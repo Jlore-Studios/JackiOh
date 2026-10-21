@@ -25,6 +25,10 @@
 //! | `unban`   | 100, unpaired                  | ≥ `TRAINING_UNBAN.vs_parent` (60)    | strictly fewer than the parent's |
 //! | `learn`   | 400: 200 deals, paired         | ≥ `TRAINING_LEARN.vs_parent` (220)   | —                                |
 //!
+//! and every game is clean on either seat (R1489000): no refused action, throw, fallback or panic
+//! caught in an AI's search, and a log that folds back to its hash; each other game is a failure
+//! naming its seed and the candidate's seat.
+//!
 //! The `learn` lane is the learned evaluation's (#1012, R1012000): a network a script retrained, no
 //! LLM in the loop (`training/learn.md`), gated like `improve` on hold-out deals of its own.
 //!
@@ -210,6 +214,44 @@ fn results_of(outcomes: &[ArenaOutcome]) -> Vec<(Option<GameResult>, PlayerId)> 
         .iter()
         .map(|outcome| (outcome.result, outcome.game.a_seat))
         .collect()
+}
+
+/// R1489000: one line per game that is not clean, as the quality gates hold theirs (B31): its seed,
+/// the candidate's seat, and what it showed: `ArenaOutcome::faults` on either seat, any throw, and
+/// a log that does not fold back to its hash. `replayed` holds each game's `arena::replays`.
+pub(crate) fn unclean_games(outcomes: &[ArenaOutcome], replayed: &[bool]) -> Vec<String> {
+    outcomes
+        .iter()
+        .zip(replayed)
+        .filter_map(|(outcome, &folds_back)| {
+            let mut shown = outcome.faults();
+            shown.extend(outcome.thrown.iter().cloned());
+            if !folds_back {
+                shown.push("its log does not fold back to its hash".to_string());
+            }
+            (!shown.is_empty()).then(|| {
+                format!(
+                    "unclean game {} (the candidate {}): {}",
+                    outcome.game.seed,
+                    outcome.game.a_seat.as_str(),
+                    shown.join("; ")
+                )
+            })
+        })
+        .collect()
+}
+
+/// Every rule the run fails: the lane's (`gate_failures`), then each game that is not clean
+/// (`unclean_games`, R1489000). Empty when it promotes.
+pub(crate) fn promotion_failures(
+    lane: Lane,
+    counts: &GateCounts,
+    outcomes: &[ArenaOutcome],
+    replayed: &[bool],
+) -> Vec<String> {
+    let mut failures = gate_failures(lane, counts);
+    failures.extend(unclean_games(outcomes, replayed));
+    failures
 }
 
 /// Game `k`'s seed, or a paired gate's deal `k`'s: `"<lane>:<tree>:<k>"`.
@@ -650,7 +692,9 @@ fn report(
     out.push_str(&format!(
         "{seeds} Each seat's deck is built by one rule, from every set that ships minus its own AI's \
          shadow ban, with no handicap and no shaping (R976000). A draw is not a win, nor is a game \
-         without a result. No game is played against random (R732001).\n\n"
+         without a result. No game is played against random (R732001). Every game must also be clean \
+         on either seat: no refused action, throw, fallback or panic caught in an AI's search, and a \
+         log that folds back to its hash (R1489000).\n\n"
     ));
     if !failures.is_empty() {
         out.push_str("Fails:\n\n");
@@ -721,6 +765,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         arena::append_records(&path, &arena::records_of(&outcomes)?)?;
     }
     let vs_parent = &outcomes[..];
+    let replayed = vs_parent
+        .iter()
+        .map(arena::replays)
+        .collect::<anyhow::Result<Vec<bool>>>()?;
 
     let counts = GateCounts {
         games: gate.games,
@@ -739,7 +787,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         parent_shadow_ban: counts.parent_shadow_ban,
         date: arena::utc_date(),
     };
-    let failures = gate_failures(args.lane, &counts);
+    let failures = promotion_failures(args.lane, &counts, vs_parent, &replayed);
     print!(
         "{}",
         report(args.lane, mode, &record, &counts, &parent, vs_parent, &failures)?
@@ -809,7 +857,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::{GameOverReason, Winner};
+    use jackioh_ai::{RejectedAction, SimPanic};
+    use jackioh_engine::{ActionBody, GameOverReason, PerPlayer, Winner};
     use std::process::Command;
 
     fn counts(lane: Lane, vs_parent: i32, shadow_ban: usize, parent_shadow_ban: usize) -> GateCounts {
@@ -1315,5 +1364,111 @@ mod tests {
         assert!(lines[0].contains("\"vsParent\":\"86/100\""));
         assert!(lines[1].starts_with("{\"generation\":9,"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A clean finished win of game `n`: the candidate on p1 on odd games, p2 on even ones.
+    fn clean_win(n: i32) -> ArenaOutcome {
+        let a_seat = if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 };
+        ArenaOutcome {
+            game: arena::ArenaGame {
+                seed: game_seed(Lane::Improve, "4b825dc", arena::deal_of(n)),
+                n,
+                decks: (Vec::new(), Vec::new()),
+                seats: PerPlayer::new(AgentSpec::SelfAi, AgentSpec::SelfAi),
+                skills: PerPlayer::new(jackioh_ai::AI_SKILL_MAX, jackioh_ai::AI_SKILL_MAX),
+                a_seat,
+                labels: ("self".to_string(), "bin-gen8".to_string()),
+                paired: true,
+                turn_actions: None,
+                stop_unsettled: false,
+                self_budget: jackioh_ai::AI_GATE_BUDGET,
+            },
+            result: Some(GameResult {
+                winner: Winner::from(a_seat),
+                reason: GameOverReason::HeroDeath,
+            }),
+            log: Vec::new(),
+            hash: "h".to_string(),
+            turns: 9,
+            rejected: Vec::new(),
+            thrown: Vec::new(),
+            fallbacks: PerPlayer::new(0, 0),
+            sim_panics: PerPlayer::new(0, 0),
+            first_sim_panic: None,
+            times: PerPlayer::new(Vec::new(), Vec::new()),
+        }
+    }
+
+    #[test]
+    fn r1489000_one_game_with_a_search_panic_fails_the_gate_with_every_game_won_and_names_its_seed() {
+        let mut games: Vec<ArenaOutcome> = (1..=4).map(clean_win).collect();
+        let replayed = vec![true; 4];
+        assert!(
+            promotion_failures(
+                Lane::Improve,
+                &counts(Lane::Improve, 400, 11, 11),
+                &games,
+                &replayed
+            )
+            .is_empty()
+        );
+        games[2].sim_panics.p1 = 1;
+        games[2].first_sim_panic = Some(SimPanic {
+            seat: PlayerId::P1,
+            message: "a guessed world broke".into(),
+        });
+        assert_eq!(wins_of(&results_of(&games)), 4);
+        assert_eq!(
+            promotion_failures(
+                Lane::Improve,
+                &counts(Lane::Improve, 400, 11, 11),
+                &games,
+                &replayed
+            ),
+            vec![
+                "unclean game improve:4b825dc:2 (the candidate p1): p1: 1 search panics, the first: a \
+                 guessed world broke"
+                    .to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn r1489000_a_refusal_a_throw_a_fallback_or_a_replay_mismatch_on_either_seat_fails_the_gate() {
+        let mut games: Vec<ArenaOutcome> = (1..=4).map(clean_win).collect();
+        let mut replayed = vec![true; 4];
+        games[0].fallbacks.p2 = 2;
+        games[1].rejected.push(RejectedAction {
+            seat: PlayerId::P2,
+            action: ActionBody::EndTurn,
+            error: "refused".into(),
+        });
+        games[1].thrown.push("p1: controller bin threw: boom".to_string());
+        replayed[3] = false;
+        assert_eq!(
+            promotion_failures(
+                Lane::Improve,
+                &counts(Lane::Improve, 400, 11, 11),
+                &games,
+                &replayed
+            ),
+            vec![
+                "unclean game improve:4b825dc:1 (the candidate p1): p2: 2 fallbacks".to_string(),
+                "unclean game improve:4b825dc:1 (the candidate p2): p2: 1 refused actions; p1: \
+                 controller bin threw: boom"
+                    .to_string(),
+                "unclean game improve:4b825dc:2 (the candidate p2): its log does not fold back to its \
+                 hash"
+                    .to_string(),
+            ]
+        );
+        let failures = promotion_failures(
+            Lane::Improve,
+            &counts(Lane::Improve, 219, 11, 11),
+            &games,
+            &replayed,
+        );
+        assert_eq!(failures.len(), 4);
+        assert_eq!(failures[0], "vs parent: 219/400 wins, 220 needed");
     }
 }

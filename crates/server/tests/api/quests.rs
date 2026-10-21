@@ -22,13 +22,15 @@ use jackioh_engine::{
 use serde_json::{Value, json};
 
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
+use jackioh_server::config::{JLORE_GAMES_DAILY_CAP, QUEST_MAX_HELD, QUEST_XP_PER_JLORE};
 use jackioh_server::economy::quests::{
     GameTally, PlayedCard, QuestDef, QuestGoal, pool, progress_of, quest_def, quest_interval_ms, quest_xp,
     tally_seat, top_up_quests,
 };
 use jackioh_server::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
-use jackioh_server::economy::store::{EconomyLedger, EconomyReason, JloreReason, QuestChange, QuestGrant};
+use jackioh_server::economy::store::{
+    EconomyLedger, EconomyReason, JloreGrant, JloreReason, QuestChange, QuestGrant,
+};
 
 use crate::support::deps::{call, test_app as built_app};
 use crate::support::store::store;
@@ -339,6 +341,51 @@ async fn r1304001_a_completed_quest_pays_its_jlore_and_xp_exactly_once() {
         &won_game(&p1, "match-2", GameTally::default(), now + 1)
     ));
     assert_eq!(paid(&ledger_of(&app, &p1).await).len(), 1);
+}
+
+#[tokio::test]
+async fn r1483000_quest_jlore_pays_past_the_game_cap() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    let now = now_ms();
+    set_due(&app, &p1, now + 10 * interval()).await;
+    let win = easiest(&QuestGoal::WinGames);
+    hold(&app, &p1, win, win.target - 1, now).await;
+    // Today's games have already paid the cap.
+    let earlier = JloreGrant {
+        profile_id: p1.clone(),
+        delta: JLORE_GAMES_DAILY_CAP,
+        reason: JloreReason::Game,
+        reference: Some("earlier-game".to_string()),
+        dev: false,
+        at: now,
+    };
+    store!(app, |t| t.economy_jlore_grant(&earlier));
+
+    store!(app, |t| pay_game_rewards(
+        &mut t,
+        &won_game(&p1, "match-1", GameTally::default(), now)
+    ));
+    let jlore = ledger_of(&app, &p1).await.jlore;
+    let by = |reason: JloreReason| -> Vec<JloreGrant> {
+        jlore
+            .iter()
+            .filter(|grant| grant.reason == reason)
+            .cloned()
+            .collect()
+    };
+    assert_eq!(
+        by(JloreReason::Game),
+        vec![earlier],
+        "the win's own Jlore was held back"
+    );
+    let quest = by(JloreReason::Quest);
+    assert_eq!(quest.len(), 1, "{quest:?}");
+    assert_eq!(
+        quest[0].delta,
+        i64::from(win.jlore),
+        "the quest's Jlore is paid past the cap"
+    );
 }
 
 #[tokio::test]

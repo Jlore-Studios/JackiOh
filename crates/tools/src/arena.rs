@@ -20,8 +20,10 @@
 //! ships minus its own agent's shadow ban (R186), with no handicap (Easy both, R180), and neither
 //! seat is shaped (R976000), so with one shadow ban on both sides a deal's two games deal the same two
 //! decks. A refused action is replaced by endTurn or the first legal answer; a controller that throws
-//! ends the game without a result. So a game is a function of its seed and its two agents, whatever
-//! the thread count.
+//! ends the game without a result. Each seat's fallbacks (a "no move", replaced by the random policy,
+//! or an AI decision off its fallback path) and the panics an AI's search caught are counted, a `bin:`
+//! agent's from its verbose answer (R1489000). So a game is a function of its seed and its two agents,
+//! whatever the thread count.
 //!
 //! Every finished game leaves one `GameRecord` (R376; `source: "dev"`, `mode: "random"`, R378) on a
 //! JSONL line: in `<--out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else on stdout.
@@ -43,8 +45,8 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, anyhow, bail};
 use jackioh_ai::{
-    AI_SKILL_MAX, AI_SKILL_MIN, AiDeckOptions, RejectedAction, build_ai_deck, plays_best, random_action,
-    redact,
+    AI_GATE_BUDGET, AI_SKILL_MAX, AI_SKILL_MIN, AiDeckOptions, Decision, DecisionReason, RejectedAction,
+    SearchBudget, SimPanic, build_ai_deck, plays_best, random_action, redact,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
@@ -354,9 +356,13 @@ pub(crate) struct ArenaGame {
     /// R1006007: whether a decision whose search ran a board to a settle cap ends the game without a
     /// result (self-play's games); the arena's and the gates' games play on.
     pub stop_unsettled: bool,
+    /// R1489000: the budget a `self` seat decides at: `AI_GATE_BUDGET`, the browser's own, but in a
+    /// test that starves it. A `bin:` agent decides at its own build's.
+    pub self_budget: SearchBudget,
 }
 
-/// What a game came to: match.ts's `MatchRecord` minus search statistics, plus each seat's decision times.
+/// What a game came to: match.ts's `MatchRecord` minus search statistics but its seats' fallbacks
+/// and caught panics, plus each seat's decision times.
 #[derive(Clone, Debug)]
 pub(crate) struct ArenaOutcome {
     pub game: ArenaGame,
@@ -368,8 +374,14 @@ pub(crate) struct ArenaOutcome {
     pub turns: i32,
     pub rejected: Vec<RejectedAction>,
     pub thrown: Vec<String>,
-    /// Agent answers of "no move", replaced by the random policy on the seat's stream.
-    pub fallbacks: i32,
+    /// Each seat's fallbacks: agent answers of "no move", replaced by the random policy on the seat's
+    /// stream, and AI decisions off the fallback path (`DecisionReason::Fallback`, R1489000).
+    pub fallbacks: PerPlayer<i32>,
+    /// R1489000: each seat's AI decisions' `stats.sim_panics`, summed; a `bin:` seat's as its verbose
+    /// answers tell them.
+    pub sim_panics: PerPlayer<usize>,
+    /// The first of them that kept its message (a `self` seat's), by seat; None when there is none.
+    pub first_sim_panic: Option<SimPanic>,
     /// Each seat's decision times, in milliseconds.
     pub times: PerPlayer<Vec<f64>>,
 }
@@ -383,6 +395,37 @@ impl ArenaOutcome {
     /// Whether the game ended drawn.
     pub(crate) fn drawn(&self) -> bool {
         matches!(self.result, Some(result) if result.winner == Winner::Draw)
+    }
+
+    /// R1489000: what either seat's AI did off its own path, p1 first: refused actions, fallbacks and
+    /// panics its search caught, each line naming the seat. Empty when there is none.
+    pub(crate) fn faults(&self) -> Vec<String> {
+        let mut faults = Vec::new();
+        for seat in [PlayerId::P1, PlayerId::P2] {
+            let refused = self
+                .rejected
+                .iter()
+                .filter(|rejected| rejected.seat == seat)
+                .count();
+            if refused > 0 {
+                faults.push(format!("{}: {refused} refused actions", seat.as_str()));
+            }
+            if self.fallbacks[seat] > 0 {
+                faults.push(format!("{}: {} fallbacks", seat.as_str(), self.fallbacks[seat]));
+            }
+            if self.sim_panics[seat] > 0 {
+                let first = match &self.first_sim_panic {
+                    Some(first) if first.seat == seat => format!(", the first: {}", first.message),
+                    _ => String::new(),
+                };
+                faults.push(format!(
+                    "{}: {} search panics{first}",
+                    seat.as_str(),
+                    self.sim_panics[seat]
+                ));
+            }
+        }
+        faults
     }
 }
 
@@ -438,6 +481,7 @@ pub(crate) fn game_setup(
         paired,
         turn_actions: None,
         stop_unsettled: false,
+        self_budget: AI_GATE_BUDGET,
     })
 }
 
@@ -517,6 +561,8 @@ struct DecideRequest<'a> {
     seat: PlayerId,
     rng_seed: &'a str,
     rng_cursor: u32,
+    /// R1489000: always true, for the decision's `reason` and `stats.simPanics`.
+    verbose: bool,
 }
 
 impl BinAgent {
@@ -573,14 +619,15 @@ impl BinAgent {
         let _ = self.child.wait();
     }
 
-    /// The agent's move on `redact(state, seat)`; the stream moves to the cursor the agent answers with.
+    /// The agent's move on `redact(state, seat)`; the stream moves to the cursor the agent answers
+    /// with. The request is verbose, so the answer tells the decision's `reason` and `stats.simPanics`.
     fn decide(
         &mut self,
         state: &GameState,
         seat: PlayerId,
         rng_seed: &str,
         rng: &mut Rng,
-    ) -> Result<Option<ActionBody>, String> {
+    ) -> Result<Choice, String> {
         let view = redact(state, seat);
         let request = DecideRequest {
             op: "decide",
@@ -588,6 +635,7 @@ impl BinAgent {
             seat,
             rng_seed,
             rng_cursor: rng.cursor(),
+            verbose: true,
         };
         let answer = self.call(&request).map_err(|error| format!("{error:#}"))?;
         if let Some(error) = answer.get("error") {
@@ -605,8 +653,62 @@ impl BinAgent {
             serde_json::from_value(answer.get("action").cloned().unwrap_or(Value::Null))
                 .map_err(|error| format!("the answer's action is not an ActionBody: {error}"))?;
         *rng = Rng::new(rng_seed, cursor);
-        Ok(action)
+        let (fell_back, sim_panics) = told_of(&answer);
+        Ok(Choice {
+            action,
+            fell_back,
+            sim_panics,
+            first_sim_panic: None,
+        })
     }
+}
+
+/// One controller call's answer (match.ts's `ControllerChoice`): the action, `None` for "no move",
+/// and what an AI's decision told of itself (R1489000).
+#[derive(Default)]
+struct Choice {
+    action: Option<ActionBody>,
+    /// The decision came off the AI's fallback path (`DecisionReason::Fallback`).
+    fell_back: bool,
+    /// The panics its search caught (`SearchStats::sim_panics`).
+    sim_panics: usize,
+    /// The first one's message, when the agent kept it (`self` does; a `bin:` agent sends none).
+    first_sim_panic: Option<String>,
+}
+
+impl Choice {
+    /// An answer that is only its action: the random policy's.
+    fn plain(action: Option<ActionBody>) -> Choice {
+        Choice {
+            action,
+            ..Choice::default()
+        }
+    }
+
+    /// `self`'s answer: the decision's action and what it tells of itself.
+    fn of(decision: Option<Decision>) -> Choice {
+        let Some(decision) = decision else {
+            return Choice::default();
+        };
+        Choice {
+            fell_back: decision.reason == DecisionReason::Fallback,
+            sim_panics: decision.stats.sim_panics,
+            first_sim_panic: decision.first_sim_panic,
+            action: Some(decision.action),
+        }
+    }
+}
+
+/// R1489000: what a `bin:` agent's verbose answer tells of its decision: off the fallback path
+/// (`"reason":"fallback"`) and the panics its search caught (`stats.simPanics`). An answer that
+/// tells neither counts none.
+fn told_of(answer: &Value) -> (bool, usize) {
+    let fell_back = answer.get("reason").and_then(Value::as_str) == Some(DecisionReason::Fallback.as_str());
+    let sim_panics = answer
+        .pointer("/stats/simPanics")
+        .and_then(Value::as_u64)
+        .map_or(0, |count| usize::try_from(count).unwrap_or(usize::MAX));
+    (fell_back, sim_panics)
 }
 
 /// One controller call (match.ts's `chooseFor`): the agent's action, `None` for "no move", or what it
@@ -621,21 +723,26 @@ fn choose_for(
     seat: PlayerId,
     rng_seed: &str,
     rng: &mut Rng,
-) -> Result<Option<ActionBody>, String> {
+    budget: SearchBudget,
+) -> Result<Choice, String> {
     if !matches!(live, Live::Random) && !plays_best(skill, rng) {
         return catch_unwind(AssertUnwindSafe(|| random_action(state, seat, rng)))
+            .map(Choice::plain)
             .map_err(|panic| agent::panic_message(&*panic));
     }
     match live {
         Live::SelfAi => {
             let view = redact(state, seat);
             let start = rng.clone();
-            let (action, next) = catch_unwind(AssertUnwindSafe(|| agent::decide_with(&view, seat, start)))
-                .map_err(|panic| agent::panic_message(&*panic))?;
+            let (decision, next) = catch_unwind(AssertUnwindSafe(|| {
+                agent::decide_full(&view, seat, start, budget)
+            }))
+            .map_err(|panic| agent::panic_message(&*panic))?;
             *rng = next;
-            Ok(action)
+            Ok(Choice::of(decision))
         }
         Live::Random => catch_unwind(AssertUnwindSafe(|| random_action(state, seat, rng)))
+            .map(Choice::plain)
             .map_err(|panic| agent::panic_message(&*panic)),
         Live::Bin(bin) => bin.decide(state, seat, rng_seed, rng),
     }
@@ -719,7 +826,9 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
     let mut log: Vec<Action> = Vec::new();
     let mut rejected: Vec<RejectedAction> = Vec::new();
     let mut thrown: Vec<String> = Vec::new();
-    let mut fallbacks = 0;
+    let mut fallbacks: PerPlayer<i32> = PerPlayer::new(0, 0);
+    let mut sim_panics: PerPlayer<usize> = PerPlayer::new(0, 0);
+    let mut first_sim_panic: Option<SimPanic> = None;
     let mut times: PerPlayer<Vec<f64>> = PerPlayer::new(Vec::new(), Vec::new());
 
     let mut turn = state.turn;
@@ -749,6 +858,7 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         };
 
         let started = Instant::now();
+        let budget = game.self_budget;
         let choice = if game.stop_unsettled && matches!(live[seat], Live::SelfAi) {
             // R1006007: a decision whose search runs a board to a settle cap ends the game without
             // a result, at the cap's first panic: the search would reach the loop again and again.
@@ -760,7 +870,7 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
             );
             let watched = watch_unsettled(move || {
                 let mut rng = start;
-                let choice = choose_for(&mut Live::SelfAi, skill, &at, seat, &ctl_seed, &mut rng);
+                let choice = choose_for(&mut Live::SelfAi, skill, &at, seat, &ctl_seed, &mut rng, budget);
                 (choice, rng)
             });
             let Some((choice, next)) = watched else {
@@ -781,11 +891,12 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
                 seat,
                 &ctl[seat],
                 &mut rngs[seat],
+                game.self_budget,
             )
         };
         times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
-        let chosen = match choice {
-            Ok(chosen) => chosen,
+        let choice = match choice {
+            Ok(choice) => choice,
             Err(message) => {
                 thrown.push(format!(
                     "{}: controller {} threw: {message}",
@@ -795,11 +906,24 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
                 break;
             }
         };
+        // R1489000: what an AI's decision told of itself, counted as match_.rs's `play_match` counts it.
+        if choice.fell_back {
+            fallbacks[seat] += 1;
+        }
+        sim_panics[seat] += choice.sim_panics;
+        if first_sim_panic.is_none()
+            && let Some(message) = &choice.first_sim_panic
+        {
+            first_sim_panic = Some(SimPanic {
+                seat,
+                message: message.clone(),
+            });
+        }
 
-        let chosen = match chosen {
+        let chosen = match choice.action {
             Some(chosen) => chosen,
             None => {
-                fallbacks += 1;
+                fallbacks[seat] += 1;
                 match random_action(&state, seat, &mut rngs[seat]) {
                     Some(chosen) => chosen,
                     None => {
@@ -858,6 +982,8 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         rejected,
         thrown,
         fallbacks,
+        sim_panics,
+        first_sim_panic,
         times,
     })
 }
@@ -985,6 +1111,7 @@ struct DuelLine<'a> {
     rejected: usize,
     thrown: &'a [String],
     fallbacks: i32,
+    sim_panics: usize,
     replay_ok: bool,
     decisions: usize,
     ms_sum: i64,
@@ -997,7 +1124,8 @@ fn round_ms(ms: f64) -> i64 {
 }
 
 /// duel.ts's per-game line: outcome from a's side, `aborted` (no result; no gate counts it a draw),
-/// why it ended, hash, whether it replays, and a's decision count and times.
+/// why it ended, hash, whether it replays, both seats' fallbacks and caught search panics, and a's
+/// decision count and times.
 fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> {
     let subject = outcome.game.a_seat;
     let other = subject.opponent();
@@ -1018,7 +1146,8 @@ fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> 
         hash: &outcome.hash,
         rejected: outcome.rejected.len(),
         thrown: &outcome.thrown,
-        fallbacks: outcome.fallbacks,
+        fallbacks: outcome.fallbacks.p1 + outcome.fallbacks.p2,
+        sim_panics: outcome.sim_panics.p1 + outcome.sim_panics.p2,
         replay_ok,
         decisions: mine.len(),
         ms_sum: round_ms(mine.iter().sum()),
@@ -1326,6 +1455,7 @@ mod tests {
             paired: false,
             turn_actions: None,
             stop_unsettled: false,
+            self_budget: AI_GATE_BUDGET,
         };
         assert_eq!(
             record_id("0.2.0", &game),
@@ -1647,5 +1777,64 @@ mod tests {
         assert_eq!(civil_date(19_723), "2024-01-01");
         assert_eq!(civil_date(19_782), "2024-02-29");
         assert_eq!(civil_date(-1), "1969-12-31");
+    }
+
+    #[test]
+    fn r1489000_a_self_seat_starved_of_budget_counts_its_fallbacks_in_the_outcome() {
+        jackioh_cards::register_all();
+        let mut game = setups(
+            &self_entrant(),
+            &entrant(&AgentSpec::Random).unwrap(),
+            1,
+            false,
+            |n| format!("r1489000-starved:{n}"),
+        )
+        .unwrap()
+        .remove(0);
+        assert_eq!(game.self_budget, AI_GATE_BUDGET);
+        game.self_budget = SearchBudget {
+            nodes: 0,
+            lethal_nodes: 0,
+            ..AI_GATE_BUDGET
+        };
+        let outcome = play_game(&game).unwrap();
+        let own = game.a_seat;
+        assert!(outcome.fallbacks[own] > 0, "{:?}", outcome.fallbacks);
+        assert_eq!(outcome.fallbacks[own.opponent()], 0);
+        assert_eq!(outcome.sim_panics, PerPlayer::new(0, 0));
+        assert_eq!(outcome.first_sim_panic, None);
+        assert!(
+            outcome
+                .faults()
+                .contains(&format!("{}: {} fallbacks", own.as_str(), outcome.fallbacks[own])),
+            "{:?}",
+            outcome.faults()
+        );
+        let line: Value = serde_json::from_str(&duel_line(&outcome, true).unwrap()).unwrap();
+        assert_eq!(line["fallbacks"], json!(outcome.fallbacks[own]));
+        assert_eq!(line["simPanics"], json!(0));
+    }
+
+    #[test]
+    fn r1489000_a_bin_agents_verbose_answer_tells_its_fallback_and_its_search_panics() {
+        assert_eq!(
+            told_of(
+                &json!({"action":{"type":"endTurn"},"rngCursor":3,"reason":"fallback","line":[],"stats":{"nodes":0,"simPanics":2}})
+            ),
+            (true, 2)
+        );
+        assert_eq!(
+            told_of(
+                &json!({"action":{"type":"endTurn"},"rngCursor":3,"reason":"search","line":[],"stats":{"nodes":1,"simPanics":0}})
+            ),
+            (false, 0)
+        );
+        assert_eq!(told_of(&json!({"action":null,"rngCursor":0})), (false, 0));
+        assert_eq!(
+            told_of(
+                &json!({"action":{"type":"endTurn"},"rngCursor":3,"reason":"search","line":[],"stats":{"nodes":1}})
+            ),
+            (false, 0)
+        );
     }
 }

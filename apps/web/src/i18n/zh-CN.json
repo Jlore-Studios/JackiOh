@@ -3010,6 +3010,7 @@
   "Share the last turn": "分享最后一回合",
   "Checking this game on the server…": "正在服务器上核对本局…",
   "+{jlore} Jlore, +{xp} XP": "+{jlore} Jlore，+{xp} 经验",
+  "Daily Jlore reached": "每日 Jlore 已达上限",
   "This game earned nothing ({reason}).": "本局没有收益（{reason}）。",
   "The server could not check this game.": "服务器无法核对本局。",
   "earning is off": "收益尚未开放",

@@ -2177,6 +2177,11 @@ pub const JLORE_LADDER_LOSS: i32 = 10;
 pub const JLORE_PRACTICE_WIN: i32 = 10;
 /// SPEC §14.8: the Jlore a practice game pays for a loss (#1333's table: 5).
 pub const JLORE_PRACTICE_LOSS: i32 = 5;
+/// SPEC §14.8, R1483000: the most Jlore an account's games pay it in one UTC day, ladder and
+/// practice together, as Hearthstone caps the gold its games pay (quest and track Jlore are not
+/// counted and not stopped). The owner's number (#1483): well above a real day's play, far below
+/// what a loop of conceded practice games would earn.
+pub const JLORE_GAMES_DAILY_CAP: i64 = 2000;
 /// SPEC §14.8: the XP of a game per action the player took, a proxy for time played. #1333's
 /// table leaves it to measured action counts: over R1333001's games 20, 600 and 2,000 average
 /// 999.75 XP a ladder game, `XP_LADDER_TARGET_MEAN`'s 1,000.
@@ -2195,6 +2200,10 @@ pub const XP_LADDER_TARGET_MEAN: i32 = 1000;
 /// SPEC §14.8: how long a practice seed waits to be claimed, in seconds. #1294's table gives no
 /// value; an hour outlasts any game without holding seeds.
 pub const PRACTICE_SEED_TTL_SECONDS: i64 = 3600;
+/// SPEC §14.8, R1483000: how many unclaimed, unexpired practice seeds an account holds at once; a
+/// request past it is refused and issues nothing. Bounds one account's place in the claim queue
+/// (`PRACTICE_VERIFY_CONCURRENCY`). The approved proposal's number (#1483).
+pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// SPEC §14.8, #1303: how many practice claims the server verifies at once, each a fold of the
 /// game's log and a re-run of every AI move off the runtime (`economy::practice`). A claim past it
 /// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep

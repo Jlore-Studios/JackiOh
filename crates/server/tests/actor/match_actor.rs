@@ -537,6 +537,9 @@ struct Options {
     ratings: [f64; 2],
     /// R1351000: (blocker, blocked) profile pairs standing before the match starts.
     blocks: Vec<(&'static str, &'static str)>,
+    /// R1483000: the economy on (§14.12), which the build leaves off, so an ending pays and the
+    /// daily cap can hold its Jlore back.
+    economy_live: bool,
 }
 
 impl Default for Options {
@@ -551,6 +554,7 @@ impl Default for Options {
             walk: Walk::ToTurnOne,
             ratings: [1000.0, 1000.0],
             blocks: Vec::new(),
+            economy_live: false,
         }
     }
 }
@@ -683,7 +687,12 @@ async fn harness(options: Options) -> Harness {
             ((p1.clone(), p2.clone()), SEED.to_string())
         }
     };
-    let app = empty_test_app().await;
+    let mut app = empty_test_app().await;
+    if options.economy_live {
+        Arc::get_mut(&mut app)
+            .expect("the test app has no second handle yet")
+            .economy_live = true;
+    }
     let [first, second] = options.ratings;
     seed_profile(
         &app,
@@ -4733,6 +4742,109 @@ mod r1086_equip_over_the_socket {
             written.get("magnetic").is_none(),
             "written under the new name only: {written}"
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1483000 — a ladder result says whether the day's Jlore cap held an account's pay back
+// ---------------------------------------------------------------------------
+
+mod the_result_says_what_the_daily_cap_held_back {
+    use super::*;
+    use jackioh_server::config::JLORE_GAMES_DAILY_CAP;
+    use jackioh_server::economy::store::{JloreGrant, JloreReason};
+
+    /// The `jloreCapped` of each `view` frame a client was sent, in order (`None`: no such key).
+    fn flags(socket: &Client) -> Vec<Option<bool>> {
+        socket
+            .of_type("view")
+            .iter()
+            .map(|frame| {
+                frame
+                    .get("jloreCapped")
+                    .map(|flag| flag.as_bool().expect("a boolean"))
+            })
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1483000_a_ladder_result_sends_the_cap_only_to_the_capped_account_and_again_on_reconnect() {
+        let h = harness(Options {
+            economy_live: true,
+            ..Options::default()
+        })
+        .await;
+        // Today's games have already paid profile-1 the cap; profile-2 has played none.
+        let earlier = JloreGrant {
+            profile_id: "profile-1".to_string(),
+            delta: JLORE_GAMES_DAILY_CAP,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at: now(),
+        };
+        {
+            let mut tx = h.app.db.begin(None).await.expect("a store transaction");
+            tx.economy_jlore_grant(&earlier)
+                .await
+                .expect("the earlier game's Jlore");
+            tx.commit().await.expect("commit");
+        }
+        assert_eq!(flags(&h.p1), vec![None], "no frame says it before the game ends");
+
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+
+        // The seat held back is told, in a view of the finished game; the other is told nothing.
+        assert_eq!(flags(&h.p1).last(), Some(&Some(true)));
+        assert!(flags(&h.p2).iter().all(Option::is_none), "{:?}", flags(&h.p2));
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+        assert!(
+            flags(&h.p1)[..flags(&h.p1).len() - 1].iter().all(Option::is_none),
+            "the views before the result carry nothing: {:?}",
+            flags(&h.p1)
+        );
+
+        // A reconnect gets it again in its full view, the opponent's still nothing.
+        let (again1, again2) = (Client::new(), Client::new());
+        h.actor.attach(P1, again1.socket());
+        h.actor.attach(P2, again2.socket());
+        h.idle().await;
+        assert_eq!(flags(&again1), vec![Some(true)]);
+        assert_eq!(flags(&again2), vec![None]);
+
+        // So does one on an actor rebuilt from the store once the rematch window has passed.
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        for client in [&h.p1, &h.p2, &again1, &again2] {
+            client.drop_transport();
+        }
+        settle().await;
+        let app = h.app.clone();
+        drop(h);
+        settle().await;
+        assert_eq!(
+            app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        let rebuilt = app
+            .matches
+            .actor_for(&app, MATCH_ID)
+            .await
+            .expect("the rebuilt actor");
+        let (back1, back2) = (Client::new(), Client::new());
+        rebuilt.attach(P1, back1.socket());
+        rebuilt.attach(P2, back2.socket());
+        rebuilt.idle().await;
+        settle().await;
+        assert_eq!(flags(&back1), vec![Some(true)]);
+        assert_eq!(flags(&back2), vec![None]);
     }
 }
 

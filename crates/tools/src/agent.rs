@@ -21,14 +21,18 @@
 //! to the random policy on the same stream when the AI has no move (match.ts's `playMatch`), and a
 //! game played through this protocol is the game the in-process `self` agent plays.
 //!
-//! `"verbose":true` (default false) adds the `Decision`'s other fields to the answer, for a person
-//! reading a game back; the referee never sets it. `{"action":null,…}` means the AI had no move. A request the agent cannot read, or a decision that
+//! `"verbose":true` (default false) adds the `Decision`'s other fields to the answer: the arena's
+//! referee sets it, to count a decision off the fallback path and the panics its search caught
+//! (`reason`, `stats.simPanics`, R1489000), and a person reading a game back may. `{"action":null,…}`
+//! means the AI had no move. A request the agent cannot read, or a decision that
 //! panicked, is answered `{"error":"…"}`, which the referee records as a thrown controller.
 
 use std::io::{BufRead, Write};
 
 use anyhow::Context;
-use jackioh_ai::{AI_GATE_BUDGET, AiOptions, Decision, DecisionReason, SHADOW_BAN_IDS, SearchStats, decide};
+use jackioh_ai::{
+    AI_GATE_BUDGET, AiOptions, Decision, DecisionReason, SHADOW_BAN_IDS, SearchBudget, SearchStats, decide,
+};
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -140,7 +144,9 @@ fn answer_decide(request: Request) -> Value {
         return json!({ "error": "agent: decide needs an rngSeed" });
     };
     let rng = Rng::new(&rng_seed, request.rng_cursor.unwrap_or(0));
-    let decided = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| decide_full(&state, seat, rng)));
+    let decided = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        decide_full(&state, seat, rng, AI_GATE_BUDGET)
+    }));
     match decided {
         Ok((decision, rng)) => {
             let detail = decision
@@ -162,20 +168,19 @@ fn answer_decide(request: Request) -> Value {
     }
 }
 
-/// The AI's move for `seat` on `state` (the referee's `redact(state, seat)`), at the quality gates'
-/// budget (`AI_GATE_BUDGET`, the browser's own, so a promotion measures the AI that ships), and the
-/// stream after it. `arena.rs`'s in-process `self` agent calls this too, so `self` and `bin:<this
-/// binary>` play the same games.
-pub(crate) fn decide_with(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<ActionBody>, Rng) {
-    let (decision, rng) = decide_full(state, seat, rng);
-    (decision.map(|decision| decision.action), rng)
-}
-
-/// `decide_with`'s decision whole, with its reason, line and stats.
-fn decide_full(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<Decision>, Rng) {
+/// The AI's whole decision for `seat` on `state` (the referee's `redact(state, seat)`), at
+/// `budget`, and the stream after it. `answer_decide` and the arena's `self` seat pass
+/// `AI_GATE_BUDGET`, the browser's own, so a promotion measures the AI that ships, except in a test
+/// that starves it (`ArenaGame::self_budget`, R1489000).
+pub(crate) fn decide_full(
+    state: &GameState,
+    seat: PlayerId,
+    rng: Rng,
+    budget: SearchBudget,
+) -> (Option<Decision>, Rng) {
     let mut options = AiOptions {
         rng,
-        budget: AI_GATE_BUDGET,
+        budget,
         should_stop: None,
     };
     let decision = decide(state, seat, &mut options);
@@ -280,6 +285,7 @@ mod tests {
             "{verbose}"
         );
         assert!(verbose["stats"]["stoppedBy"].is_string(), "{verbose}");
+        assert!(verbose["stats"]["simPanics"].is_u64(), "{verbose}");
     }
 
     #[test]

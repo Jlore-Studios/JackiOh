@@ -55,6 +55,7 @@ export type { CustomFrame } from "./generated/CustomFrame.ts";
 export type { CustomIssue } from "./generated/CustomIssue.ts";
 export type { CustomParam } from "./generated/CustomParam.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
+export type { Flavor } from "./generated/Flavor.ts";
 export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";
 export type { GameEventType } from "./generated/GameEventType.ts";

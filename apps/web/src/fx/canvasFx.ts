@@ -9,11 +9,14 @@
 import { PARTICLE_PRESETS } from "./presets.ts";
 import type { ParticleSystem, EmitOptions } from "./particles.ts";
 import type { FxRng } from "./rng.ts";
-import type { FxBox, FxPreset, FxVec } from "./types.ts";
+import { createShots } from "./shots.ts";
+import type { FxBox, FxPreset, FxShot, FxVec } from "./types.ts";
 
 export type CanvasFx = {
   /** A glowing head on a shallow arc, trailing `preset` particles until flightMs; `density` (default 1) scales the trail and the arrival burst. */
   projectile(preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
+  /** #1442: a flavor's shot (`shots.ts`) from `from` to `to`, bursting `preset` where it lands; `density` (default 1) scales its trail and that burst. */
+  shot(shot: FxShot, colors: readonly string[], preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
   /** Jagged branching polyline from the box centre, white-hot fading to dark over durationMs. */
   crack(box: FxBox, durationMs: number): void;
   /** An expanding elliptical shock wave about the box (RING.scaleFrom to RING.scaleTo), fading over durationMs. */
@@ -220,6 +223,7 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
   const cracks: Crack[] = [];
   const rings: Ring[] = [];
   const flashes: Flash[] = [];
+  const shots = createShots({ particles, rng });
 
   /** One reusable emit request, so a trail step allocates nothing. */
   const trailBox: FxBox = { x: 0, y: 0, width: 0, height: 0 };
@@ -429,6 +433,10 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
       });
     },
 
+    shot(shot, colors, preset, from, to, flightMs, density = 1) {
+      shots.add(shot, colors, preset, from, to, flightMs, density);
+    },
+
     crack(box, durationMs) {
       const cx = box.x + box.width / 2;
       const cy = box.y + box.height / 2;
@@ -520,25 +528,29 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
         if (fl.elapsed < fl.durationMs - END_EPSILON_MS) flashes[w++] = fl;
       }
       flashes.length = w;
+
+      shots.step(dtMs, age);
     },
 
     draw(ctx) {
-      if (projectiles.length + cracks.length + rings.length + flashes.length === 0) return;
+      if (projectiles.length + cracks.length + rings.length + flashes.length + shots.alive() === 0) return;
       for (const rg of rings) drawRing(ctx, rg);
       for (const cr of cracks) drawCrack(ctx, cr);
       for (const fl of flashes) drawFlash(ctx, fl);
       for (const pr of projectiles) drawProjectile(ctx, pr);
+      shots.draw(ctx);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
     },
 
-    alive: () => projectiles.length + cracks.length + rings.length + flashes.length,
+    alive: () => projectiles.length + cracks.length + rings.length + flashes.length + shots.alive(),
 
     clear() {
       projectiles.length = 0;
       cracks.length = 0;
       rings.length = 0;
       flashes.length = 0;
+      shots.clear();
     },
   };
 }

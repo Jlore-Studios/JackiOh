@@ -1485,6 +1485,7 @@ describe("B20 turn banners", () => {
 const CUE_KEYS: Record<FxCue["kind"], readonly string[]> = {
   burst: ["kind", "preset", "at", "delayMs", "count", "spread", "power"],
   projectile: ["kind", "preset", "from", "to", "delayMs", "flightMs", "density"],
+  shot: ["kind", "shot", "colors", "preset", "from", "to", "delayMs", "flightMs", "density"],
   crack: ["kind", "at", "delayMs", "durationMs"],
   ring: ["kind", "preset", "at", "delayMs", "durationMs"],
   shake: ["kind", "trauma", "delayMs"],
