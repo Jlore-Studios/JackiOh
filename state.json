@@ -12337,8 +12337,23 @@
     "what": "review #1565 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-21T18:26:01Z",
-    "notes": [],
+    "at": "2026-10-21T18:35:34Z",
+    "notes": [
+      "#1577 needs a plan",
+      "#1582 needs a plan",
+      "#1583 needs a plan",
+      "started a night run, as a lane was free: #1577 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+      "#1575: typed it Task",
+      "#1574: typed it Task",
+      "#1573: typed it Task",
+      "#1572: typed it Task",
+      "#1571: typed it Task",
+      "#1570: typed it Task",
+      "#1569: typed it Task",
+      "#1568: typed it Bug",
+      "#1567: typed it Task",
+      "#1566: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
