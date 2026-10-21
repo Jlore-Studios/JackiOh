@@ -9072,7 +9072,9 @@
     },
     "1487": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6308490068"
+      ],
       "failures": 1,
       "forced": false,
       "handoff": {
@@ -9100,9 +9102,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6308490068"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "1489": {
