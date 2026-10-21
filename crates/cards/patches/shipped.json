@@ -212,5 +212,17 @@
     "commit": "6107dda0fbb6e8793e7aa078ffddf5574b9581b0",
     "blob": "8806eaf2012241094e1489d21330894e77d59948",
     "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.0e",
+    "commit": "54163dcabd1e718bca8d3b661584cadfd10d8371",
+    "blob": "5f78b60d5697c8fe3cfb5dc170036304f2a6840d",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.0f",
+    "commit": "ed9409471c4bc9bf6e8b114e721c96d0a98ef9c5",
+    "blob": "5f78b60d5697c8fe3cfb5dc170036304f2a6840d",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   }
 ]

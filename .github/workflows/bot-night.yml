@@ -16,7 +16,19 @@
 # account's token and run no model. gate and work hold a model secret and no GitHub write token;
 # work holds only the one secret of the subscription plan chose, and its output is a result file
 # and a git bundle that deliver checks for itself before pushing.
+#
+# With `controller` on (.harness/config.json, #1455), bot-status's loop plans the work and starts
+# each run with its plan made (bot/harness/controller.py): `plan_ref` names the plan, which the loop
+# wrote to the state branch, and `runs_on`, `cli`, `secret` and `shared` are its runner, CLI,
+# secret name and shared flag. Such a run skips gate and plan, so it waits in GitHub's queue once,
+# for its model job, not three times; work's first step holds those inputs to the plan and to
+# providers.json before any step is handed a secret, and deliver reads the plan from the state
+# branch, where the model job cannot write. A run started any other way (the schedule, a command,
+# a person) gates and plans itself, and its gate defers to the loop while the loop is going.
 name: bot-night
+# A run started with its plan names it, and where its model job runs: the loop finds its run by
+# this title, and Squishy counts a run on GitHub's runners against the slots the bots share.
+run-name: ${{ inputs.plan_ref && format('bot-night {0} on {1}', inputs.plan_ref, inputs.runs_on) || 'bot-night' }}
 
 on:
   schedule:
@@ -44,6 +56,26 @@ on:
         description: "Record GitHub writes instead of sending them"
         type: boolean
         default: false
+      plan_ref:
+        description: "Set by bot-status's loop (#1455): its plan on the state branch, plans/<ref>.json. Empty: the run gates and plans itself"
+        required: false
+        default: ""
+      runs_on:
+        description: "With plan_ref: the plan's runner"
+        required: false
+        default: ""
+      cli:
+        description: "With plan_ref: the plan's CLI"
+        required: false
+        default: ""
+      secret:
+        description: "With plan_ref: the name of the plan's secret (work checks it against providers.json)"
+        required: false
+        default: ""
+      shared:
+        description: "With plan_ref: whether the plan's subscription is the shared one"
+        required: false
+        default: ""
 
 # No workflow-wide concurrency group: runs on different subscriptions go in parallel. The plan
 # job alone is serialized (below), so two runs never claim the same item or subscription.
@@ -58,6 +90,8 @@ env:
 jobs:
   gate:
     name: gate
+    # A run the status loop started with its plan needs no gate and no plan (#1455).
+    if: ${{ !inputs.plan_ref }}
     runs-on: ubuntu-latest
     timeout-minutes: 20     # no step waits any more (the quiet wait is retired): reads and a peek
     permissions:
@@ -244,19 +278,28 @@ jobs:
   work:
     name: work
     needs: plan
-    if: contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    # After the plan job, or with no gate and no plan job in a run the status loop started with its
+    # plan (`plan_ref`, #1455).
+    if: ${{ !cancelled() && (inputs.plan_ref || contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)) }}
     # The subscription's runner (providers.json `runs_on`). On the machine the CLIs, Node, pnpm,
     # each user's Rust and Python are installed already, and a login there never leaves it.
-    runs-on: ${{ needs.plan.outputs.runs_on || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.plan_ref && inputs.runs_on || needs.plan.outputs.runs_on || 'ubuntu-latest' }}
     timeout-minutes: 350
     permissions:
       contents: read         # the model job may read; it may not write anything to GitHub
+    # The plan job's outputs, or a loop's run's inputs, which the step after the checkout holds to
+    # the plan and providers.json before any step is handed a secret (`plan-fetch --check`).
+    env:
+      PLAN_RUNS_ON: ${{ inputs.plan_ref && inputs.runs_on || needs.plan.outputs.runs_on || 'ubuntu-latest' }}
+      PLAN_CLI: ${{ inputs.plan_ref && inputs.cli || needs.plan.outputs.cli }}
+      PLAN_SECRET: ${{ inputs.plan_ref && inputs.secret || needs.plan.outputs.secret }}
+      PLAN_SHARED: ${{ inputs.plan_ref && inputs.shared || needs.plan.outputs.shared }}
     steps:
       # On the machine the checkout stays between jobs, and the last model job's worktrees (in
       # RUNNER_TEMP, emptied after every job) stay registered in it. Checkout then cannot reset a
       # branch one of them claims ("used by worktree at ...") and clones the repository afresh.
       - name: Forget the last job's worktrees
-        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
+        if: ${{ !startsWith(env.PLAN_RUNS_ON, 'ubuntu-') }}
         run: git -C "$GITHUB_WORKSPACE" worktree prune 2>/dev/null || true
 
       # On the machine, the job's temporary files go in RUNNER_TEMP, which is emptied when the
@@ -265,7 +308,7 @@ jobs:
       # worktree that goes when it ends, so both only fill the shared disk (the cards' tests build
       # 5.2 GB with them, 0.55 GB without; four card jobs at once filled it on 2026-10-09, #590).
       - name: Keep the job's temporary files with the job
-        if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
+        if: ${{ !startsWith(env.PLAN_RUNS_ON, 'ubuntu-') }}
         run: |
           mkdir -p "$RUNNER_TEMP/tmp"
           {
@@ -282,12 +325,24 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # A run the status loop started with its plan (#1455): the plan comes from the state branch,
+      # where only the bots' tokens write, and the runner, CLI, secret name and shared flag this job
+      # was given must be the plan's and its subscription's in providers.json, or the job stops
+      # here, before any step is handed a secret.
+      - name: The loop's plan, held to providers.json
+        if: ${{ inputs.plan_ref }}
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PLAN_REF: ${{ inputs.plan_ref }}
+        run: python3 -m harness plan-fetch --ref "$PLAN_REF" --out "$RUNNER_TEMP/plan/plan.json" --check
+
       # On GitHub's runners only: the machine has its own (bot/machine/setup.sh).
       - uses: pnpm/action-setup@v4
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
 
       - uses: actions/setup-node@v4
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -295,13 +350,13 @@ jobs:
       # The Rust toolchain rust-toolchain.toml pins, with its components and target, as ci.yml's
       # setup installs it (.github/actions/setup); the harness's checks run cargo.
       - uses: dtolnay/rust-toolchain@1.97.0
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         with:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
 
       - uses: actions/setup-python@v5
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         with:
           python-version: "3.13"
 
@@ -313,7 +368,7 @@ jobs:
       # machine and in CI's test profile, which keeps the entry small. These lines are the same as
       # bot-cache.yml's step of this name, since the entry's key hashes them.
       - name: The night bot's build directories
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         run: |
           {
             echo "CARGO_TARGET_DIR=$GITHUB_WORKSPACE/target"
@@ -324,7 +379,7 @@ jobs:
 
       # As .github/actions/setup does: rust-cache keys on every toolchain rustup has.
       - name: Only the pinned toolchain
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         run: |
           pinned=$(rustup show active-toolchain | cut -d ' ' -f 1)
           for toolchain in $(rustup toolchain list --quiet); do
@@ -333,7 +388,7 @@ jobs:
           rustup toolchain list
 
       - uses: Swatinem/rust-cache@v2
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         with:
           shared-key: night-bot-checks
           cache-directories: .cache/bin
@@ -341,10 +396,10 @@ jobs:
 
       - name: The emsdk scripts/build-wasm.sh pins
         id: emsdk
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@v4
-        if: startsWith(needs.plan.outputs.runs_on, 'ubuntu-') && steps.emsdk.outputs.version != ''
+        if: startsWith(env.PLAN_RUNS_ON, 'ubuntu-') && steps.emsdk.outputs.version != ''
         with:
           path: .cache/emsdk
           key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ steps.emsdk.outputs.version }}
@@ -352,13 +407,13 @@ jobs:
       # Only the CLI of the subscription plan chose, and only on GitHub's runners. The provider
       # and CLI come from plan's outputs, which providers.json decides; the model never sets them.
       - name: Install the claude CLI
-        if: needs.plan.outputs.cli == 'claude' && startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: env.PLAN_CLI == 'claude' && startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         run: |
           npm install --global @anthropic-ai/claude-code
           claude --version
 
       - name: Install the codex CLI and its sandbox
-        if: needs.plan.outputs.cli == 'codex' && startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: env.PLAN_CLI == 'codex' && startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         run: |
           npm install --global @openai/codex
           codex --version
@@ -368,7 +423,7 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Install the muse CLI
-        if: needs.plan.outputs.cli == 'muse' && startsWith(needs.plan.outputs.runs_on, 'ubuntu-')
+        if: env.PLAN_CLI == 'muse' && startsWith(env.PLAN_RUNS_ON, 'ubuntu-')
         env:
           MUSE_NO_AUTO_UPDATE: "1"
         run: |
@@ -377,6 +432,7 @@ jobs:
           "$HOME/.local/bin/muse" --version
 
       - name: Fetch the plan
+        if: ${{ !inputs.plan_ref }}
         uses: actions/download-artifact@v4
         with:
           name: plan
@@ -386,28 +442,28 @@ jobs:
         working-directory: bot
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
+          HARNESS_PROVIDER_SECRET: ${{ secrets[env.PLAN_SECRET] }}
         run: python3 -m harness doctor --work --plan "$RUNNER_TEMP/plan/plan.json"
 
       # bright-bots-harness reads a step named "Build, check and review" as this bot spending the
       # shared Claude subscription (quiet.py), so only a run on it (claude-1) has that name; a run
       # on any other subscription must not excuse a rise on the shared one.
       - name: Build, check and review
-        if: needs.plan.outputs.shared == 'true'
+        if: env.PLAN_SHARED == 'true'
         working-directory: bot
         env:
           # The one secret of the subscription plan chose, picked by name; no other provider's.
-          HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
+          HARNESS_PROVIDER_SECRET: ${{ secrets[env.PLAN_SECRET] }}
           GITHUB_TOKEN: ${{ github.token }}   # read-only: the checkpoints read HALT and the state
         run: |
           python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
             --out "$RUNNER_TEMP/out" --work-dir "$RUNNER_TEMP/work"
 
       - name: Work on another subscription (build, check and review)
-        if: needs.plan.outputs.shared != 'true'
+        if: env.PLAN_SHARED != 'true'
         working-directory: bot
         env:
-          HARNESS_PROVIDER_SECRET: ${{ secrets[needs.plan.outputs.secret] }}
+          HARNESS_PROVIDER_SECRET: ${{ secrets[env.PLAN_SECRET] }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 -m harness work --plan "$RUNNER_TEMP/plan/plan.json" \
@@ -426,7 +482,7 @@ jobs:
   deliver:
     name: deliver
     needs: [plan, work]
-    if: always() && contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)
+    if: ${{ always() && (inputs.plan_ref || contains(fromJSON('["plan", "build", "revise", "review", "suggest"]'), needs.plan.outputs.action)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -447,10 +503,21 @@ jobs:
           python-version: "3.13"
 
       - name: Fetch the plan
+        if: ${{ !inputs.plan_ref }}
         uses: actions/download-artifact@v4
         with:
           name: plan
           path: ${{ runner.temp }}/plan
+
+      # The status loop's plan (#1455), from the state branch, where the model job cannot write: in
+      # such a run its action, item and subscription are the plan file's, as there is no plan job.
+      - name: The loop's plan
+        if: ${{ inputs.plan_ref }}
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PLAN_REF: ${{ inputs.plan_ref }}
+        run: python3 -m harness plan-fetch --ref "$PLAN_REF" --out "$RUNNER_TEMP/plan/plan.json"
 
       - name: Fetch the model job's output
         continue-on-error: true

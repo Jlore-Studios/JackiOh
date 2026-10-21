@@ -875,6 +875,8 @@ describe("B14 summon", () => {
     expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { env: envOf({ card: catalog(FACTS) }) }), [
       ring("dust", tid(zone), slam, 250),
       burst("dust", tid(zone, FOOT), "ring", slam),
+      // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
+      burst("spark", tid(zone, FOOT), "point", slam),
     ]);
   });
 });
@@ -887,7 +889,12 @@ describe("B15 cast", () => {
       const cues = plan([played("p1", HAND), summon("p1", HAND, "core-002", "units", 3)], D, {
         env: envOf({ card: catalog(FACTS) }),
       });
-      expectCues(cues, [ring("dust", tid(zone), slam, D), burst("dust", tid(zone, FOOT), "ring", slam)]);
+      expectCues(cues, [
+        ring("dust", tid(zone), slam, D),
+        burst("dust", tid(zone, FOOT), "ring", slam),
+        // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
+        burst("spark", tid(zone, FOOT), "point", slam),
+      ]);
     }
   });
 
@@ -1029,7 +1036,7 @@ describe("B16 the recipe table, row by row", () => {
     expect(plan([{ type: "divineShieldLost", instanceId: "nowhere" }], 250)).toEqual([]);
   });
 
-  it("B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D", () => {
+  it("B16 destroyed on the board: a crack at 0, embers at 0.3 D and smoke at 0.5 D, plus its flavor's exit (#1446)", () => {
     forDs("destroyed", (D) => {
       expectCues(
         plan([{ type: "destroyed", instanceId: MINE_3, defId: "core-017", owner: "p1", controller: "p1", attack: 1, maxHealth: 6, killerId: ENEMY }], D),
@@ -1037,6 +1044,9 @@ describe("B16 the recipe table, row by row", () => {
           crack(cardT(MINE_3), 0, D),
           burst("ember", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
           burst("smoke", cardT(MINE_3), "area", r(FX_DEATH_SMOKE_AT * D)),
+          // #1446: core-017 is Nature, so it wilts: leaves drop off the card and settle at its foot.
+          burst("poison", cardT(MINE_3), "area", r(FX_DEATH_EMBER_AT * D)),
+          burst("dust", cardT(MINE_3, FOOT), "point", r(FX_DEATH_SMOKE_AT * D)),
         ],
       );
     });

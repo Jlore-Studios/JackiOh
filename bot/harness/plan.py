@@ -49,7 +49,7 @@ an unforced run uses it only after the gate saw it quiet (`quiet_ok`).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from itertools import islice
 from typing import Any, Iterator, Mapping
 
@@ -60,7 +60,7 @@ from harness.clock import iso, parse_iso
 from harness.config import (DIFFICULTIES, HALT_PATH, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS,
                             LABEL_NEEDS_PLAN, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
                             LABEL_SUGGESTION, LABEL_WORKING, MIN_TIER, NIGHT_WORKFLOW, OTHERS,
-                            PART_FLOOR, SLASH, STATE_BRANCH)
+                            PART_FLOOR, SLASH, STATE_BRANCH, STATUS_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.prompts import data
@@ -96,11 +96,39 @@ def nothing(reason: str) -> dict[str, Any]:
     return {"action": "none", "reason": reason}
 
 
+#: The run id a claim carries while the run the status loop started for it is not yet found
+#: (`controller.py`): `pending:<item>-<unix seconds>`, which names the run's title.
+PENDING = "pending:"
+#: How long a pending claim's run may take to show up in the run list before it counts as dead.
+PENDING_GRACE = timedelta(minutes=15)
+
+
+def pending_run(ctx: Context, run_id: str) -> str:
+    """The status of the run a pending claim names: the bot-night run whose title carries its
+    reference (bot-night.yml's `run-name`). Until that run shows up it is alive for
+    `PENDING_GRACE` after the claim (the reference holds the claim's time), and dead after."""
+    ref = run_id[len(PENDING):]
+    try:
+        runs = ctx.gh.list_runs(NIGHT_WORKFLOW, limit=50)
+    except GitHubError:
+        return "unknown"
+    for run in runs:
+        if str(run.get("display_title") or "").startswith(f"bot-night {ref} "):
+            return "alive" if run.get("status") in LIVE else "dead"
+    try:
+        made = datetime.fromtimestamp(int(ref.rsplit("-", 1)[-1]), tz=timezone.utc)
+    except (ValueError, OverflowError, OSError):
+        return "dead"
+    return "alive" if ctx.now() - made < PENDING_GRACE else "dead"
+
+
 def run_status(ctx: Context, run_id: Any) -> str:
     """`alive`, `dead`, or `unknown` when GitHub could not say. Runs now overlap, so a run that
     cannot be read is treated as alive: its lane stays held and its item is not requeued."""
     if not run_id:
         return "dead"
+    if str(run_id).startswith(PENDING):
+        return pending_run(ctx, str(run_id))
     try:
         return "alive" if ctx.gh.get_run(run_id).get("status") in LIVE else "dead"
     except GitHubError as exc:
@@ -110,6 +138,64 @@ def run_status(ctx: Context, run_id: Any) -> str:
 def run_alive(ctx: Context, run_id: Any) -> bool:
     """True unless the run is known to have ended."""
     return run_status(ctx, run_id) != "dead"
+
+
+#: How long since the status loop's last tick (`loop_tick`) it still counts as going: two ticks
+#: missed, so a loop that hangs while its run still shows as in progress stops nothing for long.
+LOOP_STALE = timedelta(minutes=15)
+
+
+def loop_alive(ctx: Context) -> bool:
+    """With `controller` on (#1455), whether the status loop is going, the one place that plans and
+    starts night runs while it is: then bot-night's own gate defers to it and nothing else starts a
+    run. It is going when its run is in progress and its sweep ticked within `LOOP_STALE`. A run
+    list or a state file GitHub cannot read says no, so the night runs fall back to planning
+    themselves."""
+    if not ctx.cfg.controller:
+        return False
+    try:
+        runs = ctx.gh.list_runs(STATUS_WORKFLOW, status="in_progress", limit=5)
+        if not any(run.get("status") == "in_progress"
+                   and str(run.get("path") or "").endswith(f"/{STATUS_WORKFLOW}") for run in runs):
+            return False
+        tick = parse_iso(ctx.store.load().get("loop_tick"))
+    except GitHubError:
+        return False
+    return tick is not None and ctx.now() - tick < LOOP_STALE
+
+
+#: How long a planner may hold the planning lock (`planning_lock`) before another may take it:
+#: a plan takes under a minute, so a lock this old was left by a planner that died.
+LOCK_TTL = timedelta(minutes=3)
+
+
+def take_planning_lock(ctx: Context, owner: str) -> bool:
+    """Take the planning lock on the state file, or say False when another planner holds it. The
+    plan job's concurrency group serializes the night runs' plans; the status loop plans too
+    (#1455), so both take this lock, which the state file's compare-and-set makes one holder's."""
+    now = ctx.now()
+    got: list[bool] = []
+
+    def change(state: dict[str, Any]) -> None:
+        held = state.get("planning") if isinstance(state.get("planning"), dict) else {}
+        since = parse_iso(held.get("at")) if held.get("at") else None
+        if held.get("owner") not in (None, owner) and since and now - since < LOCK_TTL:
+            got[:] = [False]
+            return
+        got[:] = [True]
+        state["planning"] = {"owner": owner, "at": iso(now)}
+
+    ctx.store.update(change, "planning lock")
+    return bool(got and got[0])
+
+
+def drop_planning_lock(ctx: Context, owner: str) -> None:
+    def change(state: dict[str, Any]) -> None:
+        held = state.get("planning") if isinstance(state.get("planning"), dict) else {}
+        if held.get("owner") == owner:
+            state["planning"] = None
+
+    ctx.store.update(change, "planning lock released")
 
 
 def vault_path(provider_id: str) -> str:
@@ -138,10 +224,13 @@ def stops(ctx: Context, state: dict[str, Any], force: bool) -> str | None:
 class Lanes:
     """The runs that hold work now: item number (0 for a suggestion survey) -> provider id.
     `planning` are the items whose run is a planning run: those hold the planning lane
-    (`Pool.plan_lanes`), not a build lane, nor a lane of their provider's. GitHub's runners and
-    the bot's machine have lanes of their own, so neither waits on the other: `limit` is
-    GitHub's (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and
-    `machine` names the subscriptions that run on the machine."""
+    (`Pool.plan_lanes`), not a lane of their provider's. GitHub's runners and the bot's machine
+    have lanes of their own, so neither waits on the other: `limit` is GitHub's
+    (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and `machine`
+    names the subscriptions that run on the machine. Every run holds a runner where it runs, a
+    planning run too, so `limit` bounds the hosted runners the bot's model jobs take (#1455) and
+    `machine_limit` the machine's slots. `limit` is a pool the bots share, first come first
+    served: `shared` is how many of its slots the other bots' runs hold now (`others_on_github`)."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
@@ -149,6 +238,7 @@ class Lanes:
     plan_limit: int = 0
     machine_limit: int = 0
     machine: frozenset[str] = frozenset()
+    shared: int = 0
 
     @property
     def busy(self) -> set[str]:
@@ -179,10 +269,12 @@ class Lanes:
 
     @property
     def free(self) -> int:
-        """Build lanes free on GitHub's runners."""
-        return max(0, self.limit - sum(1 for number, provider_id in self.held.items()
-                                       if number not in self.planning
-                                       and provider_id not in self.machine))
+        """Lanes free on GitHub's runners. A planning run there takes one too (#1455): the
+        organization runs 20 hosted jobs at once, CI among them, so `max_parallel` caps every
+        model job the bots run on them, not only builds, and the other bots' runs take theirs
+        out of the same pool (`shared`)."""
+        return max(0, self.limit - self.shared - sum(1 for provider_id in self.held.values()
+                                                     if provider_id not in self.machine))
 
     @property
     def machine_free(self) -> int:
@@ -206,12 +298,39 @@ class Lanes:
         """These lanes with one more run held."""
         planning = self.planning | ({number} if action == "plan" else set())
         return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit,
-                     self.machine_limit, self.machine)
+                     self.machine_limit, self.machine, self.shared)
 
     def describe(self) -> str:
         return ", ".join((f"#{n} with `{p}`" + (" (planning)" if n in self.planning else ""))
                          if n else f"a survey with `{p}`"
                          for n, p in sorted(self.held.items())) or "none"
+
+
+#: A run of another bot that holds a slot of GitHub's runners: queued for one, or on one.
+SHARED_LIVE = ("queued", "in_progress")
+
+
+def others_on_github(ctx: Context) -> int:
+    """How many runs of the other bots (`config.OTHERS`, by their `workflow`) hold a slot of the
+    GitHub runners the bots share (#1455). `max_parallel` is one pool, first come first served:
+    a slot Squishy holds is one the night bot waits for, and the other way round. A night-bot run
+    started with its plan names its runner in its title (bot-night.yml's `run-name`), and one on
+    the machine holds no slot; any other live run counts as one. A list GitHub cannot read counts
+    as none, so a failed read never stops every lane."""
+    count = 0
+    for other in OTHERS:
+        if not other.workflow:
+            continue
+        for status in SHARED_LIVE:
+            try:
+                runs = ctx.gh.list_runs(other.workflow, status=status, limit=100)
+            except GitHubError:
+                continue
+            count += sum(1 for run in runs
+                         if run.get("status") == status
+                         and str(run.get("path") or "").endswith(f"/{other.workflow}")
+                         and " on night-vm-" not in str(run.get("display_title") or ""))
+    return count
 
 
 def working_threads(ctx: Context) -> list[dict[str, Any]]:
@@ -226,7 +345,8 @@ def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     pool = ctx.cfg.pool
     lanes = Lanes(pool.max_parallel, plan_limit=pool.plan_lanes,
                   machine_limit=pool.machine_parallel,
-                  machine=frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)))
+                  machine=frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)),
+                  shared=others_on_github(ctx))
     for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})
@@ -436,8 +556,10 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
                   quiet_ok: str) -> list[Seat]:
     """The planning lane's planners: the strongest seat of each subscription that may plan now
     (at least medium), the strong ones first, and within a tier the one holding the fewest plans
-    first, then the usage order. A planning run there takes no build lane, so a subscription plans
-    while it builds, as many items at once as it has lanes: planning comes first, so the strong
+    first, then the usage order. A planning run takes none of its subscription's lanes, so a
+    subscription plans while it builds, as many items at once as it has lanes, but it takes a
+    runner: a slot on the machine (`machine_full`), or one of GitHub's lanes (`Lanes.free`,
+    #1455). Planning comes first, so the strong
     models write the plans the medium ones build from before they build themselves. One the quiet
     check guards, or one with caps, plans only when it holds nothing else. Which item a planner
     may take is the item's plan floor (`queue.plan_floor`): a medium one plans only easy or
@@ -458,6 +580,8 @@ def lane_planners(ctx: Context, state: dict[str, Any], lanes: Lanes, *, forced: 
             continue  # one run at a time on a guarded or capped subscription (`Lanes.full`)
         if machine_full(cfg.pool, provider, lanes):
             continue
+        if not cfg.pool.on_machine(provider.id) and lanes.free <= 0:
+            continue  # GitHub's lanes are full, and a planning run there takes one (#1455)
         if (provider.quiet_check and cfg.quiet.enabled and not forced
                 and quiet_ok not in (ANY_QUIET, provider.id)):
             continue
@@ -895,6 +1019,8 @@ def fill_lanes(ctx: Context, lanes: Lanes, taken: Candidate, assignment: Assignm
                planned: dict[str, Any]) -> None:
     """Start one more run when, with this item claimed, a lane (or the planning lane) and more
     work are still free. That run does the same, so the lanes fill one run at a time."""
+    if ctx.cfg.controller_loop:
+        return  # the status loop plans again at once, in the same tick (`controller.start`)
     after = lanes.with_run(taken.number, assignment.provider.id, assignment.action)
     if not after.any_room:
         return

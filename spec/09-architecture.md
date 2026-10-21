@@ -116,7 +116,7 @@ e2e/           Cypress: hotseat games and networked room-code games
 | Vector | Mitigation |
 | --- | --- |
 | Claiming unowned cards | The collection is server-owned; loadouts are validated against it (9.4) |
-| Farming or forging the economy | Every roll and grant is the server's, seeded and logged; a game's XP is capped, and the Jlore an account's games pay stops at `JLORE_GAMES_DAILY_CAP` a UTC day; a ladder game's actions are counted from the server's own log, and a practice game pays only once the server has replayed it, on a seed of which an account holds at most `PRACTICE_SEEDS_OPEN_MAX` open ([[R1483000]], 14.8, 14.11) |
+| Farming or forging the economy | Every roll and grant is the server's, seeded and logged; a game's XP is capped, and the Jlore an account's games pay stops at `JLORE_GAMES_DAILY_CAP` a UTC day; a game the server runs (ladder, unranked, Conquest or co-op) has its actions counted from the server's own log, and a practice game pays only once the server has replayed it, on a seed of which an account holds at most `PRACTICE_SEEDS_OPEN_MAX` open ([[R1483000]], [[R1502000]], 14.8, 14.11) |
 | Deck swapped after matchmaking | Decks are frozen into the ticket (9.4) |
 | Reading a Conquest opponent's pick or decks | A pick leaves the server only in its owner's projection, and the other side's deck names and lists never do ([[R331]], [[R336]]) |
 | Illegal actions | `reduce` rejects them; client checks are UX only (9.3) |

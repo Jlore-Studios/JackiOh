@@ -253,7 +253,8 @@ shop/                   #1309: spending what the economy pays, on /account behin
                         unowned cards (`POST /api/tokens/redeem-card`) and a Rare/Epic token browsing unowned
                         cosmetics at its tier or below with a preview on the card (`POST
                         /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
-                        /api/cosmetic-packs/open`) with the Chase Shard bar (`GET /api/cosmetic-packs`) and its
+                        /api/cosmetic-packs/open`) with the Chase Shard bar and the odds of a slot and of the
+                        guaranteed one (`GET /api/cosmetic-packs`, R1339000) and the bar's
                         Legendary-or-Mythic choice only when full (`POST /api/cosmetic-packs/chase`); every
                         refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,

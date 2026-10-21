@@ -28,7 +28,7 @@ from harness.config import LABEL_BUILD
 from tests.fakes import OPERATOR, FakeGitHub
 from tests.support import make_config, make_ctx
 from tests.test_dashboard import offline
-from tests.test_workflows import job, read
+from tests.test_workflows import job, read, selftest
 
 BOT_DIR = Path(__file__).resolve().parents[1]
 SQUISHY = {"login": "squishy-squooby", "id": 334289562}
@@ -379,7 +379,7 @@ class SquishyWorkflowTests(unittest.TestCase):
         self.assertIn("python -m harness dashboard --companions", read("bot-commands.yml"))
 
     def test_selftest_lints_and_loads_squishy(self):
-        text = read("bot-selftest.yml")
+        text = selftest()
         self.assertIn("HARNESS_HOME=.squishy python3.13 -m harness window", text)
         for name in ("squishy-run.yml", "squishy-commands.yml"):
             self.assertIn(f".github/workflows/{name}", text)

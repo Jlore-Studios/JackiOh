@@ -18,9 +18,9 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_cata
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_DUPLICATE_RATES, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-    GLOBAL_PACK_NAME, PACK_BASE_RATES, PACK_FILLER_RARE_RATE, PACK_PRICE_JLORE, PACK_SLOTS,
-    PACK_TARGET_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
+    GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS,
+    PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, pack_cosmetics, shipped};
 use jackioh_server::db::store::{CollectionEntry, StoreError};
@@ -30,6 +30,7 @@ use jackioh_server::economy::roll::{
     Holdings, OpeningLog, PackKind, Slot, SlotGrant, pack_pool, roll_opening,
 };
 use jackioh_server::economy::store::{Counter, EconomyReason, InventoryItem, JloreGrant, JloreReason};
+use jackioh_server::economy::tiers::{card_odds, cosmetic_odds};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::store::fake;
@@ -490,6 +491,8 @@ async fn r1301002_an_opening_on_a_full_collection_grants_cosmetics_or_bar_points
         .cards;
     tx.commit().await.expect("the commit");
     let mut cosmetics = 0;
+    // What the openings granted so far, slot by slot, as (card, cosmetic).
+    let mut granted: Vec<(String, String)> = Vec::new();
     for slot in &slots {
         match &slot.grant {
             SlotGrant::Card => panic!("every card was owned: {slot:?}"),
@@ -510,9 +513,18 @@ async fn r1301002_an_opening_on_a_full_collection_grants_cosmetics_or_bar_points
                         .any(|held| held.card_id == slot.card_id && &held.cosmetic_id == cosmetic_id),
                     "{slot:?}"
                 );
+                granted.push((slot.card_id.clone(), cosmetic_id.clone()));
             }
             SlotGrant::Bars { cosmetic_rarity } => {
-                assert!(*cosmetic_rarity >= CosmeticRarity::Epic, "{slot:?}");
+                // Spent: nothing droppable at its rarity (Epic's is a starter), or an earlier slot
+                // already put that rarity's foil on its card.
+                let foil = registry
+                    .iter()
+                    .find(|cosmetic| cosmetic.rarity == *cosmetic_rarity && !cosmetic.starter);
+                assert!(
+                    foil.is_none_or(|foil| granted.contains(&(slot.card_id.clone(), foil.id.clone()))),
+                    "{slot:?}"
+                );
             }
         }
     }
@@ -805,7 +817,7 @@ async fn the_routes_refuse_a_signed_out_caller() {
 }
 
 #[tokio::test]
-async fn get_reads_the_pity_counters_and_the_odds() {
+async fn r1339000_get_reads_the_pity_counters_and_the_tables() {
     let (app, token) = setup().await;
     let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
     assert_eq!(status, 200, "{body}");
@@ -819,12 +831,23 @@ async fn get_reads_the_pity_counters_and_the_odds() {
     assert_eq!(
         body["odds"],
         json!({
-            "base": PACK_BASE_RATES,
-            "target": PACK_TARGET_RATES,
-            "fillerRare": PACK_FILLER_RARE_RATE,
-            "duplicateCosmetic": COSMETIC_DUPLICATE_RATES,
+            "slot": card_odds(None),
+            "flooredSlot": card_odds(Some(PACK_FLOOR_RARITY)),
+            "duplicateCosmetic": cosmetic_odds(None),
         })
     );
+    // The tables as percentages' fractions, the computed fallback included, and no Common in the
+    // floored slot.
+    let total = f64::from(TIER_WEIGHT_TOTAL);
+    assert_eq!(
+        body["odds"]["slot"]["common"],
+        json!(f64::from(TIER_WEIGHT_TOTAL - CARD_TIER_WEIGHTS.set_total()) / total)
+    );
+    assert_eq!(
+        body["odds"]["slot"]["epic"],
+        json!(f64::from(CARD_TIER_WEIGHTS.epic) / total)
+    );
+    assert_eq!(body["odds"]["flooredSlot"]["common"], json!(0.0));
 
     buy(&app, &token, "Core").await;
     let opened = open(&app, &token, "Core").await;

@@ -92,6 +92,8 @@ export const shopTestid = {
   packsRetry: "cosmetic-packs-retry",
   packsError: "cosmetic-packs-error",
   unopened: "cosmetic-packs-unopened",
+  odds: "cosmetic-packs-odds",
+  flooredOdds: "cosmetic-packs-floored-odds",
   open: "cosmetic-packs-open",
   reveal: "cosmetic-reveal",
   slot: (index: number) => `cosmetic-slot-${String(index)}`,
