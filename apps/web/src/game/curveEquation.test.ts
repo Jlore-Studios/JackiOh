@@ -93,7 +93,10 @@ describe("curveEquation: KY's Papaya's curve as the equation its cells make", ()
     ).toBe("y = ¹⁄₂x² − ⁵⁄₂x + 3");
   });
 
-  it("names no equation for empty, duplicate-lane, off-grid, or oversized cells", () => {
+  it("names no equation for malformed, empty, duplicate-lane, off-grid, or oversized cells", () => {
+    expect(curveEquation(null, "p1")).toBeNull();
+    expect(curveEquation({}, "p1")).toBeNull();
+    expect(curveEquation([null], "p1")).toBeNull();
     expect(curveEquation([], "p1")).toBeNull();
     expect(curveEquation([cell("p1", "units", 1), cell("p2", "units", 1)], "p1")).toBeNull();
     for (const lane of OFF_GRID_LANES) expect(curveEquation([cell("p1", "units", lane)], "p1")).toBeNull();

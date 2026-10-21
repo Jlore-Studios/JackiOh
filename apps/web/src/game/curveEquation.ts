@@ -93,13 +93,24 @@ function signed(f: Fraction, first: boolean): string {
   return f.num < 0 ? ` ${MINUS} ` : " + ";
 }
 
+function isZoneRef(value: unknown): value is ZoneRef {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const cell = value as Record<string, unknown>;
+  return (
+    (cell.player === "p1" || cell.player === "p2") &&
+    (cell.row === "units" || cell.row === "backrow") &&
+    typeof cell.lane === "number" &&
+    LANES.includes(cell.lane)
+  );
+}
+
 /**
  * The equation of the curve a `curveDrawn` names (R831003), read from `caster`'s seat; null when the
- * cells make no curve (none, too many, a zone off the grid, or two in one lane).
+ * cells make no curve (malformed, none, too many, a zone off the grid, or two in one lane).
  */
-export function curveEquation(cells: readonly ZoneRef[], caster: PlayerId): string | null {
-  // Downloaded replay views are shallow-cast, so bound the interpolation before doing any work.
-  if (cells.length === 0 || cells.length > LANES.length || cells.some((cell) => !LANES.includes(cell.lane))) return null;
+export function curveEquation(cells: unknown, caster: PlayerId): string | null {
+  // Downloaded replay views are shallow-cast, so validate and bound the interpolation before doing any work.
+  if (!Array.isArray(cells) || cells.length === 0 || cells.length > LANES.length || !cells.every(isZoneRef)) return null;
   const points = cells.map((cell) => ({
     x: cell.lane - 1,
     y: GRID_ROWS.findIndex((grid) => grid.enemy === (cell.player !== caster) && grid.row === cell.row),
