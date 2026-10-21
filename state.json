@@ -12704,7 +12704,10 @@
       "total": 8153964544
     }
   ],
-  "planning": null,
+  "planning": {
+    "at": "2026-10-21T17:31:09Z",
+    "owner": "run 39644394527"
+  },
   "providers": {
     "agy": {
       "refused_until": "2026-10-16T17:49:53Z",
