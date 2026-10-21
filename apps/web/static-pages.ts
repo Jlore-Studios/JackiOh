@@ -237,14 +237,16 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
     ) +
     section(
       "What we checked",
-      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, against its WCAG 2.0, " +
-        "2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except " +
+      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer&rsquo;s " +
+        "size and at a phone&rsquo;s, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed " +
+        "every serious or critical problem it found, except " +
         "those listed below. The same check runs every day, and fails when a new one appears.</p>" +
         "<ul><li>The home page, signing in, creating an account, resetting a password, the invite code " +
         "screen and the screen that asks for your date of birth and agreement to the terms.</li>" +
         "<li>Play, Decks, Account and the leaderboard.</li>" +
         "<li>The Almanac, Patch notes and Stats.</li>" +
         "<li>Practice, its setup and a game, and a game on one device.</li>" +
+        "<li>The card creator, Replays, Play together and the Collection.</li>" +
         "<li>The Privacy Policy, the Terms, this page and the Copyright page.</li></ul>",
     ) +
     section(
