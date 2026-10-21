@@ -62,25 +62,33 @@ export default function TokenPicker({
   const [busy, setBusy] = useState<string | null>(null);
   const [tier, setTier] = useState<CosmeticTokenTier>("Rare");
   const [cardFor, setCardFor] = useState<Record<string, string>>({});
+  const [attempt, setAttempt] = useState(0);
+  const [reading, setReading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+    setReading(true);
     Promise.all([getTokens(token), getCollection(token), getOwnedCosmetics(token)]).then(
       ([barsAnswer, collectionAnswer, ownedAnswer]) => {
         if (!cancelled) {
           setBars(barsAnswer);
           setCollection(collectionAnswer);
           setOwned(ownedAnswer);
+          setLoadError(null);
+          setReading(false);
         }
       },
       (cause: unknown) => {
-        if (!cancelled) setLoadError(wordsOf(cause));
+        if (!cancelled) {
+          setLoadError(wordsOf(cause));
+          setReading(false);
+        }
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [token, revision]);
+  }, [token, revision, attempt]);
 
   const pickCard = (cardId: string): void => {
     if (busy !== null) return;
@@ -138,9 +146,23 @@ export default function TokenPicker({
     <div className="form-card token-panel" data-testid={shopTestid.tokenPanel}>
       <h3 className="shop-heading">{t("Card and cosmetic tokens")}</h3>
       {loadError === null ? null : (
-        <p className="notice" role="alert" data-testid={shopTestid.tokenLoadError}>
-          {loadError}
-        </p>
+        <>
+          <p className="notice" role="alert" data-testid={shopTestid.tokenLoadError}>
+            {loadError}
+          </p>
+          <div className="account-actions">
+            <button
+              type="button"
+              data-testid={shopTestid.tokenRetry}
+              disabled={reading}
+              onClick={() => {
+                setAttempt((before) => before + 1);
+              }}
+            >
+              {t("Try again")}
+            </button>
+          </div>
+        </>
       )}
       {bars === null || collection === null || owned === null ? (
         loadError === null ? (
