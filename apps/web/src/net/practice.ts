@@ -26,8 +26,14 @@ export type PracticeSeedRequest = {
 /** R1303001, R1303003: the seed, the last board the server kept for a paying game, and when the seed lapses (epoch ms). */
 export type PracticeSeedIssued = { seed: string; lastBoard: LastBoardCard[]; expiresAt: number };
 
-/** What a claim earned, or why it earned nothing (`economy::practice`'s `ClaimRefusal`, snake case). */
-export type PracticeClaimAnswer = { paid: true; jlore: number; xp: number } | { paid: false; reason: string };
+/**
+ * What a claim earned, or why it earned nothing (`economy::practice`'s `ClaimRefusal`, snake case).
+ * R1483000: `jloreCapped` is true when the day's Jlore cap held some or all of the game's Jlore back,
+ * which `jlore` already leaves out.
+ */
+export type PracticeClaimAnswer =
+  | { paid: true; jlore: number; xp: number; jloreCapped: boolean }
+  | { paid: false; reason: string };
 
 /** 201 with the seed; a 409 while the economy is off or for a catalog the server cannot fold. */
 export function requestPracticeSeed(token: string, body: PracticeSeedRequest): Promise<PracticeSeedIssued> {

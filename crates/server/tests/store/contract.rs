@@ -8200,8 +8200,8 @@ mod economy {
     use super::*;
     use jackioh_server::config::SET_TRACK_FIRST_LEVEL;
     use jackioh_server::economy::store::{
-        CosmeticGrant, CounterGrant, EconomyLedger, InventoryGrant, JloreGrant, PracticeSeed, QuestGrant,
-        TrackGrant,
+        CosmeticGrant, CounterGrant, EconomyLedger, GameJloreTotals, InventoryGrant, JloreGrant,
+        PracticeSeed, QuestGrant, TrackGrant,
     };
 
     fn jlore(profile_id: &str, delta: i64, reason: &str, dev: bool, at: i64) -> JloreGrant {
@@ -8763,6 +8763,118 @@ mod economy {
         );
     }
 
+    /// R1483000: the day's `game` Jlore sums the profile's own `game` rows with `at` in the half-open
+    /// window, a quest's, a track's and a pack's rows and another profile's apart, with the share
+    /// one reference wrote beside it.
+    async fn r1483000_game_jlore_totals_use_one_window_reason_and_reference(harness: &StoreHarness) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let (day_start, day_end) = (10 * 86_400_000_i64, 11 * 86_400_000_i64);
+        let row = |profile_id: &str, delta: i64, reason: &str, reference: &str, at: i64| -> JloreGrant {
+            from(json!({
+                "profileId": profile_id, "delta": delta, "reason": reason, "reference": reference,
+                "dev": false, "at": at,
+            }))
+        };
+        for grant in [
+            row(&owner.id, 100, "game", "m1", day_start),
+            row(&owner.id, 20, "game", "m2", day_end - 1),
+            row(&owner.id, 7, "game", "m3", day_end),
+            row(&owner.id, 3, "game", "m0", day_start - 1),
+            row(&owner.id, 50, "quest", "m1", day_start + 1),
+            row(&owner.id, 40, "track", "m1", day_start + 2),
+            row(&owner.id, -30, "pack_purchase", "m1", day_start + 3),
+            row(&other.id, 500, "game", "m1", day_start + 4),
+        ] {
+            q!(harness, t => t.economy_jlore_grant(&grant));
+        }
+        let totals = |profile_id: &str, reference: &str, window: (i64, i64)| {
+            let (profile_id, reference) = (profile_id.to_string(), reference.to_string());
+            async move {
+                q!(harness, t => t.economy_game_jlore_totals(&profile_id, window.0, window.1, &reference))
+            }
+        };
+        let window = (day_start, day_end);
+        assert_eq!(
+            totals(&owner.id, "m1", window).await,
+            GameJloreTotals {
+                day: 120,
+                reference: 100
+            }
+        );
+        assert_eq!(
+            totals(&owner.id, "m2", window).await,
+            GameJloreTotals {
+                day: 120,
+                reference: 20
+            }
+        );
+        assert_eq!(
+            totals(&owner.id, "m3", window).await,
+            GameJloreTotals {
+                day: 120,
+                reference: 0
+            }
+        );
+        assert_eq!(
+            totals(&other.id, "m1", window).await,
+            GameJloreTotals {
+                day: 500,
+                reference: 500
+            }
+        );
+        assert_eq!(
+            totals(&owner.id, "m1", (day_end, day_end + 1)).await,
+            GameJloreTotals { day: 7, reference: 0 }
+        );
+        assert_eq!(
+            totals(&owner.id, "m1", (day_start + 5, day_end - 1)).await,
+            GameJloreTotals::default()
+        );
+    }
+
+    /// R1483000: a profile's open seeds are the ones unclaimed and issued at or after the time given,
+    /// its own alone: a claimed seed and a lapsed one do not count, nor another profile's.
+    async fn r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts(
+        harness: &StoreHarness,
+    ) {
+        let owner = pending_profile(harness, None).await;
+        let other = pending_profile(harness, None).await;
+        let now = harness.now();
+        let seed = |name: &str, profile_id: &str, issued_at: i64| -> PracticeSeed {
+            from(json!({
+                "seed": name, "profileId": profile_id, "issuedAt": issued_at, "claimedAt": null,
+                "setup": {
+                    "difficulty": "easy", "humanSeat": "p1", "deck": { "kind": "random", "lean": null },
+                    "lastBoard": [], "catalogVersion": "v-contract",
+                },
+            }))
+        };
+        for held in [
+            seed("seed-open-new", &owner.id, now),
+            seed("seed-open-old", &owner.id, now - 5),
+            seed("seed-claimed", &owner.id, now),
+            seed("seed-lapsed", &owner.id, now - 1000),
+            seed("seed-theirs", &other.id, now),
+        ] {
+            q!(harness, t => t.economy_practice_seed_insert(&held));
+        }
+        assert!(q!(harness, t => t.economy_practice_seed_claim(&owner.id, "seed-claimed", now + 1)));
+        let open = |profile_id: &str, since: i64| {
+            let profile_id = profile_id.to_string();
+            async move { q!(harness, t => t.economy_practice_seeds_open(&profile_id, since)) }
+        };
+        assert_eq!(open(&owner.id, now - 100).await, 2);
+        assert_eq!(
+            open(&owner.id, now - 5).await,
+            2,
+            "a seed issued at the time counts"
+        );
+        assert_eq!(open(&owner.id, now).await, 1);
+        assert_eq!(open(&owner.id, now + 1).await, 0);
+        assert_eq!(open(&other.id, now - 100).await, 1);
+    }
+
     /// R1301003: a pack opening takes the account's economy lock for its transaction. Taken in
     /// turn, each transaction gets it, a rolled-back one lets it go, and the lock writes no row.
     async fn r1301003_the_economy_lock_is_taken_per_transaction(harness: &StoreHarness) {
@@ -8814,6 +8926,8 @@ mod economy {
         every_economy_write_rolls_back_with_its_transaction,
         a_deleted_account_takes_its_economy_with_it,
         practice_seeds_issue_claim_once_and_prune,
+        r1483000_game_jlore_totals_use_one_window_reason_and_reference,
+        r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
     );
 }
 
