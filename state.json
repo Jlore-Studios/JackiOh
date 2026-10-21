@@ -9735,7 +9735,7 @@
       }
     },
     "1513": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "strong",
       "cleared": {
@@ -9761,16 +9761,16 @@
         }
       ],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-10-21T08:27:05Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "39568348260",
+      "run_id": "39569449449",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-10-21T08:21:51Z",
+      "started_at": "2026-10-21T08:31:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -13601,9 +13601,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-21T08:28:06Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39569384310",
-    "what": "review #1517 on claude-1"
+    "at": "2026-10-21T08:31:03Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39569449449",
+    "what": "revise #1513 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-21T08:27:12Z",
