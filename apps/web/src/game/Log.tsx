@@ -39,6 +39,7 @@ import { chaosNames, chaosRollOf } from "../fx/chaos.ts";
 import { CatalogContext, withMatchDefs, type CardLookup } from "./catalog.ts";
 import { LOG_HISTORY_LIMIT } from "./config.ts";
 import { sideOf, testid, touchHoldMode } from "./contract.ts";
+import { curveEquation } from "./curveEquation.ts";
 import { cardInView, namedFace } from "./faces.ts";
 import { outcomeFor, resultReason } from "./Result.tsx";
 import { PREDICTED_WORDS, SECRET_WORDS } from "./secrets.ts";
@@ -466,9 +467,14 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "questCompleted":
       // A completed quest has left the view's open quests, so its words are gone with it.
       return capitalised(t("{whose} {card} completed a quest", { whose: name.whose(event.player), card: name.instance(event.instanceId, t("card")) }));
-    case "curveDrawn":
-      // R831003: the curve itself is the board's to show; the line says whose it was.
-      return t("{seat} drew a curve across the board", { seat: name.seat(event.player) });
+    case "curveDrawn": {
+      // R831003: the board draws the curve; the line names it as the equation its cells make, read from
+      // the caster's side (curveEquation.ts), and says only whose it was when the cells make none.
+      const equation = curveEquation(event.cells, event.player);
+      return equation === null
+        ? t("{seat} drew a curve across the board", { seat: name.seat(event.player) })
+        : t("{seat} drew the curve {equation} across the board", { seat: name.seat(event.player), equation });
+    }
     case "rolledBack":
       return event.turnsAgo === 1
         ? t("The board went back {n} turn", { n: event.turnsAgo })

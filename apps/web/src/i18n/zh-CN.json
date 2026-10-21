@@ -2330,6 +2330,7 @@
   "KY's Papaya: Discover another cell, or done": "KY的木瓜：再发现一个格子，或完成",
   "Done": "完成",
   "{seat} drew a curve across the board": "{seat}在场上画出了一条曲线",
+  "{seat} drew the curve {equation} across the board": "{seat}在场上画出了曲线 {equation}",
   "Lane 1, your backrow": "第1纵列，你的后场",
   "Lane 1, your Units": "第1纵列，你的单位",
   "Lane 1, enemy Units": "第1纵列，敌方单位",

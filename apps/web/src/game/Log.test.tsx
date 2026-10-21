@@ -148,7 +148,42 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
         ])}
       />,
     );
-    expect(lines()).toEqual(["You drew a curve across the board", "Opponent drew a curve across the board"]);
+    expect(lines()).toEqual(["You drew the curve y = 2 across the board", "Opponent drew a curve across the board"]);
+  });
+
+  it("R831003 the log names KY's Papaya's curve as the equation its cells make, read from the caster's side", () => {
+    render(
+      <Log
+        view={withEvents(fullBoardView(), [
+          {
+            type: "curveDrawn",
+            player: "p1",
+            cells: [
+              { player: "p1", row: "backrow", lane: 1 },
+              { player: "p2", row: "units", lane: 2 },
+              { player: "p2", row: "backrow", lane: 3 },
+              { player: "p2", row: "backrow", lane: 4 },
+              { player: "p2", row: "units", lane: 5 },
+            ],
+          },
+          {
+            type: "curveDrawn",
+            player: "p2",
+            cells: [
+              { player: "p2", row: "backrow", lane: 1 },
+              { player: "p1", row: "units", lane: 2 },
+              { player: "p1", row: "backrow", lane: 3 },
+              { player: "p1", row: "backrow", lane: 4 },
+              { player: "p1", row: "units", lane: 5 },
+            ],
+          },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual([
+      "You drew the curve y = −¹⁄₂x² + ⁵⁄₂x across the board",
+      "Opponent drew the curve y = −¹⁄₂x² + ⁵⁄₂x across the board",
+    ]);
   });
 
   it("ends the game in words", () => {
