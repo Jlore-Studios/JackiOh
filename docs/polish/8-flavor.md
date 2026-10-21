@@ -44,3 +44,7 @@ The first rule that gives an answer decides.
 
 A pull request that assigns flavors lists every entry it touched in a table: id, name, type,
 flavor, the rule that decided it, and for rule 2 or 3 a few words why.
+
+## Looks
+
+Every flavor's look lives in one table, `FLAVOR_LOOKS` in `apps/web/src/fx/flavors.ts`: its two or three colours, its particle shape and its projectile, with `chaosFlavor` there picking the look a Chaos card takes from its instance id (never Chaos itself), and `flavorOf` in `apps/web/src/cards/flavor.ts` the one lookup of which flavor a definition draws (R1437000). Each projectile is built from four motions (arc, bolt, beam, swipe, drawn by `fx/shots.ts`), and a Ranged attacker stays in place and fires its flavor's projectile at its target, the hit landing as the entry ends. `FX_FLAVOR_LIVE` in `fx/constants.ts` keeps all of it dark, every cue today's, until #1444 turns it on for the last part of #1436.
