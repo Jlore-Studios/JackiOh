@@ -20,7 +20,7 @@ use jackioh_server::api::results::run_reaper;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_REAPER_INTERVAL_SECONDS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
-use jackioh_server::db::store::{CollectionEntry, MatchStatus, SeriesStatus};
+use jackioh_server::db::store::{CollectionEntry, MatchStatus, SeriesStatus, TicketStatus};
 use jackioh_server::seats::{Lease, Seat, Seats, Taken};
 
 use crate::support::deps::{TestAppOptions, add_user, call, empty_test_app, record_logs, test_app_with};
@@ -688,6 +688,46 @@ async fn r1523000_a_claim_on_the_old_epoch_writes_nothing() {
         for person in [host, guest] {
             assert_eq!(in_match(&app, &person.id).await, None, "{kind:?}: no flag");
             assert_eq!(app.seats.of(&person.id), None, "{kind:?}: no seat");
+        }
+    }
+}
+
+#[tokio::test]
+async fn r1523000_a_sweep_on_the_old_epoch_claims_no_pair() {
+    for mode in ["bo1", "bo3"] {
+        let (app, people) = accounts(2).await;
+        let [owner, opponent] = &people[..] else {
+            unreachable!()
+        };
+        write_ticket(&app, "t-owner", &owner.id, mode).await;
+        write_ticket(&app, "t-opponent", &opponent.id, mode).await;
+        // A newer server has booted: the old one's sweep still runs until it is stopped.
+        fake(&app).lock().await.tables.seat_epoch += 1;
+
+        let report = try_pair(&app).await.expect("a sweep");
+        assert_eq!(report.made, 0, "{mode}");
+        assert_eq!(report.failed.len(), 1, "{mode}: the pair's claim was fenced");
+        assert_eq!(report.failed[0].error.code.as_str(), "unavailable", "{mode}");
+
+        let data = fake(&app);
+        let data = data.lock().await;
+        for ticket in &data.tables.tickets {
+            assert_eq!(
+                ticket.status,
+                TicketStatus::Open,
+                "{mode}: {} stays open",
+                ticket.id
+            );
+            assert_eq!(ticket.match_id, None, "{mode}: {} names no match", ticket.id);
+        }
+        assert!(data.tables.ticket_claims.is_empty(), "{mode}: no claim");
+        assert!(data.tables.reserved.is_empty(), "{mode}: no skeleton");
+        assert!(data.tables.matches.is_empty(), "{mode}: no match");
+        assert!(data.tables.series.is_empty(), "{mode}: no series");
+        drop(data);
+        for person in [owner, opponent] {
+            assert_eq!(in_match(&app, &person.id).await, None, "{mode}: no flag");
+            assert_eq!(app.seats.of(&person.id), None, "{mode}: no seat");
         }
     }
 }

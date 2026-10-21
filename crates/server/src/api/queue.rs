@@ -862,6 +862,9 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
                     .begin(None)
                     .await
                     .map_err(|error| ApiError::internal(error.to_string()))?;
+                // R1523000: a server whose epoch a newer one has taken claims nothing, so both
+                // tickets stay open for the newer server's sweep.
+                tx.seats_fence(app.seats.epoch()).await.map_err(ApiError::from)?;
                 let won = tx
                     .tickets_claim_pair(&a.id, &b.id, &match_id, now)
                     .await
