@@ -11,7 +11,9 @@
 //
 // R768000: a result screen opens it at step 0 ("Watch the replay") or at the last step with the
 // last turn's GIF already being made ("Share the last turn"). #936 B59: an online match's route hands
-// it "Share with a friend" (`actions`), drawn under the toolbar.
+// it "Share with a friend" (`actions`), drawn under the toolbar. #1568: Try again appears only for
+// `error`, since a refusal or an expiry cannot change, and it repeats the failed move. Failed pages
+// are not cached (`steps.ts`, the `finally` that runs `flying.delete`).
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -45,6 +47,8 @@ export const replayTestid = {
   back: "replay-back",
   loading: "replay-loading",
   failure: "replay-failure",
+  /** #1568: a failed page offers Try again beside the alert. */
+  retry: "replay-retry",
 } as const;
 
 export type ReplayPlayerProps = {
@@ -135,6 +139,8 @@ export default function ReplayPlayer({
   const shownAt = useRef<number | null>(null);
   /** The control that had focus when the board was mounted afresh, to give it back to the new one. */
   const refocus = useRef<string | null>(null);
+  /** The move that failed, for Try again to make once more (#1568). */
+  const retryMove = useRef<() => void>(IGNORE);
   const [fx] = useFxSettings();
   const busy = useBoardBusy(root);
   const current = at?.step.step ?? 0;
@@ -163,6 +169,9 @@ export default function ReplayPlayer({
       cache.load(index).then(apply, (cause: unknown) => {
         if (wanted.current !== ticket) return;
         setPlaying(false);
+        retryMove.current = () => {
+          show(index);
+        };
         setFailure(replayFailureOf(cause));
       });
     },
@@ -186,9 +195,18 @@ export default function ReplayPlayer({
         if (wanted.current === ticket && target !== current) show(target);
       },
       (cause: unknown) => {
-        if (wanted.current === ticket) setFailure(replayFailureOf(cause));
+        if (wanted.current !== ticket) return;
+        retryMove.current = () => {
+          goTurn(direction);
+        };
+        setFailure(replayFailureOf(cause));
       },
     );
+  }
+
+  function retry(): void {
+    setFailure(null);
+    retryMove.current();
   }
 
   // The scrubber let go, wherever the pointer is: the board goes to where it was left. Until then it
@@ -283,6 +301,13 @@ export default function ReplayPlayer({
         <p className="notice" role="alert" data-testid={replayTestid.failure}>
           {replayFailureText(failure)}
         </p>
+        {failure.reason === "error" ? (
+          <div className="row">
+            <button type="button" className="button-primary" data-testid={replayTestid.retry} onClick={retry}>
+              {t("Try again")}
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }

@@ -243,6 +243,8 @@ function Hotseat({ ready }: { ready: Ready }): ReactElement {
             pings={teamPings}
             onPing={ping}
             error={error}
+            // No server economy behind the hotseat: no seat is ever capped.
+            jloreCapped={false}
           />
         </DuosChromeContext.Provider>
       </CatalogContext.Provider>

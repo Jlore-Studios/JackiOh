@@ -16,6 +16,8 @@ import { canShareFile, exportGif, shareGif } from "./gif/export.ts";
 import type { GifExportResult } from "./gif/export.ts";
 import OpenedReplay from "./OpenedReplay.tsx";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
+import { ReplayFailure } from "./source.ts";
+import type { ReplaySource } from "./source.ts";
 import { gifTestid } from "./ShareGif.tsx";
 import { openOnlineMatchReplay } from "./sources.ts";
 
@@ -148,5 +150,27 @@ describe("R768000 a result screen's way into a replay", () => {
     expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("This game was played on an earlier patch.");
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1568 OpenedReplay offers Try again when the source could not be loaded, and plays once it can", async () => {
+    const load = vi
+      .fn<() => Promise<ReplaySource>>()
+      .mockRejectedValueOnce(new ReplayFailure("error", "Couldn’t reach JackiOh."))
+      .mockResolvedValueOnce(fakeReplaySource(steps));
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <OpenedReplay load={load} onLeave={vi.fn()} />
+      </CatalogContext.Provider>,
+    );
+
+    expect(await screen.findByTestId(replayTestid.failure)).toHaveTextContent("Couldn’t reach JackiOh.");
+    expect(screen.getByTestId(replayTestid.retry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(replayTestid.retry));
+    expect(screen.getByTestId(replayTestid.loading)).toBeInTheDocument();
+
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

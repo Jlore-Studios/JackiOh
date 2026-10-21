@@ -64,9 +64,10 @@ function refusalWords(cause: unknown): string {
 }
 
 /** The account's saved decks by name, for the deck choice, and why they could not be read (none then). */
-function useSavedDecks(): { decks: readonly SavedDeck[]; loadError: string | null } {
+function useSavedDecks(): { decks: readonly SavedDeck[]; loadError: string | null; retry: () => void } {
   const [decks, setDecks] = useState<readonly SavedDeck[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
     withSession(getDecks).then(
@@ -80,15 +81,19 @@ function useSavedDecks(): { decks: readonly SavedDeck[]; loadError: string | nul
     return () => {
       cancelled = true;
     };
-  }, []);
-  return { decks, loadError };
+  }, [attempt]);
+  const retry = (): void => {
+    setLoadError(null);
+    setAttempt((before) => before + 1);
+  };
+  return { decks, loadError, retry };
 }
 
 export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactElement {
   useLocale();
   const headingId = useId();
   const joinId = useId();
-  const { decks, loadError } = useSavedDecks();
+  const { decks, loadError, retry } = useSavedDecks();
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
   const [deck, setDeck] = useState<string>(RANDOM);
   const [leanNewest, setLeanNewest] = useState(false);
@@ -280,9 +285,16 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
         ) : null}
       </div>
       {loadError === null ? null : (
-        <p className="coop-panel__error" role="alert">
-          {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
-        </p>
+        <>
+          <p className="coop-panel__error" role="alert">
+            {t("Your decks could not be loaded: {message}", { message: t(loadError) })}
+          </p>
+          <div className="coop-panel__row">
+            <button type="button" data-testid={duosTestid.coopDecksRetry} onClick={retry}>
+              {t("Try again")}
+            </button>
+          </div>
+        </>
       )}
 
       {room === null ? (
