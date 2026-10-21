@@ -244,7 +244,7 @@ Every way of asking either gets an answer at once, or is found again later:
     `approve` or `reject` vote on a suggestion, which the event job also wakes for at once (#929);
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
-  - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head;
+  - a failed, cancelled or broken CI run (`bot selftest` among its jobs) on a bot pull request's head;
   - a label the bot uses (`config.LABELS`) that the repository does not have. It checks each
     time that list changes, so a new label exists within ten minutes of its merge, without
     `harness setup` (the method labels shipped in #328 without existing); and one it retired
@@ -1220,8 +1220,10 @@ python3 -m unittest discover -s tests -t .   # the suite (about ten seconds)
 python3 -m harness --help                     # every command
 ```
 
-`bot selftest` in CI runs the suite on Python 3.12 and 3.13 and runs actionlint over the bot's
-workflows. The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
+`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over the
+bot's workflows and `ci.yml`. It runs when a pull request touches what the suite reads (the bot, its
+switches, `.github/`, `.claude/`, the scripts, the training lanes' prompts and loop, the issue and patch
+conventions, the toolchain), on every push to `main`, and whenever the job that decides fails (#1455). The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
 `review` and `suggest` (the self check runs `review` with a header saying it is a self check),
 Squishy's `oneshot` and `split` (which both bots' fullsend splits with too), and `reconcile`, the
 first prompt of a fullsend reconcile. The bots cannot edit anything in `bot/`, `.harness/`, `.squishy/` or

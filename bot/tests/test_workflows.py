@@ -22,6 +22,11 @@ def job(text: str, name: str) -> str:
     return match.group(1)
 
 
+def selftest() -> str:
+    """The `bot selftest` job's block: a job of CI's since #1455, which had a workflow of its own."""
+    return job(read("ci.yml"), "bot-selftest")
+
+
 class NightWorkflowTests(unittest.TestCase):
     text = read("bot-night.yml")
 
@@ -145,8 +150,9 @@ class NightWorkflowTests(unittest.TestCase):
             self.assertTrue(steps[0].startswith("HALT check"), (name, steps))
 
     def test_no_checkout_keeps_credentials(self):
-        for name in ("bot-night.yml", "bot-commands.yml", "bot-selftest.yml"):
-            text = read(name)
+        for name, text in (("bot-night.yml", read("bot-night.yml")),
+                           ("bot-commands.yml", read("bot-commands.yml")),
+                           ("ci.yml's bot selftest", selftest())):
             checkouts = text.count("uses: actions/checkout@")
             self.assertEqual(text.count("persist-credentials: false"), checkouts, name)
 
@@ -264,7 +270,7 @@ class BuildCacheWorkflowTests(unittest.TestCase):
         self.assertIn("run: sh scripts/build-wasm.sh\n", self.cache)
 
     def test_actionlint_reads_it(self):
-        self.assertIn(".github/workflows/bot-cache.yml", read("bot-selftest.yml"))
+        self.assertIn(".github/workflows/bot-cache.yml", selftest())
 
 
 class CommandsWorkflowTests(unittest.TestCase):
@@ -286,7 +292,7 @@ class CommandsWorkflowTests(unittest.TestCase):
         cfg = config.load(env={})
         self.assertIn(f"github.actor != '{cfg.bot_login}'", self.text)
         self.assertIn(f"'@{cfg.bot_login}'", self.text)
-        self.assertIn(f"workflows: [{cfg.ci_workflow}, bot selftest]", self.text)
+        self.assertIn(f"workflows: [{cfg.ci_workflow}]", self.text)
 
     def test_every_way_a_request_arrives_is_heard(self):
         for trigger in ("issue_comment:\n    types: [created, edited]",
@@ -393,7 +399,7 @@ class TriageWorkflowTests(unittest.TestCase):
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
         self.assertIn('python3 -m harness triage --payload "$GITHUB_EVENT_PATH"', triage_job)
         self.assertIn("timeout-minutes:", triage_job)
-        self.assertIn(".github/workflows/triage.yml", read("bot-selftest.yml"))
+        self.assertIn(".github/workflows/triage.yml", selftest())
 
     def test_only_human_of_the_labels_starts_it(self):
         self.assertIn("if: github.event_name != 'issues' || github.event.action == 'opened' || "

@@ -99,9 +99,9 @@ class EventTests(unittest.TestCase):
         events.handle(self.ctx, "pull_request_target", payload)
         self.assertEqual(self.gh.label_names(9), {LABEL_REVISE})
 
-    def test_the_selftest_and_a_cancelled_run_count_as_ci(self):
+    def test_a_failed_and_a_cancelled_run_count_as_ci(self):
         self.gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR,), sha="s1")
-        for name, conclusion in (("bot selftest", "failure"), ("CI", "cancelled")):
+        for name, conclusion in (("CI", "failure"), ("CI", "cancelled")):
             run = {"name": name, "conclusion": conclusion, "head_branch": "bot/issue-5",
                    "head_sha": "s1", "id": len(self.gh.reruns) + 1, "run_attempt": 1,
                    "pull_requests": [{"number": 9}]}
