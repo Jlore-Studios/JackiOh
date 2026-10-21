@@ -10279,6 +10279,13 @@
     "1556": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T18:24:57Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy-rule line 7 is the one I was least sure of: the stub-docker harness can only unit-test the new validation branches, while the boot/image sequencing itself is proven by CI's own rehearsal jobs rather than a committed unit test, so the core behavior is not unit-checked and easy fails."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
