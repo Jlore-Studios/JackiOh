@@ -1108,16 +1108,16 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             );
         }
 
-        // R1437000: a flavor is one of the fifteen; an entry may carry none until #1436's part 5.
-        if let Some(flavor) = value.get("flavor")
-            && !flavor
-                .as_str()
-                .is_some_and(|flavor| flavor_union.contains(&flavor))
+        // R1437000: every entry carries one since #1436's part 5.
+        if !value
+            .get("flavor")
+            .and_then(Json::as_str)
+            .is_some_and(|flavor| flavor_union.contains(&flavor))
         {
             fail(
                 &mut failures,
                 &at,
-                &format!("`flavor` is not a Flavor (got {})", describe(Some(flavor))),
+                &format!("`flavor` is not a Flavor (got {})", describe(value.get("flavor"))),
             );
         }
 
@@ -2148,9 +2148,10 @@ mod tests {
         assert_eq!(failures.len(), 3, "{failures:#?}");
     }
 
-    // R1437000: a flavor is one of the fifteen names, and an entry may carry none until #1436's part 5.
+    // R1437000: a flavor is one of the fifteen names, and every entry carries one since
+    // #1436's part 5.
     #[test]
-    fn r1437000_a_flavor_is_one_of_the_fifteen_and_an_entry_may_carry_none_yet() {
+    fn r1437000_a_flavor_is_one_of_the_fifteen_and_every_entry_carries_one() {
         assert_eq!(check_catalog(&shipped_catalog()).failures, Vec::<String>::new());
         for flavor in Flavor::ALL {
             let catalog = with_field("core-002", "flavor", Json::from(flavor.as_str()));
@@ -2165,6 +2166,18 @@ mod tests {
                 )]
             );
         }
+        // An entry with none fails, naming the entry and showing `undefined`.
+        let mut catalog = shipped_catalog();
+        match catalog.get_mut("core-002") {
+            Some(Json::Object(entry)) => {
+                entry.shift_remove("flavor");
+            }
+            _ => panic!("core-002 is an object"),
+        }
+        assert_eq!(
+            check_catalog(&catalog).failures,
+            ["catalog[\"core-002\"]: `flavor` is not a Flavor (got undefined)"]
+        );
     }
 
     #[test]
