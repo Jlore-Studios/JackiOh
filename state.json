@@ -9394,6 +9394,11 @@
     "1496": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-21T06:36:41Z",
+        "by": "`gpt` (medium), `claude` (strong)",
+        "sha": "86a583cd7c957bfe60ec35a4e23c55feca89cbb0"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
