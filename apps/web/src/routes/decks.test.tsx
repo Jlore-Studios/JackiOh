@@ -13,11 +13,12 @@ import {
   legalDecks,
 } from "../game/deckbuilder/fixtures.ts";
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
-import { poolCardId } from "../game/deckbuilder/testids.ts";
+import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
 import { ApiRequestError, getCollection, getDecks, getMe, putDeck } from "../net/api.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
+import { navTestid } from "./nav.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -138,6 +139,15 @@ describe("the gate (§9.4)", () => {
       expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("the server could not be reached");
     });
   });
+
+  it("#1485 offers Back when /api/auth/me cannot be read", async () => {
+    vi.mocked(getMe).mockRejectedValue(new Error("the server could not be reached"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+  });
 });
 
 // Reads
@@ -181,6 +191,25 @@ describe("what the screen opens with", () => {
     await waitFor(() => {
       expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("decks unavailable");
     });
+  });
+
+  it("#1485 a failed decks read offers Back and Try again, and Try again opens the workshop once the read works", async () => {
+    vi.mocked(getDecks).mockRejectedValueOnce(new Error("decks unavailable"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("decks unavailable");
+    });
+    expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+    expect(screen.getByTestId(DECKBUILDER_RETRY)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(DECKBUILDER_RETRY));
+    expect(screen.getByTestId("deckbuilder-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId(DECKBUILDER_RETRY)).toBeNull();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(getDecks).toHaveBeenCalledTimes(2);
   });
 });
 

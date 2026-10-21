@@ -200,6 +200,40 @@ describe("#1309 the Jlore shop", () => {
     expect(await screen.findByTestId(T.loadError)).toHaveTextContent("the wallet is not reachable");
     expect(screen.queryByTestId(T.wallet)).toBeNull();
   });
+
+  it("#1485 a failed read that works on the page's next revision shows the shop and drops the alert", async () => {
+    const answers: { wallet?: Reply } = { wallet: refusal(503, "unavailable", "the wallet is not reachable") };
+    shopServer(answers);
+    const { rerender } = render(<Shop token={TOKEN} />);
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("the wallet is not reachable");
+
+    answers.wallet = { status: 200, body: walletInfo() };
+    rerender(<Shop token={TOKEN} revision={1} />);
+
+    expect(await screen.findByTestId(T.wallet)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.loadError)).toBeNull();
+    expect(screen.queryByTestId(T.retry)).toBeNull();
+  });
+
+  it("#1485 Try again reads once more, cannot be pressed twice while the read is out, and drops the alert once it works", async () => {
+    const answers: { wallet?: Reply } = { wallet: refusal(503, "unavailable", "the wallet is not reachable") };
+    const server = shopServer(answers);
+    render(<Shop token={TOKEN} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.retry)).toBeEnabled();
+    });
+    expect(server.to("GET", "/api/wallet")).toHaveLength(1);
+
+    answers.wallet = { status: 200, body: walletInfo() };
+    fireEvent.click(screen.getByTestId(T.retry));
+    // The read is out: the button waits for it, and a second press sends nothing.
+    expect(screen.getByTestId(T.retry)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(T.retry));
+
+    expect(await screen.findByTestId(T.wallet)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.loadError)).toBeNull();
+    expect(server.to("GET", "/api/wallet")).toHaveLength(2);
+  });
 });
 
 /** The cosmetic packs' reads, answered from the fixtures unless a test says otherwise. */
@@ -268,5 +302,43 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.reveal)).toBeNull();
     expect(text(T.unopened)).toContain("2 unopened");
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("#1485 a failed read that works on the page's next revision shows the shop and drops the alert", async () => {
+    const answers: { packs?: Reply } = {
+      packs: refusal(503, "unavailable", "the cosmetic packs are not reachable"),
+    };
+    cosmeticServer(answers);
+    const { rerender } = render(<CosmeticPacks token={TOKEN} />);
+    expect(await screen.findByTestId(T.packsLoadError)).toHaveTextContent("the cosmetic packs are not reachable");
+
+    answers.packs = { status: 200, body: cosmeticPacksInfo() };
+    rerender(<CosmeticPacks token={TOKEN} revision={1} />);
+
+    expect(await screen.findByTestId(T.unopened)).toHaveTextContent("Cosmetic pack: 2 unopened");
+    expect(screen.queryByTestId(T.packsLoadError)).toBeNull();
+    expect(screen.queryByTestId(T.packsRetry)).toBeNull();
+  });
+
+  it("#1485 Try again reads once more, cannot be pressed twice while the read is out, and drops the alert once it works", async () => {
+    const answers: { packs?: Reply } = {
+      packs: refusal(503, "unavailable", "the cosmetic packs are not reachable"),
+    };
+    const server = cosmeticServer(answers);
+    render(<CosmeticPacks token={TOKEN} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.packsRetry)).toBeEnabled();
+    });
+    expect(server.to("GET", "/api/cosmetic-packs")).toHaveLength(1);
+
+    answers.packs = { status: 200, body: cosmeticPacksInfo() };
+    fireEvent.click(screen.getByTestId(T.packsRetry));
+    // The read is out: the button waits for it, and a second press sends nothing.
+    expect(screen.getByTestId(T.packsRetry)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(T.packsRetry));
+
+    expect(await screen.findByTestId(T.unopened)).toHaveTextContent("Cosmetic pack: 2 unopened");
+    expect(screen.queryByTestId(T.packsLoadError)).toBeNull();
+    expect(server.to("GET", "/api/cosmetic-packs")).toHaveLength(2);
   });
 });
