@@ -9072,6 +9072,13 @@
     "1487": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T07:48:56Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "engine rules in crates/engine/src (a dozen lasting-text readers and a Script field on a shared surface) plus two rulings, a golden bless and a classify fix; the rule's hard line for engine rules holds outright"
+      },
       "failures": 2,
       "forced": false,
       "handoff": {
