@@ -42,10 +42,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::MutexGuard;
 
 use jackioh_engine::{DEFAULT_PORTRAIT, newest_shipped_set, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
@@ -63,9 +61,10 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::{
     CallOutcome, E2eStoreOptions, FakeCatalog, FakeData, FakeTables, create_e2e_store,
 };
-use jackioh_server::db::store::{BotDeck, Db, NewBot, ProfileStatus, StoreError};
+use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, StoreError};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
+use crate::support::store::{fake_lock, q, to_json, uuid};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
 
@@ -74,27 +73,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
         Err(error) => panic!("{error}: {value}"),
-    }
-}
-
-fn to_json<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-/// One store call in its own transaction.
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the server's unit tests run on the fake store"),
     }
 }
 
@@ -152,7 +130,7 @@ fn decks_from() -> [Vec<String>; 3] {
 /// An active profile with a token that verifies as it, owning every card (R111).
 async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
     grant_entire_catalog(app, id, None)
@@ -164,7 +142,7 @@ async fn active_profile(app: &App, id: &str, rating: f64) -> String {
 /// A pending profile with a token that verifies as it (§9.4).
 async fn pending_profile(app: &App, id: &str) -> String {
     let user_id = format!("user-{id}");
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "pending" }));
     grant_entire_catalog(app, id, None)
@@ -176,9 +154,8 @@ async fn pending_profile(app: &App, id: &str) -> String {
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 
 /// A client-minted deck or trio id (R256): a UUID, unique within the file.
-fn uuid() -> String {
-    let n = NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1;
-    format!("00000000-0000-4000-8000-{n:012}")
+fn next_uuid() -> String {
+    uuid(NEXT_ID.fetch_add(1, Ordering::SeqCst) + 1)
 }
 
 /// Saves one deck for the profile under `id`, straight into the store.
@@ -205,7 +182,7 @@ async fn save_deck_as(app: &App, id: &str, profile_id: &str, cards: &[String], n
 
 /// Saves one deck for the profile, straight into the store, and returns its id.
 async fn save_deck_for(app: &App, profile_id: &str, cards: &[String], name: &str) -> String {
-    let id = uuid();
+    let id = next_uuid();
     save_deck_as(app, &id, profile_id, cards, name).await;
     id
 }
@@ -228,7 +205,7 @@ async fn save_trio_for(
             ]
         }
     };
-    let id = uuid();
+    let id = next_uuid();
     let now = now_ms();
     let outcome = q!(
         app,
@@ -260,21 +237,21 @@ async fn ticket(app: &App, id: &str) -> Value {
 }
 
 async fn tickets_table(app: &App) -> Vec<Value> {
-    to_json(&fake(app).await.tables.tickets)
+    to_json(&fake_lock(app).await.tables.tickets)
         .as_array()
         .cloned()
         .unwrap_or_default()
 }
 
 async fn matches_table(app: &App) -> Vec<Value> {
-    to_json(&fake(app).await.tables.matches)
+    to_json(&fake_lock(app).await.tables.matches)
         .as_array()
         .cloned()
         .unwrap_or_default()
 }
 
 async fn series_table(app: &App) -> Vec<Value> {
-    to_json(&fake(app).await.tables.series)
+    to_json(&fake_lock(app).await.tables.series)
         .as_array()
         .cloned()
         .unwrap_or_default()
@@ -318,7 +295,7 @@ struct SeedTicket<'a> {
 }
 
 async fn seed_ticket(app: &App, input: SeedTicket<'_>) -> Value {
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": input.profile_id, "status": "active", "rating": input.rating }));
     let [deck, ..] = decks_from();
@@ -440,7 +417,7 @@ mod r165_queueing_with_no_saved_deck_at_all {
         let app = test_app().await;
         let token = active_profile(&app, "never-built", 1000.0).await;
 
-        let (status, body) = enqueue(&app, &token, &uuid()).await;
+        let (status, body) = enqueue(&app, &token, &next_uuid()).await;
 
         // A queue-time refusal the player fixes in the deckbuilder is a loadout failure: 422, like L1–L6.
         assert_eq!(body["error"]["code"], "loadout_invalid");
@@ -460,7 +437,7 @@ mod r165_queueing_with_no_saved_deck_at_all {
         // Control: only the saved deck changes between the two calls.
         let app = test_app().await;
         let token = active_profile(&app, "builder", 1000.0).await;
-        let deck_id = uuid();
+        let deck_id = next_uuid();
 
         assert_eq!(enqueue(&app, &token, &deck_id).await.0, 422);
 
@@ -1039,7 +1016,7 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         let swapper = active_profile(&app, "swapper", 1000.0).await;
         let rival = active_profile(&app, "rival", 1000.0).await;
         let [frozen, rival_cards, substitute] = decks_from();
-        let deck_id = uuid();
+        let deck_id = next_uuid();
         assert_eq!(save(&app, &swapper, &deck_id, &frozen, None).await, 200);
         let rival_deck = save_deck_for(&app, "rival", &rival_cards, "rival's deck").await;
 
@@ -1084,7 +1061,7 @@ mod section_98_decks_are_frozen_into_the_queue_ticket {
         let swapper = active_profile(&app, "early", 1000.0).await;
         let rival = active_profile(&app, "late", 1000.0).await;
         let [first, rival_cards, substitute] = decks_from();
-        let deck_id = uuid();
+        let deck_id = next_uuid();
         assert_eq!(save(&app, &swapper, &deck_id, &first, None).await, 200);
         let rival_deck = save_deck_for(&app, "late", &rival_cards, "late's deck").await;
 
@@ -1281,7 +1258,7 @@ mod r257_queue_modes {
                 .as_array()
                 .is_some_and(Vec::is_empty)
         );
-        let profiles = to_json(&fake(&app).await.tables.profiles);
+        let profiles = to_json(&fake_lock(&app).await.tables.profiles);
         assert!(
             profiles
                 .as_array()
@@ -1434,7 +1411,7 @@ mod r640002_the_queue_readout {
         }
         q!(app, tickets_cancel("t-gone", now_ms()));
         // Three games, one of them against a ladder bot.
-        fake(&app)
+        fake_lock(&app)
             .await
             .seed_profile(json!({ "id": "a-bot", "kind": "bot" }));
         ended(&app, "m-1", ["t-1", "t-2"]).await;
@@ -1741,7 +1718,9 @@ mod a_paired_match_whose_start_fails {
         enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
         // The registry writes the match row only once the game has begun; refusing that write is a
         // start that fails after the claim.
-        let calls = record_calls(&mut *fake(&app).await, |_, method| method == "matches.create");
+        let calls = record_calls(&mut *fake_lock(&app).await, |_, method| {
+            method == "matches.create"
+        });
 
         // The claim won, the in-match transaction committed, and then the start failed — the pair
         // is lost either way; what must NOT be lost is the players.
@@ -1763,7 +1742,7 @@ mod a_paired_match_whose_start_fails {
         }
 
         // Free means free: the claimed ticket is never open, so a fresh enqueue is not blocked.
-        fake(&app).await.on_call = None;
+        fake_lock(&app).await.on_call = None;
         let (_, again) = enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
         assert_eq!(again["status"], "open");
     }
@@ -1781,7 +1760,7 @@ mod a_paired_match_whose_start_fails {
         // The start fails at `matches.create`, and the start-failure cleanup's conditional
         // clears fail too (R890000 renamed them from `profiles.setInMatch` to
         // `profiles.clearInMatch`; both names are refused so the cleanup fails either way).
-        record_calls(&mut *fake(&app).await, |seen, method| {
+        record_calls(&mut *fake_lock(&app).await, |seen, method| {
             method == "matches.create"
                 || ((method == "profiles.setInMatch" || method == "profiles.clearInMatch")
                     && seen.iter().any(|previous| previous == "matches.create"))
@@ -1793,7 +1772,7 @@ mod a_paired_match_whose_start_fails {
                 .0,
             500
         );
-        fake(&app).await.on_call = None;
+        fake_lock(&app).await.on_call = None;
 
         let stranded_a = in_match_of(&app, "stranded-a").await;
         let stranded_b = in_match_of(&app, "stranded-b").await;
@@ -1833,7 +1812,7 @@ mod a_paired_match_whose_start_fails {
         // The claim won, `series.create` landed inside the transaction, then the start failed. Without the
         // rollback the 'picking' row would hold both players out of the queue (R264) until the pick deadline
         // ran the series out (R333). The fault is the one store call right after the series row, and only it.
-        let calls = record_calls(&mut *fake(&app).await, |seen, _method| {
+        let calls = record_calls(&mut *fake_lock(&app).await, |seen, _method| {
             seen.last().is_some_and(|previous| previous == "series.create")
         });
 
@@ -1853,7 +1832,7 @@ mod a_paired_match_whose_start_fails {
             "calls: {seen:?}"
         );
         // The transaction's half: nothing of the series remains, and no in-match flag was ever set.
-        fake(&app).await.on_call = None;
+        fake_lock(&app).await.on_call = None;
         assert!(series_table(&app).await.is_empty());
         for id in ["series-a", "series-b"] {
             assert_eq!(in_match_of(&app, id).await, Value::Null);
@@ -1895,7 +1874,7 @@ mod a_failed_start_does_not_end_the_sweep {
 
         // The registry writes the match row only once the game has begun; refusing that write
         // once is a start that fails for the first pair only.
-        let _calls = record_calls(&mut *fake(&app).await, |seen, method| {
+        let _calls = record_calls(&mut *fake_lock(&app).await, |seen, method| {
             method == "matches.create" && !seen.iter().any(|previous| previous == "matches.create")
         });
 
@@ -1944,7 +1923,9 @@ mod a_failed_start_does_not_end_the_sweep {
         .await;
         // Every `matches.create` fails: the seeded pair's start fails during the third player's
         // own enqueue sweep.
-        let _calls = record_calls(&mut *fake(&app).await, |_, method| method == "matches.create");
+        let _calls = record_calls(&mut *fake_lock(&app).await, |_, method| {
+            method == "matches.create"
+        });
 
         // Rated far from the failing pair, so no window of this sweep admits it as an opponent.
         let third = active_profile(&app, "third", 1600.0).await;
@@ -2010,7 +1991,7 @@ mod a_failed_start_does_not_end_the_sweep {
         seed_ticket(&app, t("t-p2", "pair-two", past + 50_000)).await;
         seed_ticket(&app, t("t-lone", "lone", past)).await;
 
-        let _calls = record_calls(&mut *fake(&app).await, |seen, method| {
+        let _calls = record_calls(&mut *fake_lock(&app).await, |seen, method| {
             method == "matches.create" && !seen.iter().any(|previous| previous == "matches.create")
         });
 
@@ -2043,8 +2024,8 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let app = test_app().await;
         let swapper = active_profile(&app, "swapper", 1000.0).await;
         let rival = active_profile(&app, "rival", 1000.0).await;
-        let deck_id = uuid();
-        let rival_deck_id = uuid();
+        let deck_id = next_uuid();
+        let rival_deck_id = next_uuid();
         let [mine, theirs, _] = decks_from();
         assert_eq!(save(&app, &swapper, &deck_id, &mine, Some("gary")).await, 200);
         assert_eq!(
@@ -2296,7 +2277,7 @@ mod r253_what_may_be_queued_through_the_real_validator {
         let app = granting_app().await;
         // A new account: pending, then active through the store's R111 trigger, which grants the
         // starter cards and nothing else.
-        fake(&app)
+        fake_lock(&app)
             .await
             .seed_profile(json!({ "id": "starter", "userId": "user-starter", "status": "pending" }));
         q!(app, profiles_set_status("starter", ProfileStatus::Active));
@@ -2368,7 +2349,7 @@ mod r253_what_may_be_queued_through_the_real_validator {
 
         // L5: the collection is server-owned and can move after a save (§9.8).
         let legal = save_deck_for(&w.app, "real", &w.pool[..w.size], "Legal").await;
-        fake(&w.app).await.tables.collection.clear();
+        fake_lock(&w.app).await.tables.collection.clear();
         let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": legal }), "L5").await;
         assert!(
             refused["error"]["message"]
@@ -2511,7 +2492,7 @@ mod r890000_a_room_join_between_the_sweep_read_and_the_claim {
         // A room join lands between the sweep's busy-set read and the claim: it seats `r89-a`
         // in its own match first, as `series_recovery.rs`'s `race_first_update` writes its rival
         // row straight into the tables.
-        fake(&app).await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+        fake_lock(&app).await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
             if method == "tickets.claimPair"
                 && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == "r89-a")
                 && row.in_match_id.is_none()
@@ -2522,7 +2503,7 @@ mod r890000_a_room_join_between_the_sweep_read_and_the_claim {
         }));
 
         let report = try_pair(&app).await.expect("a sweep");
-        fake(&app).await.before_call = None;
+        fake_lock(&app).await.before_call = None;
 
         // The pair never started: no match row, one failed start, and `r89-a` still points at
         // the room match the rival won while `r89-b` was never seated. Both tickets stay

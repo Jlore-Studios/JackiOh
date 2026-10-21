@@ -20,7 +20,6 @@
 //! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -34,10 +33,11 @@ use jackioh_server::config::{
     SERIES_START_GRACE_SECONDS,
 };
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{Db, SeriesRow, StoreError};
+use jackioh_server::db::store::{SeriesRow, StoreError};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
+use crate::support::store::{advance_and_yield, fake, store, to_json};
 
 const ALICE: &str = "profile-alice";
 const BOB: &str = "profile-bob";
@@ -52,32 +52,8 @@ fn give_up_ms() -> i64 {
     SERIES_START_GIVE_UP_SECONDS * 1000
 }
 
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
-
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
@@ -107,7 +83,7 @@ async fn stop_failing(app: &App) {
 // Time and logs
 
 /// The server's clock, read as the epoch-ms stamp it wrote on the series row at `begin` plus the
-/// tokio time (paused, moved only by `advance`) since.
+/// tokio time (paused, moved only by `advance_and_yield`) since.
 #[derive(Clone, Copy)]
 struct Clock {
     base_ms: i64,
@@ -118,14 +94,6 @@ impl Clock {
     fn now(&self) -> i64 {
         self.base_ms + i64::try_from(self.at.elapsed().as_millis()).expect("milliseconds fit")
     }
-}
-
-async fn advance(ms: i64) {
-    tokio::time::advance(Duration::from_millis(
-        u64::try_from(ms).expect("time moves forward"),
-    ))
-    .await;
-    tokio::task::yield_now().await;
 }
 
 /// Every `tracing` line the server writes on this thread while the guard lives, as JSON.
@@ -443,11 +411,11 @@ mod r263_a_series_survives_a_restart {
         write_picks_only(&a.app, &series, [0, 1], a.clock.now()).await;
 
         // Inside the grace the sweeper leaves it to the request that may be starting it right now.
-        advance(grace_ms() - 1).await;
+        advance_and_yield(grace_ms() - 1).await;
         assert_eq!(sweep(&a.app).await, nothing_swept());
         assert_eq!(a.started().await, Vec::<Value>::new());
 
-        advance(1).await;
+        advance_and_yield(1).await;
         assert_eq!(
             sweep(&a.app).await,
             json!({ "timedOut": [], "started": [SERIES_ID], "abandoned": [] })
@@ -470,7 +438,7 @@ mod r263_a_series_survives_a_restart {
             vec![json!(FIRST_MATCH), json!(FIRST_MATCH)]
         );
 
-        advance(grace_ms()).await;
+        advance_and_yield(grace_ms()).await;
         assert_eq!(sweep(&a.app).await, nothing_swept());
         assert_eq!(a.started().await.len(), 1);
     }
@@ -487,11 +455,11 @@ mod r263_a_series_survives_a_restart {
         assert!(active_for(&a.app, ALICE).await);
 
         // Inside the give-up window the sweeper keeps trying to start it.
-        advance(give_up_ms() - 1).await;
+        advance_and_yield(give_up_ms() - 1).await;
         assert_eq!(sweep(&a.app).await, nothing_swept());
         assert_eq!(row(&a.app).await["status"], "playing");
 
-        advance(1).await;
+        advance_and_yield(1).await;
         assert_eq!(
             sweep(&a.app).await,
             json!({ "timedOut": [], "started": [], "abandoned": [SERIES_ID] })
@@ -515,7 +483,7 @@ mod r263_a_series_survives_a_restart {
         pick_both(&a, [0, 0]).await;
         // A restart: the match row is live in the store, its actor not yet rebuilt in memory.
         let b = boot(Some(&a)).await;
-        advance(give_up_ms() * 2).await;
+        advance_and_yield(give_up_ms() * 2).await;
         assert_eq!(sweep(&b.app).await, nothing_swept());
         assert_eq!(row(&b.app).await["status"], "playing");
     }
@@ -536,7 +504,7 @@ mod r263_a_series_survives_a_restart {
         // The failure was the dead process's, not the database's.
         stop_failing(&a.app).await;
         let b = boot(Some(&a)).await;
-        advance(grace_ms()).await;
+        advance_and_yield(grace_ms()).await;
         assert_eq!(
             sweep(&b.app).await,
             json!({ "timedOut": [], "started": [SERIES_ID], "abandoned": [] })
@@ -560,7 +528,7 @@ mod r263_a_series_survives_a_restart {
         // Restart: the match row is in the store, its actor is not in the new process's memory.
         let b = boot(Some(&a)).await;
         assert!(!b.app.matches.has(FIRST_MATCH));
-        advance(grace_ms()).await;
+        advance_and_yield(grace_ms()).await;
         // The match exists, so the sweeper does not start it again: the registry folds its log back on
         // the first socket (§9.5).
         assert_eq!(sweep(&b.app).await, nothing_swept());
@@ -878,7 +846,7 @@ mod r263_every_write_is_a_compare_and_set {
         }
 
         let b = boot(Some(&a)).await;
-        advance(grace_ms()).await;
+        advance_and_yield(grace_ms()).await;
         assert_eq!(sweep(&b.app).await, nothing_swept());
         assert_eq!(
             in_match(&b.app).await,
@@ -897,7 +865,7 @@ mod r263_every_write_is_a_compare_and_set {
         store!(a.app, t => t.matches_finish(FIRST_MATCH, now as _).await.expect("matches.finish"));
 
         let b = boot(Some(&a)).await;
-        advance(grace_ms()).await;
+        advance_and_yield(grace_ms()).await;
         assert_eq!(sweep(&b.app).await, nothing_swept());
         assert_eq!(b.started().await, Vec::<Value>::new());
         assert!(logs.has("series.game_unrecorded"));

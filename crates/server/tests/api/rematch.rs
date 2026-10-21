@@ -30,7 +30,6 @@ use std::time::Duration;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use tokio::sync::MutexGuard;
 
 use jackioh_engine::{ActionBody, PlayerId, newest_shipped_set};
 use jackioh_server::actor::engine::deal_random_deck;
@@ -40,10 +39,11 @@ use jackioh_server::api::rematch::{STAKE_DOUBLE, STAKE_NORMAL, rematch_offer_cou
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
-use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
-use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput};
+use jackioh_server::db::fake::{CallOutcome, FakeTables};
+use jackioh_server::db::store::{MatchSeat, StartMatchInput};
 
 use crate::support::deps::{add_user, call, test_app};
+use crate::support::store::{fake_lock, q, to_json};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
 
@@ -52,27 +52,6 @@ fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
         Err(error) => panic!("{error}: {value}"),
-    }
-}
-
-fn to_json<T: Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-/// One store call in its own transaction.
-macro_rules! q {
-    ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut tx = $app.db.begin(None).await.expect("begin");
-        let out = tx.$method($($arg),*).await.expect(stringify!($method));
-        tx.commit().await.expect("commit");
-        out
-    }};
-}
-
-async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the server's unit tests run on the fake store"),
     }
 }
 
@@ -97,7 +76,7 @@ fn names(tag: &str) -> (String, String, String) {
 /// An active profile with a token that verifies as it (`queue.rs`'s fixture).
 async fn active_profile(app: &App, id: &str, rating: f64) -> String {
     let user_id = format!("user-{id}");
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": "active", "rating": rating }));
     add_user(app, &user_id, &format!("{id}@example.test"), true)
@@ -283,7 +262,7 @@ mod r672_double_or_nothing {
         let (a, b, _) = names("rate-unit");
         let (c, d) = ("rate-unit-c".to_string(), "rate-unit-d".to_string());
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             for profile_id in [&a, &b, &c, &d] {
                 data.seed_profile(json!({ "id": profile_id }));
             }
@@ -362,7 +341,7 @@ mod r672_double_or_nothing {
         ] {
             let [p1, p2] = pair;
             {
-                let mut data = fake(&app).await;
+                let mut data = fake_lock(&app).await;
                 data.seed_profile(json!({ "id": p1 }));
                 data.seed_profile(json!({ "id": p2 }));
             }
@@ -746,12 +725,12 @@ mod rematch_creation_guards {
         // of the store's calls stands in for the foreign key: no flag before the row is written.
         let calls: Arc<StdMutex<Vec<String>>> = Arc::default();
         let seen = Arc::clone(&calls);
-        fake(&app).await.on_call = Some(Arc::new(move |method: &str| {
+        fake_lock(&app).await.on_call = Some(Arc::new(move |method: &str| {
             seen.lock().expect("calls").push(method.to_string());
             Ok(())
         }));
         let (_, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
-        fake(&app).await.on_call = None;
+        fake_lock(&app).await.on_call = None;
         let created_id = created["matchId"].as_str().expect("a match id").to_string();
 
         let calls = calls.lock().expect("calls").clone();
@@ -1017,7 +996,7 @@ mod rematch_presence {
         let app = test_app().await;
         let (a, b, _) = names("presence-registry");
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             data.seed_profile(json!({ "id": a }));
             data.seed_profile(json!({ "id": b }));
         }
@@ -1223,7 +1202,7 @@ mod r1442_rematch_signals {
         paired_tickets(&app, &finished, [&a, &b], "bo1").await;
         // The signals the match's result left (`actor::telemetry`), neither seat having offered.
         {
-            let mut data = fake(&app).await;
+            let mut data = fake_lock(&app).await;
             for seat in ["p1", "p2"] {
                 data.tables.match_signals.push(from(json!({
                     "matchId": finished,
@@ -1274,7 +1253,7 @@ mod r890000_a_seat_taken_mid_start {
         // seat claim loses.
         let b_elsewhere = b.clone();
         let claims = Arc::new(AtomicU32::new(0));
-        fake(&app).await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+        fake_lock(&app).await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
             if method == "profiles.setInMatch"
                 && claims.fetch_add(1, Ordering::SeqCst) == 1
                 && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == b_elsewhere)
@@ -1285,7 +1264,7 @@ mod r890000_a_seat_taken_mid_start {
         }));
 
         let (status, refused) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
-        fake(&app).await.before_call = None;
+        fake_lock(&app).await.before_call = None;
         assert_eq!(status, 409, "{refused}");
         assert_eq!(refused["error"]["code"], "already_in_match");
         // No rematch row, the loser keeps its game, and the winner's flag went with the void.

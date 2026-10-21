@@ -32,10 +32,12 @@ fn mana_trigger() -> TriggerDef {
 
 /// "Activate: Spend ({price}) Plague Counters: Exile {exiles} from each of the opponent's field,
 /// hand, deck, and graveyard zones."
-fn exile_ability(price: i32, exiles: i32) -> ActivationDecl {
+/// Its label is that template itself: the client fills `{price}` and `{exiles}` from the card's
+/// current numbers (R386), so a tuned number shows as the one the ability uses.
+fn exile_ability() -> ActivationDecl {
     ActivationDecl {
         id: "maestro-exile".to_string(),
-        label: format!("Spend ({price}) Plague Counters: exile {exiles} from each enemy zone"),
+        label: "Spend ({price}) Plague Counters: exile {exiles} from each enemy zone".to_string(),
         uses: ActivationUses::Count(1),
         cost: None,
         targets: Vec::new(),
@@ -60,18 +62,18 @@ fn exile_ability(price: i32, exiles: i32) -> ActivationDecl {
     }
 }
 
-fn maestro(radiant: bool) -> Script {
+fn maestro() -> Script {
     Script {
         triggers: vec![mana_trigger()],
-        activations: vec![exile_ability(4, if radiant { 2 } else { 1 })],
+        activations: vec![exile_ability()],
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: maestro(false),
-        radiant: maestro(true),
+        base: maestro(),
+        radiant: maestro(),
     }
 }
 
@@ -309,6 +311,41 @@ mod tests {
             activate_exile(&mut s);
             assert_eq!(plague(&s, &maestro.id), 0);
             assert_eq!(exiled_of(&s).len(), 8);
+        }
+
+        /// R386: the Activate's words are the template the view's `params` fill, so a button shows the
+        /// price and exile count the ability will use, tuned or printed, on either face.
+        #[test]
+        fn r386_the_activate_label_is_its_template_once_its_numbers_are_tuned() {
+            for radiant_face in [false, true] {
+                let mut s = full_enemy("maestro-label", radiant_face, 4);
+                let maestro = s.unit("p1", 1).expect("the Maestro");
+                // One Upgrade each: the exiles one more, the price one less.
+                let exiles_now = crate::upgrade_number(&mut s, &maestro.id, "exiles");
+                let price_now = crate::upgrade_number(&mut s, &maestro.id, "price");
+                assert_eq!(
+                    (price_now, exiles_now),
+                    (3, if radiant_face { 3 } else { 2 }),
+                    "radiant {radiant_face}"
+                );
+                let shown = s.view(PlayerId::P1).you.units[0]
+                    .clone()
+                    .expect("the Maestro's view");
+                let params = shown.params.expect("its declared numbers");
+                assert_eq!(params.get("price"), Some(&price_now), "radiant {radiant_face}");
+                assert_eq!(params.get("exiles"), Some(&exiles_now), "radiant {radiant_face}");
+                let labels: Vec<String> = shown
+                    .activations
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|activation| activation.label)
+                    .collect();
+                assert_eq!(
+                    labels,
+                    ["Spend ({price}) Plague Counters: exile {exiles} from each enemy zone"],
+                    "radiant {radiant_face}"
+                );
+            }
         }
 
         #[test]

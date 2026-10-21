@@ -27,7 +27,7 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START};
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{
-    Db, MatchActionRow, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError,
+    MatchActionRow, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError,
     Ticket,
 };
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
@@ -39,6 +39,7 @@ use crate::support::deps::test_app;
 use crate::support::engine::{
     TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game, fake_deck, hand_card, hand_ids, install_test_cards,
 };
+use crate::support::store::{fake_ref, store};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -48,18 +49,6 @@ const A: &str = "profile-a";
 const B: &str = "profile-b";
 
 // The harness's small reads (private copies, CLAUDE.md's fullsend rule 5)
-
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
-}
 
 /// The JSON a row or any port value serialises to.
 fn j<T: Serialize>(value: &T) -> Value {
@@ -100,28 +89,20 @@ where
     T::try_from(n).expect("a slot the rules' signature can hold")
 }
 
-/// The fake store behind `test_app()`.
-fn fake(app: &App) -> &Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => data,
-        _ => panic!("support::deps::test_app() runs on the fake store"),
-    }
-}
-
 /// `test_app()` holds the E2E fixtures
 /// (R144), so they go first and every row a test reads is one it wrote.
 async fn fresh_store(app: &App) {
-    fake(app).lock().await.reset();
+    fake_ref(app).lock().await.reset();
 }
 
 /// A profile written without the API (status `active` unless set).
 async fn seed_profile(app: &App, input: Value) {
-    let _ = fake(app).lock().await.seed_profile(input);
+    let _ = fake_ref(app).lock().await.seed_profile(input);
 }
 
 /// One read of the fake's raw tables, as JSON.
 async fn table(app: &App, read: impl Fn(&FakeData) -> Value) -> Value {
-    let data = fake(app).lock().await;
+    let data = fake_ref(app).lock().await;
     read(&data)
 }
 
@@ -438,7 +419,7 @@ fn p1_plays_log(decks: &(Vec<String>, Vec<String>), card: &str) -> Vec<Value> {
 /// `seats()`' decks, p1's holding `card` as well (the scripted cards `scenario` deals are fixed): in
 /// the match row, as every fold of it reads them. Answers the decks.
 async fn deal_p1(app: &App, card: &str) -> (Vec<String>, Vec<String>) {
-    let mut data = fake(app).lock().await;
+    let mut data = fake_ref(app).lock().await;
     let row = &mut data.tables.matches[0];
     row.decks.0 = fake_deck(&[card]);
     row.decks.clone()
@@ -752,7 +733,7 @@ mod results_m7_t2 {
     async fn r768_a_failed_final_hash_write_rolls_the_whole_result_back() {
         install_test_cards();
         let app = scenario(ScenarioOptions::default()).await;
-        fake(&app).lock().await.on_call = Some(Arc::new(|method: &str| -> Result<(), StoreError> {
+        fake_ref(&app).lock().await.on_call = Some(Arc::new(|method: &str| -> Result<(), StoreError> {
             if method == "matches.recordFinalHash" {
                 Err(StoreError::from("the hash write fails".to_owned()))
             } else {
@@ -760,7 +741,7 @@ mod results_m7_t2 {
             }
         }));
         assert!(record_result(&app, hashed("hash-1", now_ms())).await.is_err());
-        fake(&app).lock().await.on_call = None;
+        fake_ref(&app).lock().await.on_call = None;
 
         assert_eq!(
             table(&app, |data| json!(data.tables.results.len())).await,
@@ -799,7 +780,7 @@ mod results_m7_t2 {
         .expect("a ResultRow");
         let collided = Arc::new(AtomicBool::new(false));
         {
-            let mut store = fake(&app).lock().await;
+            let mut store = fake_ref(&app).lock().await;
             let first_insert = collided.clone();
             store.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
                 if method != "results.insert" || first_insert.swap(true, Ordering::SeqCst) {

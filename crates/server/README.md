@@ -795,8 +795,11 @@ sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearse
 `tests/server.rs` is one binary over `tests/{api,actor,bots,loops,store,support}/`. `support/deps.rs` builds a
 test `App` on `Db::Fake` and `Auth::E2e` and calls the router with `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
-through the engine testkit's override; `support/socket.rs` is an in-memory socket; time is
-`tokio::time::pause()` and `advance()`. The fake store is strict where Postgres is strict (a
+through the engine testkit's override; `support/socket.rs` is an in-memory socket; `support/store.rs` holds
+the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`; one store call in its own
+transaction: `q!`, `store!`, `try_store!`; `to_json`, `uuid`); time is `tokio::time::pause()` and that
+module's steps (`advance`, `advance_and_yield`, `sleep_settled`).
+The fake store is strict where Postgres is strict (a
 transaction restores every table when it fails, claims are single-shot). `tests/store/contract.rs`
 runs every case against `Db::Fake` always and against `Db::Pg` when `DATABASE_URL` is set, which is
 what `tests/db/run.sh` sets, so a change to the store goes there. RLS and triggers are a property of

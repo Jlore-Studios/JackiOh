@@ -74,6 +74,8 @@ export type CreatorProps = {
   api?: CreatorApi;
   /** Where "Try it" goes: the practice route's path for the saved card. */
   onTry: (cardId: string) => void;
+  /** Told whether the editor holds changes not yet saved, each time that changes; the route asks before leaving with them (R1484000). */
+  onUnsaved?: (unsaved: boolean) => void;
 };
 
 type ScriptCheck =
@@ -325,7 +327,24 @@ function Editor({
   );
 }
 
-export function Creator({ token, api = DEFAULT_CREATOR_API, onTry }: CreatorProps): ReactElement {
+/** The note a leave with unsaved changes shows: opening another card, or the page's Back (R1484000). */
+export function UnsavedNote({ onDiscard, onKeep }: { onDiscard: () => void; onKeep: () => void }): ReactElement {
+  return (
+    <div className="creator-note" role="alert">
+      <p>{t("This card has changes you haven't saved.")}</p>
+      <div className="creator-row">
+        <button type="button" className="button-secondary" onClick={onDiscard}>
+          {t("Discard them")}
+        </button>
+        <button type="button" className="button-secondary" onClick={onKeep}>
+          {t("Keep editing")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: CreatorProps): ReactElement {
   const { state, reload, replace } = useCustomCards(token, api.list);
   const cards = state.kind === "ready" ? state.cards : [];
   const limit = state.kind === "ready" ? state.limit : 0;
@@ -335,6 +354,8 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry }: CreatorProp
   const [pendingOpen, setPendingOpen] = useState<CustomCard | "new" | null>(null);
   const saved = draft.id === null ? null : (cards.find((card) => card.id === draft.id) ?? null);
   const dirty = isDirty(draft, saved);
+  /** Changes a leave would lose: a dirty draft, unless it is a new card nobody has touched. */
+  const unsaved = dirty && !(draft.id === null && JSON.stringify(cardOf(draft)) === JSON.stringify(cardOf(newDraft())));
   const reopenAfterReload = useRef<string | null>(null);
 
   // After "Open the newer save": the list is read again, then that card opened from it.
@@ -349,7 +370,7 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry }: CreatorProp
 
   const open = useCallback(
     (target: CustomCard | "new", force = false) => {
-      if (!force && dirty && !(draft.id === null && JSON.stringify(cardOf(draft)) === JSON.stringify(cardOf(newDraft())))) {
+      if (!force && unsaved) {
         setPendingOpen(target);
         return;
       }
@@ -357,8 +378,12 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry }: CreatorProp
       setSave({ kind: "idle" });
       setDraft(target === "new" ? newDraft() : draftOf(target));
     },
-    [dirty, draft],
+    [unsaved],
   );
+
+  useEffect(() => {
+    onUnsaved?.(unsaved);
+  }, [onUnsaved, unsaved]);
 
   const persist = useCallback(async (): Promise<CustomCard | null> => {
     setSave({ kind: "saving" });
@@ -459,19 +484,7 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry }: CreatorProp
       </aside>
 
       <div className="creator-body">
-        {pendingOpen === null ? null : (
-          <div className="creator-note" role="alert">
-            <p>{t("This card has changes you haven't saved.")}</p>
-            <div className="creator-row">
-              <button type="button" className="button-secondary" onClick={() => open(pendingOpen, true)}>
-                {t("Discard them")}
-              </button>
-              <button type="button" className="button-secondary" onClick={() => setPendingOpen(null)}>
-                {t("Keep editing")}
-              </button>
-            </div>
-          </div>
-        )}
+        {pendingOpen === null ? null : <UnsavedNote onDiscard={() => open(pendingOpen, true)} onKeep={() => setPendingOpen(null)} />}
         <Editor
           key={draft.id ?? "new"}
           draft={draft}

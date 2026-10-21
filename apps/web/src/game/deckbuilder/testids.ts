@@ -134,6 +134,9 @@ export const DECKBUILDER_LOADING = "deckbuilder-loading";
 
 export const DECKBUILDER_ERROR = "deckbuilder-error";
 
+/** The decks read's Try again, beside `DECKBUILDER_ERROR` (#1485). */
+export const DECKBUILDER_RETRY = "deckbuilder-retry";
+
 /**
  * The MIME the pool puts a catalog id on when a drag starts, alongside a `text/plain` copy.
  * `e2e/support/testids.ts` `DECK_DRAG_MIME` is the same string. A drop reads both, and prefers the

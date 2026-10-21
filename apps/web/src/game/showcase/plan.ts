@@ -1,5 +1,6 @@
 // Derives showcase data only from redacted events (CLAUDE.md rule 7; R97, R202, R227).
-// It shows opponent plays, R502 casts on draw on both seats, and casts by another card (C+ #47 Jogg's Box).
+// It shows opponent plays, R502 casts on draw on both seats, casts by another card (C+ #47 Jogg's Box),
+// and trap reveals on both seats (issue #1493).
 // `view.events` is §10.8's re-redacted sliding window, so `sameOccurrence` matches redacted and revealed events.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
@@ -25,6 +26,8 @@ export type ShowcasePlay = {
   castOnDraw?: true;
   /** Another card cast it: that card's definition (null when the view hides it) and which of its casts this is, 1 on. */
   castBy?: { defId: string | null; ordinal: number };
+  /** A trap reveal: which of the batch's `trapFired` events this is, 1 on, and how many there are. */
+  trapReveal?: { ordinal: number; total: number };
 };
 
 /** R97 keeps event seats, even when card fields are redacted. */
@@ -127,7 +130,10 @@ function tailOffset(fresh: readonly GameEvent[], window: readonly GameEvent[]): 
   return fresh.every((event, i) => window[offset + i] === event) ? offset : null;
 }
 
-/** R502 includes both seats' casts on draw; per-viewer trackers also find chained casts (R97, R202). */
+/**
+ * R502 includes both seats' casts on draw; per-viewer trackers also find chained casts (R97, R202).
+ * Issue #1493 holds up every `trapFired` on both seats, in stream order with the plays.
+ */
 export function showcasePlays(
   fresh: readonly GameEvent[],
   view: PlayerView,
@@ -136,9 +142,29 @@ export function showcasePlays(
   const offset = tailOffset(fresh, view.events);
   const window = offset === null ? fresh : view.events;
   const base = offset ?? 0;
+  const total = fresh.filter((event) => event.type === "trapFired").length;
+  let revealed = 0;
   const items: ShowcaseItem[] = [];
   fresh.forEach((event, at) => {
     const cast = plays.see(event);
+    if (event.type === "trapFired") {
+      revealed += 1;
+      const trapReveal = { ordinal: revealed, total };
+      // R154, R763: either sentinel hides the trap; only its controller's seat may read it.
+      const play: ShowcasePlay =
+        event.defId === HIDDEN_CARD || event.instanceId === HIDDEN_CARD
+          ? { player: event.controller, defId: null, radiant: false, set: false, trapReveal }
+          : {
+              player: event.controller,
+              defId: event.defId,
+              instanceId: event.instanceId,
+              radiant: cardInView(view, event.instanceId)?.radiant ?? false,
+              set: false,
+              trapReveal,
+            };
+      items.push({ play, event });
+      return;
+    }
     if (event.type !== "cardPlayed") return;
     const onDraw = castOnDrawAt(window, base + at);
     if (!onDraw && cast === null && sideOf(view, event.player) !== "opponent") return;

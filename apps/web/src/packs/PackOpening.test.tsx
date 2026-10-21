@@ -570,6 +570,42 @@ describe("#1308 the card packs panel", () => {
     expect(screen.queryByTestId(T.loading)).toBeNull();
   });
 
+  it("#1485 a failed read that works on the page's next revision shows the shop and drops the alert", async () => {
+    const answers: Answers = { info: refusal(503, "unavailable", "the packs are not reachable") };
+    packsServer(answers);
+    const { rerender } = render(<PackOpening token={TOKEN} />);
+    expect(await screen.findByTestId(T.loadError)).toHaveTextContent("the packs are not reachable");
+
+    answers.info = { status: 200, body: packsInfo() };
+    rerender(<PackOpening token={TOKEN} revision={1} />);
+
+    await screen.findByTestId(T.odds);
+    expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
+    expect(screen.queryByTestId(T.loadError)).toBeNull();
+    expect(screen.queryByTestId(T.retry)).toBeNull();
+  });
+
+  it("#1485 Try again reads once more, cannot be pressed twice while the read is out, and drops the alert once it works", async () => {
+    const answers: Answers = { info: refusal(503, "unavailable", "the packs are not reachable") };
+    const server = packsServer(answers);
+    render(<PackOpening token={TOKEN} />);
+    await waitFor(() => {
+      expect(screen.getByTestId(T.retry)).toBeEnabled();
+    });
+    expect(server.to("GET", "/api/packs")).toHaveLength(1);
+
+    answers.info = { status: 200, body: packsInfo() };
+    fireEvent.click(screen.getByTestId(T.retry));
+    // The read is out: the button waits for it, and a second press sends nothing.
+    expect(screen.getByTestId(T.retry)).toBeDisabled();
+    fireEvent.click(screen.getByTestId(T.retry));
+
+    await screen.findByTestId(T.odds);
+    expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
+    expect(screen.queryByTestId(T.loadError)).toBeNull();
+    expect(server.to("GET", "/api/packs")).toHaveLength(2);
+  });
+
   it("says it is loading until the server answers", async () => {
     packsServer();
     render(<PackOpening token={TOKEN} />);

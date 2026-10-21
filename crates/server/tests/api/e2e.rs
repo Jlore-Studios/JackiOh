@@ -48,6 +48,7 @@ use jackioh_server::db::store::{
 use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{call, test_app};
+use crate::support::store::{store, try_store, uuid};
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -166,28 +167,6 @@ fn hashes(app: &App) -> Hashes {
     Hashes {
         pepper: app.env.code_pepper.clone(),
     }
-}
-
-/// One store call in a transaction of its own (TS called the store's methods bare).
-macro_rules! store {
-    ($db:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut t = $db.begin(None).await.expect("begin");
-        let out = t.$method($($arg),*).await.unwrap_or_else(|error| panic!("{}: {error:?}", stringify!($method)));
-        t.commit().await.expect("commit");
-        out
-    }};
-}
-
-/// The same call, answering its `Result` instead of insisting on `Ok`.
-macro_rules! try_store {
-    ($db:expr, $method:ident($($arg:expr),* $(,)?)) => {{
-        let mut t = $db.begin(None).await.expect("begin");
-        let out = t.$method($($arg),*).await;
-        if out.is_ok() {
-            t.commit().await.expect("commit");
-        }
-        out
-    }};
 }
 
 fn account(user_id: &str) -> &'static E2EAccount {
@@ -1028,11 +1007,6 @@ mod r144_the_reseed_on_demand {
 
 mod r143_the_optional_seed {
     use super::*;
-
-    /// A client-minted deck id (R256).
-    fn uuid(n: usize) -> String {
-        format!("00000000-0000-4000-8000-{n:012}")
-    }
 
     /// A legal Best-of-1 deck of the real catalog (the queue judges L2–L6 with the shared
     /// validator, SURFACE §11.3): `DECK_SIZE` distinct cards that are not Tokens.

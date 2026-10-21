@@ -23,8 +23,7 @@ use jackioh_server::config::{
     PACK_TARGET_RATES, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, pack_cosmetics, shipped};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CollectionEntry, Db, StoreError};
+use jackioh_server::db::store::{CollectionEntry, StoreError};
 use jackioh_server::economy::math::PityCounters;
 use jackioh_server::economy::packs::{OpenedPack, PACK_GRANT_REASON, open_pack};
 use jackioh_server::economy::roll::{
@@ -33,6 +32,7 @@ use jackioh_server::economy::roll::{
 use jackioh_server::economy::store::{Counter, EconomyReason, InventoryItem, JloreGrant, JloreReason};
 
 use crate::support::deps::{add_user, call, empty_test_app};
+use crate::support::store::fake;
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
@@ -47,13 +47,6 @@ const ROUTES: [(&str, &str); 3] = [
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
 // ---------------------------------------------------------------------------------------------
-
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        Db::Pg(_) => panic!("the test app runs on the fake store"),
-    }
-}
 
 /// An empty app with the active `p1` and its bearer token.
 async fn setup() -> (Arc<App>, String) {

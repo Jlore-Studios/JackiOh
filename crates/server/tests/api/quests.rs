@@ -31,6 +31,7 @@ use jackioh_server::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
 use jackioh_server::economy::store::{EconomyLedger, EconomyReason, JloreReason, QuestChange, QuestGrant};
 
 use crate::support::deps::{call, test_app as built_app};
+use crate::support::store::store;
 
 /// The caller's bearer token and managed-auth user id (`e2e/support/config.ts`'s `e2e-p1`).
 const TOKEN: &str = "e2e-token-p1";
@@ -57,18 +58,6 @@ async fn economy_app(live: bool) -> Arc<App> {
         .expect("the test app has no second handle yet")
         .economy_live = live;
     app
-}
-
-/// Every store call in this file: one transaction, committed when the call answers.
-macro_rules! store {
-    ($app:expr, |$t:ident| $call:expr) => {{
-        let mut $t = $app.db.begin(None).await.expect("a store transaction begins");
-        let out = $call
-            .await
-            .expect(concat!("the store answers ", stringify!($call)));
-        $t.commit().await.expect("the store transaction commits");
-        out
-    }};
 }
 
 async fn profile_id_of(app: &App, user_id: &str) -> String {

@@ -226,6 +226,20 @@ describe("R510 the Activate control on the card", () => {
     expect(abilityLabel(info, { ...radiant, params: { multiplier: 5 } }, "Deal {multiplier}× its Attack.")).toBe("Deal 5× its Attack.");
     expect(abilityLabel(info, radiant, "No numbers.")).toBe("No numbers.");
   });
+
+  it("R510 the Maestro's words read the price and exile count it will use, printed or tuned, on either face", () => {
+    const def = CATALOG["meditative-069"];
+    const info = { name: "The Maestro", type: "Unit" as const, text: "", tags: [], ...(def === undefined ? {} : { def }) };
+    const label = "Spend ({price}) Plague Counters: exile {exiles} from each enemy zone";
+    const reads = (price: number, exiles: number): string =>
+      `Spend (${String(price)}) Plague Counters: exile ${String(exiles)} from each enemy zone`;
+    const base = card({ defId: "meditative-069" });
+    const radiant = card({ defId: "meditative-069", radiant: true });
+    expect(abilityLabel(info, base, label)).toBe(reads(4, 1));
+    expect(abilityLabel(info, radiant, label)).toBe(reads(4, 2));
+    expect(abilityLabel(info, { ...base, params: { price: 3, exiles: 2 } }, label)).toBe(reads(3, 2));
+    expect(abilityLabel(info, { ...radiant, params: { price: 3, exiles: 3 } }, label)).toBe(reads(3, 3));
+  });
 });
 
 // Building an activation through the board

@@ -27,11 +27,12 @@ use jackioh_server::api::series::start_series;
 use jackioh_server::app::App;
 use jackioh_server::config::{GLITCH_BOARDS_SAMPLED, MATCH_VOIDED_CLOSE_CODE};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, ProfileKind, QueueMode};
+use jackioh_server::db::store::{ProfileKind, QueueMode};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
 use crate::support::socket::{FakeSocket, create_fake_socket};
+use crate::support::store::{fake, store, to_json};
 
 const MATCH_ID: &str = "match-glitch";
 const P1: &str = "profile-1";
@@ -51,34 +52,8 @@ const REPLY_WITHIN: Duration = Duration::from_secs(1);
 /// How long `frame` sleeps between two looks for the reply.
 const REPLY_STEP: Duration = Duration::from_millis(10);
 
-/// One store call in its own transaction.
-macro_rules! store {
-    ($app:expr, $t:ident => $call:expr) => {{
-        let mut $t = $app
-            .db
-            .begin(None)
-            .await
-            .expect("the fake store opens a transaction");
-        let out = $call;
-        $t.commit().await.expect("the fake store commits");
-        out
-    }};
-}
-
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a serialisable value")
-}
-
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
-fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
-    match &app.db {
-        Db::Fake(data) => Arc::clone(data),
-        _ => panic!("the test app runs on the fake store"),
-    }
 }
 
 /// One table of the fake store: rows as JSON.

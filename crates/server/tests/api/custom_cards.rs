@@ -21,10 +21,10 @@ use jackioh_engine::{CustomCard, CustomFrame};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{API_MAX_BODY_BYTES, CUSTOM_CARDS_PER_ACCOUNT};
-use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CustomCardWrite, Db};
+use jackioh_server::db::store::CustomCardWrite;
 
 use crate::support::deps::{add_user, call, test_app};
+use crate::support::store::fake_lock;
 
 const OWNER: &str = "owner";
 const OTHER: &str = "other";
@@ -49,16 +49,9 @@ fn merged(mut base: Value, extra: Value) -> Value {
     base
 }
 
-async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
-    match &app.db {
-        Db::Fake(data) => data.lock().await,
-        Db::Pg(_) => panic!("the API tests run on the fake store"),
-    }
-}
-
 async fn profile(app: &App, id: &str, status: &str) -> String {
     let user_id = format!("user-{id}");
-    fake(app)
+    fake_lock(app)
         .await
         .seed_profile(json!({ "id": id, "userId": user_id, "status": status }));
     add_user(app, &user_id, &format!("{id}@example.test"), true)
@@ -115,7 +108,7 @@ impl Ctx {
     }
 
     async fn table(&self) -> Vec<Value> {
-        fake(&self.app)
+        fake_lock(&self.app)
             .await
             .tables
             .custom_cards
