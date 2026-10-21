@@ -789,7 +789,7 @@ cargo test -p jackioh-server                          # the whole suite, on the 
 cargo test -p jackioh-server --test server actor::    # one area of the general binary: api::, actor::, bots::, loops::
 cargo test -p jackioh-server --test server_store store::   # the store suite, on the in-memory store
 sh crates/server/tests/sql/run.sh                     # schema, RLS and trigger invariants (Docker)
-sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it)
+sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it; DB_SHARDS=n databases at once, 3 by default)
 sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
