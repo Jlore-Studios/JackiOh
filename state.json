@@ -8731,6 +8731,13 @@
     "1499": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T12:41:47Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "line 7 fails: the Postgres half of the claim is checked only by the Docker db suite, not by `cargo test`; the change also settles which refusal a window block gets (\u00a713.9's 404)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
