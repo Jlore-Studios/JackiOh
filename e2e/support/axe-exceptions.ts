@@ -7,7 +7,7 @@
 // `/accessibility` lists the same gaps for players (apps/web/src/routes/accessibility.tsx).
 
 export type AxeException = {
-  /** The route label spec 38 checks, as its tests name it (`"/practice board"`, `"/almanac"`). */
+  /** The route label spec 38 checks, as its tests name it (`"/practice board"`, `"/almanac"`; at 390x844 `"/almanac (phone)"`). */
   route: string;
   /** The axe rule id (`label-content-name-mismatch`, …). */
   rule: string;
@@ -53,4 +53,10 @@ export const AXE_EXCEPTIONS: readonly AxeException[] = [
   { route: "/decks", rule: "label-content-name-mismatch", selector: ".db-tile", reason: DECK_TILE_LABEL },
   { route: "/practice board", rule: "label-content-name-mismatch", selector: ".prompt-card", reason: CARD_FACE_LABEL },
   { route: "hotseat board, a unit in play", rule: "target-size", selector: ".log .log-card", reason: LOG_LINE_SIZE },
+  // At 390x844 (#1561) the same card buttons. The open deck's strips are not among them: a phone
+  // folds the deck's list away while its pool is open.
+  { route: "/ (phone)", rule: "label-content-name-mismatch", selector: ".landing-fan-card", reason: CARD_FACE_LABEL },
+  { route: "/almanac (phone)", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
+  { route: "/decks (phone)", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
+  { route: "/practice board (phone)", rule: "label-content-name-mismatch", selector: ".prompt-card", reason: CARD_FACE_LABEL },
 ];

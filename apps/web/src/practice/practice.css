@@ -199,15 +199,16 @@
     0 18px 36px -18px color-mix(in srgb, var(--tier) 75%, transparent);
 }
 
-/* The radio itself, drawn as a socket that a diamond gem drops into when it is chosen. */
+/* The radio itself, drawn as a socket that a diamond gem drops into when it is chosen. 24 px, WCAG
+   2.5.8's least target: at a phone's width a smaller one has too little room around it (#1561). */
 .practice-tier__radio {
   position: absolute;
   top: 12px;
   right: 12px;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   margin: 0;
   border: 2px solid color-mix(in srgb, var(--tier) 45%, color-mix(in srgb, var(--tavern-brass) 55%, transparent));
   border-radius: 50%;

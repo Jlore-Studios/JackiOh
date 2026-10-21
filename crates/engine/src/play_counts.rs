@@ -100,9 +100,17 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     if type_ == CardType::Spell {
         state.last_spell = Some(record.clone());
     }
-    // R451: the last face-up card, passing over Traps (set face-down, so nothing hidden is ever
-    // recorded) and the tags `LAST_FACE_UP_SKIPPED_TAGS` names (the AI generated cards).
-    if played_face_down(type_) || tags.iter().any(|tag| LAST_FACE_UP_SKIPPED_TAGS.contains(tag)) {
+    // R451, R1121000: the last face-up card, passing over Traps (set face-down, so nothing
+    // hidden is ever recorded) and the tags `LAST_FACE_UP_SKIPPED_TAGS` names (the AI generated
+    // cards) — read off the recorded card's printed tags as well as the played card's tags as
+    // played, since a play can record another card's play (Classic #57 Echo records the Spell it
+    // copied, R399); a recorded AI card, a fused one included, leaves the previous record standing.
+    let recorded_skipped = crate::catalog::find_def(Some(&*state), &record.def_id)
+        .is_some_and(|def| def.tags.iter().any(|tag| LAST_FACE_UP_SKIPPED_TAGS.contains(tag)));
+    if played_face_down(type_)
+        || tags.iter().any(|tag| LAST_FACE_UP_SKIPPED_TAGS.contains(tag))
+        || recorded_skipped
+    {
         return;
     }
     if let Some(log) = state.players[player].game_log.as_mut() {
