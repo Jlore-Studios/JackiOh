@@ -270,7 +270,8 @@ def tier_at_least(tier: str, floor: str) -> bool:
 class Pool:
     #: How many runs may go at once on GitHub's runners (the Claude accounts'), planning runs
     #: included (#1455): the organization runs 20 hosted jobs at once, so this is the share the
-    #: bot's model jobs may hold while CI keeps the rest.
+    #: bots' model jobs may hold while CI keeps the rest. Both bots name the same pool and count
+    #: each other's runs against it, first come first served (`plan.others_on_github`).
     max_parallel: int
     priority: tuple[str, ...]
     providers: Mapping[str, Provider]

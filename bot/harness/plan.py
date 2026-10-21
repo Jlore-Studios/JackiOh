@@ -143,7 +143,8 @@ class Lanes:
     (`Pool.max_parallel`), `machine_limit` the machine's (`Pool.machine_parallel`), and `machine`
     names the subscriptions that run on the machine. Every run holds a runner where it runs, a
     planning run too, so `limit` bounds the hosted runners the bot's model jobs take (#1455) and
-    `machine_limit` the machine's slots."""
+    `machine_limit` the machine's slots. `limit` is a pool the bots share, first come first
+    served: `shared` is how many of its slots the other bots' runs hold now (`others_on_github`)."""
 
     limit: int
     held: dict[int, str] = field(default_factory=dict)
@@ -151,6 +152,7 @@ class Lanes:
     plan_limit: int = 0
     machine_limit: int = 0
     machine: frozenset[str] = frozenset()
+    shared: int = 0
 
     @property
     def busy(self) -> set[str]:
@@ -183,9 +185,10 @@ class Lanes:
     def free(self) -> int:
         """Lanes free on GitHub's runners. A planning run there takes one too (#1455): the
         organization runs 20 hosted jobs at once, CI among them, so `max_parallel` caps every
-        model job the bot runs on them, not only its builds."""
-        return max(0, self.limit - sum(1 for provider_id in self.held.values()
-                                       if provider_id not in self.machine))
+        model job the bots run on them, not only builds, and the other bots' runs take theirs
+        out of the same pool (`shared`)."""
+        return max(0, self.limit - self.shared - sum(1 for provider_id in self.held.values()
+                                                     if provider_id not in self.machine))
 
     @property
     def machine_free(self) -> int:
@@ -209,12 +212,39 @@ class Lanes:
         """These lanes with one more run held."""
         planning = self.planning | ({number} if action == "plan" else set())
         return Lanes(self.limit, {**self.held, number: provider_id}, planning, self.plan_limit,
-                     self.machine_limit, self.machine)
+                     self.machine_limit, self.machine, self.shared)
 
     def describe(self) -> str:
         return ", ".join((f"#{n} with `{p}`" + (" (planning)" if n in self.planning else ""))
                          if n else f"a survey with `{p}`"
                          for n, p in sorted(self.held.items())) or "none"
+
+
+#: A run of another bot that holds a slot of GitHub's runners: queued for one, or on one.
+SHARED_LIVE = ("queued", "in_progress")
+
+
+def others_on_github(ctx: Context) -> int:
+    """How many runs of the other bots (`config.OTHERS`, by their `workflow`) hold a slot of the
+    GitHub runners the bots share (#1455). `max_parallel` is one pool, first come first served:
+    a slot Squishy holds is one the night bot waits for, and the other way round. A night-bot run
+    started with its plan names its runner in its title (bot-night.yml's `run-name`), and one on
+    the machine holds no slot; any other live run counts as one. A list GitHub cannot read counts
+    as none, so a failed read never stops every lane."""
+    count = 0
+    for other in OTHERS:
+        if not other.workflow:
+            continue
+        for status in SHARED_LIVE:
+            try:
+                runs = ctx.gh.list_runs(other.workflow, status=status, limit=100)
+            except GitHubError:
+                continue
+            count += sum(1 for run in runs
+                         if run.get("status") == status
+                         and str(run.get("path") or "").endswith(f"/{other.workflow}")
+                         and " on night-vm-" not in str(run.get("display_title") or ""))
+    return count
 
 
 def working_threads(ctx: Context) -> list[dict[str, Any]]:
@@ -229,7 +259,8 @@ def read_lanes(ctx: Context, state: dict[str, Any]) -> Lanes:
     pool = ctx.cfg.pool
     lanes = Lanes(pool.max_parallel, plan_limit=pool.plan_lanes,
                   machine_limit=pool.machine_parallel,
-                  machine=frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)))
+                  machine=frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)),
+                  shared=others_on_github(ctx))
     for thread in working_threads(ctx):
         number = int(thread["number"])
         record = state["items"].get(str(number), {})

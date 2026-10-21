@@ -400,7 +400,7 @@ class StatusTests(unittest.TestCase):
         text = status.report(ctx)
         runs = "https://github.com/jgoetzmann/JackiOh/actions/runs"
         self.assertIn("\n".join([
-            "- **Running now** (1 of 6 lanes on GitHub's runners, 5 free; 2 of "
+            "- **Running now** (1 of 8 lanes on GitHub's runners, 7 free; 2 of "
             f"{ctx.cfg.pool.machine_parallel} on the night box):",
             f"  - `claude-1` (claude, `opus`): building #37, for 47m, [run]({runs}/101).",
             f"  - `muse` (muse, `muse-spark-1.3-contributor`): revising #49, for 2h 03m, "
@@ -418,7 +418,7 @@ class StatusTests(unittest.TestCase):
 
     def test_nothing_running(self):
         text = status.report(make_ctx(FakeGitHub(), at=NIGHT))
-        self.assertIn("- Running now: nothing (6 of 6 lanes free on GitHub's runners, 6 on the "
+        self.assertIn("- Running now: nothing (8 of 8 lanes free on GitHub's runners, 6 on the "
                       "night box).", text)
 
 

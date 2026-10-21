@@ -522,8 +522,10 @@ prints each one and whether it could start now, and `/harness status` does the s
   moved to the $50 plan (its last reading, from the $15 plan, said 100% of the week).
 
 At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
-included (6, under the Claude accounts' eight lanes: the organization runs 20 hosted jobs at once,
-and with Squishy's 2 the bots hold at most 8 of them, so CI keeps 12; #1455), `machine_parallel` how
+included (8: the organization runs 20 hosted jobs at once, so CI keeps 12; #1455). It is one pool
+the two bots share, first come first served: Squishy's `providers.json` names the same 8, and each
+bot counts the other's live runs against it (`plan.others_on_github`, by the workflow its identity
+names), so a free slot goes to whichever bot asks first. `machine_parallel` how
 many run at once on the bot's machine (6; its two vCPUs run each job's checks; GitHub's runners have
 four each), each apart from the other, so Claude runs never wait for the night box's slots nor its
 runs for GitHub's lanes; `plan_lanes` is how many planning runs may go at once beside the

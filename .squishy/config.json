@@ -17,7 +17,9 @@
     "marker": "<!-- jackioh-squishy -->",
     "trust": ".harness/trust.txt",
     "modes": ["oneshot", "split", "split-bot", "fullsend"],
-    "others": [{ "name": "the night bot", "login": "jgoetzmann-bot", "label_prefix": "bot:" }]
+    "others": [
+      { "name": "the night bot", "login": "jgoetzmann-bot", "label_prefix": "bot:", "workflow": "bot-night.yml" }
+    ]
   },
   "max_turns": { "plan": 200, "build": 600, "fix": 300, "revise": 300, "review": 150, "suggest": 120 },
   "call_timeout_minutes": 300,
