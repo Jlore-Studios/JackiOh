@@ -8236,10 +8236,8 @@
       "run_id": "39556525402",
       "started_at": "2026-10-21T06:38:09Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-1` (claude, opus) rejected it: `apps/web/src/fx/stage.ts:49`: rangedLook only looks in each side's `units` row, so a Ranged Unit standing in a backrow zone (a Flying Unit, R1081000) attacks wi"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
