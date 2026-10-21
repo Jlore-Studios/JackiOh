@@ -14,7 +14,7 @@
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
@@ -336,6 +336,50 @@ export default function StatsRoute(): ReactElement {
 
     return () => controller.abort();
   }, [cardDrillDownId, mode, drillDownAttempt]);
+
+  // The drill-down is a modal like the client's others (ConfirmConcede.tsx; docs/polish/6-cards.md,
+  // B25): the focus moves to its Close when it opens, Tab and Shift+Tab stay inside, Escape closes
+  // it, and the control that opened it has the focus back once it closes. That control is kept when
+  // it is pressed, not read off the focus, which a click on a button does not move in every browser.
+  const drillDownOpener = useRef<HTMLElement | null>(null);
+  const drillDownDialog = useRef<HTMLDivElement>(null);
+  const drillDownCloseButton = useRef<HTMLButtonElement>(null);
+  const drillDownOpen = Boolean(cardDrillDownId);
+
+  const openDrillDown = (id: string, opener: HTMLElement): void => {
+    drillDownOpener.current = opener;
+    setCardDrillDownId(id);
+  };
+
+  useEffect(() => {
+    if (!drillDownOpen) return;
+    drillDownCloseButton.current?.focus({ preventScroll: true });
+    // Both keys are read at the window, in the capture phase, so they hold wherever the focus is.
+    function onKey(event: globalThis.KeyboardEvent): void {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        setCardDrillDownId(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = drillDownDialog.current;
+      if (dialog === null) return;
+      const order = [...dialog.querySelectorAll<HTMLElement>("button:not([disabled])")];
+      if (order.length === 0) return;
+      const at = order.indexOf(document.activeElement as HTMLElement);
+      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
+      event.preventDefault();
+      event.stopPropagation();
+      order[next]?.focus();
+    }
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      const opener = drillDownOpener.current;
+      if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
@@ -838,7 +882,7 @@ export default function StatsRoute(): ReactElement {
                       <button
                         type="button"
                         className="stats-grid-card"
-                        onClick={() => setCardDrillDownId(card.id)}
+                        onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                         aria-label={shownName(card.id, card.name)}
                       >
                         {face && (
@@ -1073,13 +1117,13 @@ export default function StatsRoute(): ReactElement {
                           key={card.id}
                           className="stats-tr"
                           data-card-id={card.id}
-                          onClick={() => setCardDrillDownId(card.id)}
+                          onClick={(e) => openDrillDown(card.id, e.currentTarget)}
                           role="button"
                           tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
-                              setCardDrillDownId(card.id);
+                              openDrillDown(card.id, e.currentTarget);
                             }
                           }}
                         >
@@ -1270,8 +1314,9 @@ export default function StatsRoute(): ReactElement {
 
         {/* Card Drill-Down Modal */}
         {cardDrillDownId && (
-          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)} aria-hidden="true">
+          <div className="stats-modal-scrim" onClick={() => setCardDrillDownId(null)}>
             <div
+              ref={drillDownDialog}
               className="stats-drilldown-modal"
               data-testid={statsTestid.drillDownModal}
               role="dialog"
@@ -1284,6 +1329,7 @@ export default function StatsRoute(): ReactElement {
                   {drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
                 </h2>
                 <button
+                  ref={drillDownCloseButton}
                   type="button"
                   className="stats-drilldown-close"
                   data-testid={statsTestid.drillDownClose}
