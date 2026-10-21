@@ -9849,6 +9849,8 @@
       "pending_request": false,
       "provider": "claude-5",
       "queued_at": "2026-10-21T14:36:49Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39618440289",
       "self_check_findings": [],
       "started_at": "2026-10-21T14:40:06Z",
