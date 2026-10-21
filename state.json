@@ -9020,6 +9020,13 @@
     "1486": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-21T05:22:14Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Line 5 fails: the change edits a card script (crates/cards/src/scripts/meditative/c069_the_maestro.rs), which the rule never rates easy, even though only 2 files change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
