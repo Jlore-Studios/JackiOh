@@ -14,6 +14,8 @@
 
 import type { PlayerId, Row, ZoneRef } from "@jackioh/shared";
 
+import { LANES } from "./contract.ts";
+
 /** The grid's rows from the caster's seat, by y (R422). */
 const GRID_ROWS: readonly { readonly enemy: boolean; readonly row: Row }[] = [
   { enemy: false, row: "backrow" },
@@ -93,14 +95,16 @@ function signed(f: Fraction, first: boolean): string {
 
 /**
  * The equation of the curve a `curveDrawn` names (R831003), read from `caster`'s seat; null when the
- * cells make no curve (none, a zone off the grid, or two in one lane).
+ * cells make no curve (none, too many, a zone off the grid, or two in one lane).
  */
 export function curveEquation(cells: readonly ZoneRef[], caster: PlayerId): string | null {
+  // Downloaded replay views are shallow-cast, so bound the interpolation before doing any work.
+  if (cells.length === 0 || cells.length > LANES.length || cells.some((cell) => !LANES.includes(cell.lane))) return null;
   const points = cells.map((cell) => ({
     x: cell.lane - 1,
     y: GRID_ROWS.findIndex((grid) => grid.enemy === (cell.player !== caster) && grid.row === cell.row),
   }));
-  if (points.length === 0 || points.some((point) => point.y < 0)) return null;
+  if (points.some((point) => point.y < 0)) return null;
   if (new Set(points.map((point) => point.x)).size !== points.length) return null;
   const terms = coefficients(points)
     .map((f, power) => ({ f, power }))

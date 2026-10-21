@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import { curveEquation } from "./curveEquation.ts";
 
 const cell = (player: PlayerId, row: Row, lane: number): ZoneRef => ({ player, row, lane });
+const OFF_GRID_LANES = [0, 6, 999] as const;
+const OVERSIZED_CURVE_CELL_COUNT = 120;
 
 describe("curveEquation: KY's Papaya's curve as the equation its cells make", () => {
   it("a constant crosses its whole row, and reads y = 0 on the caster's backrow", () => {
@@ -91,8 +93,15 @@ describe("curveEquation: KY's Papaya's curve as the equation its cells make", ()
     ).toBe("y = ¹⁄₂x² − ⁵⁄₂x + 3");
   });
 
-  it("names no equation for no cells or two cells in one lane", () => {
+  it("names no equation for empty, duplicate-lane, off-grid, or oversized cells", () => {
     expect(curveEquation([], "p1")).toBeNull();
     expect(curveEquation([cell("p1", "units", 1), cell("p2", "units", 1)], "p1")).toBeNull();
+    for (const lane of OFF_GRID_LANES) expect(curveEquation([cell("p1", "units", lane)], "p1")).toBeNull();
+    expect(
+      curveEquation(
+        Array.from({ length: OVERSIZED_CURVE_CELL_COUNT }, (_, index) => cell("p1", "units", index + 1)),
+        "p1",
+      ),
+    ).toBeNull();
   });
 });
