@@ -31,7 +31,7 @@ use serde_json::{Value, json};
 use sqlx::Row;
 use sqlx::postgres::PgPool;
 
-use crate::support::deps::test_app;
+use crate::support::test_app::test_app;
 
 /// One transaction around one store call made outside `store.tx`: begin, the call, commit. Answers
 /// the call's value, or the first error's text; an error drops the transaction, rolling it back.

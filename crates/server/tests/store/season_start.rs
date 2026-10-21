@@ -3,7 +3,7 @@
 //! exactly while the store holds none of its writes.
 //!
 //! The port of `apps/server/test/db/season-start.test.ts`. TS's `createTestDeps()` is
-//! `support::deps::test_app()` (a fake store and the test patch version); its store's
+//! `support::test_app::test_app()` (a fake store and the test patch version); its store's
 //! `seedProfile` is `FakeData::seed_profile`, reached through the `Db::Fake` handle's lock.
 
 use jackioh_server::api::ranked::{SeasonDeps, rate_ranked_game};
@@ -14,7 +14,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use crate::support::deps::{TEST_CATALOG_VERSION, test_app};
+use crate::support::test_app::{TEST_CATALOG_VERSION, test_app};
 
 /// One transaction around one store call, as TS's store gave every method called outside
 /// `store.tx`: begin, the call, commit. Answers the call's value, or the first error's text.

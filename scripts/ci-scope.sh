@@ -53,11 +53,12 @@
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
 #    all three; tests/sql/ the sql invariants; the store (src/db/), the Supabase bootstrap
 #    (tests/db/bootstrap.sql), the server's manifest and Cargo.lock the store contract and the deploy
-#    rehearsal; the rest of tests/db/, tests/store/ and what they compile with (tests/support/,
-#    tests/server.rs) the store contract; the server's boot path (main.rs, app.rs, env.rs, the
-#    catalog's seeding, and its route, which is Render's readiness probe), the Dockerfile,
-#    render.yaml and tests/deploy/ the deploy rehearsal. A suite a pull request leaves runs in the
-#    daily super run (docs/v0.3.0/README.md §7), and its skip passes the check.
+#    rehearsal; the rest of tests/db/, tests/store/ and what they compile with (tests/server_store.rs
+#    and tests/support/test_app.rs, the one support module it takes) the store contract; the server's
+#    boot path (main.rs, app.rs, env.rs, the catalog's seeding, and its route, which is Render's
+#    readiness probe), the Dockerfile, render.yaml and tests/deploy/ the deploy rehearsal. A suite
+#    a pull request leaves runs in the daily super run (docs/v0.3.0/README.md §7), and its skip
+#    passes the check.
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
 #    .cargo/.
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
@@ -190,7 +191,7 @@ for file in $files; do
     crates/server/migrations/*) on db_sql db_store db_deploy ;;
     crates/server/tests/sql/*) on db_sql ;;
     crates/server/tests/db/bootstrap.sql | crates/server/src/db/* | crates/server/Cargo.toml | Cargo.lock) on db_store db_deploy ;;
-    crates/server/tests/db/* | crates/server/tests/store/* | crates/server/tests/support/* | crates/server/tests/server.rs) on db_store ;;
+    crates/server/tests/db/* | crates/server/tests/store/* | crates/server/tests/support/test_app.rs | crates/server/tests/server_store.rs) on db_store ;;
     crates/server/src/env.rs | crates/server/src/main.rs | crates/server/src/app.rs | crates/server/src/cli/seed_catalog.rs | \
       crates/server/src/api/catalog.rs | crates/server/Dockerfile | render.yaml | crates/server/tests/deploy/*) on db_deploy ;;
   esac

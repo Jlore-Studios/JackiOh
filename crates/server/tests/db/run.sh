@@ -45,9 +45,11 @@ trap cleanup EXIT
 # Built once: in the test profile, `cargo test`'s, and with the tests, so with the features the tests
 # turn on. A plain `cargo build` (the dev profile, which Cargo.toml's test-profile overrides make
 # different) or a `cargo run` (no tests, so other features) would compile the workspace again, so the
-# migrate step below runs the binary this build made.
-echo "--- build (jackioh-server and its tests) ---"
-cargo build --profile test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bins --tests
+# migrate step below runs the binary this build made. Exactly what the steps below run, and no more:
+# the `jackioh-server` executable (for `migrate`) and the `server_store` test target, not the server's
+# other test binaries.
+echo "--- build (jackioh-server and its store tests) ---"
+cargo build --profile test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --bin jackioh-server --test server_store
 SERVER_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/jackioh-server"
 
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
@@ -85,4 +87,4 @@ docker cp "$HERE/grants.sql" "$CONTAINER":/tmp/ >/dev/null
 docker exec "$CONTAINER" psql -U postgres -v ON_ERROR_STOP=1 -q -d jackioh -f /tmp/grants.sql
 
 echo "--- cargo test (crates/server/tests/store) ---"
-DATABASE_URL="$URL" cargo test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --test server store:: -- --test-threads=1
+DATABASE_URL="$URL" cargo test --manifest-path "$REPO/Cargo.toml" -p jackioh-server --test server_store store:: -- --test-threads=1

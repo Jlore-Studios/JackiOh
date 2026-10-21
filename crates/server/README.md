@@ -786,14 +786,19 @@ untouched. On a new project the reset zeroes nothing.
 
 ```
 cargo test -p jackioh-server                          # the whole suite, on the in-memory store and fixture auth
-cargo test -p jackioh-server --test server actor::    # one area: api::, actor::, store::
+cargo test -p jackioh-server --test server actor::    # one area of the general binary: api::, actor::, bots::, loops::
+cargo test -p jackioh-server --test server_store store::   # the store suite, on the in-memory store
 sh crates/server/tests/sql/run.sh                     # schema, RLS and trigger invariants (Docker)
 sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it)
 sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-`tests/server.rs` is one binary over `tests/{api,actor,bots,loops,store,support}/`. `support/deps.rs` builds a
-test `App` on `Db::Fake` and `Auth::E2e` and calls the router with `tower`'s `oneshot`;
+Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
+`tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
+`tests/db/run.sh` builds and links only that (CI's `db (store contract)` job stays under five minutes). A
+`store::` test lives in `server_store` only, and every other area in `server` only. `support/test_app.rs`
+builds a test `App` on `Db::Fake` and `Auth::E2e`; `support/deps.rs` re-exports it and calls the router with
+`tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; `support/store.rs` holds
 the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`; one store call in its own
