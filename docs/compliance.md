@@ -50,9 +50,9 @@ line only after that review.
 ## 3. Accessibility
 
 - `e2e/cypress/e2e/38-accessibility.cy.ts` runs axe-core over every route and both boards in the
-  daily run, and fails on any serious or critical WCAG 2.2 A/AA violation not listed with its reason
-  in `e2e/support/axe-exceptions.ts`. An exception that no longer fires fails it too, so the list
-  only holds what is still true.
+  daily run, at 1280x720 and again at a phone's 390x844 (#1561), and fails on any serious or
+  critical WCAG 2.2 A/AA violation not listed with its reason in `e2e/support/axe-exceptions.ts`.
+  An exception that no longer fires fails it too, so the list only holds what is still true.
 - Lighthouse is run by hand: Chrome's DevTools, Lighthouse, Accessibility only, on the deployed
   site. Write what it found into `/accessibility` with the date.
 - `/accessibility` says what was checked, with what and when, and what falls short. It claims no

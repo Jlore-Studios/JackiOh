@@ -14,7 +14,7 @@ export const accessibilityTestid = {
   updated: "accessibility-updated",
 } as const;
 
-export const ACCESSIBILITY_LAST_UPDATED = "2026-10-15";
+export const ACCESSIBILITY_LAST_UPDATED = "2026-10-21";
 
 export default function AccessibilityRoute(): ReactElement {
   // Split around the link, so the sentence is one entry and English reads as it always did.
@@ -44,7 +44,7 @@ export default function AccessibilityRoute(): ReactElement {
           <h3 id="a11y-checked">{t("What we checked")}</h3>
           <p>
             {t(
-              "On the date above we checked every screen with axe-core 4.14 in Chrome, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except those listed below. The same check runs every day, and fails when a new one appears.",
+              "On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer’s size and at a phone’s, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed every serious or critical problem it found, except those listed below. The same check runs every day, and fails when a new one appears.",
             )}
           </p>
           <ul>
@@ -52,6 +52,7 @@ export default function AccessibilityRoute(): ReactElement {
             <li>{t("Play, Decks, Account and the leaderboard.")}</li>
             <li>{t("The Almanac, Patch notes and Stats.")}</li>
             <li>{t("Practice, its setup and a game, and a game on one device.")}</li>
+            <li>{t("The card creator, Replays, Play together and the Collection.")}</li>
             <li>{t("The Privacy Policy, the Terms, this page and the Copyright page.")}</li>
           </ul>
         </section>
