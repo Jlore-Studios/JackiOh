@@ -8955,21 +8955,26 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-21T05:26:50Z",
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
+      "pr": 1512,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-21T05:08:32Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "39552593377",
       "started_at": "2026-10-21T05:59:12Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:6308541831"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "1484": {
       "action": "build",
