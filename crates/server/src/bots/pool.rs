@@ -9,8 +9,8 @@
 //!
 //! A new bot is drawn from the pool's seed like a player is made: a strength (`BOT_STRENGTHS`, its
 //! R610 rating seeded from it), a think speed, a persona (R645's weights), the hours it is on, an
-//! account age, and a username drawn from two word lists or, for `BOT_DEFAULT_USERNAME_SHARE` of them,
-//! the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
+//! account age, and a username drawn as people pick theirs (`bots::names`) or, for
+//! `BOT_DEFAULT_USERNAME_SHARE` of them, the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
 //! people took into live Best-of-1 games, those with enough games in the order its strength takes
 //! them and the rest shuffled (R750000), then random decks dealt as a player's All Random deck is (no shadow ban, no soft gate,
 //! R1453) leaning on the cards that win as far as its strength says (`deal_random_deck_with_strength`,
@@ -37,13 +37,14 @@ use crate::actor::engine::{deal_random_deck_excluding_with_strength, deal_random
 use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::app::{App, now_ms};
+use crate::bots::names::draw_username;
 use crate::bots::persona::pick_bot_persona;
 use crate::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_HOURS_PER_DAY,
-    BOT_NAME_FIRST, BOT_NAME_SECOND, BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN,
-    BOT_POOL_PER_WEEKLY_ACTIVE, BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN,
-    BOT_STALE_START_SECONDS, BOT_STRENGTHS, CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
+    BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
+    BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
+    CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
     BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
@@ -115,7 +116,7 @@ pub fn plan_pool(bots: &[BotRow], target: usize) -> PoolChange {
 }
 
 /// `low + rng.int(high − low + 1)`: an integer in `[low, high]`.
-fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
+pub(crate) fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
     low + i64::from(rng.int(i32::try_from(high - low + 1).unwrap_or(1)))
 }
 
@@ -139,9 +140,7 @@ pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<S
     let name = if rng.chance(BOT_DEFAULT_USERNAME_SHARE) {
         None
     } else {
-        let first = rng.pick(BOT_NAME_FIRST).copied().unwrap_or_default();
-        let second = rng.pick(BOT_NAME_SECOND).copied().unwrap_or_default();
-        Some(format!("{first}{second}"))
+        draw_username(&mut rng)
     };
     let seed_rating = BOT_STRENGTHS
         .get(strength)
