@@ -9081,6 +9081,7 @@
       "provider": "claude-2",
       "queued_at": "2026-10-21T05:04:25Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "39548326404",
       "started_at": "2026-10-21T05:14:13Z",
       "stop_requested": false,
@@ -9091,7 +9092,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:6308490068"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "1489": {
       "action": "plan",
