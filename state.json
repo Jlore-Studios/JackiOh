@@ -9664,11 +9664,11 @@
       "issue": 1445,
       "kind": "review",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-5",
       "queued_at": "2026-10-21T13:45:46Z",
-      "run_id": "39610231271",
+      "run_id": "39612437199",
       "self_check_findings": [],
-      "started_at": "2026-10-21T13:52:27Z",
+      "started_at": "2026-10-21T14:06:08Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -11497,9 +11497,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-21T14:03:33Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39611829740",
-    "what": "build #1503 on claude-3"
+    "at": "2026-10-21T14:06:08Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/39612437199",
+    "what": "review #1531 on claude-5"
   },
   "last_sweep": {
     "at": "2026-10-21T13:57:28Z",
