@@ -316,8 +316,9 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 ## Commands
 
 ```
-cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow_a.rs, ai_slow_b.rs)
-cargo test -p jackioh-ai --test ai_slow_b     # one binary: CI gives each its own job (#873)
+cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow.rs) but the daily ones
+cargo test -p jackioh-ai -- --include-ignored # and the daily ones: the many-game sweeps, `#[ignore = "daily: …"]`
+cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its own job (#873)
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team (--games N)

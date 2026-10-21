@@ -8,6 +8,7 @@ import { opponentOf, type Action, type CardView, type PlayerId, type PlayerView 
 
 import { LESSON_GAME_MS, LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
+import { daily, sweep } from "../../test/daily.ts";
 import { script } from "./advanced.ts";
 import { gotItRuns, stepsOf, type Step } from "./testkit.ts";
 
@@ -216,7 +217,8 @@ describe("R293 lesson advanced", () => {
     LESSON_GAME_TIMEOUT_MS,
   );
 
-  it(
+  // A share of the deals, so only the whole sweep can judge it.
+  daily(
     "R293 advanced: the lesson's decks forgive a game that goes another way: the autopilot wins most other deals",
     () => {
       const results: string[] = [];
@@ -232,7 +234,7 @@ describe("R293 lesson advanced", () => {
   it(
     "R293 advanced: a player who ignores the coach never stalls or breaks it",
     () => {
-      for (let n = 1; n <= RANDOM_RUNS; n += 1) {
+      for (let n = 1; n <= sweep(RANDOM_RUNS); n += 1) {
         const run = playLesson(LESSON, { policy: "random", policySeed: `${LESSON}:random:${String(n)}` });
         expect(run.view.result, `policy seed ${String(n)} reaches a result`).not.toBeNull();
         expect(run.coach.finished, `policy seed ${String(n)}: the coach is finished`).toBe(true);

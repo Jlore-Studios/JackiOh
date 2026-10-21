@@ -11,22 +11,23 @@
 #   clippy             `rust (fmt, clippy)`
 #   rust_engine_rules  `rust (test engine rules)`, and so on: each `rust_<group>` is one entry of
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
-#   rust_cards_lib_core     `rust_tools_wasm`)
-#   rust_cards_lib_classic
-#   rust_cards_lib_classic_plus
-#   rust_cards_lib_meditative
+#   rust_cards_lib     `rust_tools_wasm`)
 #   rust_cards
 #   rust_server
 #   rust_ai
-#   rust_ai_slow_a
-#   rust_ai_slow_b
+#   rust_ai_slow
 #   rust_luau
 #   rust_tools_wasm
-#   web                `web (typecheck, eslint)` and `web (unit k/3)`
+#   web                `web (typecheck, eslint)` and `web (unit k/3)`; the WASM modules and the client
+#                      build run on `web` or `e2e`
+#   web_promote        `web (unit 1/3)`'s own run of apps/web/src/net/promote-production.test.ts, which
+#                      the shards leave out (the daily super run runs it whatever changed)
 #   e2e                `e2e smoke`
 #
-# Until ci.yml is wired to them (#751), it reads only `full` and `db`; every other line is printed
-# so that wiring needs no change here.
+# ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
+# for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
+# job-level `if:` cannot see `matrix`, a first step that turns the entry's other steps off. Each
+# summary job accepts a skip only when the skipped piece's own line says `false`.
 #
 # `full=false` means every file the pull request changes sits on the SKIP list below, which holds
 # only paths that no CI job other than `bot selftest` ever reads (ci.yml's `changes` job scopes that
@@ -61,11 +62,11 @@
 #    a pull request leaves runs in the daily super run (docs/v0.3.0/README.md §7), and its skip
 #    passes the check.
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
-#    .cargo/.
+#    .cargo/, and any Luau source or .luaurc (the same job runs luau-analyze, #442 L10).
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine or
 #    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
-#    runs its three groups (ai, ai slow a and ai slow b), server and tools, wasm; the server runs
+#    runs its two groups (ai and ai slow), server and tools, wasm; the server runs
 #    server; tools and wasm run tools, wasm; luau runs luau and tools, wasm (the tools build on it).
 #    A crate the map does not know runs every group. A crate's Cargo.toml also runs tools, wasm,
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
@@ -76,12 +77,15 @@
 #    crates/server/.env.example, render.yaml and apps/web/.env.production (the catalog version's
 #    sites, which the tools' patches tests read) tools, wasm, the first as well as server;
 #    render.yaml too (the server's tests/api/health.rs reads its healthCheckPath, #861) server; and
-#    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; and training/history/sweep-*.md
-#    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm.
+#    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
+#    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
+#    and scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
+#    types it writes to the C bindings) tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
-#    (V23) and every Rust source for a file it includes from outside its crate, so a diff there that
-#    adds a line holding a reader call (`readFileSync(`, `include_str!(`, `include_bytes!(`,
-#    `read_to_string(`) or `CARGO_MANIFEST_DIR` runs tools, wasm.
+#    (V23), every Rust source for a file it includes from outside its crate, and every Rust source for
+#    an `#[ignore]` that does not say it runs daily, so a diff there that adds a line holding a
+#    reader call (`readFileSync(`, `include_str!(`, `include_bytes!(`, `read_to_string(`),
+#    `CARGO_MANIFEST_DIR` or `#[ignore` runs tools, wasm.
 #  - web runs for everything but what no web test, build or typecheck reads: the server's, the
 #    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
 #    the web's tests read there: env.rs, the Dockerfile, tests/deploy/, the practice claim fixture,
@@ -89,6 +93,11 @@
 #    quests.json, whose titles the quests panel's test holds to zh-CN), every crate's README, the
 #    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), docs/, training/, reviews/, analysis/ and the top-level Markdown.
+#  - web_promote runs for what promote-production.test.ts runs and reads: scripts/promote-production.sh,
+#    scripts/vercel-ignore.sh, the workflow (under .github/, so every job runs) and the test itself,
+#    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
+#    workspace, .nvmrc, both vitest configs and apps/web/src/test/). It turns `web` on too, so the
+#    job that runs it runs.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
 #    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's golden
 #    traces, which tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
@@ -113,8 +122,8 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_luau rust_tools_wasm web e2e"
-RUST="rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_luau rust_tools_wasm"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm web web_promote e2e"
+RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm"
 
 # Every line, set to $1.
 every() {
@@ -184,7 +193,7 @@ for file in $files; do
   case "$file" in
     Cargo.toml | Cargo.lock | rust-toolchain.toml | .cargo/* | .github/* | scripts/ci-scope.sh)
       echo "ci-scope: $file runs every job" >&2
-      on clippy $RUST web e2e
+      on clippy $RUST web web_promote e2e
       ;;
   esac
 
@@ -199,13 +208,14 @@ for file in $files; do
 
   case "$file" in
     *.rs | Cargo.toml | */Cargo.toml | Cargo.lock | clippy.toml | */clippy.toml | rustfmt.toml | rust-toolchain.toml | .cargo/*) on clippy ;;
+    *.luau | *.luaurc) on clippy ;;
   esac
 
   # The crate map, which acceptance.rs holds to `cargo metadata`.
   case "$file" in
     crates/server/.env.example) on rust_server rust_tools_wasm ;;
     crates/engine/* | crates/cards/*) on $RUST ;;
-    crates/ai/*) on rust_ai rust_ai_slow_a rust_ai_slow_b rust_server rust_tools_wasm ;;
+    crates/ai/*) on rust_ai rust_ai_slow rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/luau/*) on rust_luau rust_tools_wasm ;;
     crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
@@ -217,7 +227,7 @@ for file in $files; do
     docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
     render.yaml) on rust_server rust_tools_wasm ;;
-    apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
+    apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
   esac
 
   case "$file" in
@@ -236,6 +246,12 @@ for file in $files; do
   esac
 
   case "$file" in
+    scripts/promote-production.sh | scripts/vercel-ignore.sh | apps/web/src/net/promote-production.test.ts) on web web_promote ;;
+    package.json | apps/web/package.json | pnpm-lock.yaml | pnpm-workspace.yaml | .nvmrc) on web web_promote ;;
+    vitest.config.ts | apps/web/vitest.config.ts | apps/web/src/test/*) on web web_promote ;;
+  esac
+
+  case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
     crates/*/tests/* | crates/*/README.md | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
     docs/* | spec/* | training/* | reviews/* | analysis/*) ;;
@@ -248,7 +264,7 @@ done
 
 # acceptance.rs's scans, which read every source under apps/, crates/ and e2e/.
 if git diff --no-renames -U0 "$base...$head" -- apps crates e2e 2>/dev/null |
-  grep -qE '^\+.*(readFileSync\(|include_str!\(|include_bytes!\(|read_to_string\(|CARGO_MANIFEST_DIR)'; then
+  grep -qE '^\+.*(readFileSync\(|include_str!\(|include_bytes!\(|read_to_string\(|CARGO_MANIFEST_DIR|#\[ignore)'; then
   on rust_tools_wasm
 fi
 
