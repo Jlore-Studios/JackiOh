@@ -85,6 +85,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1479": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-21T01:32:25Z",
+      "issue": 1475,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "97ea34806c69ab1c",
