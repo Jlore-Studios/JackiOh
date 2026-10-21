@@ -875,6 +875,8 @@ describe("B14 summon", () => {
     expectCues(plan([summon("p2", "n2", "core-002", "units", 2)], 250, { env: envOf({ card: catalog(FACTS) }) }), [
       ring("dust", tid(zone), slam, 250),
       burst("dust", tid(zone, FOOT), "ring", slam),
+      // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
+      burst("spark", tid(zone, FOOT), "point", slam),
     ]);
   });
 });
@@ -887,7 +889,12 @@ describe("B15 cast", () => {
       const cues = plan([played("p1", HAND), summon("p1", HAND, "core-002", "units", 3)], D, {
         env: envOf({ card: catalog(FACTS) }),
       });
-      expectCues(cues, [ring("dust", tid(zone), slam, D), burst("dust", tid(zone, FOOT), "ring", slam)]);
+      expectCues(cues, [
+        ring("dust", tid(zone), slam, D),
+        burst("dust", tid(zone, FOOT), "ring", slam),
+        // #1445: core-002 is Physical, so its entrance is a spark burst at the zone's foot.
+        burst("spark", tid(zone, FOOT), "point", slam),
+      ]);
     }
   });
 
