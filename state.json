@@ -11815,10 +11815,12 @@
       "forced": false,
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-22T20:35:22Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "strong",
       "run_id": "39850543160",
       "started_at": "2026-10-22T20:37:59Z",
       "stop_requested": false,
@@ -11841,7 +11843,8 @@
         ],
         "mode": "fullsend",
         "onto": "bot/issue-1651"
-      }
+      },
+      "verdict_rounds": 0
     },
     "1652": {
       "cleared": {
