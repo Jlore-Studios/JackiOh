@@ -159,8 +159,8 @@ function signInThroughForm(email: string): void {
     cy.get('[data-testid="login-error"]').should("not.exist");
 
     // Past the invite gate: the gate leaves an active account on /decks; a pending one would be
-    // bounced to /invite.
-    cy.get('[data-testid="landing-build-decks"]').click();
+    // bounced to /invite. (#1577: the landing offers no Build decks door anymore.)
+    cy.visit("/decks");
     cy.get('[data-testid="deck-list"]', { timeout: 40_000 }).should("exist");
     cy.location("pathname").should("eq", "/decks");
   });

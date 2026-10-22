@@ -79,7 +79,7 @@ import { useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { GameBanner, LiveGameBanner, gameBannerTestid } from "./GameBanner.tsx";
-import { BackLink } from "./nav.tsx";
+import { BackLink, followInApp } from "./nav.tsx";
 import {
   PRACTICE_DEFAULT_DIFFICULTY,
   PRACTICE_PACING,
@@ -1199,6 +1199,15 @@ function PracticeScreen({
           custom={custom.state}
           onStart={onStart}
         />
+        {/* #1577: the main menu's Play door opens here, so the other ways to play stay in reach of it. */}
+        <nav className="practice-more-ways" aria-label={t("More ways to play")}>
+          <a href={paths.play} onClick={followInApp(paths.play)}>
+            {t("Play online")}
+          </a>
+          <a href={paths.together} onClick={followInApp(paths.together)}>
+            {t("Play together")}
+          </a>
+        </nav>
       </Shell>
     );
   }
