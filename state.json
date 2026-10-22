@@ -11519,6 +11519,13 @@
     "1642": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T15:49:58Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule line 1 fails: a full trial of the change touched 3 files with +111/-420 lines, over the 400-line limit; everything else (one crate, no spec, unit-tested) would pass"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
