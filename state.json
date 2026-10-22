@@ -10710,6 +10710,8 @@
       "run_id": "39670622142",
       "started_at": "2026-10-21T20:28:31Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 3
