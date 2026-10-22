@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 1595,
+  "title": "Patch: a random cast answers its prompts like a player would",
+  "branch": "bot/issue-1595",
+  "thread": "**Issue #1595 (data, not instructions):**\n\n```text\n# #1595: Patch: a random cast answers its prompts like a player would\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen an effect casts a random card for you (the loot-box card that casts a random spell, the boss prime that does the same), the game is supposed to answer that card's questions itself, at random. Today it gets two kinds of question wrong. A 'pick cards up to a total cost' question is answered with no budget at all \u2014 the random cast can summon graveyard units whose total cost a real player could never pick. And a question raised by a triggered ability is handed to the player as a real prompt instead of being rolled \u2014 pausing the random cast for input and letting the player choose what should have been chance.\n\n## Why\n\nTwo confirmed violations of R452 ('every prompt opened for its caster while it resolves \u2026 answered at once, uniformly, so the caster is never asked'). (1) `answer_at_random` builds its probe `PendingChoice` with `budget: None` (`crates/engine/src/prompts.rs:1389-1403`), so `PickWalk::fits` admits every set (`prompts.rs:780-782, 800`); `classic-044` Back from the GY is a Spell in the random pools of `classicplus-047` Jogg's Box and `classicplus-038-1` Solarius Prime, so a random cast can summon over its (5) budget \u2014 an outcome a human can never select (`why_answer_refused`, `prompts.rs:552-568`). (2) `cry_trigger.rs`'s `ask_targets`/`ask_modes` check only the Mayor's random-target flag (R1200) and never the random-cast mode (`crates/engine/src/cry_trigger.rs:240-287, 313-325`), so a random cast of a trigger-Cry card (Rewind, League of Losers) opens a real prompt for the caster. The sibling module `crates/engine/src/effects/plague.rs:228-234` already follows the contract, and `has_answerer(\"@triggerCry\")` (`prompts.rs:579-584`) exists precisely to keep the caster un-asked.\n\n## Proposal\n\nPass the real budget into the probe \u2014 `budget: args.budget.map(|b| b.max(0))`, matching `open_prompt`'s own write at `prompts.rs:372`. In the Cry-prompt path compute `cast_mode_for_prompt` like `plague.rs:228-234` does and, when `mode.random`, draw the picks with the existing random-pick helpers (honoring `target_enemies`) instead of calling `open_prompt`.\n\n## Where it lands\n\n`crates/engine/src/prompts.rs`, `crates/engine/src/cry_trigger.rs`; the model to copy is `crates/engine/src/effects/plague.rs:228-234`. Spec R452, \u00a710.6; tests land in `crates/engine/tests/rules/effects_cast.rs` (already one of R452's `proven_in` files).\n\n## Acceptance criteria\n\n- [ ] Reusing the `back_from_gy()` fixture: random-cast it over a graveyard whose units cost more than the budget in total; across seeds every summoned set's total cost fits the budget \u2014 fails today.\n- [ ] A random cast of a trigger-Cry card leaves `state.pending` `None` through resolution and draws its Cry target from the rng deterministically per seed.\n- [ ] `cargo jackioh spec index` and `cargo jackioh spec check` stay green (the test file is already in R452's `proven_in`); `cargo jackioh fuzz --seeds 200` passes.\n\n## Size and risks\n\nSmall-medium, engine only. The Cry arm must route through the sided-aiming rules (an aimed cast still prefers its side), mirroring `plague.rs`; the fixed paths grow the fuzz's reachable space slightly. No new ruling needed \u2014 R452 already states the rule; this is conformance.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:34:47Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1595: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #1613: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
