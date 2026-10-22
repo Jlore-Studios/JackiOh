@@ -12403,14 +12403,20 @@
       "taken_asks": []
     },
     "1676": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-22T20:31:09Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "pending:8aec485c-1792701411",
+      "started_at": "2026-10-22T20:37:04Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "1680": {
       "failures": 0,
@@ -13315,9 +13321,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T20:36:39Z",
+    "at": "2026-10-22T20:37:04Z",
     "url": "",
-    "what": "plan #1675 on claude-4"
+    "what": "plan #1676 on muse"
   },
   "last_sweep": {
     "at": "2026-10-22T20:34:53Z",
