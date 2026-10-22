@@ -55,6 +55,7 @@ pub mod echo;
 pub mod effects;
 pub mod enchantments;
 pub mod faces;
+pub mod float;
 pub mod freeze;
 pub mod game_over;
 pub mod game_summary;

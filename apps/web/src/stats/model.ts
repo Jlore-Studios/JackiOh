@@ -3,13 +3,13 @@
 
 import type { PlayerId } from "@jackioh/shared";
 
-export const CARD_COUNTERS = ["seen", "played", "playedAgainst", "destroyed", "defeated"] as const;
+export const CARD_COUNTERS = ["seen", "played", "playedAgainst", "destroyed", "defeated", "allured", "lethal", "sprung", "survived"] as const;
 export type CardCounter = (typeof CARD_COUNTERS)[number];
 
-/** Per-card viewer counts: seen, player/opponent plays, and player/opponent destroyed cards. */
+/** Per-card viewer counts: seen, player/opponent plays, player/opponent destroyed cards, and (R1582000) the player's cards the opponent's Allure took, lethal blows, Traps fired and survivors. */
 export type CardCounters = Readonly<Record<CardCounter, number>>;
 
-export const NO_COUNTS: CardCounters = Object.freeze({ seen: 0, played: 0, playedAgainst: 0, destroyed: 0, defeated: 0 });
+export const NO_COUNTS: CardCounters = Object.freeze({ seen: 0, played: 0, playedAgainst: 0, destroyed: 0, defeated: 0, allured: 0, lethal: 0, sprung: 0, survived: 0 });
 
 export type PlayerStats = {
   readonly games: number;
@@ -35,6 +35,14 @@ export type GameLog = {
   readonly playedAgainst: Readonly<Record<string, number>>;
   readonly destroyed: Readonly<Record<string, number>>;
   readonly defeated: Readonly<Record<string, number>>;
+  /** R1582000: the player's cards the opponent's Allure took. */
+  readonly allured: Readonly<Record<string, number>>;
+  /** R1582000: the cards that dealt the lethal blow of a game the player won. */
+  readonly lethal: Readonly<Record<string, number>>;
+  /** R1582000: the player's Traps that fired. */
+  readonly sprung: Readonly<Record<string, number>>;
+  /** R1582000: the player's Units standing when a game they won ended. */
+  readonly survived: Readonly<Record<string, number>>;
 };
 
 export const EMPTY_LOG: GameLog = Object.freeze({
@@ -43,6 +51,10 @@ export const EMPTY_LOG: GameLog = Object.freeze({
   playedAgainst: Object.freeze({}),
   destroyed: Object.freeze({}),
   defeated: Object.freeze({}),
+  allured: Object.freeze({}),
+  lethal: Object.freeze({}),
+  sprung: Object.freeze({}),
+  survived: Object.freeze({}),
 });
 
 export type GameOutcome = "win" | "loss" | "draw";
@@ -77,7 +89,11 @@ export function logIsEmpty(log: GameLog): boolean {
     Object.keys(log.played).length === 0 &&
     Object.keys(log.playedAgainst).length === 0 &&
     Object.keys(log.destroyed).length === 0 &&
-    Object.keys(log.defeated).length === 0
+    Object.keys(log.defeated).length === 0 &&
+    Object.keys(log.allured).length === 0 &&
+    Object.keys(log.lethal).length === 0 &&
+    Object.keys(log.sprung).length === 0 &&
+    Object.keys(log.survived).length === 0
   );
 }
 
@@ -88,7 +104,7 @@ export function addGame(stats: PlayerStats, log: GameLog, outcome: GameOutcome):
     cards[id] = { ...current, [counter]: current[counter] + by };
   };
   for (const id of log.seen) add(id, "seen", 1);
-  for (const counter of ["played", "playedAgainst", "destroyed", "defeated"] as const) {
+  for (const counter of ["played", "playedAgainst", "destroyed", "defeated", "allured", "lethal", "sprung", "survived"] as const) {
     for (const [id, n] of Object.entries(log[counter])) add(id, counter, n);
   }
   return {

@@ -70,12 +70,15 @@ Nothing in a build can reach production, so the first calibration's anchor is th
 
 ## The ceiling gate
 
-A player rated above every bot in the pool is never given one: `choose_bot` (`bots/fallback.rs`,
-R1453) answers none when the player outrates every active bot, and the ticket waits for a person
-instead. With a pool seeded from `BOT_SEED_RATINGS` the ceiling is the highest seed. Two tests hold it:
+A player rated above every bot in the pool is given none but a grinder: `choose_bot`
+(`bots/fallback.rs`, R1453) answers no other bot when the player outrates every active bot, and the
+ticket waits for a person instead. With a pool seeded from `BOT_SEED_RATINGS` the ceiling is the highest seed. Two tests hold it:
 `r1453_above_the_strongest_bot_gets_none` and `r748000_the_strongest_seed_is_the_ceiling`
 (`crates/server/tests/api/bots.rs`): a person one point above the highest seed gets no bot, and one
-rated exactly at it gets the strongest.
+rated exactly at it gets the strongest. A grinder within `MAX_FAIR_GAP` is the one exception
+(R1555000): while people outrank every bot, the top bots grind, and a player above every bot may
+meet one of them. The live anchor reads each bot by the strength it holds now, so a grinder that
+steps up into the reference brings its games from the strength below with it.
 
 The ceiling is why the seeds matter at the top: a reference seeded too low sends the best players
 to wait for people, one seeded too high lets a bot beat players who have outgrown it. Live ratings
@@ -110,7 +113,10 @@ every promotion on a number a lane cannot change.
 
 The seeds are for new bots. A bot already in the pool keeps the rating it has earned, so a
 re-calibration changes the ratings of the bots made after it, and the ceiling only as bots are replaced
-and the live ratings follow the AI.
+and the live ratings follow the AI. They follow it without waiting for a calibration: a bot's first
+rated game on a new AI generation widens its deviation, by `BOT_PROMOTION_DEVIATION_BOOST` per
+promotion and capped at a new player's (R1560000), so its next rated games move its rating
+to the new AI's strength.
 
 ## How calibration differs from live play
 

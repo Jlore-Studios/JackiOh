@@ -63,6 +63,9 @@
 //   it) and Mark in a hand (printed "Mark"). Grant tag stays rules vocabulary: #35 says it in plain
 //   words, so no card prints the row's name.
 //
+// Issue #1563 (R1563000) adds §6.2's Float, with "Floats" as its alias: Bread and Butter's "Reveals when
+// any player Floats", "X = the Float", and "Float reduces cost" on GIGA Glowy Jelly Bean and YileGPT Prime.
+//
 // Issue #1174 (R1174000) adds §6.1's Frozen, a status that is no keyword kind, and §6.3's Freeze,
 // with "freeze" and "freezes" as its aliases. No card prints either yet (M+ #24 Bob, #1185, will).
 
@@ -80,6 +83,7 @@ export type TriggerTermId =
   | "Echo"
   | "Cast on draw"
   | "Quickdraw"
+  | "Float"
   | "Activate";
 export type VerbTermId =
   | "Discover"
@@ -245,10 +249,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Can't attack or switch position until it thaws: it loses its next chance to do either, and thaws at the end of the turn it could have done it",
   ),
   // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords"); patch
-  // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it.
+  // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it, and issue #1615 (R1615000) Charge
+  // and Indestructible.
   "Combat keyword": status(
     "Combat keyword",
-    "One of the keywords Units fight with: Taunt, Rush, Charge, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Indestructible, Deft, Lifesteal, Pierce, Trample",
+    "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample",
     { aliases: ["combat keywords", "combat keyword"] },
   ),
 
@@ -272,6 +277,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Echo: trigger("Echo", "Recast this card X more times", { row: "Echo X" }),
   "Cast on draw": trigger("Cast on draw", "Plays itself on draw, then draw again"),
   Quickdraw: trigger("Quickdraw", "Starts in your opening hand instead of a draw"),
+  // #1563 (R1563000): "Floats", "the Float" and "Float reduces cost" all bold as this term.
+  Float: trigger(
+    "Float",
+    'The mana a player leaves unspent when their turn ends. "Float reduces cost": whenever you Float, this costs that much less',
+    { aliases: ["Floats"] },
+  ),
   // Patch v0.2.0 (B3.2, R384): "Activate", "Activate 2", "Activate ♾️" are this one term.
   Activate: trigger(
     "Activate",

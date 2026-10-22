@@ -592,6 +592,14 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All Random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
+/** R1578000: the Play hub, its primary online panel, the nav of the other ways to play and their tiles. */
+export const PLAY_SCREEN = "play-screen";
+export const PLAY_ONLINE = "play-online";
+export const PLAY_WAYS = "play-ways";
+export const PLAY_CREATOR = "play-creator";
+export const PLAY_TOGETHER = "play-together";
+/** R1578000: a visitor with no account is offered sign-in where the online controls would be. */
+export const PLAY_SIGN_IN = "play-sign-in";
 
 export function playModeId(mode: QueueMode): string {
   return `play-mode-${mode}`;
@@ -749,7 +757,6 @@ export function replaysOnlineId(matchId: string): string {
 // #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
 // the chat panel and the board rail's chat, the challenge toast, the watch screen and the replay share.
 
-export const LANDING_PLAY_TOGETHER = "landing-play-together";
 export const TOGETHER_ROOT = "together";
 export const TOGETHER_ADD_INPUT = "together-add-input";
 export const TOGETHER_ADD_SUBMIT = "together-add-submit";
@@ -821,8 +828,10 @@ export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
 export const WATCH_SCREEN = "watch-screen";
 export const WATCH_WAITING = "watch-waiting";
 export const WATCH_REFUSED = "watch-refused";
+export const WATCH_GONE = "watch-gone";
 export const WATCH_STATUS = "watch-status";
 export const WATCH_BACK = "watch-back";
+export const WATCH_RECONNECT = "watch-reconnect";
 
 export const SHARE_FRIEND_OPEN = "share-friend-open";
 /** One per friend: `data-profile-id`, `data-shared`. */
@@ -874,6 +883,7 @@ export const DUOS_CONCEDE = "duos-concede";
 export const DUOS_CONCEDE_STATUS = "duos-concede-status";
 export const DUOS_RESULT = "duos-result";
 export const DUOS_RESULT_REPLAY = "duos-result-replay";
+export const DUOS_RESULT_JLORE = "duos-result-jlore";
 export const DUOS_REPLAY = "duos-replay";
 export const DUOS_LIFE_STRIP = "duos-life-strip";
 
@@ -887,9 +897,8 @@ export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
 // `collectionTestid` in collection/collection.ts, none of which this project can import (each
 // reaches `@jackioh/*`, which only the client's own build resolves).
 
-/** `/account`: the Card packs toggle (shop, opening, token picker) and the Dev tools toggle (R1300000). */
+/** `/account`: the Dev tools toggle (R1300000). */
 export const ACCOUNT_SCREEN = "account-screen";
-export const ACCOUNT_PACKS_TOGGLE = "account-packs-toggle";
 export const ACCOUNT_DEV_TOGGLE = "account-dev-toggle";
 
 /** §14.10: the Dev tools panel; its status line says "Done." or the server's refusal word for word. */

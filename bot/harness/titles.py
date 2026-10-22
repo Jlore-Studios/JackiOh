@@ -150,23 +150,38 @@ def retitle_shipped(gh: Any, entries: list[dict[str, Any]], subject_of=None) -> 
                 pull = gh.get_pull(number)
             except GitHubError:
                 continue
-            threads = [(number, str(pull.get("title") or ""), True)]
+            threads = [(number, pull, True)]
             for issue in closed_by(str(pull.get("body") or "")):
                 try:
-                    threads.append((issue, str(gh.get_issue(issue).get("title") or ""), False))
+                    threads.append((issue, gh.get_issue(issue), False))
                 except GitHubError:
                     continue
-            for thread, title, is_pull in threads:
+            for thread, data, is_pull in threads:
+                title = str(data.get("title") or "")
                 retitled = new_title(title, version)
                 if retitled != title:
                     if is_pull:
                         gh.update_pull(thread, title=retitled)
                     else:
                         gh.update_issue(thread, title=retitled)
-                gh.create_comment(thread, f"Shipped as **{version}** (`patches ship`, #1360): "
-                                          f"its title is now `{retitled}`.")
+                _comment(gh, thread, bool(data.get("locked")),
+                         f"Shipped as **{version}** (`patches ship`, #1360): "
+                         f"its title is now `{retitled}`.")
                 done.append(f"#{thread}: {retitled}")
     return done
+
+
+def _comment(gh: Any, number: int, locked: bool, body: str) -> None:
+    """Comment on a thread, unlocking a locked one for the comment and locking it again: the
+    workflow's token cannot comment on a locked thread (`lock-conversations.yml`)."""
+    if not locked:
+        gh.create_comment(number, body)
+        return
+    gh.unlock(number)
+    try:
+        gh.create_comment(number, body)
+    finally:
+        gh.lock(number)
 
 
 def left_alone(thread: dict[str, Any]) -> bool:

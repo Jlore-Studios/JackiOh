@@ -32,6 +32,17 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
+Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
+window, and what a menu holds past its room scrolls in its one region, never in the page, with its
+top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
+makes the shell the window's height); its region takes `one-screen__body`; a box between the two
+that must shrink (a tavern panel) takes `one-screen__frame`, and a wrapper that stacks its children
+as the shell does takes `one-screen__stack`. Under 501 px tall (a phone on its side) the page
+scrolls as it did. The deck builder and the almanac do the same on a phone (`deckbuilder.css`,
+`workshop.css`, `almanac.css`), as they already did on a desktop. No type shrinks to make it fit.
+The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
+sizes and fails when the page is taller or wider than its allowance.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and
@@ -189,7 +200,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
                         the trio editor that marks every card two of its decks share (R251),
@@ -197,7 +208,10 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
-routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
+routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
+                        largest, Practice, Card creator, Play together and Replays as four smaller links
+                        beside it, and for a visitor with no account (`token` null) a Sign in in the online
+                        panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
@@ -210,11 +224,12 @@ net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for
                         the lobby
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match or series the menus' banner offers;
-                        an ended queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
+                        then the game), and useLiveGame, the live match, series or co-op game the menus'
+                        banner offers (R1566000); an ended queue is forgotten after
+                        QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
-                        practice game (Resume, on /practice) and the live online game (Rejoin, on / and
-                        /practice); game-banner.css draws it as the tavern's notice
+                        practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
+                        on / and /practice); game-banner.css draws it as the tavern's notice
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,
@@ -224,29 +239,38 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
-routes/collection.tsx   /collection (#1307): the account's cards per shipped set, wallet, set tracks and
-                        quests, each panel reading for itself and saying why when its read fails;
-                        collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel) and their
-                        model; every one renders the server's answers and decides nothing (rule 7)
-routes/QuestsPanel.tsx  /collection's quests (§14.9) from GET /api/quests: each held quest's progress and
+routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
+                        Card builder (/creator) as links, Cards and Cosmetics opened in place by
+                        `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
+                        between them and the hub; the page never scrolls, a section's body does. Cards is
+                        the account's cards per shipped set, wallet, set tracks and quests, each panel
+                        reading for itself and saying why when its read fails; Cosmetics is the only place
+                        to equip one (the six selects, collection/CosmeticsPanel.tsx, on the same store and
+                        `cosmetics` settings group as before, R633) beside the owned list from GET
+                        /api/cosmetics; collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel,
+                        CosmeticsPanel) and their model; every one renders the server's answers and
+                        decides nothing (rule 7)
+routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other; the page never
+                        scrolls, its body does
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
                         its answer or refusal; /account's "Manage sign-in & account" shows every account
                         its account secret ID, hidden until asked for, with a copy button
-packs/                  #1308: the card packs on /account (SPEC §14.3, §14.4; `PackOpening.tsx`, lazy-loaded from
-                        routes/account.tsx, shown to an active account once `ECONOMY_LIVE` and before it to a dev
-                        one): the odds and pity counters `GET /api/packs` states, the packs held, and the scene
+packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
+                        by routes/shop.tsx): the pity counters `GET /api/packs` states, shown once for every
+                        card pack, apart from the odds, then the packs held, the odds and the scene
                         that opens one (`POST /api/packs/open`): a tear or swipe, the best rarity tinting the
                         glow, cards turned one at a time (Epic and above on a hold), what each became, a
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
                         at once; the server decided every slot before anything animates (`packs.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
-shop/                   #1309: spending what the economy pays, on /account behind the same packs toggle
-                        (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, lazy-loaded from
-                        routes/account.tsx beside the opening): the Jlore shop buys set and global packs at
+shop/                   #1309: spending what the economy pays, on /shop (R1580000) beside the opening
+                        (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, imported by
+                        routes/shop.tsx): the Jlore shop buys set and global packs at
                         `GET /api/packs`' price (`POST /api/packs/buy`), the button disabled with the
                         shortfall shown when the wallet (`GET /api/wallet`) is short; the token picker shows
                         both token bars and the cycle's next step (`GET /api/tokens`), a card token browsing
@@ -279,7 +303,7 @@ routes (net/navigate.ts paths, and both vercel.json route tables):
                          name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
                          Chat (always), Remove and Block; "Shared with me"; the co-op panel
   /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
-                         legal action, SPECTATE_DELAY_MS behind
+                         legal action, SPECTATE_DELAY_MS behind; Reconnect now once its own reopens run out
   /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
   /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
                          bindings, with a seat switcher (development only, as /dev/hotseat)
@@ -307,7 +331,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
                          file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
 
-The landing page offers Play together beside Play online. The replays list and the replay player offer
+The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. On the Duos board:
@@ -327,7 +351,7 @@ The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_
 and only the dev server's build (`predev`'s `JACKIOH_WASM_DUOS=1`, crates/wasm's `duos` feature): in
 any other build each throws the reason.
 
-Test ids, mirrored in `e2e/support/testids.ts`: `landing-play-together`, `together-add-input`,
+Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
 `together-challenge`, `together-watch`, `together-chat-open`, `chat-input`, `chat-send`,
 `chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,

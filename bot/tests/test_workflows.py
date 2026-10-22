@@ -27,6 +27,14 @@ def selftest() -> str:
     return job(read("ci.yml"), "bot-selftest")
 
 
+ACTIONLINT_EVERY_WORKFLOW = "rhysd/actionlint:1.7.7 -color $(ls .github/workflows/*.yml)"
+
+
+def linted(name: str) -> bool:
+    """Whether bot selftest's actionlint reads the workflow `name`: it reads every one there is."""
+    return ACTIONLINT_EVERY_WORKFLOW in selftest() and (WORKFLOWS / name).is_file()
+
+
 class NightWorkflowTests(unittest.TestCase):
     text = read("bot-night.yml")
 
@@ -129,11 +137,11 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertFalse(other.group(1).startswith("Build, check and review"))
         self.assertEqual(work.count("python3 -m harness work --plan"), 2)
 
-    def test_a_run_the_loop_started_skips_gate_and_plan_and_checks_before_any_secret(self):
+    def test_a_run_the_loop_started_skips_gate_plan_and_deliver_and_checks_before_any_secret(self):
         """#1455: bot-status's loop plans, and starts a run with `plan_ref`. The run skips its gate
         (and so its plan job), names the plan and its runner in its title, and its model job holds
         the dispatch's runner, CLI, secret name and shared flag to the plan and providers.json
-        before any step is handed a secret; deliver reads the plan from the state branch."""
+        before any step is handed a secret. #1537: it skips deliver too, which the loop does."""
         self.assertIn("run-name: ${{ inputs.plan_ref && format('bot-night {0} on {1}', "
                       "inputs.plan_ref, inputs.runs_on) || 'bot-night' }}", self.text)
         self.assertIn("if: ${{ !inputs.plan_ref }}", job(self.text, "gate"))
@@ -150,9 +158,10 @@ class NightWorkflowTests(unittest.TestCase):
         self.assertIn('python3 -m harness plan-fetch --ref "$PLAN_REF" --out '
                       '"$RUNNER_TEMP/plan/plan.json" --check', work)
         deliver = job(self.text, "deliver")
-        self.assertIn('python3 -m harness plan-fetch --ref "$PLAN_REF" --out '
-                      '"$RUNNER_TEMP/plan/plan.json"\n', deliver)
-        self.assertEqual(deliver.count("if: ${{ !inputs.plan_ref }}"), 1)  # the plan artifact
+        self.assertIn("if: ${{ always() && !inputs.plan_ref && contains(", deliver)
+        # Only the plan job's artifact is left for it to read.
+        self.assertNotIn("plan-fetch", deliver)
+        self.assertIn("name: plan\n", deliver)
 
     def test_plans_run_one_at_a_time_and_runs_in_parallel(self):
         self.assertNotRegex(self.text, r"^concurrency:", "a workflow-wide group would serialize runs")
@@ -299,7 +308,7 @@ class BuildCacheWorkflowTests(unittest.TestCase):
         self.assertIn("run: sh scripts/build-wasm.sh\n", self.cache)
 
     def test_actionlint_reads_it(self):
-        self.assertIn(".github/workflows/bot-cache.yml", selftest())
+        self.assertTrue(linted("bot-cache.yml"))
 
 
 class CommandsWorkflowTests(unittest.TestCase):
@@ -428,11 +437,33 @@ class TriageWorkflowTests(unittest.TestCase):
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
         self.assertIn('python3 -m harness triage --payload "$GITHUB_EVENT_PATH"', triage_job)
         self.assertIn("timeout-minutes:", triage_job)
-        self.assertIn(".github/workflows/triage.yml", selftest())
+        self.assertTrue(linted("triage.yml"))
 
     def test_only_human_of_the_labels_starts_it(self):
         self.assertIn("if: github.event_name != 'issues' || github.event.action == 'opened' || "
                       "github.event.label.name == 'human'", job(self.text, "triage"))
+
+
+class WakeWorkflowTests(unittest.TestCase):
+    text = read("claude-wake.yml")
+
+    def test_each_wake_holds_one_secret_and_no_write_token(self):
+        ping = job(self.text, "ping")
+        self.assertIn("permissions: {}", ping)
+        self.assertEqual(set(re.findall(r"\$\{\{\s*(secrets[^}]*?)\s*\}\}", ping)),
+                         {"secrets[matrix.account.secret]"})
+
+    def test_the_clock_reads_only_and_learns_only_which_secrets_are_set(self):
+        clock = job(self.text, "clock")
+        perms = re.search(r"permissions:\n((?:\s{6}.*\n)+)", clock).group(1)
+        grants = dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", perms, re.M))
+        self.assertEqual(grants, {"contents": "read", "actions": "read"})
+        for mention in re.findall(r"secrets\.(\w+)[^}]*", clock):
+            self.assertIn(f"secrets.{mention} != '' && '{mention}'", clock)
+        self.assertNotIn("secrets[", clock)
+
+    def test_it_is_linted(self):
+        self.assertTrue(linted("claude-wake.yml"))
 
 
 class RequiredChecksTests(unittest.TestCase):

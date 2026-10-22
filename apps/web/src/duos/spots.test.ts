@@ -99,6 +99,7 @@ describe("#936 S6 the co-op socket", () => {
       type: "view",
       view: { seat: "a1" },
       legal: [{ kind: "concede" }],
+      jloreCapped: false,
     });
     expect(parseDuosFrame("not json")).toBeNull();
     expect(parseDuosFrame(JSON.stringify({ type: "watchers", count: 2 }))).toBeNull();

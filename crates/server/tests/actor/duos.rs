@@ -38,15 +38,15 @@ use jackioh_server::actor::ws_server::{Socket, SocketFrame, WS_CLOSE, WS_SUBPROT
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, JLORE_COOP_LOSS,
-    MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MATCH_SERVER_ACTION_RETRY_MS,
-    MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD,
-    REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
+    JLORE_GAMES_DAILY_CAP, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS,
+    MATCH_SERVER_ACTION_RETRY_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS, REMATCH_OFFER_TTL_MS,
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::duos::registry;
 use jackioh_server::duos::store::DuosActionRow;
 use jackioh_server::economy::rewards::{GameMode, game_xp};
-use jackioh_server::economy::store::JloreReason;
+use jackioh_server::economy::store::{JloreGrant, JloreReason};
 
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
@@ -693,11 +693,16 @@ struct Duos {
 }
 
 async fn duos(difficulty: &str) -> Duos {
-    duos_with(difficulty, None).await
+    duos_with(difficulty, None, None).await
 }
 
-/// A Duos match whose host brings `host_deck` as a saved deck (dealt at random when `None`).
-async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
+/// A Duos match whose host brings `host_deck` and whose guest brings `guest_deck` as saved decks
+/// (each dealt at random when `None`).
+async fn duos_with(
+    difficulty: &str,
+    host_deck: Option<Vec<String>>,
+    guest_deck: Option<Vec<String>>,
+) -> Duos {
     jackioh_cards::register_all();
     let app = empty_test_app().await;
     let host = account(&app, 1, "Hana").await;
@@ -711,6 +716,14 @@ async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
         }
         None => json!({ "difficulty": difficulty, "random": true }),
     };
+    let guest_choice = match &guest_deck {
+        Some(cards) => {
+            let deck_id = uuid(801);
+            save_deck(&app, &guest, &deck_id, cards).await;
+            json!({ "deckId": deck_id })
+        }
+        None => json!({ "random": true }),
+    };
     let (status, created) = api(&app, "POST", "/api/duos/rooms", &host.token, room).await;
     assert_eq!(status, 201, "{created}");
     let code = created["code"].as_str().expect("a room code").to_string();
@@ -719,7 +732,7 @@ async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
         "POST",
         &format!("/api/duos/rooms/{code}/join"),
         &guest.token,
-        json!({ "random": true }),
+        guest_choice,
     )
     .await;
     assert_eq!(status, 200, "{joined}");
@@ -1710,6 +1723,119 @@ mod b40_b42_the_log_the_replay_and_the_end {
 }
 
 // ---------------------------------------------------------------------------------------------
+// R1483000 — a capped co-op seat is told on its own view
+// ---------------------------------------------------------------------------------------------
+
+mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
+    use super::*;
+
+    /// The `jloreCapped` of each `view` frame a client was sent, in order (`None`: no such key).
+    fn flags(client: &WsClient) -> Vec<Option<bool>> {
+        client
+            .of_type("view")
+            .iter()
+            .map(|frame| {
+                frame
+                    .get("jloreCapped")
+                    .map(|flag| flag.as_bool().expect("a boolean"))
+            })
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1483000_a_capped_coop_seat_sees_it_on_its_own_view_and_after_a_rebuild() {
+        let h = duos("easy").await;
+        // Today's games have already paid the host the cap; the guest has played none.
+        let earlier = JloreGrant {
+            profile_id: h.host.id.clone(),
+            delta: JLORE_GAMES_DAILY_CAP,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at: now_ms(),
+        };
+        {
+            let mut tx = h.app.db.begin(None).await.expect("a store transaction");
+            tx.economy_jlore_grant(&earlier)
+                .await
+                .expect("the earlier game's Jlore");
+            tx.commit().await.expect("commit");
+        }
+
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        for (client, name) in [(&a1, "host"), (&a2, "guest")] {
+            let before = flags(client);
+            assert!(!before.is_empty(), "{name} was sent no view");
+            assert!(
+                before.iter().all(Option::is_none),
+                "{name} was told of the cap before the game ended: {before:?}"
+            );
+        }
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+
+        h.concede_both(&a1, &a2).await;
+        let (_, _, capped) = a1
+            .wait_for(a1_from, PROMPTLY, |frame| {
+                frame.get("jloreCapped").and_then(Value::as_bool) == Some(true)
+            })
+            .await
+            .unwrap_or_else(|| {
+                panic!(
+                    "the host was never told the cap held its pay back: {:?}",
+                    a1.frames()
+                )
+            });
+        assert!(!capped["view"]["result"].is_null(), "{capped}");
+
+        // The seat held back is told, in a view of the finished game; the teammate is told nothing.
+        let host = flags(&a1);
+        assert_eq!(host.last(), Some(&Some(true)), "{host:?}");
+        assert!(
+            host[..host.len() - 1].iter().all(Option::is_none),
+            "the views before the result carry nothing: {host:?}"
+        );
+        assert!(
+            flags(&a2).iter().all(Option::is_none),
+            "the teammate is never told: {:?}",
+            flags(&a2)
+        );
+        assert!(
+            a2.of_type_since(a2_from, "view")
+                .iter()
+                .any(|frame| !frame["view"]["result"].is_null())
+        );
+
+        // A reconnect gets it again in its full view, the teammate's still nothing.
+        let (back1, back2) = (h.seat(&h.host).await, h.seat(&h.guest).await);
+        for (client, expected, name) in [(&back1, Some(true), "host"), (&back2, None, "guest")] {
+            let again = flags(client);
+            assert!(!again.is_empty(), "{name} was sent no view on reconnect");
+            assert!(
+                again.iter().all(|flag| *flag == expected),
+                "{name} answered {again:?} on reconnect: {:?}",
+                client.frames()
+            );
+        }
+
+        // So does one on an actor rebuilt from the store: dropping the actor folds the log again,
+        // and the arm reads the ledger.
+        registry(&h.app).stop(&h.match_id).await;
+        assert!(!registry(&h.app).has(&h.match_id));
+        let (rebuilt1, rebuilt2) = (h.seat(&h.host).await, h.seat(&h.guest).await);
+        for (client, expected, name) in [(&rebuilt1, Some(true), "host"), (&rebuilt2, None, "guest")] {
+            let again = flags(client);
+            assert!(!again.is_empty(), "{name} was sent no view after the rebuild");
+            assert!(
+                again.iter().all(|flag| *flag == expected),
+                "{name} answered {again:?} after the rebuild: {:?}",
+                client.frames()
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // §13.2, R268 — the mulligan clock keeps a person's hand
 // ---------------------------------------------------------------------------------------------
 
@@ -1721,7 +1847,7 @@ mod r268_the_mulligan_clock {
         // Every card costs 4 or more: the AI's own mulligan, which keeps the cheap ones, would send
         // nearly all of the host's opening hand back.
         let costly = deck_where(|def| def["cost"].as_i64().is_some_and(|cost| cost >= 4));
-        let h = duos_with("easy", Some(costly)).await;
+        let h = duos_with("easy", Some(costly), None).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         let dealt_a1 = hand_ids(&first_view(&a1)["view"]["own"]);
@@ -1780,7 +1906,7 @@ mod b37_b38_the_ais_hold {
         // Units of cost 1 or less: playing A1's round 1 outright, the AI always has a card to play.
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
-        let h = duos_with("easy", Some(cheap)).await;
+        let h = duos_with("easy", Some(cheap), None).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
@@ -2110,13 +2236,15 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     /// Round 1 open with both people seated, and the first `play` A1 may make. Every play of a card of
-    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`.
+    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`. The guest
+    /// brings the cheap deck too: a random deal could hold a Cast-on-draw autopilot (M+ #18, R1183002)
+    /// that plays A2's first turn, and a panicking card in it, before anyone has acted.
     async fn opened() -> (Duos, WsClient, WsClient, Arc<AtomicUsize>, Value) {
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
         let runs = Arc::new(AtomicUsize::new(0));
         install_panicking_plays(&cheap, Arc::clone(&runs));
-        let h = duos_with("easy", Some(cheap)).await;
+        let h = duos_with("easy", Some(cheap.clone()), Some(cheap)).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
@@ -2223,6 +2351,42 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
         assert_eq!(logs.named("duos.panicked.drawn").len(), 1);
         assert_eq!(runs.load(Ordering::SeqCst), 1);
         assert_eq!(h.app.bug_reports.recorded().len(), 1);
+    }
+
+    /// R1523000: the ceiling's draw is a co-op result like any other, so both people leave the
+    /// match's seats once it lands, not a reaper tick later.
+    #[tokio::test(start_paused = true)]
+    async fn r1523000_a_ceiling_draw_from_a_panicked_server_action_releases_both_seats() {
+        let (h, _a1, _a2, _runs, play) = opened().await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let seat = jackioh_server::seats::Seat::Duos(h.match_id.clone());
+        for person in [&h.host, &h.guest] {
+            assert_eq!(
+                h.app.seats.of(&person.id),
+                Some(seat.clone()),
+                "the join seated {}",
+                person.id
+            );
+        }
+
+        let seq = actor.next_seq();
+        actor
+            .submit(
+                DuosSeat::A1,
+                format!("{SERVER_NONCE_PREFIX}ai-{seq}"),
+                serde_json::from_value(play).expect("a legal action is an action"),
+            )
+            .await;
+
+        assert!(actor.is_finished(), "the match ended at once");
+        for person in [&h.host, &h.guest] {
+            assert_eq!(
+                h.app.seats.of(&person.id),
+                None,
+                "{} still holds the match",
+                person.id
+            );
+        }
     }
 }
 

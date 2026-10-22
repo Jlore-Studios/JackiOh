@@ -133,7 +133,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `action_timings` | **none** | no policy | none — the play telemetry, written by the match actor with the result (R1442) |
 | `emote_events` | **none** | no policy | none (R1442) |
 | `match_signals` | **none** | no policy | none (R1442) |
-| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule, decks and trio; a readable row would tell a bot's seat from a person's (R1454, R1452, R641000) |
+| `bots` | **none** | no policy | none — the ladder bots' strength, speed, persona, schedule, decks, trio and grind; a readable row would tell a bot's seat from a person's (R1454, R1452, R641000) |
 | `friend_requests` | rows you sent or received | `auth.uid() in (from_profile, to_profile)` | none — the server answers a request to a blocked pair as it answers an unknown name (SPEC §9.4) |
 | `friendships` | rows you are in | `auth.uid() in (a, b)` | none |
 | `blocks` | rows you made | `blocker = auth.uid()` | none — the blocked player never reads that they are blocked |
@@ -708,8 +708,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0039_duos.sql` → `0040_moderation_switch_grant.sql` → `0041_card_totals.sql` →
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
    `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` →
-   `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` — and records
-   them in
+   `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` →
+   `0051_duos_seats_set_null.sql` → `0052_bot_rating_generation.sql` → `0053_bot_grind.sql` — and records them in
    `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
    `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
@@ -779,8 +779,9 @@ step that is not yet implemented says which BUILD task delivers it.
    `blocks`, the server-only `presence`, `challenges`, `chat_messages`, `chat_reports` and
    `replay_shares`, each readable only by its own players, and `profiles.allow_spectators`, on by
    default. 0039 adds the co-op tables (SPEC §13.9): `duos_rooms`, which a room's two people read but
-   its frozen deck choices, and the server-only `duos_matches` and `duos_match_actions`. Every row of
-   both goes with an account that is deleted; neither needs anything else from the bring-up. 0045
+   its frozen deck choices, and the server-only `duos_matches` and `duos_match_actions`. A room goes
+   with an account that is deleted (and, until 0051, so did a co-op match); neither needs anything
+   else from the bring-up. 0045
    adds the economy's fifteen tables (SPEC §14.11): each holding (Jlore, packs and tokens, pity and
    the bars, set tracks, quests, owned cosmetics) beside its append-only ledger, which its own
    account reads and no client role writes, and `cosmetics`, which step 6 fills; `collection_grants`
@@ -794,7 +795,11 @@ step that is not yet implemented says which BUILD task delivers it.
    database (`app.settings.economy_launched`), every account keeps its cards while its Jlore, packs,
    tokens, counters, tracks, held quests and full arts are zeroed by offsetting `launch` rows
    (ref `launch:0050`) and its quest schedule is cleared (R1310002). On a new project it zeroes
-   nothing.
+   nothing. 0051 gives a co-op seat 0012's rule for a 1v1 seat (R1497000): a deleted account's seat
+   on a finished co-op match empties while the match, its result and its log stay for the teammate,
+   and a delete that would empty a seat of a live one raises. 0052 gives each `bot_ratings` row the
+   AI generation it was last rated on (R1560000), which the server alone writes; no step of the
+   bring-up fills it. 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000).
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL
@@ -805,7 +810,7 @@ step that is not yet implemented says which BUILD task delivers it.
      policy, so there is no path (§9.4).
 6. **Seed the catalog.** `target/release/jackioh-server seed-catalog`. It writes the catalog compiled
    into the binary, `crates/cards/catalog.json` (BUILD M4-T1, M9-T1). Check `select count(*) from public.cards;` → 480
-   (396 cards + 84 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
+   (396 cards + 86 tokens over Core, Classic, Classic+, Meditative and Meditative+: patch v0.2.0, Glitch,
    issue #170, the Meditative set, issue #553, and the Meditative+ set, issue #1187) and
    `select app.catalog_version();` → your `CATALOG_VERSION`, the latest card patch's version (R388).
    In the same transaction it writes the cosmetics registry compiled in, `crates/server/cosmetics.json`

@@ -11,7 +11,7 @@
 //!   the first payout's unlocked track active and carries its XP there too).
 //!
 //! ONE suite, TWO stores, like `contract.rs`: every case runs against `Db::Fake` always, and
-//! against `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time over one
+//! against `Db::Pg` too when `DATABASE_URL` is set (`tests/db/run.sh`, one case at a time per
 //! database).
 //!
 //! Every pair is started before either is awaited (`tokio::join!`); the assertions are on the end

@@ -11,9 +11,10 @@
 //! enter with (its Radiant face, buffs and tuning) over its printed base face. #1224 prices what a
 //! side's coming refreshes will or will not give: the refreshes it still has to lose (R844) and its
 //! next-turn rider (§2.3). #1506 weighs the cards dormant under a side's Stack piles (§3.2, R13):
-//! the seat's own unit piles card by card, every other pile by its count (R447). It reads only what
-//! the seat may know or what a determinization sampled, and nothing here reads a handicap or a
-//! difficulty (R180).
+//! the seat's own unit piles card by card, every other pile by its count (R447). #1602 prices three
+//! facts both seats see: the cost an enemy face-down card shows (R351), the fatigue draws a side has
+//! taken (§2.4) and Windfury (R636). It reads only what the seat may know or what a determinization
+//! sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -23,10 +24,10 @@ use jackioh_engine::config::{
 };
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::{
-    AttackTarget, CardDef, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, PlayerState,
-    Position, UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of,
+    AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword, KeywordKind, PlayerId,
+    PlayerState, Position, UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of,
     attack_restriction, attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face,
-    credit_lapsing, effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of,
+    credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of,
     is_temporary_card, lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
     stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
@@ -58,6 +59,17 @@ fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
 /// (`backrow_is_public`). A placeholder never is, and is asked first: the rule reads the definition.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
     find_def(Some(state), &card.def_id).is_some() && backrow_is_public(state, card, seat)
+}
+
+/// R351: the cost a backrow card the seat cannot read shows both players, the number `view_for` shows:
+/// a placeholder's is the price `redact` parked on it (`cost_override`), any other card's is its cost
+/// read on the field (`effective_cost`). A determinization keeps the parked price on the trap it samples
+/// there (R762), so every world shows the seat the number the true board does.
+fn shown_cost(state: &GameState, card: &CardInstance) -> i32 {
+    if find_def(Some(state), &card.def_id).is_none() {
+        return card.cost_override.unwrap_or(0);
+    }
+    effective_cost(state, card, CostOptions::default())
 }
 
 /// B3.3: the share of itself a card keeps under its Brittle count (`active_brittle_count`), 1 with none.
@@ -328,7 +340,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
 /// banked (a debt, Jade steps, extra turns, the enemy units it has marked), what its coming refreshes
-/// will or will not give, the backrow, the hand and the library.
+/// will or will not give, the backrow (an enemy face-down card by the cost it shows), the hand, the
+/// library and the fatigue draws it has taken.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -383,7 +396,13 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                     }
                 }
             }
-            _ => value += w.enemy_face_down,
+            // R351: the cost it shows is public; nothing else of it is (no call at a zero weight).
+            _ => {
+                value += w.enemy_face_down;
+                if w.enemy_face_down_per_cost != 0.0 {
+                    value += w.enemy_face_down_per_cost * f64::from(shown_cost(state, card));
+                }
+            }
         }
     }
 
@@ -396,6 +415,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
+    // §2.4: every fatigue draw taken adds a point to each one still to come.
+    value -= w.fatigue_draw * f64::from(side.fatigue_count);
     value
 }
 

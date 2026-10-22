@@ -39,8 +39,8 @@ line only after that review.
 ### A user found to be under the minimum
 
 1. Find the account in the Supabase dashboard (Authentication → Users) by its address.
-2. If the player is in a live match or an unfinished Conquest series, wait for it to end: the
-   deletion is refused until then (migration 0012).
+2. If the player is in a live match, a live co-op game or an unfinished Conquest series, wait for
+   it to end: the deletion is refused until then (migrations 0012 and 0051).
 3. Delete the user in the dashboard. That deletes from `auth.users`, which fires
    `on_auth_user_deleted` and removes the profile and every row that is only theirs, as "Delete my
    account" does (migration 0012). There is no parental-consent route.
@@ -50,9 +50,9 @@ line only after that review.
 ## 3. Accessibility
 
 - `e2e/cypress/e2e/38-accessibility.cy.ts` runs axe-core over every route and both boards in the
-  daily run, and fails on any serious or critical WCAG 2.2 A/AA violation not listed with its reason
-  in `e2e/support/axe-exceptions.ts`. An exception that no longer fires fails it too, so the list
-  only holds what is still true.
+  daily run, at 1280x720 and again at a phone's 390x844 (#1561), and fails on any serious or
+  critical WCAG 2.2 A/AA violation not listed with its reason in `e2e/support/axe-exceptions.ts`.
+  An exception that no longer fires fails it too, so the list only holds what is still true.
 - Lighthouse is run by hand: Chrome's DevTools, Lighthouse, Accessibility only, on the deployed
   site. Write what it found into `/accessibility` with the date.
 - `/accessibility` says what was checked, with what and when, and what falls short. It claims no

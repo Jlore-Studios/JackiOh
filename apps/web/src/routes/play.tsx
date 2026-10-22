@@ -4,6 +4,9 @@
 // and rank never exposes its hidden rating. R915005: a deck naming a custom card (or a trio holding
 // one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
 // R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
+// R1578000: /play is the hub every play mode starts from, online first: the queue, its setup and the
+// rank are the primary panel, the other ways to play are four smaller links beside it, and a visitor
+// with no account sees the same screen with a sign-in where the online panel's controls would be.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -71,6 +74,14 @@ export const playTestid = {
   status: "play-status",
   error: "play-error",
   practice: "play-practice",
+  /** R1578000: the hub's screen, its primary online panel and the nav of the other ways to play. */
+  screen: "play-screen",
+  online: "play-online",
+  ways: "play-ways",
+  creator: "play-creator",
+  together: "play-together",
+  /** R1578000: a visitor with no account is offered sign-in where the online panel's controls would be. */
+  signIn: "play-sign-in",
   modeBo1: "play-mode-bo1",
   modeBo3: "play-mode-bo3",
   modeRandom: "play-mode-random",
@@ -81,6 +92,8 @@ export const playTestid = {
   recentGames: "play-recent-games",
   decksLink: "play-decks-link",
   seriesLink: "play-series-link",
+  /** R1566000: a refusal naming the player's live co-op match links to it. */
+  duosLink: "play-duos-link",
   copyRoomCode: "play-copy-room-code",
   copyRoomLink: "play-copy-room-link",
   /** R1075000: the room ticket's Cancel. */
@@ -93,6 +106,8 @@ export const playTestid = {
   leanNewest: "play-lean-newest",
   /** R915005: under a picker that offers a deck or trio naming a custom card: why it is off. */
   practiceOnly: "play-practice-only",
+  /** #1568: a failed decks read offers Try again beside the alert. */
+  decksRetry: "play-decks-retry",
 } as const;
 
 export const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
@@ -194,8 +209,9 @@ function attempt<T>(call: () => Promise<T>): Promise<T> {
 }
 
 /** A collection failure skips only the client verdict; the catalog is the one the client ships (game/currentCatalog.ts). */
-function useLobbyData(token: string): LobbyLoad {
+function useLobbyData(token: string): [LobbyLoad, () => void] {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
+  const [round, setRound] = useState(0);
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -215,8 +231,12 @@ function useLobbyData(token: string): LobbyLoad {
     return () => {
       cancelled = true;
     };
-  }, [token]);
-  return load;
+  }, [token, round]);
+  const retry = useCallback((): void => {
+    setLoad({ kind: "loading" });
+    setRound((before) => before + 1);
+  }, []);
+  return [load, retry];
 }
 
 /** R915005: a deck that names a custom card plays only in practice, never online. */
@@ -323,6 +343,8 @@ type LobbyError = {
   message: string;
   issues: readonly string[];
   seriesId: string | null;
+  /** R1566000: the live co-op match an `already_in_match` refusal names (R1065000). */
+  duosMatchId: string | null;
   /** R264: the room's mode, worded at render (`roomModeMessage`) so a language switch rewords it. */
   roomMode: QueueMode | null;
 };
@@ -340,12 +362,13 @@ export function issueMessagesOf(details: unknown): string[] {
   return messages;
 }
 
-function seriesIdOfError(cause: unknown): string | null {
+/** The id a refusal's `details` names under `key` (R264's series, R1065000's co-op match), or null. */
+function detailIdOfError(cause: unknown, key: "seriesId" | "duosMatchId"): string | null {
   if (!(cause instanceof ApiRequestError)) return null;
   const details = cause.details;
   if (typeof details !== "object" || details === null) return null;
-  const seriesId = (details as { seriesId?: unknown }).seriesId;
-  return typeof seriesId === "string" && seriesId.length > 0 ? seriesId : null;
+  const id = (details as Record<string, unknown>)[key];
+  return typeof id === "string" && id.length > 0 ? id : null;
 }
 
 function errorOf(cause: unknown): LobbyError {
@@ -353,7 +376,8 @@ function errorOf(cause: unknown): LobbyError {
     message: messageOf(cause),
     issues:
       cause instanceof ApiRequestError && cause.code === LOADOUT_INVALID ? issueMessagesOf(cause.details) : [],
-    seriesId: seriesIdOfError(cause),
+    seriesId: detailIdOfError(cause, "seriesId"),
+    duosMatchId: detailIdOfError(cause, "duosMatchId"),
     roomMode: null,
   };
 }
@@ -392,7 +416,10 @@ type Status =
 
 // Pairing watch
 
-/** Uses `liveGameOf` so pairing navigation matches the rest of the client. */
+/**
+ * Uses `liveGameOf` so pairing navigation matches the rest of the client. R1566000: a co-op game is
+ * no pairing; the hub's refusal links it.
+ */
 export function pairTargetOf(me: {
   currentMatchId: string | null;
   currentSeriesId?: string | null;
@@ -668,16 +695,70 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
       <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
         {t("Leaderboard →")}
       </a>
-      <a href={paths.replays} data-testid={playTestid.replays} onClick={followInApp(paths.replays)}>
-        {t("Your replays →")}
-      </a>
     </section>
+  );
+}
+
+/** R1578000: the ways to play beside online play, each one a link to the screen that starts it. */
+type Way = { href: string; testid: string; name: string; note: string };
+
+function waysToPlay(): readonly Way[] {
+  return [
+    {
+      href: paths.practice,
+      testid: playTestid.practice,
+      name: t("Practice"),
+      note: t("Solo games against the AI, including the tutorial."),
+    },
+    {
+      href: paths.creator,
+      testid: playTestid.creator,
+      name: t("Card creator"),
+      note: t("Make custom cards and try them against the AI."),
+    },
+    {
+      href: paths.together,
+      testid: playTestid.together,
+      name: t("Play together"),
+      note: t("Friends, challenges, watching and co-op Duos."),
+    },
+    {
+      href: paths.replays,
+      testid: playTestid.replays,
+      name: t("Replays"),
+      note: t("Watch your recent games again."),
+    },
+  ];
+}
+
+function WaysNav(): ReactElement {
+  return (
+    <nav className="play-ways" data-testid={playTestid.ways} aria-label={t("More ways to play")}>
+      {waysToPlay().map((way) => (
+        <a key={way.href} className="play-way" href={way.href} data-testid={way.testid} onClick={followInApp(way.href)}>
+          <span className="play-way__name">{way.name}</span>
+          <span className="play-way__note">{way.note}</span>
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function PlayHero(): ReactElement {
+  return (
+    <header className="play-hero">
+      <div className="brand">
+        <h1>JackiOh</h1>
+      </div>
+      <p className="play-hero__title">{t("Play")}</p>
+    </header>
   );
 }
 
 // Route
 
-export type PlayRouteProps = { token: string };
+/** R1578000: `null` is a visitor with no account, who reads nothing and is offered sign-in. */
+export type PlayRouteProps = { token: string | null };
 
 type Room = { code: string; mode: QueueMode };
 
@@ -711,7 +792,45 @@ function statusWords(status: Status): string {
   }
 }
 
+/** R1578000: a visitor with no account sees the hub's other ways to play, and no read leaves the page. */
+function SignedOutPlay(): ReactElement {
+  useLocale();
+  return (
+    <div className="app-shell tavern lobby play-screen play-hub" data-testid={playTestid.screen}>
+      <BackLink />
+      <PlayHero />
+      <div className="play-layout">
+        <section
+          className="play-online play-online--signed-out"
+          data-testid={playTestid.online}
+          aria-labelledby="play-online-heading"
+        >
+          <h2 id="play-online-heading" className="play-online__heading">
+            {t("Play online")}
+          </h2>
+          <p>{t("Online play is invite-only for now: you’ll need an invite code after signing up.")}</p>
+          <a
+            className="button-primary play-cta"
+            href={paths.login}
+            data-testid={playTestid.signIn}
+            onClick={followInApp(paths.login)}
+          >
+            {t("Sign in")}
+          </a>
+        </section>
+        <div className="play-side">
+          <WaysNav />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
+  return token === null ? <SignedOutPlay /> : <OnlinePlay token={token} />;
+}
+
+function OnlinePlay({ token }: { token: string }): ReactElement {
   useLocale();
   /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
@@ -736,7 +855,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
   const [lean, setLean] = useState(readPlayLean);
 
-  const lobby = useLobbyData(token);
+  const [lobby, retryLobby] = useLobbyData(token);
   const data = lobby.kind === "ready" ? lobby.data : null;
   const deck = data === null ? null : defaultDeck(data.decks, deckId);
   const trio = data === null ? null : defaultTrio(data.trios, trioId, data.decks);
@@ -937,7 +1056,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
         if (roomMode === null) throw cause;
         setMode(roomMode);
         dropLinkStatus(chosen.mode);
-        setError({ message: "", issues: [], seriesId: null, roomMode });
+        setError({ message: "", issues: [], seriesId: null, duosMatchId: null, roomMode });
       }
     });
   }
@@ -952,16 +1071,13 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const games = population?.gamesLastHour ?? 0;
 
   return (
-    <div className="app-shell tavern lobby play-screen" data-waiting={locked ? "true" : "false"}>
+    <div
+      className="app-shell tavern lobby play-screen play-hub"
+      data-testid={playTestid.screen}
+      data-waiting={locked ? "true" : "false"}
+    >
       <BackLink />
-
-      <header className="play-hero">
-        <div className="brand">
-          <h1>JackiOh</h1>
-        </div>
-        <p className="play-hero__title">{t("Play online")}</p>
-        <p className="play-hero__lead">{t("Pick a mode, bring a deck, and find someone to play.")}</p>
-      </header>
+      <PlayHero />
 
       {status !== null ? (
         <p
@@ -992,185 +1108,205 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               {t("Go to your series →")}
             </a>
           )}
+          {error.duosMatchId === null ? null : (
+            <a
+              href={paths.duos(error.duosMatchId)}
+              data-testid={playTestid.duosLink}
+              onClick={followInApp(paths.duos(error.duosMatchId))}
+            >
+              {t("Go to your co-op game →")}
+            </a>
+          )}
         </div>
       ) : null}
       <div className="play-layout">
-        <section className="lobby-card play-panel play-panel--setup" aria-labelledby="play-setup-heading">
-          <h2 id="play-setup-heading" className="play-panel__heading">
-            <span className="play-step" aria-hidden="true">
-              1
-            </span>
-            {t("How do you want to play?")}
+        <section className="play-online" data-testid={playTestid.online} aria-labelledby="play-online-heading">
+          <h2 id="play-online-heading" className="play-online__heading">
+            {t("Play online")}
           </h2>
-          <fieldset className="lobby-modes">
-            <legend className="lobby-modes__legend">{t("Mode")}</legend>
-            {QUEUE_MODES.map((option) => {
-              const wait = expectedWait?.[option] ?? null;
-              return (
-                <label
-                  key={option}
-                  className="lobby-mode play-mode-tile"
-                  data-selected={option === mode ? "true" : "false"}
-                  data-mode={option}
-                >
-                  <input
-                    type="radio"
-                    name="play-mode"
-                    value={option}
-                    checked={option === mode}
-                    data-testid={playModeTestid(option)}
-                    disabled={locked}
-                    onChange={() => {
-                      dropLinkStatus(mode);
-                      setMode(option);
-                    }}
-                  />
-                  <ModeIcon mode={option} />
-                  <span className="lobby-mode__text">
-                    <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
-                  </span>
-                  {wait === null ? null : (
-                    <span className="play-mode-tile__waiting" data-testid={playWaitTestid(option)}>
-                      {waitWords(wait)}
+          <RankPanel rank={rank} />
+          <section className="lobby-card play-panel play-panel--setup" aria-labelledby="play-setup-heading">
+            <h2 id="play-setup-heading" className="play-panel__heading">
+              <span className="play-step" aria-hidden="true">
+                1
+              </span>
+              {t("How do you want to play?")}
+            </h2>
+            <fieldset className="lobby-modes">
+              <legend className="lobby-modes__legend">{t("Mode")}</legend>
+              {QUEUE_MODES.map((option) => {
+                const wait = expectedWait?.[option] ?? null;
+                return (
+                  <label
+                    key={option}
+                    className="lobby-mode play-mode-tile"
+                    data-selected={option === mode ? "true" : "false"}
+                    data-mode={option}
+                  >
+                    <input
+                      type="radio"
+                      name="play-mode"
+                      value={option}
+                      checked={option === mode}
+                      data-testid={playModeTestid(option)}
+                      disabled={locked}
+                      onChange={() => {
+                        dropLinkStatus(mode);
+                        setMode(option);
+                      }}
+                    />
+                    <ModeIcon mode={option} />
+                    <span className="lobby-mode__text">
+                      <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
                     </span>
-                  )}
-                </label>
-              );
-            })}
-          </fieldset>
-          {games === 0 ? null : (
-            <p className="lobby-note" data-testid={playTestid.recentGames}>
-              {recentGamesWords(games)}
-            </p>
-          )}
-
-          <h2 className="play-panel__heading play-panel__heading--sub">
-            <span className="play-step" aria-hidden="true">
-              2
-            </span>
-            {mode === "bo3" ? t("Bring a trio") : mode === "bo1" ? t("Bring a deck") : t("No deck to bring")}
-          </h2>
-
-          {lobby.kind === "loading" && mode !== "random" ? (
-            <p className="lobby-note" role="status">
-              {t("Loading your decks…")}
-            </p>
-          ) : null}
-          {lobby.kind === "failed" && mode !== "random" ? (
-            <p className="notice" role="alert">
-              {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
-            </p>
-          ) : null}
-
-          {data !== null && mode === "bo1" ? (
-            data.decks.length === 0 ? (
-              <p className="lobby-note">
-                {noDecksBefore}
-                <DecksLink>{t("Build one in Decks")}</DecksLink>
-                {noDecksAfter}
+                    {wait === null ? null : (
+                      <span className="play-mode-tile__waiting" data-testid={playWaitTestid(option)}>
+                        {waitWords(wait)}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </fieldset>
+            {games === 0 ? null : (
+              <p className="lobby-note" data-testid={playTestid.recentGames}>
+                {recentGamesWords(games)}
               </p>
-            ) : (
-              <div className="play-pick">
-                <label htmlFor="play-deck">{t("Your deck")}</label>
-                <select
-                  id="play-deck"
-                  ref={deckSelect}
-                  className="lobby-select"
-                  data-testid={playTestid.deckSelect}
-                  value={deck?.id ?? ""}
+            )}
+
+            <h2 className="play-panel__heading play-panel__heading--sub">
+              <span className="play-step" aria-hidden="true">
+                2
+              </span>
+              {mode === "bo3" ? t("Bring a trio") : mode === "bo1" ? t("Bring a deck") : t("No deck to bring")}
+            </h2>
+
+            {lobby.kind === "loading" && mode !== "random" ? (
+              <p className="lobby-note" role="status">
+                {t("Loading your decks…")}
+              </p>
+            ) : null}
+            {lobby.kind === "failed" && mode !== "random" ? (
+              <>
+                <p className="notice" role="alert">
+                  {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
+                </p>
+                <div className="row">
+                  <button type="button" data-testid={playTestid.decksRetry} onClick={retryLobby}>
+                    {t("Try again")}
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {data !== null && mode === "bo1" ? (
+              data.decks.length === 0 ? (
+                <p className="lobby-note">
+                  {noDecksBefore}
+                  <DecksLink>{t("Build one in Decks")}</DecksLink>
+                  {noDecksAfter}
+                </p>
+              ) : (
+                <div className="play-pick">
+                  <label htmlFor="play-deck">{t("Your deck")}</label>
+                  <select
+                    id="play-deck"
+                    ref={deckSelect}
+                    className="lobby-select"
+                    data-testid={playTestid.deckSelect}
+                    value={deck?.id ?? ""}
+                    disabled={locked}
+                    onChange={(event) => {
+                      setDeckId(event.target.value);
+                    }}
+                  >
+                    {deck === null ? <option value="">{t("No deck plays online yet")}</option> : null}
+                    {data.decks.map((saved) =>
+                      deckPracticeOnly(saved) ? (
+                        <option key={saved.id} value={saved.id} disabled>
+                          {practiceOnlyLabel(saved.name)}
+                        </option>
+                      ) : (
+                        <option key={saved.id} value={saved.id}>
+                          {saved.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                  {deck === null ? null : <DeckSummary deck={deck} />}
+                  {data.decks.some(deckPracticeOnly) ? (
+                    <p className="lobby-note" data-testid={playTestid.practiceOnly}>
+                      {t("A deck with a custom card plays only in practice, against the AI.")}
+                    </p>
+                  ) : null}
+                </div>
+              )
+            ) : null}
+
+            {data !== null && mode === "bo3" ? (
+              data.trios.length === 0 ? (
+                <p className="lobby-note">
+                  {noTriosBefore}
+                  <DecksLink>{t("Build one in Decks")}</DecksLink>
+                  {noTriosAfter}
+                </p>
+              ) : (
+                <div className="play-pick">
+                  <label htmlFor="play-trio">{t("Your trio")}</label>
+                  <select
+                    id="play-trio"
+                    ref={trioSelect}
+                    className="lobby-select"
+                    data-testid={playTestid.trioSelect}
+                    value={trio?.id ?? ""}
+                    disabled={locked}
+                    onChange={(event) => {
+                      setTrioId(event.target.value);
+                    }}
+                  >
+                    {trio === null ? <option value="">{t("No trio plays online yet")}</option> : null}
+                    {data.trios.map((saved) =>
+                      trioPracticeOnly(saved, data.decks) ? (
+                        <option key={saved.id} value={saved.id} disabled>
+                          {practiceOnlyLabel(saved.name)}
+                        </option>
+                      ) : (
+                        <option key={saved.id} value={saved.id}>
+                          {saved.name}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                  {trio === null ? null : <TrioSummary trio={trio} decks={data.decks} />}
+                  {data.trios.some((saved) => trioPracticeOnly(saved, data.decks)) ? (
+                    <p className="lobby-note" data-testid={playTestid.practiceOnly}>
+                      {t("A trio holding a deck with a custom card cannot play Conquest: custom cards play only in practice.")}
+                    </p>
+                  ) : null}
+                </div>
+              )
+            ) : null}
+
+            {mode === "random" ? (
+              <>
+                <p className="lobby-note">
+                  {t("No deck needed: the server deals both of you one when the game starts.")}
+                </p>
+                <LeanSetPicker
+                  value={lean}
                   disabled={locked}
-                  onChange={(event) => {
-                    setDeckId(event.target.value);
+                  testid={playTestid.leanNewest}
+                  onChange={(pick) => {
+                    setLean(pick);
+                    writePlayLean(pick);
                   }}
-                >
-                  {deck === null ? <option value="">{t("No deck plays online yet")}</option> : null}
-                  {data.decks.map((saved) =>
-                    deckPracticeOnly(saved) ? (
-                      <option key={saved.id} value={saved.id} disabled>
-                        {practiceOnlyLabel(saved.name)}
-                      </option>
-                    ) : (
-                      <option key={saved.id} value={saved.id}>
-                        {saved.name}
-                      </option>
-                    ),
-                  )}
-                </select>
-                {deck === null ? null : <DeckSummary deck={deck} />}
-                {data.decks.some(deckPracticeOnly) ? (
-                  <p className="lobby-note" data-testid={playTestid.practiceOnly}>
-                    {t("A deck with a custom card plays only in practice, against the AI.")}
-                  </p>
-                ) : null}
-              </div>
-            )
-          ) : null}
+                />
+              </>
+            ) : null}
 
-          {data !== null && mode === "bo3" ? (
-            data.trios.length === 0 ? (
-              <p className="lobby-note">
-                {noTriosBefore}
-                <DecksLink>{t("Build one in Decks")}</DecksLink>
-                {noTriosAfter}
-              </p>
-            ) : (
-              <div className="play-pick">
-                <label htmlFor="play-trio">{t("Your trio")}</label>
-                <select
-                  id="play-trio"
-                  ref={trioSelect}
-                  className="lobby-select"
-                  data-testid={playTestid.trioSelect}
-                  value={trio?.id ?? ""}
-                  disabled={locked}
-                  onChange={(event) => {
-                    setTrioId(event.target.value);
-                  }}
-                >
-                  {trio === null ? <option value="">{t("No trio plays online yet")}</option> : null}
-                  {data.trios.map((saved) =>
-                    trioPracticeOnly(saved, data.decks) ? (
-                      <option key={saved.id} value={saved.id} disabled>
-                        {practiceOnlyLabel(saved.name)}
-                      </option>
-                    ) : (
-                      <option key={saved.id} value={saved.id}>
-                        {saved.name}
-                      </option>
-                    ),
-                  )}
-                </select>
-                {trio === null ? null : <TrioSummary trio={trio} decks={data.decks} />}
-                {data.trios.some((saved) => trioPracticeOnly(saved, data.decks)) ? (
-                  <p className="lobby-note" data-testid={playTestid.practiceOnly}>
-                    {t("A trio holding a deck with a custom card cannot play Conquest: custom cards play only in practice.")}
-                  </p>
-                ) : null}
-              </div>
-            )
-          ) : null}
+            <Verdict result={verdict} />
+          </section>
 
-          {mode === "random" ? (
-            <>
-              <p className="lobby-note">
-                {t("No deck needed: the server deals both of you one when the game starts.")}
-              </p>
-              <LeanSetPicker
-                value={lean}
-                disabled={locked}
-                testid={playTestid.leanNewest}
-                onChange={(pick) => {
-                  setLean(pick);
-                  writePlayLean(pick);
-                }}
-              />
-            </>
-          ) : null}
-
-          <Verdict result={verdict} />
-        </section>
-
-        <div className="play-side">
           <section className="lobby-card play-panel play-panel--queue" aria-labelledby="play-queue-heading">
             <h2 id="play-queue-heading" className="play-panel__heading">
               <span className="play-step" aria-hidden="true">
@@ -1198,8 +1334,10 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               {t("Leave the queue")}
             </button>
           </section>
+        </section>
 
-          <RankPanel rank={rank} />
+        <div className="play-side">
+          <WaysNav />
 
           <section className="lobby-card play-panel play-panel--room" aria-labelledby="play-room-heading">
             <h2 id="play-room-heading" className="play-panel__heading">
@@ -1245,19 +1383,8 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               </div>
             </form>
           </section>
-
-          <section className="lobby-card play-panel play-panel--practice" aria-labelledby="play-practice-heading">
-            <h2 id="play-practice-heading" className="play-panel__heading">
-              {t("Practice")}
-            </h2>
-            <p>{t("A game against the AI, right here in your browser: no queue, no rating, three difficulties.")}</p>
-            <a href={paths.practice} data-testid={playTestid.practice}>
-              {t("Practice against the AI →")}
-            </a>
-          </section>
         </div>
       </div>
-
     </div>
   );
 }

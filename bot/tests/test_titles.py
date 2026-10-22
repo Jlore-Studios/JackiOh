@@ -61,6 +61,18 @@ class TitleTests(unittest.TestCase):
         self.assertIn("Shipped as **v0.3.17b**", gh.list_comments(5)[-1]["body"])
         self.assertEqual(titles.shipped(after, after), [])
 
+    def test_a_locked_thread_is_unlocked_for_the_comment_and_locked_again(self):
+        gh = FakeGitHub()
+        gh.add_issue(5, "Patch v0.3.X: Bigot costs (3)")
+        gh.add_pull(9, "bot/issue-5", "Patch v0.3.X: Bigot costs (3)", body="Closes #5")
+        gh.lock(5)
+        gh.lock(9)
+        entries = [{"version": "v0.3.17b", "commits": ["abc"]}]
+        titles.retitle_shipped(gh, entries, subject_of=lambda sha: "Patch v0.3.X: Bigot costs (3) (#9)")
+        for number in (5, 9):
+            self.assertIn("Shipped as **v0.3.17b**", gh.list_comments(number)[-1]["body"])
+            self.assertTrue(gh.get_issue(number)["locked"])
+
     def test_a_push_that_renames_shipped_versions_ships_nothing(self):
         before = [{"version": "v0.3.16"}, {"version": "v0.3.17"}]
         retcon = [{"version": "v0.4.0b"}, {"version": "v0.4.0c"}]

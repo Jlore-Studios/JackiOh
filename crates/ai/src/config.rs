@@ -20,6 +20,12 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
     missed_lethal_chance: 0.0,
 };
 
+/// R1563005 (Meditative+ #20 KY's Competition): the chance, in [0, 1], that the AI answers a question
+/// of a sequence right, on the base face's three-digit sums and on the Radiant face's one- and two-digit
+/// ones; a miss is one of the wrong answers. Drawn from the AI's own stream, never the match's.
+pub const AI_KY_COMPETITION_ACCURACY: f64 = 0.85;
+pub const AI_KY_COMPETITION_RADIANT_ACCURACY: f64 = 0.93;
+
 /// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
 /// decision, 1.0 follows the AI at every decision as it did before the knob.
 pub const AI_SKILL_MIN: f64 = 0.0;
@@ -152,7 +158,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
-/// are already gone). A keyword kind with no entry here (Armor, Windfury, …) is worth nothing of its
+/// are already gone). A keyword kind with no entry here (Armor, Deft, …) is worth nothing of its
 /// own; `of` answers `None` for it, as TS's `weights[keyword.kind]` was `undefined`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct KeywordWeights {
@@ -205,6 +211,10 @@ pub struct KeywordWeights {
     /// R783012: one more play from the graveyard after the unit dies.
     #[serde(rename = "Flashback")]
     pub flashback: f64,
+    /// R636: a second attack each turn (`attacks_per_turn`). `face_threat` already counts the second
+    /// swing at the next turn's face; this is what the body is worth for it beyond that, in trades.
+    #[serde(rename = "Windfury")]
+    pub windfury: f64,
 }
 
 impl KeywordWeights {
@@ -232,6 +242,7 @@ impl KeywordWeights {
             KeywordKind::Cloaked => Some(self.cloaked),
             KeywordKind::Crater => Some(self.crater),
             KeywordKind::Flashback => Some(self.flashback),
+            KeywordKind::Windfury => Some(self.windfury),
             _ => None,
         }
     }
@@ -327,9 +338,16 @@ pub struct EvalWeights {
     pub backrow_per_cost: f64,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
+    /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
+    /// `enemy_face_down`: a (6) back and a (0) back are not the same threat.
+    pub enemy_face_down_per_cost: f64,
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
+    /// §2.4: taken off a side per fatigue draw it has taken (`fatigue_count`, public): the Nth draw
+    /// from an empty library deals N, so each one taken adds a point to every fatigue hit to come.
+    /// It reads the count alone, never the library, which `library_card` prices.
+    pub fatigue_draw: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
@@ -401,6 +419,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         crater: 0.0,
         // R783012: no card prints it yet (§6.1), so nothing until one does and the lanes measure it.
         flashback: 0.0,
+        // #1602: off. At 1.0 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
+        // 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing (training/improve.md, A screen);
+        // the training lanes may move it.
+        windfury: 0.0,
     },
     spell_damage: 0.5,
     brittle_discount: 0.5,
@@ -430,8 +452,16 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
     enemy_face_down: 2.0,
+    // #1602: off. At 0.8 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
+    // 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing (training/improve.md, A screen); the
+    // training lanes may move it.
+    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    // #1602: off. At 1.0 its screen, 400 games of improve-dev against the parent (fb41b6e01), read
+    // 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing (training/improve.md, A screen); the
+    // training lanes may move it.
+    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
     owed_mana: 0.8,
@@ -562,6 +592,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
         cloaked: 0.0,
         crater: 0.0,
         flashback: 0.0,
+        // #1602's Windfury came after the gates were fixed too: nothing, as it gave it.
+        windfury: 0.0,
     },
     spell_damage: 0.0,
     brittle_discount: 0.0,
@@ -589,8 +621,11 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     backrow_base: 1.5,
     backrow_per_cost: 0.8,
     enemy_face_down: 2.0,
+    // #1602's shown cost and fatigue came after the gates were fixed too: nothing, as it gave them.
+    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
+    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
     // them did.

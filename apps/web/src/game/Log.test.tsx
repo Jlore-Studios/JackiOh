@@ -556,6 +556,10 @@ describe("#552 the log reads as English on the Meditative cards' events", () => 
     ]);
   });
 
+  it("the other seat's prompt says whose it is and not what it asks for, since its event names no kind", () => {
+    expect(lines(withEvents(baseView(), [{ type: "promptOpened", player: "p2" }]))).toEqual(["Opponent must choose"]);
+  });
+
   it("R1301 R1320 the lines about a unit shown in Chinese all name it in Chinese: its stat buff and its Buff", () => {
     const chinese = CHINESE["meditative-023"]?.name ?? "";
     const view = baseView({

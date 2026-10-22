@@ -252,7 +252,8 @@ export function DuosReplayPlayer({ steps, back, actions }: { steps: DuosReplaySt
         {actions}
       </div>
       <DuosChromeContext.Provider value={{ back }}>
-        <DuosBoard key={shown.board} view={view} legal={NOTHING} onAction={ignore} pings={NO_PINGS} onPing={ignore} replay />
+        {/* Replay steps carry no economy: no seat is ever capped. */}
+        <DuosBoard key={shown.board} view={view} legal={NOTHING} onAction={ignore} pings={NO_PINGS} onPing={ignore} jloreCapped={false} replay />
       </DuosChromeContext.Provider>
     </div>
   );

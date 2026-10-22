@@ -152,7 +152,7 @@ mod tests {
                 crate::register_all();
                 // At (2), so Palantir (which steals a (1) Cost Spell) lets it resolve and limits its draws.
                 let mut s = setup(
-                    json!({ "hand": [{ "def": HURRAH, "costMod": 1 }, "core-010"] }),
+                    json!({ "hand": [{ "def": HURRAH, "costMod": 2 }, "core-010"] }),
                     json!({ "backrow": [{ "def": PALANTIR, "faceUp": true }] }),
                     false,
                 );

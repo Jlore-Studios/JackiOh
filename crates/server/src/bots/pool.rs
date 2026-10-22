@@ -9,8 +9,8 @@
 //!
 //! A new bot is drawn from the pool's seed like a player is made: a strength (`BOT_STRENGTHS`, its
 //! R610 rating seeded from it), a think speed, a persona (R645's weights), the hours it is on, an
-//! account age, and a username drawn from two word lists or, for `BOT_DEFAULT_USERNAME_SHARE` of them,
-//! the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
+//! account age, and a username drawn as people pick theirs (`bots::names`) or, for
+//! `BOT_DEFAULT_USERNAME_SHARE` of them, the `Player#n` every new account is given. Its Best-of-1 decks are the patch's distinct decklists
 //! people took into live Best-of-1 games, those with enough games in the order its strength takes
 //! them and the rest shuffled (R750000), then random decks dealt as a player's All Random deck is (no shadow ban, no soft gate,
 //! R1453) leaning on the cards that win as far as its strength says (`deal_random_deck_with_strength`,
@@ -19,6 +19,13 @@
 //! Conquest trio (R641000) is dealt after them, for the same catalog version: its own decks first, in order, each that shares no card with
 //! those taken before it, then decks dealt with every card already taken left out, until it holds
 //! three that pass the trio's rules (`validate_trio`, R253).
+//!
+//! R1555000: each refresh then starts or stops the top bots' grind (`plan_grind`). While the
+//! `BOT_GRIND_REFERENCE_RANK`-th highest-rated placed person this season is more than
+//! `BOT_GRIND_GAP` above every active bot, the top `BOT_GRINDERS` active bots grind, chosen again at
+//! every refresh; once a bot is within `BOT_GRIND_GAP − BOT_GRIND_HYSTERESIS` of that person, none
+//! does. A grinder is on more hours, may meet a player above every bot and play another bot while
+//! the queue is empty (`bots::fallback`), and steps up a strength as it wins (`api::ranked`).
 //!
 //! `release_stale_starts`, which the queue's sweeper runs every sweep whatever `LADDER_BOTS` says,
 //! lets go any bot still held by a claim whose match never started (`BOT_STALE_START_SECONDS`): a
@@ -36,14 +43,17 @@ use jackioh_engine::{Rng, pick_portrait_from_seed};
 use crate::actor::engine::{deal_random_deck_excluding_with_strength, deal_random_deck_with_strength};
 use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
+use crate::api::ranked::{SeasonDeps, build_season_id};
 use crate::app::{App, now_ms};
+use crate::bots::names::draw_username;
 use crate::bots::persona::pick_bot_persona;
 use crate::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
-    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_HOURS_PER_DAY,
-    BOT_NAME_FIRST, BOT_NAME_SECOND, BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN,
-    BOT_POOL_PER_WEEKLY_ACTIVE, BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN,
-    BOT_STALE_START_SECONDS, BOT_STRENGTHS, CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
+    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_GRIND_GAP,
+    BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY,
+    BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
+    BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
+    CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
     BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, StoreError, UsernameClaim, UsernameClaimOutcome,
@@ -114,8 +124,47 @@ pub fn plan_pool(bots: &[BotRow], target: usize) -> PoolChange {
     }
 }
 
+/// R1555000: the bots that should grind, given every bot and the ratings of this season's placed
+/// people. None with no active bot, or fewer than `BOT_GRIND_REFERENCE_RANK` people; else, when the
+/// `BOT_GRIND_REFERENCE_RANK`-th highest person is more than `BOT_GRIND_GAP` above the highest-rated
+/// active bot (more than `BOT_GRIND_GAP − BOT_GRIND_HYSTERESIS` while some active bot grinds
+/// already, so the grind does not flap), the first `BOT_GRINDERS` active bots by rating, highest
+/// first, ties on id.
+pub fn plan_grind(bots: &[BotRow], people: &[f64]) -> Vec<String> {
+    let mut active: Vec<&BotRow> = bots.iter().filter(|bot| bot.retired_at.is_none()).collect();
+    active.sort_by(|a, b| {
+        b.rating
+            .total_cmp(&a.rating)
+            .then_with(|| a.profile_id.cmp(&b.profile_id))
+    });
+    let Some(top) = active.first().map(|bot| bot.rating) else {
+        return Vec::new();
+    };
+    let mut people = people.to_vec();
+    people.sort_by(|a, b| b.total_cmp(a));
+    let Some(reference) = BOT_GRIND_REFERENCE_RANK
+        .checked_sub(1)
+        .and_then(|index| people.get(index))
+    else {
+        return Vec::new();
+    };
+    let threshold = if active.iter().any(|bot| bot.grinding) {
+        BOT_GRIND_GAP - BOT_GRIND_HYSTERESIS
+    } else {
+        BOT_GRIND_GAP
+    };
+    if reference - top <= threshold {
+        return Vec::new();
+    }
+    active
+        .into_iter()
+        .take(BOT_GRINDERS)
+        .map(|bot| bot.profile_id.clone())
+        .collect()
+}
+
 /// `low + rng.int(high − low + 1)`: an integer in `[low, high]`.
-fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
+pub(crate) fn int_in(rng: &mut Rng, low: i64, high: i64) -> i64 {
     low + i64::from(rng.int(i32::try_from(high - low + 1).unwrap_or(1)))
 }
 
@@ -139,9 +188,7 @@ pub fn draw_new_bot(seed: &str, profile_id: &str, now: i64) -> (NewBot, Option<S
     let name = if rng.chance(BOT_DEFAULT_USERNAME_SHARE) {
         None
     } else {
-        let first = rng.pick(BOT_NAME_FIRST).copied().unwrap_or_default();
-        let second = rng.pick(BOT_NAME_SECOND).copied().unwrap_or_default();
-        Some(format!("{first}{second}"))
+        draw_username(&mut rng)
     };
     let seed_rating = BOT_STRENGTHS
         .get(strength)
@@ -386,6 +433,8 @@ pub struct PoolRefresh {
     /// R641000: bots whose Conquest trio was dealt (bots that held none, and bots whose trio was for
     /// another catalog).
     pub trios: usize,
+    /// R1555000: bots that grind after it.
+    pub grinding: usize,
 }
 
 /// R1454: claims `name` for the new bot as the username route claims one. A name the checks refuse,
@@ -416,7 +465,8 @@ async fn claim_name(app: &App, profile_id: &str, name: &str, now: i64) -> Result
 /// R1454: lets go every bot whose claimed match was still unstarted `BOT_STALE_START_SECONDS` after
 /// the claim, and that match's player with it: a start a crash or a restart cut off. The queue's
 /// sweeper runs it every sweep whatever `LADDER_BOTS` says (`run_matchmaker`), so neither is held
-/// out of the queue for longer than about that. Answers how many bots it let go.
+/// out of the queue for longer than about that; a release holds the seat ledger to the record at
+/// once (R1523000). Answers how many bots it let go.
 pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreError> {
     let mut tx = app.db.begin(None).await?;
     let released = tx
@@ -426,12 +476,19 @@ pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreErr
     for bot_id in &released {
         tracing::warn!(event = "bots.start.released", botId = %bot_id);
     }
+    if !released.is_empty() {
+        // R1523000: the bots and players let go here leave the seat ledger too, which a restart
+        // filled from their flags.
+        crate::seats::reconcile(app).await;
+    }
     Ok(released.len())
 }
 
 /// R1454: sizes the pool for the people active now, makes, retires and reinstates bots to fit, and
 /// deals decks to every active bot that holds none for this catalog, then (R641000) a trio to every
-/// active bot that holds none for it. `seed` seeds the new bots.
+/// active bot that holds none for it, then (R1555000) sets grinding the bots `plan_grind` names
+/// against this season's placed people, and every other bot, retired ones included, not. `seed`
+/// seeds the new bots.
 pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh, StoreError> {
     let mut tx = app.db.begin(None).await?;
     let bots = tx.bots_list().await?;
@@ -514,6 +571,28 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         tx.commit().await?;
         trios += 1;
     }
+
+    // R1555000: after the pool is sized, so a retired bot stops and a new one may start.
+    let mut tx = app.db.begin(None).await?;
+    let bots = tx.bots_list().await?;
+    let standings = tx
+        .ranked_standings(&build_season_id(&SeasonDeps::current()))
+        .await?;
+    tx.commit().await?;
+    let people: Vec<f64> = standings
+        .iter()
+        .filter(|standing| !standing.bot && standing.rank.ladder.is_some())
+        .map(|standing| standing.rating)
+        .collect();
+    let grinders = plan_grind(&bots, &people);
+    let mut tx = app.db.begin(None).await?;
+    for bot in &bots {
+        let grinding = grinders.contains(&bot.profile_id);
+        if bot.grinding != grinding {
+            tx.bots_set_grinding(&bot.profile_id, grinding).await?;
+        }
+    }
+    tx.commit().await?;
     Ok(PoolRefresh {
         target,
         retired: change.retire.len(),
@@ -521,6 +600,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         created: change.create,
         dealt: stale.len(),
         trios,
+        grinding: grinders.len(),
     })
 }
 
@@ -538,6 +618,7 @@ pub async fn run_bot_pool(app: Arc<App>) {
                 created = done.created,
                 dealt = done.dealt,
                 trios = done.trios,
+                grinding = done.grinding,
             ),
             Err(error) => tracing::warn!(event = "bots.pool.failed", message = %error),
         }

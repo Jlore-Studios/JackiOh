@@ -117,6 +117,25 @@ button:disabled {
   max-width: 100%;
 }
 
+/* --- one screen (#1581, R1581000) ----------------------------------------------------------
+   A menu is one screen: its root takes `one-screen`, the shell is the window's height and the
+   page never scrolls. Its one region, `one-screen__body`, scrolls inside itself when the menu
+   holds more than its room; `one-screen__frame` lets a box between the two shrink (a tavern
+   panel); `one-screen__stack` stacks a wrapper's children as the shell would. The region is
+   `position: relative` so that a visually hidden label inside it (absolute, at its place in the
+   content) scrolls with it instead of reaching below the window and making the page scroll. Under
+   501 px tall (a phone on its side) the page scrolls as before. */
+@media (min-height: 501px) {
+  .app-shell.one-screen { height: 100vh; height: 100dvh; min-height: 0; }
+  .app-shell.one-screen > * { flex-shrink: 0; }
+  .app-shell.one-screen .one-screen__frame { flex: 0 1 auto; min-height: 0; }
+  .app-shell.one-screen .one-screen__body {
+    position: relative; flex: 0 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  }
+}
+.app-shell.one-screen .one-screen__stack { display: flex; flex-direction: column; gap: inherit; }
+.app-shell.one-screen .one-screen__stack > * { flex-shrink: 0; }
+
 .app-shell h1 {
   font-size: 16px;
   margin: 0;

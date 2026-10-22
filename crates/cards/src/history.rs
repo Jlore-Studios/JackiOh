@@ -20,11 +20,12 @@ use crate::scripts::classic::{
     c008_pickle, c009_income_tax, c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{c033_ivory_tower, c040_appropriations};
-use crate::scripts::core::{c049_snom_bunny_mind_control, c050_k_pop_fanatic};
+use crate::scripts::core::{c029_giga_glowy_jelly_bean, c049_snom_bunny_mind_control, c050_k_pop_fanatic};
 use crate::scripts::meditative::{
-    c017_true_craft_a_card, c037_cn_in_a_bottle, c054_money_machine, c074_montana_giant, c080_aluneth,
-    c097_2_wishing_well, c097_8_prison,
+    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c037_cn_in_a_bottle, c049_yilegpt_tamed,
+    c054_money_machine, c074_montana_giant, c080_aluneth, c097_2_wishing_well, c097_8_prison,
 };
+use crate::scripts::meditative_plus::c001_bobs_plan;
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -45,7 +46,10 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// no Aura, Money Machine rolled its controller's card and either player could Tribute it, and Aluneth's
 /// draws took no discount. #1279's three ran theirs through v0.3.16: Pickle's questions opened during your
 /// turn, Income Tax's keep opened at once on either turn, and In Too Deep's reward G asked at once with
-/// its quest opening beside the prompt (R1279000).
+/// its quest opening beside the prompt (R1279000). #1563's ran theirs through v0.4.0f: YileGPT Tamed put
+/// its Prime on the bottom of the deck, not shuffled in, GIGA Glowy Jelly Bean had no Float discount, and
+/// Expedition12 and Expedition123 lost all mana for their turns (R844), Expedition12's Radiant face with
+/// Echo 1, and Bob's Plan added Spa Day after Aestheticize the Game, with no Discover.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -101,6 +105,27 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c008_pickle::ID, "v0.4.0b", c008_pickle::script_v0_3_16),
     (c009_income_tax::ID, "v0.4.0b", c009_income_tax::script_v0_3_16),
     (c090_in_too_deep::ID, "v0.4.0b", c090_in_too_deep::script_v0_3_16),
+    (
+        c049_yilegpt_tamed::ID,
+        "v0.4.0f",
+        c049_yilegpt_tamed::script_v0_4_0f,
+    ),
+    (
+        c029_giga_glowy_jelly_bean::ID,
+        "v0.4.0f",
+        c029_giga_glowy_jelly_bean::script_v0_4_0f,
+    ),
+    (
+        c018_expedition12::ID,
+        "v0.4.0f",
+        c018_expedition12::script_v0_4_0f,
+    ),
+    (
+        c019_expedition123::ID,
+        "v0.4.0f",
+        c019_expedition123::script_v0_4_0f,
+    ),
+    (c001_bobs_plan::ID, "v0.4.0f", c001_bobs_plan::script_v0_4_0f),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

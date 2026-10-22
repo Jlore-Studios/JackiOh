@@ -1902,6 +1902,10 @@ mod assert_not_in_series_r264 {
     async fn r264_refuses_a_profile_in_a_series_that_is_not_over_naming_the_series() {
         let ctx = setup().await;
         q!(ctx.app, series_create(&series("picking")));
+        // R1523000: the seat written straight into the store, read as a restart would read it.
+        jackioh_server::seats::hydrate(&ctx.app)
+            .await
+            .expect("the ledger reads the store");
         let error = assert_free_to_play(&ctx.app, PROFILE)
             .await
             .expect_err("in a series");
@@ -1914,6 +1918,9 @@ mod assert_not_in_series_r264 {
     async fn r264_s_control_a_series_that_is_over_holds_nobody() {
         let ctx = setup().await;
         q!(ctx.app, series_create(&series("over")));
+        jackioh_server::seats::hydrate(&ctx.app)
+            .await
+            .expect("the ledger reads the store");
         assert!(assert_free_to_play(&ctx.app, PROFILE).await.is_ok());
     }
 }

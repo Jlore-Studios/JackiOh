@@ -21,22 +21,44 @@ It plans again until nothing more can start, as each plan job's `fill_lanes` use
 more run, and prunes plan files older than `KEEP_PLANS`. bot-night's own gate and plan still run
 for a run started any other way (its schedule, a command, a person), and plan only while no loop
 is going (`plan.loop_alive`): rule 13 keeps the schedule.
+
+The loop also delivers the runs it started (#1537), so they have no `deliver` job either, which
+waited 7 to 25 minutes for a hosted runner on 2026-10-20 to run for under a minute. Each tick, before
+it plans, `deliver` takes every such run that has ended (`plan.awaiting_delivery`): it reads the
+run's plan from the state branch, downloads the model job's `work` upload through the Actions API
+and unzips it, clones the default branch afresh into the runner's scratch directory (the loop's
+own checkout is shallow and hours old, and the deliverer checks that the bundle descends from the
+commit the work started at), and runs the same `Deliverer` deliver ran, as the run. Each try is
+recorded in the state file first (`plan.DELIVERIES`), so one that fails, or ends the loop's
+process, is tried again on the next tick, at most `plan.DELIVER_TRIES` times. Until then
+housekeeping leaves the item alone; after them, or `plan.DELIVER_WITHIN` after the run ended, it
+is housekeeping's, as a dead run's item is. A delivery that fails never stops the tick: git runs
+through `subprocess` with its timeouts, and every failure is a note.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import io
 import json
 import re
 import secrets
+import tempfile
 import time
+import zipfile
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Callable
 
+from harness import config as config_mod
 from harness import plan as plan_mod
+from harness.clock import iso
 from harness.config import NIGHT_WORKFLOW, STATE_BRANCH
 from harness.context import Context
+from harness.deliver import Deliverer
 from harness.errors import GitHubError
+from harness.git import Git
+from harness.redact import redact
 
 #: Where the loop keeps the plans of the runs it starts, on the state branch.
 PLANS = "plans"
@@ -241,3 +263,127 @@ def check(ctx: Context, planned: dict[str, Any], given: dict[str, str]) -> list[
         if given.get(key, "") != want:
             problems.append(f"the dispatch's {key} is {given.get(key, '')!r}, {provider_id}'s is {want!r}")
     return problems
+
+
+# ---------------------------------------------------------------------- delivering (#1537)
+
+#: The model job's upload (bot-night.yml's `work` job): the result, the bundle, the sealed login
+#: and the transcripts.
+WORK_ARTIFACT = "work"
+#: How long the clone of the default branch one delivery works in may take, in seconds.
+CLONE_TIMEOUT = 600
+#: How many of the loop's deliveries the state file remembers.
+KEEP_DELIVERIES = 100
+
+
+def deliver(ctx: Context, *, workspace: Path | None = None) -> list[str]:
+    """Deliver every night run the loop started that has ended and still waits for it
+    (`plan.awaiting_delivery`). Each line says what happened; nothing here raises."""
+    try:
+        runs = ctx.gh.list_runs(NIGHT_WORKFLOW, limit=50)
+    except GitHubError as exc:
+        return [f"could not list the night runs to deliver: {exc}"]
+    scratch = workspace or Path(config_mod.github_env().get("RUNNER_TEMP") or tempfile.gettempdir())
+    notes = []
+    for run in runs:
+        try:
+            waiting = plan_mod.awaiting_delivery(ctx, run)
+        except GitHubError as exc:
+            notes.append(f"could not tell whether run {run.get('id')} waits for delivery: {exc}")
+            continue
+        if waiting:
+            notes.append(_deliver_run(ctx, run, scratch))
+    return notes
+
+
+def _deliver_run(ctx: Context, run: dict[str, Any], scratch: Path) -> str:
+    """Deliver one run as its own `deliver` job did: its plan, its model job's output and a fresh
+    clone of the default branch, with the run's id on the config, so every link and record names
+    the night run. A failure is a note, and the run is tried again on the next tick."""
+    run_id = str(run.get("id"))
+    what = f"run {run_id}"
+    try:
+        tries = _count_try(ctx, run_id, plan_mod.loop_ref(run))
+    except GitHubError as exc:
+        return f"could not deliver {what}: the state file refused its try ({exc})"
+    try:
+        planned = fetch(ctx, plan_mod.loop_ref(run))
+        what = f"{_what(planned)} (run {run_id})"
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix=f"deliver-{run_id}-", dir=scratch) as tmp:
+            out = Path(tmp) / "out"
+            found = _download_work(ctx, run_id, out)
+            repo = _clone(ctx, Path(tmp) / "repo")
+            as_run = dataclasses.replace(ctx, cfg=dataclasses.replace(ctx.cfg, run_id=run_id))
+            deliverer = Deliverer(as_run, planned, out, repo)
+            deliverer.chain = False  # this tick's sweep plans the next runs itself
+            outcome = deliverer.run()
+    except Exception as exc:  # noqa: BLE001 - one delivery failing never stops the tick
+        left = plan_mod.DELIVER_TRIES - tries
+        then = (f"it is tried again next tick ({left} more)" if left > 0
+                else "its item is left to housekeeping, as a dead run's")
+        return (f"could not deliver {what}, try {tries} of {plan_mod.DELIVER_TRIES} "
+                f"({type(exc).__name__}: {redact(str(exc))[:300]}): {then}")
+    status = str(outcome.get("status") or "")
+    try:
+        _record(ctx, run_id, done=True, status=status)
+    except GitHubError as exc:
+        return f"delivered {what}: {status}, but its record was refused ({exc})"
+    return f"delivered {what}: {status}" + ("" if found else " (its model job left no upload)")
+
+
+def _count_try(ctx: Context, run_id: str, ref: str) -> int:
+    """Record one more try at delivering `run_id` before it starts, so a try that ends the loop's
+    process counts too. Returns which try this is."""
+    tries = 0
+
+    def change(state: dict[str, Any]) -> None:
+        nonlocal tries
+        book = state.get(plan_mod.DELIVERIES)
+        if not isinstance(book, dict):
+            book = state[plan_mod.DELIVERIES] = {}
+        entry = book.get(run_id) if isinstance(book.get(run_id), dict) else {}
+        tries = int(entry.get("tries") or 0) + 1
+        book[run_id] = {**entry, "ref": ref, "tries": tries, "at": iso(ctx.now())}
+        for old in sorted(book, key=lambda key: str((book[key] or {}).get("at") or ""))[:-KEEP_DELIVERIES]:
+            del book[old]
+
+    ctx.store.update(change, f"delivering run {run_id}")
+    return tries
+
+
+def _record(ctx: Context, run_id: str, **fields: Any) -> None:
+    def change(state: dict[str, Any]) -> None:
+        book = state.get(plan_mod.DELIVERIES)
+        if isinstance(book, dict) and isinstance(book.get(run_id), dict):
+            book[run_id].update(fields)
+
+    ctx.store.update(change, f"delivered run {run_id}")
+
+
+def _download_work(ctx: Context, run_id: str, out: Path) -> bool:
+    """Unzip the run's `work` upload into `out`. False when its model job left none (it failed
+    before the model started, or was cancelled): the deliverer says so then, as deliver did after
+    its download, which was allowed to fail."""
+    out.mkdir(parents=True, exist_ok=True)
+    found = [a for a in ctx.gh.list_artifacts(run_id)
+             if a.get("name") == WORK_ARTIFACT and not a.get("expired")]
+    if not found:
+        return False
+    data = ctx.gh.download_artifact(found[0]["id"])
+    root = out.resolve()
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        for member in archive.infolist():
+            if not (root / member.filename).resolve().is_relative_to(root):
+                raise ValueError(f"the upload holds a path outside it: {member.filename!r}")
+        archive.extractall(root)
+    return True
+
+
+def _clone(ctx: Context, into: Path) -> Path:
+    """A fresh clone of the default branch, history and all but blobs fetched as needed, for one
+    delivery: the deliverer fetches the bundle into it and checks what it descends from."""
+    url = f"{ctx.cfg.server_url}/{ctx.cfg.repo}.git"
+    Git(into.parent).run("clone", "--quiet", "--filter=blob:none", "--no-tags", "--branch",
+                         ctx.cfg.default_branch, url, str(into), timeout=CLONE_TIMEOUT)
+    return into

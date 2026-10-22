@@ -1,5 +1,5 @@
 // R1295000: the card cosmetics a player's own cards wear: the store, how a face wears them, the cap
-// on moving foils, the settings rows, and the stylesheet's two promises — no border in the Radiant
+// on moving foils, the Collection's equip rows (R1579000), and the stylesheet's two promises — no border in the Radiant
 // gold, and every foil still under reduced motion. Vitest stubs CSS imports, so the sheets are read
 // as text (foil.test.ts does the same for cards.css).
 
@@ -12,8 +12,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { CardCosmeticsControls, DeckCosmeticsControls } from "../settings/controls.tsx";
+import { CardCosmeticsControls, DeckCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
+import { collectionTestid } from "../collection/collection.ts";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
+import { resetSettings } from "../settings/store.ts";
 import { unit } from "../test/fixtures.ts";
 import { CardFace } from "./CardFace.tsx";
 import {
@@ -289,20 +291,20 @@ describe("R1295000 the cosmetics store and how a face wears it", () => {
     expect(root(container).getAttribute("data-cosmetic-motion")).toBe("static");
   });
 
-  it("R1295000 the settings selects write the store and show the default for an unknown id", () => {
+  it("R1295000 the collection's selects write the store and show the default for an unknown id", () => {
     render(<CardCosmeticsControls />);
-    const foil = screen.getByTestId<HTMLSelectElement>("setting-cosmetic-foil");
+    const foil = screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("foil"));
     expect(foil.value).toBe(DEFAULT_CARD_COSMETICS.foil);
     expect([...foil.options].map((option) => option.value)).toEqual(cosmeticsOf("foil").map((cosmetic) => cosmetic.id));
 
-    fireEvent.change(screen.getByTestId("setting-cosmetic-border"), { target: { value: PICKS.border } });
+    fireEvent.change(screen.getByTestId(collectionTestid.equip("border")), { target: { value: PICKS.border } });
     expect(readCosmetics().border).toBe(PICKS.border);
-    expect(screen.getByTestId<HTMLSelectElement>("setting-cosmetic-border").value).toBe(PICKS.border);
+    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("border")).value).toBe(PICKS.border);
 
     act(() => {
       writeCosmetics({ finish: "finish-velvet" });
     });
-    expect(screen.getByTestId<HTMLSelectElement>("setting-cosmetic-finish").value).toBe(DEFAULT_CARD_COSMETICS.finish);
+    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("finish")).value).toBe(DEFAULT_CARD_COSMETICS.finish);
     expect(readCosmetics().finish).toBe("finish-velvet");
   });
 });
@@ -436,38 +438,32 @@ describe("R1297000 the deck slots", () => {
     expect(deckCosmeticPatch("cardBack", BACK)).toEqual({ cardBackCosmetic: BACK });
   });
 
-  it("R1297000 the settings rows write the account's playmat, backdrop and card back", () => {
+  it("R1297000 the collection's rows write the account's playmat, backdrop and card back", () => {
     render(<DeckCosmeticsControls />);
     for (const kind of DECK_SLOT_KINDS) {
-      const select = screen.getByTestId<HTMLSelectElement>(`setting-cosmetic-${kind}`);
+      const select = screen.getByTestId<HTMLSelectElement>(collectionTestid.equip(kind));
       expect(select.value).toBe(DEFAULT_CARD_COSMETICS[kind]);
       expect([...select.options].map((option) => option.value)).toEqual(cosmeticsOf(kind).map((cosmetic) => cosmetic.id));
     }
-    fireEvent.change(screen.getByTestId("setting-cosmetic-table"), { target: { value: TABLE } });
-    fireEvent.change(screen.getByTestId("setting-cosmetic-field"), { target: { value: FIELD } });
-    fireEvent.change(screen.getByTestId("setting-cosmetic-cardBack"), { target: { value: BACK } });
+    fireEvent.change(screen.getByTestId(collectionTestid.equip("table")), { target: { value: TABLE } });
+    fireEvent.change(screen.getByTestId(collectionTestid.equip("field")), { target: { value: FIELD } });
+    fireEvent.change(screen.getByTestId(collectionTestid.equip("cardBack")), { target: { value: BACK } });
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, field: FIELD, cardBack: BACK });
-    expect(screen.getByTestId<HTMLSelectElement>("setting-cosmetic-cardBack").value).toBe(BACK);
+    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("cardBack")).value).toBe(BACK);
 
     // An id this client does not know shows as the default, which is what the board draws.
     act(() => {
       writeCosmetics({ table: "table-marble" });
     });
-    expect(screen.getByTestId<HTMLSelectElement>("setting-cosmetic-table").value).toBe(DEFAULT_CARD_COSMETICS.table);
+    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("table")).value).toBe(DEFAULT_CARD_COSMETICS.table);
   });
 
-  it("R1297000 each settings reset puts back only its own kinds", () => {
-    const reset = (id: string): void => {
-      const slot = SETTINGS_SLOTS.find((candidate) => candidate.id === id);
-      if (slot?.reset === undefined) throw new Error(`no ${id} slot with a reset`);
-      slot.reset();
-    };
-    writeCosmetics({ foil: PICKS.foil, table: TABLE, cardBack: BACK });
-    reset("card-cosmetics");
-    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, cardBack: BACK });
-    writeCosmetics({ foil: PICKS.foil });
-    reset("deck-cosmetics");
-    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: PICKS.foil });
+  it("R1579000 no settings reset touches the equipped cosmetics", () => {
+    writeCosmetics({ foil: PICKS.foil, finish: PICKS.finish, border: PICKS.border, table: TABLE, field: FIELD, cardBack: BACK });
+    const equipped = { ...readCosmetics() };
+    for (const slot of SETTINGS_SLOTS) slot.reset?.();
+    resetSettings();
+    expect(readCosmetics()).toEqual(equipped);
   });
 
   it("R1297000 every backdrop has a still version and moves only inside the motion gate", () => {

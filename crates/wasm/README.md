@@ -25,7 +25,7 @@ opaque `EngineState` brand (CLAUDE.md rule 7) and hands back on every call.
 | `constants()`, `engine_tables()` | the AI budgets, shadow-ban ids and deck builder's numbers (`AI_DECK`); the three Call to Chaos tables (Core's, Classic+'s and Meditative's) and the Heroic Power table the client prints |
 | `preview_sets(sets)` | R1400, R1420: treat `SetName[]` as shipped for the module's life (the dev hotseat's E2E injection); a module built without the `preview` feature refuses any set |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | #936: the Duos wrapper for `/dev/duos`: a `DuosState` (its four decks and handicaps checked first, as `create_game`'s setup is), then `{ state, events, error? }`, `DuosActionBody[]` and `DuosView`; the seat crosses as its string (`"a1"`). Built only with the `duos` feature (the dev server's build only: `JACKIOH_WASM_DUOS=1`, off by default); without it each throws the reason |
-| `craft_preview(recipe, cost)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say |
+| `craft_preview(recipe, cost, prompt)` | ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe — a `CraftPreview` — so the block editor shows what the reducer will say; `prompt` is the open prompt's `{ craftMode, craftOffer }`, its frame and offer (R1563007) |
 
 A binding returns `Err(JsError)`, which JavaScript sees as a thrown `Error` with the engine's message,
 where a JSON argument does not parse or the setup is refused (a deck or handicap `create_game` will

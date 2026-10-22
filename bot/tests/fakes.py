@@ -36,6 +36,9 @@ class FakeGitHub:
         self.pinned: list[str] = []
         self.runs: dict[str, dict[str, Any]] = {}
         self.jobs: dict[str, list[dict[str, Any]]] = {}
+        #: A run's uploads, by run id, and each upload's zip, by its id.
+        self.artifacts: dict[str, list[dict[str, Any]]] = {}
+        self.artifact_zips: dict[int, bytes] = {}
         self.reruns: list[Any] = []
         self.reacted: list[tuple[int, str]] = []
         self.auto_merge: dict[str, str] = {}
@@ -172,7 +175,16 @@ class FakeGitHub:
         return [c for c in getattr(self, "commits", [])
                 if not author or (c.get("author") or {}).get("login") == author][:limit]
 
+    def lock(self, number: int) -> None:
+        self.threads[number]["locked"] = True
+
+    def unlock(self, number: int) -> None:
+        self.threads[number]["locked"] = False
+
     def create_comment(self, number: int, body: str) -> dict[str, Any]:
+        if self.threads.get(number, {}).get("locked"):
+            # As the workflow's own token finds a locked thread (lock-conversations.yml).
+            raise GitHubError("Unable to create comment because issue is locked.", 403)
         comment = {"id": next(self._ids), "body": with_marker(body), "user": dict(BOT),
                    "author_association": "COLLABORATOR", "created_at": "2026-09-29T00:00:00Z",
                    "issue_url": f"https://api.github.com/repos/{self.repo}/issues/{number}"}
@@ -399,7 +411,8 @@ class FakeGitHub:
         return dict(self.runs[str(run_id)])
 
     def list_runs(self, workflow: str, *, status: str = "", limit: int = 30) -> list[dict]:
-        return list(self.runs.values())[:limit]
+        # A run that names its workflow is listed only for it; one that does not, for any.
+        return [r for r in self.runs.values() if r.get("workflow", workflow) == workflow][:limit]
 
     def rerun_failed_jobs(self, run_id: Any) -> None:
         self.reruns.append(run_id)
@@ -409,6 +422,14 @@ class FakeGitHub:
 
     def job_log(self, job_id: Any, tail_chars: int = 6000) -> str:
         return f"log of job {job_id}: AssertionError: expected 3 to be 4"
+
+    def list_artifacts(self, run_id: Any) -> list[dict]:
+        return copy.deepcopy(self.artifacts.get(str(run_id), []))
+
+    def download_artifact(self, artifact_id: Any) -> bytes:
+        if int(artifact_id) not in self.artifact_zips:
+            raise GitHubError("no artifact", 404)
+        return self.artifact_zips[int(artifact_id)]
 
     def check_runs(self, sha: str) -> list[dict]:
         return []

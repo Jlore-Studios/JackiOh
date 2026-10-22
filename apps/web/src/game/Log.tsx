@@ -387,7 +387,10 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "turnAutoEnded":
       return t("{seat} had no moves left, so turn {turn} ended", { seat: name.seat(event.player), turn: event.turn });
     case "promptOpened":
-      return t("{seat} must choose {what}", { seat: name.seat(event.player), what: t(PROMPT_WORDS[event.kind]) });
+      // R81, §10.6: the other seat's event names whose prompt it is, not what it asks for.
+      return event.kind === undefined
+        ? t("{seat} must choose", { seat: name.seat(event.player) })
+        : t("{seat} must choose {what}", { seat: name.seat(event.player), what: t(PROMPT_WORDS[event.kind]) });
     case "promptAnswered":
       return t("{seat} chose", { seat: name.seat(event.player) });
     case "drawOffered":

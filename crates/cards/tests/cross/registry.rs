@@ -233,6 +233,7 @@ mod registry_build_m4_t2 {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // std::thread::scope: the testkit's override must be shown to stay on its own thread (SURFACE §8); never the rules.
     fn register_all_puts_the_real_registries_back_after_a_fixture_catalog() {
         register_all();
         // An engine test registers its own fixtures (BUILD §0). In Rust a fixture registration is the

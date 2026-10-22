@@ -18,22 +18,24 @@ const SPEC_DIR = "cypress/e2e";
 /**
  * The per-pull-request smoke list (docs/v0.3.0/README.md §7), one spec per user-facing flow: 01 a
  * hotseat game and its replay hash, 06 a networked match, 10 the invite gate, 13 practice against the
- * AI, 19 the queue modes and a series. Spec number prefixes, as WEIGHTS keys them.
+ * AI, 19 the queue modes and a series, 46 every menu on one screen (R1581000). Spec number prefixes, as
+ * WEIGHTS keys them.
  */
-export const SMOKE = ["01", "06", "10", "13", "19"];
+export const SMOKE = ["01", "06", "10", "13", "19", "46"];
 
 /**
  * Seconds per spec on ubuntu-latest, Chrome and Electron's slower: CI run 36973335249 (main at
  * e762937, the TypeScript server). Specs 29-36 and 40 are estimates (29-32 from the turns they play,
  * spec 03's length per turn; 36 from its play-through of the Meditative set, about six minutes in
  * Chromium on a loaded machine; 40 from the creator, a deck save, the Luau module's load and up to a
- * dozen practice turns); once they have run, replace them with measured times (#79).
+ * dozen practice turns; 46 from a local run, 54 visits of 0.2-1.3 s each); once they have run,
+ * replace them with measured times (#79).
  */
 const WEIGHTS = {
   "01": 67, "02": 124, "03": 30, "04": 46, "05": 20, "06": 11, "07": 38, "08": 170, "09": 32,
   "10": 4, "11": 26, "12": 43, "13": 49, "14": 22, "15": 17, "16": 28, "17": 55, "18": 51,
   "19": 28, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4,
-  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "40": 90, "99": 1,
+  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "40": 90, "46": 50, "99": 1,
 };
 const DEFAULT_WEIGHT = 30;
 

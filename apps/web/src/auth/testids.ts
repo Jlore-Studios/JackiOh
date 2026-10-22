@@ -10,20 +10,32 @@ export const landingTestid = {
   root: "landing",
   signIn: "landing-sign-in",
   account: "landing-account",
-  playAi: "landing-play-ai",
-  playOnline: "landing-play-online",
-  buildDecks: "landing-build-decks",
-  /** #920: the card creator. */
-  makeCards: "landing-make-cards",
+  /** #1577: the Play door, to practice. */
+  play: "landing-play",
   /** #1307: the collection screen. */
   collection: "landing-collection",
+  /** #1577: the Shop door, to the shop. */
+  shop: "landing-shop",
   fan: "landing-card-fan",
   fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",
   statsClear: "landing-stats-clear",
+  /** R1584000: the floor's stat showcase. */
+  showcase: "landing-showcase",
+  showcaseTitle: "landing-showcase-title",
+  showcaseLine: "landing-showcase-line",
+  showcasePrev: "landing-showcase-prev",
+  showcaseNext: "landing-showcase-next",
+  showcaseStage: "landing-showcase-stage",
+  showcaseFx: "landing-showcase-fx",
 } as const;
+
+/** R1584000: `landing-showcase-pick-${key}`, the dot that shows one stat. */
+export function landingShowcasePickTestid(key: string): string {
+  return `landing-showcase-pick-${key}`;
+}
 
 /** `landing-fan-card-${index}`, 0..4. */
 export function landingFanCardTestid(index: number): string {

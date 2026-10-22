@@ -142,6 +142,73 @@ describe("the deck's portrait button (R641)", () => {
   });
 });
 
+describe("the picker gives the focus back (#1569)", () => {
+  it("Escape from inside the menu closes it and gives the focus back to the portrait button, which names the menu only while it is open", () => {
+    render(picker("gary"));
+    const current = screen.getByTestId("portrait-current");
+    expect(current).not.toHaveAttribute("aria-controls");
+    const menu = openPicker();
+    expect(menu.id).not.toBe("");
+    expect(current).toHaveAttribute("aria-controls", menu.id);
+
+    const tile = screen.getByTestId("portrait-pick-timmy");
+    tile.focus();
+    fireEvent.keyDown(tile, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(current).toHaveFocus();
+    expect(current).not.toHaveAttribute("aria-controls");
+  });
+
+  it("a pick closes the menu and gives the focus back to the portrait button", () => {
+    const onPick = vi.fn();
+    render(picker("gary", onPick));
+    openPicker();
+    const tile = screen.getByTestId("portrait-pick-felinors");
+    tile.focus();
+    fireEvent.click(tile);
+    expect(onPick).toHaveBeenCalledWith("felinors");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("portrait-current")).toHaveFocus();
+  });
+
+  it("a press outside, or Escape once the focus is elsewhere on the page, leaves the focus where the player put it", () => {
+    render(
+      <>
+        <button type="button" data-testid="elsewhere">
+          elsewhere
+        </button>
+        {picker("gary")}
+      </>,
+    );
+    const elsewhere = screen.getByTestId("elsewhere");
+
+    openPicker();
+    elsewhere.focus();
+    fireEvent.pointerDown(elsewhere);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(elsewhere).toHaveFocus();
+
+    openPicker();
+    elsewhere.focus();
+    fireEvent.keyDown(elsewhere, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(elsewhere).toHaveFocus();
+  });
+
+  it("each portrait's Preview names the preview panel while it shows that portrait's pool", () => {
+    render(picker("gary"));
+    openPicker();
+    const garys = screen.getByTestId("portrait-preview-gary");
+    expect(garys).not.toHaveAttribute("aria-controls");
+    fireEvent.click(garys);
+    expect(garys).toHaveAttribute("aria-expanded", "true");
+    const panel = screen.getByTestId("portrait-preview-panel");
+    expect(panel.id).not.toBe("");
+    expect(garys).toHaveAttribute("aria-controls", panel.id);
+    expect(screen.getByTestId("portrait-preview-timmy")).not.toHaveAttribute("aria-controls");
+  });
+});
+
 describe("the emote previews (R644)", () => {
   it("R644 R1343 a tile's Preview opens the whole pool — five voice lines and every emoji a game may deal", () => {
     render(picker("gary"));

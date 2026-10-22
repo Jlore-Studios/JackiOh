@@ -3,13 +3,14 @@
 // the socket opens, shows the waiting panel (naming the delay) until the first delayed view and then
 // the friend's board read-only, shows a `forbidden` frame as the refused screen with the way back and
 // never reopens it, opens again `WATCH_RECONNECT_MS` after an unexpected close up to
-// `WATCH_RECONNECT_ATTEMPTS` times, and does not reopen a finished game.
+// `WATCH_RECONNECT_ATTEMPTS` times and then offers Reconnect now, whose click opens it again
+// with the attempts started over (#1570), and does not reopen a finished game.
 //
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance
 // time by hand.
 
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { registeredCatalog } from "@jackioh/engine";
@@ -209,6 +210,7 @@ describe("B50 the watch screen", () => {
     expect(screen.getByTestId("watch-refused")).toBeInTheDocument();
     expect(connection("watch-screen")).toBe("refused");
     expect(screen.getByTestId("watch-back").getAttribute("href")).toBe("/together");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
     await advance(WATCH_RECONNECT_MS * (WATCH_RECONNECT_ATTEMPTS + 1));
     expect(sockets).toHaveLength(1);
   });
@@ -302,6 +304,7 @@ describe("B50 the watch screen", () => {
     socket.emit("close");
 
     expect(screen.getByTestId("watch-status").getAttribute("data-connection")).toBe("closed");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
     await advance(WATCH_RECONNECT_MS);
     expect(sockets).toHaveLength(1);
   });
@@ -435,6 +438,7 @@ describe("B50 the watch screen", () => {
     await advance(SILENT_SOCKET_MS + 1);
     wakeTab();
     expect(connection("watch-screen")).toBe("closed");
+    expect(screen.getByTestId("watch-reconnect")).toBeInTheDocument();
     expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 1);
     expect(latest().closed).toBe(true);
     expect(sockets.every((s) => s.closed)).toBe(true);
@@ -442,5 +446,100 @@ describe("B50 the watch screen", () => {
     await advance(SILENT_SOCKET_MS + 1);
     wakeTab();
     expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 1);
+  });
+
+  it("#1570 once the reopens run out, Reconnect now opens the watch socket again and the live view resumes", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    const first = latest();
+    first.emit("open");
+    first.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    first.emit("close");
+
+    for (let attempt = 1; attempt <= WATCH_RECONNECT_ATTEMPTS; attempt += 1) {
+      expect(connection("watch-status")).toBe("connecting");
+      expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+      await advance(WATCH_RECONNECT_MS);
+      expect(sockets).toHaveLength(attempt + 1);
+      latest().emit("close");
+    }
+
+    expect(connection("watch-status")).toBe("closed");
+    expect(screen.getByTestId("watch-status")).toHaveTextContent("Disconnected");
+    expect(screen.getByTestId("watch-reconnect")).toHaveTextContent("Reconnect now");
+
+    fireEvent.click(screen.getByTestId("watch-reconnect"));
+    expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 2);
+    expect(connection("watch-status")).toBe("connecting");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+
+    const again = latest();
+    again.emit("open");
+    expect(connection("watch-status")).toBe("open");
+    expect(again.sent.map((text) => JSON.parse(text) as unknown)).toEqual([
+      { type: "hello", matchId: "m-watch", friendId: "f-ann" },
+    ]);
+
+    again.frame({
+      type: "view",
+      view: baseView({ viewer: "p1", you: emptySide("p1", { hand: [card({ instanceId: "h-1570", defId: "core-001" })] }) }),
+      legal: [],
+    });
+    expect(screen.getByTestId("hand-card-h-1570")).toBeInTheDocument();
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+  });
+
+  it("#1570 offers Reconnect now on the waiting panel when no view came, and its click starts the reopens over", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+
+    for (let attempt = 1; attempt <= WATCH_RECONNECT_ATTEMPTS; attempt += 1) {
+      latest().emit("close");
+      expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+      await advance(WATCH_RECONNECT_MS);
+    }
+
+    latest().emit("close");
+    expect(connection("watch-screen")).toBe("closed");
+    expect(screen.getByTestId("watch-waiting")).toContainElement(screen.getByTestId("watch-reconnect"));
+
+    fireEvent.click(screen.getByTestId("watch-reconnect"));
+    expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 2);
+    expect(connection("watch-screen")).toBe("connecting");
+
+    latest().emit("close");
+    expect(connection("watch-screen")).toBe("connecting");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+    await advance(WATCH_RECONNECT_MS);
+    expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 3);
+
+    latest().emit("open");
+    latest().frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(screen.queryByTestId("watch-waiting")).toBeNull();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+  });
+
+  it("#1599 once the reopens run out before any view, says the game can no longer be reached, with Reconnect now and the way back, not Joining", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    expect(screen.getByTestId("watch-waiting")).toHaveTextContent("Joining as a watcher…");
+
+    for (let attempt = 1; attempt <= WATCH_RECONNECT_ATTEMPTS; attempt += 1) {
+      latest().emit("close");
+      expect(screen.queryByTestId("watch-gone")).toBeNull();
+      await advance(WATCH_RECONNECT_MS);
+    }
+
+    latest().emit("close");
+    expect(connection("watch-screen")).toBe("closed");
+    expect(screen.getByTestId("watch-gone")).toHaveTextContent("This game can no longer be reached.");
+    const panel = screen.getByTestId("watch-waiting");
+    expect(panel).not.toHaveTextContent("Joining as a watcher…");
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId("watch-refused")).toBeNull();
+    const back = screen.getByTestId("watch-back");
+    expect(panel).toContainElement(back);
+    expect(back).toHaveAttribute("href", "/together");
+    expect(panel).toContainElement(screen.getByTestId("watch-reconnect"));
   });
 });

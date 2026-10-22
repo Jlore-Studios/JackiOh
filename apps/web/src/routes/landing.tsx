@@ -24,7 +24,6 @@ import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
-import { togetherTestid } from "../together/testids.ts";
 import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
 import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
@@ -308,51 +307,20 @@ function Corner({ account }: { account: Account }): ReactElement | null {
 }
 
 function Actions(): ReactElement {
+  // #1577, R1578000: the three doors. Play leads to the Play hub, which holds every way to play,
+  // online first; the invite-only sentence lives on `/invite` and `/play`, where the player decides.
   return (
     <nav className="landing-ctas" aria-label={t("Play")}>
       <a
         className="landing-cta landing-cta--primary"
-        href={paths.practice}
-        data-testid={landingTestid.playAi}
-        onClick={followInApp(paths.practice)}
+        href={paths.play}
+        data-testid={landingTestid.play}
+        onClick={followInApp(paths.play)}
       >
-        {t("Play vs AI")}
+        {t("Play")}
       </a>
-      <p className="landing-cta-note">{t("No account needed. Pick a difficulty and play.")}</p>
+      <p className="landing-cta-note">{t("Online first: every way to play, from one screen.")}</p>
       <div className="landing-ctas-secondary">
-        <a
-          className="landing-cta landing-cta--secondary"
-          href={paths.play}
-          data-testid={landingTestid.playOnline}
-          onClick={followInApp(paths.play)}
-        >
-          {t("Play online")}
-        </a>
-        {/* #936 B54: friends, challenges, chat and Duos co-op. */}
-        <a
-          className="landing-cta landing-cta--secondary"
-          href={paths.together}
-          data-testid={togetherTestid.landingCta}
-          onClick={followInApp(paths.together)}
-        >
-          {t("Play together")}
-        </a>
-        <a
-          className="landing-cta landing-cta--secondary"
-          href={paths.decks}
-          data-testid={landingTestid.buildDecks}
-          onClick={followInApp(paths.decks)}
-        >
-          {t("Build decks")}
-        </a>
-        <a
-          className="landing-cta landing-cta--secondary"
-          href={paths.creator}
-          data-testid={landingTestid.makeCards}
-          onClick={followInApp(paths.creator)}
-        >
-          {t("Make cards")}
-        </a>
         <a
           className="landing-cta landing-cta--secondary"
           href={paths.collection}
@@ -361,11 +329,15 @@ function Actions(): ReactElement {
         >
           {t("Collection")}
         </a>
+        <a
+          className="landing-cta landing-cta--secondary"
+          href={paths.shop}
+          data-testid={landingTestid.shop}
+          onClick={followInApp(paths.shop)}
+        >
+          {t("Shop")}
+        </a>
       </div>
-      {/* Said where the player decides, not after they have signed up and confirmed an email. */}
-      <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>
-        {t("Online play is invite-only for now: you’ll need an invite code after signing up.")}
-      </p>
       {DEV_ONLY ? (
         // Production has no hotseat route; it boots from this full page load's query.
         <a
@@ -464,20 +436,23 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
         </div>
       </section>
 
-      <PlayerStatsCard />
+      {/* R1584000: the stats and the footer are one screen below the hero, when there are stats. */}
+      <div className="landing-floor">
+        <PlayerStatsCard reduced={motion === "reduced"} />
 
-      {open === null ? null : (
-        <Suspense fallback={null}>
-          <CardDetail
-            def={open}
-            onClose={() => {
-              setOpen(null);
-            }}
-          />
-        </Suspense>
-      )}
+        {open === null ? null : (
+          <Suspense fallback={null}>
+            <CardDetail
+              def={open}
+              onClose={() => {
+                setOpen(null);
+              }}
+            />
+          </Suspense>
+        )}
 
-      <SiteFooter />
+        <SiteFooter />
+      </div>
     </div>
   );
 }

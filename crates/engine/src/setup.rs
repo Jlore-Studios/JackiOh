@@ -77,6 +77,7 @@ fn mulligan_prompt(sink: &EngineSink, player: PlayerId) -> PendingChoice {
         max: hand.len() as i32,
         budget: None,
         craft_mode: None,
+        craft_offer: None,
         streak: None,
         resume: Resume {
             def_id: String::new(),
@@ -103,8 +104,8 @@ fn open_mulligans(sink: &mut EngineSink) {
         sink.state.next_id += 1;
         sink.events.push(GameEvent::PromptOpened {
             player,
-            choice_id: prompt.id.clone(),
-            kind: PromptKind::Mulligan,
+            choice_id: Some(prompt.id.clone()),
+            kind: Some(PromptKind::Mulligan),
         });
         open.push(MulliganSeat { prompt, keep: None });
     }
@@ -371,7 +372,10 @@ pub fn answer_mulligan(sink: &mut EngineSink, player: PlayerId, keep: &[String])
     let choice_id = seat.prompt.id.clone();
     // §10.6: the answer names the prompt it answers, as every other does. That a seat has answered is
     // public — the other seat is told it is ready — and what it kept is not (R266, §9.1).
-    sink.events.push(GameEvent::PromptAnswered { player, choice_id });
+    sink.events.push(GameEvent::PromptAnswered {
+        player,
+        choice_id: Some(choice_id),
+    });
     if !mulligan_owed(sink.state).is_empty() {
         return;
     }

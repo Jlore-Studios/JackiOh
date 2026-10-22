@@ -151,6 +151,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Echo",
   "Cast on draw",
   "Quickdraw",
+  "Float",
   "Activate",
 ];
 
@@ -274,7 +275,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
   });
 
-  it("R781005 R1025000 combat keywords are a term the cards that draw them print, its entry listing the sixteen", () => {
+  it("R781005 R1025000 R1615000 combat keywords are a term the cards that draw them print, its entry listing the fourteen", () => {
     expect(termsOf("Aura: Has 5 random combat keywords.")).toEqual([
       { text: "Aura:", term: "Aura" },
       { text: "combat keywords", term: "Combat keyword" },
@@ -284,11 +285,11 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
     const entry = GLOSSARY["Combat keyword"];
     expect(entry.section).toBe("§6.1");
-    for (const word of ["Taunt", "Flying", "Ranged", "Indestructible", "Trample"]) {
+    for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample"]) {
       expect(entry.rule).toContain(word);
     }
-    // R1025000: Armor and Spell Damage are no longer in the pool.
-    for (const word of ["Armor", "Spell Damage"]) {
+    // R1025000: Armor and Spell Damage are no longer in the pool; R1615000: nor are Charge and Indestructible.
+    for (const word of ["Armor", "Spell Damage", "Charge", "Indestructible"]) {
       expect(entry.rule).not.toContain(word);
     }
   });
@@ -415,6 +416,14 @@ describe("B10: tokenizeRules and termsIn", () => {
         offset += token.text.length;
       }
     }
+  });
+
+  it("R1563000 Float bolds as one term: Floats, the Float and Float reduces cost", () => {
+    // Distinct terms in order: "Floats" and "the Float" are one term.
+    expect(termsIn("Reveals when any player Floats: Summon an X/X Bread Token for you. X = the Float.")).toEqual([
+      "Float",
+    ]);
+    expect(termsIn("Make every card in your hand Radiant.\nFloat reduces cost.")).toEqual(["Radiant", "Float"]);
   });
 
   it("B10 real card texts: Cry, Death, Combo, Cast on draw, Radiant and keywords are marked", () => {
@@ -634,6 +643,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Exile: ["exile", "exiles", "exiled"],
       // R1174000: Freeze's spellings; Frozen is its own §6.1 status.
       Freeze: ["freeze", "freezes"],
+      // R1563000: Bread and Butter prints "Reveals when any player Floats".
+      Float: ["Floats"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);

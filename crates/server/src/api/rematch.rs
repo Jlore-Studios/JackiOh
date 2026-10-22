@@ -28,13 +28,15 @@ use jackioh_engine::{LeanPick, PlayerId};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
-use crate::api::decks::{assert_no_custom_cards, lean_of, seated_in};
+use crate::api::decks::{assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
+use crate::seats::Seat;
 
 /// R672: a normal rematch moves the rating once; a double-or-nothing moves it twice.
 pub const STAKE_NORMAL: RematchStakes = 1;
@@ -242,27 +244,24 @@ async fn create_rematch(
     );
 
     // Refuse before minting anything: a seat that found another game meanwhile keeps that game.
+    // R1523000: both seats, or neither, reserved in one step; a seat that holds a match, a series
+    // not over or a live co-op match refuses with no details, since it may be the other player's
+    // (R1065000). Every undo below that runs before the commit gives them back as the lease drops.
+    let lease = app
+        .seats
+        .reserve(
+            &[&seats.0.profile_id, &seats.1.profile_id],
+            Seat::Match(match_id.to_string()),
+        )
+        .map_err(|_| already_in_match())?;
     let mut bots = Vec::new();
     {
-        let mut tx = app
-            .db
-            .begin(None)
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        let mut tx = app.db.begin(None).await?;
+        tx.seats_fence(app.seats.epoch()).await?;
         for seat in [&seats.0, &seats.1] {
-            // R1065000: a match, a series not over or a live co-op match; no details, since the seat
-            // may be the other player's.
-            if seated_in(&mut tx, &seat.profile_id)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?
-                .is_some()
-            {
-                return Err(already_in_match());
-            }
             let found = tx
                 .profiles_get_many(std::slice::from_ref(&seat.profile_id))
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
+                .await?;
             if found
                 .first()
                 .is_some_and(|profile| profile.kind == ProfileKind::Bot)
@@ -270,9 +269,7 @@ async fn create_rematch(
                 bots.push(seat.profile_id.clone());
             }
         }
-        tx.commit()
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await?;
     }
 
     // R639000: a ladder bot is claimed for its rematch in one step, as the fallback claims one for a
@@ -282,11 +279,8 @@ async fn create_rematch(
         if !app.env.ladder_bots {
             return Err(already_in_match());
         }
-        let mut tx = app
-            .db
-            .begin(None)
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        let mut tx = app.db.begin(None).await?;
+        tx.seats_fence(app.seats.epoch()).await?;
         for bot in &bots {
             let claimed = tx
                 .bots_claim_for_rematch(
@@ -296,15 +290,12 @@ async fn create_rematch(
                     &finished.catalog_version,
                     now_ms(),
                 )
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
+                .await?;
             if !claimed {
                 return Err(already_in_match());
             }
         }
-        tx.commit()
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await?;
     }
 
     // A failed start leaves nothing behind: the caller clears the offer claim and the seats re-offer.
@@ -334,19 +325,11 @@ async fn create_rematch(
         // whose fallback start failed.
         if !bots.is_empty() {
             let cleanup = async {
-                let mut tx = app
-                    .db
-                    .begin(None)
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                let mut tx = app.db.begin(None).await?;
                 for bot in &bots {
-                    tx.profiles_clear_in_match(bot, match_id)
-                        .await
-                        .map_err(|error| ApiError::internal(error.to_string()))?;
+                    tx.profiles_clear_in_match(bot, match_id).await?;
                 }
-                tx.commit()
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                tx.commit().await?;
                 discard_open(app, match_id).await
             }
             .await;
@@ -362,11 +345,9 @@ async fn create_rematch(
     // claimed compare-and-set (R890000): a seat taken during the start loses here instead of
     // being seated twice, and the taken seat keeps its game and tickets.
     let seated = async {
-        let mut tx = app
-            .db
-            .begin(None)
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        let mut tx = app.db.begin(None).await?;
+        // R1523000: a newer server holds the seats once the epoch has moved on; nothing is written.
+        tx.seats_fence(app.seats.epoch()).await?;
         let mut taken: Option<String> = None;
         for seat in [&seats.0, &seats.1] {
             // A seat the claim already holds (R639000's bots, seated for this match before the
@@ -374,87 +355,58 @@ async fn create_rematch(
             // only for equality; the compare-and-set stays the guard.
             let held = tx
                 .profiles_get_many(std::slice::from_ref(&seat.profile_id))
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
+                .await?;
             let already = held
                 .first()
                 .is_some_and(|profile| profile.in_match_id.as_deref() == Some(match_id));
-            if !already
-                && !tx
-                    .profiles_set_in_match(&seat.profile_id, Some(match_id))
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))?
-            {
+            if !already && !tx.profiles_set_in_match(&seat.profile_id, Some(match_id)).await? {
                 taken = Some(seat.profile_id.clone());
                 break;
             }
             // A stray open ticket would block the re-queue M7-T1 promises after this game ends.
-            if let Some(ticket) = tx
-                .tickets_open_for_profile(&seat.profile_id)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?
-            {
-                tx.tickets_cancel(&ticket.id, now_ms())
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))?;
+            if let Some(ticket) = tx.tickets_open_for_profile(&seat.profile_id).await? {
+                tx.tickets_cancel(&ticket.id, now_ms()).await?;
             }
         }
-        tx.commit()
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit().await?;
         Ok::<_, ApiError>(taken)
     }
     .await;
-    match seated {
+    // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant) and a
+    // fenced write both undo the rematch: stop the actor, then erase the live match with no result
+    // (R679), whose `on delete set null` releases the winner seat's flag and any bot flags
+    // `bots_claim_for_rematch` set, while a taken seat is untouched. The caller clears the offer
+    // claim and the seats re-offer; the lease gives the ledger's seats back as it drops.
+    let refused = match seated {
+        Err(error) if error.code == ApiErrorCode::Unavailable => error,
         Err(error) => {
             tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
+            lease.commit();
+            tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
+            return Ok(());
         }
         Ok(Some(taken)) => {
-            // That seat found another game mid-start. Undo the rematch: stop the actor, then
-            // erase the live match with no result (R679), whose `on delete set null` releases
-            // the winner seat's flag and any bot flags `bots_claim_for_rematch` set, while the
-            // taken seat is untouched. The caller clears the offer claim and the seats re-offer.
+            tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             tracing::info!(event = "rematch.seat_taken", matchId = %match_id, profileId = %taken);
-            app.matches.stop(match_id).await;
-            let voided = async {
-                let mut tx = app
-                    .db
-                    .begin(None)
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))?;
-                tx.matches_forget_voided(match_id)
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))?;
-                tx.commit()
-                    .await
-                    .map_err(|error| ApiError::internal(error.to_string()))
-            }
-            .await;
-            if let Err(error) = voided {
-                tracing::error!(event = "rematch.void_failed", matchId = %match_id, message = %error.message);
-            }
-            return Err(already_in_match());
+            already_in_match()
         }
-        Ok(None) => {}
+        Ok(None) => {
+            lease.commit();
+            tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
+            return Ok(());
+        }
+    };
+    app.matches.stop(match_id).await;
+    let voided = one_tx!(app.db, |t| t.matches_forget_voided(match_id).await?);
+    if let Err(error) = voided {
+        tracing::error!(event = "rematch.void_failed", matchId = %match_id, message = %error);
     }
-    tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
-    Ok(())
+    Err(refused)
 }
 
 async fn rematch_mode(app: &App, finished: &MatchRow) -> Result<QueueMode, ApiError> {
     // A series game never reaches here, so `bo3` is a store that lost a row: refuse it like one.
-    let mut tx = app
-        .db
-        .begin(None)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    let mode = tx
-        .matches_mode_of(&finished.id)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit()
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let mode = one_tx!(app.db, |t| t.matches_mode_of(&finished.id).await?)?;
     if mode == Some(QueueMode::Bo3) {
         return Err(series_game());
     }
@@ -466,18 +418,7 @@ async fn rematch_mode(app: &App, finished: &MatchRow) -> Result<QueueMode, ApiEr
 /// (§9.1): a missing match and another profile's match answer the same.
 async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(MatchRow, PlayerId), ApiError> {
     let match_id = req.params.get("matchId").map(String::as_str).unwrap_or("");
-    let mut tx = app
-        .db
-        .begin(None)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    let found = tx
-        .matches_get(match_id)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit()
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let found = one_tx!(app.db, |t| t.matches_get(match_id).await?)?;
     let Some(match_row) = found else {
         return Err(no_such_match());
     };
@@ -489,18 +430,7 @@ async fn callers_match(app: &App, req: &Req, profile: &Profile) -> Result<(Match
 
 /// Whether the match was a game of a Conquest series (`series_with_game`).
 async fn is_series_game(app: &App, match_id: &str) -> Result<bool, ApiError> {
-    let mut tx = app
-        .db
-        .begin(None)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    let series = tx
-        .series_with_game(match_id)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit()
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let series = one_tx!(app.db, |t| t.series_with_game(match_id).await?)?;
     Ok(series.is_some())
 }
 
@@ -542,18 +472,7 @@ pub async fn offer_for_bot(
     if !app.env.ladder_bots {
         return Ok(None);
     }
-    let mut tx = app
-        .db
-        .begin(None)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    let found = tx
-        .matches_get(match_id)
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
-    tx.commit()
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let found = one_tx!(app.db, |t| t.matches_get(match_id).await?)?;
     let Some(match_row) = found else {
         return Ok(None);
     };

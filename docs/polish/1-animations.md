@@ -604,7 +604,7 @@ point. `side(x)` is `sideOf(view, x)`. Fractions such as `FX_SLAM_AT·D` are rou
 | `handGlint` | `addedToHand` | `burst(sparkle, hand-<side(player)>, area, 0)` |
 | `shuffle` | `shuffledIn` | `ghost({viewport, FX_CENTER} → library-<side(player)>, 0)`, `burst(arcane, library-<side(player)>, point, D)` |
 | `buff` | `buffed` | attack + health > 0: `arrows(up, tgt, 0)`, `burst(sparkle, tgt, area, 0)`. < 0: `arrows(down, tgt, 0)`, `burst(void, tgt, area, 0)`. = 0: `[]`. |
-| `keyword` | `keywordGranted` | Divine Shield: `ring(gold, tgt, 0)`, `burst(holy, tgt, ring, 0)`. Poisonous: `burst(poison, tgt, area, 0)`. Taunt: `ring(dust, tgt, 0)`. Any other: `burst(arcane, tgt, point, 0)`. |
+| `keyword` | `keywordGranted` | Divine Shield: `ring(gold, tgt, 0)`, `burst(holy, tgt, ring, 0)`. Poisonous: `burst(poison, tgt, area, 0)`. Taunt: `ring(dust, tgt, 0)`. Any other: `burst(arcane, tgt, point, 0)`. A loss (`lost`, R46), whatever the keyword: `arrows(down, tgt, 0)`, `burst(void, tgt, area, 0)`. |
 | `counter` | `counterChanged` | plague: `burst(poison, tgt, area, 0)`. grade: `burst(sparkle, tgt, point, 0)`. |
 | `glint` | `costChanged` | `burst(arcane, tgt, point, 0)` |
 | `glint` | `modifierChanged` | `added`: `burst(arcane, tgt, point, 0)`. Removed: `[]`. |

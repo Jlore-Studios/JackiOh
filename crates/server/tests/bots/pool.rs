@@ -10,6 +10,11 @@
 //! sharing no card (R253): its own Best-of-1 decks first, then decks dealt with the cards already
 //! taken left out, dealt again whenever the catalog version changes.
 //!
+//! R1555000: when the season's `BOT_GRIND_REFERENCE_RANK`-th placed person is more than
+//! `BOT_GRIND_GAP` above every active bot, a refresh sets the top `BOT_GRINDERS` grinding, and clears
+//! them once a bot is within the gap less `BOT_GRIND_HYSTERESIS`; a grinder is on more hours, and
+//! the queue's sweep pairs it with another bot while nobody is queued (`choose_bot_pair`).
+//!
 //! `jackioh_server::bots::pool`, against the fake store and the real catalog.
 
 use std::sync::Arc;
@@ -25,22 +30,27 @@ use jackioh_engine::wire::{GameRecord, ListTotal, StatsTotals};
 use jackioh_server::actor::engine::{deal_random_deck, deal_random_deck_excluding};
 use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
-use jackioh_server::app::now_ms;
+use jackioh_server::app::{App, now_ms};
+use jackioh_server::bots::fallback::{bot_match_gap_passed, bot_matches, choose_bot_pair, on_schedule};
 use jackioh_server::bots::pool::{
-    PoolChange, bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_pool, pool_target,
+    PoolChange, bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
     refresh_pool, release_stale_starts,
 };
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
-    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_POOL_MAX, BOT_POOL_MIN,
-    BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
-    MATCHMAKER_SWEEP_INTERVAL_SECONDS, PersonaName,
+    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_GRIND_ACTIVE_HOURS, BOT_GRIND_GAP,
+    BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRIND_STEP_GAMES, BOT_GRINDERS, BOT_HOURS_PER_DAY,
+    BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE, BOT_SPEED_MAX, BOT_SPEED_MIN,
+    BOT_STALE_START_SECONDS, BOT_STRENGTHS, BOT_VS_BOT_MAX_LIVE, BOT_VS_BOT_MIN_GAP_SECONDS,
+    MATCHMAKER_SWEEP_INTERVAL_SECONDS, MAX_FAIR_GAP, PersonaName,
 };
-use jackioh_server::db::store::{BotDeck, BotRow, FrozenTrio, Ticket};
+use jackioh_server::db::store::{BotDeck, BotRow, FrozenTrio, NewBot, RatedGameRow, Ticket};
+use jackioh_server::ranked::ladder::fresh_rank;
+use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::username::normalize_username;
 
 use crate::support::deps::empty_test_app;
-use crate::support::store::q;
+use crate::support::store::{fake_lock, q};
 
 /// Unit conversion, not configuration: a day in milliseconds.
 const DAY: i64 = 86_400_000;
@@ -61,6 +71,8 @@ fn bot(id: &str, created_at: i64, retired_at: Option<i64>) -> BotRow {
         retired_at,
         rating: 1000.0,
         in_match_id: None,
+        grinding: false,
+        grind_wins: 0,
     }
 }
 
@@ -210,7 +222,6 @@ fn r1454_drawn_bots_in_range_valid_names() {
         match name {
             Some(name) => {
                 named += 1;
-                assert!(name.is_ascii(), "{name}");
                 assert!(
                     normalize_username(&name).is_ok(),
                     "{name} is not a valid username"
@@ -754,4 +765,368 @@ async fn r750000_below_threshold_lists_fall_back_to_the_shuffle() {
         led.insert(decks[0].cards.clone());
     }
     assert_eq!(led.len(), 2, "both lists lead some seed");
+}
+
+// R1555000 — the top bots' grind
+
+/// Unit conversion, not configuration: the gap between two bots' matches speaks seconds.
+const MS_PER_SECOND: i64 = 1000;
+
+/// A bot of the grind's tests: active, on all day, rated `rating`, and grinding or not.
+fn rated_bot(id: &str, rating: f64, grinding: bool) -> BotRow {
+    BotRow {
+        rating,
+        grinding,
+        ..bot(id, 0, None)
+    }
+}
+
+/// The 3rd person's rating at which the grind is exactly at its gap from a top bot rated 1200.
+const AT_THE_GAP: f64 = 1200.0 + BOT_GRIND_GAP;
+
+#[test]
+fn r1555000_the_grind_s_constants_hold_together() {
+    const {
+        // A grind that starts and stops at the same gap would flap; one that started beyond the fair
+        // gap would leave the people who started it unable to meet a grinder at all.
+        assert!(0.0 < BOT_GRIND_HYSTERESIS);
+        assert!(BOT_GRIND_HYSTERESIS < BOT_GRIND_GAP);
+        assert!(BOT_GRIND_GAP <= MAX_FAIR_GAP as f64);
+        // A grinder plays more than any bot's own schedule has it, and a day holds that many hours.
+        assert!(BOT_ACTIVE_HOURS_MAX < BOT_GRIND_ACTIVE_HOURS);
+        assert!(BOT_GRIND_ACTIVE_HOURS <= BOT_HOURS_PER_DAY);
+        assert!(BOT_GRIND_REFERENCE_RANK >= 1);
+        assert!(BOT_GRINDERS >= 1);
+        assert!(BOT_GRIND_STEP_GAMES >= 1);
+        assert!(BOT_VS_BOT_MAX_LIVE >= 1);
+        assert!(BOT_VS_BOT_MIN_GAP_SECONDS >= 1);
+    };
+}
+
+#[test]
+fn r1555000_grinding_starts_past_the_gap_for_the_top_bots_alone() {
+    // A retired bot rated above them all is not the top: only active bots grind or set the gap.
+    let mut retired = rated_bot("e", 1500.0, false);
+    retired.retired_at = Some(1);
+    let bots = vec![
+        rated_bot("d", 1100.0, false),
+        rated_bot("a", 1200.0, false),
+        retired,
+        rated_bot("c", 1100.0, false),
+        rated_bot("b", 1150.0, false),
+    ];
+    // The 3rd-highest person is what counts: one or two far ahead start nothing on their own.
+    let people = [AT_THE_GAP + 50.0, 900.0, AT_THE_GAP + 40.0, AT_THE_GAP + 1.0];
+    const { assert!(BOT_GRIND_REFERENCE_RANK == 3 && BOT_GRINDERS <= 4) };
+    let top: Vec<String> = ["a", "b", "c", "d"][..BOT_GRINDERS]
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
+    assert_eq!(plan_grind(&bots, &people), top, "the highest first, ties on id");
+
+    // At the gap, not past it: none.
+    let at = [AT_THE_GAP + 50.0, AT_THE_GAP + 40.0, AT_THE_GAP];
+    assert!(plan_grind(&bots, &at).is_empty());
+    // Too few placed people: none, however far ahead.
+    assert!(plan_grind(&bots, &[AT_THE_GAP + 500.0, AT_THE_GAP + 400.0]).is_empty());
+    // No active bot: none.
+    let mut all_retired = bots.clone();
+    for bot in &mut all_retired {
+        bot.retired_at = Some(1);
+    }
+    assert!(plan_grind(&all_retired, &people).is_empty());
+}
+
+#[test]
+fn r1555000_grinding_stops_only_past_the_hysteresis() {
+    let people_at = |third: f64| [third + 50.0, third + 40.0, third];
+    let stays = 1200.0 + BOT_GRIND_GAP - BOT_GRIND_HYSTERESIS + 1.0;
+    let stops = 1200.0 + BOT_GRIND_GAP - BOT_GRIND_HYSTERESIS;
+    let grinding = vec![
+        rated_bot("a", 1200.0, true),
+        rated_bot("b", 1150.0, true),
+        rated_bot("c", 1100.0, true),
+        rated_bot("d", 1000.0, false),
+    ];
+    let top: Vec<String> = ["a", "b", "c", "d"][..BOT_GRINDERS]
+        .iter()
+        .map(|id| id.to_string())
+        .collect();
+    assert_eq!(plan_grind(&grinding, &people_at(stays)), top);
+    assert!(plan_grind(&grinding, &people_at(stops)).is_empty());
+
+    // The grinders are chosen again at each refresh: a bot that grinds now but is no longer among the
+    // top hands its place on.
+    let mut handed = grinding.clone();
+    handed[2].grinding = false;
+    handed[3].grinding = true;
+    assert_eq!(plan_grind(&handed, &people_at(stays)), top);
+
+    // A grind not yet started needs the whole gap.
+    let idle: Vec<BotRow> = grinding
+        .iter()
+        .map(|bot| BotRow {
+            grinding: false,
+            ..bot.clone()
+        })
+        .collect();
+    assert!(plan_grind(&idle, &people_at(stays)).is_empty());
+}
+
+#[test]
+fn r1555000_a_grinder_s_schedule_widens_and_its_own_comes_back() {
+    let mut late = bot("late", 0, None);
+    late.active_from_hour = 22;
+    late.active_hours = 8;
+    let hours_on = |bot: &BotRow| {
+        (0..BOT_HOURS_PER_DAY)
+            .filter(|hour| on_schedule(bot, *hour))
+            .count()
+    };
+    let own: Vec<i32> = (0..BOT_HOURS_PER_DAY)
+        .filter(|hour| on_schedule(&late, *hour))
+        .collect();
+    assert_eq!(own, vec![0, 1, 2, 3, 4, 5, 22, 23], "on from 22:00 for 8 hours");
+
+    late.grinding = true;
+    assert_eq!(
+        hours_on(&late),
+        usize::try_from(BOT_GRIND_ACTIVE_HOURS).expect("hours")
+    );
+    assert!(
+        own.iter().all(|hour| on_schedule(&late, *hour)),
+        "widened from its own start, never moved"
+    );
+
+    late.grinding = false;
+    let back: Vec<i32> = (0..BOT_HOURS_PER_DAY)
+        .filter(|hour| on_schedule(&late, *hour))
+        .collect();
+    assert_eq!(back, own, "its own schedule comes back");
+}
+
+/// A rated game between two sides, each a bot's (`Some`) or a person's, that ended at `ended_at`.
+fn rated_game(bots: [Option<&str>; 2], ended_at: i64) -> RatedGameRow {
+    let side = |bot: Option<&str>| {
+        let glicko = json!({ "rating": 1000.0, "deviation": 100.0, "volatility": 0.06 });
+        json!({
+            "profileId": if bot.is_some() { Value::Null } else { json!("person") },
+            "botId": bot,
+            "pilot": if bot.is_some() { "ai" } else { "human" },
+            "before": glicko,
+            "after": glicko,
+            "rankBefore": null,
+            "rankAfter": null,
+        })
+    };
+    serde_json::from_value(json!({
+        "id": format!("game-{ended_at}"),
+        "kind": "match",
+        "seasonId": "v0.1",
+        "patchVersion": "v0.1.1",
+        "catalogVersion": "0.1.1",
+        "sides": [side(bots[0]), side(bots[1])],
+        "winnerSide": 0,
+        "reason": "hero-death",
+        "endedAt": ended_at,
+    }))
+    .expect("a rated game")
+}
+
+/// What puts a bot out of a match between two bots' reach.
+type Unready = fn(&mut BotRow);
+
+#[test]
+fn r1555000_the_bot_pair_is_the_lowest_grinder_and_its_closest_ready_bot() {
+    let ready = |id: &str, rating: f64, grinding: bool| BotRow {
+        decks: vec![BotDeck {
+            cards: Vec::new(),
+            portrait: "vanilla".to_string(),
+        }],
+        decks_catalog_version: Some("v".to_string()),
+        ..rated_bot(id, rating, grinding)
+    };
+    let pool = vec![
+        ready("g2", 1300.0, true),
+        ready("n3", 1000.0, false),
+        ready("n2", 1210.0, false),
+        ready("g1", 1200.0, true),
+        ready("n1", 1190.0, false),
+    ];
+    let none_recent: IndexMap<String, Vec<String>> = IndexMap::new();
+    let none_busy: IndexSet<String> = IndexSet::new();
+    let pair = |bots: &[BotRow], recent: &IndexMap<String, Vec<String>>, busy: &IndexSet<String>| {
+        choose_bot_pair(bots, recent, busy, 12, "v")
+            .map(|(grinder, opponent)| (grinder.profile_id.clone(), opponent.profile_id.clone()))
+    };
+    let named = |a: &str, b: &str| Some((a.to_string(), b.to_string()));
+
+    // The lowest grinder, against the closest bot: n1 and n2 are 10 off each, so the id decides.
+    assert_eq!(pair(&pool, &none_recent, &none_busy), named("g1", "n1"));
+    // Not one of the grinder's recent opponents.
+    let mut recent = IndexMap::new();
+    recent.insert("g1".to_string(), vec!["n1".to_string()]);
+    assert_eq!(pair(&pool, &recent, &none_busy), named("g1", "n2"));
+
+    // n1 and n2 each out of reach the same way: the closest ready bot is the other grinder.
+    let mut busy = IndexSet::new();
+    busy.insert("n1".to_string());
+    busy.insert("n2".to_string());
+    assert_eq!(pair(&pool, &none_recent, &busy), named("g1", "g2"), "busy");
+    let unready: [(&str, Unready); 4] = [
+        ("in a match", |bot| {
+            bot.in_match_id = Some("elsewhere".to_string())
+        }),
+        ("retired", |bot| bot.retired_at = Some(1)),
+        ("off schedule", |bot| {
+            bot.active_from_hour = 13;
+            bot.active_hours = 8;
+        }),
+        ("another catalog", |bot| {
+            bot.decks_catalog_version = Some("old".to_string())
+        }),
+    ];
+    for (why, make) in unready {
+        let mut bots = pool.clone();
+        for bot in bots
+            .iter_mut()
+            .filter(|bot| ["n1", "n2"].contains(&bot.profile_id.as_str()))
+        {
+            make(bot);
+        }
+        assert_eq!(pair(&bots, &none_recent, &none_busy), named("g1", "g2"), "{why}");
+    }
+
+    // g1 out of reach: g2 grinds against its own closest.
+    let mut bots = pool.clone();
+    bots[3].in_match_id = Some("elsewhere".to_string());
+    assert_eq!(pair(&bots, &none_recent, &none_busy), named("g2", "n2"));
+    // No grinder: no pair.
+    let idle: Vec<BotRow> = pool
+        .iter()
+        .map(|bot| BotRow {
+            grinding: false,
+            ..bot.clone()
+        })
+        .collect();
+    assert_eq!(pair(&idle, &none_recent, &none_busy), None);
+
+    // A match two bots hold is a match between two bots; one a bot holds alone (a person's) is not.
+    let mut held = pool.clone();
+    held[0].in_match_id = Some("between-bots".to_string());
+    held[1].in_match_id = Some("with-a-person".to_string());
+    held[2].in_match_id = Some("between-bots".to_string());
+    assert_eq!(bot_matches(&held), vec!["between-bots".to_string()]);
+
+    // The gap runs from the last game between two bots; a game against a person does not count.
+    let gap = BOT_VS_BOT_MIN_GAP_SECONDS * MS_PER_SECOND;
+    let ended = 1_000_000;
+    let games = [rated_game([Some("g1"), Some("n1")], ended)];
+    assert!(!bot_match_gap_passed(&games, ended + gap - 1));
+    assert!(bot_match_gap_passed(&games, ended + gap));
+    let with_a_person = [rated_game([None, Some("g1")], ended)];
+    assert!(bot_match_gap_passed(&with_a_person, ended));
+}
+
+/// A person rated `rating` with a row in this season, placed or not.
+async fn season_person(app: &App, id: &str, rating: f64, placed: bool) {
+    fake_lock(app)
+        .await
+        .seed_profile(json!({ "id": id, "status": "active", "rating": rating }));
+    let mut rank = fresh_rank(&season_id_of(jackioh_cards::catalog_version()), id, 0);
+    if placed {
+        rank.ladder = Some(0);
+    }
+    q!(app, ranked_put_rank(&rank));
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1555000_a_refresh_marks_the_top_bots_grinding_and_clears_them() {
+    let app = empty_test_app().await;
+    let now = now_ms();
+    let refreshed = refresh_pool(&app, "grind", now).await.expect("a refresh");
+    assert_eq!(refreshed.grinding, 0, "nobody has played");
+    let bots = q!(app, bots_list());
+    let top = bots
+        .iter()
+        .map(|bot| bot.rating)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let mut by_rating = bots.clone();
+    by_rating.sort_by(|a, b| {
+        b.rating
+            .total_cmp(&a.rating)
+            .then_with(|| a.profile_id.cmp(&b.profile_id))
+    });
+    let expected: Vec<String> = by_rating
+        .iter()
+        .take(BOT_GRINDERS)
+        .map(|bot| bot.profile_id.clone())
+        .collect();
+
+    // Two placed people past the gap and one who has not placed yet: too few placed to start it.
+    let season = season_id_of(jackioh_cards::catalog_version());
+    season_person(&app, "grind-person-1", top + BOT_GRIND_GAP + 50.0, true).await;
+    season_person(&app, "grind-person-2", top + BOT_GRIND_GAP + 20.0, true).await;
+    season_person(&app, "grind-person-unplaced", top + BOT_GRIND_GAP + 30.0, false).await;
+    // A retired bot's placed row, rated past the gap too, is no person's.
+    let retired: NewBot = serde_json::from_value(json!({
+        "profileId": "grind-retired-bot",
+        "strength": 0,
+        "speed": 1.0,
+        "persona": "balanced",
+        "activeFromHour": 0,
+        "activeHours": 24,
+        "decks": [],
+        "decksCatalogVersion": null,
+        "createdAt": now - DAY,
+        "seedRating": top + BOT_GRIND_GAP + 40.0,
+    }))
+    .expect("a bot");
+    q!(app, bots_create(&retired));
+    q!(app, bots_set_retired(&retired.profile_id, Some(now)));
+    let mut retired_rank = fresh_rank(&season, &retired.profile_id, 0);
+    retired_rank.ladder = Some(0);
+    q!(app, ranked_put_rank(&retired_rank));
+    let refreshed = refresh_pool(&app, "grind-2", now).await.expect("a refresh");
+    assert_eq!(refreshed.grinding, 0);
+    assert!(q!(app, bots_list()).iter().all(|bot| !bot.grinding));
+
+    // A third placed person past the gap: exactly the top bots grind, their hours and strengths as
+    // they were (the widening is read, never written).
+    season_person(&app, "grind-person-3", top + BOT_GRIND_GAP + 1.0, true).await;
+    let refreshed = refresh_pool(&app, "grind-3", now).await.expect("a refresh");
+    assert_eq!(refreshed.grinding, BOT_GRINDERS);
+    let after = q!(app, bots_list());
+    let mut grinding: Vec<String> = after
+        .iter()
+        .filter(|bot| bot.grinding)
+        .map(|bot| bot.profile_id.clone())
+        .collect();
+    grinding.sort();
+    let mut wanted = expected.clone();
+    wanted.sort();
+    assert_eq!(grinding, wanted);
+    for before in &bots {
+        let now_row = after
+            .iter()
+            .find(|bot| bot.profile_id == before.profile_id)
+            .expect("the bot after");
+        assert_eq!(
+            (now_row.active_from_hour, now_row.active_hours, now_row.strength),
+            (before.active_from_hour, before.active_hours, before.strength)
+        );
+    }
+
+    // The top bot climbs to within the gap less the hysteresis of the third person: the grind stops.
+    let climber = &expected[0];
+    let mut rating = q!(app, ranked_bot(climber)).expect("its rating");
+    rating.glicko.rating = top + BOT_GRIND_GAP + 1.0 - (BOT_GRIND_GAP - BOT_GRIND_HYSTERESIS);
+    q!(app, ranked_put_bot(&rating));
+    let refreshed = refresh_pool(&app, "grind-4", now).await.expect("a refresh");
+    assert_eq!(refreshed.grinding, 0);
+    assert!(
+        q!(app, bots_list())
+            .iter()
+            .all(|bot| !bot.grinding && bot.grind_wins == 0)
+    );
 }

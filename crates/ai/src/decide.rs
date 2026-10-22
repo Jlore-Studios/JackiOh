@@ -15,6 +15,10 @@
 //!      and the best mean wins (a style with a temperature picks among them, R1452).
 //!   7. a fallback when nothing could be scored.
 //!
+//! The chosen action is tried on the true state before it is returned (`submitted`): when the
+//! reducer refuses it, the first action of the next finalist it accepts goes in its place, best mean
+//! first, and only when none is accepted the match's replacement does, as a fallback (#1575).
+//!
 //! Only the first action of the chosen line is played; the caller asks again after it, so the AI
 //! re-plans after every action and a plan that only one sampled world liked never gets past step one.
 //! `decide` never panics out: every internal failure becomes a fallback and is counted in simErrors,
@@ -32,12 +36,15 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexMap;
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind, Rng, active_units_of,
-    mulligan_prompt_for, reduce_unpiloted,
+    ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind,
+    PromptOption, Rng, active_units_of, mulligan_prompt_for, reduce_unpiloted,
 };
 
 use crate::candidates::candidate_actions;
-use crate::config::{AI_EVAL, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
+use crate::config::{
+    AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE,
+    AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
+};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::lethal::find_lethal;
 use crate::match_::replacements_for;
@@ -88,18 +95,39 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 /// redacted copy judges no answer right, so a search would score the four answers and Stop alike and
 /// spend a decision's budget on a guess, up to `KY_COMPETITION_MAX` times in one turn, past the turn
 /// clock (R79); worked out, each answer costs one redaction. It never stops: a miss would end the
-/// sequence with the streak a Stop keeps, so answering is never worse. `None` for any other prompt, or
-/// a statement it cannot work out, which the search then answers.
-fn worked_answer_action(public: &GameState, seat: PlayerId) -> Option<ActionBody> {
+/// sequence with the streak a Stop keeps, so answering is never worse. R1563005: like a player in a
+/// hurry it slips: it answers right `AI_KY_COMPETITION_ACCURACY` of the time (the Radiant face's easier
+/// sums `AI_KY_COMPETITION_RADIANT_ACCURACY`), and otherwise gives one of the wrong answers, both drawn
+/// from its own stream. `None` for any other prompt, or a statement it cannot work out, which the
+/// search then answers.
+fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
         return None;
     }
     let answer = worked_answer(&pending.prompt)?.to_string();
     let option = pending.options.iter().find(|option| option.label == answer)?;
+    let accuracy = if pending.resume.radiant {
+        AI_KY_COMPETITION_RADIANT_ACCURACY
+    } else {
+        AI_KY_COMPETITION_ACCURACY
+    };
+    let selection = if rng.chance(accuracy) {
+        option.selection.clone()
+    } else {
+        let wrong: Vec<&PromptOption> = pending
+            .options
+            .iter()
+            .filter(|other| other.label != answer && other.key != ANSWER_STOP_KEY)
+            .collect();
+        match wrong.get(rng.int(wrong.len() as i32).max(0) as usize) {
+            Some(miss) => miss.selection.clone(),
+            None => option.selection.clone(),
+        }
+    };
     Some(ActionBody::Answer {
         choice_id: pending.id.clone(),
-        selection: vec![option.selection.clone()],
+        selection: vec![selection],
     })
 }
 
@@ -266,7 +294,33 @@ enum Plan {
         line: Vec<ActionBody>,
         score: f64,
         stopped_by: Option<StoppedBy>,
+        /// The finalists not chosen, best mean first (`runners_up_of`); empty off step 6's pick.
+        runners_up: Vec<RunnerUp>,
     },
+}
+
+/// A finalist the decision did not choose: its line and its mean score. `submitted` plays the first
+/// of them the true state accepts when it refuses the chosen action.
+struct RunnerUp {
+    line: Vec<ActionBody>,
+    score: f64,
+}
+
+/// Every finalist but the chosen one, best mean first. Stable, so equal means keep the finalists'
+/// order.
+fn runners_up_of(finalists: &[Scored<'_>], means: &[f64], chosen_index: usize) -> Vec<RunnerUp> {
+    let mut out: Vec<RunnerUp> = finalists
+        .iter()
+        .zip(means)
+        .enumerate()
+        .filter(|(index, _)| *index != chosen_index)
+        .map(|(_, (entry, mean))| RunnerUp {
+            line: entry.line.actions.clone(),
+            score: *mean,
+        })
+        .collect();
+    out.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    out
 }
 
 /// What the guarded body leaves behind for the fallback when it panics (TS's outer `let`s).
@@ -303,8 +357,9 @@ fn plan(
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
-    // 3, R1184002: a question of a sequence, worked out from its statement, at once.
-    if let Some(answer) = worked_answer_action(&public, seat) {
+    // 3, R1184002: a question of a sequence, worked out from its statement, at once (R1563005: right
+    // most of the time).
+    if let Some(answer) = worked_answer_action(&public, seat, rng) {
         return Plan::Immediate(answer, DecisionReason::Prompt);
     }
 
@@ -364,6 +419,7 @@ fn plan(
                 line: lethal,
                 score: AI_EVAL.win - f64::from(public.turn),
                 stopped_by: None,
+                runners_up: Vec::new(),
             };
         }
         passed_over = Some(first_lethal);
@@ -379,6 +435,7 @@ fn plan(
             reason: DecisionReason::Fallback,
             score: 0.0,
             stopped_by: None,
+            runners_up: Vec::new(),
         };
     };
     let root_turn = det0.turn;
@@ -409,6 +466,7 @@ fn plan(
             reason: DecisionReason::Fallback,
             score: 0.0,
             stopped_by: Some(stopped_by),
+            runners_up: Vec::new(),
         };
     }
 
@@ -489,6 +547,7 @@ fn plan(
             reason: DecisionReason::Fallback,
             score: 0.0,
             stopped_by: None,
+            runners_up: Vec::new(),
         };
     };
     let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
@@ -511,17 +570,20 @@ fn plan(
         line: chosen.actions.clone(),
         score: chosen_mean,
         stopped_by: Some(stopped_by),
+        runners_up: runners_up_of(&finalists, &means, chosen_index),
     }
 }
 
-/// The body a decision submits: the chosen one when the reducer accepts it on the true state, and
-/// the first of the match's replacements (`replacements_for`: endTurn, then an answer, then any
-/// other legal action) when it does not. A chosen action can be legal on every determinization and
-/// still refuse on the true state — a face-down aura trap taxes the hand the determinization could
+/// The body a decision submits: the chosen one when the reducer accepts it on the true state; else
+/// the first action of the first runner-up it accepts (the finalists not chosen, best mean first),
+/// with the search's reason and that runner-up's line and mean (#1575); and only when none is
+/// accepted, the first of the match's replacements (`replacements_for`: endTurn, then an answer,
+/// then any other legal action) as a fallback. A chosen action can be legal on every determinization
+/// and still refuse on the true state — a face-down aura trap taxes the hand the determinization could
 /// not see (R403) — and a submitted refusal is recorded against the AI and replaced anyway, so the
 /// same replacement is better submitted directly: the trajectory is the same one the match would
 /// have made of it, minus the rejection.
-fn submitted(state: &GameState, seat: PlayerId, decision: Decision) -> Decision {
+fn submitted(state: &GameState, seat: PlayerId, decision: Decision, runners_up: &[RunnerUp]) -> Decision {
     if holds_placeholder(state) {
         // `decide` is handed the observed view outside the gate's drivers (the worker and arena
         // send the redacted state), and its `ai:hidden` placeholders have no definition the
@@ -540,6 +602,21 @@ fn submitted(state: &GameState, seat: PlayerId, decision: Decision) -> Decision 
     };
     if trial(&decision.action) {
         return decision;
+    }
+    for runner_up in runners_up {
+        if let Some(first) = runner_up.line.first()
+            && trial(first)
+        {
+            return Decision {
+                action: first.clone(),
+                line: runner_up.line.clone(),
+                stats: SearchStats {
+                    score: runner_up.score,
+                    ..decision.stats
+                },
+                ..decision
+            };
+        }
     }
     for replacement in replacements_for(state, seat) {
         if trial(&replacement) {
@@ -630,13 +707,14 @@ pub fn decide_styled(
     };
 
     match outcome {
-        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason))),
+        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason), &[])),
         Ok(Plan::Searched {
             action,
             reason,
             line,
             score,
             stopped_by,
+            runners_up,
         }) => Some(submitted(
             state,
             seat,
@@ -647,6 +725,7 @@ pub fn decide_styled(
                 stats: stats(&counter, score, stopped_by),
                 first_sim_panic: counter.first_sim_panic(),
             },
+            &runners_up,
         )),
         Err(payload) => {
             // The plan's own panic: a failed simulation like the others (once in `sim_errors`, as
@@ -663,7 +742,131 @@ pub fn decide_styled(
                     stats: stats(&counter, 0.0, None),
                     first_sim_panic: counter.first_sim_panic(),
                 },
+                &[],
             ))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::{Scenario, json, scenario};
+
+    use super::*;
+    use crate::config::AI_BUDGET;
+    use crate::simulate::create_node_counter;
+
+    const AI: PlayerId = PlayerId::P1;
+    const LOBBYIST: &str = "classic-068"; // C #68: (3)+ Cost cards cost (1) more.
+    const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
+    const VANILLA: &str = "core-008"; // (1) Unit 4/4
+
+    /// The AI (p1) at 3 mana with a (3) and a (1) Unit in hand. With `lobbyist`, C #68 stands on the
+    /// other side's field and the (3) costs 4: the hidden tax R403's face-down aura was, planted where
+    /// the search cannot see it by deciding on the board without it. It is the literal's last card, so
+    /// every other id is the same on both boards.
+    fn board(lobbyist: bool) -> Scenario {
+        jackioh_cards::register_all();
+        let field: Vec<&str> = if lobbyist { vec![LOBBYIST] } else { Vec::new() };
+        scenario(json!({
+            "p1": { "hand": [MENACE, VANILLA], "mana": 3 },
+            "p2": { "field": field },
+        }))
+    }
+
+    /// What `decide` would submit, its runners-up beside it, as planned on `state`.
+    fn planned(state: &GameState) -> (Decision, Vec<RunnerUp>) {
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let mut scratch = Scratch {
+            candidates: Vec::new(),
+            determinizations: 0,
+            lines: 0,
+        };
+        let mut rng = Rng::new("decide-1575", 0);
+        let Plan::Searched {
+            action,
+            reason,
+            line,
+            score,
+            runners_up,
+            ..
+        } = plan(
+            state,
+            AI,
+            AI_BUDGET,
+            &AI_STYLE_EXACT,
+            &mut rng,
+            &counter,
+            &mut scratch,
+        )
+        else {
+            panic!("the search decides");
+        };
+        let decision = Decision {
+            action,
+            reason,
+            line,
+            stats: SearchStats {
+                score,
+                ..quiet_stats()
+            },
+            first_sim_panic: None,
+        };
+        (decision, runners_up)
+    }
+
+    fn plays(action: Option<&ActionBody>, card: &CardInstance) -> bool {
+        matches!(action, Some(ActionBody::Play { instance_id, .. }) if *instance_id == card.id)
+    }
+
+    /// #1575: the search picks the (3) Unit, the true state refuses it, and the runner-up line (the
+    /// (1) Unit) is submitted in its place, as the search's own decision, not endTurn.
+    #[test]
+    fn a_refused_choice_submits_the_runner_up_lines_first_action_not_end_turn() {
+        let believed = board(false);
+        let truth = board(true);
+        let (decision, runners_up) = planned(believed.state());
+        assert!(
+            plays(Some(&decision.action), believed.card(MENACE)),
+            "{:?}",
+            decision.action
+        );
+        assert!(
+            runners_up.windows(2).all(|pair| pair[0].score >= pair[1].score),
+            "best mean first"
+        );
+        let runner_up = runners_up.first().expect("a runner-up");
+        assert!(
+            plays(runner_up.line.first(), believed.card(VANILLA)),
+            "{:?}",
+            runner_up.line
+        );
+
+        let sent = submitted(truth.state(), AI, decision, &runners_up);
+        assert_eq!(Some(&sent.action), runner_up.line.first());
+        assert_ne!(sent.action, ActionBody::EndTurn);
+        assert_eq!(sent.reason, DecisionReason::Search);
+        assert_eq!(sent.line, runner_up.line);
+        assert_eq!(sent.stats.score, runner_up.score);
+    }
+
+    /// With no runner-up the true state accepts, the refusal falls back as before: endTurn first.
+    #[test]
+    fn a_refused_choice_with_no_runner_up_falls_back_to_end_turn() {
+        let believed = board(false);
+        let truth = board(true);
+        let (decision, _) = planned(believed.state());
+        let sent = submitted(truth.state(), AI, decision, &[]);
+        assert_eq!(sent.action, ActionBody::EndTurn);
+        assert_eq!(sent.reason, DecisionReason::Fallback);
+    }
+
+    /// An accepted choice is submitted as decided, its runners-up unread.
+    #[test]
+    fn an_accepted_choice_is_submitted_as_decided() {
+        let believed = board(false);
+        let (decision, runners_up) = planned(believed.state());
+        let sent = submitted(believed.state(), AI, decision.clone(), &runners_up);
+        assert_eq!(sent, decision);
     }
 }

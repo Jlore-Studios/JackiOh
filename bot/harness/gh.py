@@ -291,6 +291,14 @@ class GitHub:
             if exc.status != 404:
                 raise
 
+    def lock(self, number: int) -> None:
+        """Lock an issue's or pull request's conversation: only collaborators may comment
+        (`.github/workflows/lock-conversations.yml`). The empty body sends a Content-Length."""
+        self.request("PUT", f"{self._r}/issues/{int(number)}/lock", {})
+
+    def unlock(self, number: int) -> None:
+        self.request("DELETE", f"{self._r}/issues/{int(number)}/lock")
+
     def list_labels(self) -> list[dict]:
         return self.paginate(f"{self._r}/labels")
 
@@ -595,6 +603,36 @@ class GitHub:
         except (urllib.error.URLError, TimeoutError) as exc:
             return f"(log unavailable: {exc})"
         return redact(text[-tail_chars:])
+
+    def list_artifacts(self, run_id: int | str) -> list[dict]:
+        return self.paginate(f"{self._r}/actions/runs/{run_id}/artifacts", key="artifacts")
+
+    def download_artifact(self, artifact_id: int | str) -> bytes:
+        """An artifact's zip. GitHub answers with a redirect to its storage, which is followed
+        without the token, as `job_log`'s is."""
+        what = f"GET {self._r}/actions/artifacts/{artifact_id}/zip"
+        opener = urllib.request.build_opener(_NoRedirect)
+        req = urllib.request.Request(
+            self._url(f"{self._r}/actions/artifacts/{artifact_id}/zip"), headers=self._headers()
+        )
+        try:
+            with opener.open(req, timeout=60) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (301, 302, 303, 307, 308):
+                raise GitHubError(f"{what}: HTTP {exc.code}", exc.code) from None
+            location = exc.headers.get("Location", "")
+        except (urllib.error.URLError, TimeoutError) as exc:
+            raise GitHubError(f"{what}: {redact(str(exc))}", 0) from None
+        if not location:
+            raise GitHubError(f"{what}: a redirect with no location", 0)
+        try:
+            with urllib.request.urlopen(location, timeout=120) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            raise GitHubError(f"{what}: the archive answered HTTP {exc.code}", exc.code) from None
+        except (urllib.error.URLError, TimeoutError) as exc:
+            raise GitHubError(f"{what}: the archive: {redact(str(exc))}", 0) from None
 
     def check_runs(self, sha: str) -> list[dict]:
         return self.paginate(f"{self._r}/commits/{sha}/check-runs", key="check_runs")

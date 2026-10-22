@@ -1,7 +1,9 @@
 # The night bot's machine: one self-hosted runner per subscription, labelled night-vm-<id>
-# (bot/machine/README.md). A new subscription on the machine adds its label here.
+# (bot/machine/README.md). A new subscription on the machine adds its label here. And the local
+# runner on the owner's PC, which every learn.yml job names (bot/machine/README.md, The local runner).
 self-hosted-runner:
   labels:
+    - jackioh-selfplay-local
     - night-vm-claude-1
     - night-vm-claude-2
     - night-vm-claude-3

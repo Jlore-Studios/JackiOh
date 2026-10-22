@@ -299,9 +299,16 @@ pub struct GraceDeadlines {
 pub enum DuosServerMessage {
     /// B23, B35: the seat's own `duos_view_for` and `duos_legal_actions` for that same seat, read off
     /// one state, so the array is always true of the view it travels with.
+    ///
+    /// `jlore_capped` is the receiving seat's own flag: true once the match has ended and the daily
+    /// cap (`JLORE_GAMES_DAILY_CAP`) held back some or all of that seat's Jlore for it
+    /// (R1483000). It is the seat's own economy, so a seat never gets the teammate's; false is left
+    /// off the frame.
     View {
         view: Box<DuosView>,
         legal: Vec<DuosActionBody>,
+        #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+        jlore_capped: bool,
     },
     /// §9.3: the nonce accepted and the log seq it was written at.
     Ack { nonce: String, seq: i64 },

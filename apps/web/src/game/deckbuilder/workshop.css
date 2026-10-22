@@ -946,3 +946,15 @@
     animation: none;
   }
 }
+
+/* R1581000: on a phone the page is the window's height (deckbuilder.css), and this is its one
+   region: what is taller than the room scrolls here, with the top staying put. */
+@media (max-width: 760px) and (min-height: 501px) {
+  .ws-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

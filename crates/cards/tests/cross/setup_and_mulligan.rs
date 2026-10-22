@@ -212,7 +212,7 @@ mod r224_setup_waits_for_a_question {
         assert!(result.events.iter().any(|event| matches!(
             event,
             GameEvent::PromptOpened {
-                kind: PromptKind::Mode,
+                kind: Some(PromptKind::Mode),
                 ..
             }
         )));
@@ -276,8 +276,8 @@ mod r224_setup_waits_for_a_question {
         let started = begin_game(&game);
         let asked: Option<String> = started.events.iter().find_map(|event| match event {
             GameEvent::PromptOpened {
-                kind: PromptKind::Mode,
-                choice_id,
+                kind: Some(PromptKind::Mode),
+                choice_id: Some(choice_id),
                 ..
             } => Some(choice_id.clone()),
             _ => None,
@@ -291,7 +291,10 @@ mod r224_setup_waits_for_a_question {
         // the opening draw. A second prompt never overwrites an unanswered one (R156), so the question
         // stays open until it is answered.
         let answered = started.events.iter().any(|event| match event {
-            GameEvent::PromptAnswered { choice_id, .. } => asked.as_deref() == Some(choice_id.as_str()),
+            GameEvent::PromptAnswered {
+                choice_id: Some(choice_id),
+                ..
+            } => asked.as_deref() == Some(choice_id.as_str()),
             _ => false,
         });
         let still_open = asked.is_some()
@@ -331,7 +334,10 @@ mod r224_setup_waits_for_a_question {
         register_all();
         let begun = begin_game(&create_game(&game_args("r7-mulligan-ids", catalog_decks())));
         let opened_id: Option<String> = begun.events.iter().find_map(|event| match event {
-            GameEvent::PromptOpened { choice_id, .. } => Some(choice_id.clone()),
+            GameEvent::PromptOpened {
+                choice_id: Some(choice_id),
+                ..
+            } => Some(choice_id.clone()),
             _ => None,
         });
         assert!(opened_id.is_some());
@@ -346,7 +352,10 @@ mod r224_setup_waits_for_a_question {
         );
         assert_eq!(answered.error, None);
         let closed: Option<String> = answered.events.iter().find_map(|event| match event {
-            GameEvent::PromptAnswered { choice_id, .. } => Some(choice_id.clone()),
+            GameEvent::PromptAnswered {
+                choice_id: Some(choice_id),
+                ..
+            } => Some(choice_id.clone()),
             _ => None,
         });
         // Every prompt's answer names its PendingChoice id.

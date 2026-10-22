@@ -12,11 +12,12 @@ import { SHIPPED_SETS, newestShippedSet, type CardDef } from "@jackioh/shared";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packName } from "../packs/packs.ts";
-import { cosmeticPacksInfo, walletInfo } from "../shop/fixtures.ts";
+import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
 import WalletPanel from "./WalletPanel.tsx";
-import { COLLECTED_DEFS, collectionTestid as T, setCompletions } from "./collection.ts";
+import { COLLECTED_DEFS, collectionSectionOf, collectionTestid as T, ownedCosmetics, setCompletions } from "./collection.ts";
 import { collectionOwning, fullCollection, track, tracksOf } from "./fixtures.ts";
 
 afterEach(() => {
@@ -195,5 +196,44 @@ describe("#1307 TracksPanel", () => {
     expect(screen.getByTestId(T.trackXp("Core"))).toHaveTextContent("Last level reached.");
     expect(screen.getByTestId(T.trackRewards("Core"))).toHaveTextContent("All rewards claimed.");
     expect(screen.queryByRole("progressbar")).toBeNull();
+  });
+});
+
+describe("R1579000 the Collection's cosmetics and sections", () => {
+  const starters = COSMETICS.filter((cosmetic) => cosmetic.starter && !cosmetic.default);
+
+  it("R1579000 ownedCosmetics lists every starter but the defaults once, then each per-card cosmetic on its card", () => {
+    const none = ownedCosmetics({ cards: [], account: [] });
+    expect(none.map((entry) => entry.cosmetic.id)).toEqual(starters.map((cosmetic) => cosmetic.id));
+    expect(none.every((entry) => entry.cardId === null)).toBe(true);
+    expect(none.some((entry) => entry.cosmetic.default)).toBe(false);
+
+    const some = ownedCosmetics(
+      ownedCosmeticsOf({
+        cards: [
+          { cardId: "core-004", cosmeticId: "full-art-gary-the-gambler" },
+          { cardId: "core-001", cosmeticId: "full-art-big-d-fender" },
+          { cardId: "core-001", cosmeticId: "full-art-unknown-to-this-client" },
+        ],
+        account: ["table-felt", "table-unknown-to-this-client"],
+      }),
+    );
+    // The registry's order: the starters, once each (table-felt is in `account` too), then the full arts.
+    expect(some.map((entry) => [entry.cosmetic.id, entry.cardId])).toEqual([
+      ...starters.map((cosmetic) => [cosmetic.id, null]),
+      ["full-art-big-d-fender", "core-001"],
+      ["full-art-gary-the-gambler", "core-004"],
+    ]);
+  });
+
+  it("R1579000 collectionSectionOf reads ?section= and gives the hub otherwise", () => {
+    expect(collectionSectionOf("?section=cards")).toBe("cards");
+    expect(collectionSectionOf("?section=cosmetics")).toBe("cosmetics");
+    expect(collectionSectionOf("?x=1&section=cards")).toBe("cards");
+    expect(collectionSectionOf("")).toBeNull();
+    expect(collectionSectionOf("?section=")).toBeNull();
+    expect(collectionSectionOf("?section=shop")).toBeNull();
+    expect(collectionSectionOf("?section=Cards")).toBeNull();
+    expect(collectionSectionOf("?other=cards")).toBeNull();
   });
 });

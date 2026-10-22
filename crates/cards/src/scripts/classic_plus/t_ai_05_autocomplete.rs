@@ -187,6 +187,50 @@ mod tests {
             }
 
             #[test]
+            fn r1121000_an_echo_of_a_fused_ai_spell_is_no_face_up_record_autocomplete_copies_the_card_before_it() {
+                crate::register_all();
+                const ECHO: &str = "classic-057";
+                const BOOK: &str = "classicplus-057";
+                const FUSED: &str = "t-1:classicplus-057+classicplus-t-ai-05";
+                let mut s = scenario(json!({
+                    "p1": { "hand": [VANILLA, ECHO, AUTOCOMPLETE], "mana": 9 },
+                    // P2 holds the Book to fuse and an Autocomplete of its own to play after.
+                    "p2": { "hand": [BOOK, AUTOCOMPLETE], "field": [VANILLA], "mana": 9 },
+                }));
+                let p1_vanilla = s.hand(P1).iter().find(|card| card.def_id == VANILLA).map(|card| card.id.clone()).expect("p1 holds a vanilla unit");
+                s.play(&p1_vanilla, json!({ "zone": 1 }));
+                s.end_turn();
+                // P2 fuses Book of Stats with Autocomplete and plays it on its own unit.
+                let fused = subsystems::rebuild_fused_def(s.state_mut(), FUSED, P2).expect("Book and Autocomplete fuse");
+                assert_eq!(fused.type_, CardType::Spell);
+                assert!(fused.tags.contains(&Tag::Ai));
+                let book = s.card(BOOK).id.clone();
+                s.card_mut(&book).def_id = FUSED.to_string();
+                let p2_unit = s.unit(P2, 1).map(|unit| unit.id.clone()).unwrap_or_default();
+                s.play(&book, json!({ "targets": [{ "pick": "instance", "instanceId": p2_unit }] }));
+                // The fused Book resolved: 4/4 + 5/5.
+                let grown = s.stats(&p2_unit);
+                assert_eq!((grown.attack, grown.health), (9, 9));
+                s.end_turn();
+                // P1's Echo copies the fused text onto its own unit.
+                let echo = s.hand(P1).iter().find(|card| card.def_id == ECHO).map(|card| card.id.clone()).expect("p1 holds Echo");
+                let p1_unit = s.unit(P1, 1).map(|unit| unit.id.clone()).unwrap_or_default();
+                s.play(&echo, json!({ "targets": [{ "pick": "instance", "instanceId": p1_unit }] }));
+                let echoed = s.stats(&p1_unit);
+                assert_eq!((echoed.attack, echoed.health), (9, 9));
+                s.end_turn();
+                // P2's Autocomplete copies the card before the fusion, never the fused card.
+                let autocomplete = s.hand(P2).iter().find(|card| card.def_id == AUTOCOMPLETE).map(|card| card.id.clone()).expect("p2 holds Autocomplete");
+                s.play(&autocomplete, json!({}));
+                assert!(s.hand(P2).iter().any(|card| card.def_id == VANILLA));
+                assert!(s.hand(P2).iter().all(|card| !card.def_id.starts_with("t-")));
+                assert_eq!(
+                    last_face_up_played(s.state(), P1).map(|record| record.def_id),
+                    Some(VANILLA.to_string()),
+                );
+            }
+
+            #[test]
             fn nothing_played_yet_nothing_and_no_rng_draw_r129() {
                 let mut s = after_their_turn(&[], json!({}), json!({}), false);
                 let hand_before = s.hand(P1).len();

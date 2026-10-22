@@ -3,13 +3,17 @@
 # run super.yml --ref <branch>`). CI (ci.yml) keeps the essential checks per pull request; this keeps
 # the rest from rotting.
 #
-#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, in quarters (V7, V9)
+#   fuzz            `jackioh fuzz` seeds 1-10,000, plain and with the rotating handicap, and the Duos
+#                   co-op wave's seeds 1-2,000 (`fuzz --duos`), in quarters (V7, V9, #936 B25)
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
+#   daily tests     every Rust test `#[ignore = "daily: …"]` leaves out of a pull request's cargo test:
+#                   the many-game sweeps, whose rule a cheaper test holds per pull request
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
 #   e2e             all 35 e2e specs on Chrome, in shards, and the component specs (V21)
-#   web             the audio, fx and asset unit tests the pull requests leave out
+#   web             the audio, fx and asset unit tests and promote-production.test.ts, which the pull
+#                   requests leave out, and the tutorial lessons' whole sweeps (JACKIOH_DAILY=1)
 #   db              sql invariants, the store contract and the deploy rehearsal against a real Postgres
 #   notebooks       analysis/'s tests on its committed fixtures: the loader's card figures against the
 #                   Rust report's, and every notebook run end to end (#442 L19, #445)
@@ -45,6 +49,9 @@ env:
   CARGO_TERM_COLOR: always
   # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix.
   FUZZ_SEEDS: "10000"
+  # The Duos wave's (§13, #936 B25), ten times `fuzz --duos`'s 200: a Duos game is four seats and a
+  # pool, several times a 1v1 game's work. Split the same way.
+  DUOS_FUZZ_SEEDS: "2000"
 
 jobs:
   # ------------------------------------------------------------------------------------------------
@@ -98,7 +105,9 @@ jobs:
 
   # Seeds 1-FUZZ_SEEDS, each quarter plain and then with the handicap (fuzz-handicap.test.ts's
   # rotation), as `--from` and `--seeds` ranges: a seed is its own game whatever run it sits in, so
-  # the quarters together play exactly `fuzz --seeds 10000` and `fuzz --seeds 10000 --handicap`.
+  # the quarters together play exactly `fuzz --seeds 10000` and `fuzz --seeds 10000 --handicap`. Then
+  # the quarter's share of the Duos co-op wave, seeds 1-DUOS_FUZZ_SEEDS (`fuzz --duos`), which no
+  # pull request plays beyond the tools crate's three seeds.
   fuzz:
     name: fuzz (${{ matrix.shard }}/${{ strategy.job-total }})
     needs: rust-build
@@ -126,6 +135,17 @@ jobs:
           echo "seeds $from..$(( from + per - 1 ))"
           target/release/jackioh fuzz --from "$from" --seeds "$per"
           target/release/jackioh fuzz --from "$from" --seeds "$per" --handicap
+      # Also after a failure above, so one run reports every wave.
+      - name: this quarter's Duos seeds
+        if: ${{ !cancelled() }}
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          per=$(( DUOS_FUZZ_SEEDS / SHARDS ))
+          from=$(( (SHARD - 1) * per + 1 ))
+          echo "Duos seeds $from..$(( from + per - 1 ))"
+          target/release/jackioh fuzz --duos --from "$from" --seeds "$per"
 
   # The three matchups at their full seed counts against gateNeeded, and the perf gate, every k-th
   # game per shard. Wins are a property of the whole run, so each shard keeps its games and `gate
@@ -204,6 +224,25 @@ jobs:
           path: target/golden-diff/
           if-no-files-found: warn
 
+  # The Rust tests too slow or too statistical for every pull request: each `#[ignore = "daily: …"]`
+  # in the workspace, its reason naming what holds the same rule per pull request (acceptance.rs
+  # holds every ignore to that form), and nothing else. `--tests` leaves out the doc-tests, whose
+  # `ignore` blocks are not tests at all. Most of the job is compiling the workspace.
+  daily-tests:
+    name: daily tests (cargo test -- --ignored)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CARGO_PROFILE_TEST_DEBUG: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+          cache-key: daily-tests
+      - name: every test a pull request leaves to the daily run
+        run: cargo test --workspace --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored
+
   coverage:
     name: coverage (engine, cards, ai)
     runs-on: ubuntu-latest
@@ -279,9 +318,11 @@ jobs:
           path: e2e/artifacts/component/screenshots
           if-no-files-found: warn
 
-  # The unit tests ci.yml's `web (unit k/3)` leaves out: the audio and fx layers and the asset tests.
+  # The unit tests ci.yml's `web (unit k/3)` leaves out: the audio and fx layers, the asset tests and
+  # promote-production.test.ts; and, with JACKIOH_DAILY=1 (apps/web/src/test/daily.ts), the whole of
+  # each sweep a pull request plays only the first game of: the tutorial lessons'.
   web-extra:
-    name: web (audio, fx and asset tests)
+    name: web (audio, fx, asset and daily tests)
     needs: wasm
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -297,7 +338,11 @@ jobs:
       - name: unpack the WASM module
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: vitest
-        run: pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts
+        env:
+          JACKIOH_DAILY: "1"
+        run: >-
+          pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts
+          src/net/promote-production.test.ts src/tutorial/scripts/
 
   # ------------------------------------------------------------------------------------------------
   # notebooks
@@ -367,7 +412,7 @@ jobs:
   # API's JSON and env, never through `${{ }}` in the script.
   report:
     name: report
-    needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, coverage, e2e, component, web-extra, notebooks, db]
+    needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, daily-tests, coverage, e2e, component, web-extra, notebooks, db]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -426,7 +471,7 @@ jobs:
 
           # Main's red run is the night bot's to fix; a branch's is its author's.
           if [ "$REF" = "$DEFAULT_BRANCH" ]; then
-            owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave). A pull request's CI runs only the e2e smoke specs, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            owner="Night bot: this run is on \`$DEFAULT_BRANCH\`, so it is yours. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
           else
             owner="This run is on \`$REF\`, not \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi

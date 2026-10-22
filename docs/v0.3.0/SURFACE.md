@@ -190,33 +190,14 @@ enforce it, and nothing else is needed (the ESLint purity rules go):
 1. **Their `Cargo.toml` depends only on `serde`, `serde_json`, `indexmap`, each other, and `ts-rs`
    behind the engine's off-by-default `ts` feature.** No `rand`, no `getrandom`, no `tokio`, no
    `time`. A crate you cannot name, you cannot call.
-2. **Each has the same `clippy.toml`** (clippy reads the one in the crate's own directory) and CI
-   runs `cargo clippy --workspace --all-targets -- -D warnings`:
-
-```toml
-disallowed-types = [
-  { path = "std::collections::HashMap", reason = "iteration order is random per process: use indexmap::IndexMap (insertion order, like a JS Map) or BTreeMap" },
-  { path = "std::collections::HashSet", reason = "iteration order is random per process: use indexmap::IndexSet or BTreeSet" },
-  { path = "std::time::Instant", reason = "CLAUDE.md rule 4: no clocks in pure crates" },
-  { path = "std::time::SystemTime", reason = "CLAUDE.md rule 4: no clocks in pure crates" },
-  { path = "std::fs::File", reason = "CLAUDE.md rule 4: no I/O in pure crates" },
-  { path = "std::thread::Thread", reason = "CLAUDE.md rule 4: no threads in pure crates" },
-  { path = "std::sync::Mutex", reason = "no mutable statics: per-game state lives in GameState, per-call state in EngineSink" },
-  { path = "std::sync::RwLock", reason = "no mutable statics" },
-  { path = "std::cell::RefCell", reason = "no interior mutability in the rules" },
-]
-disallowed-methods = [
-  { path = "std::time::Instant::now", reason = "CLAUDE.md rule 4" },
-  { path = "std::time::SystemTime::now", reason = "CLAUDE.md rule 4" },
-  { path = "std::env::var", reason = "CLAUDE.md rule 4" },
-  { path = "std::env::vars", reason = "CLAUDE.md rule 4" },
-  { path = "std::fs::read", reason = "CLAUDE.md rule 4" },
-  { path = "std::fs::read_to_string", reason = "CLAUDE.md rule 4" },
-  { path = "std::fs::write", reason = "CLAUDE.md rule 4" },
-  { path = "std::thread::spawn", reason = "CLAUDE.md rule 4" },
-  { path = "std::process::exit", reason = "CLAUDE.md rule 4" },
-]
-```
+2. **Each has the same `clippy.toml`** (clippy reads the one in the crate's own directory;
+   `crates/tools/tests/acceptance.rs` holds the four byte for byte the same and runs clippy over a
+   fixture with one use of each entry) and CI runs `cargo clippy --workspace --all-targets -- -D
+   warnings`. `crates/engine/clippy.toml` is the list (#1600): the hash-ordered collections and
+   `RandomState`, the clock, the disk (`File`, `OpenOptions`, `DirBuilder`, the `std::fs` functions,
+   `Path`'s disk reads), the environment and the command line, stdin, stdout and stderr, the network,
+   processes and threads, and `Mutex`, `RwLock` and `RefCell`. Its header names what stays free:
+   `Cell` and `thread::LocalKey`, `OnceLock` and `LazyLock`, `mpsc` and the tests' atomic nonces.
 
 - **The only statics** in the pure crates are the catalog and the script registry, each a
   `std::sync::OnceLock` set once by `jackioh_cards::register_all()` and read-only after. Everything
@@ -762,8 +743,9 @@ keeps behind its opaque `EngineState` brand.
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
 #[wasm_bindgen] pub fn engine_tables() -> String;
     // { chaosEffects: [{label}], chaosPlusEffects: [{label}], heroPowerNames: [..], heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }
-#[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64) -> String;
-    // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false
+#[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> String;
+    // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false;
+    // prompt_json is the open prompt's { craftMode, craftOffer } (either absent), so the verdict is its answer's (R1563007)
 ```
 
 ### 10.2 Build

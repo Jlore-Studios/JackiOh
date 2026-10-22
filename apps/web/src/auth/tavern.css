@@ -87,6 +87,14 @@
   margin-right: auto;
 }
 
+/* R1581000: a tavern menu on one screen has no room for the shell's tall bottom padding or the
+   footer's own; its region scrolls what exceeds the rest. */
+@media (min-height: 501px) {
+  .tavern.app-shell.one-screen { min-height: 0; padding-bottom: 14px; }
+  .tavern.app-shell.one-screen .site-footer { padding: 8px var(--tavern-gutter) 0; }
+  .tavern.app-shell.one-screen .site-footer__links { padding: 0; }
+}
+
 .tavern.app-shell p {
   color: var(--tavern-text-dim);
 }

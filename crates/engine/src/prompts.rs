@@ -176,6 +176,31 @@ pub fn stop_answer(state: &GameState) -> Option<ActionBody> {
         })
 }
 
+/// R1563006: a question of a sequence open in a state (Meditative+ #20 KY's Competition), as a host's
+/// sequence clock reads it: who answers it, the right answers so far, and the prompt's id. All public:
+/// the opponent's view shows that a prompt is open, and the streak rides the prompt (R1184000).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SequenceQuestion {
+    pub player: PlayerId,
+    pub streak: i32,
+    pub prompt_id: String,
+}
+
+/// R1563006: the question of a sequence open in `state`, or `None` with none open. A sequence's first
+/// question has a streak of 0, so a host starts its clock there and stops it when none is open.
+pub fn sequence_question_of(state: &GameState) -> Option<SequenceQuestion> {
+    let pending = state.pending.as_ref()?;
+    if pending.kind != PromptKind::Answer {
+        return None;
+    }
+    Some(SequenceQuestion {
+        player: pending.player_id,
+        streak: pending.streak?,
+        prompt_id: pending.id.clone(),
+    })
+}
+
 /// A card's data with the two one-prompt control keys taken out (`PROMPT_OWNER_KEY`, `ANSWER_KEY`).
 pub fn without_prompt_keys(data: &IndexMap<String, Value>) -> IndexMap<String, Value> {
     let mut rest = data.clone();
@@ -371,6 +396,7 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
         max,
         budget: args.budget.map(|budget| budget.max(0)),
         craft_mode: None,
+        craft_offer: None,
         streak: None,
         resume,
     };
@@ -379,8 +405,8 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
     sink.state.pending = Some(pending.clone());
     sink.events.push(GameEvent::PromptOpened {
         player: args.player,
-        choice_id: pending.id.clone(),
-        kind: args.kind,
+        choice_id: Some(pending.id.clone()),
+        kind: Some(args.kind),
     });
     Some(pending)
 }
@@ -390,7 +416,7 @@ pub fn close_prompt(sink: &mut EngineSink<'_>) -> Option<PendingChoice> {
     let pending = sink.state.pending.take()?;
     sink.events.push(GameEvent::PromptAnswered {
         player: pending.player_id,
-        choice_id: pending.id.clone(),
+        choice_id: Some(pending.id.clone()),
     });
     Some(pending)
 }
@@ -512,11 +538,13 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
         let Some(Selection::Craft { recipe }) = picks.first() else {
             return Err(EngineError::new("that prompt takes a crafted recipe"));
         };
-        // R1182000, R1182002: and in the frame the prompt's mode names, if any.
+        // R1182000, R1182002: and in the frame the prompt's mode names, if any; R1563007: of the blocks
+        // its offer holds, if it has one.
         return match crate::subsystems::craft::validate_answer(
             recipe,
             pending.budget.unwrap_or(-1),
             pending.craft_mode,
+            pending.craft_offer.as_ref(),
         ) {
             Ok(()) => Ok(()),
             Err(reasons) => Err(EngineError::new(format!(
@@ -1396,8 +1424,10 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         options: args.options.clone(),
         min: clamp(args.min.unwrap_or(1), 0, max),
         max,
-        budget: None,
+        // B5 E18: the budget `open_prompt` gives the prompt, so a random answer is one a player could pick.
+        budget: args.budget.map(|budget| budget.max(0)),
         craft_mode: None,
+        craft_offer: None,
         streak: None,
         resume: args.resume.clone(),
     };

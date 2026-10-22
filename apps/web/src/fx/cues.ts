@@ -741,6 +741,13 @@ const keyword: Recipe = (event, p) => {
   if (event.type !== "keywordGranted") return [];
   const i = p.env.intensity;
   const at = anchor(p.tgt);
+  // #1598: a keyword the unit loses (R46) reads as a debuff does (`buff` above), whatever the keyword.
+  if (event.lost === true) {
+    return [
+      { kind: "arrows", direction: "down", at, delayMs: 0, durationMs: p.D + FX_ARROWS_TAIL_MS },
+      burst(i, "void", at, "area", 0, "debuffVoid"),
+    ];
+  }
   switch (event.keyword.kind) {
     case "Divine Shield":
       return [ring(p.D, "gold", at, 0), burst(i, "holy", at, "ring", 0, "keywordHoly")];

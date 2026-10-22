@@ -132,6 +132,7 @@ pub mod glitch;
 pub mod glow_facts;
 pub mod granted_tags;
 pub mod graveyard_play;
+pub mod graveyard_play_reason;
 pub mod graveyard_reset;
 pub mod hand_size;
 pub mod handicap;

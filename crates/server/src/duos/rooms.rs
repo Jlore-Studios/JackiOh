@@ -13,7 +13,8 @@
 //!
 //! A person in a 1v1 match, a Conquest series that is not over or a live co-op match can neither make
 //! nor join a room, and a join is refused while the host is in one: the same `assert_free_to_play`
-//! and `assert_host_free` (`api::decks`, R1065000) every 1v1 door asks. The join's claim cancels both
+//! and refusals (`api::decks`, R1065000) every 1v1 door answers, and the join reserves both people's
+//! seats in the seat ledger before it claims the room (R1523000). The join's claim cancels both
 //! people's open tickets, as a series' start does. Co-op games are unranked: no rating moves and no
 //! results row is written; the result lives on the match's own row (B40).
 //!
@@ -45,7 +46,7 @@ use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, assert_host_free, freeze_choice, lean_of,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, lean_of,
     read_mode_choice,
 };
 use crate::api::http::{
@@ -58,6 +59,7 @@ use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom, DuosRoomClaimOutcome};
+use crate::seats::Seat;
 
 /// R149's bound, as the 1v1 room's: a fresh code is tried this many times against the codes still
 /// held before the create reports that none is free.
@@ -314,7 +316,6 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     }
     assert_free_to_play(app, &profile.id).await?;
     let guest_choice = freeze(app, &profile.id, &choice).await?;
-    assert_host_free(app, &room.host).await?;
 
     // Everything the match is created with is settled, and the engine has begun it, before anything is
     // written: a setup the engine refuses leaves the room open and nothing behind. The match is
@@ -326,6 +327,20 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         ))
     })?;
     let match_id = new_uuid();
+    // R1523000: the guest's seat and the host's, or neither, before anything is written. A guest
+    // who holds a game meets the refusal `assert_free_to_play` answers, and a host who holds one
+    // the host's (R1065000); a rival door that reserved either first wins, and this one writes
+    // nothing.
+    let lease = app
+        .seats
+        .reserve(&[&profile.id, &room.host], Seat::Duos(match_id.clone()))
+        .map_err(|taken| {
+            if taken.profile == profile.id {
+                in_game(&taken.seat)
+            } else {
+                host_busy()
+            }
+        })?;
     let seed = take_seed(&room.code, joiner_seed).unwrap_or_else(new_seed);
     let options = catch_unwind(AssertUnwindSafe(|| {
         engine::match_options(
@@ -356,8 +371,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     .map_err(|payload| ApiError::internal(panic_text(payload)))?
     .map_err(ApiError::internal)?;
 
-    // B33's single claim and the match row, in one transaction: the loser of a race writes nothing.
+    // B33's single claim and the match row, in one transaction: the loser of a race writes nothing,
+    // and so does a claim a newer server's epoch has fenced (R1523000, answered 503).
     let claim = one_tx!(app.db, |t| {
+        t.seats_fence(app.seats.epoch()).await?;
         let claim = t
             .duos_rooms_claim(&room.code, &profile.id, &guest_choice, &match_id, now)
             .await?;
@@ -380,6 +397,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             return Ok(refusal(409, "full", "someone already joined that room"));
         }
     }
+    // R1523000: the record holds the match now, so the ledger holds both seats until its ending.
+    lease.commit();
     registry(app).start(app, row, state, pinned);
     tracing::info!(
         event = "duos.room.joined",

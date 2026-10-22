@@ -12,7 +12,7 @@
 // A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
 // server says the game is `watchable`; Chat always; Remove and Block, each asking once.
 
-import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { CoopPanel } from "../duos/CoopPanel.tsx";
@@ -131,7 +131,8 @@ type FriendRowProps = {
   friend: Friend;
   unread: number;
   busy: boolean;
-  onChallenge: () => void;
+  /** Gets the Challenge button pressed, which has the focus back once the dialog closes. */
+  onChallenge: (opener: HTMLElement) => void;
   onChat: () => void;
   onRemove: () => void;
   onBlock: () => void;
@@ -159,7 +160,15 @@ function FriendRow({ friend, unread, busy, onChallenge, onChat, onRemove, onBloc
       {asking === null ? (
         <span className="together-row__actions">
           {canChallenge ? (
-            <button type="button" className="button-primary" data-testid={togetherTestid.challenge} disabled={busy} onClick={onChallenge}>
+            <button
+              type="button"
+              className="button-primary"
+              data-testid={togetherTestid.challenge}
+              disabled={busy}
+              onClick={(event) => {
+                onChallenge(event.currentTarget);
+              }}
+            >
               {t("Challenge")}
             </button>
           ) : null}
@@ -300,13 +309,14 @@ export function TogetherRoute(): ReactElement {
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
   const [challenges, reloadChallenges] = usePolled(getChallenges, SOCIAL_POLL_MS);
   const [unread, reloadUnread] = usePolled(getUnread, SOCIAL_POLL_MS);
-  const [shared] = usePolled(getSharedReplays, null);
+  const [shared, reloadShared] = usePolled(getSharedReplays, null);
   const lookup = useCatalogLookup();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatWith, setChatWith] = useState<PlayerRef | null>(null);
   const [challenging, setChallenging] = useState<PlayerRef | null>(null);
   const [watching, setWatching] = useState<SharedReplay | null>(null);
+  const challengeOpener = useRef<HTMLElement | null>(null);
 
   // "Shared with me →" on `/replays` opens this page at its list.
   useEffect(() => {
@@ -334,6 +344,18 @@ export function TogetherRoute(): ReactElement {
       });
   };
 
+  /**
+   * Closes the challenge dialog and gives the focus back to the Challenge button that opened it, as a
+   * dialog should leave it (WAI-ARIA APG; `Game.tsx`'s `refocusConcede`). The button is kept when it is
+   * pressed, not read off the focus, which a click on a button does not move in every browser.
+   */
+  const closeChallenge = (): void => {
+    setChallenging(null);
+    const opener = challengeOpener.current;
+    challengeOpener.current = null;
+    if (opener !== null && opener.isConnected) opener.focus({ preventScroll: true });
+  };
+
   if (watching !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
@@ -353,7 +375,7 @@ export function TogetherRoute(): ReactElement {
   const outgoingChallenges = challenges.kind === "ready" ? challenges.value.outgoing : [];
 
   return (
-    <div className="app-shell tavern lobby together-screen" data-testid={togetherTestid.root}>
+    <div className="app-shell tavern lobby together-screen one-screen" data-testid={togetherTestid.root}>
       <BackLink />
 
       <header className="together-hero">
@@ -372,7 +394,7 @@ export function TogetherRoute(): ReactElement {
         </p>
       )}
 
-      <div className="together-layout">
+      <div className="together-layout one-screen__body">
         <section className="lobby-card together-panel" aria-labelledby="together-friends-heading">
           <h2 id="together-friends-heading" className="together-panel__heading">
             {t("Friends")}
@@ -405,7 +427,8 @@ export function TogetherRoute(): ReactElement {
                   friend={friend}
                   unread={counts[friend.profileId] ?? 0}
                   busy={busy}
-                  onChallenge={() => {
+                  onChallenge={(opener) => {
+                    challengeOpener.current = opener;
                     setChallenging({ profileId: friend.profileId, username: friend.username });
                   }}
                   onChat={() => {
@@ -515,9 +538,22 @@ export function TogetherRoute(): ReactElement {
               </p>
             ) : null}
             {shared.kind === "failed" ? (
-              <p className="notice" role="alert">
-                {t(shared.message)}
-              </p>
+              <>
+                <p className="notice" role="alert">
+                  {t(shared.message)}
+                </p>
+                <div className="row">
+                  <button
+                    type="button"
+                    data-testid={togetherTestid.sharedRetry}
+                    onClick={() => {
+                      reloadShared();
+                    }}
+                  >
+                    {t("Try again")}
+                  </button>
+                </div>
+              </>
             ) : null}
             {shared.kind === "ready" && shared.value.shared.length === 0 ? (
               <p className="lobby-note" data-testid={togetherTestid.noShared}>
@@ -602,11 +638,9 @@ export function TogetherRoute(): ReactElement {
       {challenging === null ? null : (
         <ChallengeDialog
           friend={challenging}
-          onClose={() => {
-            setChallenging(null);
-          }}
+          onClose={closeChallenge}
           onSent={() => {
-            setChallenging(null);
+            closeChallenge();
             reloadChallenges();
           }}
         />

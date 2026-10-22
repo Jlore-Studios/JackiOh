@@ -92,8 +92,8 @@ fn answer_all(state: &mut GameState, keys: &[String]) {
 }
 
 /// R81, R97: the other seat's view of a prompt: that it is open, and whose — the whole of `pending`,
-/// so no option, caption, cost or budget travels — and a `promptOpened` event that names the player
-/// and the kind and nothing more.
+/// so no option, caption, cost or budget travels — and `promptOpened` events of the holder's that name
+/// the player and nothing more: not the prompt's kind, nor its id.
 fn expect_only_that_it_is_open(state: &GameState, viewer: PlayerId, holder: PlayerId) {
     let view = view_for(state, viewer);
     assert_eq!(
@@ -101,14 +101,18 @@ fn expect_only_that_it_is_open(state: &GameState, viewer: PlayerId, holder: Play
         json!({ "forYou": false, "pendingFor": holder })
     );
     for opened in events_of_type(&view.events, GameEventType::PromptOpened) {
-        let mut names: Vec<String> = json_of(opened)
+        let opened = json_of(&opened);
+        if opened["player"] != json!(holder) {
+            continue;
+        }
+        let mut names: Vec<String> = opened
             .as_object()
             .expect("an event is an object")
             .keys()
             .cloned()
             .collect();
         names.sort();
-        assert_eq!(names, ["choiceId", "kind", "player", "type"]);
+        assert_eq!(names, ["player", "type"]);
     }
 }
 
@@ -1159,5 +1163,65 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
         );
         assert_eq!(state.players.p2.exile.len(), 1);
         expect_replays("mind-melt-replay", &decks, &log, &state);
+    }
+}
+
+mod r81_r97_a_prompt_a_hidden_card_opens_in_each_seats_events {
+    use super::*;
+    use crate::rules::fixtures::prompts::{deck_asker, spark};
+
+    /// The newest event of this type in `viewer`'s view, as JSON.
+    fn newest(state: &GameState, viewer: PlayerId, type_: GameEventType) -> Value {
+        events_of_type(&view_for(state, viewer).events, type_)
+            .last()
+            .map(json_of)
+            .expect("the event is in the view")
+    }
+
+    #[test]
+    fn r81_r97_the_holder_reads_its_prompts_kind_and_id_and_the_other_seat_only_whose_it_is() {
+        let mut state = board("hidden-asker");
+        // A library card is nobody's to read (R97); its deck trigger asks its controller as p1's Spell
+        // resolves.
+        let asker = new_instance(&mut state, &deck_asker().id, P1, Zone::Library { player: P1 });
+        state.players.p1.library = vec![asker];
+        let card = in_hand(&mut state, &spark().id, P1, 1).remove(0);
+        state = act(
+            &state,
+            input(json!({ "type": "play", "playerId": "p1", "instanceId": card.id })),
+            None,
+        );
+        let pending = open_as(&state, PromptKind::Mode, P1);
+        assert_eq!(
+            newest(&state, P1, GameEventType::PromptOpened),
+            json!({ "type": "promptOpened", "player": "p1", "choiceId": pending.id, "kind": "mode" })
+        );
+        assert_eq!(
+            newest(&state, P2, GameEventType::PromptOpened),
+            json!({ "type": "promptOpened", "player": "p1" })
+        );
+        assert!(
+            !serde_json::to_string(&view_for(&state, P2))
+                .expect("a view")
+                .contains(&format!("\"{}\"", pending.id))
+        );
+
+        state = act(
+            &state,
+            input(json!({
+                "type": "answer", "playerId": "p1", "choiceId": pending.id,
+                "selection": [{ "pick": "mode", "option": "stay" }],
+            })),
+            None,
+        );
+        assert!(state.pending.is_none());
+        assert_eq!(
+            newest(&state, P1, GameEventType::PromptAnswered),
+            json!({ "type": "promptAnswered", "player": "p1", "choiceId": pending.id })
+        );
+        assert_eq!(
+            newest(&state, P2, GameEventType::PromptAnswered),
+            json!({ "type": "promptAnswered", "player": "p1" })
+        );
     }
 }

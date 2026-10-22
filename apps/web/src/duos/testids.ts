@@ -30,6 +30,8 @@ export const duosTestid = {
   coopStatus: "coop-status",
   coopError: "coop-error",
   coopRejoin: "coop-rejoin",
+  /** #1568: a failed deck read offers Try again beside the alert. */
+  coopDecksRetry: "coop-decks-retry",
   // The board's own: the rail's pieces, the concede offer and the result.
   board: "duos-board",
   lifeStrip: "duos-life-strip",
@@ -42,9 +44,12 @@ export const duosTestid = {
   resultBack: "duos-result-back",
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
+  resultJlore: "duos-result-jlore",
   // The route's own: before the first view, its clock, and its connection line and Reconnect now.
   connecting: "duos-connecting",
   refused: "duos-refused",
+  /** #1599: the sentence that stands in for a socket closed for good before any view (a voided match). */
+  gone: "duos-gone",
   connection: "duos-connection",
   reconnect: "duos-reconnect",
   clock: "duos-clock",

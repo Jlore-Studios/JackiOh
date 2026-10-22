@@ -84,6 +84,7 @@ use crate::duos::protocol::{
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
 use crate::duos::{ceiling_at, ceiling_draw, finish_match};
+use crate::seats::Seat;
 
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
 /// indexed in this order.
@@ -462,6 +463,9 @@ struct Core {
     /// The result is written (or the row already had one when the actor was built).
     finished: bool,
     finished_at: Option<i64>,
+    /// By `HUMAN_SEATS`: R1483000, each seat's own flag for whether the daily Jlore cap held back
+    /// its pay for this match.
+    jlore_capped: [bool; 2],
     stopped: bool,
 }
 
@@ -549,6 +553,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         socket_generation: [0, 0],
         finished,
         finished_at: finished.then(now_ms),
+        jlore_capped: [false, false],
         stopped: false,
     };
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -675,6 +680,7 @@ impl DuosActor {
         socket.send(encode(&DuosServerMessage::View {
             view: Box::new(view),
             legal,
+            jlore_capped: human(seat).map(|index| core.jlore_capped[index]).unwrap_or(false),
         }));
     }
 
@@ -897,6 +903,11 @@ impl DuosActor {
             (over, live && left <= 0)
         };
         if over {
+            // R1483000: an actor rebuilt on a match already finished learns what the cap held
+            // back from the ledger; one that is about to write it does so in `on_terminal`.
+            if self.lock().finished {
+                self.load_jlore_caps(false).await;
+            }
             self.on_terminal().await;
         } else if past_ceiling {
             // R1047000: folded back past its ceiling, the match ends before anyone plays on.
@@ -1267,7 +1278,17 @@ impl DuosActor {
             self.let_go("duos.result.unrecorded");
             return;
         }
+        self.release_seats();
         self.let_go("duos.panicked.drawn");
+    }
+
+    /// R1523000: once the result has landed, both people leave the match's seats.
+    fn release_seats(&self) {
+        let row = &self.shared.row;
+        let seat = Seat::Duos(row.id.clone());
+        for person in [&row.a1, &row.a2] {
+            self.shared.app.seats.release(person, &seat);
+        }
     }
 
     /// B35: after every applied action, both people get fresh views and clocks; then the result is
@@ -1315,7 +1336,34 @@ impl DuosActor {
             self.let_go("duos.result.unrecorded");
             return;
         }
+        self.release_seats();
+        self.load_jlore_caps(true).await;
         tracing::info!(event = "duos.over", matchId = %self.match_id_str(), outcome = %result.outcome, reason = %result.reason);
+    }
+
+    /// R1483000: whether the daily Jlore cap held back either seat's pay for this match, read off
+    /// the ledger now that the result is in it. Every view of a seat it held back carries it;
+    /// `announce` sends those seats a fresh one now, for a result just written (an actor arming on
+    /// a finished match sends its sockets theirs as each attaches). A read that fails costs the
+    /// line, never the result: it is logged, and the next rebuilt actor reads it again.
+    async fn load_jlore_caps(&self, announce: bool) {
+        let caps = match super::duos_game_jlore_caps(&self.shared.app, self.match_id_str()).await {
+            Ok(caps) => caps,
+            Err(error) => {
+                tracing::warn!(event = "duos.jloreCaps.failed", matchId = %self.match_id_str(), message = %error);
+                return;
+            }
+        };
+        if !caps.iter().any(|capped| *capped) {
+            return;
+        }
+        let mut core = self.lock();
+        core.jlore_capped = caps;
+        for seat in HUMAN_SEATS {
+            if announce && human(seat).is_some_and(|index| core.jlore_capped[index]) {
+                self.push_view(&core, seat);
+            }
+        }
     }
 
     /// `MATCH_RECORD_RESULT_ATTEMPTS` tries, the waits doubling from `MATCH_RECORD_RESULT_BACKOFF_MS`.
@@ -1524,8 +1572,8 @@ impl DuosActor {
         match code {
             SocketErrorCode::MatchOver => {}
             SocketErrorCode::Internal => {
-                // A match whose row is gone (an account deleted with it) takes no more rows: the
-                // actor lets go rather than retry for ever.
+                // A match whose row is gone (deleted from the store under the actor) takes no more
+                // rows: the actor lets go rather than retry for ever.
                 let row = one_tx!(self.shared.app.db, |t| t
                     .duos_matches_get(&self.shared.row.id)
                     .await?);

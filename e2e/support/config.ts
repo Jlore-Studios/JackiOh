@@ -31,10 +31,14 @@ export const routes = {
   practice: () => env("practiceRoute", "/practice"),
   /** R768000: the recent games and their replays. */
   replays: () => env("replaysRoute", "/replays"),
-  /** §14: the account page, whose Card packs and Dev tools toggles spec 45 opens. */
+  /** §14: the account page, whose Dev tools toggle spec 45 opens. */
   account: () => env("accountRoute", "/account"),
   /** #1307: the collection, wallet, set tracks and quests. */
   collection: () => env("collectionRoute", "/collection"),
+  /** R1579000: the Cards section. */
+  collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
+  /** #1577, R1580000: where spec 45 buys, opens and redeems. */
+  shop: () => env("shopRoute", "/shop"),
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */
@@ -101,6 +105,13 @@ export const timeouts = {
   /** Spec 38: one axe-core run over a whole page, a board included. */
   axe: 30_000,
 };
+
+/** BUILD M5-T1's two sizes, a desktop's and a phone's; spec 46 holds every menu to one screen at both (R1581000). */
+export const viewports = {
+  desktop: { label: "desktop", width: 1280, height: 720 },
+  phone: { label: "phone", width: 390, height: 844 },
+} as const;
+export type MenuViewport = (typeof viewports)[keyof typeof viewports];
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {

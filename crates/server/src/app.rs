@@ -62,8 +62,8 @@ pub struct App {
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
-    /// SPEC §11 R978000: the public card statistics' computed per-patch reports, held here for the
-    /// limiter's reason.
+    /// SPEC §11 R978000: the public card statistics' computed per-patch reports and R1583000's play
+    /// rates, held here for the limiter's reason.
     pub card_stats: api::stats::KeptReports,
     /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
     /// tests never share presence.
@@ -71,6 +71,9 @@ pub struct App {
     /// SPEC §11 R672: the rematch offers in memory (`api::rematch`). One per app, so parallel tests
     /// never share offers.
     pub rematch_offers: api::rematch::RematchOffers,
+    /// SPEC §11 R1523000: the seat ledger, the one game each profile holds (`seats`). One per app,
+    /// so parallel tests never share seats; `serve` boots it before the port opens.
+    pub seats: crate::seats::Seats,
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
     /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
     /// limiter's reason.
@@ -595,6 +598,12 @@ pub static ROUTES: &[Route] = &[
     ),
     (
         "GET",
+        "/api/stats/play-rates",
+        AuthLevel::None,
+        h!(api::stats::get_play_rates),
+    ),
+    (
+        "GET",
         "/api/stats/player",
         AuthLevel::Active,
         h!(api::stats::get_player),
@@ -925,6 +934,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         card_stats: api::stats::KeptReports::default(),
         queue_presence: api::queue::QueuePresence::new(),
         rematch_offers: api::rematch::RematchOffers::default(),
+        seats: crate::seats::Seats::default(),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,
@@ -1240,6 +1250,12 @@ async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
 pub async fn serve(env: Env) -> anyhow::Result<()> {
     init_logging();
     let app = build(env).await?;
+    // R1523000: the seat epoch moves on, then the ledger is filled from the database, before the
+    // port opens (so before `/readyz` can pass) and before any loop starts. Fatal, as a failed
+    // migration is: a server that cannot fence would seat a player its predecessor already seated.
+    crate::seats::boot(&app)
+        .await
+        .map_err(|error| anyhow!("the seat ledger could not boot: {error}"))?;
 
     // `bug_reports.rs`: whether GitHub takes the token, which `GET /api/catalog` then reports.
     let probing = Arc::clone(&app);

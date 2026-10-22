@@ -265,6 +265,9 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         ));
     };
     store.lock().await.reset();
+    // R1523000: the wipe took the seat epoch and every seat with it, so the ledger boots again on
+    // the empty store, as a restart over it would.
+    crate::seats::boot(app).await?;
 
     let mut profiles: IndexMap<String, String> = IndexMap::new();
     let mut granted_cards = 0;

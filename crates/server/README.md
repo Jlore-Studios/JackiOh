@@ -31,11 +31,11 @@ a sign-in by username, which it makes with the account's address and answers wit
 | --- | --- | --- |
 | Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` or a return as `loop.returned`, both alerts, and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, each live match checkpointed and its actor stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
-| Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
+| Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs`, `seats.rs` | state in memory; time from `tokio::time`. `seats.rs` is the seat ledger, the one game each profile holds (a match, a series not over or a co-op match), which every door into a game reserves all its seats through in one step before it writes; the in-match flag stays its record and second guard, boot fills it from the database after bumping `app.seat_epoch`, the reaper's tick reconciles it (`seats.drift`), and a claim on an older epoch writes nothing (R1523000) |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
 | Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, and the hero cards' full arts, one per card) and its check: no id twice, ids a settings text can carry, one default per kind a player picks, a full art naming its own card and no default (R1295000, R1297000, R1313000); `is_id_of` checks a deck's pick |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
@@ -164,7 +164,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
 | `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }`. The fixtures: `e2e-p1` and `e2e-p2`, active and granted every card past their starter cards; `e2e-pending`, pending, for spec 10; and `e2e-econ`, pending and a dev account in E2E mode alone, for spec 45, the one that walks the economy (R1310004) |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), `queued` (R897000), and `isDev`, whether `DEV_PROFILE_IDS` lists the caller (R1300000) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match, series and live co-op match (`currentDuosMatchId`, R1566000), the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), `queued` (R897000), and `isDev`, whether `DEV_PROFILE_IDS` lists the caller (R1300000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
@@ -197,15 +197,16 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
 | `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
-| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000) |
+| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
-| `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
+| `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
+| `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
@@ -215,7 +216,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read, `nextCursor` the opaque cursor of the page before it, R1384000), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
-| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
+| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002; `already_in_match` for a guest in a game and `conflict` for a host in one, R1065000, the ledger's answer to a join racing another door, and 503 `unavailable` while a newer server holds the seats, R1523000); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
 | `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§13.9) |
 | `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
 | `GET` | `/readyz` | none | readiness, render.yaml's `healthCheckPath`: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
@@ -389,7 +390,7 @@ counting a record file is read with, so a report is what the records gave. `stat
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
-retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
+retention purge; its row and id stay, so the same game is never written or counted again (R1044001). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
 
@@ -536,9 +537,9 @@ series still makes its picks.
 - `bots::fallback` is pure but for that key: which waiting ticket may have a bot (`fallback_due`)
   and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match and a side of no
   series that is not over, not one of the player's last `BOT_RECENT_OPPONENTS`, for Best of 1
-  holding decks and for Conquest a trio dealt for this catalog, the closest in rating; none for a
-  player rated above every bot). The queue's sweep (`api/queue.rs`, `try_pair`) pairs every two
-  people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
+  holding decks and for Conquest a trio dealt for this catalog, the closest in rating; for a
+  player rated above every bot, only a grinder within `MAX_FAIR_GAP`, R1555000). The queue's sweep
+  (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
   single-shot like a pair's claim) and starts the match, ranked, the person p1 and first to act as
   the older ticket of a pair is (R1453); a start that fails lets both go. A Conquest ticket and its
   bot (R641000) are claimed and made a series in one transaction (`start_bot_series`:
@@ -546,7 +547,14 @@ series still makes its picks.
   games the series is what holds the bot, so every bot claim checks, after it locks the bot, that
   it is a side of no series that is not over (`lock_free_bot` in `db/pg.rs`, a statement of its own
   so it reads what an earlier claim committed). The person is series p1; the series is ranked and
-  rated once as it ends, the bot's side as the bot it is (`plan_series_rating`).
+  rated once as it ends, the bot's side as the bot it is (`plan_series_rating`). While the top bots
+  grind (R1555000), a sweep that finds no ticket open at all then kicks off a ranked Best-of-1 match
+  between two bots (`kick_off_bot_match`): the pair is `choose_bot_pair`'s (the lowest-rated ready
+  grinder and the ready bot closest to it, not one of its recent opponents), at most
+  `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
+  (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), the grinder p1, and
+  neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
+  whose actor is not in memory, which no socket would come back to rebuild after a restart.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
   `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
   the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
@@ -617,7 +625,12 @@ series still makes its picks.
   match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
-  open-row sweep (R1450) would delete the skeleton.
+  open-row sweep (R1450) would delete the skeleton. Each refresh ends by setting grinding the bots
+  `plan_grind` names (R1555000): the top `BOT_GRINDERS` active bots while the season's
+  `BOT_GRIND_REFERENCE_RANK`-th placed person is more than `BOT_GRIND_GAP` above every one, until a
+  bot is within the gap less `BOT_GRIND_HYSTERESIS` (`bots_set_grinding`). A grinder is on
+  `BOT_GRIND_ACTIVE_HOURS` a day (`fallback::scheduled_hours`), and each of its rated wins counts
+  toward its next strength (`bots_note_grind_win`, from `api::ranked::commit_ranked_game`).
 - `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
@@ -782,18 +795,43 @@ counters, set tracks, held quests and owned full arts are zeroed by offsetting `
 deleted, so its quest clock starts again (R1310002). The starter cosmetics have no row and are
 untouched. On a new project the reset zeroes nothing.
 
+Migration 0051 gives a co-op seat 0012's rule for a 1v1 seat (R1497000). `duos_matches.a1` and `a2`
+become nullable and `on delete set null`, replacing 0039's cascade, so a deleted account's seat on a
+finished co-op match empties while the match, its result and its log stay for the teammate, whose
+replay still opens. `duos_matches_seats_filled_unless_over_check` lets only a match that has ended
+have an empty seat, so a delete that would empty a seat of a live co-op match raises, behind
+`DELETE /api/account`'s own 409. Both stores read an emptied seat back as `""` (`duos::store`), and
+the in-memory store refuses the live case too (`duos::store::refuse_live_seat`). A co-op room still
+goes with either of its people.
+
+Migration 0052 gives each `bot_ratings` row `ai_generation`, the AI generation
+(`crates/ai/generation.json`) the bot was last rated on (R1560000). A rated game against a bot whose
+row names an older generation, or none, widens its deviation by `BOT_PROMOTION_DEVIATION_BOOST` in
+quadrature per promotion (one for none), capped at a new player's, before rating it
+(`api/ranked.rs`, `ranked::glicko2::widen_for_promotions`), and stamps the row with the server's
+generation, so a bot's rating re-settles on each new AI from its rated games.
+
+Migration 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000): whether a ladder bot grinds
+now, which the pool's refresh sets and clears, and its rated wins since it started grinding or last
+stepped up a strength.
+
 ## Tests
 
 ```
 cargo test -p jackioh-server                          # the whole suite, on the in-memory store and fixture auth
-cargo test -p jackioh-server --test server actor::    # one area: api::, actor::, store::
+cargo test -p jackioh-server --test server actor::    # one area of the general binary: api::, actor::, bots::, loops::
+cargo test -p jackioh-server --test server_store store::   # the store suite, on the in-memory store
 sh crates/server/tests/sql/run.sh                     # schema, RLS and trigger invariants (Docker)
-sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it)
+sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it; DB_SHARDS=n databases at once, 3 by default)
 sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-`tests/server.rs` is one binary over `tests/{api,actor,bots,loops,store,support}/`. `support/deps.rs` builds a
-test `App` on `Db::Fake` and `Auth::E2e` and calls the router with `tower`'s `oneshot`;
+Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
+`tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
+`tests/db/run.sh` builds and links only that (CI's `db (store contract)` job stays under five minutes). A
+`store::` test lives in `server_store` only, and every other area in `server` only. `support/test_app.rs`
+builds a test `App` on `Db::Fake` and `Auth::E2e`; `support/deps.rs` re-exports it and calls the router with
+`tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; `support/store.rs` holds
 the helpers every file shares (the fake store: `fake`, `fake_ref`, `fake_lock`; one store call in its own

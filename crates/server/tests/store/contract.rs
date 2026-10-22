@@ -14,9 +14,9 @@
 //! `db/pg.rs`'s KNOWN DIVERGENCES block and the assertion here is written to the weaker of the two
 //! (deck order, action timestamps) rather than deleted.
 //!
-//!   cargo test -p jackioh-server --test server store::contract   -> `<case>::memory::*` always;
-//!                                                                    `<case>::postgres::*` skip
-//!   test:db (crates/server/tests/db/run.sh, DATABASE_URL set)     -> `<case>::postgres::*` run too
+//!   cargo test -p jackioh-server --test server_store store::contract   -> `<case>::memory::*` always;
+//!                                                                      `<case>::postgres::*` skip
+//!   test:db (crates/server/tests/db/run.sh, DATABASE_URL set)          -> `<case>::postgres::*` run too
 //!
 //! How the TS reads in Rust:
 //!
@@ -4999,6 +4999,86 @@ mod game_records {
         }
     }
 
+    /// A match between `p1` and `p2` finished at `ended_at`, with a result unless `result` is
+    /// false, a final hash unless `hash` is false, and one logged action unless `log` is false.
+    async fn ended_match(
+        harness: &StoreHarness,
+        (p1, p2): (&str, &str),
+        ended_at: i64,
+        result: bool,
+        hash: bool,
+        log: bool,
+    ) -> String {
+        let match_id = id();
+        let now = harness.now();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, now)));
+        if log {
+            q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+        }
+        if result {
+            let row: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [p1, p2],
+                "winnerProfileId": p1,
+                "reason": "concede",
+                "turns": 3,
+                "endedAt": ended_at,
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            }));
+            q!(harness, t => t.results_insert(&row));
+        }
+        q!(harness, t => t.matches_finish(&match_id, ended_at));
+        if hash {
+            q!(harness, t => t.matches_record_final_hash(&match_id, "final-hash"));
+        }
+        match_id
+    }
+
+    /// R1596000: the finished matches with a result, a final hash and a kept log that hold no
+    /// record, even an emptied one, in `[ended_after, ended_before)`, earliest ended first.
+    async fn r1596000_lists_the_finished_matches_whose_record_was_never_filed(harness: &StoreHarness) {
+        const DAY: i64 = 86_400_000;
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let after = now - 10_000;
+        let before = now - 1_000;
+        // Every flag true unless the list says otherwise.
+        let first = ended_match(harness, (&a.id, &b.id), after, true, true, true).await;
+        let second = ended_match(harness, (&a.id, &b.id), before - 1, true, true, true).await;
+        let _at_before = ended_match(harness, (&a.id, &b.id), before, true, true, true).await;
+        let too_old = ended_match(harness, (&a.id, &b.id), after - 1, true, true, true).await;
+        let filed = ended_match(harness, (&a.id, &b.id), after + 1, true, true, true).await;
+        q!(harness, t => t.game_records_insert(&game_record(&filed, json!({}))));
+        let emptied = ended_match(harness, (&a.id, &b.id), after + 2, true, true, true).await;
+        q!(harness, t => t.game_records_insert(&game_record(&emptied, json!({}))));
+        harness.age_game_record(&emptied, 8 * DAY).await;
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * DAY,
+            "matchActionsEndedBefore": now - 90 * DAY,
+            "playTelemetryEndedBefore": now - 365 * DAY,
+            "gameRecordsRecordedBefore": now - 7 * DAY,
+        }));
+        q!(harness, t => t.purge_expired(&cutoffs));
+        let _no_result = ended_match(harness, (&a.id, &b.id), after + 3, false, true, true).await;
+        let _no_hash = ended_match(harness, (&a.id, &b.id), after + 4, true, false, true).await;
+        let _no_log = ended_match(harness, (&a.id, &b.id), after + 5, true, true, false).await;
+        // A live match with a log that is never finished.
+        let live = id();
+        q!(harness, t => t.matches_create(&match_row(&live, &a.id, &b.id, harness, now)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&live, 1, "p1", "n1", now)]));
+
+        assert_eq!(
+            q!(harness, t => t.game_records_unfiled(after, before)),
+            vec![first.clone(), second.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_unfiled(0, before)),
+            vec![too_old, first, second]
+        );
+    }
+
     /// R1044000: a record written is folded into the totals once, in the transaction that writes
     /// it, and the totals give every report the records gave.
     async fn r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give(
@@ -5169,6 +5249,7 @@ mod game_records {
         r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give,
         r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time,
         r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
+        r1596000_lists_the_finished_matches_whose_record_was_never_filed,
     );
 }
 
@@ -5478,6 +5559,33 @@ mod ranked {
         assert!(q!(harness, t => t.ranked_bot("ai-hard")).is_none());
     }
 
+    async fn r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on(harness: &StoreHarness) {
+        let now = harness.now();
+        // A row written without one (before migration 0052) reads back without one.
+        let older: BotRating = from(json!({
+            "botId": "ai-gen",
+            "glicko": { "rating": 1200.0, "deviation": 60.0, "volatility": 0.06 },
+            "games": 40,
+            "updatedAt": now,
+        }));
+        q!(harness, t => t.ranked_put_bot(&older));
+        assert_eq!(
+            must(q!(harness, t => t.ranked_bot("ai-gen")), "the row").ai_generation,
+            None
+        );
+        // A rated game stamps it, and the upsert replaces it.
+        let mut stamped = j(&older);
+        stamped["aiGeneration"] = json!(13);
+        let stamped: BotRating = from(stamped);
+        q!(harness, t => t.ranked_put_bot(&stamped));
+        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(stamped.clone()));
+        let mut newer = j(&stamped);
+        newer["aiGeneration"] = json!(14);
+        let newer: BotRating = from(newer);
+        q!(harness, t => t.ranked_put_bot(&newer));
+        assert_eq!(q!(harness, t => t.ranked_bot("ai-gen")), Some(newer));
+    }
+
     async fn r611_records_a_rated_game_once_and_answers_it_back_whole(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
@@ -5654,6 +5762,7 @@ mod ranked {
         r607_lists_a_profile_s_badges_oldest_season_first,
         r608_keeps_the_best_jlorious_position_the_season_has_held,
         r610_keeps_each_bot_s_own_rating_upserted,
+        r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on,
         r611_records_a_rated_game_once_and_answers_it_back_whole,
         r611_records_a_bot_side_with_no_profile_and_no_rank,
         r748000_lists_rated_games_with_a_bot_side_since,
@@ -7078,7 +7187,120 @@ mod bots {
         assert!(q!(harness, t => t.tickets_claim_for_bot(&best_of_one.id, &bot.profile_id, &id(), now)));
     }
 
+    /// R1555000: a grind counts a grinding bot's rated wins and steps its strength up at the count,
+    /// to the strongest at most, its count back to 0 at each step, start and stop; its rating is
+    /// untouched. A bot not grinding, or an id that is no bot, counts nothing.
+    async fn r1555000_a_grind_counts_its_wins_and_steps_the_strength(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(3, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let row = |bots: Vec<BotRow>| {
+            let bot = must(bots.into_iter().next(), "the bot");
+            (bot.grinding, bot.grind_wins, bot.strength)
+        };
+        assert_eq!(row(q!(harness, t => t.bots_list())), (false, 0, 3));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(
+            row(q!(harness, t => t.bots_list())),
+            (false, 0, 3),
+            "not grinding"
+        );
+
+        q!(harness, t => t.bots_set_grinding(&bot.profile_id, true));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(row(q!(harness, t => t.bots_list())), (true, 1, 3));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(row(q!(harness, t => t.bots_list())), (true, 0, 4), "a step");
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        assert_eq!(
+            row(q!(harness, t => t.bots_list())),
+            (true, 0, 4),
+            "never past the strongest"
+        );
+        let rating = must(q!(harness, t => t.ranked_bot(&bot.profile_id)), "its R610 row");
+        assert_eq!(rating.glicko.rating, 1000.0, "a step moves no rating");
+
+        q!(harness, t => t.bots_note_grind_win(&bot.profile_id, 2, 4));
+        q!(harness, t => t.bots_set_grinding(&bot.profile_id, false));
+        assert_eq!(
+            row(q!(harness, t => t.bots_list())),
+            (false, 0, 4),
+            "the step is kept"
+        );
+
+        assert!(call!(harness, t => t.bots_set_grinding(&id(), true)).is_err());
+        assert!(call!(harness, t => t.bots_note_grind_win("a-bare-rating", 2, 4)).is_ok());
+    }
+
+    /// R1555000: a match between two bots claims both in one statement: two different free bots,
+    /// once, completed by the match's start and let go, both, when the start never comes.
+    async fn r1555000_a_pair_claim_takes_two_free_bots_once(harness: &StoreHarness) {
+        const MINUTE: i64 = 60_000;
+        let now = harness.now();
+        let version = harness.catalog_version.clone();
+        let made: [NewBot; 6] = std::array::from_fn(|_| new_bot(2, now - DAY, 1000.0));
+        for bot in &made {
+            q!(harness, t => t.bots_create(bot));
+        }
+        let [a, b, c, d, retired, in_series] = made.map(|bot| bot.profile_id);
+        q!(harness, t => t.bots_set_retired(&retired, Some(now)));
+        let person = active_profile(harness, None).await;
+        let series = super::series::series_row(harness, &person.id, &in_series, json!({}));
+        q!(harness, t => t.series_create(&series));
+        let in_match = |bots: &[BotRow], id: &str| {
+            bots.iter()
+                .find(|row| row.profile_id == id)
+                .and_then(|row| row.in_match_id.clone())
+        };
+
+        let match_id = id();
+        let pair = (a.clone(), b.clone());
+        assert!(q!(harness, t => t.bots_claim_pair(&pair, &match_id, &version, now)));
+        let bots = q!(harness, t => t.bots_list());
+        assert_eq!(in_match(&bots, &a), Some(match_id.clone()));
+        assert_eq!(in_match(&bots, &b), Some(match_id.clone()));
+        // Busy now: neither is claimed again, with the other or with a free one.
+        assert!(!q!(harness, t => t.bots_claim_pair(&pair, &id(), &version, now)));
+        assert!(!q!(harness, t => t.bots_claim_pair(&(c.clone(), a.clone()), &id(), &version, now)));
+
+        // Never a retired bot, a person, a bot in a series not over or one bot twice; and a refused
+        // claim leaves the free bot free.
+        for refused in [
+            (c.clone(), retired.clone()),
+            (person.id.clone(), c.clone()),
+            (in_series.clone(), c.clone()),
+            (c.clone(), c.clone()),
+        ] {
+            assert!(
+                !q!(harness, t => t.bots_claim_pair(&refused, &id(), &version, now)),
+                "{refused:?}"
+            );
+        }
+        assert_eq!(in_match(&q!(harness, t => t.bots_list()), &c), None);
+
+        // The start completes the claim's match.
+        q!(harness, t => t.matches_create(&match_row(&match_id, &a, &b, harness, now)));
+        let started = must(q!(harness, t => t.matches_get(&match_id)), "the match");
+        assert_eq!(started.players, pair);
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + MINUTE)).is_empty());
+
+        // A claim whose start never came lets both bots go.
+        assert!(
+            q!(harness, t => t.bots_claim_pair(&(c.clone(), d.clone()), &id(), &version, now - 2 * MINUTE))
+        );
+        let mut released = q!(harness, t => t.bots_release_stale_starts(now - MINUTE));
+        released.sort();
+        let mut both = vec![c.clone(), d.clone()];
+        both.sort();
+        assert_eq!(released, both);
+        let bots = q!(harness, t => t.bots_list());
+        assert_eq!((in_match(&bots, &c), in_match(&bots, &d)), (None, None));
+    }
+
     both_stores!(
+        r1555000_a_grind_counts_its_wins_and_steps_the_strength,
+        r1555000_a_pair_claim_takes_two_free_bots_once,
         r1454_bots_create_and_list,
         r1454_retire_and_decks,
         r1453_claim_for_bot_is_single_shot,
@@ -8135,9 +8357,12 @@ mod duos {
         assert!(q!(harness, t => t.duos_matches_live()).is_empty());
     }
 
-    /// 0039's cascade (0012's rule): a deleted account takes its rooms and its co-op matches with
-    /// their logs, and nothing of its teammate.
-    async fn s6_a_deleted_profile_takes_its_rooms_and_matches(harness: &StoreHarness) {
+    /// 0039's cascade takes a deleted account's rooms; 0051 empties its seat on a finished co-op
+    /// match, which keeps its result and its log for the teammate, and both stores read the emptied
+    /// seat back as the empty id, as a 1v1 seat reads (R1497000).
+    async fn r1497000_a_deleted_profile_takes_its_rooms_and_empties_its_seat_on_a_finished_match(
+        harness: &StoreHarness,
+    ) {
         let a1 = active_profile(harness, None).await;
         let a2 = active_profile(harness, None).await;
         let now = harness.now();
@@ -8146,13 +8371,59 @@ mod duos {
         let row = duos_match(&a1.id, &a2.id, now);
         q!(harness, t => t.duos_matches_create(&row));
         q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now)));
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "poolEmptied" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
 
         assert!(q!(harness, t => t.profiles_remove(&a2.id)));
         assert!(q!(harness, t => t.duos_rooms_get("DUOSGH")).is_none());
         assert!(q!(harness, t => t.duos_rooms_get("DUOSJK")).is_some());
-        assert!(q!(harness, t => t.duos_matches_get(&row.id)).is_none());
-        assert!(q!(harness, t => t.duos_actions(&row.id)).is_empty());
+        let kept = must(
+            q!(harness, t => t.duos_matches_get(&row.id)),
+            "the finished match stays",
+        );
+        assert_eq!((kept.a1.as_str(), kept.a2.as_str()), (a1.id.as_str(), ""));
+        assert_eq!((kept.ended_at, kept.result), (Some(now + 1_000), Some(result)));
+        assert_eq!(q!(harness, t => t.duos_actions(&row.id)).len(), 1);
         assert!(q!(harness, t => t.profiles_get_by_id(&a1.id)).is_some());
+
+        assert!(q!(harness, t => t.profiles_remove(&a1.id)));
+        let emptied = must(
+            q!(harness, t => t.duos_matches_get(&row.id)),
+            "the match outlives both people",
+        );
+        assert_eq!((emptied.a1.as_str(), emptied.a2.as_str()), ("", ""));
+    }
+
+    /// 0051's check, and the fake's refusal of it: a profile seated in a live co-op match is not
+    /// deleted, from either seat, and the match and its log are left as they were; once the match
+    /// has ended the same delete goes through (R1497000).
+    async fn r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now);
+        q!(harness, t => t.duos_matches_create(&row));
+        q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now)));
+
+        for seated in [&a1, &a2] {
+            assert!(
+                call!(harness, t => t.profiles_remove(&seated.id)).is_err(),
+                "a seat of a live co-op match"
+            );
+            assert!(q!(harness, t => t.profiles_get_by_id(&seated.id)).is_some());
+        }
+        assert_eq!(q!(harness, t => t.duos_matches_get(&row.id)), Some(row.clone()));
+        assert_eq!(q!(harness, t => t.duos_actions(&row.id)).len(), 1);
+        assert_eq!(
+            q!(harness, t => t.duos_matches_live_for(&a2.id)),
+            Some(row.id.clone())
+        );
+
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 1_000)));
+        assert!(q!(harness, t => t.profiles_remove(&a2.id)));
+        let ended = must(q!(harness, t => t.duos_matches_get(&row.id)), "the match");
+        assert_eq!((ended.a1.as_str(), ended.a2.as_str()), (a1.id.as_str(), ""));
     }
 
     /// §13.9, the retention purge: a co-op match's log goes once the match ended before the cutoff,
@@ -8266,7 +8537,8 @@ mod duos {
         s6_a_block_either_way_defeats_the_claim,
         r1047002_open_co_op_rooms_are_counted_by_host,
         s6_matches_finish_once_and_the_log_is_append_only,
-        s6_a_deleted_profile_takes_its_rooms_and_matches,
+        r1497000_a_deleted_profile_takes_its_rooms_and_empties_its_seat_on_a_finished_match,
+        r1497000_a_profile_seated_in_a_live_co_op_match_is_not_deleted,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
     );
 }
@@ -9007,6 +9279,99 @@ mod economy {
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+    );
+}
+
+/// R1523000: the seat ledger's epoch (migration 0054's `app.seat_epoch`). A claim fences on the epoch
+/// its server booted on; once a newer server's bump has moved it on, the claim's transaction writes
+/// nothing.
+mod r1523000_seat_epoch {
+    use super::*;
+
+    /// A claim's transaction, as every door writes one: the fence first, then its seat.
+    async fn claim(
+        harness: &StoreHarness,
+        epoch: i64,
+        profile_id: &str,
+        match_id: &str,
+    ) -> Result<bool, StoreError> {
+        let mut t = harness.db.begin(None).await?;
+        t.seats_fence(epoch).await?;
+        let seated = t.profiles_set_in_match(profile_id, Some(match_id)).await?;
+        t.commit().await?;
+        Ok(seated)
+    }
+
+    fn flag_of(profile: Option<Profile>) -> Value {
+        j(&must(profile, "the profile"))["inMatchId"].clone()
+    }
+
+    async fn r1523000_a_fence_on_an_older_epoch_refuses_and_its_transaction_writes_nothing(
+        harness: &StoreHarness,
+    ) {
+        let profile = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &profile.id, &other.id, harness, harness.now())));
+
+        let older = q!(harness, t => t.seats_bump_epoch());
+        let current = q!(harness, t => t.seats_bump_epoch());
+        assert_eq!(
+            current,
+            older + 1,
+            "{}: a bump moves the epoch on by one",
+            harness.name
+        );
+
+        let fenced = claim(harness, older, &profile.id, &match_id).await;
+        assert!(
+            matches!(fenced, Err(StoreError::Fenced)),
+            "{}: {fenced:?}",
+            harness.name
+        );
+        assert!(
+            flag_of(q!(harness, t => t.profiles_get_by_id(&profile.id))).is_null(),
+            "{}: the fenced claim wrote nothing",
+            harness.name
+        );
+
+        // The control: the epoch the newest server booted on lets the same claim land.
+        let landed = claim(harness, current, &profile.id, &match_id).await;
+        assert!(matches!(landed, Ok(true)), "{}: {landed:?}", harness.name);
+        assert_eq!(
+            flag_of(q!(harness, t => t.profiles_get_by_id(&profile.id))),
+            match_id.as_str()
+        );
+    }
+
+    async fn r1523000_lists_every_profile_seated_in_a_match(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let free = active_profile(harness, None).await;
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &a.id, &b.id, harness, harness.now())));
+        q!(harness, t => t.profiles_set_in_match(&a.id, Some(match_id.as_str())));
+        q!(harness, t => t.profiles_set_in_match(&b.id, Some(match_id.as_str())));
+
+        let seated = q!(harness, t => t.profiles_seated());
+        let mut expected = vec![a.id.clone(), b.id.clone()];
+        expected.sort();
+        assert_eq!(
+            seated
+                .iter()
+                .map(|row| row.profile_id.clone())
+                .collect::<Vec<_>>(),
+            expected,
+            "{}: by profile id, the free one left out",
+            harness.name
+        );
+        assert!(seated.iter().all(|row| row.match_id == match_id));
+        assert!(!seated.iter().any(|row| row.profile_id == free.id));
+    }
+
+    both_stores!(
+        r1523000_a_fence_on_an_older_epoch_refuses_and_its_transaction_writes_nothing,
+        r1523000_lists_every_profile_seated_in_a_match,
     );
 }
 

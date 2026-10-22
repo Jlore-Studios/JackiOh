@@ -1,11 +1,11 @@
 // `/leaderboard`: Jlorious first, then the tiers, then the Raisins — and never a rating, nor a
 // profile id (R1436).
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
-import LeaderboardRoute from "./leaderboard.tsx";
+import LeaderboardRoute, { leaderboardTestid } from "./leaderboard.tsx";
 
 vi.mock("../net/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/api.ts")>();
@@ -93,5 +93,21 @@ describe("the leaderboard screen", () => {
     render(<LeaderboardRoute token={TOKEN} />);
 
     expect(await screen.findByTestId("leaderboard-error")).toHaveTextContent("the server refused");
+  });
+
+  it("#1568 a failed read offers Try again, which reads the ladder again and shows it", async () => {
+    vi.mocked(getLeaderboard).mockRejectedValueOnce(new Error("the server refused")).mockResolvedValueOnce(board());
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(leaderboardTestid.error)).toHaveTextContent("the server refused");
+    expect(screen.getByTestId(leaderboardTestid.retry)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(leaderboardTestid.retry));
+    expect(screen.getByTestId(leaderboardTestid.loading)).toBeInTheDocument();
+    expect(screen.queryByTestId(leaderboardTestid.retry)).toBeNull();
+
+    expect(await screen.findByTestId(leaderboardTestid.season)).toHaveTextContent("Season v0.2");
+    expect(getLeaderboard).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

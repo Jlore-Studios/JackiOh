@@ -33,6 +33,7 @@ import type { LuauBindings } from "./luau.ts";
 import type { Action, ActionBody, CardDef, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
+import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { CustomCard } from "../wire/generated/CustomCard.ts";
 import type { CustomIssue } from "../wire/generated/CustomIssue.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
@@ -498,8 +499,14 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
  * `CraftPreview` — so the block editor shows what the reducer will say and the client decides
  * nothing (CLAUDE.md rule 7).
  */
-export function craftPreview(recipe: CraftRecipe, cost: number): CraftPreview {
-  return call("craftPreview", () => parsed<CraftPreview>(engine.craft_preview(json(recipe), cost)));
+export function craftPreview(
+  recipe: CraftRecipe,
+  cost: number,
+  prompt: Pick<PendingPromptView, "craftMode" | "craftOffer"> = {},
+): CraftPreview {
+  // R1563007: the open prompt's mode and offer, so the verdict is the one its answer gets.
+  const slice = { craftMode: prompt.craftMode, craftOffer: prompt.craftOffer };
+  return call("craftPreview", () => parsed<CraftPreview>(engine.craft_preview(json(recipe), cost, json(slice))));
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */

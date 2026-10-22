@@ -1,6 +1,6 @@
-//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migration 0039): co-op rooms, co-op
-//! matches and their append-only log, over Postgres (`pg` below) or the in-memory fake (`fake`
-//! below, whose tables are `FakeTables::duos`).
+//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migrations 0039 and 0051): co-op
+//! rooms, co-op matches and their append-only log, over Postgres (`pg` below) or the in-memory fake
+//! (`fake` below, whose tables are `FakeTables::duos`).
 //!
 //! Same shape as `db::store`: every store method is one method on `Tx`, named `duos_<table>_<verb>`,
 //! whose body dispatches to this file's `pg::<name>` or `fake::<name>`. The impl lives here, beside
@@ -128,9 +128,9 @@ pub struct DuosMatchOptions {
 pub struct DuosMatch {
     pub id: String,
     pub seed: String,
-    /// The room's host.
+    /// The room's host; empty once the match has ended and their account was deleted (R1497000).
     pub a1: String,
-    /// The room's guest.
+    /// The room's guest; empty once the match has ended and their account was deleted (R1497000).
     pub a2: String,
     pub difficulty: Difficulty,
     pub options: DuosMatchOptions,
@@ -302,24 +302,41 @@ impl Tx<'_> {
     }
 }
 
-/// Migration 0039's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): a deleted
-/// profile's rooms (host or guest) and co-op matches (either seat) go, each match with its log.
+/// Migration 0051's `duos_matches_seats_filled_unless_over_check`, in the fake
+/// (`db::fake::profiles_remove`): a profile seated in a live co-op match is not deleted (R1497000).
+pub fn refuse_live_seat(tables: &DuosTables, profile_id: &str) -> StoreResult<()> {
+    match tables
+        .matches
+        .iter()
+        .find(|row| row.ended_at.is_none() && (row.a1 == profile_id || row.a2 == profile_id))
+    {
+        Some(row) => Err(format!(
+            "duos_matches_seats_filled_unless_over_check: profile {profile_id} holds a seat in live co-op match {}",
+            row.id
+        )
+        .into()),
+        None => Ok(()),
+    }
+}
+
+/// Migration 0039's `on delete cascade` for rooms and 0051's `on delete set null` for seats, in the
+/// fake (`db::fake::remove_profile_rows`): a deleted profile's rooms (host or guest) go, and its seat
+/// on each co-op match empties. The match and its log stay for the teammate (R1497000).
 pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
     tables
         .rooms
         .retain(|room| room.host != profile_id && room.guest.as_deref() != Some(profile_id));
-    let gone: Vec<String> = tables
-        .matches
-        .iter()
-        .filter(|row| row.a1 == profile_id || row.a2 == profile_id)
-        .map(|row| row.id.clone())
-        .collect();
-    tables.matches.retain(|row| !gone.contains(&row.id));
-    tables.actions.retain(|row| !gone.contains(&row.match_id));
+    for row in tables.matches.iter_mut() {
+        for seat in [&mut row.a1, &mut row.a2] {
+            if *seat == profile_id {
+                seat.clear();
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
-// Postgres (migration 0039)
+// Postgres (migrations 0039 and 0051)
 // ---------------------------------------------------------------------------
 
 mod pg {
@@ -409,8 +426,10 @@ mod pg {
         Ok(DuosMatch {
             id: uuid_text(row, "id")?,
             seed: row.try_get("seed")?,
-            a1: uuid_text(row, "a1")?,
-            a2: uuid_text(row, "a2")?,
+            // R1497000: a deleted account's seat (migration 0051) reads back empty, as a 1v1 seat does
+            // (db::pg, KNOWN DIVERGENCES, deleted accounts).
+            a1: uuid_or_null(row, "a1")?.unwrap_or_default(),
+            a2: uuid_or_null(row, "a2")?.unwrap_or_default(),
             difficulty: difficulty_of(&row.try_get::<String, _>("difficulty")?)?,
             options: serde_json::from_value(row.try_get::<Value, _>("options")?)?,
             created_at: ms_of(row.try_get("created_at")?),

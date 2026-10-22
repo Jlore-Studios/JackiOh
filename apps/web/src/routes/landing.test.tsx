@@ -165,11 +165,11 @@ afterEach(() => {
 
 // B37: route and CTAs
 
+// R1577000, R1578000: the three doors and where each leads.
 const CTAS = [
-  ["Play vs AI", landingTestid.playAi, paths.practice],
-  ["Play online", landingTestid.playOnline, paths.play],
-  ["Build decks", landingTestid.buildDecks, paths.decks],
+  ["Play", landingTestid.play, paths.play],
   ["Collection", landingTestid.collection, paths.collection],
+  ["Shop", landingTestid.shop, paths.shop],
 ] as const;
 
 describe("B37 the landing route", () => {
@@ -299,21 +299,45 @@ describe("B37 the corner slot", () => {
     expect(landing()).toHaveAttribute("data-account", "anonymous");
   });
 
-  it("B37 the three play CTAs are there whatever the slot shows", async () => {
+  it("B37 the three doors are there whatever the slot shows", async () => {
     signedIn();
     serve("hang");
     render(<LandingRoute />);
     for (const [, testid] of CTAS) expect(within(landing()).getByTestId(testid)).toBeInTheDocument();
   });
 
-  it("B37 says, beside the CTAs, that online play needs an invite code and Play vs AI needs no account", () => {
+  it("R1578000 the Play door leads to the hub, where online play comes first", () => {
     render(<LandingRoute />);
-    const note = within(landing()).getByTestId(landingTestid.inviteOnly);
-    expect(note.textContent).toMatch(/invite code/);
-    // des-9: the Play vs AI note already says no account is needed.
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
-    expect(within(ctas).getByText(/No account needed/)).toBeInTheDocument();
-    expect(note.textContent).not.toMatch(/needs no account/);
+    const play = within(ctas).getByTestId(landingTestid.play);
+    expect(play.closest("a")?.getAttribute("href")).toBe(paths.play);
+    expect(paths.play).toBe("/play");
+    expect(within(ctas).getByText("Online first: every way to play, from one screen.")).toBeInTheDocument();
+    // The hub, not the landing, takes the account promise back: nothing here says none is needed.
+    expect(within(ctas).queryByText(/No account needed/)).toBeNull();
+  });
+
+  it("R1577000 the removed entries have no call to action on the landing", () => {
+    render(<LandingRoute />);
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    for (const path of [paths.together, paths.decks, paths.creator]) {
+      expect(ctas.querySelector(`a[href="${path}"]`), `${path} has no door`).toBeNull();
+    }
+    // The invite-only sentence lives on `/invite` and `/play`, not beside the doors.
+    expect(within(ctas).queryByText(/invite code/)).toBeNull();
+  });
+
+  it("R1577000 Play reads as the main action: it is the primary door, largest and first", () => {
+    render(<LandingRoute />);
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    // The dev-only hotseat link shares the nav but is no door.
+    const doors = [...ctas.querySelectorAll("a.landing-cta")];
+    expect(doors.map((door) => door.getAttribute("data-testid"))).toEqual([
+      landingTestid.play,
+      landingTestid.collection,
+      landingTestid.shop,
+    ]);
+    expect(doors[0]).toHaveClass("landing-cta--primary");
   });
 });
 
@@ -673,21 +697,58 @@ describe("R639 your table", () => {
     expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
   });
 
-  it("R639 shows the record and the favourites the device kept, and Clear forgets them", () => {
-    withGames(4, { "core-004": { seen: 4, played: 9, playedAgainst: 0, destroyed: 0, defeated: 0 } });
+  it("R639 R1584000 the floor shows the device's stats one at a time, and Clear forgets them", async () => {
+    withGames(4, { "core-004": { seen: 4, played: 9 } });
+    render(<LandingRoute />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
+    const table = screen.getByTestId(landingTestid.stats);
+    expect(table.textContent).toContain("Old Faithful");
+    expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe("played 9×");
+    expect(table.querySelector('[data-def-id="core-004"]')).not.toBeNull();
+    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
+    expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("The Record");
+    expect(table.textContent).toContain("4 games: 4 won, 0 lost (100% won)");
+    fireEvent.click(screen.getByTestId(landingTestid.statsClear));
+    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+  });
+
+  it("R1584000 the record alone shows while the device holds no card to show", () => {
+    withGames(4);
     render(<LandingRoute />);
     const table = screen.getByTestId(landingTestid.stats);
     expect(table.textContent).toContain("4 games: 4 won, 0 lost (100% won)");
-    expect(table.querySelector('[data-stat="played"]')?.textContent).toContain("played 9×");
-    fireEvent.click(screen.getByTestId(landingTestid.statsClear));
-    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+    expect(screen.queryByTestId(landingTestid.showcase)).toBeNull();
+  });
+
+  it("R1584000 the floor holds the stats and the footer, and fills one screen only with stats", () => {
+    withGames(4, { "core-004": { played: 9 } });
+    render(<LandingRoute />);
+    const floor = document.querySelector(".landing-floor");
+    expect(floor).not.toBeNull();
+    expect(floor?.querySelector('[data-testid="landing-stats"]')).not.toBeNull();
+    expect(floor?.querySelector(".site-footer")).not.toBeNull();
+    cleanup();
+    withGames(0);
+    render(<LandingRoute />);
+    expect(document.querySelector(".landing-floor > .site-footer")).not.toBeNull();
+    expect(document.querySelector(".landing-floor > .landing-stats")).toBeNull();
+
+    const sheet = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "landing.css"), "utf8");
+    expect(sheet).toContain(".landing .landing-floor:has(> .landing-stats) {");
+    expect(sheet).toContain("height: 100dvh");
   });
 });
 
 // R765: rejoin a live online game from the main menu
 
 describe("R765 the main menu's live-game banner", () => {
-  function serveInGame(currentMatchId: string | null, currentSeriesId: string | null = null): void {
+  function serveInGame(
+    currentMatchId: string | null,
+    currentSeriesId: string | null = null,
+    currentDuosMatchId: string | null = null,
+  ): void {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: unknown) => {
@@ -700,6 +761,7 @@ describe("R765 the main menu's live-game banner", () => {
               emailVerified: true,
               currentMatchId,
               currentSeriesId,
+              currentDuosMatchId,
               email: "player@example.test",
             }),
           );
@@ -729,6 +791,16 @@ describe("R765 the main menu's live-game banner", () => {
     render(<LandingRoute />);
     const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
     expect(rejoin).toHaveAttribute("href", paths.series("s-3"));
+  });
+
+  it("R1566000 a player whose co-op game is live sees the banner, and Rejoin leads to /duos/<id>", async () => {
+    signedIn();
+    serveInGame(null, null, "d-3");
+    render(<LandingRoute />);
+
+    const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
+    expect(banner).toHaveAttribute("data-kind", "duos");
+    await expectLeadsTo(within(banner).getByTestId(gameBannerTestid.rejoin), paths.duos("d-3"));
   });
 
   it("R765 no live game, or no account, shows no banner", async () => {

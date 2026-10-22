@@ -24,7 +24,10 @@ have used:
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
   work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
   With `controller` on (#1455) the status loop's sweep plans the work and starts each run with
-  its plan (`controller.start`), and any other sweep leaves the work to the loop while it goes.
+  its plan (`controller.start`), and any other sweep leaves the work to the loop while it goes;
+- just before that, in the status loop, the night runs it started that have ended: it delivers
+  them itself (`controller.deliver`, #1537), as they have no `deliver` job, so a run's item is
+  delivered within a tick of its model job ending, before the loop plans again.
 
 It looks back to the later of `LOOKBACK` and the first sweep ever (so the first one replays
 nothing), leaves anything younger than `SETTLE` to a handler that may still be running, and
@@ -75,7 +78,7 @@ def sweep(ctx: Context) -> list[str]:
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
     for part in (_labels, _comments, _reviews, _assignments, _failed_ci, _needs_plan,
-                 _green_heads, _trees, _night_run, _issue_types, _difficulty_labels):
+                 _green_heads, _trees, _deliveries, _night_run, _issue_types, _difficulty_labels):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -403,6 +406,15 @@ def _trees(ctx: Context, since: datetime) -> list[str]:
 
     _each(ctx.gh.list_issues(labels=LABEL_TREE), act, notes)
     return notes
+
+
+def _deliveries(ctx: Context, since: datetime) -> list[str]:
+    """The status loop delivers the night runs it started once they end (`controller.deliver`,
+    #1537): before `_night_run`, so the lanes they held are free, and their items settled, when it
+    plans. Any other sweep leaves them to the loop."""
+    if not ctx.cfg.controller_loop:
+        return []
+    return controller.deliver(ctx)
 
 
 def _night_run(ctx: Context, since: datetime) -> list[str]:

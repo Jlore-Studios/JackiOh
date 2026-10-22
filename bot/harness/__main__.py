@@ -25,6 +25,7 @@ from harness import disk as disk_mod
 from harness import stats as stats_mod
 from harness import deliver as deliver_mod
 from harness import events as events_mod
+from harness import identity as identity_mod
 from harness import logins as logins_mod
 from harness import plan as plan_mod
 from harness import providers as providers_mod
@@ -32,6 +33,7 @@ from harness import quiet as quiet_mod
 from harness import status as status_mod
 from harness import sweep as sweep_mod
 from harness import triage as triage_mod
+from harness import wake as wake_mod
 from harness.clock import iso, now as clock_now, parse_iso
 from harness.config import LABELS, TRUST_PATH, Config
 from harness.errors import ConfigError, GitHubError, HarnessError, LoginError
@@ -186,6 +188,44 @@ def cmd_quiet(cfg: Config, args: argparse.Namespace) -> int:
     excused = f" (the rise was {verdict.excused_by})" if verdict.excused_by else ""
     _summary(f"### Quiet: {'yes' if verdict.quiet else 'no'}\n\n{verdict.reason}{excused}.\n")
     _dump(verdict.to_dict())
+    return 0
+
+
+def cmd_wake(cfg: Config, args: argparse.Namespace) -> int:
+    """The morning start (`wake.py`): `--wait` sleeps until the wake time, `--list` prints this
+    bot's subscriptions to wake as JSON on its last line, and `--ping` wakes one with the job's
+    own secret."""
+    if args.ping:
+        ok, line = wake_mod.wake(cfg, args.ping)
+        print(line)
+        _summary(line)
+        return 0 if ok else 1
+    ctx = _ctx(cfg, write=False)
+    now = ctx.now()
+    if args.list:
+        found, notes = wake_mod.to_wake(ctx, identity_mod.HOME)
+        print(json.dumps(found))
+        for line in notes:
+            print(f"wake: {line}", file=sys.stderr)
+        _summary(f"### Wake ({identity_mod.HOME})\n\n"
+                 f"{len(found)} to wake.{_bullets(notes)}")
+        return 0
+    wait = None if args.now else wake_mod.until_wake(now)
+    if not args.now and wait is None:
+        reason = f"outside the hours around {wake_mod.WAKE_AT:%H:%M} {wake_mod.ZONE}"
+    elif not args.now and wake_mod.already_woken(
+            ctx.gh.list_runs(wake_mod.WORKFLOW, status="success", limit=10), now):
+        reason, wait = "an earlier run already woke today's sessions", None
+    else:
+        reason = ""
+    if reason:
+        print(f"wake: nothing to do: {reason}")
+        _output({"go": "false"})
+        return 0
+    if wait:
+        print(f"wake: sleeping {wait} until {wake_mod.WAKE_AT:%H:%M} {wake_mod.ZONE}")
+        time.sleep(wait.total_seconds())
+    _output({"go": "true"})
     return 0
 
 
@@ -737,6 +777,12 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--item", default="")
     p.add_argument("--mode", default="auto", choices=plan_mod.MODES)
     sub.add_parser("quiet", help="wait until nobody else is spending the subscription")
+    p = sub.add_parser("wake", help="start the Claude sessions that are not running (wake.py)")
+    p.add_argument("--wait", action="store_true",
+                   help="sleep until the wake time, or say there is nothing to do (the default)")
+    p.add_argument("--now", action="store_true", help="wake at once, at any hour")
+    p.add_argument("--list", action="store_true", help="print this bot's subscriptions to wake")
+    p.add_argument("--ping", default="", help="wake this one subscription with the job's secret")
     p = sub.add_parser("work", help="the model job: build, review and fix one item")
     p.add_argument("--plan", required=True)
     p.add_argument("--out", required=True)
@@ -811,6 +857,7 @@ def parser() -> argparse.ArgumentParser:
 COMMANDS = {
     "peek": cmd_peek,
     "quiet": cmd_quiet,
+    "wake": cmd_wake,
     "plan": cmd_plan,
     "work": cmd_work,
     "plan-fetch": cmd_plan_fetch,

@@ -46,7 +46,8 @@ mod e6_spell_damage_s4_4_step_0 {
     use super::*;
 
     #[test]
-    fn a_spell_s_hit_is_raised_by_the_sum_of_the_spell_damage_on_its_controller_s_units_once_per_hit() {
+    fn r1563002_a_spell_s_hit_is_raised_by_the_sum_of_the_spell_damage_on_its_controller_s_cards_once_per_hit()
+     {
         let mut state = playing("dc-spell-damage");
         put(&mut state, &solar.id, slot(P1, Row::Units, 1), json!({}));
         put(
@@ -55,11 +56,12 @@ mod e6_spell_damage_s4_4_step_0 {
             slot(P1, Row::Units, 2),
             json!({ "radiant": true }),
         );
-        // The opponent's Spell Damage is theirs; a Field Spell and a face-down Trap printing it are no units.
+        // The opponent's Spell Damage is theirs; a face-up Field Spell printing it counts (R1563002), and a
+        // face-down Trap printing it does not, its text asleep (R1487000).
         put(&mut state, &solar.id, slot(P2, Row::Units, 1), json!({}));
         put(&mut state, &lens.id, slot(P1, Row::Backrow, 1), json!({}));
         put(&mut state, &hidden_lens.id, slot(P1, Row::Backrow, 2), json!({}));
-        assert_eq!(spell_damage_of(&state, P1), 2 + 5);
+        assert_eq!(spell_damage_of(&state, P1), 2 + 5 + 1);
         let target = put(&mut state, &wall.id, slot(P2, Row::Units, 2), json!({}));
         find_instance_mut(&mut state, &target.id)
             .expect("on the field")
@@ -78,7 +80,7 @@ mod e6_spell_damage_s4_4_step_0 {
         }));
         assert_eq!(
             to_json(&events_of_type(&result.events, GameEventType::Damage)),
-            json!([{ "type": "damage", "sourceId": spell.id, "targetId": target.id, "amount": 3 + 7, "combat": false }])
+            json!([{ "type": "damage", "sourceId": spell.id, "targetId": target.id, "amount": 3 + 8, "combat": false }])
         );
         assert!(replays_to(&game.start, &game.log, game.state()));
     }

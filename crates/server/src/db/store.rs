@@ -67,6 +67,11 @@ pub enum StoreError {
     /// no clash: the log answers it with that row. The field is the message.
     #[error("{0}")]
     SeqClash(String),
+    /// R1523000: `seats_fence` found the seat epoch moved past the one this process booted on, so a
+    /// newer server holds the seats. The claiming transaction writes nothing, and its door answers
+    /// 503.
+    #[error("the seat ledger's epoch has moved on: a newer server holds the seats")]
+    Fenced,
     /// The driver's own failure: a lost connection, a constraint, a function's `raise`.
     #[error(transparent)]
     Db(#[from] sqlx::Error),
@@ -235,6 +240,14 @@ impl Profile {
     pub fn username(&self) -> String {
         render_username(&self.username_base, self.username_tag)
     }
+}
+
+/// R1523000: one profile whose in-match flag is set, and the match it names (`profiles_seated`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SeatedProfile {
+    pub profile_id: String,
+    pub match_id: String,
 }
 
 /// `profiles_create`'s argument. The new profile's username is the store's to give, the lowest
@@ -610,7 +623,8 @@ pub struct MatchRow {
     pub ranked: Option<bool>,
     /// R672: the mode a rematch was made in, written when the rematch is created (migration 0023).
     /// Absent on every older row, whose mode `matches_mode_of` keeps deriving from its tickets,
-    /// room or series exactly as before — no creation site but the rematch writes this.
+    /// room or series exactly as before — no creation site but the rematch and a match between two
+    /// bots (R1555000) writes this.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<QueueMode>,
     /// R672: a double-or-nothing rematch's stakes (migration 0023). Absent reads as 1, a normal
@@ -976,6 +990,10 @@ pub struct BotRating {
     pub glicko: Glicko,
     pub games: i64,
     pub updated_at: i64,
+    /// R1560000: the AI generation (`crates/ai/generation.json`) the bot was last rated on; `None`
+    /// for a row not rated since R1560000 (migration 0052).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ai_generation: Option<i64>,
 }
 
 /// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
@@ -1019,6 +1037,12 @@ pub struct BotRow {
     pub rating: f64,
     /// The match it is in, as for a profile (§9.5).
     pub in_match_id: Option<String>,
+    /// R1555000: whether it grinds now (migration 0053), set and cleared by the pool's refresh.
+    #[serde(default)]
+    pub grinding: bool,
+    /// R1555000: the rated games it has won since it started grinding or last stepped up.
+    #[serde(default)]
+    pub grind_wins: i32,
 }
 
 /// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
@@ -1441,7 +1465,8 @@ pub struct StartMatchInput {
     pub seats: (MatchSeat, MatchSeat),
     /// R672: the mode a rematch is made in, carried onto the match row. Absent everywhere else:
     /// the queue, the rooms and the series keep deriving the mode from what made the match
-    /// (`matches_mode_of`), and only a rematch — which no ticket, room or series made — states it.
+    /// (`matches_mode_of`), and only a rematch and a match between two bots (R1555000) — which no
+    /// ticket, room or series made — state it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<QueueMode>,
     /// R672: a double-or-nothing rematch's stakes, carried onto the match row. Absent reads as 1.
@@ -1671,14 +1696,37 @@ impl Tx<'_> {
         dispatch!(self, profiles_clear_in_match(profile_id, match_id))
     }
 
+    /// R1523000: every profile whose in-match flag is set, with its match, by profile id: the seat
+    /// ledger's boot and reconcile read it.
+    pub async fn profiles_seated(&mut self) -> StoreResult<Vec<SeatedProfile>> {
+        dispatch!(self, profiles_seated())
+    }
+
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
     /// trios, custom cards (R915008), tutorial progress, its age check and terms acceptances
     /// (R757000, R757001), queue
     /// tickets, rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches, results and series stay for the other
-    /// player, with this profile's seat left empty (migration 0012). False when there was no such
-    /// profile. The caller refuses a profile in a live match or series first.
+    /// player, with this profile's seat left empty (migration 0012), and so do finished co-op matches
+    /// for the teammate (migration 0051, R1497000). False when there was no such profile. The caller
+    /// refuses a profile in a live match, series or co-op match first.
     pub async fn profiles_remove(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_remove(profile_id))
+    }
+
+    // seats (R1523000, migration 0054): the seat ledger's epoch
+
+    /// The fence every claiming transaction runs before it writes a seat: `Err(Fenced)` unless
+    /// `app.seat_epoch` still holds `epoch`, the one this process booted on. In Postgres it takes
+    /// the row `for share`, which never blocks another claim but makes a newer process's
+    /// `seats_bump_epoch` wait until this transaction ends.
+    pub async fn seats_fence(&mut self, epoch: i64) -> StoreResult<()> {
+        dispatch!(self, seats_fence(epoch))
+    }
+
+    /// Moves the epoch on by one and answers it: a booting process's first write, which fences every
+    /// claim an older process makes from then on.
+    pub async fn seats_bump_epoch(&mut self) -> StoreResult<i64> {
+        dispatch!(self, seats_bump_epoch())
     }
 
     // codes
@@ -2291,6 +2339,38 @@ impl Tx<'_> {
         )
     }
 
+    /// R1555000: sets the bot grinding or not, its count of grinding wins back to 0 either way. An
+    /// unknown bot is an error.
+    pub async fn bots_set_grinding(&mut self, profile_id: &str, grinding: bool) -> StoreResult<()> {
+        dispatch!(self, bots_set_grinding(profile_id, grinding))
+    }
+
+    /// R1555000: counts one rated win for the bot while it grinds: at `step_games` wins its
+    /// strength steps up one, to `strongest` at most, and the count goes back to 0. A bot that is
+    /// not grinding, or an id that is no bot, changes nothing.
+    pub async fn bots_note_grind_win(
+        &mut self,
+        bot_id: &str,
+        step_games: i32,
+        strongest: usize,
+    ) -> StoreResult<()> {
+        dispatch!(self, bots_note_grind_win(bot_id, step_games, strongest))
+    }
+
+    /// R1555000: `bots_claim_for_rematch` for a match between two bots, `players` p1 and p2: false,
+    /// writing nothing, unless the two are different bots and both are free (in no match, a side of
+    /// no series that is not over, and not retired). On true the `open` match skeleton is written
+    /// and both are put in it.
+    pub async fn bots_claim_pair(
+        &mut self,
+        players: &(String, String),
+        match_id: &str,
+        catalog_version: &str,
+        at: i64,
+    ) -> StoreResult<bool> {
+        dispatch!(self, bots_claim_pair(players, match_id, catalog_version, at))
+    }
+
     /// R1454: lets go every bot still in a match it was claimed for before `before` (epoch ms) that
     /// never started (still the claim's `open` skeleton: a start a crash or a restart cut off). The
     /// skeleton goes, and with it the in-match state of both its profiles, as `matches_discard_open`
@@ -2434,6 +2514,17 @@ impl Tx<'_> {
     /// once: one written since is folded as it is written.
     pub async fn game_records_fold_pending(&mut self, limit: usize) -> StoreResult<usize> {
         dispatch!(self, game_records_fold_pending(limit))
+    }
+
+    /// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
+    /// result, a final hash (R768; a ceiling draw has none, R112, R1253000), a log the purge has not
+    /// taken and no game record, even an emptied one (R1044001). Earliest ended first, then by id.
+    pub async fn game_records_unfiled(
+        &mut self,
+        ended_after: i64,
+        ended_before: i64,
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, game_records_unfiled(ended_after, ended_before))
     }
 
     /// R1044000: the totals the query reads. No decklists: `stats_decklists` reads those.

@@ -4,8 +4,6 @@
 
 export const togetherTestid = {
   root: "together",
-  /** The landing page's Play together call to action (B54). */
-  landingCta: "landing-play-together",
   addInput: "together-add-input",
   addSubmit: "together-add-submit",
   /** The server's refusal of an add (B55), in its own words. */
@@ -39,6 +37,8 @@ export const togetherTestid = {
   challengeSend: "together-challenge-send",
   challengeClose: "together-challenge-close",
   challengeError: "together-challenge-error",
+  /** #1568: a failed deck read offers Try again beside the alert. */
+  challengeDecksRetry: "together-challenge-decks-retry",
   /** One per open challenge this account sent: `data-challenge-id`, `data-room-code`. */
   outgoingChallenge: "together-outgoing-challenge",
   cancelChallenge: "together-cancel-challenge",
@@ -46,6 +46,8 @@ export const togetherTestid = {
   sharedRow: "together-shared-row",
   sharedOpen: "together-shared-open",
   noShared: "together-no-shared",
+  /** #1568: a failed shared list offers Try again beside the alert. */
+  sharedRetry: "together-shared-retry",
 } as const;
 
 /** A mode's radio in the challenge form: `together-challenge-mode-bo1|bo3|random`. */
@@ -85,10 +87,15 @@ export const challengeToastTestid = {
 export const watchTestid = {
   /** `data-connection` (`connecting|open|closed|refused`). */
   screen: "watch-screen",
+  /** The panel before the first view: the wait, or (#1599) the notice that the reopens ran out. */
   waiting: "watch-waiting",
   refused: "watch-refused",
+  /** #1599: the sentence that stands in for the wait once the reopens ran out before any view. */
+  gone: "watch-gone",
   status: "watch-status",
   back: "watch-back",
+  /** #1570: "Reconnect now", once the screen's own reopens have run out on a game still running. */
+  reconnect: "watch-reconnect",
 } as const;
 
 export const shareTestid = {

@@ -115,7 +115,7 @@ use crate::db::store::{
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
+    SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
     TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
     TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
@@ -196,6 +196,9 @@ pub struct BotTableRow {
     pub trio: Option<FrozenTrio>,
     pub trio_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
+    /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0053).
+    pub grinding: bool,
+    pub grind_wins: i32,
 }
 
 /// R1450: a match id a queue pairing reserved (`tickets_claim_pair`) and when it was claimed; in
@@ -280,6 +283,8 @@ pub struct FakeTables {
     /// `crate::economy::store`'s.
     pub economy: crate::economy::store::EconomyTables,
     // ---- end Economy ----
+    /// R1523000: migration 0054's `app.seat_epoch`, its one row's epoch (0 in an empty store).
+    pub seat_epoch: i64,
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -402,8 +407,12 @@ impl FakeData {
 
     /// R144: "the server reseeds its fixture accounts and invite codes at boot". The reseed is a
     /// wipe and rewrite rather than a merge, so a second run starts from the same rows as the first.
+    /// The seat epoch stays, as `app.seat_epoch` stays through the Postgres harness's truncate: a
+    /// server's ledger fences on it from boot on (R1523000).
     pub fn reset(&mut self) {
+        let seat_epoch = self.tables.seat_epoch;
         self.tables = empty_tables();
+        self.tables.seat_epoch = seat_epoch;
         self.next_profile = 1;
     }
 
@@ -1090,10 +1099,53 @@ pub fn profiles_clear_in_match(
     Ok(())
 }
 
-/// Migration 0012's account deletion, [`remove_profile_rows`].
+/// R1523000: every profile whose in-match flag is set, with its match, by profile id.
+pub fn profiles_seated(f: &mut FakeTx<'_>) -> Result<Vec<SeatedProfile>, StoreError> {
+    call(f, "profiles.seated")?;
+    let mut rows: Vec<SeatedProfile> = f
+        .tables()
+        .profiles
+        .iter()
+        .filter_map(|profile| {
+            profile.in_match_id.as_ref().map(|match_id| SeatedProfile {
+                profile_id: profile.id.clone(),
+                match_id: match_id.clone(),
+            })
+        })
+        .collect();
+    rows.sort_by(|a, b| by_profile_id(&a.profile_id, &b.profile_id));
+    Ok(rows)
+}
+
+/// R1523000: the claim's fence, `Fenced` unless the epoch is still `epoch`. The transaction holds the
+/// tables' one lock, so nothing can bump the epoch while it runs; a claim begun after a bump finds
+/// the new epoch, as Postgres's does.
+pub fn seats_fence(f: &mut FakeTx<'_>, epoch: i64) -> Result<(), StoreError> {
+    call(f, "seats.fence")?;
+    if f.tables().seat_epoch == epoch {
+        Ok(())
+    } else {
+        Err(StoreError::Fenced)
+    }
+}
+
+/// R1523000: a booting process's bump.
+pub fn seats_bump_epoch(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
+    call(f, "seats.bumpEpoch")?;
+    let tables = f.tables();
+    tables.seat_epoch += 1;
+    Ok(tables.seat_epoch)
+}
+
+/// Migration 0012's account deletion, [`remove_profile_rows`]. A profile seated in a live co-op
+/// match is refused first, as migration 0051's check refuses it in Postgres (R1497000).
 pub fn profiles_remove(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     call(f, "profiles.remove")?;
-    Ok(remove_profile_rows(f.tables(), profile_id))
+    let tables = f.tables();
+    if tables.profiles.iter().any(|row| row.id == profile_id) {
+        crate::duos::store::refuse_live_seat(&tables.duos, profile_id)?;
+    }
+    Ok(remove_profile_rows(tables, profile_id))
 }
 
 // ---------------------------------------------------------------------------
@@ -2704,6 +2756,37 @@ pub fn game_records_fold_pending(f: &mut FakeTx<'_>, limit: usize) -> Result<usi
     Ok(pending.len())
 }
 
+/// R1596000: the store's [`crate::db::store::Tx::game_records_unfiled`].
+pub fn game_records_unfiled(
+    f: &mut FakeTx<'_>,
+    ended_after: i64,
+    ended_before: i64,
+) -> Result<Vec<String>, StoreError> {
+    call(f, "gameRecords.unfiled")?;
+    let tables: &FakeTables = f.tables();
+    let mut unfiled: Vec<(i64, String)> = tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Finished
+                && row.final_hash.is_some()
+                && row
+                    .finished_at
+                    .is_some_and(|at| ended_after <= at && at < ended_before)
+                && tables.results.iter().any(|result| result.match_id == row.id)
+                && tables
+                    .match_actions
+                    .iter()
+                    .any(|logged| logged.match_id == row.id)
+                && !tables.game_record_ledger.contains_key(&row.id)
+                && !tables.game_records.iter().any(|record| record.id == row.id)
+        })
+        .filter_map(|row| row.finished_at.map(|at| (at, row.id.clone())))
+        .collect();
+    unfiled.sort();
+    Ok(unfiled.into_iter().map(|(_, id)| id).collect())
+}
+
 /// R1044000: the totals the query reads.
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
     call(f, "statsTotals.load")?;
@@ -3269,7 +3352,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     }
     // Social (#939, #940): migration 0038's rows cascade with the profile.
     remove_watch_rows(tables, profile_id);
-    // Duos co-op (#946): 0039's rooms, matches and their logs cascade with either person.
+    // Duos co-op (#946, R1497000): 0039's rooms cascade with either person; 0051 empties the
+    // person's seat on each co-op match, which stays with its log.
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
     // Economy (#1299): 0045's holdings and ledgers cascade with the profile.
     crate::economy::store::remove_economy_rows(&mut tables.economy, profile_id);
@@ -3595,6 +3679,8 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 retired_at: bot.retired_at,
                 rating,
                 in_match_id: profile.in_match_id.clone(),
+                grinding: bot.grinding,
+                grind_wins: bot.grind_wins,
             })
         })
         .collect();
@@ -3648,6 +3734,8 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         trio: None,
         trio_catalog_version: None,
         retired_at: None,
+        grinding: false,
+        grind_wins: 0,
     });
     let rating = BotRating {
         bot_id: bot.profile_id.clone(),
@@ -3658,6 +3746,7 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         },
         games: 0,
         updated_at: now,
+        ai_generation: None,
     };
     match tables.bots.iter().position(|row| row.bot_id == rating.bot_id) {
         None => tables.bots.push(rating),
@@ -3808,6 +3897,68 @@ pub fn bots_claim_for_rematch(
     }
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
+    }
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
+    Ok(true)
+}
+
+/// R1555000: the flag, and the grind's count of wins back to 0; an unknown bot errs, as Postgres's
+/// row count does.
+pub fn bots_set_grinding(f: &mut FakeTx<'_>, profile_id: &str, grinding: bool) -> Result<(), StoreError> {
+    call(f, "bots.setGrinding")?;
+    let row = bot_row_of(f.tables(), profile_id)?;
+    row.grinding = grinding;
+    row.grind_wins = 0;
+    Ok(())
+}
+
+/// R1555000: as Postgres's statement: a grinding bot counts the win, and at `step_games` steps up
+/// one strength (to `strongest` at most) with its count back to 0; anything else changes nothing.
+pub fn bots_note_grind_win(
+    f: &mut FakeTx<'_>,
+    bot_id: &str,
+    step_games: i32,
+    strongest: usize,
+) -> Result<(), StoreError> {
+    call(f, "bots.noteGrindWin")?;
+    let Some(row) = f
+        .tables()
+        .ladder_bots
+        .iter_mut()
+        .find(|row| row.profile_id == bot_id && row.grinding)
+    else {
+        return Ok(());
+    };
+    if row.grind_wins + 1 >= step_games {
+        row.strength = (row.strength + 1).min(strongest);
+        row.grind_wins = 0;
+    } else {
+        row.grind_wins += 1;
+    }
+    Ok(())
+}
+
+/// R1555000: single-shot, as `bots_claim_for_rematch` for two bots: two different bots, both free,
+/// or nothing changes. As there, the fake writes no skeleton, so both point at the reserved id.
+pub fn bots_claim_pair(
+    f: &mut FakeTx<'_>,
+    players: &(String, String),
+    match_id: &str,
+    _catalog_version: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    call(f, "bots.claimPair")?;
+    let tables = f.tables();
+    if players.0 == players.1 || !bot_is_free(tables, &players.0) || !bot_is_free(tables, &players.1) {
+        return Ok(false);
+    }
+    for bot_id in [&players.0, &players.1] {
+        if let Some(bot) = profile_of(tables, bot_id) {
+            bot.in_match_id = Some(match_id.to_string());
+        }
     }
     tables.reserved.push(ReservedMatch {
         match_id: match_id.to_string(),

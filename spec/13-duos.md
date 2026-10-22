@@ -129,7 +129,7 @@ The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh 
 
 - **A disconnect.** A human seat whose socket has been gone past the disconnect grace (`DISCONNECT_GRACE_SECONDS`, 60 s, [[§9.5]]) is played by the AI, as [[§13.7]] plays team B's seats, until its player reconnects, and its teammate is told that the AI is playing it. A team never loses to a disconnect. A move the AI decided while it held a person's seat one way (played outright past the grace, or only to answer for a clock that ran out, [[§13.3]]) is dropped if that hold changed before the move applied, and the seat is decided for again: a player who is back is never played for, whatever clock ran out meanwhile.
 - **Concede.** Conceding takes both humans. A seat's concede opens its team's concede offer, which both teammates see, and the teammate's concede while the offer stands ends the game, the other team winning. Each team has an offer of its own: the other team's concede neither takes nor clears it. An offer lapses when its round ends.
-- **The way back.** A player who leaves a co-op game's page may go back to it while it lasts: the menus' banner offers it, as it offers a live match ([[R765]]).
+- **The way back.** A player who leaves a co-op game's page may go back to it while it lasts: the menus' banner offers it, as it offers a live match ([[R765]], [[R1566000]]).
 
 ### 13.9 Co-op rooms
 
@@ -145,6 +145,7 @@ A co-op game starts from a room on the Play together page ([[§9.5]]).
 - The socket takes a 1v1 socket's nonce rules ([[R270]]) and the round's own namespace (`duos:`, [[§13.3]]) is refused as `srv-` is; a `hello` repeated while one from the same socket is still queued is absorbed by it, as [[R835001]] has it for a 1v1 socket ([[§9.1]]).
 - A co-op game is unranked: it records a result for both humans and moves no rating ([[§9.12]]), and pays each of them as [[§14.8]] says ([[R1502000]]).
 - Either human seat may watch a finished co-op game again, its own seat's view after each step, as [[§9.5]]'s replays show a 1v1 match; an account that held no human seat gets what an unknown match gets, and a game still being played has no replay until it ends. The replay folds under the catalog version the match was played on and is refused, never cut short, when this build neither is nor carries that version, or when the log no longer folds to its end or to the result the match recorded ([[R768]], [[R767000]]). A co-op game's log is kept `MATCH_ACTION_RETENTION_DAYS` after the game ends, as a 1v1 match's is ([[§9.5]]); then the retention purge takes it and its replay is gone, while the match and its result stay. A co-op game is not in the recent games list. Its replay offers Download JSON: one file of the seat's own views, each step's index and round, the seat and the build's catalog version, and no seed, log, deck, match id, account or ping. The recent games page's Open replay JSON opens it again in the page ([[R1242000]]).
+- Deleting an account ([[§9.4]]) is refused while it holds a seat in a live co-op match, as in a live 1v1 match; once a co-op game has ended, the deleted account's seat on it empties and the match, its result and its log stay, so the teammate still watches its replay ([[R1497000]]).
 
 ### 13.10 Pings
 

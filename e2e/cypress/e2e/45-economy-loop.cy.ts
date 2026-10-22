@@ -12,7 +12,8 @@
 //    concedes, raises the wallet by at least `JLORE_LADDER_WIN` (a level the XP reaches may pay
 //    more) and the newest track by at least `XP_WIN_BONUS`, and `/collection` shows that track's
 //    level and XP as `/api/tracks` answers them.
-// 3. §14.1, §14.3: `/account`'s shop sells a global pack for `PACK_PRICE_JLORE`, and the pack opens.
+// 3. §14.1, §14.3: the Shop (`/shop`, R1580000) sells a global pack for `PACK_PRICE_JLORE`, and the pack
+//    opens there.
 // 4. §14.3: each slot the server granted as a new card reads "New card", and the collection grows
 //    by exactly those cards.
 // 5. R1310003, §14.5: the Dev tools fill the card token bar, which pays one card token, and the
@@ -62,7 +63,6 @@ import {
 } from "../../support/config.ts";
 import {
   ACCOUNT_DEV_TOGGLE,
-  ACCOUNT_PACKS_TOGGLE,
   CARD_FACE,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
@@ -370,7 +370,7 @@ function winALadderGame(loop: Loop): void {
   cy.expectResult("Win");
 
   // The result's transaction pays (api/results.rs), so the next screen reads what it paid.
-  cy.visitAs(econ(), routes.collection());
+  cy.visitAs(econ(), routes.collectionCards());
   cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
   cy.then(() => {
     read<WalletBody>(econ(), "/api/wallet").then((wallet) => {
@@ -409,8 +409,7 @@ function buyAndOpenAGlobalPack(loop: Loop): void {
   });
   cy.intercept("POST", "**/api/packs/buy").as("buy");
   cy.intercept("POST", "**/api/packs/open").as("open");
-  cy.visitAs(econ(), routes.account());
-  cy.get(ts(ACCOUNT_PACKS_TOGGLE), { timeout: timeouts.view }).click();
+  cy.visitAs(econ(), routes.shop());
   cy.then(() => {
     cy.get(ts(SHOP_WALLET), { timeout: timeouts.view }).should("have.text", `${String(loop.jlore)} Jlore`);
   });
@@ -481,9 +480,8 @@ function redeemACardToken(loop: Loop): void {
     });
   });
 
-  // The token picker reads its tokens when it mounts, and the Dev tools tell no other panel, so read it again.
-  cy.reload();
-  cy.get(ts(ACCOUNT_PACKS_TOGGLE), { timeout: timeouts.view }).click();
+  // The token picker is on the Shop (R1580000) and reads its tokens when it mounts.
+  cy.visitAs(econ(), routes.shop());
   cy.then(() => {
     cy.get(ts(TOKEN_HELD_CARD), { timeout: timeouts.view }).should("have.text", `Card tokens held: ${String(held)}`);
   });
@@ -531,7 +529,7 @@ function receiveAQuest(): void {
     read<QuestsBody>(econ(), "/api/quests").then((body) => {
       expect(body.quests.map((quest) => quest.questId), "§14.10: the dev tool gave the account that quest").to.deep.eq([given]);
     });
-    cy.visitAs(econ(), routes.collection());
+    cy.visitAs(econ(), routes.collectionCards());
     cy.get(ts(QUESTS_QUEST), { timeout: timeouts.view }).should("have.length", [given].length).and("have.attr", "data-quest-id", given);
   });
 }

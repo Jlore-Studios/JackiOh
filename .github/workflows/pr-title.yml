@@ -6,7 +6,8 @@
 # (`bot/harness/triage.py`'s `CONVENTION`), with the titles tools give their own pull requests
 # (`AUTOMATED_PULL`: `patches ship: v0.3.1`, `Promote main to production: N commit(s) up to abc1234`,
 # a training lane's `AI gen N (lane): …`) and GitHub's `Revert "…"` of a title that passes. The
-# bots title theirs from their issue when the builder's title breaks it (`triage.pull_title`).
+# bots title theirs from their issue when the builder's title breaks it, and when both do (a
+# workflow's `CI: …` alert) write `Patch: <what it does>` (`triage.pull_title`).
 #
 # _target: this repository's workflow and its default branch's Python run, never code from the pull
 # request, and the job reads nothing but the title, from the event, through the environment. It

@@ -91,8 +91,10 @@ pub struct CardView {
     pub countered_on_play: Option<bool>,
     /// R979000, §10.8: why the viewer's own hand card cannot be played now
     /// (`play_choices::why_hand_card_unplayable`), as `UnitView.attack_reason` (R849000) is for an
-    /// attack. Set only on the viewer's own hand card while they may act (their turn, the main
-    /// phase, no prompt open) and `play_actions_for` lists no play of it. Absent otherwise, never
+    /// attack; R1571000: and why a card in the viewer's own graveyard that a permission admits
+    /// (`play_choices::why_graveyard_card_unplayable`) cannot be played now. Set only on those
+    /// cards while they may act (their turn, the main phase, no prompt open) and
+    /// `legal_actions` lists no play of the card. Absent otherwise, never
     /// `false` or empty, so a view with no unplayable card is byte for byte what it was.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -1054,6 +1056,11 @@ pub struct PendingPromptView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub craft_mode: Option<crate::wire::CraftMode>,
+    /// R1563007: a `craft` prompt's offer, the blocks the editor shows and the answer may use. Absent
+    /// on every other prompt and on Scratch Pad's, which codes from the whole palette.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_offer: Option<crate::wire::CraftOffer>,
     /// R1184000: a sequence question's right answers so far (Meditative+ #20 KY's Competition), its
     /// chooser's to see; the prompt then offers Stop after its answers. Absent on every other prompt.
     #[serde(default, skip_serializing_if = "Option::is_none")]

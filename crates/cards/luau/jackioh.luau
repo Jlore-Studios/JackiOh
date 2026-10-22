@@ -1193,12 +1193,12 @@ turn: number,
 } | {
 ["type"]: "promptOpened",
 player: PlayerId,
-choiceId: string,
-kind: PromptKind,
+choiceId: string?,
+kind: PromptKind?,
 } | {
 ["type"]: "promptAnswered",
 player: PlayerId,
-choiceId: string,
+choiceId: string?,
 } | {
 ["type"]: "drawOffered",
 player: PlayerId,

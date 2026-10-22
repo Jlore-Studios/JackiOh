@@ -51,7 +51,7 @@ use crate::actor::checkpoint::{CheckpointBody, checkpoint_row};
 use crate::actor::clock::{Timer, after, create_match_clock};
 use crate::actor::contracts::{
     ActorDeps, ClockExpiry, ClockView, CreateMatchClockInput, ExpiryHandler, MatchClock, RecordResultInput,
-    SocketHandlers, VoidMatchInput, one_tx,
+    SequenceClockView, SocketHandlers, VoidMatchInput, one_tx,
 };
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
@@ -891,6 +891,16 @@ impl MatchActor {
             // active seat as a convention", so a fold never has to guess. R79 makes it a draw and R112
             // covers the reaper's version of the same ending.
             ClockExpiry::Ceiling => vec![(snapshot.active, ActionBody::CeilingReached)],
+            // R1563006: the question still open for that player is answered Stop (R1184001's answer),
+            // read when the expiry runs, since the player may have stopped or missed in between.
+            ClockExpiry::Sequence { player } => match &snapshot.sequence {
+                Some(question) if question.player == player => {
+                    jackioh_engine::prompts::stop_answer(&core.state)
+                        .map(|stop| vec![(player, stop)])
+                        .unwrap_or_default()
+                }
+                _ => Vec::new(),
+            },
         }
     }
 
@@ -1260,8 +1270,12 @@ impl MatchActor {
     /// socket does, and meets a person's offer as `on_rematch_offer` says. An end whose result never
     /// lands lets the actor go (`let_go_unrecorded`), and its plan with it.
     fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
-        // R641000: a series game offers no rematch, so its bot stays for none.
-        if self.shared.match_row.ranked != Some(true) || self.shared.series_game {
+        // R641000: a series game offers no rematch, so its bot stays for none. R1555000: nor do two
+        // bots offer each other one.
+        if self.shared.match_row.ranked != Some(true)
+            || self.shared.series_game
+            || PLAYERS.iter().all(|home| self.shared.bots[*home].is_some())
+        {
             return;
         }
         for home in PLAYERS {
@@ -2378,6 +2392,11 @@ fn clock_view_for(snapshot: &MatchSnapshot) -> ClockView {
         pending_for: snapshot.pending_for,
         mulligan_owed: snapshot.mulligan_owed.clone(),
         over: snapshot.result.is_some() || snapshot.phase == jackioh_engine::Phase::Over,
+        sequence: snapshot.sequence.as_ref().map(|question| SequenceClockView {
+            player: question.player,
+            streak: question.streak,
+            prompt_id: question.prompt_id.clone(),
+        }),
     }
 }
 

@@ -103,7 +103,7 @@ export function defaultVisibility(): FxVisibility {
 
 
 /** The public catalog facts an effect may use: rarity and printed stats of the base face. */
-function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFacts | undefined {
+export function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFacts | undefined {
   if (defId === "hidden" || lookup === null) return undefined;
   const info = lookup(defId, false);
   if (info === undefined) return undefined;

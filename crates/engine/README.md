@@ -52,11 +52,17 @@ mutable static. Two things hold it:
 
 - `Cargo.toml` depends on `serde`, `serde_json`, `indexmap` and, behind the off-by-default `ts`
   feature, `ts-rs`, and nothing else. A crate it cannot name it cannot call.
-- `clippy.toml` (the same file sits in `crates/cards` and `crates/ai`) bans `HashMap`, `HashSet`,
-  `Instant`, `SystemTime`, `File`, `Thread`, `Mutex`, `RwLock` and `RefCell`, and the methods
-  `Instant::now`, `SystemTime::now`, `env::var`, `env::vars`, `fs::read`, `fs::read_to_string`,
-  `fs::write`, `thread::spawn` and `process::exit`. CI runs `cargo clippy --workspace --all-targets
-  -- -D warnings`, so a use anywhere in the crate, tests included, fails the build.
+- `clippy.toml` (the same file sits in `crates/cards`, `crates/ai` and `crates/luau`, and
+  `crates/tools/tests/acceptance.rs` holds the four byte for byte the same) bans `HashMap`, `HashSet`
+  and `RandomState`; the clock (`Instant`, `SystemTime`); the disk (`File`, `OpenOptions`, `DirBuilder`,
+  the `std::fs` functions and `Path`'s disk reads such as `exists` and `read_dir`); the environment and
+  the command line; stdin, stdout and stderr; the network; processes (`Command`, `exit`, `abort`, `id`);
+  threads (`Thread`, `Builder`, `spawn`, `scope`, `sleep`, `park`, …); and `Mutex`, `RwLock` and
+  `RefCell`. Its header names what stays free. CI runs `cargo clippy --workspace --all-targets
+  -- -D warnings`, so a use anywhere in the crate, tests included, fails the build; an `allow` is for
+  test or build code and says why. The same acceptance file runs clippy over
+  `crates/tools/tests/fixtures/purity.rs`, one use of each entry, so an entry that names nothing (which
+  clippy only warns about) fails there.
 
 Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state), in the same order
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the

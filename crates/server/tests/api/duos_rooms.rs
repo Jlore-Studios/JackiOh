@@ -759,6 +759,26 @@ mod b41_the_finished_replay {
         assert_eq!(held.replays.held(now_ms()), 1, "one fold serves both people");
     }
 
+    /// R1497000: the guest's `DELETE /api/account` empties their seat on the finished match and
+    /// leaves the match and its log, so the host still watches its replay from their own seat.
+    #[tokio::test]
+    async fn r1497000_the_teammate_still_opens_the_replay_once_the_other_account_is_gone() {
+        let t = three().await;
+        let match_id = t.finished().await;
+
+        let (status, body) = api(&t.app, "DELETE", "/api/account", &t.guest.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+
+        let (row, log) = stored(&t.app, &match_id).await;
+        assert_eq!((row.a1.as_str(), row.a2.as_str()), (t.host.id.as_str(), ""));
+        assert!(!log.is_empty(), "the log stays with the match");
+        let (status, body) = replay(&t.app, &t.host, &match_id).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["seat"], "a1", "{body}");
+        let steps = body["steps"].as_array().expect("steps");
+        assert_eq!(steps.len(), log.len() + 1, "as it began, then a step per action");
+    }
+
     #[tokio::test]
     async fn r767000_a_join_pins_the_match_to_the_catalog_it_is_dealt_from() {
         let t = three().await;
@@ -1482,11 +1502,15 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
         let code = room(&t.app, &t.host).await;
         let body = json!({ "difficulty": "easy", "random": true });
 
-        // A guest in a 1v1 match.
+        // A guest in a 1v1 match. R1523000: each seat written straight into the store is read as a
+        // restart would read it.
         store!(t.app, tx => tx
             .profiles_set_in_match(&t.guest.id, Some("elsewhere"))
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
         let (status, refused) = create(&t.app, &t.guest, body.clone()).await;
         assert_eq!(status, 409, "{refused}");
         assert!(code_is(&refused, "already_in_match"), "{refused}");
@@ -1497,12 +1521,18 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             .profiles_set_in_match(&t.guest.id, None)
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
 
         // A host in a 1v1 match.
         store!(t.app, tx => tx
             .profiles_set_in_match(&t.host.id, Some("elsewhere"))
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
         let (status, refused) = join(&t.app, &t.guest, &code).await;
         assert_eq!(status, 409, "{refused}");
         assert!(code_is(&refused, "conflict"), "{refused}");
@@ -1510,6 +1540,9 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             .profiles_set_in_match(&t.host.id, None)
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
 
         // A guest in a series that is not over.
         let trio = json!({ "name": "t", "decks": [{ "name": "a", "cards": [] }, { "name": "b", "cards": [] }, { "name": "c", "cards": [] }] });
@@ -1536,6 +1569,9 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             "version": 1,
         }));
         store!(t.app, tx => tx.series_create(&series).await.expect("series.create"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
         let (status, refused) = create(&t.app, &t.guest, body).await;
         assert_eq!(status, 409, "{refused}");
         assert!(code_is(&refused, "already_in_match"), "{refused}");
@@ -1544,5 +1580,46 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             json!({ "seriesId": "series-1" }),
             "{refused}"
         );
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1566000 — the account read names the live co-op match
+// ---------------------------------------------------------------------------------------------
+
+mod r1566000_the_account_read_names_the_live_co_op_match {
+    use super::*;
+
+    /// `GET /api/auth/me` as `who`.
+    async fn me(app: &Arc<App>, who: &Account) -> Value {
+        let (status, body) = api(app, "GET", "/api/auth/me", &who.token, Value::Null).await;
+        assert_eq!(status, 200, "{body}");
+        body
+    }
+
+    #[tokio::test]
+    async fn r1566000_api_auth_me_names_the_co_op_match_to_both_its_people_while_it_lasts_and_not_after() {
+        let t = three().await;
+        assert!(me(&t.app, &t.host).await["currentDuosMatchId"].is_null());
+
+        let (_, match_id) = t.started().await;
+
+        for who in [&t.host, &t.guest] {
+            let body = me(&t.app, who).await;
+            assert_eq!(body["currentDuosMatchId"], json!(match_id), "{body}");
+            assert!(
+                body["currentMatchId"].is_null(),
+                "a co-op match sets no in-match flag: {body}"
+            );
+        }
+        let body = me(&t.app, &t.third).await;
+        assert!(body["currentDuosMatchId"].is_null(), "{body}");
+
+        finish(&t.app, &match_id).await;
+
+        for who in [&t.host, &t.guest] {
+            let body = me(&t.app, who).await;
+            assert!(body["currentDuosMatchId"].is_null(), "{body}");
+        }
     }
 }

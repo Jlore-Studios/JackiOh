@@ -15,7 +15,7 @@
 //!      turn cap at TURN_CAP_PLAYER_TURNS player-turns), inside a bounded number of actions. The
 //!      bound is not a pass condition: hitting it is a reported failure, so a non-terminating game
 //!      fails loudly instead of hanging CI (the policy never concedes or offers a draw, R84, so those
-//!      endings cannot occur here).
+//!      endings come only from the endings channel, below).
 //!   3. REPLAY EQUALITY: folding `(seed, decks, log)` in a fresh `create_game` reproduces the same
 //!      state hash, with no rejected actions. This is what makes SPEC §9.3's "(seed, log)
 //!      reconstructs any match" true.
@@ -27,7 +27,7 @@
 //! state it produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal
 //! actions, §10.8) holds for both seats on every state, setup's included: every state under
 //! `cargo test`, every I6_GATE_STRIDE-th under the gate.
-//! I8 (no unlisted attack or switch `reduce` accepts, §4.1, §4.2) runs on every state under `cargo test`,
+//! I8 (no unlisted attack, switch or activation `reduce` accepts, §4.1, §4.2, §10.2) runs on every state under `cargo test`,
 //! every I8_GATE_STRIDE-th under the gate and `--handicap`.
 //!
 //! And after every action, GROWTH (#1254): the gate weighs each action it applies by the events `reduce`
@@ -40,12 +40,15 @@
 //! is as deterministic as the game; the handicapped wave is weighed the same way through the same
 //! loop, and `--duos` is weighed by `duos_fuzz.rs` through the shared helpers below.
 //!
-//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, two forged
+//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, forged
 //! actions that are never logged. A wrong-seat probe sends the action the policy chose from the seat
 //! that may not take it, and must be refused with no events (§9.3); a reused-nonce probe sends a
 //! concede under the nonce of the last logged action, and must neither apply nor replace anything but
-//! answer that action's own events (§10.1, §10.2). Either way the state must be kept exactly, the
-//! nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
+//! answer that action's own events (§10.1, §10.2); while a prompt is open, a malformed-answer probe
+//! sends the policy's answer with a stale choice id, from the other seat, with a pick dropped below
+//! `min`, with a pick doubled and with a pick no option offers, each owed a refusal with no events
+//! (§10.6, #1574). Every way the state must be kept exactly, the nonce memory `hash_state` leaves out
+//! included. A failure is the "probe" stage and names the step
 //! and the probe. The handicapped wave probes the same way and `--duos` as `duos_fuzz.rs` says. The
 //! probes draw from no random stream, so every game plays as it did before them.
 //!
@@ -106,6 +109,23 @@
 //! `fold_args`), so a game that starts from them still folds back to its live hash. The summary and
 //! `--json` count seeds by start, and a failure names its start. `--from <seed>` plays a seed from
 //! its start, since the seed alone draws it. The corpus replays from the plain start.
+//!
+//! # The endings channel (#1572)
+//!
+//! The policy never concedes, offers or answers a draw, or emotes (R84), and `timeout`,
+//! `disconnectExpired`, `ceilingReached` and `setAutoEndTurn` are the server's, not its, so a plain
+//! wave never plays those endings and cleanups across random boards. On `ENDINGS_SHARE` of seeds, in both
+//! waves, the game also takes an endings channel: at each step, from a stream of its own, it may send
+//! one of those actions in the policy's place (`endings_action`). A concede, an expired disconnect or
+//! the ceiling comes at `ENDINGS_END_CHANCE`, an answer to a standing offer (R36) at
+//! `ENDINGS_ANSWER_CHANCE`, and an offer, an emote (R1127), a timeout (R268) or the R345 setting at
+//! `ENDINGS_ACT_CHANCE`, from either seat (R79). An offer, its answer and an emote go only while
+//! `legal_actions` lists them. A channel action is logged like any other, so replay, the hash and
+//! the checkpoint fold it, and the probes skip its step. The share, not every seed, keeps most games
+//! at their depth; `GameSetup` draws it from the seed's `endings-` stream, so `--from <seed> --seeds
+//! 1` replays it, and a game that took it may end by `ENDINGS_TERMINAL_REASONS`. The summary and
+//! `--json` count the seeds that took it. The corpus replays without it, and the shipped §10.7
+//! policy (`AI_SKIPPED_ACTIONS`) is unchanged.
 
 use std::cell::RefCell;
 use std::fs;
@@ -118,14 +138,15 @@ use anyhow::{Context, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
-    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships,
+    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, malformed_answers, preview_every_set, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
     CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, FoldArgs,
     GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId,
     ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, find_instance, fold,
-    hash_state, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems, validate_deck,
+    has_standing_draw_offer, hash_state, legal_actions, mulligan_owed, opponent_of, reduce, seat_to_act,
+    subsystems, validate_deck,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -268,7 +289,8 @@ fn max_actions_per_game() -> usize {
 }
 
 /// §2.5 plus R84: the policy never concedes or offers a draw, so only these can occur, a Glitch that
-/// voids the match (R679) among them.
+/// voids the match (R679) among them, and, in a game that takes the endings channel,
+/// `ENDINGS_TERMINAL_REASONS` (#1572).
 const TERMINAL_REASONS: &[&str] = &[
     "hero-death",
     "both-heroes-dead",
@@ -472,6 +494,69 @@ fn manufactured_board(rng: &mut Rng) -> Vec<LastBoardEntry> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The endings channel (#1572)
+// ---------------------------------------------------------------------------------------------
+
+/// The share of seeds, in both 1v1 waves, that take the endings channel (#1572), drawn from the
+/// seed's `endings-` stream. The rest play as the policy alone does, so they keep their depth.
+pub const ENDINGS_SHARE: f64 = 0.25;
+/// Per step, in a game that takes the channel: the chance it concedes, expires a disconnect or
+/// reaches the match ceiling in the policy's place (§2.5, R79).
+pub const ENDINGS_END_CHANCE: f64 = 0.004;
+/// Per step while a draw offer stands, in a game that takes the channel: the chance the seat it was
+/// made to answers it (R36); an offer left unanswered lapses with its turn (R269).
+pub const ENDINGS_ANSWER_CHANCE: f64 = 0.2;
+/// Per step, in a game that takes the channel: the chance it sends an offer, an emote (R1127), a
+/// timeout (R268) or the R345 setting in the policy's place.
+pub const ENDINGS_ACT_CHANCE: f64 = 0.03;
+
+/// The endings only the endings channel reaches (#1572).
+const ENDINGS_TERMINAL_REASONS: &[&str] = &["concede", "draw-accepted", "disconnect", "match-ceiling"];
+
+/// The actions `legal_actions` offers `seat` that `keep` holds, in its order.
+fn listed(state: &GameState, seat: PlayerId, keep: fn(&ActionBody) -> bool) -> Vec<ActionBody> {
+    legal_actions(state, seat).into_iter().filter(keep).collect()
+}
+
+/// What the endings channel sends at `state` in the policy's place, and from which seat, or `None`
+/// when the policy acts (#1572). `player` is the seat the game waits on, `rng` the seed's
+/// `endings-steps-` stream. An offer, its answer and an emote go only while `legal_actions` lists
+/// them; the rest are the server's, which `reduce` takes from either seat while the game is live.
+fn endings_action(state: &GameState, player: PlayerId, rng: &mut Rng) -> Option<(PlayerId, ActionBody)> {
+    let seats = [player, opponent_of(player)];
+    if rng.chance(ENDINGS_END_CHANCE) {
+        let seat = *rng.pick(&seats)?;
+        let endings = [
+            ActionBody::Concede,
+            ActionBody::DisconnectExpired { player: seat },
+            ActionBody::CeilingReached,
+        ];
+        return rng.pick(&endings).map(|body| (seat, body.clone()));
+    }
+    // R36, R269: the seat with an offer to answer is the one the active player made it to.
+    if let Some(&seat) = seats.iter().find(|seat| has_standing_draw_offer(state, **seat))
+        && rng.chance(ENDINGS_ANSWER_CHANCE)
+    {
+        let answers = listed(state, seat, |body| matches!(body, ActionBody::AnswerDraw { .. }));
+        return rng.pick(&answers).map(|body| (seat, body.clone()));
+    }
+    if !rng.chance(ENDINGS_ACT_CHANCE) {
+        return None;
+    }
+    let mut acts: Vec<(PlayerId, ActionBody)> = Vec::new();
+    for seat in seats {
+        let offered = listed(state, seat, |body| {
+            matches!(body, ActionBody::OfferDraw | ActionBody::Emote { .. })
+        });
+        acts.extend(offered.into_iter().map(|body| (seat, body)));
+        acts.push((seat, ActionBody::Timeout));
+        let enabled = state.players[seat].auto_end_turn == Some(false);
+        acts.push((seat, ActionBody::SetAutoEndTurn { enabled }));
+    }
+    rng.pick(&acts).cloned()
+}
+
+// ---------------------------------------------------------------------------------------------
 // Playing one game with the real policy
 // ---------------------------------------------------------------------------------------------
 
@@ -562,12 +647,14 @@ struct GameSetup {
     rotation: Option<SeedHandicap>,
     /// What the game starts from beyond its decks (#1503), drawn from `seed` alone.
     start: StartKind,
+    /// Whether the game also takes the endings channel's actions (#1572), drawn from seed alone.
+    endings: bool,
 }
 
 impl GameSetup {
     /// The gate's game for `seed`, from the start the seed draws.
     fn gate(seed: u32) -> GameSetup {
-        GameSetup::plain(seed).with_drawn_start()
+        GameSetup::plain(seed).with_drawn_start().with_drawn_endings()
     }
 
     /// The gate's game for `seed` from the plain start, drawing none: the game a corpus record
@@ -577,6 +664,7 @@ impl GameSetup {
             seed,
             rotation: None,
             start: StartKind::Plain,
+            endings: false,
         }
     }
 
@@ -586,8 +674,10 @@ impl GameSetup {
             seed,
             rotation: Some(handicap_for_seed(seed)),
             start: StartKind::Plain,
+            endings: false,
         }
         .with_drawn_start()
+        .with_drawn_endings()
     }
 
     /// `self` with the start its seed draws (#1503): on `START_STATE_SHARE` of seeds one of
@@ -602,7 +692,15 @@ impl GameSetup {
         GameSetup { start, ..self }
     }
 
-    /// The stream named `kind` (`""` for the game's own, `policy-`, `policy-order-`, `checkpoint-`):
+    /// `self` taking the endings channel on `ENDINGS_SHARE` of seeds (#1572). The draw reads the
+    /// `endings-` stream and nothing else.
+    fn with_drawn_endings(self) -> GameSetup {
+        let endings = Rng::new(&self.stream("endings-"), 0).chance(ENDINGS_SHARE);
+        GameSetup { endings, ..self }
+    }
+
+    /// The stream named `kind` (`""` for the game's own, `policy-`, `policy-order-`, `checkpoint-`,
+    /// `endings-` and `endings-steps-`):
     /// `jackioh-fuzz-<kind><seed>` for the gate and `jackioh-fuzz-handicap-<kind><seed>` for the
     /// handicapped wave, the names every seed was played under before the two shared a loop.
     fn stream(&self, kind: &str) -> String {
@@ -671,8 +769,9 @@ impl GameSetup {
 /// One full game played by SPEC §10.7's policy. `subsystems::choose_action` IS that policy — uniform
 /// over `legal_actions` minus `AI_SKIPPED_ACTIONS` (R84), ending the turn when nothing else is on
 /// offer or with `AI_END_TURN_PROBABILITY`, and answering an open prompt uniformly (R44) — so this
-/// drives the shipped machinery rather than a second copy of the rule. The probes' forged actions go
-/// through `probe` (#1386).
+/// drives the shipped machinery rather than a second copy of the rule. In a game that takes the
+/// endings channel, `endings_action` may send a step's action in the policy's place (#1572). The
+/// probes' forged actions go through `probe` (#1386).
 fn play_game(
     setup: &GameSetup,
     decks: (Vec<String>, Vec<String>),
@@ -686,6 +785,10 @@ fn play_game(
     // R265: while both mulligans are open either seat may answer first; a stream of its own picks
     // which, so the fuzz plays both orders (the game is the same either way, R265).
     let mut order = Rng::new(&setup.stream("policy-order-"), 0);
+    // #1572: the endings channel's own stream, in a game that takes it.
+    let mut endings = setup
+        .endings
+        .then(|| Rng::new(&setup.stream("endings-steps-"), 0));
     let mut log: Vec<Action> = Vec::new();
     let mut monitor = create_invariant_monitor(&state);
     let stride = hidden_stride();
@@ -733,20 +836,31 @@ fn play_game(
 
         // With a prompt open only its holder may act (§9.3); otherwise it is the active player's turn.
         let player = actor_of(&state, &mut order);
-        let Some(chosen): Option<ActionBody> = subsystems::choose_action(&state, player, &mut policy) else {
-            return Err(FuzzFailure::new(
-                FailureStage::Termination,
-                format!(
-                    "no legal action for {player} while the game is live (turn {}, phase \"{}\", pending {}): R82 auto-ends a turn with nothing left to do, so this is a stall, not an ending",
-                    state.turn,
-                    state.phase,
-                    pending_label(&state)
-                ),
-                At {
-                    turn: state.turn,
-                    actions: log.len(),
-                },
-            ));
+        // #1572: in a game that takes the endings channel, the channel may send this step's action.
+        let sent = endings
+            .as_mut()
+            .and_then(|rng| endings_action(&state, player, rng));
+        let from_channel = sent.is_some();
+        let (player, chosen) = if let Some(sent) = sent {
+            sent
+        } else {
+            let Some(chosen): Option<ActionBody> = subsystems::choose_action(&state, player, &mut policy)
+            else {
+                return Err(FuzzFailure::new(
+                    FailureStage::Termination,
+                    format!(
+                        "no legal action for {player} while the game is live (turn {}, phase \"{}\", pending {}): R82 auto-ends a turn with nothing left to do, so this is a stall, not an ending",
+                        state.turn,
+                        state.phase,
+                        pending_label(&state)
+                    ),
+                    At {
+                        turn: state.turn,
+                        actions: log.len(),
+                    },
+                ));
+            };
+            (player, chosen)
         };
 
         let unsound = monitor.before(&state, player, &chosen);
@@ -761,8 +875,10 @@ fn play_game(
             ));
         }
 
-        // #1386: forged actions against this state, never logged.
-        if log.len().is_multiple_of(probe_stride)
+        // #1386: forged actions against this state, never logged. A channel action is skipped: the
+        // other seat may send a concede or a server action too (§9.3).
+        if !from_channel
+            && log.len().is_multiple_of(probe_stride)
             && let Some(message) = probe_state(
                 &state,
                 player,
@@ -788,7 +904,12 @@ fn play_game(
             return Err(FuzzFailure::new(
                 FailureStage::Play,
                 format!(
-                    "legalActions offered \"{}\" but reduce refused it: {error}",
+                    "{} \"{}\" but reduce refused it: {error}",
+                    if from_channel {
+                        "the endings channel sent"
+                    } else {
+                        "legalActions offered"
+                    },
                     action.action_type().as_str()
                 ),
                 At {
@@ -862,7 +983,7 @@ fn play_game(
 }
 
 /// Assertion 2: the game ended the way §2.5 says a policy game can end, inside the R2 cap.
-fn check_termination(run: &GameRun) -> Result<(), FuzzFailure> {
+fn check_termination(setup: &GameSetup, run: &GameRun) -> Result<(), FuzzFailure> {
     let at = At {
         turn: run.state.turn,
         actions: run.log.len(),
@@ -874,13 +995,20 @@ fn check_termination(run: &GameRun) -> Result<(), FuzzFailure> {
             at,
         ));
     };
-    if !TERMINAL_REASONS.contains(&result.reason.as_str()) {
+    // #1572: a game that takes the endings channel may also end by one of its endings.
+    let channel: &[&str] = if setup.endings {
+        ENDINGS_TERMINAL_REASONS
+    } else {
+        &[]
+    };
+    let allowed: Vec<&str> = TERMINAL_REASONS.iter().chain(channel).copied().collect();
+    if !allowed.contains(&result.reason.as_str()) {
         return Err(FuzzFailure::new(
             FailureStage::Termination,
             format!(
                 "ended with reason \"{}\"; the policy never concedes or offers a draw (R84), so §2.5 leaves only {}",
                 result.reason,
-                TERMINAL_REASONS.join(", ")
+                allowed.join(", ")
             ),
             at,
         ));
@@ -1493,6 +1621,9 @@ pub(crate) const WRONG_SEAT_PROBE: &str = "wrong-seat";
 /// A probe failure's name: another action under a nonce already applied.
 pub(crate) const REUSED_NONCE_PROBE: &str = "reused-nonce";
 
+/// A probe failure's name: the policy's answer to the open prompt, made malformed (#1574).
+pub(crate) const MALFORMED_ANSWER_PROBE: &str = "malformed-answer";
+
 /// The probes' stride: every state in the test sweep, every PROBE_GATE_STRIDE-th otherwise.
 pub fn probe_stride() -> usize {
     if is_whole_suite_sweep() {
@@ -1537,7 +1668,8 @@ fn judge_probe(state: &GameState, result: &ReduceResult, owed: Option<&[GameEven
 
 /// The probes on one state (#1386), never logged. First a concede by `player` under the last logged
 /// action's nonce, owed that action's own events (`last`); then `chosen` sent by the other seat, owed
-/// a refusal, unless that seat still owes its own mulligan, which it may answer (R265).
+/// a refusal, unless that seat still owes its own mulligan, which it may answer (R265); then, while a
+/// prompt is open, `chosen` made malformed (`malformed_answers`), each owed a refusal (#1574).
 fn probe_state(
     state: &GameState,
     player: PlayerId,
@@ -1556,16 +1688,24 @@ fn probe_state(
         }
     }
     let other = opponent_of(player);
-    if mulligan_owed(state).contains(&other) {
-        return None;
+    if !mulligan_owed(state).contains(&other) {
+        let forged = Action::new(chosen.clone(), other, format!("fuzz-probe-{step}"));
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
+            return Some(format!(
+                "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent \"{}\" while {player} was to act, and it {wrong}",
+                chosen.action_type().as_str()
+            ));
+        }
     }
-    let forged = Action::new(chosen.clone(), other, format!("fuzz-probe-{step}"));
-    judge_probe(state, &probe(state, &forged), None).map(|wrong| {
-        format!(
-            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent \"{}\" while {player} was to act, and it {wrong}",
-            chosen.action_type().as_str()
-        )
-    })
+    for (variant, seat, body) in malformed_answers(state, chosen) {
+        let forged = Action::new(body, seat, format!("fuzz-probe-{step}"));
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
+            return Some(format!(
+                "{MALFORMED_ANSWER_PROBE} probe after step {step}: {seat} sent the {variant} answer to the open prompt, and it {wrong}"
+            ));
+        }
+    }
+    None
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2019,7 +2159,7 @@ fn run_seed(setup: &GameSetup, decks: (Vec<String>, Vec<String>), probe: Reducer
             actions: run.log.len(),
         });
         // 2. always terminate, by hero death or the R2 cap
-        check_termination(&run)?;
+        check_termination(setup, &run)?;
         // 3. (seed, log) folds to the same hash
         check_replay(setup, &run)?;
         // 4. the game survives a serialized restart (#1387)
@@ -2098,6 +2238,8 @@ struct Wave {
     checkpoint_max_ms: u128,
     /// How many seeds, passed or failed, started from each kind of start (#1503).
     starts: IndexMap<&'static str, usize>,
+    /// How many seeds, passed or failed, took the endings channel (#1572).
+    endings: usize,
 }
 
 /// Plays the gate's seeds `from..from + ran`, in parallel, and gathers them back in seed order.
@@ -2117,6 +2259,11 @@ fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Pa
     let started_at = Instant::now();
     let results: Vec<Result<Passed, Failure>> = (from..from + ran).into_par_iter().map(seed).collect();
     let elapsed_ms = started_at.elapsed().as_secs_f64() * MS_PER_SECOND;
+    let setup_of = if handicapped {
+        GameSetup::handicapped
+    } else {
+        GameSetup::gate
+    };
 
     let mut wave = Wave {
         handicapped,
@@ -2133,6 +2280,7 @@ fn play_seeds(handicapped: bool, from: u32, ran: u32, seed: fn(u32) -> Result<Pa
         checkpoint_mid: 0,
         checkpoint_max_ms: 0,
         starts: IndexMap::new(),
+        endings: (from..from + ran).filter(|seed| setup_of(*seed).endings).count(),
     };
     for result in results {
         let start = match &result {
@@ -2237,6 +2385,7 @@ impl Wave {
             .collect::<Vec<_>>()
             .join(" ");
         text.push_str(&format!("  starts: {starts}\n"));
+        text.push_str(&format!("  endings channel: {} seed(s)\n", self.endings));
         text.push_str(&heaviest_lines(&self.heaviest));
         text
     }
@@ -2261,6 +2410,7 @@ impl Wave {
             })).collect::<Vec<_>>(),
             "heaviest": self.heaviest,
             "starts": self.start_counts().collect::<IndexMap<_, _>>(),
+            "endingsChannel": self.endings,
             "bounds": MEASURES
                 .into_iter()
                 .map(|measure| (measure.as_str(), measure.bound()))
@@ -2653,6 +2803,7 @@ mod tests {
                 checkpoint_mid: 0,
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
+                endings: 0,
             };
             assert!(wave(2500).summary().starts_with("[M4 fuzz] FULL GATE\n"));
             assert!(wave(WAVE_SEEDS).summary().starts_with("[M4 fuzz] FULL GATE\n"));
@@ -2676,6 +2827,7 @@ mod tests {
                 checkpoint_mid: 0,
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
+                endings: 0,
             };
             assert!(
                 wave(WAVE_SEEDS)
@@ -2765,7 +2917,12 @@ mod tests {
                 heaviest: Heaviest::default(),
                 paused: Vec::new(),
             };
-            assert_eq!(check_termination(&run).err().map(|failure| failure.message), None);
+            assert_eq!(
+                check_termination(&GameSetup::plain(1), &run)
+                    .err()
+                    .map(|failure| failure.message),
+                None
+            );
         }
     }
 
@@ -3120,6 +3277,7 @@ mod tests {
                 checkpoint_mid: 0,
                 checkpoint_max_ms: 0,
                 starts: IndexMap::new(),
+                endings: 0,
             };
             let summary = wave.summary();
             assert!(
@@ -3153,7 +3311,7 @@ mod tests {
         use super::*;
 
         /// A reducer that ignores who sent an action and answers for the seat the game waits on.
-        fn seatless(state: &GameState, action: &Action) -> ReduceResult {
+        pub(super) fn seatless(state: &GameState, action: &Action) -> ReduceResult {
             let seat = seat_to_act(state).unwrap_or(state.active);
             reduce(
                 state,
@@ -3195,6 +3353,22 @@ mod tests {
         #[test]
         fn a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe() {
             assert_caught(forgetful, REUSED_NONCE_PROBE);
+        }
+
+        /// A reducer that takes any answer from the prompt's holder as the prompt's first listed answer.
+        fn lenient(state: &GameState, action: &Action) -> ReduceResult {
+            if let (ActionBody::Answer { .. }, Some(pending)) = (&action.body, &state.pending)
+                && pending.player_id == action.player_id
+                && let Some(first) = jackioh_engine::prompt_answers(pending).into_iter().next()
+            {
+                return reduce(state, &Action::new(first, action.player_id, action.nonce.clone()));
+            }
+            reduce(state, action)
+        }
+
+        #[test]
+        fn a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe() {
+            assert_caught(lenient, MALFORMED_ANSWER_PROBE);
         }
 
         #[test]
@@ -3528,10 +3702,15 @@ mod tests {
             let mut run = play_game(&setup, decks, reduce)
                 .unwrap_or_else(|failure| panic!("[{}] {}", failure.stage.as_str(), failure.message));
             assert_eq!(run.state.phase, Phase::Over);
-            assert_eq!(check_termination(&run).err().map(|failure| failure.message), None);
+            assert_eq!(
+                check_termination(&setup, &run)
+                    .err()
+                    .map(|failure| failure.message),
+                None
+            );
             run.state.phase = Phase::Main;
-            let failure =
-                check_termination(&run).expect_err("a finished game still in the main phase must fail");
+            let failure = check_termination(&setup, &run)
+                .expect_err("a finished game still in the main phase must fail");
             assert_eq!(failure.stage, FailureStage::Termination, "{}", failure.message);
             assert!(
                 failure
@@ -3836,6 +4015,7 @@ mod tests {
                 checkpoint_mid: 0,
                 checkpoint_max_ms: 0,
                 starts: IndexMap::from([("glitch-boards", 1)]),
+                endings: 0,
             };
             let summary = wave.summary();
             assert!(
@@ -3866,6 +4046,240 @@ mod tests {
             let drawn = fuzz_seed(seed).unwrap_or_else(|failure| panic!("{}", failure.message));
             assert_eq!(drawn.start, StartKind::LastBoards);
             assert_ne!(replayed.hash, drawn.hash);
+        }
+    }
+
+    mod fuzz_endings_channel {
+        use super::*;
+        use jackioh_engine::testkit::{
+            CardScripts, Script, clear_overrides, json_as, register_catalog_as, register_scripts,
+        };
+        use jackioh_engine::{ActionType, CardDef, StaticFlags};
+
+        /// The seeds the channel tests search: wide enough that a card joining the pool cannot leave
+        /// a kind of action out of the games they play.
+        const CHANNEL_SEEDS: u32 = 400;
+
+        /// What the endings channel sends, by wire name: each must reach a log in the gate's waves.
+        const CHANNEL_KINDS: [&str; 7] = [
+            "concede",
+            "offerDraw",
+            "answerDraw",
+            "timeout",
+            "setAutoEndTurn",
+            "disconnectExpired",
+            "ceilingReached",
+        ];
+
+        /// A fixture Unit whose owner's opponent's emotes reach the board (Radiant M#71's flag), the
+        /// only card that makes an emote legal (R1127).
+        const LISTENER: &str = "fuzz-listener";
+
+        /// `failure` as a panic that names its seed and stage, the report's own order.
+        fn fail(seed: u32, failure: FuzzFailure) -> ! {
+            panic!("seed {seed}: [{}] {}", failure.stage.as_str(), failure.message)
+        }
+
+        /// `setup`'s game played and held to termination, replay and the serialized restart, a
+        /// failure of any panicking with its seed and stage.
+        fn checked_run(setup: &GameSetup, decks: (Vec<String>, Vec<String>)) -> GameRun {
+            let seed = setup.seed;
+            let run = play_game(setup, decks, reduce).unwrap_or_else(|failure| fail(seed, failure));
+            check_termination(setup, &run).unwrap_or_else(|failure| fail(seed, failure));
+            check_replay(setup, &run).unwrap_or_else(|failure| fail(seed, failure));
+            check_serial_restart(setup, &run.decks, &run.log, &run.state, &run.paused)
+                .unwrap_or_else(|failure| fail(seed, failure));
+            run
+        }
+
+        /// Puts the listener in this thread's catalog and scripts; `clear_overrides` takes it out.
+        fn install_listener() {
+            register_all();
+            let face = json!({ "attack": 1, "health": 1, "keywords": [],
+                "text": "Your opponent's emotes reach the board (fuzz fixture)." });
+            let def: CardDef = json_as(
+                json!({ "id": LISTENER, "index": LISTENER, "name": "Listener (fuzz fixture)",
+                "set": "Core", "type": "Unit", "tags": [], "rarity": "Common", "token": false, "cost": 1,
+                "base": face, "radiant": face }),
+            );
+            let mut catalog = (*CATALOG).clone();
+            catalog.insert(LISTENER.to_string(), def);
+            register_catalog_as(catalog, jackioh_cards::catalog_version());
+            let script = Script {
+                static_flags: Some(StaticFlags {
+                    hears_emotes: Some(true),
+                    ..StaticFlags::default()
+                }),
+                ..Script::default()
+            };
+            let mut scripts = jackioh_cards::scripts_of();
+            scripts.insert(
+                LISTENER.to_string(),
+                CardScripts {
+                    base: script.clone(),
+                    radiant: script,
+                },
+            );
+            register_scripts(scripts);
+        }
+
+        #[test]
+        fn a_share_of_ci_s_seeds_takes_the_channel_in_both_waves_and_a_corpus_record_takes_none() {
+            for setup_of in [GameSetup::gate, GameSetup::handicapped] {
+                let taking = (1..=200).filter(|seed| setup_of(*seed).endings).count();
+                assert!(
+                    0 < taking && taking < 200,
+                    "{taking} of 200 seeds take the channel"
+                );
+            }
+            assert_eq!(GameSetup::gate(7).stream("endings-"), "jackioh-fuzz-endings-7");
+            assert_eq!(
+                GameSetup::handicapped(7).stream("endings-steps-"),
+                "jackioh-fuzz-handicap-endings-steps-7"
+            );
+            assert!((1..=200).all(|seed| !GameSetup::plain(seed).endings));
+        }
+
+        #[test]
+        fn the_gate_s_channel_games_log_its_actions_and_fold_back_from_a_concede_and_an_accepted_draw() {
+            register_all();
+            let _preview = preview_every_set();
+            let mut kinds: IndexSet<String> = IndexSet::new();
+            let mut declined = false;
+            let mut reasons: IndexSet<String> = IndexSet::new();
+            for seed in (1..=CHANNEL_SEEDS).filter(|seed| GameSetup::gate(*seed).endings) {
+                let run = checked_run(&GameSetup::gate(seed), decks_for_seed(seed));
+                kinds.extend(
+                    run.log
+                        .iter()
+                        .map(|action| action.action_type().as_str().to_string()),
+                );
+                declined |= run
+                    .log
+                    .iter()
+                    .any(|action| action.body == ActionBody::AnswerDraw { accept: false });
+                reasons.extend(run.state.result.map(|result| result.reason.as_str().to_string()));
+                let all_kinds = CHANNEL_KINDS.iter().all(|kind| kinds.contains(*kind));
+                if all_kinds && declined && reasons.contains("concede") && reasons.contains("draw-accepted") {
+                    break;
+                }
+            }
+            for kind in CHANNEL_KINDS {
+                assert!(
+                    kinds.contains(kind),
+                    "no channel game of seeds 1..={CHANNEL_SEEDS} logged \"{kind}\""
+                );
+            }
+            assert!(declined, "no channel game logged a declined draw");
+            for reason in ["concede", "draw-accepted"] {
+                assert!(
+                    reasons.contains(reason),
+                    "no channel game ended by \"{reason}\": {reasons:?}"
+                );
+            }
+        }
+
+        #[test]
+        fn a_planted_listener_s_opponent_emotes_through_the_channel_and_the_game_folds_back() {
+            install_listener();
+            let _preview = preview_every_set();
+            // The overrides are this thread's, so the seeds run here and not under rayon.
+            let emoted = (1..=CHANNEL_SEEDS)
+                .filter(|seed| GameSetup::gate(*seed).endings)
+                .find(|seed| {
+                    let (mut p1, mut p2) = decks_for_seed(*seed);
+                    p1[0] = LISTENER.to_string();
+                    p2[0] = LISTENER.to_string();
+                    let run = checked_run(&GameSetup::gate(*seed), (p1, p2));
+                    run.log
+                        .iter()
+                        .any(|action| action.action_type() == ActionType::Emote)
+                });
+            clear_overrides();
+            assert!(
+                emoted.is_some(),
+                "no planted channel game of seeds 1..={CHANNEL_SEEDS} logged an emote"
+            );
+        }
+
+        #[test]
+        fn a_game_without_the_channel_still_fails_on_each_channel_ending() {
+            register_all();
+            let _preview = preview_every_set();
+            let decks = decks_for_seed(1);
+            for reason in [
+                GameOverReason::Concede,
+                GameOverReason::DrawAccepted,
+                GameOverReason::Disconnect,
+                GameOverReason::MatchCeiling,
+            ] {
+                let mut state = create_game(&CreateGameOptions {
+                    seed: "jackioh-fuzz-1".to_string(),
+                    decks: decks.clone(),
+                    ..CreateGameOptions::default()
+                });
+                state.result = Some(GameResult {
+                    winner: Winner::Draw,
+                    reason,
+                });
+                state.phase = Phase::Over;
+                let run = GameRun {
+                    state,
+                    log: Vec::new(),
+                    decks: decks.clone(),
+                    heaviest: Heaviest::default(),
+                    paused: Vec::new(),
+                };
+                let failure = check_termination(&GameSetup::plain(1), &run)
+                    .expect_err("a game without the channel cannot end by one of its endings");
+                assert_eq!(failure.stage, FailureStage::Termination, "{}", failure.message);
+                assert!(
+                    failure
+                        .message
+                        .contains(&format!("ended with reason \"{}\"", reason.as_str())),
+                    "{}",
+                    failure.message
+                );
+                let channel = GameSetup {
+                    endings: true,
+                    ..GameSetup::plain(1)
+                };
+                assert_eq!(
+                    check_termination(&channel, &run)
+                        .err()
+                        .map(|failure| failure.message),
+                    None
+                );
+            }
+        }
+
+        #[test]
+        fn a_channel_seed_s_failure_names_its_seed_and_both_decks_and_the_summary_counts_the_channel() {
+            register_all();
+            let seed = (1..=200)
+                .find(|seed| GameSetup::gate(*seed).endings)
+                .expect("some seed of 1..=200 takes the channel");
+            let decks = decks_for_seed(seed);
+            let failure = fuzz_deal_probed(seed, decks.clone(), fuzz_probe_stage::seatless)
+                .err()
+                .expect("a reducer that breaks the wrong-seat probe must fail the seed");
+            assert_eq!((failure.seed, &failure.decks), (seed, &decks));
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains(&format!("example: seed {seed} (")), "{text}");
+            assert!(
+                text.contains(&format!("seed {seed} p1 deck: {}", decks.0.join(", "))),
+                "{text}"
+            );
+            assert!(
+                text.contains(&format!("seed {seed} p2 deck: {}", decks.1.join(", "))),
+                "{text}"
+            );
+
+            let wave = play_wave(seed, 1);
+            assert_eq!(wave.endings, 1);
+            let summary = wave.summary();
+            assert!(summary.contains("\n  endings channel: 1 seed(s)\n"), "{summary}");
+            assert_eq!(wave.json()["endingsChannel"], json!(1));
         }
     }
 }

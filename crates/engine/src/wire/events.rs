@@ -563,14 +563,23 @@ pub enum GameEvent {
         player: PlayerId,
         turn: i32,
     },
+    /// R81, §10.6: `choiceId` and `kind` are the holder's. The other seat's view drops both
+    /// (`view_for`), so it reads only that a prompt is open and whose. The engine always sets them.
     PromptOpened {
         player: PlayerId,
-        choice_id: String,
-        kind: PromptKind,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        choice_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        kind: Option<PromptKind>,
     },
+    /// R81, §10.6: `choiceId` as on `promptOpened`.
     PromptAnswered {
         player: PlayerId,
-        choice_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        choice_id: Option<String>,
     },
     DrawOffered {
         player: PlayerId,

@@ -81,10 +81,10 @@ use crate::db::store::{
     PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
     ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
     RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery,
-    StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
-    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -1452,6 +1452,7 @@ struct BotRatingDbRow {
     volatility: f64,
     games: i32,
     updated_at: OffsetDateTime,
+    ai_generation: Option<i32>,
 }
 
 impl BotRatingDbRow {
@@ -1463,6 +1464,7 @@ impl BotRatingDbRow {
             volatility: get(row, "volatility")?,
             games: get(row, "games")?,
             updated_at: get(row, "updated_at")?,
+            ai_generation: get(row, "ai_generation")?,
         })
     }
 }
@@ -1477,6 +1479,7 @@ fn to_bot_rating(row: BotRatingDbRow) -> BotRating {
         },
         games: i64::from(row.games),
         updated_at: ms_of(row.updated_at),
+        ai_generation: row.ai_generation.map(i64::from),
     }
 }
 
@@ -2203,13 +2206,64 @@ pub async fn profiles_clear_in_match(
     Ok(())
 }
 
+/// R1523000: every profile whose in-match flag is set, with its match, by profile id.
+pub async fn profiles_seated(t: &mut PgTx<'_>) -> Result<Vec<SeatedProfile>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select id, current_match_id from public.profiles
+          where current_match_id is not null order by id",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            Ok(SeatedProfile {
+                profile_id: uuid_text(row, "id")?,
+                match_id: uuid_text(row, "current_match_id")?,
+            })
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
+// The seat ledger's epoch (R1523000, migration 0054)
+// ---------------------------------------------------------------------------
+
+/// The claim's fence: the one row `for share` while it still holds `epoch`, `Fenced` when it does
+/// not. Shared locks never wait on each other, so claims run side by side; a newer process's bump
+/// waits for every claim that took one, and a claim that reads after the bump finds no row.
+pub async fn seats_fence(t: &mut PgTx<'_>, epoch: i64) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("select 1 from app.seat_epoch where epoch = $1 for share")
+        .bind(epoch)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    match row {
+        Some(_) => Ok(()),
+        None => Err(StoreError::Fenced),
+    }
+}
+
+/// A booting process's bump: one more than the epoch every older process fences on.
+pub async fn seats_bump_epoch(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("update app.seat_epoch set epoch = epoch + 1 returning epoch")
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get::<i64>(&row, "epoch")
+}
+
 /// `DELETE /api/account`'s store half: one delete, and migration 0012's foreign keys do the
 /// rest. Rows only this profile owns cascade; its invite-code attempts, the codes it minted and
 /// the finished matches, results, series and logged actions it played in keep their rows with
 /// its seat set to null; `profiles_release_open_matches` removes a room it opened that nobody
-/// joined. A profile still seated in a live match or an unfinished series makes the delete
-/// raise, by constraint; `src/api/auth.rs` refuses that case first. No `app.*` function: the
-/// schema is the rule here, and the statement is the whole of it.
+/// joined. A profile still seated in a live match, an unfinished series or a live co-op match
+/// (migration 0051, R1497000) makes the delete raise, by constraint; `src/api/auth.rs` refuses
+/// that case first. No `app.*` function: the schema is the rule here, and the statement is the
+/// whole of it.
 pub async fn profiles_remove(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(false);
@@ -4632,6 +4686,36 @@ pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result
     Ok(ids.len())
 }
 
+/// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
+/// result, a final hash (R768; a ceiling draw has none, R112, R1253000), a log the purge has not
+/// taken and no game record, even an emptied one (R1044001). Earliest ended first, then by id.
+pub async fn game_records_unfiled(
+    t: &mut PgTx<'_>,
+    ended_after: i64,
+    ended_before: i64,
+) -> Result<Vec<String>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select m.id from public.matches m",
+        " where m.status = 'over'",
+        " and m.final_hash is not null",
+        " and m.ended_at >= ",
+        ts!("$1"),
+        " and m.ended_at < ",
+        ts!("$2"),
+        " and exists (select 1 from public.results r where r.match_id = m.id)",
+        " and exists (select 1 from public.match_actions a where a.match_id = m.id)",
+        " and not exists (select 1 from public.game_records g where g.id = m.id::text)",
+        " order by m.ended_at, m.id",
+    ))
+    .bind(ended_after)
+    .bind(ended_before)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "id")).collect()
+}
+
 /// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`.
 fn co_json(co: &IndexMap<String, CoCount>) -> Value {
     Value::Object(
@@ -5642,7 +5726,7 @@ pub async fn ranked_note_peak_jlorious(
 pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRating>, StoreError> {
     run_as(t, None).await?;
     let row = sqlx::query(
-        "select bot_id, rating, deviation, volatility, games, updated_at
+        "select bot_id, rating, deviation, volatility, games, updated_at, ai_generation
            from public.bot_ratings where bot_id = $1::text",
     )
     .bind(bot_id)
@@ -5656,13 +5740,14 @@ pub async fn ranked_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<Option<BotRati
 pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), StoreError> {
     run_as(t, None).await?;
     sqlx::query(concat!(
-        "insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at)
+        "insert into public.bot_ratings (bot_id, rating, deviation, volatility, games, updated_at, ai_generation)
          values ($1::text, $2::float8, $3::float8, $4::float8, $5::int, ",
         ts!("$6"),
-        ")
+        ", $7::int)
          on conflict (bot_id) do update set
            rating = excluded.rating, deviation = excluded.deviation,
-           volatility = excluded.volatility, games = excluded.games, updated_at = excluded.updated_at"
+           volatility = excluded.volatility, games = excluded.games, updated_at = excluded.updated_at,
+           ai_generation = excluded.ai_generation"
     ))
     .bind(bot.bot_id.as_str())
     .bind(bot.glicko.rating)
@@ -5670,6 +5755,7 @@ pub async fn ranked_put_bot(t: &mut PgTx<'_>, bot: &BotRating) -> Result<(), Sto
     .bind(bot.glicko.volatility)
     .bind(bot.games)
     .bind(bot.updated_at)
+    .bind(bot.ai_generation)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5697,6 +5783,8 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
         retired_at: ms_or_null(get(row, "retired_at")?),
         rating: get::<Option<f64>>(row, "rating")?.unwrap_or(RATING_START),
         in_match_id: uuid_text_or_null(row, "current_match_id")?,
+        grinding: get(row, "grinding")?,
+        grind_wins: get(row, "grind_wins")?,
     })
 }
 
@@ -5706,7 +5794,7 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     let rows = sqlx::query(
         "select b.profile_id, b.strength, b.speed, b.persona, b.active_from_hour, b.active_hours,
                 b.decks, b.decks_catalog_version, b.trio, b.trio_catalog_version, b.retired_at,
-                p.created_at, p.current_match_id, r.rating
+                b.grinding, b.grind_wins, p.created_at, p.current_match_id, r.rating
            from public.bots b
            join public.profiles p on p.id = b.profile_id
            left join public.bot_ratings r on r.bot_id = b.profile_id::text
@@ -6054,25 +6142,126 @@ pub async fn bots_claim_for_rematch(
     Ok(true)
 }
 
+/// R1555000: the flag, and the grind's count of wins back to 0.
+pub async fn bots_set_grinding(t: &mut PgTx<'_>, profile_id: &str, grinding: bool) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(
+        "update public.bots set grinding = $2::boolean, grind_wins = 0 where profile_id = $1::uuid",
+    )
+    .bind(profile_id)
+    .bind(grinding)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(StoreError::from(format!("no bot {profile_id}")));
+    }
+    Ok(())
+}
+
+/// R1555000: one statement on the grinding bot's row alone, so the result's transaction locks no
+/// other bot. The id is compared as text, as `bot_ratings.bot_id` holds it, so a side that is no
+/// bot's uuid matches no row rather than failing the cast.
+pub async fn bots_note_grind_win(
+    t: &mut PgTx<'_>,
+    bot_id: &str,
+    step_games: i32,
+    strongest: usize,
+) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    sqlx::query(
+        "update public.bots
+            set strength = case when grind_wins + 1 >= $2::integer
+                                then least(strength + 1, $3::smallint)::smallint else strength end,
+                grind_wins = case when grind_wins + 1 >= $2::integer then 0 else grind_wins + 1 end
+          where profile_id::text = $1::text and grinding",
+    )
+    .bind(bot_id)
+    .bind(step_games)
+    .bind(small(i64::try_from(strongest).unwrap_or(i64::MAX), "strength")?)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+/// R1555000: `bots_claim_for_rematch` for two bots: both locked (free: `lock_free_bot`) in id
+/// order, so two claims that share a bot cannot deadlock, then the `open` skeleton written for the
+/// two and both put in it. The same id twice, or a bot that is not free, answers false and writes
+/// nothing; as there, a start that never comes leaves the skeleton to `bots_release_stale_starts`.
+pub async fn bots_claim_pair(
+    t: &mut PgTx<'_>,
+    players: &(String, String),
+    match_id: &str,
+    catalog_version: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    if players.0 == players.1 {
+        return Ok(false);
+    }
+    let (first, second) = if players.0 < players.1 {
+        (&players.0, &players.1)
+    } else {
+        (&players.1, &players.0)
+    };
+    if !lock_free_bot(t, first).await? || !lock_free_bot(t, second).await? {
+        return Ok(false);
+    }
+    sqlx::query(concat!(
+        "insert into public.matches (
+             id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
+             ceiling_at, created_at)
+           values ($1::uuid, 'open', '', $2::uuid, $3::uuid, '[]'::jsonb, '[]'::jsonb, $4::text, ",
+        ts!("$5"),
+        ", ",
+        ts!("$5"),
+        ")"
+    ))
+    .bind(match_id)
+    .bind(players.0.as_str())
+    .bind(players.1.as_str())
+    .bind(catalog_version)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    sqlx::query("update public.profiles set current_match_id = $2::uuid where id in ($1::uuid, $3::uuid)")
+        .bind(players.0.as_str())
+        .bind(match_id)
+        .bind(players.1.as_str())
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(true)
+}
+
 /// R1454: the `open` skeletons bots were claimed into before `before` and that no start completed,
 /// deleted; `profiles.current_match_id` and `tickets.match_id` are `on delete set null`, so the bot
 /// and the ticket's owner are let go with them, and the ticket stays claimed. A room is an `open`
-/// row too, but never a bot's.
+/// row too, but never a bot's. R1555000: a skeleton two bots were claimed into answers both. Each
+/// skeleton is locked once, so a second bot's row never meets a skeleton this statement already
+/// deleted (which a lock skips), and the bots are read from `profiles` as they stood before it.
 pub async fn bots_release_stale_starts(t: &mut PgTx<'_>, before: i64) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
         "with stale as (
-           select m.id, p.id as bot_id
+           select m.id
              from public.matches m
-             join public.profiles p on p.current_match_id = m.id
-            where p.kind = 'bot' and m.status = 'open' and m.created_at < ",
+            where m.status = 'open' and m.created_at < ",
         ts!("$1"),
         "
-            for update of m)
-         delete from public.matches m
-          using stale
-          where m.id = stale.id and m.status = 'open'
-          returning stale.bot_id"
+              and exists (select 1 from public.profiles p where p.current_match_id = m.id and p.kind = 'bot')
+            for update of m),
+         gone as (
+           delete from public.matches m
+            using stale
+            where m.id = stale.id and m.status = 'open'
+            returning m.id)
+         select p.id as bot_id
+           from public.profiles p
+           join gone on p.current_match_id = gone.id
+          where p.kind = 'bot'"
     ))
     .bind(before)
     .fetch_all(&mut **t)

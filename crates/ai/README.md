@@ -36,8 +36,10 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
 (R185): `redact` blanks what the seat may not know (the opponent's hand and library, the backrow
-cards it cannot read, its own library's order and the cards in it that came from the opponent, the
-seed, the event history). Every simulation runs on a `determinize`d copy whose hidden cards are
+cards it cannot read, an enemy face-down card its own prompt offers among them (its option reads
+the view's `Face-down card`, R177), its own library's order and the cards in it that came from the
+opponent, the seed, the event history), and strips from the events its queues keep what `view_for`
+strips of a hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are
 resampled from the non-token cards of every set the opponent has not shown (R185, R380), a hidden
 backrow card from the traps alone, minus any whose live aura would change a shown stat (R602), and
 of the shown cost while an unseen trap of that cost is left (R351, R762). So two states that differ
@@ -62,7 +64,10 @@ one redaction (R1184002).
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks) on every determinization, and plays the first action of the
-best mean. It re-plans after every action.
+best mean. It re-plans after every action. An action the true state refuses (a cost no determinization
+could see) is never submitted: `submitted` sends the first action of the next finalist the true state
+accepts, best mean first, with the search's reason, and only when none is accepted falls back
+(`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
@@ -316,8 +321,9 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 ## Commands
 
 ```
-cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow_a.rs, ai_slow_b.rs)
-cargo test -p jackioh-ai --test ai_slow_b     # one binary: CI gives each its own job (#873)
+cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow.rs) but the daily ones
+cargo test -p jackioh-ai -- --include-ignored # and the daily ones: the many-game sweeps, `#[ignore = "daily: …"]`
+cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its own job (#873)
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team (--games N)

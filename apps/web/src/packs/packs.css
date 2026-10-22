@@ -198,6 +198,27 @@
   gap: 0.5rem;
 }
 
+.packs-pity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.packs-pity__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.packs-pity__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 /* ---------------------------------------------------------------------------------- motion --- */
 
 @keyframes pack-tear {

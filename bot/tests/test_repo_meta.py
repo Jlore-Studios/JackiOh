@@ -16,7 +16,7 @@ from harness import config, dashboard, disk, triage
 
 from tests.fakes import FakeGitHub
 from tests.support import make_config, make_ctx
-from tests.test_workflows import WORKFLOWS, job, read, selftest
+from tests.test_workflows import WORKFLOWS, job, linted, read
 
 ROOT = config.REPO_ROOT
 FORMS = ROOT / ".github" / "ISSUE_TEMPLATE"
@@ -112,9 +112,23 @@ class PullTitleTests(unittest.TestCase):
                          "Patch v0.3.2: the rules, v2")
         self.assertEqual(triage.pull_title("Make the rules v2", "Patch: the rules"),
                          "Patch: the rules")
-        self.assertEqual(triage.pull_title("Make the rules v2", "the rules"), "Make the rules v2")
-        self.assertEqual(triage.pull_title("", "the rules"), "the rules")
         self.assertEqual(triage.pull_title("", ""), "")
+
+    def test_a_bot_that_has_no_passing_title_writes_one(self):
+        """A workflow's alert keeps its old prefix (`titles.LEFT_ALONE`), so the fix of one, as
+        #1548 and #1549 were, failed the title check."""
+        for chosen, issue, expected in (
+                ("Make the rules v2", "the rules", "Patch: Make the rules v2"),
+                ("", "the rules", "Patch: the rules"),
+                ("CI: a job ran over 7 minutes", "CI: a job ran over 7 minutes",
+                 "Patch: a job ran over 7 minutes"),
+                ("", "CI: daily super run failed", "Patch: daily super run failed"),
+                ("Architecture: weekly hygiene, dead files, 2026-10-21",
+                 "Architecture: weekly hygiene, dead files, 2026-10-21",
+                 "Patch: weekly hygiene, dead files, 2026-10-21")):
+            title = triage.pull_title(chosen, issue)
+            self.assertEqual(title, expected)
+            self.assertTrue(triage.pull_title_ok(title), title)
 
 
 class TitleWorkflowTests(unittest.TestCase):
@@ -139,7 +153,7 @@ class TitleWorkflowTests(unittest.TestCase):
         self.assertIn("TITLE: ${{ github.event.pull_request.title }}", self.text)
         self.assertEqual(self.text.count("github.event.pull_request.title"), 1)
         self.assertIn("from harness.triage import pull_title_ok", self.text)
-        self.assertIn(".github/workflows/pr-title.yml", selftest())
+        self.assertTrue(linted("pr-title.yml"))
 
 
 class IssueFormTests(unittest.TestCase):

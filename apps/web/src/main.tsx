@@ -82,7 +82,7 @@ import { initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
-import { adoptRoomLink } from "./net/roomLink.ts";
+import { adoptRoomLink, readRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
   duosIdOf,
@@ -138,6 +138,7 @@ const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
 const CollectionRoute = lazy(() => import("./routes/collection.tsx"));
+const ShopRoute = lazy(() => import("./routes/shop.tsx"));
 const StatsRoute = lazy(() => import("./routes/stats.tsx"));
 const CreatorRoute = lazy(() => import("./routes/creator.tsx"));
 // #936: Play together and a friend's game watched.
@@ -642,7 +643,7 @@ export function App(): ReactElement {
   const signedIn = readSession() !== null;
   usePresenceHeartbeat(signedIn);
 
-  // #778: every screen but the seven engine-free ones waits in EngineGate, inside the account gate so its redirects do not wait.
+  // #778: every screen but the engine-free ones (the signed-out Play hub among them, R1578000) waits in EngineGate, inside the account gate so its redirects do not wait.
   const route = ((): ReactElement => {
     if (path === paths.landing) return <LandingRoute />;
     if (path === paths.login) return <LoginRoute />;
@@ -664,6 +665,10 @@ export function App(): ReactElement {
       );
     }
     if (path === paths.play) {
+      // R1578000: the hub is every mode's front door, so a visitor with no account sees it too, its
+      // online panel a sign-in. A room link waits through the sign-in as it always did (R767), and a
+      // stored session, even a stale one, still meets the gate.
+      if (!signedIn && readRoomLink() === null) return <PlayRoute token={null} />;
       return (
         <Gated key={path}>
           {(account) => (
@@ -727,6 +732,14 @@ export function App(): ReactElement {
               <CollectionRoute token={account.token} />
             </EngineGate>
           )}
+        </Gated>
+      );
+    }
+    // #1577: the shop reads only the server's projections, never the engine, so no EngineGate.
+    if (path === paths.shop) {
+      return (
+        <Gated key={path}>
+          {(account) => <ShopRoute token={account.token} />}
         </Gated>
       );
     }

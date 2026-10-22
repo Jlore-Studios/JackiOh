@@ -4,7 +4,8 @@
 //!  - V2: the pure crates (engine, cards, ai, luau) link nothing but serde, serde_json, indexmap and
 //!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), and the
 //!    engine's and `jackioh-luau`'s ts-rs only behind their optional `ts` features (CLAUDE.md rule 4;
-//!    each crate's `clippy.toml` holds the rest of the rule);
+//!    each crate's `clippy.toml` holds the rest of the rule, the four byte for byte the same and every
+//!    entry shown to fire on `tests/fixtures/purity.rs`);
 //!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose, part 28's grep
 //!    (`readFileSync(…md`, `include_str!(…md`, `read_to_string(…md`) as a test. The two structural
 //!    readers it allows are named below;
@@ -18,6 +19,13 @@
 //!    crate built on it (dev-dependencies included) and no other, and a crate or a path dependency
 //!    the script's map lacks fails here; and a file a crate includes from outside its own directory
 //!    runs a group that tests that crate.
+//!
+//! And one for the daily run:
+//!
+//!  - Daily: every `#[ignore]` under `crates/` reads `#[ignore = "daily: <why>"]`. super.yml's
+//!    `daily tests` job runs each one (`cargo test -- --ignored`), and the reason names what holds
+//!    the same rule per pull request, so an ignore moves a test to the daily run and never switches
+//!    one off.
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -113,6 +121,112 @@ fn v2_the_reader_sees_through_tables_and_inline_tables() {
         .map(|(name, _)| name)
         .collect();
     assert_eq!(names, ["serde", "rand", "regex", "libc"]);
+}
+
+/// One use of every path the pure crates' `clippy.toml` bans (its header says why nothing compiles it).
+const PURITY_FIXTURE: &str = include_str!("fixtures/purity.rs");
+
+/// Every `path = "…"` entry of a `clippy.toml`, in its order.
+fn banned_paths(toml: &str) -> Vec<String> {
+    toml.lines()
+        .filter_map(|line| line.split_once("path = \"")?.1.split_once('"'))
+        .map(|(path, _)| path.to_string())
+        .collect()
+}
+
+/// The crates among `files` (each a crate and its `clippy.toml`) whose file is not byte for byte the
+/// first one's.
+fn diverging(files: &[(&str, String)]) -> Vec<String> {
+    let Some((_, first)) = files.first() else {
+        return Vec::new();
+    };
+    files
+        .iter()
+        .filter(|(_, text)| text != first)
+        .map(|(name, _)| name.to_string())
+        .collect()
+}
+
+#[test]
+fn v2_the_pure_crates_share_one_clippy_toml() {
+    let files: Vec<(&str, String)> = ["engine", "cards", "ai", "luau"]
+        .into_iter()
+        .map(|crate_dir| {
+            let path = repo().join("crates").join(crate_dir).join("clippy.toml");
+            let text =
+                fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+            (crate_dir, text)
+        })
+        .collect();
+    let diverging = diverging(&files);
+    assert!(
+        diverging.is_empty(),
+        "these differ from crates/engine/clippy.toml; make one edit to all four pure crates' files (CLAUDE.md rule 4): {diverging:?}"
+    );
+}
+
+#[test]
+fn v2_the_parity_check_names_each_diverging_file() {
+    let lint = "disallowed-types = []\n".to_string();
+    let mut files = vec![
+        ("engine", lint.clone()),
+        ("cards", lint.clone()),
+        ("ai", lint.clone()),
+        ("luau", lint),
+    ];
+    assert!(diverging(&files).is_empty());
+    files[2].1.push(' ');
+    assert_eq!(diverging(&files), ["ai"]);
+}
+
+#[test]
+fn v2_every_entry_of_the_pure_crates_clippy_toml_fires() {
+    let conf = repo().join("crates/engine");
+    let toml = fs::read_to_string(conf.join("clippy.toml")).expect("crates/engine/clippy.toml");
+    let paths = banned_paths(&toml);
+    assert!(
+        paths.len() > 50,
+        "only {} entries read; the file's shape changed: {paths:?}",
+        paths.len()
+    );
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-purity-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let dir = scratch.0.as_path();
+    let _ = fs::remove_dir_all(dir);
+    fs::create_dir_all(dir.join("src")).expect("a scratch crate");
+    fs::write(
+        dir.join("Cargo.toml"),
+        "[package]\nname = \"purity-fixture\"\nversion = \"0.0.0\"\nedition = \"2024\"\npublish = false\n\n[workspace]\n",
+    )
+    .expect("its manifest");
+    fs::write(dir.join("src/lib.rs"), PURITY_FIXTURE).expect("its lib.rs");
+    let out = Command::new(env!("CARGO"))
+        .args(["clippy", "--offline", "--quiet", "--color", "never"])
+        .env("CLIPPY_CONF_DIR", &conf)
+        .env("CARGO_TARGET_DIR", dir.join("target"))
+        .current_dir(dir)
+        .output()
+        .expect("cargo clippy runs");
+    drop(scratch);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !stderr.contains("does not refer to"),
+        "an entry clippy cannot resolve bans nothing: {stderr}"
+    );
+    let silent: Vec<&String> = paths
+        .iter()
+        .filter(|path| {
+            !stderr.contains(&format!("use of a disallowed method `{path}`"))
+                && !stderr.contains(&format!("use of a disallowed type `{path}`"))
+        })
+        .collect();
+    assert!(
+        silent.is_empty(),
+        "entries the fixture did not trip (give each a use in crates/tools/tests/fixtures/purity.rs): {silent:?}\n{stderr}"
+    );
 }
 
 /// The readers part 28 left standing, and those since: each reads structure, never prose.
@@ -228,15 +342,11 @@ fn v28_no_typescript_is_left_where_the_rust_replaced_it() {
 const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_engine_rules", &["jackioh-engine"]),
     ("rust_engine", &["jackioh-engine"]),
-    ("rust_cards_lib_core", &["jackioh-cards"]),
-    ("rust_cards_lib_classic", &["jackioh-cards"]),
-    ("rust_cards_lib_classic_plus", &["jackioh-cards"]),
-    ("rust_cards_lib_meditative", &["jackioh-cards"]),
+    ("rust_cards_lib", &["jackioh-cards"]),
     ("rust_cards", &["jackioh-cards"]),
     ("rust_server", &["jackioh-server"]),
     ("rust_ai", &["jackioh-ai"]),
-    ("rust_ai_slow_a", &["jackioh-ai"]),
-    ("rust_ai_slow_b", &["jackioh-ai"]),
+    ("rust_ai_slow", &["jackioh-ai"]),
     ("rust_luau", &["jackioh-luau"]),
     ("rust_tools_wasm", &[]),
 ];
@@ -647,4 +757,43 @@ fn ci_scope_include_scan_finds_each_literal_path() {
             (4, "/../../e2e/y.ts".to_string(), true),
         ]
     );
+}
+
+/// The 1-based lines of `text` that ignore a test without saying it runs daily.
+fn ignored_without_a_daily_reason(text: &str) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let line = line.trim_start();
+            line.starts_with("#[ignore") && !line.starts_with("#[ignore = \"daily: ")
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+#[test]
+fn daily_every_ignored_test_says_it_runs_daily() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join("crates"), &mut files);
+    let mut bare = Vec::new();
+    for file in files {
+        let text = fs::read_to_string(&file).unwrap_or_default();
+        for line in ignored_without_a_daily_reason(&text) {
+            bare.push(format!(
+                "{}:{line}",
+                file.strip_prefix(&root).unwrap_or(&file).display()
+            ));
+        }
+    }
+    assert!(
+        bare.is_empty(),
+        "a test ignored without `#[ignore = \"daily: <why>\"]`, which super.yml's daily tests run and whose reason names what holds the rule per pull request: {bare:?}"
+    );
+}
+
+#[test]
+fn daily_the_scan_finds_each_bare_ignore() {
+    let text = "#[test]\n#[ignore]\nfn a() {}\n    #[ignore = \"slow\"]\nfn b() {}\n#[ignore = \"daily: a sweep\"]\nfn c() {}\n";
+    assert_eq!(ignored_without_a_daily_reason(text), [2, 4]);
 }

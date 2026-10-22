@@ -408,7 +408,8 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
   title, which becomes the squash commit's subject: the `pr title` check (`pr-title.yml`, #187)
   holds it to `CONVENTION`, plus the titles tools give their own (`AUTOMATED_PULL`,
   `pull_title_ok`), and the bots' pull requests take their builder's title when it passes, else
-  their issue's (`pull_title`).
+  their issue's, else `Patch: <what it does>` with the old prefix dropped, as a workflow's
+  `CI: …` alert's fix takes (`pull_title`).
 - **It adds, and moves only what `human` moves.** A person's labels, assignees and type stay. It
   links nothing: the queue holds a build that waits for another issue by itself, from a "Blocked
   by #n" line, GitHub's own blocked-by links and the earlier parts of a patch, the sub-issues of
@@ -419,6 +420,13 @@ triage.yml -f number=<n>` (or **Run workflow** on the triage workflow's Actions 
   open issue still without one, with the same `triage.fallback_type`: a bot's (the CI-duration
   alerts, the status issue), which never reaches triage, and any triage missed.
 - **When it can't:** a failure skips quietly. It leaves no comment.
+
+**Locked conversations.** `lock-conversations.yml` locks every issue and pull request as it opens,
+and an hourly sweep locks the rest, so only collaborators can comment: the people, the night bot
+and Squishy, whose tokens have write access. The threads `github-actions[bot]` opened (the CI
+alerts, the production countdown, the hygiene issues) stay unlocked, since the workflow's own
+token cannot comment on a locked thread; `patches ship`'s "Shipped as" comment unlocks a locked
+thread, comments and locks it again (`titles.retitle_shipped`).
 
 ## Subscriptions
 
@@ -447,6 +455,14 @@ have not set up yet sit out. A login on the machine has no secret to check, so t
 as set up; turn one off with `enabled: false`, or for a while, without a pull request, with
 `/harness suspend <id>` (until `/harness resume <id>`). `python3 -m harness providers` in `bot/`
 prints each one and whether it could start now, and `/harness status` does the same on GitHub.
+
+**The morning start.** `claude-wake.yml` starts each Claude account's 5-hour session at 06:00
+America/Chicago (`wake.py`), Squishy's included, so it resets at 11:00 rather than at whatever hour
+the first run of the day lands. An account whose session the state file shows running, one
+suspended, and every account of a halted bot are left alone; each other one gets one turn of
+`claude-haiku-5-5` at low effort, in a job holding only its own secret. GitHub starts schedules
+late, so it fires in the hours before and sleeps until 06:00; run it by hand with `now` to wake
+them at any hour.
 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
@@ -944,16 +960,26 @@ claims the item with `pending:<ref>` for the run id, writes the plan to the stat
 (`plans/<ref>.json`), starts `bot-night` with `plan_ref` and the plan's runner, CLI, secret name and
 shared flag, and puts the new run's id on the claim once GitHub lists the run under its title
 (`bot-night <ref> on <runner>`). It plans again until nothing more can start. Such a run skips the
-gate and the plan job, so it waits in GitHub's queue once, for its model job. The model job's
-first step (`harness plan-fetch --check`) holds the runner, CLI, secret name and shared flag it
-was given to the plan and to `providers.json`, and stops the job before any step is handed a
-secret when one does not match. Deliver reads the plan from the state branch. On 2026-10-20 a
-night run's gate, plan and deliver each waited 6 to 25 minutes for a runner, for jobs that ran
-under a minute.
+gate, the plan job and deliver, so it waits in GitHub's queue once, for its model job. The model
+job's first step (`harness plan-fetch --check`) holds the runner, CLI, secret name and shared flag
+it was given to the plan and to `providers.json`, and stops the job before any step is handed a
+secret when one does not match. On 2026-10-20 a night run's gate, plan and deliver each waited 6
+to 25 minutes for a runner, for jobs that ran under a minute.
+
+**Who delivers (#1537).** The loop delivers the runs it started. Each tick, before it plans, its
+sweep takes every such run that has ended: it reads the run's plan from the state branch (where
+the model job cannot write), downloads the model job's `work` upload through the Actions API,
+clones the default branch afresh into the runner's scratch directory, and delivers as the deliver
+job does, as the run (its links and records name the night run). Each try is recorded in the state
+file first (`loop_deliveries`), so one that fails is tried again on the next tick, three times at
+most; until then the run counts as going, so housekeeping leaves its item alone and its lane stays
+held. After the third try, or 30 minutes after the run ended (the loop was gone, say), the item is
+housekeeping's, as a dead run's is. A failure is a note in the sweep, never the end of the loop.
 
 While the loop goes (its run is in progress and its sweep ticked in the last 15 minutes), nothing
 else starts a plain run: another sweep leaves the work to it, a delivery does not chain the next
-run, and a run started by the schedule stops at its gate. A run a person starts for an item, a
+run, and a run started by the schedule stops at its gate. A run that gated and planned itself
+delivers itself, in its own deliver job. A run a person starts for an item, a
 mode or by force still gates and plans itself, under the lock. When the loop is gone, everything
 works as below, so the schedule (rule 13) and the commands keep the bot going. The plans are
 pruned after a week ([`harness/controller.py`](harness/controller.py)).
@@ -1138,7 +1164,7 @@ days.
 
 | I want to | Do this |
 |---|---|
-| see what it is doing | the pinned issue **Night bot status** (#148), which `bot-status.yml` rewrites every five minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within five minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within five minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code). It opens with a headline (how many runs go, what the queue waits on, which subscriptions can start work now), then what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run) and a timeline of the runs going now; every subscription as a box, the Claude accounts and the night box's, then the training box's lanes, read from their pull requests (#1272), each saying what it does or why not (working, takes queued work at the next run, idle with nothing queued for it, capped and when it can start again, outside its hours, backing off, off, or no lane free where it runs) and its usage, always; the queue in the planner's order, each item with what the next run does to it (plan, build, revise, review run), its difficulty and the tier that needs (a hard item or a revision that answers a strong audit needs a strong model; a build needs a medium or strong planner first), and either who takes it at the next run or what it waits for and which subscription frees up first, with the items held back (a `human` label, an earlier part or a blocker still open) and why ([`harness/waiting.py`](harness/waiting.py) works it out with the planner's own rules on the lanes held now, so a subscription is never called free when the planner would give it nothing); each subscription's usage as bars and charts against its cap now (and the one in or outside its hours), the line a build or a plan must start under, when the window resets, a window that reset since its reading said as such, and how old the reading is; the last runs; the statistics (below); and the full status folded. Or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
+| see what it is doing | the pinned issue **Night bot status** (#148), which `bot-status.yml` rewrites every five minutes (one job loops for five and a half hours, then starts the next loop; an hourly schedule restarts it if it stops, since GitHub fires schedules here only every few hours; each tick also runs the sweep, so a broken chain of night runs restarts within five minutes; each tick also reads `.harness/providers.json` from `main` again and takes which secrets are set from the newest plan job's record, `secrets` in the state file, since GitHub fixes a run's secrets when the run is created, hours before a queued loop starts, so a subscription added or changed shows within five minutes; one the loop's checkout is too old to read, such as a new account's secret, ends the loop, and the next loop shows it on `main`'s code). It opens with a headline (how many runs go, what the queue waits on, which subscriptions can start work now), then what each lane is doing and when it started (a clock time linking to its run; hover it for how long it had run) and a timeline of the runs going now; every subscription as a box, the Claude accounts and the night box's, then the training box's lanes, read from their pull requests (#1272), each saying what it does or why not (working, takes queued work at the next run, idle with nothing queued for it, capped and when it can start again, outside its hours, backing off, off, or no lane free where it runs) and its usage, always; the queue in the planner's order, each item with what the next run does to it (plan, build, revise, review run), its difficulty and the tier that needs (a hard item or a revision that answers a strong audit needs a strong model; a build needs a medium or strong planner first), and either who takes it at the next run or what it waits for and which subscription frees up first, with the items held back (a `human` label, an earlier part or a blocker still open) and why ([`harness/waiting.py`](harness/waiting.py) works it out with the planner's own rules on the lanes held now, so a subscription is never called free when the planner would give it nothing); each subscription's usage as bars and charts against its cap now (and the one in or outside its hours), the line a build or a plan must start under, when the window resets, a window that reset since its reading said as such, and how old the reading is; the last runs; the learn lane, which runs on GitHub's runners with no model and no harness (the generation on `main`, the lane's pull request, its next scheduled run and how each of its last runs ended, read from GitHub alone: `dashboard.learn_lane`, [`training/learn.md`](../training/learn.md)); the statistics (below); and the full status folded. Or `/harness status` anywhere, or `python3 -m harness status` in `bot/`: its "Running now" lists each subscription at work, on what, for how long, and its run |
 | see what it has done | the same issue's statistics (`bot/harness/stats.py`; they had an issue of their own, #190, until they were folded in), counted afresh every 30 minutes by the same loop (`dashboard --stats`) and kept in the issue between counts, since a count reads every bot comment and pull request; `python3 -m harness stats --force` in `bot/` rewrites the issue with them counted now. One table sets the last 6 hours, the last 24 hours, the last 7 days and all time side by side: runs by kind, outcomes, pull requests opened and merged, issues closed, lines added and removed, files, commits, time to merge, model hours, tokens and cost; then the last two weeks day by day. Each window then has a folded section of its own: per subscription and model, its runs by kind, outcomes, pull requests opened and merged, lines merged, pauses, failures and model time; model tokens (in, out and cached) and USD cost per subscription (#695); bar charts of runs and lines by subscription (all time adds model hours and outcomes). Then every pull request merged, newest first, folded, with when it merged and who planned, built, revised and approved it (fewer are listed, or none, when the issue would pass GitHub's limit on an issue's body). Charts are bars and lines, never pies. Runs and builders come from the bot's own comments; a pull request from before its comments named a builder takes the last build started on its issue before it was opened, and shows as "not recorded" when there was none |
 | stop everything now | `/harness halt`; for a lock nobody can lift by comment, commit `.harness/HALT` |
 | start again | `/harness start` (and delete `.harness/HALT` if you committed it) |
@@ -1246,8 +1272,8 @@ python3 -m unittest discover -s tests -t .   # the suite (about ten seconds)
 python3 -m harness --help                     # every command
 ```
 
-`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over the
-bot's workflows and `ci.yml`. It runs when a pull request touches what the suite reads (the bot, its
+`bot selftest`, a job of `ci.yml`, runs the suite on Python 3.12 and 3.13 and runs actionlint over
+every workflow. It runs when a pull request touches what the suite reads (the bot, its
 switches, `.github/`, `.claude/`, the scripts, the training lanes' prompts and loop, the issue and patch
 conventions, the toolchain), on every push to `main`, and whenever the job that decides fails (#1455). The prompts are in `bot/prompts/`, one per role: `system`, `plan`, `build`, `fix`, `revise`,
 `review` and `suggest` (the self check runs `review` with a header saying it is a self check),
@@ -1267,6 +1293,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `asks.py` | the reactions that follow a request from its comment to its answer |
 | `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
 | `quiet.py` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
+| `wake.py` | the morning start (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago |
 | `providers.py` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
 | `runner.py` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
@@ -1278,7 +1305,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `declined.py` | the suggestions that came to nothing, which no survey offers again (#797) |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
-| `controller.py` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run |
+| `controller.py` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run; and it delivers each such run once it ends (#1537), with the model job's upload and a fresh clone of the default branch |
 | `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --controller --every 300 --for 19800`, which sweeps first each time), with the statistics counted every 30 minutes and kept between |
 | `waiting.py` | what the status issue says each queued item waits for (the tier its difficulty needs, and which subscription frees up first) and what each subscription can do now, from the planner's own rules (`plan.pairs`) on the lanes held now |
 | `stats.py` | the status issue's statistics: the last 6 hours, day, week and all time, from the bot's comments, pull requests and state file, counted every 30 minutes and kept in the issue between counts |

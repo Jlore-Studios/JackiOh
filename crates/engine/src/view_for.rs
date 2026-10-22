@@ -15,7 +15,7 @@
 //!   - R13, §3.2: the lower cards of a Stack pile are dormant and not on the field. The view shows
 //!     the top card and a count of what is buried under it, never a buried card's identity.
 //!   - R81: only the viewer's own prompt carries its options; the other player's prompt shows that
-//!     it is open and whose it is, nothing more.
+//!     it is open and whose it is, nothing more, and so do its `promptOpened` and `promptAnswered`.
 //!   - R97: the event stream is redacted, not truncated. An event that names a card the viewer may
 //!     not read keeps its type and its animation fields and shows `HIDDEN_ID` for that card.
 //!   - R764: a Glitch's reset or boards (R676, R678) takes cards out of the match unseen, so the events
@@ -54,7 +54,7 @@
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
 //!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
-//!     (`with_play_reason`).
+//!     (`with_play_reason`). R1571000: and on the viewer's own graveyard cards a permission admits.
 //!
 //! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 //! (§10.4), so no stored total ever reaches the client.
@@ -118,12 +118,12 @@ use crate::zones::{
 pub const HIDDEN_ID: &str = "hidden";
 
 /// R97, §9.1: the slot a shuffled-in card landed in would give away library order, to either side.
-const HIDDEN_POSITION: i32 = -1;
+pub const HIDDEN_POSITION: i32 = -1;
 
 /// R177: the cost a `costChanged` event reports for a card the viewer may not read. A cost is a
 /// property of the card as much as its definition is — the opponent's hand is a count (§10.8) — and
 /// a sequence of costs over a library would spell out its order (§9.1).
-const HIDDEN_COST: i32 = -1;
+pub const HIDDEN_COST: i32 = -1;
 
 /// R385: the count a `counterChanged` "brittle" reports for a card the viewer may not read.
 const HIDDEN_COUNT: i32 = -1;
@@ -646,7 +646,9 @@ fn with_choices_truncated(mut view: CardView, truncated: bool) -> CardView {
 /// never empty, so a view with no unplayable card looks exactly as it did before R979000. Only
 /// while the viewer may act (their turn, the main phase, no prompt open) and `play_actions_for`
 /// lists no play of the card; nothing else calls this, so the opponent's hand and post-game hands
-/// carry no key. Which plays are offered stays `legal_actions`' answer.
+/// carry no key. Which plays are offered stays `legal_actions`' answer. R1571000: the same for a
+/// card in the viewer's own graveyard that a permission admits, read off the graveyard's listing;
+/// the opponent's graveyard carries no key.
 fn with_play_reason(
     mut view: CardView,
     state: &GameState,
@@ -662,10 +664,21 @@ fn with_play_reason(
     if state.active != viewer {
         return view;
     }
-    if !crate::play_choices::play_actions_for(state, viewer, card).is_empty() {
+    let from_graveyard = matches!(card.zone, Zone::Graveyard { .. });
+    let listed = if from_graveyard {
+        crate::play_choices::graveyard_play_actions_for(state, viewer, card)
+    } else {
+        crate::play_choices::play_actions_for(state, viewer, card)
+    };
+    if !listed.is_empty() {
         return view;
     }
-    if let Some(reason) = crate::play_choices::why_hand_card_unplayable(state, viewer, card)
+    let reason = if from_graveyard {
+        crate::play_choices::why_graveyard_card_unplayable(state, viewer, card)
+    } else {
+        crate::play_choices::why_hand_card_unplayable(state, viewer, card)
+    };
+    if let Some(reason) = reason
         && !reason.is_empty()
     {
         view.play_reason = Some(reason);
@@ -1353,7 +1366,19 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         } else {
             None
         },
-        graveyard: side.graveyard.iter().map(|card| card_view(state, card)).collect(),
+        // R1571000: the viewer's own graveyard cards a permission admits say why they cannot be
+        // played now; the opponent's graveyard carries no key.
+        graveyard: side
+            .graveyard
+            .iter()
+            .map(|card| {
+                if player == viewer {
+                    with_play_reason(card_view(state, card), state, card, viewer)
+                } else {
+                    card_view(state, card)
+                }
+            })
+            .collect(),
         exile: side.exile.iter().map(|card| card_view(state, card)).collect(),
         // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
         // card announced to be set face-down waits here too, and the other player sees a card back.
@@ -1546,6 +1571,7 @@ fn prompt_view(state: &GameState, viewer: PlayerId, pending: &PendingChoice) -> 
         prompt: pending.prompt.clone(),
         budget: pending.budget,
         craft_mode: pending.craft_mode,
+        craft_offer: pending.craft_offer.clone(),
         streak: pending.streak,
     })
 }
@@ -2213,8 +2239,19 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // Public through and through: these name a player, a zone or a number, never a card. A
-        // `promptOpened` event says a prompt is open and whose, which is all §10.6 grants.
+        // R81, §10.6: the other seat learns that a prompt is open and whose, and nothing more. Its
+        // kind would narrow the card that asked, a hidden one among them, and its id counts the
+        // match's prompts. The holder reads both.
+        GameEventType::PromptOpened | GameEventType::PromptAnswered => {
+            if text_at(&shown, "player") == viewer.as_str() {
+                return event.clone();
+            }
+            shown.remove("choiceId");
+            shown.remove("kind");
+            rebuild(shown)
+        }
+
+        // Public through and through: these name a player, a zone or a number, never a card.
         // R315: a fatigue draw names a player and two numbers, and the fatigue count is public (§10.8).
         GameEventType::HealthLost
         | GameEventType::Fatigue
@@ -2227,8 +2264,6 @@ fn redact_event(
         | GameEventType::TurnStarted
         | GameEventType::TurnEnded
         | GameEventType::TurnAutoEnded
-        | GameEventType::PromptOpened
-        | GameEventType::PromptAnswered
         | GameEventType::DrawOffered
         | GameEventType::DrawAnswered
         // MD-D29, R1127: an emote names no card, so both seats read it as it is.

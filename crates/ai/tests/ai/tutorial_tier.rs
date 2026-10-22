@@ -302,6 +302,8 @@ mod r290_the_tutorial_tier_by_play {
 
     /// R290 the greedy baseline at a human's resources beats the AI at AI_TUTORIAL in at least 6 of 13 games
     #[test]
+    #[ignore = "daily: the tier's 21 games; r290_tier_game_seats_… and the engine's R290 tests hold the rule per pull request"]
+    #[allow(clippy::disallowed_methods)] // std::io::stdout: the daily result line goes past the test harness's capture, as the gates' do; never the rules.
     fn r290_the_greedy_baseline_at_a_humans_resources_beats_the_ai_at_ai_tutorial_in_at_least_6_of_13_games()
     {
         let games = run(Tier::Tutorial);
@@ -323,6 +325,8 @@ mod r290_the_tutorial_tier_by_play {
 
     /// R290 on seeds 1–8 the same greedy wins more games against AI_TUTORIAL than against Easy, by at least 1
     #[test]
+    #[ignore = "daily: the tier's 21 games; r290_tier_game_seats_… and the engine's R290 tests hold the rule per pull request"]
+    #[allow(clippy::disallowed_methods)] // std::io::stdout: the daily result line goes past the test harness's capture, as the gates' do; never the rules.
     fn r290_on_seeds_1_8_the_same_greedy_wins_more_games_against_ai_tutorial_than_against_easy_by_at_least_1()
     {
         let easy_games = run(Tier::Easy);
@@ -343,6 +347,7 @@ mod r290_the_tutorial_tier_by_play {
 
     /// R290 every game at either tier is clean: nothing rejected or thrown, no fallback, a result, and a replay that matches
     #[test]
+    #[ignore = "daily: the tier's 21 games; r290_tier_game_seats_… and the engine's R290 tests hold the rule per pull request"]
     fn r290_every_game_at_either_tier_is_clean_nothing_rejected_or_thrown_no_fallback_a_result_and_a_replay_that_matches()
      {
         for tier in [Tier::Tutorial, Tier::Easy] {
