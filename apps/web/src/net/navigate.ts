@@ -105,6 +105,8 @@ export const paths = {
   together: "/together",
   /** #1307: the account's collection, wallet, tracks and quests. */
   collection: "/collection",
+  /** #1577: the shop, rendering the same panel the account screen shows. */
+  shop: "/shop",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

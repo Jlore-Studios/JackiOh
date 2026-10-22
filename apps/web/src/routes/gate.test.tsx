@@ -191,6 +191,15 @@ describe("the gate, as specs 09 and 10 read it", () => {
     }, SLOW);
   });
 
+  it("anonymous: /shop sends the browser to /login", async () => {
+    serveAs("active"); // Never reached: there is no session to send.
+    at("/shop");
+    render(<App />);
+    await waitFor(() => {
+      expect(pathname()).toBe("/login");
+    }, SLOW);
+  });
+
   it("a token the server no longer accepts is the same as having none", async () => {
     signedIn("stale");
     serveAs("unauthorized");
@@ -205,6 +214,18 @@ describe("the gate, as specs 09 and 10 read it", () => {
     signedIn();
     serveAs("pending");
     at("/decks");
+    render(<App />);
+    await waitFor(() => {
+      expect(pathname()).toBe("/invite");
+    }, SLOW);
+    // And the code screen (another task's) is what renders there.
+    await gateOpened();
+  });
+
+  it("spec 10: a pending account visiting /shop lands on /invite", async () => {
+    signedIn();
+    serveAs("pending");
+    at("/shop");
     render(<App />);
     await waitFor(() => {
       expect(pathname()).toBe("/invite");

@@ -439,6 +439,15 @@ afterEach(() => {
 // B32: setup for anyone.
 
 describe("B32 /practice shows setup to anyone", () => {
+  it("#1577 the lobby links to Play online and Play together, which the main menu's Play door no longer offers", async () => {
+    renderRoute(routeHost(), { loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))) });
+    await settle();
+
+    const more = screen.getByRole("navigation", { name: "More ways to play" });
+    expect(within(more).getByRole("link", { name: "Play online" })).toHaveAttribute("href", "/play");
+    expect(within(more).getByRole("link", { name: "Play together" })).toHaveAttribute("href", "/together");
+  });
+
   it("B32 renders with no account, session or server: three difficulty radios on easy and random plus every preset", async () => {
     const host = routeHost();
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));

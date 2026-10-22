@@ -10,13 +10,12 @@ export const landingTestid = {
   root: "landing",
   signIn: "landing-sign-in",
   account: "landing-account",
-  playAi: "landing-play-ai",
-  playOnline: "landing-play-online",
-  buildDecks: "landing-build-decks",
-  /** #920: the card creator. */
-  makeCards: "landing-make-cards",
+  /** #1577: the Play door, to practice. */
+  play: "landing-play",
   /** #1307: the collection screen. */
   collection: "landing-collection",
+  /** #1577: the Shop door, to the shop. */
+  shop: "landing-shop",
   fan: "landing-card-fan",
   fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",
