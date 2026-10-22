@@ -10370,7 +10370,7 @@
       "failures": 0,
       "feedback_since": "2026-10-22T00:28:45Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 1523,
       "kind": "revise",
       "last_findings": [],
