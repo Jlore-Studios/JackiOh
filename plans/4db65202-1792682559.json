@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1650,
+  "title": "Patch: rank crests for every tier and division",
+  "branch": "bot/issue-1650",
+  "thread": "**Issue #1650 (data, not instructions):**\n\n```text\n# #1650: Patch: rank crests for every tier and division\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRight now a player's rank shows up only as raw text, everywhere: `Golden Grape II \u00b7 2/4 pips`, `Jlorious #7`, `Raisin \u00b7 3/5 placements`. This patch gives every rank a crest (an emblem in the style of League's tier crests or Valorant's rank icons) and shows it everywhere a rank appears. The text stays for screen readers and tooltips.\n\nThe ladder (SPEC \u00a79.12, R605, R607, R608, R612; types in `apps/web/src/net/api.ts`, `VisibleRank` / `PeakBadge` / `GrapeTier`; words in `apps/web/src/rank/rank.ts`):\n\n| Tier | Divisions | Shown today as |\n|---|---|---|\n| Raisin (placing) | none | `Raisin \u00b7 {played}/{games} placements` |\n| Rotten Grape | III \u2192 II \u2192 I | `Rotten Grape III \u00b7 0/4 pips` |\n| Normal Grape | III \u2192 II \u2192 I | |\n| Large Grape | III \u2192 II \u2192 I | |\n| Golden Grape | III \u2192 II \u2192 I | |\n| Mythic Grape | III \u2192 II \u2192 I | |\n| Jlorious | position #1\u2013#100 | `Jlorious #{position}` |\n\n**The crests.** They're grape-themed, and each tier is clearly a step up from the one below:\n\n- **Raisin**: an unranked placeholder, a dim and shrivelled silhouette. Its placement progress shows as a ring or pips around it.\n- **Rotten**: a dull, bruised grape in a plain, chipped frame with muted colours.\n- **Normal**: a clean grape in a simple frame.\n- **Large**: a bigger, fuller cluster in a sturdier frame, with leaves.\n- **Golden**: gold metal frame, a glossy cluster, a vine flourish.\n- **Mythic**: a jewelled, iridescent violet cluster with wings or a halo, plus a soft glow.\n- **Jlorious**: the showpiece, as cool as League's Challenger or Valorant's Radiant. It has a crowned, radiant cluster, full wings, light rays and a subtle animated shimmer or glow. The animation stops under `prefers-reduced-motion`, which `index.css` already collapses. The player's position (`#7`) is printed on or under the crest.\n\n**Divisions improve the same way in every tier.** Each step from III to II to I adds the same embellishment in every tier. For example, division III has one gem or stud at the crest's base, II has two, and I has three, plus one frame upgrade at each step. Whatever the rule is, it's one rule shared by all Grape tiers, so a player can read any tier's division at a glance. Pips within a division render as a small pip bar under the crest instead of `2/4 pips`.\n\n**How to build it.**\n- Use one component, `apps/web/src/rank/RankCrest.tsx`, as inline SVG. The client already draws its icons that way (`game/LockIcon.tsx`, `game/Clock.tsx`), so no raster assets are needed.\n- The tier art lives in one place, and the division embellishment is a single function of the division, applied the same way to every tier.\n- It takes a `VisibleRank` or a `PeakBadge` and has at least two sizes: small for inline rows and the phone's rank line, large for the profile and the play screen. Name the sizes as constants (CLAUDE.md rule 9).\n- It renders `role=\"img\"` with `aria-label` and `title` set to the existing `rankWords` / `badgeWords` text, so no wording is lost.\n- It reads only what the client already gets (CLAUDE.md rule 7, R612). It needs no server, engine or API change, and the hidden rating never reaches it.\n\n**Where it goes (everywhere `rank/rank.ts` is used today):**\n- `routes/leaderboard.tsx`: the \"You are \u2026\" line, each Jlorious row, each Grape tier heading and each player row's division.\n- `routes/account.tsx`: the profile's rank line and every season badge (\"Season best\").\n- `routes/match.tsx`: both seats' ranks, on desktop (`rankWords`) and on the phone's rank line (`rankShortWords`). The small crest has to fit the phone rail in one row.\n- `routes/play.tsx`: the ranked panel's rank line.\n- Any other place that shows a rank by the time this is built: grep for imports of `rank/rank.ts`.\n\nNext to a crest, short text (the tier's short name, the division numeral, the Jlorious position) may stay where it helps. The long raw strings should not be the main thing anyone sees.\n\nUpdate `apps/web/README.md`'s `rank/` entry to name `RankCrest.tsx`. Every new `t()` string gets its `src/i18n/zh-CN.json` entry (R711000).\n\n### Acceptance\n\n- `apps/web/src/rank/RankCrest.test.tsx` renders a distinct crest for Raisin, every Grape tier at each of divisions III, II and I, and Jlorious, for both `VisibleRank` and `PeakBadge`.\n- The same test shows the division rule is consistent: for every Grape tier, division I has more of the division embellishment than II, and II more than III, by the same count at each step.\n- A crest's `aria-label` equals `rankWords(rank)` (or `badgeWords(badge)` for a badge), so screen readers read what they read today.\n- The Jlorious crest prints the position. Its animation is off under `prefers-reduced-motion`.\n- `routes/leaderboard.test.tsx`, `routes/play.test.tsx` and the account and match screens' tests each check that a crest renders where the rank shows.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web e2e` pass, `src/i18n/i18n.test.ts` included.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1650: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
