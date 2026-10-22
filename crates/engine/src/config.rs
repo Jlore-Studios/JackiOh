@@ -1,5 +1,8 @@
 //! Every rules constant lives here (BUILD §2). The engine never hard-codes these numbers.
-//! Rows SPEC §11 marks "decide" (R1, R2, R4, R5, R14, R26, R39) are flipped here in one line.
+//! Rows SPEC §11 marks "decide" (R1, R2, R4, R5, R14, R26, R39) are flipped here in one line. A
+//! constant the engine plays at one value only (R1, R9, R14, R36, R39) is asserted at compile time
+//! where its rule is played, so flipping it stops the build at the code to change, and
+//! `crates/tools/tests/acceptance.rs` fails on a constant here that no code reads (#1640).
 //!
 //! Port of `packages/engine/src/config.ts` (part 1's type freeze, SURFACE §6.4), values verbatim,
 //! plus (CLAUDE.md rule 9) the numbers TS stated outside `config.ts` (research A §4), moved here

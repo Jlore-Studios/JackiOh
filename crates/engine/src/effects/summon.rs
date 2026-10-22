@@ -17,6 +17,7 @@ use serde_json::{Value, json};
 
 use crate::animated::animate_on_entry;
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated, query};
+use crate::config::CRY_ON_PLAY_ONLY;
 use crate::damage::DamageTarget;
 use crate::effects::buff::grant_random_keywords;
 use crate::effects::radiant::set_radiant;
@@ -38,6 +39,13 @@ use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, fresh_face_down_id, is_empty,
     is_reserved, is_unit_token, lands_face_down, open_zones, place_on_field, remove_from_any_zone, row_size,
 };
+
+// R1 (`CRY_ON_PLAY_ONLY`): a summon fires no Cry, nor does any other verb that puts a card on the
+// field without playing it (Transform, Flicker, Reborn, `summon_this`); only `play` and `cast` do.
+const _: () = assert!(
+    CRY_ON_PLAY_ONLY,
+    "R1: no summon fires a Cry (effects/summon.rs and every verb that places a card without a play)"
+);
 
 /// TS `{ defId, radiant }`, the partial instance `faces.cardTypeOf` reads a definition's running face
 /// from before any card exists: a scratch instance numbered from a counter of its own, so the
