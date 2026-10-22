@@ -11329,6 +11329,9 @@
       "stop_requested": false,
       "verdict_rounds": 1
     },
+    "1635": {
+      "suggestion": true
+    },
     "1645": {
       "action": "build",
       "asks": [],
