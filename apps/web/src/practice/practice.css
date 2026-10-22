@@ -88,6 +88,14 @@
   margin: 0 auto;
 }
 
+.practice-more-ways {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 0 auto;
+}
+
 .practice-lobby__header {
   display: flex;
   flex-direction: column;

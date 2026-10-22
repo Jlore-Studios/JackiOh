@@ -1,12 +1,11 @@
-// #936 S8 B54: the landing page's Play together call to action (`landing-play-together`), a
-// secondary CTA beside Play online that is a real link to `/together` and navigates in place, as the
-// other CTAs do (routes/landing.test.tsx). Also the S8 route table: /together, /watch/:matchId,
-// /duos/:matchId and /dev/duos.
+// #936 S8 B54: since #1577 the landing page offers no Play together call to action (the three
+// doors hold no link to `/together`); Play together lives at `/together` behind the gate.
+// Also the S8 route table: /together, /watch/:matchId, /duos/:matchId and /dev/duos.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { landingTestid } from "../auth/testids.ts";
+import { landingTestid, loginTestid } from "../auth/testids.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { stubServer } from "../test/stubServer.ts";
@@ -63,67 +62,50 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-describe("B54 the Play together call to action", () => {
-  it("B54 the landing page shows Play together, a real link to /together", () => {
+describe("B54 the landing offers no Play together call to action", () => {
+  // #1577: the three doors replaced every play call to action; Play together lives at `/together`.
+  it("B54 the landing offers no Play together call to action", () => {
     render(<LandingRoute />);
-    const cta = within(landing()).getByTestId(PLAY_TOGETHER);
-    const link = cta.closest("a");
-    expect(link, "an <a href>, so middle-click and open-in-new-tab work").not.toBeNull();
-    expect(link?.getAttribute("href")).toBe("/together");
-    expect(cta).toHaveTextContent(/play together/i);
+    expect(within(landing()).queryByTestId(PLAY_TOGETHER)).toBeNull();
   });
 
-  it("B54 a signed-in visitor is shown Play together too", async () => {
+  it("B54 a signed-in visitor is shown no Play together either", async () => {
     signedIn();
     render(<LandingRoute />);
     await screen.findByTestId(landingTestid.account, undefined, SLOW);
-    expect(within(landing()).getByTestId(PLAY_TOGETHER)).toBeInTheDocument();
+    expect(within(landing()).queryByTestId(PLAY_TOGETHER)).toBeNull();
   });
 
-  it("B54 Play together sits beside Play online among the landing's play calls to action", () => {
+  it("B54 the doors hold no link to /together", () => {
     render(<LandingRoute />);
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
-    expect(within(ctas).getByTestId(landingTestid.playOnline)).toBeInTheDocument();
-    expect(within(ctas).getByTestId(PLAY_TOGETHER)).toBeInTheDocument();
+    expect(within(ctas).queryByTestId(PLAY_TOGETHER)).toBeNull();
+    expect(ctas.querySelector('a[href="/together"]'), "/together has no door").toBeNull();
   });
 
-  it("B54 Play together is a secondary call to action, not the primary one", () => {
-    render(<LandingRoute />);
-    const primary = within(landing()).getByTestId(landingTestid.playAi);
-    const together = within(landing()).getByTestId(PLAY_TOGETHER);
-    expect(together).not.toBe(primary);
-    expect(together.className).not.toBe(primary.className);
-  });
-
-  it("B54 a plain left click on Play together navigates in place to /together", () => {
-    render(<LandingRoute />);
-    const notPrevented = fireEvent.click(within(landing()).getByTestId(PLAY_TOGETHER), { button: 0 });
-    expect(window.location.pathname).toBe("/together");
-    expect(notPrevented).toBe(false);
-  });
-
-  it.each([
-    ["a ctrl-click", { button: 0, ctrlKey: true }],
-    ["a cmd-click", { button: 0, metaKey: true }],
-    ["a middle click", { button: 1 }],
-  ] as const)("B54 %s on Play together is left to the browser: no in-page navigation", (_name, init) => {
-    render(<LandingRoute />);
-    const notPrevented = fireEvent.click(within(landing()).getByTestId(PLAY_TOGETHER), init);
-    expect(notPrevented).toBe(true);
-    expect(window.location.pathname).toBe("/");
-  });
-
-  it("B54 / renders Play together through the route table", async () => {
+  it("B54 / renders the doors and no Play together through the route table", async () => {
     render(<App />);
-    expect(await screen.findByTestId(PLAY_TOGETHER, undefined, SLOW)).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/");
+    expect(await screen.findByTestId(landingTestid.play, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId(PLAY_TOGETHER)).toBeNull();
+    expect(window.location.pathname).toBe(paths.landing);
   });
 
-  it("B54 following Play together while signed out ends at sign-in, as Play online does", async () => {
+  it("B54 following the Play door while signed out ends at practice, needing no sign-in", async () => {
     render(<App />);
-    fireEvent.click(await screen.findByTestId(PLAY_TOGETHER, undefined, SLOW), { button: 0 });
+    fireEvent.click(await screen.findByTestId(landingTestid.play, undefined, SLOW), { button: 0 });
     await waitFor(() => {
-      expect(window.location.pathname).toBe("/login");
+      expect(window.location.pathname).toBe(paths.practice);
+    }, SLOW);
+    expect(screen.queryByTestId(loginTestid.form)).toBeNull();
+  });
+
+  // #1577: no door leads to /together anymore, so the signed-out bounce is visited directly:
+  // Play together keeps the gate Play online asks for.
+  it("B54 /together while signed out ends at sign-in, as Play together always did", async () => {
+    at(paths.together);
+    render(<App />);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.login);
     }, SLOW);
   });
 });

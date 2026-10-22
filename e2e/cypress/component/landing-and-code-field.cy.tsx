@@ -37,11 +37,11 @@ const VIEWPORTS = [
 
 type Viewport = (typeof VIEWPORTS)[number];
 
-/** Every landing CTA B37 names. With no session the corner slot holds `landing-sign-in`. */
+/** Every landing CTA B37 names: the three doors, plus the corner slot with no session. */
 const LANDING_CTAS = [
-  landingTestid.playAi,
-  landingTestid.playOnline,
-  landingTestid.buildDecks,
+  landingTestid.play,
+  landingTestid.collection,
+  landingTestid.shop,
   landingTestid.signIn,
 ] as const;
 
@@ -135,6 +135,25 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
       cy.get(byTestid(landingTestid.fan)).should("exist");
 
       expectNoHorizontalOverflow(viewport);
+    });
+
+    // #1577: the top screen fits the viewport with no scrolling: title, fan and the three doors
+    // clear the first screen, while the stats floor below stays where it is.
+    it(`B39 the hero ends inside the first screen at ${where(viewport)}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      cy.mount(<LandingRoute />);
+
+      cy.get(byTestid(landingTestid.root)).should("be.visible");
+      cy.get(".landing .landing-hero").should(($hero) => {
+        const hero = $hero[0];
+        expect(hero, "the hero is mounted").to.not.eq(undefined);
+        if (hero === undefined) return;
+        const box = hero.getBoundingClientRect();
+        const height = hero.ownerDocument.defaultView?.innerHeight ?? viewport.height;
+        expect(Math.ceil(box.bottom), `the hero ends inside the first screen at ${where(viewport)}`).to.be.at.most(
+          height,
+        );
+      });
     });
   }
 });
