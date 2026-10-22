@@ -11417,7 +11417,9 @@
     },
     "1636": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6343918497"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -11440,9 +11442,7 @@
       "started_at": "2026-10-22T15:23:20Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6343918497"
-      ]
+      "taken_asks": []
     },
     "1638": {
       "action": "plan",
