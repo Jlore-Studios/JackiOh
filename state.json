@@ -11525,7 +11525,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-22T01:37:42Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:7492050e-1792635180",
+      "run_id": "39710183730",
       "started_at": "2026-10-22T02:13:20Z",
       "stop_requested": false,
       "suggestion": true,
