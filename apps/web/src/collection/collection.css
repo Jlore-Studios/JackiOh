@@ -90,3 +90,62 @@
 .tavern.app-shell .collection-track[data-unlocked="false"] {
   opacity: 0.75;
 }
+
+/* R1579000: the page never scrolls; the board shrinks and a section's body scrolls inside it. */
+.tavern.app-shell.collection-screen {
+  height: 100vh;
+  height: 100dvh;
+  padding-bottom: 14px;
+}
+
+.tavern.app-shell.collection-screen .panel--auth {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.tavern.app-shell .collection-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tavern.app-shell .collection-hub {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tavern.app-shell .collection-door {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 12px;
+  background: rgba(239, 224, 191, 0.05);
+  color: var(--tavern-parchment);
+  text-decoration: none;
+}
+
+.tavern.app-shell .collection-door:hover,
+.tavern.app-shell .collection-door:focus-visible {
+  border-color: var(--tavern-gold);
+}
+
+.tavern.app-shell .collection-door__title {
+  font-family: var(--tavern-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .collection-door__hint {
+  font-size: 13px;
+  color: var(--tavern-text-dim);
+}

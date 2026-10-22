@@ -22,6 +22,8 @@ import {
   type OpenedCosmeticPackResponse,
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
+import { paths } from "../net/navigate.ts";
+import { followInApp } from "../routes/nav.tsx";
 import {
   chaseCandidates,
   cosmeticSlotOutcome,
@@ -214,6 +216,17 @@ export default function CosmeticPacks({
                 </div>
               ))}
             </div>
+          )}
+          {opened === null ? null : (
+            <p>
+              <a
+                href={paths.collectionSection("cosmetics")}
+                data-testid={shopTestid.equipLink}
+                onClick={followInApp(paths.collectionSection("cosmetics"))}
+              >
+                {t("See and equip your cosmetics in your Collection")}
+              </a>
+            </p>
           )}
           <ShardBar
             info={info}
