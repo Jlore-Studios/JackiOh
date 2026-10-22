@@ -61,8 +61,10 @@ counteredOnPlay?: true,
 /**
  * R979000, §10.8: why the viewer's own hand card cannot be played now
  * (`play_choices::why_hand_card_unplayable`), as `UnitView.attack_reason` (R849000) is for an
- * attack. Set only on the viewer's own hand card while they may act (their turn, the main
- * phase, no prompt open) and `play_actions_for` lists no play of it. Absent otherwise, never
+ * attack; R1571000: and why a card in the viewer's own graveyard that a permission admits
+ * (`play_choices::why_graveyard_card_unplayable`) cannot be played now. Set only on those
+ * cards while they may act (their turn, the main phase, no prompt open) and
+ * `legal_actions` lists no play of the card. Absent otherwise, never
  * `false` or empty, so a view with no unplayable card is byte for byte what it was.
  */
 playReason?: string, 

@@ -408,13 +408,13 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     fireEvent.submit(screen.getByTestId(loginTestid.form));
   }
 
-  it("#479 'Play online' while signed out: /play, sign in, and the main menu", async () => {
+  it("#479 'Decks' while signed out: /decks, sign in, and the main menu", async () => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
       if (url === `${API}/api/auth/me`) return json(200, me("active"));
       return "hang";
     });
-    at(paths.play);
+    at(paths.decks);
     render(<App />);
     await screen.findByTestId(loginTestid.form, undefined, SLOW);
     expect(window.location.pathname).toBe(paths.login);
@@ -423,6 +423,40 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
+  });
+
+  it("R1578000 signed-out /play renders the hub, and its Sign in leads to the main menu", async () => {
+    const urls = stubFetch((url) => {
+      if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
+      if (url === `${API}/api/auth/me`) return json(200, me("active"));
+      return "hang";
+    });
+    at(paths.play);
+    render(<App />);
+    expect(await screen.findByTestId(playTestid.screen, undefined, SLOW)).toBeInTheDocument();
+    // No sign-in bounce: the visitor reads the hub where they are, and nothing is asked of the server.
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(loginTestid.form)).toBeNull();
+    expect(urls).toEqual([]);
+
+    fireEvent.click(screen.getByTestId(playTestid.signIn));
+    await screen.findByTestId(loginTestid.form, undefined, SLOW);
+    expect(window.location.pathname).toBe(paths.login);
+
+    signIn();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.landing);
+    }, SLOW);
+  });
+
+  it("R1578000 a room link opened while signed out is sent to sign in, not shown the hub", async () => {
+    stubFetch(() => "hang");
+    at(`${paths.play}?room=abc234&mode=bo3`);
+    render(<App />);
+    await screen.findByTestId(loginTestid.form, undefined, SLOW);
+    expect(window.location.pathname).toBe(paths.login);
+    expect(screen.queryByTestId(playTestid.screen)).toBeNull();
+    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).not.toBeNull();
   });
 
   it("R767 a room link opened while signed out waits through the sign-in, and the lobby uses it once", async () => {
@@ -445,7 +479,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
-    // #1577: no door leads to the lobby anymore; the test walks there directly.
+    // The Play door opens the hub, whose online panel is the lobby (R1578000); the test walks there directly.
     act(() => {
       navigate(paths.play);
     });
@@ -465,12 +499,12 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
 
   it("B35 the gate remembers no destination: a signed-out visit to a gated screen stores none", async () => {
     stubFetch(() => "hang");
-    at(paths.play);
+    at(paths.decks);
     render(<App />);
     await screen.findByTestId(loginTestid.form, undefined, SLOW);
     for (const storage of [window.sessionStorage, window.localStorage]) {
       for (let index = 0; index < storage.length; index += 1) {
-        expect(storage.getItem(storage.key(index) ?? "") ?? "").not.toContain(paths.play);
+        expect(storage.getItem(storage.key(index) ?? "") ?? "").not.toContain(paths.decks);
       }
     }
   });
@@ -479,7 +513,7 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     ["a URL", "https://evil.example/play"],
     ["a match route, whose id is data", "/match/some-id"],
     ["a path that is not gated", "/reset-password"],
-    ["a gated screen", "/play"],
+    ["a gated screen", "/decks"],
   ] as const)("B35 a destination an older build left in storage (%s) is never followed: the sign-in lands on the main menu", async (_name, planted) => {
     stubFetch((url) => {
       if (url.includes("/auth/v1/token")) return json(200, SIGNED_IN);
