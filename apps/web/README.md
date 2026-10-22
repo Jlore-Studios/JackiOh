@@ -213,11 +213,12 @@ net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for
                         the lobby
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match or series the menus' banner offers;
-                        an ended queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
+                        then the game), and useLiveGame, the live match, series or co-op game the menus'
+                        banner offers (R1566000); an ended queue is forgotten after
+                        QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
-                        practice game (Resume, on /practice) and the live online game (Rejoin, on / and
-                        /practice); game-banner.css draws it as the tavern's notice
+                        practice game (Resume, on /practice) and the live online or co-op game (Rejoin,
+                        on / and /practice); game-banner.css draws it as the tavern's notice
 routes/series.tsx       /series/:id: a Conquest series (R330–R336): score, both sides' won (locked) decks,
                         the history, forfeit between games, the result
 routes/SeriesPicker.tsx the deck-selection phase before each game, laid out as the mulligan (R331–R333,

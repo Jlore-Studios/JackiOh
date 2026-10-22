@@ -711,7 +711,11 @@ describe("R639 your table", () => {
 // R765: rejoin a live online game from the main menu
 
 describe("R765 the main menu's live-game banner", () => {
-  function serveInGame(currentMatchId: string | null, currentSeriesId: string | null = null): void {
+  function serveInGame(
+    currentMatchId: string | null,
+    currentSeriesId: string | null = null,
+    currentDuosMatchId: string | null = null,
+  ): void {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: unknown) => {
@@ -724,6 +728,7 @@ describe("R765 the main menu's live-game banner", () => {
               emailVerified: true,
               currentMatchId,
               currentSeriesId,
+              currentDuosMatchId,
               email: "player@example.test",
             }),
           );
@@ -753,6 +758,16 @@ describe("R765 the main menu's live-game banner", () => {
     render(<LandingRoute />);
     const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
     expect(rejoin).toHaveAttribute("href", paths.series("s-3"));
+  });
+
+  it("R1566000 a player whose co-op game is live sees the banner, and Rejoin leads to /duos/<id>", async () => {
+    signedIn();
+    serveInGame(null, null, "d-3");
+    render(<LandingRoute />);
+
+    const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
+    expect(banner).toHaveAttribute("data-kind", "duos");
+    await expectLeadsTo(within(banner).getByTestId(gameBannerTestid.rejoin), paths.duos("d-3"));
   });
 
   it("R765 no live game, or no account, shows no banner", async () => {

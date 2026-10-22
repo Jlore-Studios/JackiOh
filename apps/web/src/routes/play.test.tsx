@@ -709,6 +709,34 @@ describe("the lobby's answers", () => {
     expect(screen.getByTestId(playTestid.seriesLink)).toHaveAttribute("href", "/series/series-9");
   });
 
+  it("R1566000 a player in a live co-op game stays on the hub, and a refusal naming it links the game", async () => {
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), currentDuosMatchId: "duos-4" });
+    vi.mocked(enqueue).mockRejectedValue(
+      new ApiRequestError(409, {
+        code: "already_in_match",
+        message: "Finish your co-op match first.",
+        details: { duosMatchId: "duos-4" },
+      }),
+    );
+    await renderLobby();
+    await waitFor(() => {
+      expect(vi.mocked(getMe)).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId(playTestid.status)).toBeNull();
+    expect(vi.mocked(navigate)).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+
+    const error = await screen.findByTestId(playTestid.error);
+    expect(error).toHaveTextContent("Finish your co-op match first.");
+    const link = within(error).getByTestId(playTestid.duosLink);
+    expect(link).toHaveAttribute("href", "/duos/duos-4");
+    expect(link).toHaveTextContent("Go to your co-op game →");
+    expect(within(error).queryByTestId(playTestid.seriesLink)).toBeNull();
+    fireEvent.click(link);
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith("/duos/duos-4");
+  });
+
   it("R259 an enqueue that pairs into a series goes to the series screen", async () => {
     vi.mocked(enqueue).mockResolvedValue({
       ...openTicket("bo3"),
