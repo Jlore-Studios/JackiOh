@@ -699,13 +699,15 @@ The rule, one step at a time, each step one `reduce` (one node):
    seat controls, and takes the one its own `evaluate` likes best, if that beats standing still
    (#1036). A face-down card's Reveal is never tried: its card is a sample.
 3. **Trades.** Otherwise it takes the legal attack of highest static value, when that value is
-   positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; one on the hero is worth
-   `facePerDamage` per point of `projectedHeroDamage`; one on a unit is worth the target's
-   `unitWorth` if it dies (First Strike deciding who strikes first, Divine Shield popped for its
-   keyword weight, Poisonous killing), `chipPerDamage` per point otherwise, less the attacker's own
-   `unitWorth` if it dies. First, a Deft unit of its in Defense Position, its switch and its attack
-   unspent, is switched to Attack on trial (one node, R49), and the switch is kept when the best
-   attack afterwards is its own.
+   positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; so is every attack on the
+   hero while the attacks the opponent has left would reach it together past the seat's Taunts
+   (`readyGap` at most zero; #1634, behind `AI_REPLY.openLethal`, switched off until a screen keeps
+   it); one on the hero is worth `facePerDamage` per point of `projectedHeroDamage`; one on a unit
+   is worth the target's `unitWorth` if it dies (First Strike deciding who strikes first, Divine
+   Shield popped for its keyword weight, Poisonous killing), `chipPerDamage` per point otherwise,
+   less the attacker's own `unitWorth` if it dies. First, a Deft unit of its in Defense Position,
+   its switch and its attack unspent, is switched to Attack on trial (one node, R49), and the switch
+   is kept when the best attack afterwards, ranked one hit at a time, is its own.
 4. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
 
 It never plays a card it held unseen: those are samples, and a guessed hand adds noise rather than

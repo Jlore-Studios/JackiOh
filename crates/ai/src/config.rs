@@ -665,6 +665,11 @@ pub struct AiReply {
     /// Shield weight. Board-dependent kills only — the Cleave body itself stays priced by
     /// `AI_EVAL.keyword.cleave`.
     pub cleave_share: f64,
+    /// #1634: the static trader's lethal counts every attack it has left. When `lethal::ready_gap`
+    /// says the opponent's attacks still to come reach the seat's hero past its Taunts, every attack
+    /// on that hero is worth `AI_EVAL.win`, so the face goes first; false scores one hit at a time
+    /// (`reply_face_value`), as before.
+    pub open_lethal: bool,
 }
 
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
@@ -676,6 +681,10 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
+    // #1634: off. On, its screen, 400 games of improve-dev against the parent (82d7eb4b8), read
+    // 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing (training/improve.md, A screen); the
+    // training lanes may turn it on.
+    open_lethal: false,
 };
 
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).
