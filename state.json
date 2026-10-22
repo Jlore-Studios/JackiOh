@@ -25521,6 +25521,12 @@
         "number": 1597,
         "title": "Patch: one profile can't land in two live series",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-22T01:39:05Z",
+        "number": 1601,
+        "title": "Patch: the Duos fuzz refuses the actions its legal list never offered",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-22T01:14:20Z",
