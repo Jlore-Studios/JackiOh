@@ -1045,14 +1045,16 @@ PING_TIMEOUT_S = 180
 
 
 def ping_usage(claude_bin: str, model: str, run: Callable[..., Any] = subprocess.run,
-               token: str = "") -> dict | None:
+               token: str = "", effort: str = "") -> dict | None:
     """The Claude subscription's usage now, read off the smallest call there is: one turn of
-    `model` in an empty directory, signed in with `token` (else this process's own). None when
-    the CLI gave no reading."""
+    `model` (at `effort`, when one is named) in an empty directory, signed in with `token` (else
+    this process's own). None when the CLI gave no reading."""
     import tempfile
 
     argv = [claude_bin, "--print", "--output-format", "stream-json", "--verbose",
             "--model", model, "--max-turns", "1", "--strict-mcp-config"]
+    if effort:
+        argv += ["--effort", effort]
     env = config_mod.child_env(keep=("CLAUDE_CODE_OAUTH_TOKEN",))
     env.pop("ANTHROPIC_API_KEY", None)
     for key in ACTIONS_FILES:
