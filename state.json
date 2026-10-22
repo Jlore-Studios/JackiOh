@@ -12202,10 +12202,10 @@
       "onto": "bot/issue-1651",
       "part_of": 1651,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "round_tier": "",
-      "run_id": "39842703759",
-      "started_at": "2026-10-22T19:44:15Z",
+      "run_id": "pending:2a8b7c82-1792700029",
+      "started_at": "2026-10-22T20:14:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -13289,9 +13289,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T20:00:58Z",
+    "at": "2026-10-22T20:14:06Z",
     "url": "",
-    "what": "build #1636 on claude-7"
+    "what": "build #1667 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-22T19:58:14Z",
