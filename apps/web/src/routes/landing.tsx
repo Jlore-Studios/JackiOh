@@ -307,19 +307,19 @@ function Corner({ account }: { account: Account }): ReactElement | null {
 }
 
 function Actions(): ReactElement {
-  // #1577: the three doors. Play leads to practice, the one play screen needing no account; the
-  // invite-only sentence lives on `/invite` and `/play`, where the player decides.
+  // #1577, R1578000: the three doors. Play leads to the Play hub, which holds every way to play,
+  // online first; the invite-only sentence lives on `/invite` and `/play`, where the player decides.
   return (
     <nav className="landing-ctas" aria-label={t("Play")}>
       <a
         className="landing-cta landing-cta--primary"
-        href={paths.practice}
+        href={paths.play}
         data-testid={landingTestid.play}
-        onClick={followInApp(paths.practice)}
+        onClick={followInApp(paths.play)}
       >
         {t("Play")}
       </a>
-      <p className="landing-cta-note">{t("No account needed. Pick a difficulty and play.")}</p>
+      <p className="landing-cta-note">{t("Online first: every way to play, from one screen.")}</p>
       <div className="landing-ctas-secondary">
         <a
           className="landing-cta landing-cta--secondary"

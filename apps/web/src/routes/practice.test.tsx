@@ -439,13 +439,16 @@ afterEach(() => {
 // B32: setup for anyone.
 
 describe("B32 /practice shows setup to anyone", () => {
-  it("#1577 the lobby links to Play online and Play together, which the main menu's Play door no longer offers", async () => {
+  it("R1578000 the lobby offers no More ways to play and backs to Play", async () => {
     renderRoute(routeHost(), { loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))) });
     await settle();
 
-    const more = screen.getByRole("navigation", { name: "More ways to play" });
-    expect(within(more).getByRole("link", { name: "Play online" })).toHaveAttribute("href", "/play");
-    expect(within(more).getByRole("link", { name: "Play together" })).toHaveAttribute("href", "/together");
+    // The Play hub holds the other ways now; the setup carries no links of its own to them.
+    expect(screen.queryByRole("navigation", { name: "More ways to play" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Play together" })).toBeNull();
+
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(window.location.pathname).toBe("/play");
   });
 
   it("B32 renders with no account, session or server: three difficulty radios on easy and random plus every preset", async () => {

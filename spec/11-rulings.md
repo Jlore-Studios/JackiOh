@@ -481,4 +481,6 @@ The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195
 
 **[[R1577000]] gives the tavern landing's three doors their destinations (issue #1577, part of #1576)**: Play leads to `/practice`, the one play screen needing no account; Collection to `/collection`; Shop to a new `/shop` rendering the same panel the account screen shows until the Shop part removes it there. No old path moves, so no redirect is added. It edits [[§9.5]].
 
+**[[R1578000]] makes `/play` the Play hub (issue #1578, part of #1576)**: one screen with online play first and largest (rank, queue setup, Find a match) and Practice, Card creator, Play together, Replays and Play a friend smaller beside it; the landing's Play door opens it, a visitor with no account sees it with a Sign in where the online controls would be and nothing read, and practice's "More ways to play" links give way to its Back. No old path moves, so no redirect is added. It edits [[§9.5]] and amends [[R1577000]].
+
 **[[R1596000]] files again a game record that failed to write (issue #1596, 2026-10-22)**: [[R376]] only logged a failed filing, so the game was lost once the purge took its log; the retention loop now refiles it while the log is held. It takes R1596000, the first number of issue #1596's block, amends [[R376]] and edits [[§9.11]].

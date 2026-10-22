@@ -666,7 +666,6 @@
   cursor: not-allowed;
 }
 
-.tavern.play-screen .play-panel--practice a,
 .tavern.play-screen .play-panel--rank a {
   align-self: flex-start;
   font-weight: 700;
@@ -691,6 +690,252 @@
 .tavern.play-screen > .notice.play-status--found {
   border-color: var(--tavern-gold);
   font-weight: 700;
+}
+
+/* --- the Play hub (#1578, R1578000) -----------------------------------------------------------
+   /play is the front door of every way to play, and one screen: the shell is the viewport's height
+   and the page never scrolls. Online play is the first and the largest panel, and the other ways to
+   play are four smaller links beside it. On a desktop everything is in view, a deck list longer than
+   its room scrolling inside the setup panel. On a phone the panels stack, the online panel first and
+   whole, and `.play-layout` scrolls under it to the ways and the room. Every rule sits under
+   `.play-hub`, because the series screen shares `.play-screen`. */
+
+.tavern.play-screen.play-hub {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: 14px;
+  overflow: hidden;
+}
+
+.tavern.play-screen.play-hub > * {
+  flex: 0 0 auto;
+}
+
+.tavern.play-screen.play-hub .play-hero {
+  padding-top: 0;
+  gap: 0;
+}
+
+.tavern.play-screen.play-hub .play-hero .brand h1 {
+  font-size: 28px;
+}
+
+.tavern.play-screen.play-hub > .play-layout {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tavern.play-screen.play-hub .play-online {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 0 0 auto;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tavern.play-screen.play-hub .play-online__heading {
+  margin: 0;
+  font-family: var(--tavern-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.play-screen.play-hub .play-panel--rank {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  padding: 8px 14px;
+}
+
+.tavern.play-screen.play-hub .play-panel--rank .play-panel__heading {
+  font-size: 15px;
+}
+
+.tavern.play-screen.play-hub .play-panel--rank p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.tavern.play-screen.play-hub .play-panel {
+  gap: 10px;
+}
+
+/* The one panel that scrolls on the page's behalf. */
+.tavern.play-screen.play-hub .play-panel--setup {
+  max-height: min(18rem, 36dvh);
+  padding: 16px 16px 18px;
+  overflow-y: auto;
+}
+
+/* Find a match is the screen's one glowing action: the brightest edge and the tallest button. */
+.tavern.play-screen.play-hub .play-panel--queue {
+  padding: 16px 16px 18px;
+  border-color: var(--tavern-gold);
+  box-shadow:
+    inset 0 0 0 3px rgba(18, 11, 7, 0.85),
+    inset 0 0 0 4px rgba(201, 149, 63, 0.22),
+    0 0 34px rgba(255, 150, 60, 0.28);
+}
+
+.tavern.play-screen.play-hub .play-cta {
+  min-height: 56px;
+  font-size: 20px;
+}
+
+.tavern.play-screen.play-hub .play-side {
+  flex: 0 0 auto;
+  gap: 12px;
+}
+
+/* The other ways to play: plainer and smaller than the online panel, one tile each. */
+.tavern.play-screen.play-hub .play-ways {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tavern.play-screen.play-hub .play-way {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(201, 149, 63, 0.35);
+  border-radius: 12px;
+  background: var(--play-tile);
+  color: var(--tavern-parchment);
+  text-decoration: none;
+  transition: border-color 140ms;
+}
+
+.tavern.play-screen.play-hub .play-way:hover {
+  border-color: var(--tavern-brass);
+}
+
+.tavern.play-screen.play-hub .play-way__name {
+  font-family: var(--tavern-serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.play-screen.play-hub .play-way__note {
+  font-size: 13px;
+  color: var(--tavern-text-dim);
+}
+
+.tavern.play-screen.play-hub .play-panel--room {
+  padding: 14px 16px 16px;
+}
+
+/* A visitor with no account: the online panel is its one sentence and the way in. */
+.tavern.play-screen.play-hub .play-online--signed-out {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px 22px;
+  border: 1px solid var(--tavern-gold);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(52, 30, 16, 0.94), rgba(22, 13, 7, 0.96));
+  box-shadow: 0 0 38px rgba(255, 150, 60, 0.2);
+}
+
+.tavern.play-screen.play-hub .play-online--signed-out p {
+  margin: 0;
+}
+
+/* A phone: the notes go and the ways are two by two, so the first row of them peeks under the
+   queue and the rest is a scroll away. */
+@media (max-width: 619px) {
+  .tavern.play-screen.play-hub .play-way__note,
+  .tavern.play-screen.play-hub .play-panel--room .lobby-note {
+    display: none;
+  }
+
+  .tavern.play-screen.play-hub .play-online__heading {
+    font-size: 20px;
+  }
+
+  /* The rank panel's label and its Leaderboard link share a line, the rank under them. */
+  .tavern.play-screen.play-hub .play-panel--rank .play-panel__heading {
+    order: 1;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank a {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank p {
+    order: 3;
+    flex: 0 0 100%;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--setup,
+  .tavern.play-screen.play-hub .play-panel--queue {
+    padding: 14px 14px 16px;
+  }
+}
+
+/* A desktop: two columns, each as tall as the screen allows. The online panel's heading and rank
+   share a row, the setup takes what is left between them and the queue, and the side column's
+   panels scroll only on a screen too short for the ways and the room together. */
+@media (min-width: 900px) {
+  .tavern.play-screen.play-hub > .play-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+  }
+
+  .tavern.play-screen.play-hub .play-online {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
+  }
+
+  .tavern.play-screen.play-hub .play-online__heading {
+    align-self: center;
+    font-size: 24px;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank {
+    justify-self: end;
+    align-self: center;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--setup,
+  .tavern.play-screen.play-hub .play-panel--queue {
+    grid-column: 1 / -1;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--setup {
+    max-height: none;
+    min-height: 0;
+  }
+
+  .tavern.play-screen.play-hub .play-online--signed-out {
+    display: flex;
+  }
+
+  .tavern.play-screen.play-hub .play-side {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .tavern.play-screen.play-hub .play-ways {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* --- the series screen and its deck picker ----------------------------------------------------
