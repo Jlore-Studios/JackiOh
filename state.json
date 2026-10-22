@@ -13332,12 +13332,13 @@
     "what": "build #1651 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-22T20:34:53Z",
+    "at": "2026-10-22T20:35:58Z",
     "notes": [
-      "#1675 needs a plan",
-      "#1676 needs a plan",
-      "#1680 needs a plan",
-      "#1651: its parts have all closed; queued its reconcile"
+      "started plan #1675 on claude-4 (run 39850360072)",
+      "started plan #1676 on muse (run 39850417882)",
+      "started plan #1680 on claude-3 (run 39850480469)",
+      "started build #1651 on claude-3 (run 39850543160)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14043,7 +14044,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T20:28:37Z",
+  "loop_tick": "2026-10-22T20:35:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
