@@ -27,8 +27,9 @@ statistics, folded, drawn the same way (`stats.bot_section`).
 from __future__ import annotations
 
 import html
+import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from harness import disk as disk_mod
@@ -654,11 +655,143 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
     return "took under a minute" if took == "now" else f"took {took}"
 
 
+# ------------------------------------------------------------------ the learn lane
+
+#: The learn lane (#466; training/learn.md, .github/workflows/learn.yml): the learned evaluation,
+#: retrained and promoted on the owner's PC (the local runner, bot/machine/README.md) with no model
+#: in the loop and no harness either, so its facts come from GitHub alone: the generation on main,
+#: the lane's pull request and its runs.
+LEARN_WORKFLOW = "learn.yml"
+LEARN_BRANCH = "ai/learn"
+#: learn.yml's schedule, "23 6 * * 1": Mondays (weekday 0) at 06:23 UTC.
+LEARN_SCHEDULE = (0, 6, 23)
+#: learn.yml's LEARN_PR_STALE_HOURS: a lane pull request open this long is closed by the next run.
+LEARN_PR_STALE = timedelta(hours=48)
+LEARN_ROWS = 5
+
+
+def next_learn_run(now: datetime) -> datetime:
+    """When learn.yml's schedule next fires (GitHub fires schedules late; never early)."""
+    weekday, hour, minute = LEARN_SCHEDULE
+    at = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    at += timedelta(days=(weekday - at.weekday()) % 7)
+    return at if at > now else at + timedelta(days=7)
+
+
+#: A job that ended this way with no runner was never taken: the PC was off, asleep or busy for the
+#: 24 hours GitHub lets a job wait for a self-hosted runner.
+LEARN_NO_RUNNER = "⏸️ the PC's runner took none of it in 24 hours"
+
+
+def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
+    """How a learn.yml run ended, from its jobs' and steps' conclusions (learn.yml's names)."""
+    if run.get("status") != "completed":
+        return "🔄 running"
+    def named(items: list[dict[str, Any]], prefix: str) -> dict[str, Any] | None:
+        return next((i for i in items if str(i.get("name") or "").startswith(prefix)), None)
+    def untaken(job: dict[str, Any] | None) -> bool:
+        return (job is not None and not job.get("runner_name")
+                and job.get("conclusion") in ("failure", "cancelled"))
+    retrain, plan = named(jobs, "retrain"), named(jobs, "plan")
+    lost = [j for j in jobs if str(j.get("name") or "").startswith("export")
+            and j.get("conclusion") not in ("success", "skipped")]
+    export_failed = LEARN_NO_RUNNER if all(untaken(j) for j in lost) else "❌ the export failed"
+    if untaken(plan) or untaken(retrain):
+        return LEARN_NO_RUNNER
+    if retrain is None or retrain.get("conclusion") == "skipped":
+        if plan is not None and plan.get("conclusion") == "failure":
+            return "❌ the plan failed"
+        if lost:  # a run from before the retrain went on with the shards that finished
+            return export_failed
+        if run.get("conclusion") == "cancelled":
+            return "⏹️ cancelled"
+        return "⏭️ waited on its open pull request"
+    steps = retrain.get("steps") or []
+    # The retrain goes on with the shards that finished; it stops here only when none did.
+    shards = named(steps, "the export's shards")
+    if shards is not None and shards.get("conclusion") == "failure":
+        return export_failed if lost else "❌ the export failed"
+    fit, gate = named(steps, "retrain and screen"), named(steps, "the gate")
+    deliver, moving = named(steps, "deliver"), named(steps, "main kept moving")
+    if fit is not None and fit.get("conclusion") == "failure":
+        return "❌ the retrain broke"
+    if gate is None or gate.get("conclusion") == "skipped":
+        return "screened out" if retrain.get("conclusion") == "success" else "❌ the retrain broke"
+    if gate.get("conclusion") == "failure":
+        return "❌ the gate broke"
+    if deliver is not None and deliver.get("conclusion") == "success":
+        return "🎉 promoted"
+    if deliver is not None and deliver.get("conclusion") == "failure":
+        return "❌ passed, but could not open its pull request (LEARN_LANE_TOKEN?)"
+    if moving is not None and moving.get("conclusion") == "success":
+        return "🔁 main kept moving: another run on the export"
+    return "gated out"
+
+
+def learn_lane(ctx: Context) -> list[str]:
+    """The learn lane's section: the AI on main, the lane's pull request, the next scheduled run,
+    and its last runs with how each ended. Each part says so when GitHub cannot be read."""
+    lines = ["## 🧠 The learn lane", "",
+             "<sub>`learn.yml` retrains the learned evaluation on fresh self-play every week on "
+             "the owner's PC (the local runner, only while the PC is idle: a run takes about 40 "
+             "hours of it) and promotes it through the gate, with no model in the loop. It closes "
+             "a stuck promotion, and gates again when main moves (training/learn.md, Running "
+             "unattended).</sub>", ""]
+    try:
+        text, _ = ctx.gh.get_file("crates/ai/generation.json", "main")
+        record = json.loads(text) if text else {}
+        on_main = (f"gen {record.get('generation')} ({record.get('lane')}), promoted "
+                   f"{record.get('date')}, {record.get('vsParent')} against its parent"
+                   if record else "no generation.json")
+    except (GitHubError, ValueError):
+        on_main = "could not be read"
+    lines.append(f"- **The AI on main:** {on_main}.")
+    try:
+        pull = next((p for p in ctx.gh.list_pulls(state="open")
+                     if str(p["head"]["ref"]) == LEARN_BRANCH), None)
+        if pull is None:
+            pulled = "none open."
+        else:
+            opened = parse_iso(str(pull.get("created_at") or ""))
+            since = f" open since {_clock(ctx, opened)}" if opened else " open"
+            link = f"[#{pull['number']}]({pull.get('html_url', '')})"
+            if opened and ctx.now() - opened > LEARN_PR_STALE:
+                pulled = f"⛔ {link}{since}: the next run closes it."
+            else:
+                pulled = f"▶️ {link}{since}: CI decides, and auto-merge lands it."
+    except GitHubError:
+        pulled = "could not be read."
+    lines.append(f"- **Its pull request:** {pulled}")
+    upcoming = _local(ctx, next_learn_run(ctx.now())).strftime("%a %b %d %H:%M")
+    lines += [f"- **Next scheduled run:** {upcoming} (Central).", ""]
+    try:
+        runs = [r for r in ctx.gh.list_runs(LEARN_WORKFLOW, limit=20)
+                if r.get("event") != "workflow_run"][:LEARN_ROWS]
+    except GitHubError:
+        return lines + ["Its runs could not be read."]
+    rows = []
+    for run in runs:
+        try:
+            jobs = ctx.gh.list_jobs(run["id"]) if run.get("status") == "completed" else []
+            result = learn_outcome(run, jobs)
+        except (GitHubError, KeyError):
+            result = RESULT.get(str(run.get("conclusion")), str(run.get("conclusion")))
+        at = parse_iso(run.get("created_at"))
+        when = _hover(_local(ctx, at).strftime("%a %H:%M"), _took(ctx, run, at)) if at else "?"
+        link = f"[{run.get('run_number') or 'run'}]({run['html_url']})" if run.get("html_url") \
+            else str(run.get("id", ""))
+        rows.append(f"| {when} | {_cell(run.get('event'), 20)} | {result} | {link} |")
+    if not rows:
+        return lines + ["No runs yet."]
+    return lines + ["| Started (Central) | Trigger | Result | Run |", "|---|---|---|---|", *rows]
+
+
 @dataclass
 class View:
     """What both bots' views are drawn from, read from GitHub once per rewrite: the state, the
     open threads, the live lanes, why nothing may start (halted) if so, the queue and the
-    subscriptions explained, the last runs and the full status text."""
+    subscriptions explained, the last runs and the full status text. `learn` is the learn lane's
+    section, read once per rewrite by `update` (None: `render` reads it)."""
 
     state: dict[str, Any]
     issues: list[dict[str, Any]]
@@ -667,6 +800,7 @@ class View:
     explained: waiting_mod.Explained
     runs: list[str]
     report: str
+    learn: list[str] | None = None
 
 
 def look(ctx: Context) -> View:
@@ -744,6 +878,7 @@ def render(ctx: Context, extra: tuple[str, ...] = (), statistics: str = "",
     memory_line = memory_mod.line(state, ctx.now())
     lines += [memory_line, ""] if memory_line else []
     lines += ["## 🏃 Last night-bot runs", ""] + view.runs + [""]
+    lines += (view.learn if view.learn is not None else learn_lane(ctx)) + [""]
     if statistics:
         lines += [statistics.strip(), ""]
     for part in extra:
@@ -797,6 +932,7 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
     longer fits), with `stats_extra` drawing the other bots' records then; otherwise the block
     the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds."""
     view = look(ctx)
+    view.learn = learn_lane(ctx)
     state = view.state
     issue = find(ctx, state)
     kept = stats_mod.kept(issue.get("body")) if (stats and issue is not None) else None

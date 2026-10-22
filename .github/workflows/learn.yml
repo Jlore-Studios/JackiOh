@@ -1,28 +1,44 @@
 # The learn lane (#466, #1012; training/learn.md): the learned evaluation, retrained on fresh
 # self-play and promoted to main by the same gate as every AI, with no LLM anywhere in it
-# (docs/learned-eval.md D2). Weekly, and by dispatch (`gh workflow run learn.yml`).
+# (docs/learned-eval.md D2). Weekly, and by dispatch (`gh workflow run learn.yml`). It runs with nobody
+# watching it and with main moving under it (training/learn.md, Running unattended):
 #
-#   plan      skips the run while the lane's pull request is open, and names the export's seed base
-#             (`learned-<catalog>-<date>-<run>`, never a gate's or the dev set's, R1006002)
-#   export    selfplay.yml, called: `games` games in `shards` jobs on `runner` (the local runner,
-#             jackioh-selfplay-local, by default and on the schedule, or GitHub's when asked: #1455);
-#             none with `export_run`, which retrains on an earlier run's export (its artifacts are
-#             kept 30 days)
-#   retrain   on main: training/ml/retrain.sh over the export (positions, folded by the export's own
-#             build while its features are main's, the fit, the weights, the
-#             switch on, and an 800-game paired screen against main's AI on improve-dev, decided in
-#             advance). Only a screen with edgeLow above zero goes on: the weights and the switch are
-#             committed on ai/learn, `promote --lane learn` plays the lane's 400 hold-out games once
-#             (R1012000, R850001), and a pass, with the practice-claim fixture recorded again by the
-#             new AI (R1303002), is pushed as `AI gen <N> (learn): …` with auto-merge on.
+#   plan      names the export's seed base (`learned-<catalog>-<date>-<run>`, never a gate's or the dev
+#             set's, R1006002). A lane pull request still open is left to merge while its checks are
+#             green or running; one with a failed check, or open LEARN_PR_STALE_HOURS, is closed and the
+#             run goes on, so a stuck promotion never holds the lane
+#   export    selfplay.yml, called: `games` games in `shards` jobs, one after another on the local
+#             runner, in five rounds; none with `export_run`, which retrains on an earlier run's
+#             export (its artifacts are kept 30 days)
+#   retrain   on main: training/ml/retrain.sh over the shards that finished (a shard the PC lost costs
+#             the export its games, not the run), its positions folded by the export's own
+#             build while its features are main's, the fit, the weights, the switch on, and an 800-game
+#             paired screen against main's AI on improve-dev, decided in advance). Only a screen with
+#             edgeLow above zero goes on, to training/ml/learn-promote.sh: the network onto main as it
+#             is now, `promote --lane learn` (the lane's 400 hold-out games, R1012000, R850001) against
+#             that main's AI, the practice-claim fixture recorded again by the new AI (R1303002), and,
+#             when main moved in what the gate depends on meanwhile, all of it again on the newer main
+#             (LEARN_GATE_TRIES). A pass is pushed as `AI gen <N> (learn): …` with auto-merge on, and
 #             CI's training gate plays the gate again (`promote --verify`) before it merges, as for
-#             every lane. Each stage's report is kept as the run's `learn-<run>` artifact and in its
-#             summary, whether or not it passed.
+#             every lane. When main kept moving through every try, the run starts another on the same
+#             export (at most LEARN_CHAIN_MAX in a row). Each stage's report is kept as the run's
+#             `learn-<run>` artifact and in its summary, whether or not it passed.
+#   watch     when CI finishes red on the lane's pull request: its failed jobs run once more (a flaky
+#             test); red again, the pull request is closed with the failed jobs named, and a run on the
+#             same export starts (at most LEARN_CHAIN_MAX in a row), on main as it is by then.
+#
+# Every job runs on the owner's PC, the local runner (`jackioh-selfplay-local`, bot/machine/README.md,
+# The local runner), and none on GitHub's runners. It takes one job at a time, and only while the PC is
+# otherwise idle, so a run's 100,000 games take about 40 hours of an idle PC (about 2,500 games an hour
+# on its six CPUs) and a week's run may take several days. A job no runner takes in 24 hours (the PC
+# off, asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next week's
+# run comes anyway (training/learn.md, Running unattended).
 #
 # Pushing ai/learn and opening its pull request take LEARN_LANE_TOKEN, a fine-grained token that can
 # write contents and pull requests on this repository alone (a pull request opened with the run's
 # own token would start no CI). Without it, a passing promotion stops at its artifact
-# (`learn-<run>/promotion.patch`) and the run says so.
+# (`learn-<run>/promotion.patch`) and the run says so in red. The night bot's status issue shows the
+# lane (bot/harness/dashboard.py, `learn_lane`).
 name: learn
 
 on:
@@ -35,16 +51,9 @@ on:
         required: true
         default: "100000"
       shards:
-        description: "Export jobs"
+        description: "Export jobs (on the local runner, one after another)"
         required: true
         default: "20"
-      runner:
-        description: "Where the export runs"
-        type: choice
-        options:
-          - jackioh-selfplay-local
-          - ubuntu-latest
-        default: jackioh-selfplay-local
       screen:
         description: "Paired screen games against main (decided before it is played)"
         required: true
@@ -53,23 +62,42 @@ on:
         description: "Retrain on an earlier run's export (its run id) instead of playing one"
         required: false
         default: ""
+      chain:
+        description: "Runs on this export before this one, each started by the lane itself (it sets this)"
+        required: false
+        default: "0"
+  # The lane's pull request's CI, for `watch`. Only a workflow file on main hears it.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [ai/learn]
 
 permissions:
   contents: read
 
+env:
+  # A lane pull request open this long is closed at the next run, whatever its checks say.
+  LEARN_PR_STALE_HOURS: "48"
+  # Gates on a newer main when main moved during the last one (learn-promote.sh --tries).
+  LEARN_GATE_TRIES: "3"
+  # Runs the lane starts by itself on one export, one after another.
+  LEARN_CHAIN_MAX: "2"
+
+# A watch run never waits behind a retrain, nor replaces one waiting to start.
 concurrency:
-  group: learn
+  group: ${{ github.event_name == 'workflow_run' && 'learn-watch' || 'learn' }}
   cancel-in-progress: false
 
 jobs:
   plan:
     name: plan
-    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' }}
+    runs-on: jackioh-selfplay-local
     timeout-minutes: 10
     permissions:
       contents: read
       actions: read
-      pull-requests: read
+      pull-requests: write
     outputs:
       run: ${{ steps.plan.outputs.run }}
       seed: ${{ steps.plan.outputs.seed }}
@@ -83,11 +111,22 @@ jobs:
           EXPORT_RUN: ${{ inputs.export_run }}
         run: |
           set -euo pipefail
-          open=$(gh pr list -R "$REPO" --head ai/learn --state open --json number --jq 'length')
-          if [ "$open" != "0" ]; then
-            echo "the learn lane's pull request is open: nothing to do until it merges or closes" >> "$GITHUB_STEP_SUMMARY"
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          open=$(gh pr list -R "$REPO" --head ai/learn --state open --json number,createdAt --jq '.[0] // empty')
+          if [ -n "$open" ]; then
+            number=$(jq -r .number <<< "$open")
+            age=$(( $(date -u +%s) - $(date -u -d "$(jq -r .createdAt <<< "$open")" +%s) ))
+            failed=$(gh pr view "$number" -R "$REPO" --json statusCheckRollup --jq '[.statusCheckRollup[]
+              | select((.conclusion // "") | test("^(FAILURE|TIMED_OUT|CANCELLED|STARTUP_FAILURE|ACTION_REQUIRED)$"))
+              | .name] | unique | join(", ")')
+            if [ -z "$failed" ] && [ "$age" -lt $((LEARN_PR_STALE_HOURS * 3600)) ]; then
+              echo "the learn lane's pull request #$number is open and not failing: it merges first" >> "$GITHUB_STEP_SUMMARY"
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            why=${failed:+"its checks failed ($failed)"}
+            why=${why:-"it has been open more than $LEARN_PR_STALE_HOURS hours"}
+            gh pr close "$number" -R "$REPO" --comment "The learn lane closes this promotion: $why. Run ${RUN} retrains on main as it is now (training/learn.md, Running unattended)."
+            echo "closed the lane's pull request #$number: $why" >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -n "$EXPORT_RUN" ]; then
             # An earlier run's export, retrained on again: its seed names its shards' artifacts.
@@ -116,20 +155,23 @@ jobs:
       games: ${{ inputs.games || '100000' }}
       seed: ${{ needs.plan.outputs.seed }}
       shards: ${{ inputs.shards || '20' }}
-      runner: ${{ inputs.runner || 'jackioh-selfplay-local' }}
+      runner: jackioh-selfplay-local
       retention: "30"
       count: false
 
   retrain:
     name: retrain, screen, gate
     needs: [plan, export]
-    # After the export, or with none when the run reuses an earlier one's (export_run).
-    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && (needs.export.result == 'success' || needs.export.result == 'skipped') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
+    # After the export, whether or not every shard finished (the shards step below), or with none
+    # when the run reuses an earlier one's (export_run).
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' }}
+    runs-on: jackioh-selfplay-local
+    # The PC's runner throttles a job to half a CPU while the PC is busy, so the job may take far
+    # longer than the hour or two it takes on an idle PC (run 21: 59 minutes without a gate).
+    timeout-minutes: 2880
     permissions:
       contents: read
-      actions: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -139,12 +181,14 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-      # training/ml pins Python 3.13 (its pyproject.toml), and uv as super.yml's notebooks job does.
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
+      # uv, pinned as super.yml's notebooks job pins it, in a venv of the runner's own Python (3.12),
+      # which also reads retrain.sh's JSON. training/ml pins Python 3.13 (its pyproject.toml), and
+      # uv fetches that Python itself for `uv run`.
       - name: uv, pinned
-        run: python3 -m pip install uv==0.13.0
+        run: |
+          python3 -m venv "$RUNNER_TEMP/uv"
+          "$RUNNER_TEMP/uv/bin/pip" install --quiet uv==0.13.0
+          echo "$RUNNER_TEMP/uv/bin" >> "$GITHUB_PATH"
       - uses: actions/download-artifact@v4
         with:
           pattern: selfplay-${{ needs.plan.outputs.seed }}-*
@@ -161,6 +205,25 @@ jobs:
           path: ${{ runner.temp }}/exporter
           run-id: ${{ inputs.export_run || github.run_id }}
           github-token: ${{ github.token }}
+      # A shard the PC lost (it slept, or no runner took the shard in 24 hours) costs the export its
+      # games, not the run: the retrain goes on with the shards that finished, as long as one did.
+      - name: the export's shards
+        env:
+          SHARDS: ${{ inputs.shards || '20' }}
+          EXPORT: ${{ needs.export.result }}
+        run: |
+          set -euo pipefail
+          finished=$(find "$RUNNER_TEMP/export" -name 'selfplay-*.jsonl' 2> /dev/null | wc -l)
+          if [ "$finished" = 0 ]; then
+            echo "::error::no shard of the export finished: the PC's runner took none in 24 hours, or each one failed"
+            exit 1
+          fi
+          if [ "$EXPORT" = success ] || [ "$EXPORT" = skipped ]; then
+            echo "the export: $finished shards" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::$finished of $SHARDS shards finished: the retrain goes on with their games"
+            echo "the export: $finished of $SHARDS shards finished; the rest failed, or no runner took them in 24 hours" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: retrain and screen (training/ml/retrain.sh)
         id: retrain
         env:
@@ -192,79 +255,86 @@ jobs:
             echo "::error::retrain.sh stopped (exit $status) before it decided anything"
             exit 1
           fi
-      - name: the gate, once (promote --lane learn)
+      # Node for the practice-claim fixture, which the promotion records again.
+      - uses: ./.github/actions/setup
+        if: ${{ steps.retrain.outputs.passed == 'true' }}
+        with:
+          rust: "false"
+      - name: the gate on main as it is now (training/ml/learn-promote.sh)
         id: gate
         if: ${{ steps.retrain.outputs.passed == 'true' }}
         run: |
           set -uo pipefail
-          git config user.name "JackiOh learn lane"
-          git config user.email "learn-lane@users.noreply.github.com"
           games=$(jq -r '.counts.replayed' "$RUNNER_TEMP/learn/positions.json")
-          git add crates/ai/src/learned/weights.json crates/ai/src/config.rs
-          git commit -q -m "Stack (learn): the learned evaluation retrained on $games games" \
-            -m "$(cat "$RUNNER_TEMP/learn/summary.json")"
           status=0
-          cargo build --release -p jackioh-tools --quiet
-          target/release/jackioh promote --lane learn --parent-bin "$RUNNER_TEMP/learn/parent-jackioh" \
-            > "$RUNNER_TEMP/learn/promote.md" || status=$?
-          cat "$RUNNER_TEMP/learn/promote.md" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$status" != 0 ]; then
-            echo "passed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          generation=$(jq -r .generation crates/ai/generation.json)
-          git add crates/ai/generation.json training/history/learn.jsonl
-          git commit -q -m "AI gen $generation (learn): the learned evaluation, retrained on $games games" \
-            -m "$(cat "$RUNNER_TEMP/learn/promote.md")"
-          git format-patch -2 --stdout > "$RUNNER_TEMP/learn/promotion.patch"
+          bash training/ml/learn-promote.sh --out "$RUNNER_TEMP/learn" --games "$games" \
+            --tries "$LEARN_GATE_TRIES" || status=$?
           {
-            echo "passed=true"
-            echo "generation=$generation"
+            echo
+            echo '```json'
+            cat "$RUNNER_TEMP/learn/deliver.json" 2>/dev/null || echo '{"stage":"failed before the gate"}'
+            echo '```'
+            cat "$RUNNER_TEMP/learn/promote.md" 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          stage=$(jq -r .stage "$RUNNER_TEMP/learn/deliver.json" 2>/dev/null || echo broken)
+          {
+            echo "stage=$stage"
             echo "games=$games"
+            echo "generation=$(jq -r '.generation // empty' "$RUNNER_TEMP/learn/deliver.json" 2>/dev/null)"
           } >> "$GITHUB_OUTPUT"
-      # The practice game the AI's own moves are recorded in (R1303002), which the server's test
-      # re-runs move for move: every AI change plays it differently, so the promoted AI records it
-      # again into the promotion commit, the one file outside crates/ai/** and training/history/**
-      # CI's training gate lets a lane change. Node for it alone, after a pass.
-      - uses: ./.github/actions/setup
-        if: ${{ steps.gate.outputs.passed == 'true' }}
-        with:
-          rust: "false"
-      - name: the practice-claim fixture, recorded again by the promoted AI
-        if: ${{ steps.gate.outputs.passed == 'true' }}
-        run: |
-          set -euo pipefail
-          JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh
-          JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
-          pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
-          git add crates/server/tests/fixtures/practice-claim.json
-          git commit -q --amend --no-edit
-          git format-patch -2 --stdout > "$RUNNER_TEMP/learn/promotion.patch"
+          if [ "$stage" = broken ]; then
+            echo "::error::learn-promote.sh stopped (exit $status) before it decided anything"
+            exit 1
+          fi
       - name: deliver (push ai/learn, open its pull request, auto-merge)
-        if: ${{ steps.gate.outputs.passed == 'true' }}
+        if: ${{ steps.gate.outputs.stage == 'ready' }}
         env:
           LEARN_LANE_TOKEN: ${{ secrets.LEARN_LANE_TOKEN }}
           REPO: ${{ github.repository }}
           GENERATION: ${{ steps.gate.outputs.generation }}
           GAMES: ${{ steps.gate.outputs.games }}
+          EXPORT_RUN: ${{ inputs.export_run || github.run_id }}
+          CHAIN: ${{ inputs.chain || '0' }}
         run: |
           set -euo pipefail
           if [ -z "$LEARN_LANE_TOKEN" ]; then
-            echo "::warning::the gate passed, but LEARN_LANE_TOKEN is not set: the promotion is the run's artifact (promotion.patch)"
-            exit 0
+            echo "::error::the gate passed, but LEARN_LANE_TOKEN is not set: the promotion is the run's artifact (promotion.patch)"
+            exit 1
           fi
-          # main must not have moved under the parent, or CI's --verify would measure another one.
-          git fetch --quiet origin main
-          if [ "$(git rev-parse origin/main:crates/ai)" != "$(git rev-parse HEAD~2:crates/ai)" ]; then
-            echo "::warning::main's AI moved during the run: the next run retrains on it"
-            exit 0
+          remote="https://x-access-token:${LEARN_LANE_TOKEN}@github.com/${REPO}.git"
+          # A closed promotion leaves its branch, on an older main. Pushed as a new branch, ai/learn
+          # brings only the lane's commits, never main's changes to .github/workflows/, which a token
+          # without the workflow permission may not push.
+          git push --quiet "$remote" --delete ai/learn 2> /dev/null || true
+          if ! git push "$remote" HEAD:refs/heads/ai/learn; then
+            echo "::error::LEARN_LANE_TOKEN could not push ai/learn: it may have expired (training/learn.md, Setting it up)"
+            exit 1
           fi
-          git push --force "https://x-access-token:${LEARN_LANE_TOKEN}@github.com/${REPO}.git" HEAD:refs/heads/ai/learn
           export GH_TOKEN="$LEARN_LANE_TOKEN"
+          # `watch` reads which export to retrain on, and how many runs in a row it has had, from this.
+          { cat "$RUNNER_TEMP/learn/promote.md"; echo; echo "<!-- learn-lane export_run=$EXPORT_RUN chain=$CHAIN -->"; } \
+            > "$RUNNER_TEMP/learn/pull-body.md"
           title="AI gen $GENERATION (learn): the learned evaluation, retrained on $GAMES games"
           gh pr create -R "$REPO" --base main --head ai/learn --title "$title" \
-            --body-file "$RUNNER_TEMP/learn/promote.md"
+            --body-file "$RUNNER_TEMP/learn/pull-body.md"
           gh pr merge -R "$REPO" ai/learn --auto --squash
+      # main moved through every try: the same export again, on main as it is when that run gets there.
+      - name: main kept moving, so another run on this export
+        if: ${{ steps.gate.outputs.stage == 'moving' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EXPORT_RUN: ${{ inputs.export_run || github.run_id }}
+          CHAIN: ${{ inputs.chain || '0' }}
+          SCREEN: ${{ inputs.screen || '800' }}
+        run: |
+          set -euo pipefail
+          if [ "$CHAIN" -ge "$LEARN_CHAIN_MAX" ]; then
+            echo "::warning::main moved through every gate, and this export has had $LEARN_CHAIN_MAX runs after its first: the next scheduled run exports again"
+            exit 0
+          fi
+          gh workflow run learn.yml -R "$REPO" -f export_run="$EXPORT_RUN" -f chain=$((CHAIN + 1)) -f screen="$SCREEN"
+          echo "main moved through every gate: run $((CHAIN + 2)) on export $EXPORT_RUN started" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -277,8 +347,58 @@ jobs:
             ${{ runner.temp }}/learn/quantize-report.json
             ${{ runner.temp }}/learn/weights-float.json
             ${{ runner.temp }}/learn/screen.txt
-            ${{ runner.temp }}/learn/promote.md
+            ${{ runner.temp }}/learn/deliver.json
+            ${{ runner.temp }}/learn/promote*.md
             ${{ runner.temp }}/learn/promotion.patch
             crates/ai/src/learned/weights.json
           if-no-files-found: ignore
           retention-days: 90
+
+  watch:
+    name: watch the lane's pull request
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.conclusion != 'skipped' }}
+    runs-on: jackioh-selfplay-local
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write
+      pull-requests: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CI_RUN: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list -R "$REPO" --head ai/learn --state open --json number,headRefOid,body --jq '.[0] // empty')
+          if [ -z "$open" ]; then
+            echo "CI was $CONCLUSION on ai/learn, and no lane pull request is open"
+            exit 0
+          fi
+          number=$(jq -r .number <<< "$open")
+          if [ "$(jq -r .headRefOid <<< "$open")" != "$HEAD_SHA" ]; then
+            echo "CI run $CI_RUN was on an older head of #$number"
+            exit 0
+          fi
+          failed=$(gh api "repos/$REPO/actions/runs/$CI_RUN/jobs?per_page=100" --jq '[.jobs[]
+            | select((.conclusion // "") | test("^(failure|timed_out|cancelled)$")) | .name] | join(", ")')
+          if [ "$ATTEMPT" -lt 2 ]; then
+            gh run rerun "$CI_RUN" -R "$REPO" --failed
+            echo "CI was $CONCLUSION on #$number ($failed): its failed jobs run once more" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          marker=$(jq -r .body <<< "$open" | sed -n 's/.*<!-- learn-lane export_run=\([0-9][0-9]*\) chain=\([0-9][0-9]*\) -->.*/\1 \2/p' | tail -n 1)
+          next="the next scheduled run exports again"
+          if [ -n "$marker" ]; then
+            export_run=${marker% *}
+            chain=${marker#* }
+            if [ "$chain" -lt "$LEARN_CHAIN_MAX" ]; then
+              gh workflow run learn.yml -R "$REPO" -f export_run="$export_run" -f chain=$((chain + 1))
+              next="a run on the same export (run $export_run's) starts now, on main as it is when it gets there"
+            fi
+          fi
+          gh pr close "$number" -R "$REPO" --comment "CI failed twice on this promotion: ${failed:-$CONCLUSION}. The learn lane closes it; $next (training/learn.md, Running unattended)."
+          echo "closed #$number after CI failed twice ($failed); $next" >> "$GITHUB_STEP_SUMMARY"

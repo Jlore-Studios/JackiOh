@@ -1,6 +1,6 @@
 # The local runner's image (bot/machine/README.md, The local runner): the tools bot/machine/setup.sh
 # puts on the night box (Node 24 and pnpm through corepack, Python 3.12, Rust 1.97.0, a C++ compiler,
-# the claude, codex, agy, muse and devin CLIs) and the GitHub Actions runner, in one image. Each
+# gh, the claude, codex, agy, muse and devin CLIs) and the GitHub Actions runner, in one image. Each
 # container is one ephemeral runner: it takes one job and exits. A night box subscription's login
 # lives in its own volume, mounted at /home/runner; a self-play runner has none. Built from this directory:
 #   docker build -t jackioh-pc-runner:latest bot/machine/local
@@ -21,6 +21,16 @@ RUN apt-get update -qq \
  && curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - >/dev/null \
  && apt-get install -y -qq nodejs >/dev/null \
  && corepack enable \
+ && rm -rf /var/lib/apt/lists/*
+# GitHub's CLI from GitHub's own apt repository, as setup.sh installs it: the learn lane's jobs
+# (learn.yml) list, open, close and auto-merge its pull requests and start its runs with it.
+RUN install -d -m 755 /etc/apt/keyrings \
+ && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+ && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update -qq && apt-get install -y -qq gh >/dev/null \
  && rm -rf /var/lib/apt/lists/*
 
 # The model CLIs, installed system-wide as on the night box.

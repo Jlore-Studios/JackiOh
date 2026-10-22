@@ -26,6 +26,7 @@ import {
   rememberPendingReset,
 } from "../../../apps/web/src/net/session.ts";
 import { SESSION_STORAGE_KEY as FIXTURE_SESSION_KEY, routes } from "../../support/config.ts";
+import { PLAY_SCREEN, PLAY_SIGN_IN } from "../../support/testids.ts";
 
 // Values from config
 
@@ -58,7 +59,6 @@ const PROVIDER_TEXT = "PROVIDER-SAYS-7f3a Email link is invalid or has expired";
 
 /** Routes omitted from support/config.ts, copied from navigate.ts because e2e type-checks alone. */
 const LANDING = "/";
-const PRACTICE = "/practice";
 const RESET_PASSWORD = "/reset-password";
 
 function byTestid(testid: string): string {
@@ -262,12 +262,12 @@ function openInviteScreen(api: Partial<Api> = {}): Api {
 // B37: landing page
 
 describe("B37 the landing page", () => {
-  it("B37 anonymous: the three doors link to /practice, /collection and /shop, and the corner offers sign-in", () => {
+  it("B37 anonymous: the three doors link to /play, /collection and /shop, and the corner offers sign-in", () => {
     stubApi();
     cy.visit(LANDING);
 
     cy.get(byTestid(landingTestid.root)).should("be.visible");
-    cy.get(byTestid(landingTestid.play)).should("be.visible").closest("a").should("have.attr", "href", PRACTICE);
+    cy.get(byTestid(landingTestid.play)).should("be.visible").closest("a").should("have.attr", "href", routes.play());
     cy.get(byTestid(landingTestid.collection)).should("be.visible").closest("a").should("have.attr", "href", routes.collection());
     cy.get(byTestid(landingTestid.shop)).should("be.visible").closest("a").should("have.attr", "href", routes.shop());
     cy.get(byTestid(landingTestid.signIn)).should("be.visible");
@@ -293,11 +293,14 @@ describe("B37 the landing page", () => {
     cy.location("pathname").should("eq", routes.login());
   });
 
-  it("B37 Play moves the URL to /practice", () => {
+  it("B37 Play moves the URL to /play, whose hub an anonymous visitor sees with a way to sign in (R1578000)", () => {
     stubApi();
     cy.visit(LANDING);
     cy.get(byTestid(landingTestid.play)).click();
-    cy.location("pathname").should("eq", PRACTICE);
+    cy.location("pathname").should("eq", routes.play());
+    cy.get(byTestid(PLAY_SCREEN)).should("be.visible");
+    cy.get(byTestid(PLAY_SIGN_IN)).should("be.visible");
+    cy.get(byTestid(loginTestid.form)).should("not.exist");
   });
 });
 
@@ -487,14 +490,14 @@ describe("#479 a failed sign-in stays on the sign-in screen", () => {
   it("#479 sent by a protected screen: a failure stays on the sign-in screen, which keeps no way back to that screen", () => {
     stubApi();
     forbidProvider();
-    cy.visit(routes.play());
+    cy.visit(routes.deckbuilder());
     cy.location("pathname").should("eq", routes.login());
 
     submitSignIn();
     expectStillSigningIn();
     // A sign-in returns to the main menu, not its protected origin.
     cy.window().then((win) => {
-      for (const value of storedValues(win)) expect(value).not.to.contain(routes.play());
+      for (const value of storedValues(win)) expect(value).not.to.contain(routes.deckbuilder());
     });
 
     cy.get(byTestid(NAV_BACK)).click();

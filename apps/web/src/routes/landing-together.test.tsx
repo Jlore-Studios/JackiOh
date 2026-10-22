@@ -10,6 +10,7 @@ import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { stubServer } from "../test/stubServer.ts";
 import LandingRoute from "./landing.tsx";
+import { playTestid } from "./play.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 
@@ -90,12 +91,14 @@ describe("B54 the landing offers no Play together call to action", () => {
     expect(window.location.pathname).toBe(paths.landing);
   });
 
-  it("B54 following the Play door while signed out ends at practice, needing no sign-in", async () => {
+  // R1578000: the Play door opens the hub, which a visitor with no account sees too.
+  it("B54 following the Play door while signed out ends at the Play hub, needing no sign-in", async () => {
     render(<App />);
     fireEvent.click(await screen.findByTestId(landingTestid.play, undefined, SLOW), { button: 0 });
     await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.practice);
+      expect(window.location.pathname).toBe(paths.play);
     }, SLOW);
+    expect(await screen.findByTestId(playTestid.screen, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByTestId(loginTestid.form)).toBeNull();
   });
 

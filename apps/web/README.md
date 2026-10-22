@@ -197,7 +197,10 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
-routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
+routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
+                        largest, Practice, Card creator, Play together and Replays as four smaller links
+                        beside it, and for a visitor with no account (`token` null) a Sign in in the online
+                        panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
@@ -316,7 +319,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
                          file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
 
-The landing page offers three doors — Play (to `/practice`), Collection and Shop (#1577) — and no door to Play together, which lives at `/together` behind the gate. The replays list and the replay player offer
+The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. On the Duos board:
