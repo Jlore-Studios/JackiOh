@@ -499,6 +499,14 @@
   font-weight: 700;
 }
 
+/* R1563006: the seconds the sequence has left, beside its streak. */
+.prompt > .prompt-sequence-clock {
+  margin: 0;
+  color: #e9eef7;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 .prompt .prompt-answers > .prompt-answer-stop {
   justify-content: center;
   min-height: 44px;

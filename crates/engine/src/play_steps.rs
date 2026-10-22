@@ -715,6 +715,10 @@ pub fn validate_play(
         def_of(Some(&*sink.state), &card.def_id).cost,
         CardCost::Embiggen { .. }
     );
+    // R1563004: a card of one price that took Mountaintop Garden's Radiant price carries the choice to
+    // §10.5 step 3, which takes it off again (`garden_step`).
+    let garden_radiant =
+        action.embiggen == Some(true) && crate::mana::garden_offers_radiant(sink.state, &card);
     // R783004, R783005: stamp the face-down form before the price is read. Radiant Paranoia's Echo is
     // read as the Spell reveals (R1045), so none is stamped.
     let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> =
@@ -725,6 +729,8 @@ pub fn validate_play(
         }
         if embiggens {
             stamped.embiggened = Some(action.embiggen == Some(true));
+        } else if garden_radiant {
+            stamped.embiggened = Some(true);
         }
         if let Some((reveal, turn, echo)) = face_down_stamp {
             stamped.set_as = Some(crate::state::SetAs {
@@ -797,8 +803,9 @@ pub fn validate_play(
     run.tributes = tributes;
     run.at = 1;
     run.gifted = Some(play_made_radiant(state, player, &card, cost));
-    // R1181002: whether a Garden plays the card Embiggened, fixed here as `gifted` is (R214).
-    run.garden = crate::mana::garden_reaches(state, &card).then_some(true);
+    // R1181002: whether a Garden plays the card Embiggened, fixed here as `gifted` is (R214); R1563004:
+    // or a card of one price took its Radiant price, whose stamp step 3 takes off.
+    run.garden = (crate::mana::garden_reaches(state, &card) || garden_radiant).then_some(true);
     // R983: the Feng Shui verdicts, fixed here as `gifted` is (R214).
     let fixed = crate::subsystems::feng_shui::verdicts(state, player, &card);
     run.feng_shui = (!fixed.is_empty()).then_some(fixed);
@@ -1313,7 +1320,9 @@ fn replace_played_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 /// R1181002 (Meditative+ #22 Mountaintop Garden): a play a Garden reached at step 1 is the card's
 /// Embiggened version, whichever price it paid — stamped on the card at §10.5 step 3, before the
 /// `onPlayHook`s and the announce, so `cardPlayed` and every hook read it. A card already taken from
-/// where it is played from is not played (R226), and is left as it is.
+/// where it is played from is not played (R226), and is left as it is. R1563004: a card of one price
+/// has no Embiggened version: the stamp that carried its Radiant price to here comes off, the play made
+/// Radiant by then (`gifted`).
 fn garden_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
     if run.garden != Some(true) {
         return;
@@ -1326,8 +1335,9 @@ fn garden_step(sink: &mut EngineSink<'_>, run: &PlayRun) {
     } else {
         card.zone == (Zone::Hand { player: run.player })
     };
+    let embiggen_card = crate::play_choices::has_embiggen_price(sink.state, &card);
     if playing && let Some(live) = find_instance_mut(sink.state, &card.id) {
-        live.embiggened = Some(true);
+        live.embiggened = embiggen_card.then_some(true);
     }
 }
 

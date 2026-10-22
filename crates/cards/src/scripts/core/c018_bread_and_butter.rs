@@ -1,12 +1,13 @@
-//! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62): "When any player ends a turn with
-//! unspent mana: summon a Bread Token X/X for the trap's controller, X = that player's unspent mana".
-//! The radiant cell only says "X = 3 × unspent" (§8 Conventions), so both faces share the trigger,
-//! the beneficiary and the token.
+//! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62, R1563000): "Reveals when any player
+//! Floats: Summon an X/X Bread Token for you. X = the Float." A player Floats when their turn ends with
+//! unspent mana, and the Float is that mana (§6.2 Float; the face said "ends a turn with unspent mana"
+//! until #1563, the same rule). The radiant cell only says "X = 3 × the Float" (§8 Conventions), so
+//! both faces share the trigger, the beneficiary and the token.
 //!
 //! It fires in R62's end-of-turn trap window (both sides, in R68 order): a trap trigger on `turnEnded`,
 //! which `traps.rs` reserves for that window (`TRAP_WINDOW_EVENTS`). "Any player" needs no condition.
 //! R52: the token goes to the trap's controller (`player: "self"`), whoever ended the turn. X comes off
-//! the event (`turnEnded.unspentMana`), so the trigger reads no state. The token is printed 0/0 and
+//! the event (`turnEnded.unspentMana`, the engine's `float_of`), so the trigger reads no state. The token is printed 0/0 and
 //! summoned X/X through `statsOverride` (§7, R37). A Field Trap is not consumed (§5.1, §3.2, R33).
 //! The R280 preview and the R195/R662 glow read `unspent_mana_of`, which is public (§10.8); R33 hides
 //! a face-down trap's preview from the opponent.
@@ -19,14 +20,10 @@ pub const ID: &str = "core-018";
 /// §7: the Bread Token definition; its X/X comes from `statsOverride`, never from the def.
 const BREAD_TOKEN: &str = "core-t-bread";
 
-/// The ending player's unspent mana, straight off the event. Any other event type is not this
-/// trigger's (`on` already guarantees `turnEnded`), and a negative pool cannot happen, so both read
-/// as "nothing unspent".
+/// The Float, straight off the event (`float_of`): any other event, and a turn that ends with
+/// nothing unspent, is no Float.
 fn unspent_on(event: &GameEvent) -> i32 {
-    match event {
-        GameEvent::TurnEnded { unspent_mana, .. } => (*unspent_mana).max(0),
-        _ => 0,
-    }
+    float_of(event).map_or(0, |(_, float)| float)
 }
 
 /// The same on both faces: `multiplier` is §8's X (base) or 3X (radiant), a declared number (R386)
@@ -53,12 +50,12 @@ fn bread_trigger() -> TriggerDef {
 }
 
 /// R280: the formula as the face prints it, which the preview labels its number with — X on the base
-/// face, `multiplier` × the unspent mana on the Radiant one, with the multiplier as it stands.
+/// face, `multiplier` × the Float on the Radiant one, with the multiplier as it stands.
 fn formula(radiant: bool, multiplier: i32) -> String {
     if radiant {
-        format!("X = {multiplier} \u{00d7} that player's unspent mana")
+        format!("X = {multiplier} \u{00d7} the Float")
     } else {
-        "X = that player's unspent mana".to_string()
+        "X = the Float".to_string()
     }
 }
 
@@ -81,7 +78,7 @@ fn preview() -> PreviewHook {
     })
 }
 
-/// R662: "ends a turn with unspent mana", asked of the turn as it stands; the same on both faces.
+/// R662: "Floats", asked of the turn as it stands; the same on both faces.
 fn condition_met() -> ConditionHook {
     condition_hook(|ctx: ConditionContext<'_>| {
         if ctx.zone != ConditionZone::Field {
@@ -275,7 +272,7 @@ mod tests {
                 let shown = serde_json::to_value(&s.view(PlayerId::P1).you.backrow[0]).unwrap_or_default();
                 assert_eq!(
                     shown["preview"][0]["label"],
-                    json!(format!("X = {multiplier} \u{00d7} that player's unspent mana"))
+                    json!(format!("X = {multiplier} \u{00d7} the Float"))
                 );
                 assert_eq!(shown["preview"][0]["value"], json!(2 * multiplier));
 

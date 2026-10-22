@@ -1,5 +1,5 @@
 //! M #96 Meditative Journey (SPEC §8.8 row 96; §6.3 Exile, Shuffle into; R11, R80, R113, R311,
-//! R1246, R1247): (2) Spell, Rare.
+//! R1246, R1247): (1) Spell, Rare.
 //!
 //! Base:    "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a
 //!          Journey Complete into your deck."
@@ -199,8 +199,8 @@ mod tests {
                     js(&s.view(P1).you.own_library),
                     json!({
                         "cards": [
-                            { "defId": FILLER, "radiant": false, "count": 3 },
                             { "defId": JOURNEY_COMPLETE, "radiant": false, "created": true, "count": 1 },
+                            { "defId": FILLER, "radiant": false, "count": 3 },
                         ],
                         "unknown": 0,
                     })

@@ -1,0 +1,65 @@
+# R1454: politics and public-life references a ladder-bot username may be drawn from.
+# Meme spellings, nicknames and slogans only, spread across the spectrum so no side
+# dominates: never a bare full name, nothing violent, sexual or crude, no `Real` or
+# `Official` handle, nothing `never.txt` refuses. Nothing here may hold a `never.txt`
+# substring or a blocked token.
+Obamna
+DarkBrandon
+LetsGoBrandon
+BernieBro
+FeelTheBern
+Trump2028
+MAGAmain
+MAGA
+DarkMAGA
+Deplorable
+Covfefe
+TrumpDance
+SleepyJoe
+ButHerEmails
+FreedomFries
+DrillBabyDrill
+FakeNews
+DrainTheSwamp
+BuildTheWall
+TeaParty
+SaveAmerica
+AmericaFirst
+MolonLabe
+RINO
+AOC_Stan
+Kamala_Coconut
+HopeAndChange
+YesWeCan
+NotMeUs
+Malarkey
+OrangeMan
+NastyWoman
+Medicare4All
+GreenNewDeal
+EatTheRich
+UnionStrong
+AbolishICE
+NoKings
+ReadTheory
+Praxis
+Comrade
+Bootlicker
+DINO
+CommunismEnjoyer
+TaxationIsTheft
+Libertarian69
+RonPaulFan
+AnCap
+EndTheFed
+DontTread
+Statist
+Thatcher_Stan
+TrussLettuce
+Corbynista
+Literally1984
+CurrentThing
+NothingEver
+NothingBurger
+Zucc
+WinnieThePooh

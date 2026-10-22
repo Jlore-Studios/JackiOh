@@ -403,6 +403,7 @@ mod r1301_who_sees_it {
             max: 1,
             budget: None,
             craft_mode: None,
+            craft_offer: None,
             streak: None,
             resume: Resume {
                 def_id: String::new(),

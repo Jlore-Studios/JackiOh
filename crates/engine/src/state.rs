@@ -767,6 +767,11 @@ pub struct PendingChoice {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub craft_mode: Option<CraftMode>,
+    /// R1563007: a `craft` prompt's offer, the only blocks its answer may use (`CraftOffer`). Absent on
+    /// every other prompt and on Scratch Pad's, so a state without one hashes as it did (D9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft_offer: Option<crate::wire::CraftOffer>,
     /// R1184000: an `answer` prompt that is one question of a sequence (Meditative+ #20 KY's
     /// Competition) carries the right answers so far, which its chooser sees, and offers Stop after
     /// its answers (`prompts::ANSWER_STOP_KEY`). Absent on every other prompt (D14).

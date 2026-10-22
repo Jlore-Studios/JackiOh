@@ -572,3 +572,29 @@ mod summon_with_an_x_r1184003 {
         assert!(found.iter().all(|card| x_of(card) == 0));
     }
 }
+
+/// R1563006: what a host's sequence clock reads — the question open, its holder, streak and prompt id.
+mod m_plus_20_the_sequence_clock_reads_the_open_question_r1563006 {
+    use super::*;
+
+    #[test]
+    fn r1563006_the_first_question_has_streak_0_a_right_answer_a_new_prompt_with_streak_1_and_an_end_none() {
+        let mut state = asked("r1563006-read", false);
+        let first = must(sequence_question_of(&state), "the first question");
+        assert_eq!((first.player, first.streak), (P1, 0));
+        answer(&mut state, true);
+        let second = must(sequence_question_of(&state), "the second question");
+        assert_eq!((second.player, second.streak), (P1, 1));
+        assert_ne!(second.prompt_id, first.prompt_id);
+        // Stop, as a host answers when the clock runs out: the sequence ends, and nothing is open.
+        stop(&mut state);
+        assert_eq!(sequence_question_of(&state), None);
+        assert_eq!(the_kenny(&state).0, 1);
+    }
+
+    #[test]
+    fn r1563006_no_sequence_no_question() {
+        let state = board("r1563006-none");
+        assert_eq!(sequence_question_of(&state), None);
+    }
+}

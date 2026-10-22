@@ -8,8 +8,11 @@
 use std::sync::{Arc, Mutex};
 
 use jackioh_engine::PlayerId::{self, P1, P2};
+use jackioh_engine::config::KY_COMPETITION_SECONDS;
 use jackioh_server::actor::clock::{create_match_clock, initial_clocks, match_ceiling_at};
-use jackioh_server::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, MatchClock};
+use jackioh_server::actor::contracts::{
+    ClockExpiry, ClockView, CreateMatchClockInput, MatchClock, SequenceClockView,
+};
 use jackioh_server::app::now_ms;
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS,
@@ -96,6 +99,7 @@ fn view() -> ClockView {
         pending_for: None,
         mulligan_owed: vec![],
         over: false,
+        sequence: None,
     }
 }
 
@@ -686,5 +690,85 @@ mod r389_the_match_ceiling_doubled_with_the_turn_cap_patch_v0_2_0_b4_3 {
             match_ceiling_at(started_at),
             started_at + int(MATCH_CEILING_MINUTES) * MINUTE
         );
+    }
+}
+
+/// R1563006: Meditative+ #20 KY's Competition's sequence clock.
+mod r1563006_the_question_sequence_clock {
+    use super::*;
+
+    /// p1's turn with a question of a sequence open for p1.
+    fn asking(streak: i32, prompt_id: &str) -> ClockView {
+        ClockView {
+            pending_for: Some(P1),
+            sequence: Some(SequenceClockView {
+                player: P1,
+                streak,
+                prompt_id: prompt_id.to_string(),
+            }),
+            ..view()
+        }
+    }
+
+    fn sequence_ms() -> i64 {
+        int(KY_COMPETITION_SECONDS) * SECOND
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1563006_a_sequence_runs_out_60_seconds_after_its_first_question_whatever_it_answered_since() {
+        let h = harness(0);
+        h.clock.sync(&asking(0, "q1"));
+        sleep_settled(20 * SECOND).await;
+        // Two right answers later the window is the same one.
+        h.clock.sync(&asking(1, "q2"));
+        sleep_settled(20 * SECOND).await;
+        h.clock.sync(&asking(2, "q3"));
+        sleep_settled(sequence_ms() - 40 * SECOND - 1).await;
+        assert_eq!(h.expiries(), vec![]);
+        sleep_settled(1).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Sequence { player: P1 }]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1563006_a_sequence_that_ends_clears_its_clock_and_a_new_one_starts_from_full() {
+        let h = harness(0);
+        h.clock.sync(&asking(0, "q1"));
+        sleep_settled(50 * SECOND).await;
+        // A miss or Stop ends it: no question is open.
+        h.clock.sync(&view());
+        sleep_settled(20 * SECOND).await;
+        assert_eq!(h.expiries(), vec![]);
+        // A second Competition, on p1's next turn (inside the turn clock): a fresh window.
+        h.clock.sync(&ClockView {
+            turn: 3,
+            ..asking(0, "q9")
+        });
+        sleep_settled(sequence_ms() - 1).await;
+        assert_eq!(h.expiries(), vec![]);
+        sleep_settled(1).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Sequence { player: P1 }]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1563006_it_runs_beside_the_turn_clock_never_instead_of_it() {
+        let h = harness(0);
+        h.clock.sync(&asking(0, "q1"));
+        assert_eq!(h.clock.remaining_for(P1), Some(h.turn_ms));
+        sleep_settled(sequence_ms()).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Sequence { player: P1 }]);
+        sleep_settled(h.turn_ms - sequence_ms()).await;
+        assert_eq!(
+            h.expiries(),
+            vec![
+                ClockExpiry::Sequence { player: P1 },
+                ClockExpiry::Turn { player: P1 }
+            ]
+        );
+    }
+
+    #[test]
+    fn r1563006_the_expiry_is_named_sequence() {
+        assert_eq!(ClockExpiry::Sequence { player: P2 }.kind(), "sequence");
+        assert_eq!(KY_COMPETITION_SECONDS, 60);
     }
 }

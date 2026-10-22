@@ -3,9 +3,24 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { CardType, CraftRecipe } from "../../wire/index.ts";
-import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES } from "../../wire/engineConfig.ts";
-import { POTION_HAT, blankRecipe, frameOf, setType, takesHat, takesKeyword } from "./recipe.ts";
+import type { CardType, CraftOffer, CraftRecipe } from "../../wire/index.ts";
+import {
+  CRAFT_HAT_PRICES,
+  CRAFT_KEYWORD_PRICES,
+  CRAFT_RETIRED_VERBS,
+  CRAFT_VERB_PRICES,
+} from "../../wire/engineConfig.ts";
+import {
+  POTION_HAT,
+  blankRecipe,
+  frameOf,
+  offeredHats,
+  offeredKeywords,
+  offeredVerbs,
+  setType,
+  takesHat,
+  takesKeyword,
+} from "./recipe.ts";
 
 const CARD_TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap", "Field Trap"];
 
@@ -61,8 +76,10 @@ describe("R883 the crafter's type rules are the engine's tables", () => {
 });
 
 describe("R1182000 R1182002 the potion frame and the empty canvas", () => {
-  it("R1182000 no type takes the Activate hat outside the potion frame", () => {
-    for (const type of CARD_TYPES) expect(takesHat(type, POTION_HAT), type).toBe(false);
+  it("R1182000 R1563008 no type takes the retired Activate hat, and a Potion's hat is a Spell's When cast", () => {
+    for (const type of CARD_TYPES) expect(takesHat(type, "activate"), type).toBe(false);
+    expect(POTION_HAT).toBe("whenCast");
+    expect(takesHat("Spell", POTION_HAT)).toBe(true);
   });
 
   it("R1182000 a potion mode fixes its frame and no other mode does", () => {
@@ -78,9 +95,33 @@ describe("R1182000 R1182002 the potion frame and the empty canvas", () => {
     expect(blank.frame).toBeUndefined();
   });
 
-  it("R1182000 a blank Potion holds its frame and its one Activate, empty", () => {
+  it("R1182000 R1563008 a blank Potion is a 0/1 Spell holding its frame and its one When cast, empty", () => {
     const blank = blankRecipe(1, "potion");
     expect(blank.frame).toBe("potion");
+    expect(blank).toMatchObject({ type: "Spell", attack: 0, health: 1 });
     expect(blank.hats).toEqual([{ hat: POTION_HAT, effects: [] }]);
+  });
+});
+
+describe("R1563007 R1563009 the palette is the prompt's offer", () => {
+  const offer: CraftOffer = {
+    keywords: ["Armor", "Taunt", "Lifesteal", "Rush"],
+    hats: ["death", "cry"],
+    verbs: ["healYourHero", "draw", "damageTarget"],
+  };
+
+  it("R1563007 an offer's blocks come in the tables' order", () => {
+    expect(offeredKeywords(offer)).toEqual(["Taunt", "Rush", "Lifesteal", "Armor"]);
+    expect(offeredHats(offer)).toEqual(["cry", "death"]);
+    expect(offeredVerbs(offer)).toEqual(["damageTarget", "healYourHero", "draw"]);
+  });
+
+  it("R1563009 with no offer every block is there but the retired verbs and the retired Activate", () => {
+    expect(offeredKeywords(undefined)).toEqual(CRAFT_KEYWORD_PRICES.map((row) => row.kind));
+    expect(offeredHats(undefined)).not.toContain("activate");
+    expect(offeredHats(undefined)).toContain("whenCast");
+    expect(offeredVerbs(undefined)).not.toContain("gainArmor");
+    expect(CRAFT_RETIRED_VERBS).toEqual(["gainArmor"]);
+    expect(offeredVerbs(undefined)).toHaveLength(CRAFT_VERB_PRICES.length - CRAFT_RETIRED_VERBS.length);
   });
 });

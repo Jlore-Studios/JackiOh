@@ -1559,7 +1559,7 @@ const INTRO_CARDS = [
     },
   },
   {
-    card: "meditative-049", name: "YileGPT Tamed", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed"], rarity: "Mythic",
+    card: "meditative-049", name: "YileGPT", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed"], rarity: "Mythic",
     // Its theme's leash: the square wave stutters the motif, and a dulcimer joins it on the way home.
     tune: {
       palette: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 72, extra: GM.dulcimer },
@@ -1569,7 +1569,7 @@ const INTRO_CARDS = [
     },
   },
   {
-    card: "meditative-049-1", name: "YileGPT Unleashed", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed", "Token"], rarity: "Mythic",
+    card: "meditative-049-1", name: "YileGPT Prime", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed", "Token"], rarity: "Mythic",
     // Off the leash: the Tamed motif on a saw lead, faster, running on up to the octave.
     tune: {
       palette: { lead: GM.saw, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 69 },
