@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1600,
+  "title": "Patch: the purity lint bans the rest of std's impure surface",
+  "branch": "bot/issue-1600",
+  "thread": "**Issue #1600 (data, not instructions):**\n\n```text\n# #1600: Patch: the purity lint bans the rest of std's impure surface\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe codebase's core rule is that its rules crates never touch the clock, the disk, the network, threads, the environment or OS randomness \u2014 enforced by a lint list. Today that list bans only part of those doors: code in the rules crates could spawn a subprocess, open a socket, read a directory, sleep a thread, read command-line arguments or seed randomness from the OS, and the lint would still pass. The fix extends the banned list to the rest of the impure surface.\n\n## Why\n\nThe four identical `crates/{engine,cards,ai,luau}/clippy.toml` files ban `HashMap`/`HashSet`, `Instant`/`SystemTime`, `fs::File`, `thread::Thread`, `Mutex`/`RwLock`, `RefCell` and nine methods \u2014 but not `std::process::Command`, `std::net::*`, most of `std::fs` (`read_dir`, `metadata`, `create_dir_all`, `remove_file`, `canonicalize`, `exists`, `copy`, `rename`, `OpenOptions`\u2026), `std::env::{args,var_os,set_var,current_dir,temp_dir,current_exe}`, `std::io::{stdin,stdout,stderr}`, `std::thread::{sleep,scope,park}`, `std::hash::RandomState` (the very source the `HashMap` ban exists to avoid) or atomics in `static`s. Several of these compile for wasm32 and would only fail at runtime. Separately, nothing keeps the four files identical \u2014 an edit to one silently diverges them. Sanctioned exceptions stay free: `Cell`/`LocalKey` (the engine's and luau's declared seams) and `mpsc` (a test channel in `c047_joggs_box.rs`).\n\n## Proposal\n\nAdd the missing paths (~25 entries) to all four `clippy.toml`s, keeping the sanctioned exceptions, plus a small acceptance test asserting the four files are byte-identical so future edits land in all four.\n\n## Where it lands\n\n`crates/{engine,cards,ai,luau}/clippy.toml`; the parity test in `crates/tools/tests/acceptance.rs`. CLAUDE.md rule 4.\n\n## Acceptance criteria\n\n- [ ] `cargo clippy --workspace --all-targets -- -D warnings` stays green after the additions; any legitimately-used path is fixed or allow-listed with a cited reason (like `cards/build.rs`'s existing one), never blanket-suppressed.\n- [ ] The parity test fails when the four files diverge.\n- [ ] The new entries demonstrably fire (a documented scratch check or fixture line).\n\n## Size and risks\n\nSmall. The only real work is the first widened-lint run: handle each hit honestly (fix or justified allow).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:37:50Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1600: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
