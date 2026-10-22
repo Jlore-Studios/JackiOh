@@ -11998,7 +11998,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-22T02:55:08Z",
-      "run_id": "pending:6835c7e4-1792637778",
+      "run_id": "39714130543",
       "self_check_findings": [],
       "started_at": "2026-10-22T02:56:36Z",
       "stop_requested": false,
