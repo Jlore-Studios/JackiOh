@@ -14482,16 +14482,8 @@
     "what": "revise #1627 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-22T06:41:48Z",
-    "notes": [
-      "#1581 needs a plan",
-      "delivered build #1584 on claude-6 (run 39727979920): approved",
-      "delivered build #1602 on claude-1 (run 39719837914): approved",
-      "started plan #1581 on claude-1 (run 39735895034)",
-      "started revise #1557 on claude-6 (run 39735960197)",
-      "started revise #1627 on claude-4 (run 39736020308)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-22T06:52:20Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15070,7 +15062,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T06:41:48Z",
+  "loop_tick": "2026-10-22T06:52:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
