@@ -1,0 +1,64 @@
+{
+  "action": "build",
+  "number": 1657,
+  "title": "Patch: a finished game's answer carries what it paid: each track's XP before and after and every level reached",
+  "branch": "bot/issue-1657",
+  "thread": "**Issue #1657 (data, not instructions):**\n\n```text\n# #1657: Patch: a finished game's answer carries what it paid: each track's XP before and after and every level reached\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a74). The client will show the active track's bar filling from before to after whenever XP lands, each level reached popping with its rewards. It must not compute the level curve, and no answer tells it today: `pay_game_rewards` (`crates/server/src/economy/rewards.rs` ~l.202) returns `GameRewards { jlore, xp, jlore_capped }`, which its callers in `api/results.rs` (~l.368) and `duos/mod.rs` (`pay_coop`, ~l.164) drop; `pay_xp` (~l.295) returns `()`; the socket's `View` frame carries only `jlore_capped` (`actor/protocol.rs` ~l.184, `duos/protocol.rs` ~l.307); and the practice claim answers `{ paid, jlore, xp, jloreCapped }` (`api/practice.rs` ~l.226).\n\n### The wire (fixed: the XP client part builds against it)\n`GameEconomy = { jlore, xp, jloreCapped, tracks: TrackGain[], quests: QuestPaid[] }`, camelCase:\n- `TrackGain = { setId, before: TrackPoint, after: TrackPoint, levels: [{ level, rewards: { jlore, setPacks, cardTokens } }] }`, one per track the payout moved. The XP of every quest the game completed is in it, so each track has one before and one after. `levels` lists each level reached, in order, with what it paid (`economy/track_rewards.rs::reward_for_level`, the `LevelReward` shape); a track the payout unlocked shows its first level as `before`.\n- `TrackPoint = { level, xp, levelXp, xpToNext }`, as `GET /api/tracks` spells them (`api/economy.rs::get_tracks`; `levelXp` and `xpToNext` null past the last level). Share that computation with `get_tracks` rather than copy it.\n- `QuestPaid = { questId, title, jlore, xp }`: the quests the game completed, named as `GET /api/quests` names them.\n- Socket: `ServerMessage::View` and `DuosServerMessage::View` gain `economy: Option<GameEconomy>` (skipped when none). It is the receiving seat's own, never the other seat's, a teammate's or a watcher's, and it is set once the result is written, as `jlore_capped` is. A bot's side has none.\n- Practice: the paid claim answer adds `tracks` and `quests` beside `jlore`, `xp` and `jloreCapped`.\n\n### Decided here\nThe payout travels with the result write: `write_result` / `record_result` (`api/results.rs`) return each seat's `GameEconomy` as the reward hook computed it, and the match actor (`actor/match_actor.rs`, beside `load_jlore_caps`) and the duos actor (`duos/actor.rs`) keep it on the core beside `jlore_capped` and push it in that seat's next view. A repeat of a write already recorded pays nothing, and an actor rebuilt on a finished match has nothing to send, so those frames carry no `economy` and the client shows no fill; the doc comment says so. Rejected: reading it back off the ledger as `game_jlore_caps` does (R1483000), which needs every track's XP before the match rebuilt from its rows and a new store method in the Postgres store and the fake (`tests/store/contract.rs`); and the client reading `GET /api/tracks` before and after, which cannot name a level's rewards.\nNo ruling: this reports what \u00a714.7, \u00a714.8 and \u00a714.9 already pay; nothing pays differently.\n\n### Files\nUnder `crates/server/`: `src/economy/rewards.rs`, `src/economy/quests.rs` (report the quests a game completed), `src/api/economy.rs` (the shared track point), `src/api/results.rs`, `src/api/practice.rs`, `src/actor/match_actor.rs`, `src/actor/protocol.rs`, `src/duos/mod.rs`, `src/duos/protocol.rs`, `src/duos/actor.rs`, and the tests `tests/api/rewards.rs`, `tests/api/practice.rs`, `tests/actor/match_actor.rs`, `tests/actor/duos.rs`.\nNot here: the client (`game/net.ts`, `duos/socket.ts`, `net/practice.ts`: the XP client part), and every pack and cosmetics file of the server (the pack parts).\n\n### Done when\nTests: a ladder game whose XP reaches a level answers that seat's `economy` with the track's before and after and the level's rewards, and the other seat's frame carries only its own; a quest the game completes adds its XP to the same track gain and is listed; a bot's side and a watcher get none; a co-op seat gets its own; a paid practice claim answers `tracks` and `quests`; a game that reaches no level answers `levels: []`. Run `cargo test -p jackioh-server --test server` (at least `api::rewards`, `api::practice` and `actor::`), `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check`.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave `crates/server/README.md` and the e2e specs to the reconcile.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read \u00a714.7\u2013\u00a714.9, R1302003, R1302005, R1304001, R1483000, R1502000 and `crates/server/README.md`; read `rewards.rs` (`pay_game_rewards`, `pay_xp`, `pay_level_rewards`), `quests.rs` (`move_quests`, `complete_quest`), `api/economy.rs::get_tracks`, `api/results.rs::write_result` and `record_result`, `match_actor.rs::load_jlore_caps` and `record_result_with_retries`, `duos/mod.rs::pay_coop`, and `api/practice.rs`' settle path.\n2. In `rewards.rs` add `TrackPoint`, `LevelReached`, `TrackGain`, `QuestPaid` and `GameEconomy` (Serialize, camelCase). Make `pay_xp` return its gains (each active track read before, paid, read after, the levels in between with `reward_for_level`), and `pay_game_rewards` return the game's `GameEconomy`, merging the gains of the quests `move_quests` completes (make it return them) into one gain per track. `GameRewards` may lose `Copy`: fix its users.\n3. Move `get_tracks`' level, `levelXp` and `xpToNext` computation into one function both use.\n4. `results.rs`: return each seat's `GameEconomy` from `write_result` (a per-player option on what it returns), through `record_result` to the actor.\n5. Match actor: keep it per seat on the core like `jlore_capped`, add `economy` to `ServerMessage::View` for the receiving seat only (none for watchers), and push a fresh view after the write as `load_jlore_caps(true)` does.\n6. Duos: the same through `pay_coop`, `duos/actor.rs` and `DuosServerMessage::View`.\n7. Practice: add `tracks` and `quests` to the paid claim answer.\n8. Write the tests in Done when; run the commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read \u00a714.7\u2013\u00a714.9, R1302003, R1302005, R1304001, R1483000, R1502000 and `crates/server/README.md`; read `rewards.rs` (`pay_game_rewards`, `pay_xp`, `pay_level_rewards`), `quests.rs` (`move_quests`, `complete_quest`), `api/economy.rs::get_tracks`, `api/results.rs::write_result` and `record_result`, `match_actor.rs::load_jlore_caps` and `record_result_with_retries`, `duos/mod.rs::pay_coop`, and `api/practice.rs`' settle path.\n2. In `rewards.rs` add `TrackPoint`, `LevelReached`, `TrackGain`, `QuestPaid` and `GameEconomy` (Serialize, camelCase). Make `pay_xp` return its gains (each active track read before, paid, read after, the levels in between with `reward_for_level`), and `pay_game_rewards` return the game's `GameEconomy`, merging the gains of the quests `move_quests` completes (make it return them) into one gain per track. `GameRewards` may lose `Copy`: fix its users.\n3. Move `get_tracks`' level, `levelXp` and `xpToNext` computation into one function both use.\n4. `results.rs`: return each seat's `GameEconomy` from `write_result` (a per-player option on what it returns), through `record_result` to the actor.\n5. Match actor: keep it per seat on the core like `jlore_capped`, add `economy` to `ServerMessage::View` for the receiving seat only (none for watchers), and push a fresh view after the write as `load_jlore_caps(true)` does.\n6. Duos: the same through `pay_coop`, `duos/actor.rs` and `DuosServerMessage::View`.\n7. Practice: add `tracks` and `quests` to the paid claim answer.\n8. Write the tests in Done when; run the commands.",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-3` (claude, `opus`, strong); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read \u00a714.7\u2013\u00a714.9, R1302003, R1302005, R1304001, R1483000, R1502000 and `crates/server/README.md`; read `rewards.rs` (`pay_game_rewards`, `pay_xp`, `pay_level_rewards`), `quests.rs` (`move_quests`, `complete_quest`), `api/economy.rs::get_tracks`, `api/results.rs::write_result` and `record_result`, `match_actor.rs::load_jlore_caps` and `record_result_with_retries`, `duos/mod.rs::pay_coop`, and `api/practice.rs`' settle path.\n2. In `rewards.rs` add `TrackPoint`, `LevelReached`, `TrackGain`, `QuestPaid` and `GameEconomy` (Serialize, camelCase). Make `pay_xp` return its gains (each active track read before, paid, read after, the levels in between with `reward_for_level`), and `pay_game_rewards` return the game's `GameEconomy`, merging the gains of the quests `move_quests` completes (make it return them) into one gain per track. `GameRewards` may lose `Copy`: fix its users.\n3. Move `get_tracks`' level, `levelXp` and `xpToNext` computation into one function both use.\n4. `results.rs`: return each seat's `GameEconomy` from `write_result` (a per-player option on what it returns), through `record_result` to the actor.\n5. Match actor: keep it per seat on the core like `jlore_capped`, add `economy` to `ServerMessage::View` for the receiving seat only (none for watchers), and push a fresh view after the write as `load_jlore_caps(true)` does.\n6. Duos: the same through `pay_coop`, `duos/actor.rs` and `DuosServerMessage::View`.\n7. Practice: add `tracks` and `quests` to the paid claim answer.\n8. Write the tests in Done when; run the commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1661 skipped: it waits for #1655, #1656 to close first",
+    "#1662 skipped: it waits for #1655 to close first",
+    "#1663 skipped: it waits for #1656, #1658 to close first",
+    "#1664 skipped: it waits for #1657, #1658, #1659 to close first",
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1656, #1658, #1659, #1663 to close first"
+  ]
+}
