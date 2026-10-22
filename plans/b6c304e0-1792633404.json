@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1579,
+  "title": "Patch: the Collection screen holds decks, cards, cosmetics and the card builder",
+  "branch": "bot/issue-1579",
+  "thread": "**Issue #1579 (data, not instructions):**\n\n```text\n# #1579: Patch: the Collection screen holds decks, cards, cosmetics and the card builder\nOpened by @MaxGoetzmann.\n\nPart of #1576 (the tavern menu overhaul). Read the tracker's Goals first.\n\nBlocked by #1577\n\n## What\n\nThe screen behind the **Collection** door is the home of everything the player owns or makes:\n\n- **Decks**: the player's decks and the deck builder (`routes/decks.tsx`).\n- **Cards**: owned cards (`collection/OwnedCards.tsx`), with the track progress and whatever else the collection screen shows today (#1307), except buying and opening packs, which go to Shop.\n- **Cosmetics**: every cosmetic the player owns and **choosing which is equipped**.\n- **Card builder**: the creator (`routes/creator.tsx`).\n\n**Cosmetic selection lives in Collection and nowhere else.** Take it out of the **settings menu** (`apps/web/src/settings/` and wherever settings render it) and out of the account menu. Settings keeps settings only (audio, motion, language, accessibility and the like). No other screen keeps a second way to equip a cosmetic; a screen that needs one (e.g. a prompt after opening a cosmetic pack) links to Collection's cosmetics section instead.\n\nThe Collection screen itself is a hub of these sections (tabs or tiles, the builder chooses) that fits one screen; the card lists inside a section may scroll, as the tracker allows. Entries that move here are removed from their old place, old URLs redirected (CLAUDE.md rule 13). A player's equipped cosmetics are unchanged by the move: same stored choice, same server calls.\n\n## Done when\n\n- The hub fits a single screen without page scrolling on desktop and on a phone; only the big card lists scroll, inside their section.\n- Tests prove each of decks, cards, cosmetics (owning and equipping) and the card builder is reached from Collection, and the old entry points lead here.\n- The settings and account menus' tests say they no longer offer cosmetic selection.\n- e2e specs that equipped cosmetics through settings or the account menu, or reached these screens the old way, are updated.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1579: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
