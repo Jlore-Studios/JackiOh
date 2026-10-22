@@ -12469,14 +12469,16 @@
     "what": "plan #1634 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-22T14:57:29Z",
+    "at": "2026-10-22T15:11:57Z",
     "notes": [
-      "#1646 needs a plan",
-      "started plan #1646 on claude-7 (run 39800454013)",
-      "started plan #1635 on claude-1 (run 39800531783)",
-      "started plan #1638 on claude-4 (run 39800609477)",
-      "started plan #1634 on claude-3 (run 39800689798)",
-      "nothing more to start: nothing is queued"
+      "#1636 needs a plan",
+      "#1640 needs a plan",
+      "#1641 needs a plan",
+      "#1642 needs a plan",
+      "#1643 needs a plan",
+      "delivered plan #1638 on claude-4 (run 39800609477): planned",
+      "#1649: typed it Task",
+      "#1648: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13182,7 +13184,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T14:57:29Z",
+  "loop_tick": "2026-10-22T15:11:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
