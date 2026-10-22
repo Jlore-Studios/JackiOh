@@ -233,7 +233,7 @@ export function readCardPicks(defId: string): CardPicks {
   return cardPicks().resolved.get(defId) ?? NO_PICKS;
 }
 
-export function subscribeCardPicks(listener: () => void): () => void {
+function subscribeCardPicks(listener: () => void): () => void {
   cardPicksListeners.add(listener);
   return () => {
     cardPicksListeners.delete(listener);

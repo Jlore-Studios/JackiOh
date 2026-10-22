@@ -24,6 +24,11 @@ export type BackLinkProps = {
   children?: ReactNode;
   /** The board supplies settings separately. */
   showSettings?: boolean;
+  /**
+   * The Jlore pill, beside settings. Off on the signed-out screens (sign-in, a password reset), where
+   * a session only lands as the screen leaves and the pill has nothing to show.
+   */
+  showWallet?: boolean;
 };
 
 /** Uses `navigate`, not history, so direct links stay in the app. */
@@ -34,6 +39,7 @@ export function BackLink({
   onPress,
   children,
   showSettings = true,
+  showWallet = true,
 }: BackLinkProps): ReactElement {
   useLocale();
   return (
@@ -54,7 +60,7 @@ export function BackLink({
         {label === undefined ? t("← Back") : t(label)}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
-      {showSettings ? <JlorePill /> : null}
+      {showSettings && showWallet ? <JlorePill /> : null}
       {showSettings ? <LanguageButton placement="nav" /> : null}
       {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>

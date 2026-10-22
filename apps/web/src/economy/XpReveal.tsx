@@ -13,7 +13,7 @@
 // REDUCED MOTION (the panel's setting or the system's) draws every track's end state and every
 // reward at once, one sting, as the bars and the reveal do under it.
 
-import { useState, type CSSProperties, type ReactElement } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 
 import { SET_TRACK_LEVELS } from "@jackioh/server-config";
 import type { SetName } from "@jackioh/shared";
@@ -86,7 +86,13 @@ function TrackReveal({ gain, testid }: { gain: TrackGain; testid: string }): Rea
   const [reached, setReached] = useState(before.level);
   const [done, setDone] = useState(false);
 
-  // Motion off: the end state at once, whatever the bars have played.
+  // Motion off: the end state at once, whatever the bars have played, and kept if motion comes back.
+  useEffect(() => {
+    if (!reduced) return;
+    setAt(stages.length - 1);
+    setReached(after.level);
+    setDone(true);
+  }, [reduced, stages.length, after.level]);
   const index = reduced ? stages.length - 1 : at;
   const stage = stages[index]!;
   const level = reduced ? after.level : reached;

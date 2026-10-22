@@ -7,7 +7,7 @@
 import { collectionOf, cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../../../apps/web/src/shop/fixtures.ts";
 import { packsInfo } from "../../../apps/web/src/packs/fixtures.ts";
 import { packTestid } from "../../../apps/web/src/packs/packs.ts";
-import ShopRoute from "../../../apps/web/src/routes/shop.tsx";
+import ShopRoute, { shopRouteTestid } from "../../../apps/web/src/routes/shop.tsx";
 import { shopTestid } from "../../../apps/web/src/shop/shop.ts";
 
 const VIEWPORTS = [
@@ -69,8 +69,9 @@ function expectNoPageScroll(viewport: Viewport): void {
 /** Every panel has read and drawn what the fixtures answer. */
 function waitForPanels(): void {
   cy.get(byTestid(shopTestid.wallet)).should("contain.text", "Jlore");
-  cy.get(byTestid(packTestid.pity("epic"))).should("exist");
   cy.get(byTestid(packTestid.open("Core"))).should("exist");
+  // R1665000: the odds and the pity are on /purchases; the Shop's foot links there.
+  cy.get(byTestid(shopRouteTestid.purchases)).should("exist");
   cy.get(byTestid(shopTestid.packsPanel)).should("exist");
   cy.get(byTestid(shopTestid.cardBar)).should("exist");
 }

@@ -352,6 +352,19 @@ describe("where the pill sits", () => {
     expect(server.to("GET", "/api/wallet")).toHaveLength(0);
   });
 
+  it("BackLink with showWallet={false}, a signed-out screen's, keeps its buttons, has no pill and reads no wallet", async () => {
+    signIn();
+    const server = serve();
+    render(<BackLink showWallet={false} />);
+    act(() => {
+      announceWallet();
+    });
+
+    expect(screen.getByTestId("settings-open-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId(jlorePillTestid)).toBeNull();
+    expect(server.to("GET", "/api/wallet")).toHaveLength(0);
+  });
+
   it("the landing's top bar has one beside its two buttons", async () => {
     signIn();
     serve();

@@ -229,6 +229,8 @@ function Published({ token }: { token: string }): ReactElement {
 export default function PurchasesRoute(): ReactElement {
   useLocale();
   const [token] = useState(() => readSession()?.accessToken ?? null);
+  // One sentence, the link where the locale puts it.
+  const [signInBefore = "", signInAfter = ""] = t("{signIn} to see the odds and your pity counters.").split("{signIn}");
   return (
     <div className="app-shell tavern privacy-screen purchases-screen" data-testid={purchasesTestid.screen}>
       <BackLink />
@@ -245,10 +247,11 @@ export default function PurchasesRoute(): ReactElement {
         </p>
         {token === null ? (
           <p data-testid={purchasesTestid.signIn}>
+            {signInBefore}
             <a href={paths.login} onClick={followInApp(paths.login)}>
               {t("Sign in")}
-            </a>{" "}
-            {t("to see the odds and your pity counters.")}
+            </a>
+            {signInAfter}
           </p>
         ) : (
           <Published token={token} />

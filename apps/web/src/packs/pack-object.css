@@ -64,6 +64,15 @@
   --pack-ink: #17130f;
 }
 
+/* Meditative's paper turned to ink, its red seal kept: the set beside it, as Classic+ is Classic's. */
+.pack-object[data-pack="Meditative+"] {
+  --pack-foil-a: #3a332b;
+  --pack-foil-b: #14110d;
+  --pack-accent: #e8dcc0;
+  --pack-crimp-a: #c8322b;
+  --pack-crimp-b: #5a0f0b;
+}
+
 .pack-object[data-pack="global"] {
   --pack-foil-a: #5b3fa0;
   --pack-foil-b: #1d1530;

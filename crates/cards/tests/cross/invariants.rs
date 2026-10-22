@@ -29,7 +29,7 @@ const SHEEPISH: &str = "core-041";
 const RUSH_TOKEN: &str = "core-t-rush";
 const APPROPRIATIONS: &str = "classicplus-040";
 
-use super::scenario;
+use super::{craft_fused, scenario};
 
 /// An event from TS's object literal.
 fn event(literal: Value) -> GameEvent {
@@ -1212,5 +1212,109 @@ mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
             assert!(result.error.is_some(), "{name} was accepted");
         }
         assert!(malformed_answers(g.state(), &ActionBody::EndTurn).is_empty());
+    }
+}
+
+/// R127, R436: a Cry run out of a graveyard runs with no card (`self` null), so the `chaosRolled` a
+/// Call to Chaos in it sends names its definition beside an empty `instanceId`. The empty id is no
+/// card, so I6 reads nothing hidden in it. Fuzz seed 7232 of the handicapped wave (#1645): a Radiant
+/// Rewind ran the Cry of a Meditative Call to Chaos fused into a Unit in p1's graveyard; every edition
+/// announces its roll the same way (`announce_chaos`), so Core #95 fused into Mr Vanilla stands in.
+mod r127_r436_a_call_to_chaos_cry_run_out_of_a_graveyard {
+    use super::*;
+
+    const REWIND: &str = "classic-054";
+    const CALL_TO_CHAOS: &str = "core-095";
+
+    #[test]
+    fn r127_r436_i6_reads_the_empty_id_of_a_chaos_roll_with_no_card_as_no_card() {
+        let mut g = scenario(json!({
+            "p1": { "mana": 10, "hand": [REWIND], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": { "hand": [BIGOT], "library": [VANILLA, VANILLA, VANILLA] },
+        }));
+        // A Unit whose Cry is Call to Chaos (R77), in p1's graveyard.
+        let fused = craft_fused(&mut g, PlayerId::P1, &[VANILLA, CALL_TO_CHAOS]);
+        let state = g.state_mut();
+        state.players.p1.hand.retain(|card| card.id != fused.id);
+        let mut buried = fused.clone();
+        buried.zone = Zone::Graveyard { player: PlayerId::P1 };
+        state.players.p1.graveyard.push(buried);
+        g.play(
+            REWIND,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fused.id }] }),
+        );
+        assert!(
+            g.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::ChaosRolled { instance_id, def_id, .. }
+                    if instance_id.is_empty() && *def_id == fused.def_id
+            )),
+            "the Cry rolled with no card: {:?}",
+            g.last_events()
+        );
+        assert_eq!(
+            create_invariant_monitor(g.state()).hidden(g.state()),
+            no_violations()
+        );
+    }
+}
+
+/// R1122, R424: Traitorous Blood re-aims a declared attack at a Unit beside the attacker, and the
+/// combat is fought there, so a Classic Golem that kills the Unit it was re-aimed at killed its
+/// defender (R42) and its transform may attack again: the new Unit carries no `summonedTurn` and I4
+/// reads it as readied. Fuzz seed 9123 of the handicapped wave (#1645).
+mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
+    use super::*;
+
+    const GOLEM: &str = "classicplus-073-1";
+    const TRAITOROUS_BLOOD: &str = "meditative-064";
+    const MENACE: &str = "core-019";
+
+    #[test]
+    fn r1122_r424_i4_reads_a_golem_that_killed_the_unit_its_attack_was_redirected_to_as_readied() {
+        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
+        let mut g = scenario(json!({
+            "p1": {
+                "field": [{ "def": GOLEM, "lane": 2 }, { "def": VANILLA, "lane": 3 }],
+                "library": [VANILLA, VANILLA],
+            },
+            "p2": {
+                "field": [{ "def": MENACE, "lane": 2 }],
+                "backrow": [{ "def": TRAITOROUS_BLOOD, "faceDown": true }],
+                "library": [VANILLA, VANILLA],
+            },
+        }));
+        let golem = g.unit(PlayerId::P1, 2).expect("p1's Golem").id;
+        let ally = g.unit(PlayerId::P1, 3).expect("p1's Vanilla").id;
+        let menace = g.unit(PlayerId::P2, 2).expect("p2's Menace").id;
+        let mut monitor = create_invariant_monitor(g.state());
+        g.attack(golem.as_str(), menace.as_str());
+        assert!(
+            g.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::Redirected { what: RedirectWhat::Attack, from_id, to_id, .. }
+                    if *from_id == menace && *to_id == ally
+            )),
+            "the trap re-aimed the attack at the Golem's neighbour: {:?}",
+            g.last_events()
+        );
+        let readied = g
+            .last_events()
+            .iter()
+            .find_map(|event| match event {
+                GameEvent::Transformed {
+                    instance_id,
+                    new_instance_id,
+                    ..
+                } if *instance_id == golem => Some(new_instance_id.clone()),
+                _ => None,
+            })
+            .expect("the Golem transformed");
+        assert_eq!(
+            g.card(readied.as_str()).summoned_turn,
+            None,
+            "R424: it may attack again"
+        );
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 }

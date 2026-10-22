@@ -4,12 +4,13 @@
 // screen). Their odds and the pity are `/purchases`', which it links (R1665000). The route table serves
 // it behind the gate like `/collection` (the anonymous and pending bounces live in gate.test.tsx beside
 // the other routes'): an active account sees the shop, the landing's Shop door lands on it, and the
-// account screen links it no more (R1646000).
+// account screen links it no more but by the top bar's Jlore pill (R1646000, R1651000).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
+import { jlorePillTestid } from "../economy/JlorePill.tsx";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
@@ -321,8 +322,23 @@ describe("R1646000 the account screen links no Shop", () => {
     const record = await screen.findByTestId(accountTestid.record, undefined, SLOW);
     const account = screen.getByTestId(accountTestid.screen);
     expect(account).toContainElement(record);
-    expect(account.querySelector(`a[href="${paths.shop}"]`)).toBeNull();
+    // R1651000: the top bar's Jlore pill is every signed-in screen's; the screen's own links are these.
+    const own = Array.from(account.querySelectorAll(`a[href="${paths.shop}"]`)).filter((link) => link.closest("nav") === null);
+    expect(own).toEqual([]);
     expect(within(account).queryByRole("link", { name: "Shop" })).toBeNull();
     expect(window.location.pathname).toBe(paths.account);
+  });
+
+  it("R1651000 the account screen's one way to /shop is the Jlore pill in its top bar", async () => {
+    serveShop();
+    signedIn();
+    at(paths.account);
+    render(<App />);
+
+    const pill = await screen.findByTestId(jlorePillTestid, undefined, SLOW);
+    const account = screen.getByTestId(accountTestid.screen);
+    expect(Array.from(account.querySelectorAll(`a[href="${paths.shop}"]`))).toEqual([pill]);
+    expect(pill.closest("nav")).not.toBeNull();
+    expect(pill).toHaveAccessibleName(`${String(walletInfo().jlore)} Jlore`);
   });
 });

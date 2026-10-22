@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setMarkOf } from "../cards/setMark.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { shopPacks } from "../shop/shop.ts";
 import { COSMETIC_PACK, PACK_TEAR_MS, PACK_TILT_DEG } from "./packs.ts";
 import PackObject, { type PackObjectState } from "./PackObject.tsx";
 
@@ -145,6 +146,17 @@ function closingBrace(src: string, open: number): number {
   }
   return src.length;
 }
+
+describe("#1663 every pack's colours", () => {
+  it("each pack the store shelves, and the cosmetic pack, has a colour block of its own in pack-object.css", () => {
+    const sheet = readSheet("pack-object.css");
+    for (const pack of [...shopPacks(), COSMETIC_PACK]) {
+      const at = sheet.indexOf(`.pack-object[data-pack="${pack}"] {`);
+      expect(at, `${pack} has its colours`).toBeGreaterThanOrEqual(0);
+      expect(sheet.slice(at, closingBrace(sheet, sheet.indexOf("{", at))), pack).toContain("--pack-foil-a:");
+    }
+  });
+});
 
 /** Every `@keyframes name { … }` of a comment-free sheet and the properties its stops set. */
 function keyframeProperties(sheet: string): Map<string, string[]> {

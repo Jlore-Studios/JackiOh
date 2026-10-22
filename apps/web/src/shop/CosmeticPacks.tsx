@@ -337,7 +337,8 @@ function ShardBar({
         <p data-testid={shopTestid.shardEmpty}>{t("Nothing to buy yet")}</p>
       ) : (
         <div data-testid={shopTestid.shardChoice}>
-          <RewardReveal items={reveal} testid={shopTestid.shardReveal} />
+          {/* The moment, with its sting, only for the opening that filled the bar; read full, the words at once. */}
+          {filled ? <RewardReveal items={reveal} testid={shopTestid.shardReveal} /> : <p>{t("The bar is full — pick a chase:")}</p>}
           {candidates.map((cosmetic) => {
             const fits = fittingCards(cosmetic, quantities);
             const open = fits === null ? [] : fits.filter((cardId) => CATALOG[cardId] !== undefined);

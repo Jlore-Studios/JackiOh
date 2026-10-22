@@ -5,15 +5,13 @@
 //
 // PRESENTATION ONLY (CLAUDE.md rule 7). `state` is the caller's: this draws a pack pressed, tearing
 // or open and decides nothing about when. Every animation moves transform and opacity alone
-// (`pack-object.css`). REDUCED MOTION (the panel's setting or the system's, read as `PackScene`
-// reads them) holds the tilt, the sheen and the tear still and sets `data-motion=reduce`.
+// (`pack-object.css`). REDUCED MOTION (the panel's setting or the system's, followed live, as the
+// economy's bars read them) holds the tilt, the sheen and the tear still and sets `data-motion=reduce`.
 
 import { useRef, type CSSProperties, type PointerEvent, type ReactElement, type ReactNode } from "react";
 
 import { setMarkOf } from "../cards/setMark.ts";
-import { useFxSettings } from "../fx/settings.ts";
-import { reducedMotionNow } from "../game/animations.ts";
-import { useSetting } from "../settings/store.ts";
+import { useReducedMotion } from "../economy/FillBar.tsx";
 import { COSMETIC_PACK, PACK_TEAR_MS, PACK_TILT_DEG, packName } from "./packs.ts";
 import "./pack-object.css";
 
@@ -56,9 +54,7 @@ function emblemOf(pack: string): string {
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
 export default function PackObject({ pack, size, state = "idle", testid, children }: PackObjectProps): ReactElement {
-  const [fx] = useFxSettings();
-  const panelReduces = useSetting("reduceMotion");
-  const reduced = panelReduces || reducedMotionNow(fx);
+  const reduced = useReducedMotion();
   const root = useRef<HTMLSpanElement | null>(null);
 
   // The pointer sets two custom properties and the stylesheet moves the sheen and the tilt by

@@ -63,7 +63,8 @@ import {
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { t } from "../i18n/i18n.ts";
-import { badgeWords, rankWords } from "../rank/rank.ts";
+import { rankCaption } from "../rank/rank.ts";
+import RankCrest from "../rank/RankCrest.tsx";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
@@ -330,13 +331,24 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               {rank !== null ? (
                 <>
                   <p data-testid={accountTestid.rank}>
-                    <Username name={rank.username} /> ·{" "}
-                    {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
+                    <Username name={rank.username} /> · <RankCrest rank={rank.rank} size="large" />{" "}
+                    {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
                   </p>
                   <p data-testid={accountTestid.badges}>
-                    {rank.badges.length === 0
-                      ? t("No season best yet — finish placements to earn one.")
-                      : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(t(", ")) })}
+                    {rank.badges.length === 0 ? (
+                      t("No season best yet — finish placements to earn one.")
+                    ) : (
+                      <>
+                        {t("Season best:")}
+                        {rank.badges.map((badge, index) => (
+                          <span key={badge.seasonId}>
+                            {index === 0 ? " " : t(", ")}
+                            <RankCrest badge={badge} size="large" />{" "}
+                            {t("{rank} · Season {season}", { rank: rankCaption(badge), season: badge.seasonId })}
+                          </span>
+                        ))}
+                      </>
+                    )}
                   </p>
                   <div className="account-actions">
                     <a

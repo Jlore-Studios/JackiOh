@@ -52,7 +52,8 @@ import { getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
-import { rankShortWords, rankWords } from "../rank/rank.ts";
+import { rankCaption, rankShortWords } from "../rank/rank.ts";
+import RankCrest from "../rank/RankCrest.tsx";
 import { InMatchChat } from "../together/InMatchChat.tsx";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -495,15 +496,19 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               <span className="match-ranks__full">
                 {ranks.ranked ? t("Ranked match") : t("Unranked match")} ·{" "}
                 <Username name={ranks.seats.p1.username} />
-                {ranks.seats.p1.you ? t(" (you)") : ""} {rankWords(ranks.seats.p1.rank)} {t("vs")}{" "}
+                {ranks.seats.p1.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
+                {rankCaption(ranks.seats.p1.rank)} {t("vs")}{" "}
                 <Username name={ranks.seats.p2.username} />
-                {ranks.seats.p2.you ? t(" (you)") : ""} {rankWords(ranks.seats.p2.rank)}
+                {ranks.seats.p2.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
+                {rankCaption(ranks.seats.p2.rank)}
               </span>
               <span className="match-ranks__short">
                 {ranks.ranked ? t("Ranked") : t("Unranked")} · <Username name={ranks.seats.p1.username} />
-                {ranks.seats.p1.you ? t(" (you)") : ""} {rankShortWords(ranks.seats.p1.rank)} {t("vs")}{" "}
+                {ranks.seats.p1.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p1.rank} size="small" />{" "}
+                {rankShortWords(ranks.seats.p1.rank)} {t("vs")}{" "}
                 <Username name={ranks.seats.p2.username} />
-                {ranks.seats.p2.you ? t(" (you)") : ""} {rankShortWords(ranks.seats.p2.rank)}
+                {ranks.seats.p2.you ? t(" (you)") : ""} <RankCrest rank={ranks.seats.p2.rank} size="small" />{" "}
+                {rankShortWords(ranks.seats.p2.rank)}
               </span>
             </p>
           ) : null}
