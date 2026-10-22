@@ -24,8 +24,9 @@
 // once when there is one, or waiting for its target on the board (and draggable to it, game/drag)
 // when there are several. The first keeps the `power` testid the e2e specs press; any further one
 // is `power-<instanceId>`. The opponent's powers are tags. Whether a button is live is
-// `props.highlight.legal`; `usedThisTurn` is drawn (R1639000: a "Used" mark first in the chip, a greyed chip and a title that says so), never obeyed. A power flashes on the
-// `activated` row, which plays on its card (`card-<instanceId>`).
+// `props.highlight.legal`; `usedThisTurn` is drawn (R1639000: a "Used" mark first in the chip, a
+// greyed chip and a title that says so), never obeyed. A power flashes on the `activated` row,
+// which plays on its card (`card-<instanceId>`).
 //
 // The portrait has two presses (R1449). A click on the hero when it is not a legal target, or Enter
 // or Space on the portrait's own button (a control named for the hero, laid over the art and given
