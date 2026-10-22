@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1599,
+  "title": "Patch: a socket that closed before the first view says the game is gone, not 'Joining\u2026'",
+  "branch": "bot/issue-1599",
+  "thread": "**Issue #1599 (data, not instructions):**\n\n```text\n# #1599: Patch: a socket that closed before the first view says the game is gone, not 'Joining\u2026'\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIf a match or co-op stream closes for good before the first game screen arrives \u2014 the match was voided, the connection gave up \u2014 the player today stares at a 'Joining the match\u2026' spinner forever: a dead end dressed as a loading state. After the fix the screen says plainly that the game isn't available and offers the way back, like the existing 'This match isn't available' panel for refused joins.\n\n## Why\n\nOn the match, co-op and watch routes, `view === null` falls through to `<Loading what=\"Joining \u2026\">` for every connection state except `refused` (`apps/web/src/routes/match.tsx:317-346`, `apps/web/src/duos/DuosRoute.tsx:195-217`, `apps/web/src/together/WatchRoute.tsx:208-216`). A `closed` connection with no view received is terminal \u2014 a voided match close (`VOIDED_CLOSE_CODE` 4410, `apps/web/src/game/net.ts:704-706`) or exhausted watch reconnects (~10 s) \u2014 but is presented as pending; on the watch route the connection words aren't even rendered in that branch.\n\n## Proposal\n\nAdd a `connection === \"closed\" && view === null` branch per route rendering a terminal notice plus the way back, mirroring the `refused` panel. The watch route overlaps the open retry issue #1570 \u2014 if that lands first, this keeps the match and co-op halves; the terminal-notice shape is the same either way.\n\n## Where it lands\n\n`apps/web/src/routes/match.tsx`, `apps/web/src/duos/DuosRoute.tsx`, `apps/web/src/together/WatchRoute.tsx`, `apps/web/src/game/net.ts` (the existing close code).\n\n## Acceptance criteria\n\n- [ ] Vitest with a fake socket: close with the voided code on match and co-op, or exhaust the watch reconnects, and assert a terminal notice and back link render instead of the Joining copy.\n- [ ] The `refused` panel and normal joining flow are unchanged.\n\n## Size and risks\n\nSmall, three route files. Care only to keep #1570's watcher-retry wording compatible; the match and co-op halves are unclaimed by it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:39:42Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1599: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
