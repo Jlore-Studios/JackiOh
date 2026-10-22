@@ -11778,7 +11778,7 @@
       "taken_asks": []
     },
     "1609": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -11802,17 +11802,17 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-10-22T03:48:33Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "39717914049",
+      "run_id": "pending:a315987b-1792640910",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-22T03:38:00Z",
+      "started_at": "2026-10-22T03:48:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -13917,9 +13917,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T03:48:16Z",
+    "at": "2026-10-22T03:48:56Z",
     "url": "",
-    "what": "review #1616 on claude-1"
+    "what": "revise #1609 on muse"
   },
   "last_sweep": {
     "at": "2026-10-22T03:35:04Z",
