@@ -12290,9 +12290,12 @@
         "sha": "632ccb4ca66dc4d8656609d91aef62912e02e59d"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-22T03:38:35Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1574,
       "kind": "review",
       "pending_request": false,
