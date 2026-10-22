@@ -11798,6 +11798,8 @@
       "provider": "claude-1",
       "question": "",
       "queued_at": "2026-10-22T03:37:09Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "39717914049",
       "self_check_findings": [],
