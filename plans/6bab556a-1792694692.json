@@ -1,0 +1,63 @@
+{
+  "action": "build",
+  "number": 1660,
+  "title": "Patch: a card's border draws on the board as it does in hand",
+  "branch": "bot/issue-1660",
+  "thread": "**Issue #1660 (data, not instructions):**\n\n```text\n# #1660: Patch: a card's border draws on the board as it does in hand\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a77). The three borders (Wood, Bone, Circuit) look worse on the board than in hand. The likely cause: on the board minion layout the panel covers the face's edge, so `apps/web/src/cards/cosmetics.css` (~l.55\u201359, `.cf[data-layout=minion][data-frame] .cf-scale`) draws the border as `box-shadow: inset 0 0 0 1.2cqmin var(--trim-2)`, one flat colour over the dark inner shadow. The hand face draws `--cf-edge` instead: the border's gradient or pattern (`.cf[data-frame]` ~l.42\u201345, Circuit's and Wood's own `--cf-edge` ~l.47\u201353, painted by `cards/cards.css` ~l.169 and ~l.189).\n\n### Do\n1. Confirm it with the `ui-walkthrough` skill: equip each border, then shoot the same card in hand and on the board (hotseat at `/dev/hotseat` on a built client; hotseat wears the cosmetics). The shots stay in `.cache/browse/`, never in the repository (the skill's rule). Describe what each shows, before and after, in your final report, so the pull request can say it.\n2. Draw the minion's border with the face's edge treatment, so a border is the same object in both places: a ring layer over the minion (for example a pseudo-element painted with `var(--cf-edge)` and masked to a ring) instead of the flat inset rim, keeping the minion's inner shadow. A Radiant face still wears no border (R277, R1295000), and no border colour falls in the Radiant gold (the existing stylesheet test in `cards/cosmetics.test.tsx`).\n3. Tests: a new `apps/web/src/cards/borders.test.ts` that reads `cosmetics.css` and holds that the minion border rule paints `var(--cf-edge)` and draws no single-colour `inset \u2026 var(--trim-2)` rim. Extend `e2e/cypress/component/card-cosmetics.cy.tsx`'s `R1295000 a worn minion wears the border` to measure, for each border, that the minion's border layer's computed background is the same gradient as the full face's edge.\n\n### Files\n`apps/web/src/cards/cosmetics.css`, `apps/web/src/cards/cards.css` (only if the minion's `.cf-scale` rule, ~l.1240, must change), `apps/web/src/cards/borders.test.ts` (new), `e2e/cypress/component/card-cosmetics.cy.tsx`.\nNot here: `cards/cosmetics.ts` and `cards/cosmetics.test.tsx` (the per-card picks part).\n\n### Done when\n`pnpm --dir apps/web exec vitest run src/cards/borders.test.ts src/cards/cosmetics.test.tsx` passes, `pnpm exec eslint apps/web e2e` is clean, and your report describes each border in hand and on the board before and after. Run the component spec too if Cypress runs here (`cd e2e && pnpm exec cypress run --component --spec cypress/component/card-cosmetics.cy.tsx`).\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave `apps/web/README.md` and every other e2e spec to the reconcile. Keep every existing test id.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read R1295000, R277, `apps/web/README.md`, `cards/cosmetics.css`, `cards/cards.css` (the `.cf` edge ~l.169\u2013189 and the minion ~l.1240), `e2e/cypress/component/card-cosmetics.cy.tsx` and the `ui-walkthrough` skill.\n2. Serve a built client (`pnpm --dir apps/web build:e2e`, then `pnpm --dir apps/web exec vite preview --port 5173 --strictPort`), open `/dev/hotseat`, equip Wood, Bone and Circuit in turn (localStorage `jackioh.cosmetics.v1`, or the Collection), and shoot one card in hand and on the board for each.\n3. In `cosmetics.css`, replace the minion's flat rim with the edge treatment; reshoot and compare.\n4. Write `cards/borders.test.ts` and extend the component spec.\n5. Run the Done-when commands; write the before and after description in your report.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read R1295000, R277, `apps/web/README.md`, `cards/cosmetics.css`, `cards/cards.css` (the `.cf` edge ~l.169\u2013189 and the minion ~l.1240), `e2e/cypress/component/card-cosmetics.cy.tsx` and the `ui-walkthrough` skill.\n2. Serve a built client (`pnpm --dir apps/web build:e2e`, then `pnpm --dir apps/web exec vite preview --port 5173 --strictPort`), open `/dev/hotseat`, equip Wood, Bone and Circuit in turn (localStorage `jackioh.cosmetics.v1`, or the Collection), and shoot one card in hand and on the board for each.\n3. In `cosmetics.css`, replace the minion's flat rim with the edge treatment; reshoot and compare.\n4. Write `cards/borders.test.ts` and extend the component spec.\n5. Run the Done-when commands; write the before and after description in your report.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-6` (claude, `sonnet`, medium); review on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read R1295000, R277, `apps/web/README.md`, `cards/cosmetics.css`, `cards/cards.css` (the `.cf` edge ~l.169\u2013189 and the minion ~l.1240), `e2e/cypress/component/card-cosmetics.cy.tsx` and the `ui-walkthrough` skill.\n2. Serve a built client (`pnpm --dir apps/web build:e2e`, then `pnpm --dir apps/web exec vite preview --port 5173 --strictPort`), open `/dev/hotseat`, equip Wood, Bone and Circuit in turn (localStorage `jackioh.cosmetics.v1`, or the Collection), and shoot one card in hand and on the board for each.\n3. In `cosmetics.css`, replace the minion's flat rim with the edge treatment; reshoot and compare.\n4. Write `cards/borders.test.ts` and extend the component spec.\n5. Run the Done-when commands; write the before and after description in your report."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1661 skipped: it waits for #1656 to close first",
+    "#1663 skipped: it waits for #1656, #1658 to close first",
+    "#1664 skipped: it waits for #1658, #1659 to close first",
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1656, #1658, #1659, #1663 to close first"
+  ]
+}
