@@ -16,11 +16,12 @@
 use std::cmp::Ordering;
 
 use indexmap::IndexSet;
+use jackioh_engine::view_for::{HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDDEN_POSITION};
 use jackioh_engine::{
-    ANSWER_KEY, AttackHealth, CardInstance, Counters, GameEvent, GameState, PLAYER_IDS, PendingChoice,
-    PlayerId, Resume, SETUP_WORK, Selection, active_units_of, announced_face_down_to, backrow_is_public,
-    effective_cost, find_def, find_instance, find_instance_mut, handicap_of, mulligan_prompt_for,
-    unclamped_attack, unit_view,
+    ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
+    PendingChoice, PlayerId, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
+    announced_face_down_to, backrow_is_public, effective_cost, find_def, find_instance, find_instance_mut,
+    handicap_of, mulligan_prompt_for, unclamped_attack, unit_view,
 };
 use jackioh_engine::{CostOptions, subsystems};
 use serde_json::Value;
@@ -170,13 +171,26 @@ fn backrow_hidden_from(state: &GameState, card: &CardInstance, seat: PlayerId) -
     find_def(Some(state), &card.def_id).is_none() || !backrow_is_public(state, card, seat)
 }
 
+/// R177, §10.8: a card `seat` sees only as a face-down card, by the rule `view_for` offers a prompt's
+/// card by (`is_face_down_to`): a backrow card the seat cannot read. The view offers one by its id
+/// alone, never what it is: an enemy face-down trap a target prompt reaches (the plague cards').
+fn face_down_to(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
+    matches!(
+        card.zone,
+        Zone::Field {
+            row: Row::Backrow,
+            ..
+        }
+    ) && backrow_hidden_from(state, card, seat)
+}
+
 /// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every
 /// backrow card the seat cannot read, the cards in the seat's own library that were minted for
 /// the opponent's opening deck (#87 Pocket Chaos's library swap, R73), and every card in the seat's
 /// own library it was never shown (no `knownAs`, R312: a library swapped in, or swapped away and
 /// back, and #83 Transmogulate's picks), which its own `viewFor` list counts as unknown too. A card
 /// the seat's own open prompt offers as an option is shown to the seat by `viewFor` (§10.8), so it
-/// is not hidden.
+/// is not hidden, unless the view offers it as a face-down card (`face_down_to`, R177).
 pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let opp = seat.opponent();
     let mut hidden: IndexSet<String> = IndexSet::new();
@@ -230,7 +244,9 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
         && pending.player_id == seat
     {
         for option in &pending.options {
-            if let Selection::Instance { instance_id } = &option.selection {
+            if let Selection::Instance { instance_id } = &option.selection
+                && !find_instance(state, instance_id).is_some_and(|card| face_down_to(state, card, seat))
+            {
                 hidden.shift_remove(instance_id);
             }
         }
@@ -325,12 +341,17 @@ fn is_hidden_value(value: Option<&Value>, hidden: &IndexSet<String>) -> bool {
     is_hidden_id(value.and_then(Value::as_str), hidden)
 }
 
-/// Step 5: every `defId` that sits next to a hidden instance id becomes the placeholder id.
-fn scrub_event_value(event: &mut Value, hidden: &IndexSet<String>) {
+/// Step 5: every `defId` that sits next to a hidden instance id becomes the placeholder id,
+/// and the fields `view_for`'s `redact_event` drops or replaces for such a card go too (R97, R177,
+/// R227, R448, R1046, R1180005). The ids stay, as every hidden card's do here. Only optional fields
+/// are removed and a required one takes the view's sentinel, so the engine still reads the event
+/// back (`event_of_queued`).
+fn scrub_event_value(state: &GameState, seat: PlayerId, event: &mut Value, hidden: &IndexSet<String>) {
     let Some(copy) = event.as_object_mut() else {
         return;
     };
-    if is_hidden_value(copy.get("instanceId"), hidden) {
+    let instance_hidden = is_hidden_value(copy.get("instanceId"), hidden);
+    if instance_hidden {
         if copy.contains_key("defId") {
             copy.insert("defId".to_string(), Value::from(HIDDEN_DEF_ID));
         }
@@ -344,14 +365,97 @@ fn scrub_event_value(event: &mut Value, hidden: &IndexSet<String>) {
     if is_hidden_value(copy.get("resultInstanceId"), hidden) && copy.contains_key("defId") {
         copy.insert("defId".to_string(), Value::from(HIDDEN_DEF_ID));
     }
+    let kind = copy
+        .get("type")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    match kind.as_str() {
+        // R1180005: the answering card lies in a hand or a deck; the seat reads which only in its own
+        // hand (a deck's would say its order, §9.1; the other hand is hidden).
+        "cardResolved" => {
+            let own_hand = copy
+                .get("answer")
+                .and_then(|answer| answer.get("by"))
+                .and_then(Value::as_str)
+                .and_then(|by| find_instance(state, by))
+                .is_some_and(|card| matches!(card.zone, Zone::Hand { player } if player == seat));
+            if !own_hand {
+                copy.remove("answer");
+            }
+            if instance_hidden {
+                copy.remove("radiant");
+            }
+        }
+        // The face a hidden card had is the card's too.
+        "destroyed" | "libraryOverflow" => {
+            if instance_hidden {
+                copy.remove("radiant");
+            }
+        }
+        // R227: a card set face-down took a fresh id and its old one would name it; R1046: one set by
+        // its Cloaked shows neither its X nor its Embiggened.
+        "cardPlayed" | "summoned" => {
+            if instance_hidden {
+                copy.remove("formerId");
+                let cloaked = copy
+                    .get("instanceId")
+                    .and_then(Value::as_str)
+                    .and_then(|id| find_instance(state, id))
+                    .is_some_and(|card| card.set_as.is_some());
+                if cloaked {
+                    copy.remove("x");
+                    copy.remove("embiggened");
+                }
+            }
+        }
+        "controlChanged" => {
+            if instance_hidden {
+                copy.remove("formerId");
+            }
+        }
+        // R448, R97: the other seat's face-down set (its id may be gone already, R227) or a play of a
+        // card now hidden shows its zone alone: a Trap, its targets as as many sentinels.
+        "cardAnnounced" => {
+            let face_down = copy.get("faceDown").and_then(Value::as_bool) == Some(true);
+            let theirs = copy.get("player").and_then(Value::as_str) != Some(seat.as_str());
+            if (face_down && theirs) || instance_hidden {
+                if face_down {
+                    copy.insert("cardType".to_string(), Value::from(CardType::Trap.as_str()));
+                }
+                copy.insert("defId".to_string(), Value::from(HIDDEN_DEF_ID));
+                if let Some(Value::Array(targets)) = copy.get_mut("targets") {
+                    for target in targets.iter_mut() {
+                        *target = Value::from(HIDDEN_ID);
+                    }
+                }
+            }
+        }
+        // §9.1, R97: the slot would give a library's order away, to either seat.
+        "shuffledIn" => {
+            copy.insert("position".to_string(), Value::from(HIDDEN_POSITION));
+        }
+        // R177: a hidden card's cost is the card's, and so is one changed where the seat could not read it.
+        "costChanged" => {
+            let seat_value = Value::from(seat.as_str());
+            let hidden_from_seat = copy
+                .get("hiddenFrom")
+                .and_then(Value::as_array)
+                .is_some_and(|players| players.contains(&seat_value));
+            if instance_hidden || hidden_from_seat {
+                copy.insert("cost".to_string(), Value::from(HIDDEN_COST));
+            }
+        }
+        _ => {}
+    }
 }
 
 /// `scrub_event_value` on a typed event: through its JSON, back into the event.
-fn scrub_event(event: &GameEvent, hidden: &IndexSet<String>) -> GameEvent {
+fn scrub_event(state: &GameState, seat: PlayerId, event: &GameEvent, hidden: &IndexSet<String>) -> GameEvent {
     let Ok(mut value) = serde_json::to_value(event) else {
         return event.clone();
     };
-    scrub_event_value(&mut value, hidden);
+    scrub_event_value(state, seat, &mut value, hidden);
     serde_json::from_value::<GameEvent>(value).unwrap_or_else(|_| event.clone())
 }
 
@@ -362,11 +466,11 @@ fn belongs_to_hidden(instance_id: Option<&str>, resume: Option<&Resume>, hidden:
 
 /// A kept entry's captured event (a trigger's `resume.data.event`) is scrubbed like a dispatch event,
 /// so a face-up card's trigger cannot carry a hidden card's identity through the queue.
-fn scrub_resume(resume: &mut Resume, hidden: &IndexSet<String>) {
+fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: &IndexSet<String>) {
     if let Some(event) = resume.data.get_mut("event")
         && event.is_object()
     {
-        scrub_event_value(event, hidden);
+        scrub_event_value(state, seat, event, hidden);
     }
 }
 
@@ -496,11 +600,12 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.players[opp].library.sort_by(by_instance_id);
     next.players[seat].library.sort_by(by_instance_id);
 
-    // Step 5: queue entries of hidden cards go; events naming one lose the definition.
+    // Step 5: queue entries of hidden cards go; events naming one lose the definition and what
+    // else the view hides of it.
     next.trigger_queue
         .retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
     for entry in next.trigger_queue.iter_mut() {
-        scrub_resume(&mut entry.resume, &hidden);
+        scrub_resume(state, seat, &mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
         // R865: an in-flight play of a `secret_modes` card carries its modes in the run the queue
         // holds; the other seat reads none of them.
@@ -516,7 +621,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             }
             continue;
         }
-        scrub_resume(&mut item.resume, &hidden);
+        scrub_resume(state, seat, &mut item.resume, &hidden);
         scrub_owed_mulligan(&mut item.resume, opp);
         without_answer_key(&mut item.resume);
         // R865: as above, for the owed play the work queue holds.
@@ -531,16 +636,16 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.delayed
         .retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
     for entry in next.delayed.iter_mut() {
-        scrub_resume(&mut entry.resume, &hidden);
+        scrub_resume(state, seat, &mut entry.resume, &hidden);
         without_answer_key(&mut entry.resume);
         // R865: as above, for a delayed continuation.
         jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
     for entry in next.dispatch.iter_mut() {
-        entry.event = scrub_event(&entry.event, &hidden);
+        entry.event = scrub_event(state, seat, &entry.event, &hidden);
     }
     if let Some(pending) = next.pending.as_mut() {
-        scrub_resume(&mut pending.resume, &hidden);
+        scrub_resume(state, seat, &mut pending.resume, &hidden);
         without_answer_key(&mut pending.resume);
         // R865: as above, for the open prompt's continuation.
         jackioh_engine::secrets::scrub_secret_modes(state, &mut pending.resume, seat);
@@ -658,6 +763,23 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         theirs.prompt.max = 0;
         if theirs.keep.is_some() {
             theirs.keep = Some(Vec::new());
+        }
+    }
+
+    // R177: an option of the seat's own prompt offering a card it may not read reads as the view shows
+    // it: the label the engine wrote from the card's name becomes the view's face-down wording, with no
+    // Radiant face. Its key and selection (the id it answers with) stay, and so does its cost, which a
+    // `pick` budget counts and a face-down card shows (R351).
+    if let Some(pending) = next.pending.as_mut()
+        && pending.player_id == seat
+    {
+        for option in pending.options.iter_mut() {
+            if let Selection::Instance { instance_id } = &option.selection
+                && hidden.contains(instance_id)
+            {
+                option.label = HIDDEN_OPTION_LABEL.to_string();
+                option.radiant = None;
+            }
         }
     }
 

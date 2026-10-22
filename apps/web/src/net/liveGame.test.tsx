@@ -10,6 +10,7 @@ import type { Account } from "./gate.ts";
 import {
   MATCH_FOUND_STATUS,
   QUEUE_STORAGE_KEY,
+  bannerGameOf,
   forgetQueued,
   liveGameOf,
   readQueued,
@@ -28,13 +29,18 @@ vi.mock("./navigate.ts", async (importOriginal) => {
 
 const POLL_MS = SERIES_POLL_SECONDS * 1000;
 
-function me(currentMatchId: string | null, currentSeriesId: string | null = null): MeResponse {
+function me(
+  currentMatchId: string | null,
+  currentSeriesId: string | null = null,
+  currentDuosMatchId: string | null = null,
+): MeResponse {
   return {
     profile: { id: "p1", status: "active" },
     needsInviteCode: false,
     emailVerified: true,
     currentMatchId,
     currentSeriesId,
+    currentDuosMatchId,
     email: "player@example.com",
   };
 }
@@ -83,6 +89,15 @@ describe("R765 the live game an account read names", () => {
     expect(liveGameOf({ currentMatchId: "" })).toBeNull();
   });
 
+  it("R1566000 bannerGameOf adds the live co-op game at /duos/<id>; a match or series comes first; liveGameOf leaves it out", () => {
+    expect(bannerGameOf(me(null, null, "d-1"))).toEqual({ kind: "duos", id: "d-1", path: paths.duos("d-1") });
+    expect(liveGameOf(me(null, null, "d-1"))).toBeNull();
+    expect(bannerGameOf(me("m-1", null, "d-1"))?.path).toBe(paths.match("m-1"));
+    expect(bannerGameOf(me(null, "s-1", "d-1"))?.path).toBe(paths.series("s-1"));
+    expect(bannerGameOf(me(null, null, ""))).toBeNull();
+    expect(bannerGameOf(me(null))).toBeNull();
+  });
+
   it("R765 useLiveGame is the account's game, and none for an account that is not ready", () => {
     const read = vi.fn<(token: string) => Promise<MeResponse>>();
     expect(renderHook(() => useLiveGame(ready(me("m-1")), read)).result.current?.path).toBe("/match/m-1");
@@ -117,6 +132,23 @@ describe("R765 the live game an account read names", () => {
     const reads = read.mock.calls.length;
     await advance(POLL_MS * 3);
     expect(read).toHaveBeenCalledTimes(reads);
+  });
+
+  it("R1566000 useLiveGame offers a live co-op game, read again every SERIES_POLL_SECONDS, and gone once a read says it ended", async () => {
+    vi.useFakeTimers();
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null, null, "d-1"));
+    const account = ready(me(null, null, "d-1"));
+    const { result } = renderHook(() => useLiveGame(account, read));
+    expect(result.current).toEqual({ kind: "duos", id: "d-1", path: "/duos/d-1" });
+    expect(read).not.toHaveBeenCalled();
+
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(result.current?.path).toBe("/duos/d-1");
+
+    read.mockResolvedValue(me(null));
+    await advance(POLL_MS);
+    expect(result.current).toBeNull();
   });
 
   it("a woken page reads the live game again at once, never overlapping", async () => {
@@ -240,6 +272,22 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     await advance(POLL_MS * 3);
     expect(read).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("R1566000 a co-op game is no pairing: the queue follow neither announces it nor goes there", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null, null, "d-1"));
+    render(<Follower path={paths.decks} read={read} />);
+
+    await flush();
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalled();
+    await advance(MATCH_FOUND_NAV_DELAY_MS);
+    expect(screen.queryByTestId("found")).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(readQueued()).toBe("bo1");
   });
 
   it("R765 on /play the lobby watches for itself, so the follower reads nothing there", async () => {

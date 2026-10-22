@@ -1,7 +1,8 @@
 // The banner that tops a menu while the player has a game to go back to (R765): a practice game
 // they saved with Save and leave, on the practice menu (issue #476), and their live online game, on
-// the main menu and the practice menu (issue #478). One component, so the two read as one thing:
-// a notice in the tavern's gold hairline, what the game is, and the one way back into it.
+// the main menu and the practice menu (issue #478), a co-op game among them (R1566000). One
+// component, so the two read as one thing: a notice in the tavern's gold hairline, what the game
+// is, and the one way back into it.
 //
 // Nothing here is a rule (CLAUDE.md rule 7). The practice banner shows what the device kept
 // (`practice/resume.ts`); the online one shows what `GET /api/auth/me` said (`net/liveGame.ts`).
@@ -20,7 +21,7 @@ export const gameBannerTestid = {
   practice: "practice-resume-banner",
   /** In the practice banner: back into that game. */
   practiceResume: "practice-resume",
-  /** R765: the player's live online game (`data-kind="match|series"`), on the main and practice menus. */
+  /** R765: the player's live online game (`data-kind="match|series|duos"`), on the main and practice menus. */
   live: "live-game-banner",
   /** In the live banner: a link back to the board, or to the series screen between games. */
   rejoin: "live-game-rejoin",
@@ -78,6 +79,10 @@ const LIVE_WORDS: Readonly<Record<LiveGame["kind"], { title: string; body: strin
   series: {
     title: "You're in a Conquest series",
     body: "Your series is still on, and its next game is waiting for you.",
+  },
+  duos: {
+    title: "You're in a co-op game",
+    body: "Your co-op game is still on. If you stay away from it for {seconds} seconds, the AI plays your seat until you come back.",
   },
 };
 

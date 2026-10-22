@@ -42,6 +42,7 @@ pub mod redact_live_face_down;
 pub mod redact_play_records;
 pub mod redact_revealed_backrow;
 pub mod redact_twice;
+pub mod redact_view_mirror;
 pub mod replay_versions;
 pub mod reply;
 pub mod scorer_casts;
