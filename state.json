@@ -15354,7 +15354,9 @@
     },
     "39760023518": {
       "at": "2026-10-22T10:22:12Z",
+      "done": true,
       "ref": "f6cccfe0-1792663316",
+      "status": "interrupted",
       "tries": 1
     }
   },
