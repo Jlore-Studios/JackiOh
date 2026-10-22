@@ -12539,28 +12539,28 @@
       "verdict_rounds": 3,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/engine/tests/golden/games.jsonl"
+            "spec/11-rulings.md"
           ],
-          "from": "45bd76bc8e29d977184db596f3a17e348489f207",
-          "main": "346a91b4ad3c7d9e8c5671a38d1cc72efcfa7b06"
+          "from": "ad22ec302e7b2327fa1fc79fd9096c6945a96ff3",
+          "main": "2aa8b31e758d1f525a2ff2aa5efb2f9387b202d8"
         },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "39732584720",
-            "tier": "strong"
+            "family": "muse",
+            "run": "39753356405",
+            "tier": "medium"
           }
         ],
-        "sha": "ad22ec302e7b2327fa1fc79fd9096c6945a96ff3",
+        "sha": "cb317c8dc558bc0b278900f5511221e203c060b7",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
