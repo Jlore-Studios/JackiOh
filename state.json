@@ -11395,6 +11395,13 @@
     "1598": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T02:07:54Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "The easy rule fails on line 3 (BUILD.md's M5-T4 row has to change) and line 1 (13 files), and the work is animation polish, which is never easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
