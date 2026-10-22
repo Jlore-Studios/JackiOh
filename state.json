@@ -12600,6 +12600,14 @@
         }
       }
     },
+    "1627": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-22T05:25:49Z",
+      "issue": 1584,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "430": {
       "failures": 0,
       "forced": false,
