@@ -12429,7 +12429,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-22T20:34:25Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:f7259fc8-1792701437",
+      "run_id": "39850480469",
       "started_at": "2026-10-22T20:37:30Z",
       "stop_requested": false,
       "taken_asks": []
