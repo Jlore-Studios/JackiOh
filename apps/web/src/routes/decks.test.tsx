@@ -141,6 +141,22 @@ describe("the gate (§9.4)", () => {
     });
   });
 
+  it("R1579000 the workshop's Back leads to the Collection hub", async () => {
+    await mount();
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(window.location.pathname).toBe("/collection");
+  });
+
+  it("R1579000 the Shell's Back, shown when /api/auth/me cannot be read, leads to the Collection hub", async () => {
+    vi.mocked(getMe).mockRejectedValue(new Error("the server could not be reached"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(window.location.pathname).toBe("/collection");
+  });
+
   it("#1485 offers Back when /api/auth/me cannot be read", async () => {
     vi.mocked(getMe).mockRejectedValue(new Error("the server could not be reached"));
     render(<DecksRoute />);

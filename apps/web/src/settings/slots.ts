@@ -5,15 +5,12 @@ import { createElement, type ReactNode } from "react";
 
 import AudioControls from "../audio/AudioControls.tsx";
 import { DEFAULT_AUDIO_SETTINGS, writeAudioSettings } from "../audio/settings.ts";
-import { DEFAULT_CARD_COSMETICS, writeCosmetics } from "../cards/cosmetics.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../fx/settings.ts";
 import { DEFAULT_HAPTICS_SETTINGS, writeHapticsSettings } from "../haptics/settings.ts";
 import { resetLocale } from "../i18n/i18n.ts";
 import {
   AnimatedFoilSwitch,
-  CardCosmeticsControls,
-  DeckCosmeticsControls,
   FullArtSwitch,
   FxControls,
   LanguageSelect,
@@ -62,32 +59,6 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(FullArtSwitch),
     reset: () => {
       writeCardSettings({ fullArt: CARD_SETTINGS_DEFAULTS.fullArt });
-    },
-  },
-  {
-    // R1295000: the foil, finish and border your own cards wear.
-    section: "visuals",
-    id: "card-cosmetics",
-    render: () => createElement(CardCosmeticsControls),
-    reset: () => {
-      writeCosmetics({
-        foil: DEFAULT_CARD_COSMETICS.foil,
-        finish: DEFAULT_CARD_COSMETICS.finish,
-        border: DEFAULT_CARD_COSMETICS.border,
-      });
-    },
-  },
-  {
-    // R1297000: the playmat, backdrop and card back your own side wears.
-    section: "visuals",
-    id: "deck-cosmetics",
-    render: () => createElement(DeckCosmeticsControls),
-    reset: () => {
-      writeCosmetics({
-        table: DEFAULT_CARD_COSMETICS.table,
-        field: DEFAULT_CARD_COSMETICS.field,
-        cardBack: DEFAULT_CARD_COSMETICS.cardBack,
-      });
     },
   },
   {

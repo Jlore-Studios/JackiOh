@@ -102,8 +102,6 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["visuals", "card-full-art"],
-      ["visuals", "card-cosmetics"],
-      ["visuals", "deck-cosmetics"],
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);
@@ -111,6 +109,18 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
     for (const slot of SETTINGS_SLOTS) {
       expect(typeof slot.reset, slot.id).toBe("function");
     }
+  });
+
+  it("R1579000 the settings offer no cosmetic selection on any tab", () => {
+    const { container } = render(<SettingsPanel onClose={noop} />);
+    // A hidden tab stays in the DOM, so this covers every tab.
+    expect(container.querySelector('[data-testid^="setting-cosmetic-"]')).toBeNull();
+    expect(container.querySelector('[data-testid^="collection-equip-"]')).toBeNull();
+    for (const label of ["Foil", "Finish", "Border", "Playmat", "Backdrop", "Card back"]) {
+      expect(screen.queryByLabelText(label), label).toBeNull();
+    }
+    // Full-art cards stays a setting: no full art is a pick (R1313000).
+    expect(screen.getByTestId("setting-fullArt")).toBeInTheDocument();
   });
 
   it("the panel shows effects speed, intensity and foil after Reduce motion, and the audio controls in their section", () => {
