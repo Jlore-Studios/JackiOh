@@ -12530,7 +12530,7 @@
       "provider": "claude-1",
       "queued_at": "2026-10-22T21:28:51Z",
       "round_tier": "strong",
-      "run_id": "pending:8262c66b-1792706915",
+      "run_id": "39862772906",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-22T22:08:51Z",
