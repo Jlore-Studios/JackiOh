@@ -16,7 +16,8 @@ import { useEffect, useState, type ReactElement } from "react";
 import OwnedCards from "../collection/OwnedCards.tsx";
 import TracksPanel from "../collection/TracksPanel.tsx";
 import WalletPanel from "../collection/WalletPanel.tsx";
-import OwnedCosmetics, { CardCosmeticsControls, DeckCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
+import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
+import OwnedCosmetics, { CardCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
 import { collectionSectionOf, collectionTestid, type CollectionPart } from "../collection/collection.ts";
 import { t } from "../i18n/i18n.ts";
 import {
@@ -203,7 +204,11 @@ function CardsSection({ token }: { token: string }): ReactElement {
   );
 }
 
-/** What is equipped, the only place to pick it (R1579000), and what the account owns. */
+/**
+ * What is equipped, the only place to pick it (R1579000), and what the account owns. R1655000: the
+ * playmat, backdrop and card back are tiles; the defaults of every card stay selects, and a card's
+ * own picks are set from the card in the Cards section.
+ */
 function CosmeticsSection({ token }: { token: string }): ReactElement {
   const owned = useRead(token, getOwnedCosmetics);
 
@@ -215,11 +220,15 @@ function CosmeticsSection({ token }: { token: string }): ReactElement {
           <h3 className="account-heading">{t("Equipped")}</h3>
           <p>
             {t(
-              "Your own cards and your side of the board wear these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
+              "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
             )}
           </p>
+          <AccountCosmeticTiles owned={owned.kind === "ready" ? owned.value : null} />
+        </section>
+        <section className="collection-section">
+          <h3 className="account-heading">{t("Defaults for every card")}</h3>
+          <p>{t("A card wears these until it picks its own: open it in the Cards section.")}</p>
           <CardCosmeticsControls />
-          <DeckCosmeticsControls />
         </section>
         <Section part="cosmetics" title={t("Owned")} loading={t("Loading your cosmetics…")} read={owned}>
           {(value) => <OwnedCosmetics owned={value} />}
