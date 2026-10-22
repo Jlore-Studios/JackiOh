@@ -17,7 +17,7 @@ use crate::rules::fixtures::play_pipeline_b::{
     jogg_box, mode_spell, named_caster, pb_act, pb_playing, pb_reduce, solarius, target_spell, their_choice,
     tyrant, x_spell, x_target,
 };
-use crate::rules::fixtures::prompts::{BACK_BUDGET, back_from_gy, register_prompt_fixtures, rewind};
+use crate::rules::fixtures::prompts::{BACK_BUDGET, back_from_gy, moder, register_prompt_fixtures, rewind};
 
 // Inline cards for the chain cap and the nested cases, indexed clear of the shared fixtures.
 fn spell(name: &str, index: u32) -> CardDef {
@@ -917,6 +917,37 @@ mod e12_random_casts_r452 {
             targets.extend(hits);
         }
         assert!(targets.len() > 1, "{targets:?}");
+    }
+
+    #[test]
+    fn r452_a_cry_a_random_cast_triggers_draws_its_mode_from_the_rng_and_asks_nobody() {
+        let mut modes: BTreeSet<&str> = BTreeSet::new();
+        for seed in 1..=8 {
+            let mut state = playing(&format!("r452-cry-mode-{seed}"));
+            register_prompt_fixtures();
+            put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 2), json!({}));
+            let mine = put(
+                &mut state,
+                &moder().id,
+                slot(PlayerId::P1, Row::Units, 1),
+                json!({}),
+            );
+            let mut again = round_trip(&state);
+            let events = run(&mut state, cast_rewind(false), None);
+            run(&mut again, cast_rewind(false), None);
+            assert!(state.pending.is_none(), "seed {seed}");
+            assert!(events_of_type(&events, GameEventType::PromptOpened).is_empty());
+            assert_eq!(hash_state(&again), hash_state(&state));
+            // "hit" deals its damage to the enemy its forModes target drew; "heal" deals none.
+            let hits = damage_targets(&events);
+            assert!(hits.len() <= 1, "seed {seed}: {hits:?}");
+            assert!(
+                !hits.contains(&mine.id) && !hits.contains(&"hero-p1".to_string()),
+                "seed {seed}: {hits:?}"
+            );
+            modes.insert(if hits.is_empty() { "heal" } else { "hit" });
+        }
+        assert_eq!(modes, BTreeSet::from(["heal", "hit"]));
     }
 }
 
