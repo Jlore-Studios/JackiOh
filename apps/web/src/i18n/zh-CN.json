@@ -2170,6 +2170,7 @@
   "{seat} ended turn {turn} with {mana} mana unspent": "{seat}结束了第{turn}回合，剩余{mana}点法力值未用",
   "{seat} had no moves left, so turn {turn} ended": "{seat}无事可做，第{turn}回合结束",
   "{seat} must choose {what}": "{seat}必须选择{what}",
+  "{seat} must choose": "{seat}必须做出选择",
   "a card to Discover": "一张要发现的牌",
   "a mode": "一个模式",
   "cards to keep": "要保留的牌",

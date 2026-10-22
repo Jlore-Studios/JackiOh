@@ -405,8 +405,8 @@ pub fn open_prompt(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<Pe
     sink.state.pending = Some(pending.clone());
     sink.events.push(GameEvent::PromptOpened {
         player: args.player,
-        choice_id: pending.id.clone(),
-        kind: args.kind,
+        choice_id: Some(pending.id.clone()),
+        kind: Some(args.kind),
     });
     Some(pending)
 }
@@ -416,7 +416,7 @@ pub fn close_prompt(sink: &mut EngineSink<'_>) -> Option<PendingChoice> {
     let pending = sink.state.pending.take()?;
     sink.events.push(GameEvent::PromptAnswered {
         player: pending.player_id,
-        choice_id: pending.id.clone(),
+        choice_id: Some(pending.id.clone()),
     });
     Some(pending)
 }
