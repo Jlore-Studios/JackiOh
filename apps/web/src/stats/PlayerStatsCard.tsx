@@ -1,82 +1,61 @@
 // "Your table": the fun statistics the device has kept about its player's games (SPEC R639), on the
-// homescreen. It reads the device's own totals (store.ts) and nothing else, so it makes no request
-// and shows no card the player was not shown while playing (track.ts). It draws nothing before the
-// first finished game.
+// floor below the homescreen's first screen. It reads the device's own totals (store.ts) and shows no
+// card the player was not shown while playing (track.ts). It draws nothing before the first finished
+// game. R1584000: it shows them one at a time (StatShowcase.tsx), each card playing the board's
+// animation for its stat; the showcase is loaded when there is a stat to show, so the first screen
+// stays light. The one request it makes is R1583000's, for the player base's play rates behind the
+// Pocket Pick, and that request sends nothing of the tally.
 
-import type { ReactElement } from "react";
-import catalogJson from "@jackioh/cards/catalog.json";
-import type { CardDefs } from "@jackioh/shared";
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
 
 import { landingTestid } from "../auth/testids.ts";
-import { readerName } from "../cards/chinese.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { STATS_TOP_CARDS } from "./config.ts";
-import { topCards, winPercent, type CardCounter, type PlayerStats } from "./model.ts";
+import { loadPocketPick, type PocketPick } from "./pocketPick.ts";
+import { recordLine, showcaseStats } from "./showcase.ts";
 import { resetPlayerStats, usePlayerStats } from "./store.ts";
+import type { PlayerStats } from "./model.ts";
 
-const CATALOG = catalogJson as unknown as CardDefs;
+/** R1584000: the showcase and its stage (the board's animations and effects), loaded when a stat is first shown. */
+const StatShowcase = lazy(() => import("./StatShowcase.tsx").then((module) => ({ default: module.StatShowcase })));
 
-/**
- * The four lists the card shows, in order: what each counter means to the player. The title is the
- * English (looked up where it is drawn); the verb says its sentence when it is called, never at import.
- */
-const LISTS: readonly { counter: CardCounter; title: string; verb: (n: number) => string }[] = [
-  { counter: "played", title: "Your favourites", verb: (n) => t("played {n}×", { n }) },
-  { counter: "playedAgainst", title: "Your nemeses", verb: (n) => t("played against you {n}×", { n }) },
-  { counter: "destroyed", title: "Fallen most often", verb: (n) => t("lost {n}×", { n }) },
-  { counter: "defeated", title: "Toppled most often", verb: (n) => t("taken down {n}×", { n }) },
-];
-
-function nameOf(id: string): string {
-  const def = CATALOG[id];
-  return def === undefined ? id : readerName(def);
+/** R1583000: the Pocket Pick for this tally, null until the play rates answer and when they name none. */
+function usePocketPick(stats: PlayerStats): PocketPick | null {
+  const [pick, setPick] = useState<PocketPick | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    let live = true;
+    void loadPocketPick(stats, controller.signal).then((found) => {
+      if (live) setPick(found);
+    });
+    return () => {
+      live = false;
+      controller.abort();
+    };
+  }, [stats]);
+  return pick;
 }
 
-/** The record line: "12 games: 7 won, 4 lost, 1 drawn (58% won)". */
-export function recordLine(stats: PlayerStats): string {
-  const percent = winPercent(stats);
-  const games = stats.games === 1 ? t("{n} game", { n: stats.games }) : t("{n} games", { n: stats.games });
-  const counts = { games, won: stats.wins, lost: stats.losses, drawn: stats.draws, percent: percent ?? 0 };
-  if (stats.draws > 0) {
-    return percent === null
-      ? t("{games}: {won} won, {lost} lost, {drawn} drawn", counts)
-      : t("{games}: {won} won, {lost} lost, {drawn} drawn ({percent}% won)", counts);
-  }
-  return percent === null
-    ? t("{games}: {won} won, {lost} lost", counts)
-    : t("{games}: {won} won, {lost} lost ({percent}% won)", counts);
-}
-
-export function PlayerStatsCard(): ReactElement | null {
+export function PlayerStatsCard({ reduced }: { reduced: boolean }): ReactElement | null {
   useLocale();
   const stats = usePlayerStats();
+  const pocket = usePocketPick(stats);
+  const showcase = useMemo(() => showcaseStats(stats, pocket), [stats, pocket]);
   if (stats.games === 0) return null;
 
-  const lists = LISTS.map((list) => ({ ...list, tallies: topCards(stats, list.counter, STATS_TOP_CARDS) })).filter(
-    (list) => list.tallies.length > 0,
-  );
+  // With no card to show, the record alone, as before R1584000.
+  const record = <p className="landing-stats-record">{recordLine(stats)}</p>;
 
   return (
     <section className="landing-stats" data-testid={landingTestid.stats} aria-labelledby="landing-stats-title">
       <h2 id="landing-stats-title" className="landing-how-title">
         {t("Your table")}
       </h2>
-      <p className="landing-stats-record">{recordLine(stats)}</p>
-      {lists.length === 0 ? null : (
-        <div className="landing-stats-lists">
-          {lists.map((list) => (
-            <div key={list.counter} className="landing-stats-list" data-stat={list.counter}>
-              <h3>{t(list.title)}</h3>
-              <ol>
-                {list.tallies.map((tally) => (
-                  <li key={tally.id}>
-                    <span className="landing-stats-card">{nameOf(tally.id)}</span> <span>{list.verb(tally.count)}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
-        </div>
+      {showcase.length === 0 ? (
+        record
+      ) : (
+        <Suspense fallback={record}>
+          <StatShowcase stats={showcase} reduced={reduced} />
+        </Suspense>
       )}
       <p className="landing-stats-note">
         {t("Kept on this device only, from what you were shown.")}{" "}

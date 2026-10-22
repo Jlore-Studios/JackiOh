@@ -40,8 +40,14 @@ export const FEATURE_PLAIN_MAX_TIER = "m";
  */
 export const FULL_ART_WEIGHT_FACTOR = 2;
 
-/** R639: how many cards each "favourite" list on the statistics card shows. */
-export const STATS_TOP_CARDS = 3;
+/** R1584000: how long the floor's showcase shows one stat before the next, in ms. Everything one stat plays fits inside it. */
+export const SHOWCASE_INTERVAL_MS = 6000;
+
+/** R1584000: how long a stat's card takes to come in, and to come back after a death, in ms. landing.tsx hands it to landing.css as `--showcase-lead`. */
+export const SHOWCASE_LEAD_MS = 1200;
+
+/** R1584000: how long the card waits after each animation before the next one, and before it rests, in ms. */
+export const SHOWCASE_BEAT_GAP_MS = 900;
 
 /** R1583000: the games the device must have logged before it names a Pocket Pick. */
 export const POCKET_PICK_MIN_GAMES = 10;

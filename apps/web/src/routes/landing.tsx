@@ -436,20 +436,23 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
         </div>
       </section>
 
-      <PlayerStatsCard />
+      {/* R1584000: the stats and the footer are one screen below the hero, when there are stats. */}
+      <div className="landing-floor">
+        <PlayerStatsCard reduced={motion === "reduced"} />
 
-      {open === null ? null : (
-        <Suspense fallback={null}>
-          <CardDetail
-            def={open}
-            onClose={() => {
-              setOpen(null);
-            }}
-          />
-        </Suspense>
-      )}
+        {open === null ? null : (
+          <Suspense fallback={null}>
+            <CardDetail
+              def={open}
+              onClose={() => {
+                setOpen(null);
+              }}
+            />
+          </Suspense>
+        )}
 
-      <SiteFooter />
+        <SiteFooter />
+      </div>
     </div>
   );
 }
