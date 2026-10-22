@@ -64,10 +64,12 @@ one redaction (R1184002).
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks) on every determinization, and plays the first action of the
-best mean. It re-plans after every action. An action the true state refuses (a cost no determinization
-could see) is never submitted: `submitted` sends the first action of the next finalist the true state
-accepts, best mean first, with the search's reason, and only when none is accepted falls back
-(`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other legal action (#1575).
+best mean. It re-plans after every action. Its root tries a play in every distinct placement; deeper
+levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). An action the
+true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
+first action of the next finalist the true state accepts, best mean first, with the search's reason,
+and only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn,
+answer or other legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
@@ -272,9 +274,9 @@ pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &Po
   rule, else `hidden`), where it lands and the class of what it aims at. No key holds an instance, hero
   or prompt id. Its score is the sum of its keys' weights; a key the table lacks adds nothing.
 - `policy_label` is what `cargo jackioh positions --policy` writes on each decision row: the keys of
-  every candidate decide's probe lists there and which one was played. `src/policy/weights.json`
-  records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails on another version);
-  `build.rs` turns it into constant slices, data at compile time (rule 4).
+  every candidate the search's root lists on decide's probe world and which one was played.
+  `src/policy/weights.json` records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails
+  on another version); `build.rs` turns it into constant slices, data at compile time (rule 4).
 
 ## Duos (§13.7)
 

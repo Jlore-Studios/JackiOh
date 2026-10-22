@@ -95,11 +95,16 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
     .join("/")
 }
 
-/// AI_SEARCH.zone_variants: per otherwise-identical play, keep the first lane of each placement
-/// (`placement_key`), in legal_actions order (lane order), until zone_variants lanes are kept; a lane
-/// whose placement an earlier one has, or past the cap, goes. Everything else keeps legal_actions order.
-fn collapse_zones(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
-    let cap = AI_SEARCH.zone_variants.max(1) as usize;
+/// Per otherwise-identical play, keep the first lane of each placement (`placement_key`), in
+/// legal_actions order (lane order), until `cap` lanes are kept (`None`: every placement, the search
+/// root's, #1635); a lane whose placement an earlier one has, or past the cap, goes. Everything else
+/// keeps legal_actions order.
+fn collapse_zones(
+    state: &GameState,
+    seat: PlayerId,
+    actions: &[ActionBody],
+    cap: Option<usize>,
+) -> Vec<ActionBody> {
     let mut kept: IndexMap<ActionBody, IndexSet<String>> = IndexMap::new();
     actions
         .iter()
@@ -108,7 +113,8 @@ fn collapse_zones(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> 
                 return true;
             };
             let placements = kept.entry(zone_group_key(action)).or_default();
-            placements.len() < cap && placements.insert(placement_key(state, seat, zone))
+            cap.is_none_or(|cap| placements.len() < cap)
+                && placements.insert(placement_key(state, seat, zone))
         })
         .cloned()
         .collect()
@@ -534,6 +540,22 @@ pub fn candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
 
 /// `candidate_set` on a legal_actions already in hand.
 pub fn candidate_pool(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>) -> Vec<ActionBody> {
+    pool(state, seat, legal, Some(AI_SEARCH.zone_variants.max(1) as usize))
+}
+
+/// `candidate_set` at the search's root (#1635): every distinct placement of a play is kept, so a card
+/// that cares where it lands is tried in every lane.
+pub fn root_candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
+    pool(state, seat, legal_actions(state, seat), None)
+}
+
+/// `candidate_pool` with `collapse_zones` keeping at most `zone_cap` lanes of a play (`None`: all).
+fn pool(
+    state: &GameState,
+    seat: PlayerId,
+    legal: Vec<ActionBody>,
+    zone_cap: Option<usize>,
+) -> Vec<ActionBody> {
     let skipped = subsystems::AI_SKIPPED_ACTIONS;
     let legal: Vec<ActionBody> = legal
         .into_iter()
@@ -543,7 +565,7 @@ pub fn candidate_pool(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>)
         })
         .collect();
     let capped = cap_tribute_sets(state, seat, legal);
-    collapse_zones(state, seat, &capped)
+    collapse_zones(state, seat, &capped, zone_cap)
 }
 
 /// legal_actions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
@@ -557,8 +579,17 @@ pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
 /// `candidate_actions` on a legal_actions already in hand (reply.rs asks for both the raw and the
 /// ordered lists of one state).
 pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>) -> Vec<ActionBody> {
-    let actions = candidate_pool(state, seat, legal);
+    in_move_order(state, seat, candidate_pool(state, seat, legal))
+}
 
+/// `candidate_actions` at the search's root (#1635): `root_candidate_set` in move order.
+pub fn root_candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
+    in_move_order(state, seat, root_candidate_set(state, seat))
+}
+
+/// The candidates `actions` in move order: hero attacks, winning trades, plays round-robin, answers,
+/// other attacks, position switches, endTurn.
+fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) -> Vec<ActionBody> {
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();
     let mut plays: Vec<ActionBody> = Vec::new();
