@@ -11398,6 +11398,13 @@
     "1645": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T14:42:38Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 5 fails (crates/engine/src/testkit/invariants.rs) and it spans two crates; not hard: it changes the fuzz's oracle only, no rule or engine behaviour"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
