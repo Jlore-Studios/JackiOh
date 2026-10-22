@@ -74,7 +74,11 @@ pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 pub struct AiSearch {
     /// Plays identical but for `zone` keep the lowest lane of each placement (candidates.rs
     /// `placement_key`: what stands beside the lane or the board's edge, and in the lane's four
-    /// zones), at most this many (#1014). 3 let a Tribute play's sets outgrow the lethal allowance.
+    /// zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
+    /// the lethal solver, the opponent's reply, decide's probe and the baselines. The root keeps every
+    /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
+    /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
+    /// 197-203, edge -0.015 (-0.078 to 0.048). 3 let a Tribute play's sets outgrow the lethal allowance.
     pub zone_variants: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,

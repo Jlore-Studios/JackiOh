@@ -287,7 +287,7 @@ mod surface_beam_search {
 
         assert!(!lines.is_empty());
         assert!(counter.used() <= AI_GATE_BUDGET.nodes);
-        let firsts: IndexSet<String> = candidate_actions(&det, AI).iter().map(action_key).collect();
+        let firsts: IndexSet<String> = root_candidate_actions(&det, AI).iter().map(action_key).collect();
         for (index, line) in lines.iter().enumerate() {
             assert!(!line.actions.is_empty());
             assert!(line.actions.len() <= AI_GATE_BUDGET.max_depth);

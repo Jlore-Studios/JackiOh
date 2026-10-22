@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
-use crate::candidates::{candidate_actions, candidate_set};
+use crate::candidates::{candidate_actions, candidate_set, root_candidate_actions, root_candidate_set};
 use crate::config::{AI_MOVE_ORDER, MoveOrder};
 use crate::evaluate::NextSwing;
 use crate::learned::{finalist_score, line_score, open_score};
@@ -65,7 +65,37 @@ pub fn expansion(
     order: MoveOrder,
     prior: &PolicyPrior<'_>,
 ) -> Vec<ActionBody> {
-    let candidates = candidate_actions(state, seat);
+    expand(candidate_actions(state, seat), state, seat, width, order, prior)
+}
+
+/// `expansion` at the search's root (#1635): of `root_candidate_actions`, which keeps every distinct
+/// placement of a play.
+pub fn root_expansion(
+    state: &GameState,
+    seat: PlayerId,
+    width: usize,
+    order: MoveOrder,
+    prior: &PolicyPrior<'_>,
+) -> Vec<ActionBody> {
+    expand(
+        root_candidate_actions(state, seat),
+        state,
+        seat,
+        width,
+        order,
+        prior,
+    )
+}
+
+/// `expansion` of the given candidates.
+fn expand(
+    candidates: Vec<ActionBody>,
+    state: &GameState,
+    seat: PlayerId,
+    width: usize,
+    order: MoveOrder,
+    prior: &PolicyPrior<'_>,
+) -> Vec<ActionBody> {
     let end = candidates
         .iter()
         .find(|action| matches!(action, ActionBody::EndTurn))
@@ -85,12 +115,13 @@ pub fn expansion(
 }
 
 /// Beam search on one determinization. The frontier starts at `det`. Each open line expands its first
-/// rootBranching (depth 0) or branching (deeper) candidates, in the order `AI_MOVE_ORDER` names
-/// (`expansion`, R1171001), plus endTurn. Every child is simulated and scored with `evaluate`, a child
-/// waiting on the seat's own prompt where its answers lead (`own_prompt_score`, #1112); children whose
-/// status is not "open" become complete lines scored by terminalScore; the best beamWidth open children
-/// (stable) form the next frontier. The loop stops at maxDepth (open lines are closed by terminalScore)
-/// or when the counter refuses. Returns complete lines, best first.
+/// rootBranching (depth 0, of `root_expansion`, every placement kept, #1635) or branching (deeper)
+/// candidates, in the order `AI_MOVE_ORDER` names (`expansion`, R1171001), plus endTurn. Every child is
+/// simulated and scored with `evaluate`, a child waiting on the seat's own prompt where its answers
+/// lead (`own_prompt_score`, #1112); children whose status is not "open" become complete lines scored by
+/// terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
+/// maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
+/// lines, best first.
 pub fn beam_search(
     det: &GameState,
     seat: PlayerId,
@@ -133,7 +164,12 @@ pub fn beam_search_with(
             if stopped {
                 break;
             }
-            for action in expansion(&line.state, seat, width, order, prior) {
+            let moves = if depth == 0 {
+                root_expansion(&line.state, seat, width, order, prior)
+            } else {
+                expansion(&line.state, seat, width, order, prior)
+            };
+            for action in moves {
                 let next = match simulate(&line.state, seat, &action, counter) {
                     None => {
                         stopped = true;
@@ -214,9 +250,10 @@ pub fn beam_search_with(
 }
 
 /// Replay `actions` on another determinization. At the first action whose action_key is not in that
-/// state's candidate_actions the line is truncated. What is left ends its turn and is scored: after
-/// the opponent's reply when `reply` is set (`reply_score`, with `hidden` as there, by default the
-/// opponent's unseen cards in `det`), statically otherwise. `None` if the counter ran out.
+/// state's candidate_actions (the first action's: the root's, `root_candidate_set`, #1635) the line is
+/// truncated. What is left ends its turn and is scored: after the opponent's reply when `reply` is set
+/// (`reply_score`, with `hidden` as there, by default the opponent's unseen cards in `det`), statically
+/// otherwise. `None` if the counter ran out.
 pub fn score_line(
     det: &GameState,
     seat: PlayerId,
@@ -228,16 +265,18 @@ pub fn score_line(
     let root_turn = det.turn;
     let mut state = det.clone();
 
-    for action in actions {
+    for (at, action) in actions.iter().enumerate() {
         if line_status(&state, seat, root_turn) != LineStatus::Open {
             break;
         }
         // Membership asks for the candidates' set only (candidate_set), not their move order, and an
         // action is its own key: `==` on the body answers what action_key equality did.
-        if !candidate_set(&state, seat)
-            .iter()
-            .any(|candidate| candidate == action)
-        {
+        let candidates = if at == 0 {
+            root_candidate_set(&state, seat)
+        } else {
+            candidate_set(&state, seat)
+        };
+        if !candidates.iter().any(|candidate| candidate == action) {
             break;
         }
         match simulate(&state, seat, action, counter) {
