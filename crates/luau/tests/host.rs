@@ -681,6 +681,7 @@ fn board(scripts: &CardScripts) -> (Vec<&'static str>, Vec<EffectCall>, i32) {
 }
 
 #[test]
+#[allow(clippy::disallowed_methods)] // std::thread::scope: L8's per-thread VM must be shown to give the same effects on other threads; never the rules.
 fn the_same_effects_come_out_on_two_threads() {
     // The card loads on this thread; its hooks run here and on two others, whose VMs each load its
     // chunk the first time one of its hooks runs there.
