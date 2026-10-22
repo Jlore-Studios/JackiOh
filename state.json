@@ -12339,7 +12339,10 @@
       "feedback_since": "2026-10-22T03:14:54Z",
       "issue": 1578,
       "kind": "revise",
+      "queued_at": "2026-10-22T05:12:08Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
