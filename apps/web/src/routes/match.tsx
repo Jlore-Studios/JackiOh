@@ -31,6 +31,8 @@ import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
 import { getAudioEngine } from "../audio/index.ts";
+import { announceWallet } from "../economy/wallet.ts";
+import XpReveal from "../economy/XpReveal.tsx";
 import { useEmotes } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
 import { CatalogContext } from "../game/catalog.ts";
@@ -247,6 +249,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
 
   const view = match.view;
 
+  // #1664: the result's write paid this account (the Jlore, and maybe a level's or a quest's), so the
+  // pill reads the wallet again, once however many views carry the answer.
+  const paid = match.economy !== null;
+  useEffect(() => {
+    if (paid) announceWallet();
+  }, [paid]);
+
   // R643–R644: the match's emote session. The local seat's sends emit through the socket
   // (`sendEmote`); the opponent's relays land through `match.emote`, whose `seq` bumps on every
   // frame so the same emote twice still notifies. The device setting mutes the opponent live.
@@ -442,6 +451,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               {t("Daily Jlore reached")}
             </p>
           ) : null}
+          {/* #1664: the tracks the game moved, level by level with their rewards, and the quests it completed. */}
+          {view.result !== null && match.economy !== null ? <XpReveal economy={match.economy} /> : null}
         </>
       }
       turnClock={
