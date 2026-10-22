@@ -26468,11 +26468,6 @@
       }
     },
     "muse": {
-      "infra": {
-        "at": "2026-10-22T07:05:49Z",
-        "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "streak": 2
-      },
       "spent": [
         {
           "at": "2026-10-14T04:19:16Z",
