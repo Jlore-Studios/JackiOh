@@ -62,8 +62,8 @@ pub struct App {
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
-    /// SPEC §11 R978000: the public card statistics' computed per-patch reports, held here for the
-    /// limiter's reason.
+    /// SPEC §11 R978000: the public card statistics' computed per-patch reports and R1583000's play
+    /// rates, held here for the limiter's reason.
     pub card_stats: api::stats::KeptReports,
     /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
     /// tests never share presence.
@@ -595,6 +595,12 @@ pub static ROUTES: &[Route] = &[
         "/api/stats/cards/:id",
         AuthLevel::None,
         h!(api::stats::get_card),
+    ),
+    (
+        "GET",
+        "/api/stats/play-rates",
+        AuthLevel::None,
+        h!(api::stats::get_play_rates),
     ),
     (
         "GET",

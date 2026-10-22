@@ -14,7 +14,8 @@
 // with the hello again, which the server answers with the view it last sent, and replaces one that
 // does not answer (R1441, R1103000), within the same attempts. Once they run out on a game still
 // running, "Reconnect now" (the match bar's, `routes/match.tsx`) opens it again and starts the attempts
-// over (#1570).
+// over (#1570). Run out before the first view, the screen says the game can no longer be reached
+// rather than waiting on (#1599).
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -234,12 +235,24 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
         </div>
       </ShellPanel>
     );
+  } else if (view === null && connection === "closed") {
+    // #1599: the reopens ran out before any view; a spinner here would be a dead end.
+    screen = (
+      <ShellPanel testId={watchTestid.waiting}>
+        <p className="notice" data-testid={watchTestid.gone} role="alert">
+          {t("This game can no longer be reached. It may be over, or the connection gave up.")}
+        </p>
+        <div className="row">
+          <ReconnectNow className="button-primary" onReconnect={reconnect} />
+          <BackToTogether />
+        </div>
+      </ShellPanel>
+    );
   } else if (view === null) {
     screen = (
       <Loading what="Joining as a watcher…" slow testId={watchTestid.waiting}>
         <p className="auth-hint">{t("What you watch runs {seconds} seconds behind the game.", { seconds })}</p>
         <div className="row">
-          {exhausted ? <ReconnectNow className="button-primary" onReconnect={reconnect} /> : null}
           <BackToTogether />
         </div>
       </Loading>
