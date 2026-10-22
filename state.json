@@ -14710,8 +14710,10 @@
     "what": "revise #1633 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-22T10:58:53Z",
-    "notes": [],
+    "at": "2026-10-22T11:05:04Z",
+    "notes": [
+      "#1632: approved and green, so its strikes are cleared"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15416,7 +15418,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T10:58:53Z",
+  "loop_tick": "2026-10-22T11:05:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
