@@ -482,12 +482,6 @@
   gap: 10px;
 }
 
-/* An odd one out (Build decks, after Play online and Play together) takes the whole row rather
-   than half of it. */
-.landing .landing-ctas-secondary > :last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-}
-
 .landing a.landing-cta--secondary {
   font-size: 17px;
   color: var(--tavern-parchment);
@@ -598,6 +592,67 @@
 
   .landing .landing-how-title {
     text-align: left;
+  }
+}
+
+/* --- short viewports -------------------------------------------------------------------------
+   #1577: the top screen fits without scrolling on desktop and on a phone. At short heights the
+   wordmark, the fan and the doors shrink; the landscape-phone pattern below still wins on a phone
+   on its side, where it lays the doors beside the title and the fan. */
+
+@media (max-height: 800px) and (min-width: 900px) {
+  .landing .landing-hero {
+    padding-bottom: 32px;
+  }
+
+  .landing .landing-hero-inner {
+    row-gap: 14px;
+    padding-top: 24px;
+  }
+
+  .landing .landing-wordmark {
+    font-size: clamp(64px, 10vh, 96px);
+  }
+
+  .landing .landing-fan {
+    --fan-card-w: clamp(88px, 16vh, 120px);
+  }
+
+  .landing .landing-ctas {
+    gap: 8px;
+    padding: 12px 14px;
+  }
+}
+
+@media (max-height: 800px) and (max-width: 899px) and (orientation: portrait) {
+  .landing .landing-hero {
+    padding-bottom: 24px;
+  }
+
+  .landing .landing-hero-inner {
+    gap: 10px;
+  }
+
+  .landing .landing-title-block {
+    gap: 6px;
+    padding-top: 8px;
+  }
+
+  .landing .landing-wordmark {
+    font-size: clamp(44px, 7vh, 64px);
+  }
+
+  .landing .landing-fan {
+    --fan-card-w: clamp(52px, 12vh, 76px);
+  }
+
+  .landing .landing-ctas {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .landing a.landing-cta--primary {
+    min-height: 52px;
   }
 }
 

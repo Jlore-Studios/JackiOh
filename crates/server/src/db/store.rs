@@ -2481,6 +2481,17 @@ impl Tx<'_> {
         dispatch!(self, game_records_fold_pending(limit))
     }
 
+    /// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
+    /// result, a final hash (R768; a ceiling draw has none, R112, R1253000), a log the purge has not
+    /// taken and no game record, even an emptied one (R1044001). Earliest ended first, then by id.
+    pub async fn game_records_unfiled(
+        &mut self,
+        ended_after: i64,
+        ended_before: i64,
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, game_records_unfiled(ended_after, ended_before))
+    }
+
     /// R1044000: the totals the query reads. No decklists: `stats_decklists` reads those.
     pub async fn stats_totals_load(&mut self, query: &StatsTotalsQuery) -> StoreResult<StatsTotals> {
         dispatch!(self, stats_totals_load(query))

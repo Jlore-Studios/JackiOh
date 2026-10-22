@@ -14,6 +14,8 @@
 //! Telemetry never costs a result: it runs after the result's transaction and every failure is logged
 //! and swallowed. It is idempotent (keyed by match id; the store refuses a second), so a result
 //! written twice files the game once. The reaper's ceiling draws (R112) leave none: no game to read.
+//! R1596000: a filing that failed is made again by the retention loop while the match's log is held
+//! (`retention::refile_unfiled`, `refile_live_game`).
 //!
 //! R1044000: the store folds each record it writes into the totals every card figure is read from,
 //! in the same transaction. `fold_pending` folds the records written before the totals existed.
@@ -81,7 +83,18 @@ pub(crate) fn fold_args_of(row: &MatchRow, log: Vec<Value>) -> Result<FoldArgs, 
 /// record exists already, or something failed (logged, except the existing record). Until migration
 /// 0014 is applied the insert fails, which is logged and costs nothing else.
 pub async fn record_live_game(app: &App, match_id: &str) -> Option<GameRecord> {
-    match record_live_game_inner(app, match_id).await {
+    file_live_game(app, match_id, app.env.deployed_commit.as_deref()).await
+}
+
+/// R1596000: `record_live_game` for the retention loop's refile (`retention::refile_unfiled`). The
+/// filing server may be a later deploy than the one that played, so no build (R1367000).
+pub async fn refile_live_game(app: &App, match_id: &str) -> Option<GameRecord> {
+    file_live_game(app, match_id, None).await
+}
+
+/// The filing's body; an `Err` is the failure to log.
+async fn file_live_game(app: &App, match_id: &str, played_on: Option<&str>) -> Option<GameRecord> {
+    match record_live_game_inner(app, match_id, played_on).await {
         Ok(record) => record,
         Err(message) => {
             tracing::error!(event = "game.record.failed", matchId = %match_id, message = %message);
@@ -90,8 +103,12 @@ pub async fn record_live_game(app: &App, match_id: &str) -> Option<GameRecord> {
     }
 }
 
-/// `record_live_game`'s body; an `Err` is the failure to log.
-async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<GameRecord>, String> {
+/// `file_live_game`'s body; an `Err` is the failure to log.
+async fn record_live_game_inner(
+    app: &App,
+    match_id: &str,
+    played_on: Option<&str>,
+) -> Result<Option<GameRecord>, String> {
     let mut tx = app.db.begin(None).await.map_err(message_of)?;
     let found = tx.matches_get(match_id).await.map_err(message_of)?;
     let mode = match &found {
@@ -181,12 +198,8 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         source: GameSource::Live,
         mode: game_mode_of(mode),
         patch: row.catalog_version.clone(),
-        // R1367000: the deploy's commit, and its AI generation when a ladder bot played a seat.
-        build: RecordBuild::of(
-            app.env.deployed_commit.as_deref(),
-            jackioh_ai::ai_generation(),
-            &pilots,
-        ),
+        // R1367000: the commit of the deploy that played it (none when filed again, R1596000), and its AI generation when a ladder bot played a seat.
+        build: RecordBuild::of(played_on, jackioh_ai::ai_generation(), &pilots),
         pilots,
         game,
     };

@@ -445,7 +445,10 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
-    fireEvent.click(await screen.findByTestId(landingTestid.playOnline));
+    // #1577: no door leads to the lobby anymore; the test walks there directly.
+    act(() => {
+      navigate(paths.play);
+    });
     expect(await screen.findByTestId(playTestid.joinInput, undefined, SLOW)).toHaveValue("ABC234");
     expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
     expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
@@ -454,7 +457,9 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     act(() => {
       navigate(paths.landing);
     });
-    fireEvent.click(await screen.findByTestId(landingTestid.playOnline));
+    act(() => {
+      navigate(paths.play);
+    });
     expect(await screen.findByTestId(playTestid.joinInput, undefined, SLOW)).toHaveValue("");
   });
 

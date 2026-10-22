@@ -262,14 +262,14 @@ function openInviteScreen(api: Partial<Api> = {}): Api {
 // B37: landing page
 
 describe("B37 the landing page", () => {
-  it("B37 anonymous: the three CTAs link to /practice, /play and /decks, and the corner offers sign-in", () => {
+  it("B37 anonymous: the three doors link to /practice, /collection and /shop, and the corner offers sign-in", () => {
     stubApi();
     cy.visit(LANDING);
 
     cy.get(byTestid(landingTestid.root)).should("be.visible");
-    cy.get(byTestid(landingTestid.playAi)).should("be.visible").closest("a").should("have.attr", "href", PRACTICE);
-    cy.get(byTestid(landingTestid.playOnline)).should("be.visible").closest("a").should("have.attr", "href", routes.play());
-    cy.get(byTestid(landingTestid.buildDecks)).should("be.visible").closest("a").should("have.attr", "href", routes.deckbuilder());
+    cy.get(byTestid(landingTestid.play)).should("be.visible").closest("a").should("have.attr", "href", PRACTICE);
+    cy.get(byTestid(landingTestid.collection)).should("be.visible").closest("a").should("have.attr", "href", routes.collection());
+    cy.get(byTestid(landingTestid.shop)).should("be.visible").closest("a").should("have.attr", "href", routes.shop());
     cy.get(byTestid(landingTestid.signIn)).should("be.visible");
     cy.get(byTestid(landingTestid.account)).should("not.exist");
 
@@ -286,17 +286,17 @@ describe("B37 the landing page", () => {
     cy.get(byTestid(landingTestid.signIn)).should("not.exist");
   });
 
-  it("B37 Build decks while anonymous goes through the gate to /login", () => {
+  it("B37 Collection while anonymous goes through the gate to /login", () => {
     stubApi();
     cy.visit(LANDING);
-    cy.get(byTestid(landingTestid.buildDecks)).click();
+    cy.get(byTestid(landingTestid.collection)).click();
     cy.location("pathname").should("eq", routes.login());
   });
 
-  it("B37 Play vs AI moves the URL to /practice", () => {
+  it("B37 Play moves the URL to /practice", () => {
     stubApi();
     cy.visit(LANDING);
-    cy.get(byTestid(landingTestid.playAi)).click();
+    cy.get(byTestid(landingTestid.play)).click();
     cy.location("pathname").should("eq", PRACTICE);
   });
 });

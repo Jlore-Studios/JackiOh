@@ -165,11 +165,11 @@ afterEach(() => {
 
 // B37: route and CTAs
 
+// R1577000: the three doors and where each leads.
 const CTAS = [
-  ["Play vs AI", landingTestid.playAi, paths.practice],
-  ["Play online", landingTestid.playOnline, paths.play],
-  ["Build decks", landingTestid.buildDecks, paths.decks],
+  ["Play", landingTestid.play, paths.practice],
   ["Collection", landingTestid.collection, paths.collection],
+  ["Shop", landingTestid.shop, paths.shop],
 ] as const;
 
 describe("B37 the landing route", () => {
@@ -299,21 +299,43 @@ describe("B37 the corner slot", () => {
     expect(landing()).toHaveAttribute("data-account", "anonymous");
   });
 
-  it("B37 the three play CTAs are there whatever the slot shows", async () => {
+  it("B37 the three doors are there whatever the slot shows", async () => {
     signedIn();
     serve("hang");
     render(<LandingRoute />);
     for (const [, testid] of CTAS) expect(within(landing()).getByTestId(testid)).toBeInTheDocument();
   });
 
-  it("B37 says, beside the CTAs, that online play needs an invite code and Play vs AI needs no account", () => {
+  it("R1577000 the Play door leads to practice, which needs no account", () => {
     render(<LandingRoute />);
-    const note = within(landing()).getByTestId(landingTestid.inviteOnly);
-    expect(note.textContent).toMatch(/invite code/);
-    // des-9: the Play vs AI note already says no account is needed.
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    const play = within(ctas).getByTestId(landingTestid.play);
+    expect(play.closest("a")?.getAttribute("href")).toBe(paths.practice);
+    // des-9: the note under Play already says no account is needed.
     expect(within(ctas).getByText(/No account needed/)).toBeInTheDocument();
-    expect(note.textContent).not.toMatch(/needs no account/);
+  });
+
+  it("R1577000 the removed entries have no call to action on the landing", () => {
+    render(<LandingRoute />);
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    for (const path of [paths.play, paths.together, paths.decks, paths.creator]) {
+      expect(ctas.querySelector(`a[href="${path}"]`), `${path} has no door`).toBeNull();
+    }
+    // The invite-only sentence lives on `/invite` and `/play`, not beside the doors.
+    expect(within(ctas).queryByText(/invite code/)).toBeNull();
+  });
+
+  it("R1577000 Play reads as the main action: it is the primary door, largest and first", () => {
+    render(<LandingRoute />);
+    const ctas = within(landing()).getByRole("navigation", { name: "Play" });
+    // The dev-only hotseat link shares the nav but is no door.
+    const doors = [...ctas.querySelectorAll("a.landing-cta")];
+    expect(doors.map((door) => door.getAttribute("data-testid"))).toEqual([
+      landingTestid.play,
+      landingTestid.collection,
+      landingTestid.shop,
+    ]);
+    expect(doors[0]).toHaveClass("landing-cta--primary");
   });
 });
 
