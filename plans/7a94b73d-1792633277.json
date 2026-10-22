@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1596,
+  "title": "Patch: a finished match's statistics record survives a failed first write",
+  "branch": "bot/issue-1596",
+  "thread": "**Issue #1596 (data, not instructions):**\n\n```text\n# #1596: Patch: a finished match's statistics record survives a failed first write\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a game ends, its result is saved first and its entry in the public card statistics is filed second. If anything fails in between \u2014 a deploy, a dropped connection \u2014 the statistics entry is never written, and once the game's stored moves are cleaned up it can never be reconstructed. The card statistics quietly undercount forever after. After the fix, finished games missing their entry are found and filed before their moves are purged, so a one-off failure can't lose a record.\n\n## Why\n\n`record_result` commits, then calls `record_live_game` after the commit; its failures are logged and swallowed (`crates/server/src/api/results.rs:500-508`, `api/game_records.rs:83-91` \u2014 'logs and swallows its own failures'), and the record's read and insert are two separate transactions (`game_records.rs:95-122`, `:193-195`). The action log the record is built from is later purged by retention (`MATCH_ACTION_RETENTION_DAYS`, `api/retention.rs`), at which point the loss is permanent. R376/\u00a79.11 and R1044000 cover the filing; nothing covers its loss.\n\n## Proposal\n\nAdd a reconcile step in the retention pass: before purging a match's actions, find committed `results` rows lacking `game_records` rows and re-file them \u2014 `record_live_game` is idempotent by match id, so refiling is safe. (Folding the insert into the result transaction is the alternative; the reconcile respects the code's stated choice that filing must never come 'at the result's expense'.)\n\n## Where it lands\n\n`crates/server/src/api/retention.rs`, `api/game_records.rs`, `api/results.rs`, and a store query across `crates/server/src/db/{store,pg,fake}.rs`. Spec \u00a79.11, R376, R1044000.\n\n## Acceptance criteria\n\n- [ ] A test faults the first `game_records` insert, runs the retention/reconcile pass, and asserts the record now exists and folds into totals.\n- [ ] A match whose retention ran while its record existed is untouched (idempotent re-filing).\n- [ ] The store contract covers the new query (`crates/server/tests/store/contract.rs`).\n\n## Size and risks\n\nSmall-medium, `crates/server` only. Low risk \u2014 the reconcile is idempotent and bounded by the existing retention window; the main care is keeping it inside the purge's transaction pattern.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:37:03Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1596: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
