@@ -12085,7 +12085,10 @@
       "feedback_since": "2026-10-22T17:05:41Z",
       "issue": 1639,
       "kind": "revise",
+      "queued_at": "2026-10-22T17:55:52Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
