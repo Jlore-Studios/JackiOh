@@ -161,8 +161,7 @@ The changes, most value first:
    - A person stops `jackioh-train@improve` and `jackioh-train@unban` on the training box
      (`sudo systemctl stop …`). Or points `loop.sh` back at Devin until 11-02.
    - That gives the night bot back about two thirds of Muse's week, from the reset on 10-26.
-   - Give `loop.sh` a backoff, so that a refused session does not post a comment every 100
-     seconds.
+   - Give `loop.sh` a backoff, so that a refused session does not post a comment a minute.
 2. **Keep Muse on two lanes and the $50 plan.** A third lane does not fit the 8 GB night box: two
    builds at once already swap (`reviews/2026-10-19-issue-383-muse.md`, finding 1). It would fit on
    GitHub's runners, which that audit recommends trying for a week. That move also runs clippy and
