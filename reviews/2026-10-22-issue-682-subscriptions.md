@@ -270,3 +270,14 @@ Two things work against the unban lane in particular:
   pull requests only.
 - **Early training drafts.** The unban lane's sessions before #901 (10-14) were not counted, so
   its hours are a floor.
+
+## What came of it (2026-10-22)
+
+- **#1674 (merged):** Muse's and Squishy's weeks have no start headroom, and Squishy's weekly cap is 100%. agy, Codex and the Claude accounts keep the 95% start threshold.
+- **#1675:** the 17 shadow bans are swept again under generation 13, and what is left is sorted by cause. One issue per cause follows from it.
+- **#1676:** the development card statistics come from the learn lane's exports, in place of `gather`.
+- **#1677:** the `improve` and `unban` lanes stop, and the training box becomes a second night box with one Muse build a box. The alternative is Muse on GitHub's runners and the box stopped. Section 5's last step said to retire the box; the owner chose to keep it for the night bot.
+- **#1678:** the shadow ban is swept again after each learn promotion, and when a set ships.
+- **#1679:** the training gates become a sequential test.
+- **#1680:** the ladder bots' seeds are recalibrated for generation 13.
+- **#697** holds everything about the local runner. **#1336** is closed: the learned evaluation shipped.
