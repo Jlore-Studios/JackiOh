@@ -3,7 +3,7 @@
 // Jlorious #1–#100 first, then every other placed player grouped by Grape tier, highest tier
 // first, then how many are still playing placements. The caller's own standing heads the page.
 // The page is read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
-// through `rankWords`, and the hidden rating never reaches it. A row is keyed by its profile id and
+// through `rank/RankCrest.tsx` (#1650), and the hidden rating never reaches it. A row is keyed by its profile id and
 // shows the player's username, never the id (R1436).
 
 import { useEffect, useState, type ReactElement } from "react";
@@ -11,7 +11,8 @@ import { useEffect, useState, type ReactElement } from "react";
 import Username from "../auth/Username.tsx";
 import { t } from "../i18n/i18n.ts";
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
-import { divisionNumeral, rankWords, tierName } from "../rank/rank.ts";
+import { divisionNumeral, rankCaption, tierName } from "../rank/rank.ts";
+import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -93,9 +94,10 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
             <>
               <p data-testid={leaderboardTestid.season}>{t("Season {season}", { season: board.season })}</p>
               <p data-testid={leaderboardTestid.you}>
+                <RankCrest rank={board.you} size="large" />{" "}
                 {board.jlorious.some((row) => row.you) || board.tiers.some((tier) => tier.players.some((row) => row.you))
-                  ? t("You are {rank}", { rank: rankWords(board.you) })
-                  : t("You are {rank} — play rated games to climb", { rank: rankWords(board.you) })}
+                  ? t("You are {rank}", { rank: rankCaption(board.you) })
+                  : t("You are {rank} — play rated games to climb", { rank: rankCaption(board.you) })}
               </p>
 
               <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
@@ -105,7 +107,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                 <ol data-testid={leaderboardTestid.jlorious}>
                   {board.jlorious.map((row) => (
                     <li key={row.profileId} data-you={row.you ? "you" : undefined}>
-                      {t("#{position}", { position: row.position })} <Username name={row.username} />
+                      <RankCrest rank={{ tier: "jlorious", position: row.position }} size="small" /> <Username name={row.username} />
                       {row.you ? ` ${t("(you)")}` : ""}
                     </li>
                   ))}
@@ -115,7 +117,7 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
               {board.tiers.map((tier) => (
                 <section key={tier.tier} data-testid={leaderboardTestid.tier} data-tier={tier.tier}>
                   <h3 className="leaderboard-heading">
-                    {tierName(tier.tier)} ({tier.count})
+                    <RankCrest tier={tier.tier} size="small" /> {tierName(tier.tier)} ({tier.count})
                   </h3>
                   {tier.players.length === 0 ? (
                     <p>{t("Nobody here yet.")}</p>
@@ -123,7 +125,8 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                     <ul>
                       {tier.players.map((row) => (
                         <li key={row.profileId} data-you={row.you ? "you" : undefined}>
-                          <Username name={row.username} /> · {t("Division {division}", { division: divisionNumeral(row.division) })} ·{" "}
+                          <Username name={row.username} /> · <RankCrest tier={tier.tier} division={row.division} size="small" />{" "}
+                          {t("Division {division}", { division: divisionNumeral(row.division) })} ·{" "}
                           {row.pips === 1 ? t("{n} pip", { n: row.pips }) : t("{n} pips", { n: row.pips })}
                           {row.you ? ` ${t("(you)")}` : ""}
                         </li>
