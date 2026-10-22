@@ -1,0 +1,57 @@
+{
+  "action": "build",
+  "number": 1664,
+  "title": "Patch: XP track bars fill after every game, each level reached revealed with its rewards",
+  "branch": "bot/issue-1664",
+  "thread": "**Issue #1664 (data, not instructions):**\n\n```text\n# #1664: Patch: XP track bars fill after every game, each level reached revealed with its rewards\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a74). It is built on the bars part's `FillBar` and `RewardReveal`, the game-economy part's answers and the pill part's wallet store, and is blocked by all three.\n\n### The answers (from the game-economy part)\n`GameEconomy = { jlore, xp, jloreCapped, tracks: [{ setId, before: TrackPoint, after: TrackPoint, levels: [{ level, rewards: { jlore, setPacks, cardTokens } }] }], quests: [{ questId, title, jlore, xp }] }`, with `TrackPoint = { level, xp, levelXp: number | null, xpToNext: number | null }`. It arrives in three places:\n- as `economy` on the match socket's `view` frame (beside `jloreCapped`, `game/net.ts` ~l.298\u2013335), once the result is written;\n- the same on the co-op frame (`duos/socket.ts` ~l.80);\n- as `tracks` and `quests` on the paid practice claim (`net/practice.ts` ~l.34).\nMirror the types in `apps/web/src/economy/xp.ts`.\n\n### Do\n- **`apps/web/src/economy/XpReveal.tsx`.** For each track gain, a FillBar from `before` (`levelXp \u2212 xpToNext` of `levelXp`) to `after`, with `fills` the levels reached.\n  - At each fill the level number pops and RewardReveal shows that level's rewards one by one (Jlore, set packs, card tokens, in `collection/collection.ts::rewardWords`' words), with the sting.\n  - Several levels chain; past the last level the bar shows full.\n  - The quests the game completed are listed with their Jlore and XP. Quests complete only inside a game's payout (\u00a714.9), so this is where a completion shows; `routes/QuestsPanel.tsx` needs no change.\n  - Reduce motion shows the end state and every reward at once.\n  - The client computes no curve: every number is the answer's.\n- **Where it shows.** At the end of a ladder, unranked or Conquest game (`routes/match.tsx`, by the `Daily Jlore reached` line ~l.440), of a co-op game (`duos/DuosBoard.tsx` ~l.215), and of a paid practice game (`practice/PracticeResult.tsx`, fed through `routes/practice.tsx` ~l.1038\u20131044 and `practice/earning.ts`).\n- **The pill.** When a game's `economy` arrives, and after a paid practice claim, call `announceWallet()` (`economy/wallet.ts`, the pill part) so the pill reads the wallet again.\n- **The tracks panel.** In `collection/TracksPanel.tsx` the bare `<progress>` becomes a FillBar (no `from`) with the same `max` and `value`, keeping every test id; FillBar keeps a `<progress>`, which e2e spec 45 reads.\n\n### Files\n`apps/web/src/economy/xp.ts`, `economy/XpReveal.tsx`, `economy/xp.css`, `economy/XpReveal.test.tsx`, `collection/TracksPanel.test.tsx` (new); `game/net.ts` and `game/net.test.ts`, `duos/socket.ts`, `duos/DuosBoard.tsx`, `routes/match.tsx` (and `routes/match.test.tsx` for a case), `net/practice.ts`, `practice/earning.ts`, `practice/PracticeResult.tsx`, `routes/practice.tsx` (and `routes/practice.test.tsx` for a case), `collection/TracksPanel.tsx`.\nNot here: `economy/FillBar.tsx` and the bars part's other files, `economy/wallet.ts`, `routes/collection.tsx` and `collection/collection.test.tsx` (the Collection part).\n\n### Done when\n- `economy/XpReveal.test.tsx`: a track going from before to after a game with a level-up fills, pops the level and reveals the server's rewards; two levels chain in order; a completed quest is listed; reduced motion shows the end state and every reward at once.\n- A socket parse test: `economy` is read for the seat, and a frame without it leaves none.\n- A practice test: the paid answer's tracks reach the result.\n- `collection/TracksPanel.test.tsx`: the bar shows `levelXp \u2212 xpToNext` of `levelXp`, with its test ids.\nRun `pnpm --dir apps/web exec vitest run src/economy/XpReveal.test.tsx src/collection/TracksPanel.test.tsx src/game/net.test.ts src/routes/practice.test.tsx src/routes/match.test.tsx`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec. Keep every existing test id.\n\nBlocked by #1658, #1657, #1659.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read \u00a714.7\u2013\u00a714.9, R1483000, R1502000 and `apps/web/README.md`; read the game-economy part's wire on the branch (`actor/protocol.rs`, `duos/protocol.rs`, `api/practice.rs`), the bars part's `FillBar` and `RewardReveal`, the pill part's `economy/wallet.ts`, and `game/net.ts`, `duos/socket.ts`, `routes/match.tsx` (~l.430\u2013480), `duos/DuosBoard.tsx` (~l.200\u2013230), `net/practice.ts`, `practice/earning.ts`, `practice/PracticeResult.tsx`, `routes/practice.tsx` (~l.1030\u20131050) and `collection/TracksPanel.tsx`.\n2. Write the mirror types in `economy/xp.ts`; parse `economy` in `game/net.ts` and `duos/socket.ts`, and `tracks` and `quests` in `net/practice.ts` and `practice/earning.ts`.\n3. Write `economy/XpReveal.tsx` and `economy/xp.css` (the chained fills, the level pop, the rewards, the quests, reduced motion).\n4. Show it in `routes/match.tsx`, `duos/DuosBoard.tsx` and `practice/PracticeResult.tsx`; call `announceWallet()` where the economy or the paid claim arrives.\n5. Put `collection/TracksPanel.tsx` on FillBar.\n6. Write the tests in Done when; run the commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read \u00a714.7\u2013\u00a714.9, R1483000, R1502000 and `apps/web/README.md`; read the game-economy part's wire on the branch (`actor/protocol.rs`, `duos/protocol.rs`, `api/practice.rs`), the bars part's `FillBar` and `RewardReveal`, the pill part's `economy/wallet.ts`, and `game/net.ts`, `duos/socket.ts`, `routes/match.tsx` (~l.430\u2013480), `duos/DuosBoard.tsx` (~l.200\u2013230), `net/practice.ts`, `practice/earning.ts`, `practice/PracticeResult.tsx`, `routes/practice.tsx` (~l.1030\u20131050) and `collection/TracksPanel.tsx`.\n2. Write the mirror types in `economy/xp.ts`; parse `economy` in `game/net.ts` and `duos/socket.ts`, and `tracks` and `quests` in `net/practice.ts` and `practice/earning.ts`.\n3. Write `economy/XpReveal.tsx` and `economy/xp.css` (the chained fills, the level pop, the rewards, the quests, reduced motion).\n4. Show it in `routes/match.tsx`, `duos/DuosBoard.tsx` and `practice/PracticeResult.tsx`; call `announceWallet()` where the economy or the paid claim arrives.\n5. Put `collection/TracksPanel.tsx` on FillBar.\n6. Write the tests in Done when; run the commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read \u00a714.7\u2013\u00a714.9, R1483000, R1502000 and `apps/web/README.md`; read the game-economy part's wire on the branch (`actor/protocol.rs`, `duos/protocol.rs`, `api/practice.rs`), the bars part's `FillBar` and `RewardReveal`, the pill part's `economy/wallet.ts`, and `game/net.ts`, `duos/socket.ts`, `routes/match.tsx` (~l.430\u2013480), `duos/DuosBoard.tsx` (~l.200\u2013230), `net/practice.ts`, `practice/earning.ts`, `practice/PracticeResult.tsx`, `routes/practice.tsx` (~l.1030\u20131050) and `collection/TracksPanel.tsx`.\n2. Write the mirror types in `economy/xp.ts`; parse `economy` in `game/net.ts` and `duos/socket.ts`, and `tracks` and `quests` in `net/practice.ts` and `practice/earning.ts`.\n3. Write `economy/XpReveal.tsx` and `economy/xp.css` (the chained fills, the level pop, the rewards, the quests, reduced motion).\n4. Show it in `routes/match.tsx`, `duos/DuosBoard.tsx` and `practice/PracticeResult.tsx`; call `announceWallet()` where the economy or the paid claim arrives.\n5. Put `collection/TracksPanel.tsx` on FillBar.\n6. Write the tests in Done when; run the commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
