@@ -27,7 +27,7 @@
 //! state it produces (stage "invariant"), and I6 (no card a seat may not read in its view or legal
 //! actions, §10.8) holds for both seats on every state, setup's included: every state under
 //! `cargo test`, every I6_GATE_STRIDE-th under the gate.
-//! I8 (no unlisted attack or switch `reduce` accepts, §4.1, §4.2) runs on every state under `cargo test`,
+//! I8 (no unlisted attack, switch or activation `reduce` accepts, §4.1, §4.2, §10.2) runs on every state under `cargo test`,
 //! every I8_GATE_STRIDE-th under the gate and `--handicap`.
 //!
 //! And after every action, GROWTH (#1254): the gate weighs each action it applies by the events `reduce`
@@ -40,12 +40,15 @@
 //! is as deterministic as the game; the handicapped wave is weighed the same way through the same
 //! loop, and `--duos` is weighed by `duos_fuzz.rs` through the shared helpers below.
 //!
-//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, two forged
+//! And on the states the gate reaches, PROBES (#1386): every `probe_stride()`-th state, forged
 //! actions that are never logged. A wrong-seat probe sends the action the policy chose from the seat
 //! that may not take it, and must be refused with no events (§9.3); a reused-nonce probe sends a
 //! concede under the nonce of the last logged action, and must neither apply nor replace anything but
-//! answer that action's own events (§10.1, §10.2). Either way the state must be kept exactly, the
-//! nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
+//! answer that action's own events (§10.1, §10.2); while a prompt is open, a malformed-answer probe
+//! sends the policy's answer with a stale choice id, from the other seat, with a pick dropped below
+//! `min`, with a pick doubled and with a pick no option offers, each owed a refusal with no events
+//! (§10.6, #1574). Every way the state must be kept exactly, the nonce memory `hash_state` leaves out
+//! included. A failure is the "probe" stage and names the step
 //! and the probe. The handicapped wave probes the same way and `--duos` as `duos_fuzz.rs` says. The
 //! probes draw from no random stream, so every game plays as it did before them.
 //!
@@ -135,7 +138,7 @@ use anyhow::{Context, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
-    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships,
+    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, malformed_answers, preview_every_set, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
@@ -1618,6 +1621,9 @@ pub(crate) const WRONG_SEAT_PROBE: &str = "wrong-seat";
 /// A probe failure's name: another action under a nonce already applied.
 pub(crate) const REUSED_NONCE_PROBE: &str = "reused-nonce";
 
+/// A probe failure's name: the policy's answer to the open prompt, made malformed (#1574).
+pub(crate) const MALFORMED_ANSWER_PROBE: &str = "malformed-answer";
+
 /// The probes' stride: every state in the test sweep, every PROBE_GATE_STRIDE-th otherwise.
 pub fn probe_stride() -> usize {
     if is_whole_suite_sweep() {
@@ -1662,7 +1668,8 @@ fn judge_probe(state: &GameState, result: &ReduceResult, owed: Option<&[GameEven
 
 /// The probes on one state (#1386), never logged. First a concede by `player` under the last logged
 /// action's nonce, owed that action's own events (`last`); then `chosen` sent by the other seat, owed
-/// a refusal, unless that seat still owes its own mulligan, which it may answer (R265).
+/// a refusal, unless that seat still owes its own mulligan, which it may answer (R265); then, while a
+/// prompt is open, `chosen` made malformed (`malformed_answers`), each owed a refusal (#1574).
 fn probe_state(
     state: &GameState,
     player: PlayerId,
@@ -1681,16 +1688,24 @@ fn probe_state(
         }
     }
     let other = opponent_of(player);
-    if mulligan_owed(state).contains(&other) {
-        return None;
+    if !mulligan_owed(state).contains(&other) {
+        let forged = Action::new(chosen.clone(), other, format!("fuzz-probe-{step}"));
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
+            return Some(format!(
+                "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent \"{}\" while {player} was to act, and it {wrong}",
+                chosen.action_type().as_str()
+            ));
+        }
     }
-    let forged = Action::new(chosen.clone(), other, format!("fuzz-probe-{step}"));
-    judge_probe(state, &probe(state, &forged), None).map(|wrong| {
-        format!(
-            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent \"{}\" while {player} was to act, and it {wrong}",
-            chosen.action_type().as_str()
-        )
-    })
+    for (variant, seat, body) in malformed_answers(state, chosen) {
+        let forged = Action::new(body, seat, format!("fuzz-probe-{step}"));
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
+            return Some(format!(
+                "{MALFORMED_ANSWER_PROBE} probe after step {step}: {seat} sent the {variant} answer to the open prompt, and it {wrong}"
+            ));
+        }
+    }
+    None
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -3338,6 +3353,22 @@ mod tests {
         #[test]
         fn a_reducer_that_forgets_its_nonces_fails_the_reused_nonce_probe() {
             assert_caught(forgetful, REUSED_NONCE_PROBE);
+        }
+
+        /// A reducer that takes any answer from the prompt's holder as the prompt's first listed answer.
+        fn lenient(state: &GameState, action: &Action) -> ReduceResult {
+            if let (ActionBody::Answer { .. }, Some(pending)) = (&action.body, &state.pending)
+                && pending.player_id == action.player_id
+                && let Some(first) = jackioh_engine::prompt_answers(pending).into_iter().next()
+            {
+                return reduce(state, &Action::new(first, action.player_id, action.nonce.clone()));
+            }
+            reduce(state, action)
+        }
+
+        #[test]
+        fn a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe() {
+            assert_caught(lenient, MALFORMED_ANSWER_PROBE);
         }
 
         #[test]

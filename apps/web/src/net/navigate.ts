@@ -47,6 +47,16 @@ export function usePathname(): string {
   return useSyncExternalStore(subscribe, currentPath, currentPath);
 }
 
+function currentSearch(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.search;
+}
+
+/** The query string (`?a=b`, or empty), re-read on every `navigate` and every `popstate`. */
+export function useSearch(): string {
+  return useSyncExternalStore(subscribe, currentSearch, currentSearch);
+}
+
 /**
  * The address the source files spell: `index.html`, `public/robots.txt` and
  * `public/.well-known/security.txt` name it, and `static-pages.ts` replaces it with the build's
@@ -105,7 +115,9 @@ export const paths = {
   together: "/together",
   /** #1307: the account's collection, wallet, tracks and quests. */
   collection: "/collection",
-  /** #1577: the shop, rendering the same panel the account screen shows. */
+  /** R1579000: a Collection section that opens in place. */
+  collectionSection: (section: "cards" | "cosmetics"): string => `/collection?section=${section}`,
+  /** #1577, R1580000: the shop: buying and opening packs, pity, the tokens and the cosmetic packs. */
   shop: "/shop",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,

@@ -54,7 +54,7 @@
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
 //!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
-//!     (`with_play_reason`).
+//!     (`with_play_reason`). R1571000: and on the viewer's own graveyard cards a permission admits.
 //!
 //! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 //! (§10.4), so no stored total ever reaches the client.
@@ -646,7 +646,9 @@ fn with_choices_truncated(mut view: CardView, truncated: bool) -> CardView {
 /// never empty, so a view with no unplayable card looks exactly as it did before R979000. Only
 /// while the viewer may act (their turn, the main phase, no prompt open) and `play_actions_for`
 /// lists no play of the card; nothing else calls this, so the opponent's hand and post-game hands
-/// carry no key. Which plays are offered stays `legal_actions`' answer.
+/// carry no key. Which plays are offered stays `legal_actions`' answer. R1571000: the same for a
+/// card in the viewer's own graveyard that a permission admits, read off the graveyard's listing;
+/// the opponent's graveyard carries no key.
 fn with_play_reason(
     mut view: CardView,
     state: &GameState,
@@ -662,10 +664,21 @@ fn with_play_reason(
     if state.active != viewer {
         return view;
     }
-    if !crate::play_choices::play_actions_for(state, viewer, card).is_empty() {
+    let from_graveyard = matches!(card.zone, Zone::Graveyard { .. });
+    let listed = if from_graveyard {
+        crate::play_choices::graveyard_play_actions_for(state, viewer, card)
+    } else {
+        crate::play_choices::play_actions_for(state, viewer, card)
+    };
+    if !listed.is_empty() {
         return view;
     }
-    if let Some(reason) = crate::play_choices::why_hand_card_unplayable(state, viewer, card)
+    let reason = if from_graveyard {
+        crate::play_choices::why_graveyard_card_unplayable(state, viewer, card)
+    } else {
+        crate::play_choices::why_hand_card_unplayable(state, viewer, card)
+    };
+    if let Some(reason) = reason
         && !reason.is_empty()
     {
         view.play_reason = Some(reason);
@@ -1353,7 +1366,19 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         } else {
             None
         },
-        graveyard: side.graveyard.iter().map(|card| card_view(state, card)).collect(),
+        // R1571000: the viewer's own graveyard cards a permission admits say why they cannot be
+        // played now; the opponent's graveyard carries no key.
+        graveyard: side
+            .graveyard
+            .iter()
+            .map(|card| {
+                if player == viewer {
+                    with_play_reason(card_view(state, card), state, card, viewer)
+                } else {
+                    card_view(state, card)
+                }
+            })
+            .collect(),
         exile: side.exile.iter().map(|card| card_view(state, card)).collect(),
         // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
         // card announced to be set face-down waits here too, and the other player sees a card back.

@@ -73,14 +73,21 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
 
     fireEvent.click(screen.getByTestId(navTestid.back));
     fireEvent.click(screen.getByRole("button", { name: "Discard them" }));
-    expect(window.location.pathname).toBe(paths.landing);
+    expect(window.location.pathname).toBe(paths.collection);
   });
 
   it("R1484000 Back on an untouched new card leaves at once", async () => {
     await openRoute();
     fireEvent.click(screen.getByTestId(navTestid.back));
-    expect(window.location.pathname).toBe(paths.landing);
+    expect(window.location.pathname).toBe(paths.collection);
     expect(screen.queryByText(UNSAVED)).toBeNull();
+  });
+
+  it("R1579000 the creator's Back leads to the Collection hub", async () => {
+    await openRoute();
+    fireEvent.click(screen.getByTestId(navTestid.back));
+    expect(window.location.pathname).toBe(paths.collection);
+    expect(window.location.search).toBe("");
   });
 
   it("R1484000 with unsaved work a reload or a closed tab asks first, and not on an untouched new card", async () => {
@@ -106,7 +113,7 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
     expect(unloadIsCancelled()).toBe(false);
 
     fireEvent.click(screen.getByTestId(navTestid.back));
-    expect(window.location.pathname).toBe(paths.landing);
+    expect(window.location.pathname).toBe(paths.collection);
   });
 
   it("R1484000 the beforeunload listener is gone after the page unmounts", async () => {

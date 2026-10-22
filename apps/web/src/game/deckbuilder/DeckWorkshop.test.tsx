@@ -783,7 +783,7 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     fireEvent.click(screen.getByTestId(DECK_COSMETICS_BUTTON));
     const select = (kind: string): HTMLSelectElement => screen.getByTestId<HTMLSelectElement>(`deck-cosmetic-${kind}`);
 
-    // The deck's own pick, "Your settings' choice" where it has none, and a pick no registry lists reads as the default.
+    // The deck's own pick, "As equipped in Collection" where it has none, and a pick no registry lists reads as the default.
     expect(select("table").value).toBe("table-felt");
     expect(select("field").value).toBe("");
     expect(select("cardBack").value).toBe("card-back-standard");
@@ -794,7 +794,7 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
       "field-rain",
       "field-fireflies",
     ]);
-    expect(select("field").options[0]?.textContent).toBe("Your settings' choice");
+    expect(select("field").options[0]?.textContent).toBe("As equipped in Collection");
 
     // A pick saves with the deck, beside the cards and the portrait.
     fireEvent.change(select("field"), { target: { value: "field-rain" } });

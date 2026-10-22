@@ -858,7 +858,8 @@ export function highlightFor(
 /**
  * Picks a card up to play it (from the hand, or from the graveyard pile's "Play", B5 E11).
  * R979000: `legal` offers a card in hand no play; say why in the engine's words where the view
- * gives them (`CardView.playReason`, on the viewer's own hand cards only). Nothing is sent.
+ * gives them (`CardView.playReason`, read off the viewer's own hand; a graveyard card's shows in
+ * the pile's sheet instead, R1571000). Nothing is sent.
  */
 function startPlay(
   legal: readonly ActionBody[],

@@ -57,6 +57,9 @@ export function isPerCardKind(kind: string): boolean {
 }
 
 export const shopTestid = {
+  /** R1580000: the Shop screen, and its body, which scrolls while the page does not. */
+  screen: "shop-screen",
+  body: "shop-body",
   panel: "shop-panel",
   loading: "shop-loading",
   loadError: "shop-load-error",
@@ -96,6 +99,7 @@ export const shopTestid = {
   flooredOdds: "cosmetic-packs-floored-odds",
   open: "cosmetic-packs-open",
   reveal: "cosmetic-reveal",
+  equipLink: "cosmetic-packs-equip",
   slot: (index: number) => `cosmetic-slot-${String(index)}`,
   shardBar: "shard-bar",
   shardChoice: "shard-choice",

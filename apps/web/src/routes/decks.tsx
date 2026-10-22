@@ -62,7 +62,7 @@ type Screen =
 function Shell({ children, settings = true }: { children: ReactNode; settings?: boolean }) {
   return (
     <div className="app-shell">
-      <BackLink showSettings={settings} />
+      <BackLink showSettings={settings} to={paths.collection} />
       <h1>{t("JackiOh — decks")}</h1>
       {children}
     </div>
