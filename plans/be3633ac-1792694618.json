@@ -1,0 +1,63 @@
+{
+  "action": "build",
+  "number": 1658,
+  "title": "Patch: a bar that fills and a reward reveal, on the token bars first",
+  "branch": "bot/issue-1658",
+  "thread": "**Issue #1658 (data, not instructions):**\n\n```text\n# #1658: Patch: a bar that fills and a reward reveal, on the token bars first\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a73). Today the token bars are text (`apps/web/src/shop/TokenPicker.tsx` ~l.225: `Card token bar: 7 / 20`). This part builds the shared bar that fills and the reward reveal the other economy parts use, puts both token bars on it, and builds the opening's two-bar animation that the pack-opening scene mounts.\n\n### The components (fixed: the opening, store and XP parts import them)\n- `apps/web/src/economy/FillBar.tsx`, default export, props `{ label: string; size: number; value: number; from?: number; fills?: number; caption?: string; onFill?: (fill: number) => void; onDone?: () => void; testid?: string }`. `label` is already through `t()`; `size` and `value` are the server's. Without `from` it is drawn at `value` with no animation. With `from` it fills from `from` to `size`, bursts, calls `onFill(1)`, restarts at 0, does that again for each of `fills`, then fills to `value` and calls `onDone`. `caption` defaults to `{value} / {size}`, small secondary text; the bar is the main read. It always renders a native `<progress max={size} value={\u2026}>` resting at `value` (screen readers, and e2e spec 45 reads a track's `progress`).\n- `apps/web/src/economy/RewardReveal.tsx`, default export, props `{ items: readonly RevealItem[]; testid?: string; onDone?: () => void }`, with `RevealItem = { key: string; kind: 'cardToken' | 'cosmeticToken' | 'cosmeticPack' | 'jlore' | 'setPack' | 'level'; label: string; rarity?: string }`. The items fly out one by one, each with the existing sting (`getAudioEngine().playSfx`, as `packs/packs.ts::playStinger` plays it; no new sound file).\n- `apps/web/src/economy/OpeningBars.tsx`, default export, props `{ bars: OpeningBarsAnswer; testid?: string }`. `OpeningBarsAnswer` comes from `net/api.ts`, which the bars-answer part adds: `{ card: { before, after, size, pays }, cosmetic: { before, after, size, pays }, cosmeticPaid: ('rare' | 'epic' | 'cosmeticPack')[] }`. It draws the card and the cosmetic token bar as FillBars (`from` before, `value` after, `fills` pays), only when a bar moved, and reveals each fill's reward as it bursts: a card token, or `cosmeticPaid[i]` (a Rare or an Epic cosmetic token, or a cosmetic pack). When nothing moved it draws nothing.\n- `apps/web/src/economy/bars.ts`: the pure parts (the segments a fill plays, an opening's reveal items), with tests.\n\n### Motion\nEvery animation is transform and opacity only (the fill a `scaleX`). Reduce motion holds every animation still and shows the end state at once, calling `onFill` for each fill and then `onDone` straight away. It reads both switches, as `cards/cosmetics.css` and `PackScene` do: the settings' Reduce motion (`:root[data-reduce-motion=true]`, `useSetting('reduceMotion')`) and the system's (`game/useOsReducedMotion.ts`; `game/animations.ts::reducedMotionNow` joins them).\n\n### Files\nNew, under `apps/web/src/economy/`: `FillBar.tsx`, `RewardReveal.tsx`, `OpeningBars.tsx`, `bars.ts`, `economy.css`, `FillBar.test.tsx`, `OpeningBars.test.tsx`, `bars.test.ts`. And `apps/web/src/shop/TokenPicker.tsx` and `shop/TokenPicker.test.tsx`: both token bars become FillBars (no `from`), keeping `shopTestid.cardBar` and `shopTestid.cosmeticBar` on them, with `Next: {step}` beside the cosmetic bar. Add no test id to `shop/shop.ts` (the store part owns it).\nNot here: `shop/Shop.tsx`, `shop/CosmeticPacks.tsx`, `packs/*`.\n\n### Done when\nComponent tests: a FillBar from 18 to 3 of 20 with one fill bursts once, calls `onFill(1)` and rests at 3 (its `<progress>` value 3); under reduced motion it shows 3 at once with `onFill` and `onDone` called; OpeningBars from an answer with `card.pays` 1 and `cosmeticPaid ['epic']` reveals a card token and an Epic cosmetic token, and draws nothing for an answer where neither bar moved; the TokenPicker draws both bars from `GET /api/tokens` with the server's points and size; a stylesheet test reads `economy.css`: its keyframes animate only `transform` and `opacity`, and reduce motion stills them. Run `pnpm --dir apps/web exec vitest run src/economy src/shop/TokenPicker.test.tsx`, `pnpm --dir apps/web typecheck` (red on `OpeningBarsAnswer` until the bars-answer part lands: expected), `pnpm exec eslint apps/web`.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec. Keep every existing test id.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read \u00a714.5, \u00a714.6, R1305000, R1305001, R1305004, R1306002 and `apps/web/README.md`; read `shop/TokenPicker.tsx`, `packs/PackOpening.tsx`' `PackScene` (how it reads reduced motion, ~l.77\u201380), `packs/packs.ts::playStinger` and `game/animations.ts::reducedMotionNow`.\n2. Write `economy/bars.ts` (the segments from `from`, `fills`, `value` and `size`; the reveal items of an `OpeningBarsAnswer`) and `bars.test.ts`.\n3. Write `FillBar.tsx` and `economy.css`: a track, a fill drawn by `scaleX`, a burst, `data-*` state attributes for the tests, the `<progress>`, driven by the segments, with reduced motion.\n4. Write `RewardReveal.tsx`: items one by one with the stinger, all at once under reduced motion.\n5. Write `OpeningBars.tsx` from the two.\n6. Put both bars of `TokenPicker.tsx` on FillBar and update `TokenPicker.test.tsx`.\n7. Write the tests in Done when, the stylesheet test among them; run the commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read \u00a714.5, \u00a714.6, R1305000, R1305001, R1305004, R1306002 and `apps/web/README.md`; read `shop/TokenPicker.tsx`, `packs/PackOpening.tsx`' `PackScene` (how it reads reduced motion, ~l.77\u201380), `packs/packs.ts::playStinger` and `game/animations.ts::reducedMotionNow`.\n2. Write `economy/bars.ts` (the segments from `from`, `fills`, `value` and `size`; the reveal items of an `OpeningBarsAnswer`) and `bars.test.ts`.\n3. Write `FillBar.tsx` and `economy.css`: a track, a fill drawn by `scaleX`, a burst, `data-*` state attributes for the tests, the `<progress>`, driven by the segments, with reduced motion.\n4. Write `RewardReveal.tsx`: items one by one with the stinger, all at once under reduced motion.\n5. Write `OpeningBars.tsx` from the two.\n6. Put both bars of `TokenPicker.tsx` on FillBar and update `TokenPicker.test.tsx`.\n7. Write the tests in Done when, the stylesheet test among them; run the commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read \u00a714.5, \u00a714.6, R1305000, R1305001, R1305004, R1306002 and `apps/web/README.md`; read `shop/TokenPicker.tsx`, `packs/PackOpening.tsx`' `PackScene` (how it reads reduced motion, ~l.77\u201380), `packs/packs.ts::playStinger` and `game/animations.ts::reducedMotionNow`.\n2. Write `economy/bars.ts` (the segments from `from`, `fills`, `value` and `size`; the reveal items of an `OpeningBarsAnswer`) and `bars.test.ts`.\n3. Write `FillBar.tsx` and `economy.css`: a track, a fill drawn by `scaleX`, a burst, `data-*` state attributes for the tests, the `<progress>`, driven by the segments, with reduced motion.\n4. Write `RewardReveal.tsx`: items one by one with the stinger, all at once under reduced motion.\n5. Write `OpeningBars.tsx` from the two.\n6. Put both bars of `TokenPicker.tsx` on FillBar and update `TokenPicker.test.tsx`.\n7. Write the tests in Done when, the stylesheet test among them; run the commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1661 skipped: it waits for #1656 to close first",
+    "#1663 skipped: it waits for #1656, #1658 to close first",
+    "#1664 skipped: it waits for #1658, #1659 to close first",
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1656, #1658, #1659, #1663 to close first"
+  ]
+}
