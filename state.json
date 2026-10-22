@@ -11770,9 +11770,12 @@
     "1611": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-22T01:06:31Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1573,
       "kind": "revise",
       "last_findings": [],
