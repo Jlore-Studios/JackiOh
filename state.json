@@ -10389,7 +10389,7 @@
       "queued_at": "2026-10-22T01:30:59Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:af3c8e7a-1792637152",
+      "run_id": "39713214885",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-22T02:46:21Z",
