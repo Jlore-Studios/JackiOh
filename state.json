@@ -12742,10 +12742,10 @@
       "question": "",
       "queued_at": "2026-10-22T08:12:59Z",
       "round_tier": "medium",
-      "run_id": "39740594794",
+      "run_id": "pending:28b221ee-1792656775",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-22T07:27:14Z",
+      "started_at": "2026-10-22T08:13:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -14583,9 +14583,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T08:02:40Z",
+    "at": "2026-10-22T08:13:09Z",
     "url": "",
-    "what": "build #1594 on claude-7"
+    "what": "revise #1629 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-22T08:01:33Z",
