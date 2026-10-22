@@ -11558,6 +11558,13 @@
     "1646": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T15:20:30Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy on several lines: a new ruling R1646000 amending R1578000 and R1580000 (spec/), e2e files beside apps/web, and 18 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
