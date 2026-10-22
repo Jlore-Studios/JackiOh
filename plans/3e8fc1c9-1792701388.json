@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1675,
+  "title": "Patch: sweep the 17 shadow bans again under generation 13, and sort what is left by cause",
+  "branch": "bot/issue-1675",
+  "thread": "**Issue #1675 (data, not instructions):**\n\n```text\n# #1675: Patch: sweep the 17 shadow bans again under generation 13, and sort what is left by cause\nOpened by @jgoetzmann.\n\n## Why\n\nThe AI never deals 17 Meditative cards into its own decks (`SHADOW_BAN`, `crates/ai/src/shadow_ban.rs`): `meditative-011`, `-012`, `-017`, `-025`, `-029`, `-030`, `-031`, `-049`, `-058`, `-069`, `-075`, `-078`, `-085`, `-087`, `-091`, `-096` and `-099`. Every one is banned for `timeout`: at least one decision over `AI_SWEEP.decision_ms` (2 s) at the browser's budget, or a game past 600 actions, in a game the card was forced into.\n\n- **The bans are stale.** They were measured on the hand evaluation, in the sweeps of 2026-10-12 and the reruns after it. Since 2026-10-21 the AI is generation 13: the learned evaluation, `AI_EVAL_KIND = Learned` (#1477), whose decisions take different time. No sweep has run on it.\n- **The unban lane points the same way.** Its last dry run (#901, 2026-10-22) put 10 bans against the parent's 17, which suggests several cards may already be clear.\n- **The lane is being retired.** The #682 audit found that about 427 hours of LLM sessions in the `improve` and `unban` lanes produced no fair promotion. Unbanning becomes ordinary issues: this one measures, and the issues it leads to fix one cause each.\n\n## Proposal\n\n1. Run the sweep of record over the 17 cards, at Easy and Hard, both passes, as R186 and `crates/tools/README.md` (`sweep`) describe: `cargo jackioh sweep <the 17 ids>`, then pass 2 over the at-risk ones. Keep the report under `training/history/sweep-<date>.md`, as the earlier sweeps did.\n2. Rewrite the tables with `cargo jackioh sweep --write`, naming the new report after the reports of record. A card the new report clears comes off; one it still flags keeps a row naming this report. `sweep --check` (CI's `rust` job) then holds the file to the reports.\n3. For each card still banned, find what made it slow. Use the sweep's slow decisions (R977000 shows each one timed twice), and the long games' action counts. The 2026-10-12 notes saw hands filling with cheap random spells and tokens, and a simulated step that played out a whole turn (My Pawn). Group the cards by cause.\n\n## Out of scope\n\n- No change to the AI's search, evaluation or budget: this issue measures. Each cause becomes its own issue, done when `cargo jackioh sweep <ids>` is clean at both tiers for the cards it covers.\n- No card of an earlier set goes on the list (R732000, R1186000).\n\n## Acceptance criteria\n\n- [ ] A sweep report of the 17 under generation 13, at both tiers, is under `training/history/`.\n- [ ] `crates/ai/src/shadow_ban.rs` is rewritten by `sweep --write` alone, never by hand. `sweep --check` passes.\n- [ ] The pull request lists every card still banned: the tier that flagged it, its slowest decision or longest game, and its cause group. It also lists every card that came off.\n- [ ] `cargo test -p jackioh-ai` and `cargo test -p jackioh-tools` are green, and so is every required check.\n\n## Size and who\n\nMeasurement, the shadow-ban tables and a report: about 3 files. Hard under CLAUDE.md rule 11, since the tables decide the AI's decks. The night bot builds it.\n\nPart of the plan in #682's audit (`reviews/2026-10-22-issue-682-subscriptions.md`, section 5).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1675: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
