@@ -12372,6 +12372,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "887eb052541f7b539c57716a35dcd3da8af6bae5"
       },
+      "closed_at": "2026-10-22T06:11:26Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -12381,6 +12382,7 @@
       "issue": 1578,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
