@@ -1,0 +1,78 @@
+# One round of a self-play export's shards (#466; selfplay.yml calls it once a round, never anything
+# else): one job per range on `runner`, `jackioh selfplay --from <k> --games <n> --seed <base>` with
+# the release `jackioh` the caller's build job uploaded, its log file uploaded as
+# `selfplay-<base>-<k>` (kept `retention` days, 90 at most).
+#
+# On GitHub's runners the export is one round, at most 12 shards at once. On the local runner a round
+# holds a fifth of the shards, played one after another, and selfplay.yml starts a round only once the
+# one before it has ended: GitHub fails a job no self-hosted runner takes in 24 hours, and does not say
+# whether a shard held back by `max-parallel` is waiting all that time, so no shard is made to wait
+# longer than its own round takes (about 8 hours of an idle PC for 100,000 games).
+name: selfplay shards
+
+on:
+  workflow_call:
+    inputs:
+      ranges:
+        description: 'The round''s ranges of game numbers, as JSON: [{"from": 1, "games": 5000}, …]'
+        type: string
+        required: true
+      seed:
+        type: string
+        required: true
+      runner:
+        type: string
+        required: true
+      retention:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  shard:
+    name: shard from ${{ matrix.range.from }}
+    runs-on: ${{ inputs.runner }}
+    # GitHub's runners stop a job at 6 hours; the local runner's shards may take longer.
+    timeout-minutes: ${{ inputs.runner == 'ubuntu-latest' && 350 || 4320 }}
+    strategy:
+      fail-fast: false
+      # GitHub's free plan runs 20 hosted jobs at once for the whole organization: an export takes
+      # at most 12 of them, so CI and the bots' pull requests keep 8 while it plays. The local runner
+      # takes one job at a time.
+      max-parallel: ${{ inputs.runner == 'ubuntu-latest' && 12 || 1 }}
+      matrix:
+        range: ${{ fromJSON(inputs.ranges) }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: selfplay-jackioh
+          path: ${{ runner.temp }}
+      - name: unpack it
+        run: tar -xzf "$RUNNER_TEMP/jackioh.tgz" -C "$RUNNER_TEMP"
+      - name: play
+        env:
+          SEED: ${{ inputs.seed }}
+          FROM: ${{ matrix.range.from }}
+          GAMES: ${{ matrix.range.games }}
+        run: |
+          echo "cores: $(nproc)"
+          mkdir -p "$RUNNER_TEMP/logs"
+          start=$(date +%s)
+          "$RUNNER_TEMP/target/release/jackioh" selfplay --from "$FROM" --games "$GAMES" --seed "$SEED" \
+            --out "$RUNNER_TEMP/logs" | tee "$RUNNER_TEMP/logs/summary.json"
+          echo "seconds: $(( $(date +%s) - start ))" | tee -a "$RUNNER_TEMP/logs/timing.txt"
+          # The CPUs the shard may use: its container's quota when it has one (the local runner's
+          # --cpus; nproc there counts every processor WSL has), else every processor nproc sees.
+          cores=$(nproc)
+          if read -r quota period 2>/dev/null < /sys/fs/cgroup/cpu.max && [ "$quota" != max ]; then
+            cores=$(( (quota + period - 1) / period ))
+          fi
+          echo "cores: $cores" >> "$RUNNER_TEMP/logs/timing.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: selfplay-${{ inputs.seed }}-${{ matrix.range.from }}
+          path: ${{ runner.temp }}/logs
+          if-no-files-found: error
+          retention-days: ${{ fromJSON(inputs.retention) }}

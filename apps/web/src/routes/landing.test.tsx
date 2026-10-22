@@ -165,9 +165,9 @@ afterEach(() => {
 
 // B37: route and CTAs
 
-// R1577000: the three doors and where each leads.
+// R1577000, R1578000: the three doors and where each leads.
 const CTAS = [
-  ["Play", landingTestid.play, paths.practice],
+  ["Play", landingTestid.play, paths.play],
   ["Collection", landingTestid.collection, paths.collection],
   ["Shop", landingTestid.shop, paths.shop],
 ] as const;
@@ -306,19 +306,21 @@ describe("B37 the corner slot", () => {
     for (const [, testid] of CTAS) expect(within(landing()).getByTestId(testid)).toBeInTheDocument();
   });
 
-  it("R1577000 the Play door leads to practice, which needs no account", () => {
+  it("R1578000 the Play door leads to the hub, where online play comes first", () => {
     render(<LandingRoute />);
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
     const play = within(ctas).getByTestId(landingTestid.play);
-    expect(play.closest("a")?.getAttribute("href")).toBe(paths.practice);
-    // des-9: the note under Play already says no account is needed.
-    expect(within(ctas).getByText(/No account needed/)).toBeInTheDocument();
+    expect(play.closest("a")?.getAttribute("href")).toBe(paths.play);
+    expect(paths.play).toBe("/play");
+    expect(within(ctas).getByText("Online first: every way to play, from one screen.")).toBeInTheDocument();
+    // The hub, not the landing, takes the account promise back: nothing here says none is needed.
+    expect(within(ctas).queryByText(/No account needed/)).toBeNull();
   });
 
   it("R1577000 the removed entries have no call to action on the landing", () => {
     render(<LandingRoute />);
     const ctas = within(landing()).getByRole("navigation", { name: "Play" });
-    for (const path of [paths.play, paths.together, paths.decks, paths.creator]) {
+    for (const path of [paths.together, paths.decks, paths.creator]) {
       expect(ctas.querySelector(`a[href="${path}"]`), `${path} has no door`).toBeNull();
     }
     // The invite-only sentence lives on `/invite` and `/play`, not beside the doors.

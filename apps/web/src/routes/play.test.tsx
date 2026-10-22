@@ -50,6 +50,7 @@ import PlayRoute, {
   MATCH_FOUND_STATUS,
   MODE_LABEL,
   PLAY_CHOICE_KEY,
+  QUEUE_MODES,
   defaultDeck,
   defaultTrio,
   pairTargetOf,
@@ -318,16 +319,83 @@ describe("the lobby's match watch", () => {
   });
 });
 
-describe("the lobby's way to practice", () => {
-  /** /practice needs no account; the lobby links it so a player can find it without typing the URL. */
-  it("links to /practice", async () => {
-    const { getByTestId } = render(<PlayRoute token={TOKEN} />);
+describe("R1578000 the Play hub", () => {
+  /** Document order: `first` comes before `second`. */
+  function precedes(first: HTMLElement, second: HTMLElement): boolean {
+    return (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  }
 
-    expect(getByTestId(playTestid.practice)).toHaveAttribute("href", paths.practice);
+  const WAYS: readonly (readonly [string, string])[] = [
+    [playTestid.practice, paths.practice],
+    [playTestid.creator, paths.creator],
+    [playTestid.together, paths.together],
+    [playTestid.replays, paths.replays],
+  ];
+
+  it("R1578000 the hub puts online first with every mode reachable", async () => {
+    await renderLobby();
+
+    const online = screen.getByTestId(playTestid.online);
+    const ways = screen.getByTestId(playTestid.ways);
+    expect(screen.getByTestId(playTestid.screen)).toContainElement(online);
+    expect(precedes(online, ways)).toBe(true);
+    // The rank, the mode and deck they will queue with and Find a match are all inside the online panel.
+    expect(await within(online).findByTestId(playTestid.rank)).toBeInTheDocument();
+    expect(within(online).getByRole("region", { name: "How do you want to play?" })).toBeInTheDocument();
+    expect(within(online).getByRole("region", { name: "Find a match" })).toBeInTheDocument();
+    expect(within(online).getByTestId(playTestid.deckSelect)).toBeInTheDocument();
+    expect(within(online).getByTestId(playTestid.queue)).toBeInTheDocument();
+    for (const mode of QUEUE_MODES) expect(within(online).getByTestId(playModeTestid(mode))).toBeInTheDocument();
+    // The other ways are four links beside it, each to the screen that starts it, and the room is in reach.
+    expect(within(ways).getAllByRole("link")).toHaveLength(WAYS.length);
+    for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
     expect(paths.practice).toBe("/practice");
-    await waitFor(() => {
-      expect(vi.mocked(getMe)).toHaveBeenCalled();
+    expect(screen.getByTestId(playTestid.createRoom)).toBeInTheDocument();
+    expect(screen.getByTestId(playTestid.joinForm)).toBeInTheDocument();
+    // Replays is one tile, no longer a second link in the rank panel.
+    expect(screen.getAllByTestId(playTestid.replays)).toHaveLength(1);
+  });
+
+  it("R1578000 Find a match is the primary action", async () => {
+    await renderLobby();
+
+    expect(screen.getByTestId(playTestid.queue)).toHaveClass("button-primary", "play-cta");
+    const ways = screen.getByTestId(playTestid.ways);
+    expect(ways.querySelector(".button-primary")).toBeNull();
+    // A way to play is a plain link, never a second primary button.
+    for (const [testid] of WAYS) expect(within(ways).getByTestId(testid).tagName).toBe("A");
+  });
+
+  it("R1578000 a way to play opens its screen inside the app", async () => {
+    await renderLobby();
+
+    fireEvent.click(screen.getByTestId(playTestid.creator));
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.creator);
+  });
+
+  it("R1578000 signed out reads nothing and offers sign-in", async () => {
+    render(<PlayRoute token={null} />);
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
     });
+
+    expect(screen.getByTestId(playTestid.screen)).toBeInTheDocument();
+    const online = screen.getByTestId(playTestid.online);
+    expect(online).toHaveTextContent("Online play is invite-only for now");
+    expect(within(online).getByTestId(playTestid.signIn)).toHaveAttribute("href", paths.login);
+    expect(paths.login).toBe("/login");
+    expect(screen.queryByTestId(playTestid.queue)).toBeNull();
+    expect(screen.queryByTestId(playTestid.createRoom)).toBeNull();
+    // The other ways to play are all still offered.
+    const ways = screen.getByTestId(playTestid.ways);
+    expect(precedes(online, ways)).toBe(true);
+    for (const [testid, href] of WAYS) expect(within(ways).getByTestId(testid)).toHaveAttribute("href", href);
+    // Nothing leaves the page: no decks, rank, population, open rooms, collection or me.
+    for (const read of [getDecks, getMe, getOwnRank, getPopulation, getOpenRooms, getCollection]) {
+      expect(vi.mocked(read)).not.toHaveBeenCalled();
+    }
+    fireEvent.click(screen.getByTestId(playTestid.signIn));
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith(paths.login);
   });
 });
 
