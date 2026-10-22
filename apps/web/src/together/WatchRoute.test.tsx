@@ -518,4 +518,28 @@ describe("B50 the watch screen", () => {
     expect(screen.queryByTestId("watch-waiting")).toBeNull();
     expect(screen.getByTestId("game")).toBeInTheDocument();
   });
+
+  it("#1599 once the reopens run out before any view, says the game can no longer be reached, with Reconnect now and the way back, not Joining", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    expect(screen.getByTestId("watch-waiting")).toHaveTextContent("Joining as a watcher…");
+
+    for (let attempt = 1; attempt <= WATCH_RECONNECT_ATTEMPTS; attempt += 1) {
+      latest().emit("close");
+      expect(screen.queryByTestId("watch-gone")).toBeNull();
+      await advance(WATCH_RECONNECT_MS);
+    }
+
+    latest().emit("close");
+    expect(connection("watch-screen")).toBe("closed");
+    expect(screen.getByTestId("watch-gone")).toHaveTextContent("This game can no longer be reached.");
+    const panel = screen.getByTestId("watch-waiting");
+    expect(panel).not.toHaveTextContent("Joining as a watcher…");
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId("watch-refused")).toBeNull();
+    const back = screen.getByTestId("watch-back");
+    expect(panel).toContainElement(back);
+    expect(back).toHaveAttribute("href", "/together");
+    expect(panel).toContainElement(screen.getByTestId("watch-reconnect"));
+  });
 });

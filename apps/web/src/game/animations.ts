@@ -333,7 +333,7 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "buff" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
-  // Keyword icon pops in.
+  // Keyword icon pops in; a loss (R46, `lost`) pops it out, on the card keywordLoss.ts marks `data-lost`.
   keywordGranted: {
     animation: "jk-icon-pop",
     durationMs: 200,

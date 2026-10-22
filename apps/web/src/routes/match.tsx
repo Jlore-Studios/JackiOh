@@ -78,6 +78,8 @@ export const matchTestid = {
   connecting: "match-connecting",
   /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
+  /** #1599: the sentence that stands in for a socket closed for good before any view (a voided match). */
+  gone: "match-gone",
   /** The button that retries at once while the connection line says Reconnecting…. */
   reconnect: "match-reconnect",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
@@ -320,6 +322,22 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
         <ShellPanel testId={matchTestid.connecting}>
           <p className="notice" data-testid={matchTestid.refused} role="alert">
             {t("This match isn’t available. It may have ended, or it may not be yours to join.")}
+          </p>
+          <div className="row">
+            <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>
+              {t("Back to the lobby")}
+            </a>
+          </div>
+        </ShellPanel>
+      );
+    }
+    // #1599: a socket closed for good before any view (a voided match's VOIDED_CLOSE_CODE, game/net.ts)
+    // has nothing left to wait for, so the panel says so rather than Joining.
+    if (match.connection === "closed") {
+      return (
+        <ShellPanel testId={matchTestid.connecting}>
+          <p className="notice" data-testid={matchTestid.gone} role="alert">
+            {t("This match is no longer available. It closed before the board could load.")}
           </p>
           <div className="row">
             <a className="button-primary" href={paths.play} onClick={followInApp(paths.play)}>

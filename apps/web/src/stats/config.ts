@@ -43,6 +43,12 @@ export const FULL_ART_WEIGHT_FACTOR = 2;
 /** R639: how many cards each "favourite" list on the statistics card shows. */
 export const STATS_TOP_CARDS = 3;
 
+/** R1583000: the games the device must have logged before it names a Pocket Pick. */
+export const POCKET_PICK_MIN_GAMES = 10;
+
+/** R1583000: the plays of a card the device must have logged before it can be the Pocket Pick, so one game does not win it. */
+export const POCKET_PICK_MIN_PLAYS = 3;
+
 /**
  * R654: minimum sample of games a card must appear in to display a win rate percentage
  * instead of "not enough games".

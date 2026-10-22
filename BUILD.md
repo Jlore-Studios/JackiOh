@@ -540,7 +540,7 @@ A table `eventType → { animation, durationMs, testid }` with exactly one row p
 | `addedToHand` | Card appears at the hand edge (own) or the hand count bumps (opponent) | 250 ms | hand length or count increments | `handGlint`: sparkles over the hand |
 | `shuffledIn` | Card flies into the library, library pulses | 300 ms | library count increments | `shuffle`: card-back ghost into the library |
 | `buffed` | Stat numbers flash and tick to their new values | 250 ms | shown stats equal the view | `buff`: green arrows up or red arrows down |
-| `keywordGranted` | Keyword icon pops in | 200 ms | icon present | `keyword`: per keyword (shield ring, poison cloud, Taunt ring, motes) |
+| `keywordGranted` | Keyword icon pops in; a loss (`lost`, R46) pops it out | 200 ms | icon present; on a loss the card carries `data-lost` while it animates | `keyword`: per keyword (shield ring, poison cloud, Taunt ring, motes); a loss: red arrows down and a void burst |
 | `counterChanged` | Counter badge ticks | 200 ms | badge text equals the counter | `counter`: poison cloud (plague) or sparkle (grade) |
 | `transformed` | Card spins and shows its new face | 400 ms | card name equals the new definition | `smoke`: smoke puff and motes |
 | `swapped` | Swapped health, boards or library counts cross the centre line together | 500 ms | the swapped values are exchanged | — |
