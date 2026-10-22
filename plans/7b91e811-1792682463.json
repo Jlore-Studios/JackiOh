@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1642,
+  "title": "Patch: the queue and rematch routes pass store errors on with `?`, as every other route does",
+  "branch": "bot/issue-1642",
+  "thread": "**Issue #1642 (data, not instructions):**\n\n```text\n# #1642: Patch: the queue and rematch routes pass store errors on with `?`, as every other route does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nBehind the matchmaking queue and the rematch button, about a hundred lines repeat the same hand-written conversion of a database error into an error the API sends back. The server already does that conversion automatically, and every other part of the API relies on it. Removing the repetition leaves these files a couple of hundred lines shorter and as easy to read as the rest of the server. Nobody playing notices; every error reads exactly as before.\n\n## Why\n- `impl From<StoreError> for ApiError` (`crates/server/src/api/http.rs:229-233`) is exactly `ApiError::internal(error.to_string())`.\n- The same conversion is still spelled out as `.map_err(|error| ApiError::internal(error.to_string()))` 67 times in `crates/server/src/api/queue.rs`, 33 in `crates/server/src/api/rematch.rs`, twice in `crates/server/src/actor/registry.rs` and once in `crates/server/src/duos/replay.rs` (`rg -c`).\n- The other routes write a plain `?` (`.await?;` appears 40 times in `api/decks.rs`, 34 in `api/ranked.rs`, 20 in `api/auth.rs`).\n- Many of the queue's blocks are one read between `begin` and `commit` (for example `api/queue.rs:278-289`), which `one_tx!` (`crates/server/src/actor/contracts.rs:179-190`) already expresses in one line.\n\n## Proposal\nReplace each such `map_err` whose error is a `StoreError` with `?`. Where a begin/read/commit block does nothing but the read, fold it into `one_tx!`. Leave alone every `map_err` that wraps another error type or words its message differently.\n\n## Where it lands\n- `crates/server/src/api/queue.rs`, `crates/server/src/api/rematch.rs`, `crates/server/src/actor/registry.rs`, `crates/server/src/duos/replay.rs`\n\n## Acceptance criteria\n- [ ] No `map_err(|error| ApiError::internal(error.to_string()))` is left on a `StoreError` in `crates/server/src`. The pull request names any left on another error type.\n- [ ] `cargo test -p jackioh-server` passes with no test edited, so no status code or message changed.\n- [ ] `cargo clippy -p jackioh-server --all-targets -- -D warnings` and `cargo fmt --check` pass.\n\n## Size and risks\nAbout 200 fewer lines in 4 files of one crate, behaviour-neutral. The only risk is a `map_err` over a different error type mistaken for a store error. The compiler refuses `?` where no `From` applies, so a mistake fails to build instead of changing behaviour.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T15:02:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1642: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
