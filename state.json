@@ -10349,6 +10349,7 @@
     "1557": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "b3fb8d40f831ae13be5db4fad3770c37730d4e9b",
       "ci_fixes": 1,
       "ci_reruns": {
         "370214d62725f6b0c7f60d2eec82e9fe93dc0bf7": 1,
@@ -10368,7 +10369,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-22T00:28:45Z",
+      "feedback_since": "2026-10-22T02:46:21Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-22T02:04:53Z",
@@ -10391,11 +10392,11 @@
       "round_tier": "strong",
       "run_id": "39713214885",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-22T02:46:21Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 5,
+      "verdict_rounds": 6,
       "votes": {
         "approvals": [
           "claude"
