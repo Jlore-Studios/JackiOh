@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1598,
+  "title": "Patch: a lost keyword leaves the board looking like a loss, not a gain",
+  "branch": "bot/issue-1598",
+  "thread": "**Issue #1598 (data, not instructions):**\n\n```text\n# #1598: Patch: a lost keyword leaves the board looking like a loss, not a gain\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen an effect strips a keyword off a unit \u2014 Taunt knocked off an unbreakable defender, say \u2014 the board today pops the keyword icon in, plays its 'you gained a keyword' particles and the buff sound: exactly the show it puts on for gaining one. After the fix a loss reads as a loss: the icon leaves, the particles point down, and the sound is the debuff one \u2014 the way the game log already says 'lost'.\n\n## Why\n\nThe `keywordGranted` event's `lost` flag is ignored by all three presentation layers: the animation row plays `jk-icon-pop` unconditionally (`apps/web/src/game/animations.ts:337-342`; a literal pop-in, `animations.css:1010-1014`), the FX recipe returns the grant recipe (`apps/web/src/fx/cues.ts:740-753`), and the cue plays `sfx(\"buff\")` unconditionally (`apps/web/src/audio/cues.ts:517`) \u2014 while `buffed` right above shows the intended polarity (`:513-516`, buff vs debuff by sign). The design doc names this an open seam (`docs/polish/4-edge-cases.md:1664-1674` and its Known-limits entry at `:1771`), and BUILD M5-T4's row still reads only 'icon present'. The game log is the only layer that handles it (`apps/web/src/game/Log.tsx:318`).\n\n## Proposal\n\nAdd the removal variant: a `data-lost` marker on the `data-animating` target (the `positionSwitched` `[data-position=\"DEF\"]` selector at `animations.css:1160-1168` is the precedent) with a pop-out keyframe; a `lost` branch in the `keyword` FX recipe (downward/void cue); `sfx(\"debuff\")` when `event.lost`; and BUILD.md's `keywordGranted` row gains the `lost` case.\n\n## Where it lands\n\n`apps/web/src/game/animations.{ts,css}`, `apps/web/src/fx/cues.ts`, `apps/web/src/audio/cues.ts` and their test files; `BUILD.md`. Spec R46.\n\n## Acceptance criteria\n\n- [ ] Feeding `keywordGranted` with `lost: true` produces the removal animation variant (not `jk-icon-pop`), a debuff/void FX cue, and `sfx(\"debuff\")` \u2014 asserted in the animation, FX and audio tests.\n- [ ] Ordinary grants unchanged; `prefers-reduced-motion` still drains synchronously.\n- [ ] The wire type's `lost?: true` (generated) is only read, never edited.\n\n## Size and risks\n\nSmall-medium, client-only, no wire or engine change. Low risk \u2014 every mechanism already has a polarity precedent on the same table rows.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:39:19Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1598: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
