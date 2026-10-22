@@ -319,6 +319,7 @@ function samples(): Sample[] {
     { name: "poisonous granted", events: [{ type: "keywordGranted", instanceId: MINE_3, keyword: { kind: "Poisonous" } }] },
     { name: "taunt granted", events: [{ type: "keywordGranted", instanceId: MINE_3, keyword: { kind: "Taunt" } }] },
     { name: "rush granted", events: [{ type: "keywordGranted", instanceId: MINE_3, keyword: { kind: "Rush" } }] },
+    { name: "taunt lost", events: [{ type: "keywordGranted", instanceId: ENEMY, keyword: { kind: "Taunt" }, lost: true }] },
     { name: "a plague counter", events: [{ type: "counterChanged", instanceId: ENEMY, counter: "plague", value: 2 }] },
     { name: "a grade counter", events: [{ type: "counterChanged", instanceId: MINE_3, counter: "grade", value: 1 }] },
     { name: "a cost change", events: [{ type: "costChanged", instanceId: HAND, cost: 0 }] },
@@ -1339,6 +1340,14 @@ describe("B16 the recipe table, row by row", () => {
       expectCues(grant({ kind: "Taunt" }), [ring("dust", cardT(MINE_3), 0, D)]);
       for (const keyword of [{ kind: "Rush" }, { kind: "Charge" }, { kind: "Armor", n: 2 }, { kind: "Lucky", n: 3 }] as const) {
         expectCues(grant(keyword), [burst("arcane", cardT(MINE_3), "point", 0)]);
+      }
+    });
+  });
+
+  it("#1598 keywordGranted with lost set plans arrows down and a void burst, whatever the keyword", () => {
+    forDs("keywordGranted", (D) => {
+      for (const keyword of [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Poisonous" }, { kind: "Rush" }] as const) {
+        expectCues(plan([{ type: "keywordGranted", instanceId: ENEMY, keyword, lost: true }], D), [arrows("down", cardT(ENEMY), D), burst("void", cardT(ENEMY), "area", 0)]);
       }
     });
   });
