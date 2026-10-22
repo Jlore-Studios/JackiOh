@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1636,
+  "title": "Patch: the AI scores a Discover line the same way in every world it imagines",
+  "branch": "bot/issue-1636",
+  "thread": "**Issue #1636 (data, not instructions):**\n\n```text\n# #1636: Patch: the AI scores a Discover line the same way in every world it imagines\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe practice AI guesses the opponent's hidden cards several ways and checks its best few plans against each guess. A plan that plays a Discover card (pick one of three offered cards) only works in the first guess, because every guess is offered different cards. In the other guesses the plan stops with the pick still open. It is scored as \"spell paid, nothing gained, the opponent's turn never played\", while every rival plan is scored after the opponent's reply. Once this is built, the AI makes a sensible pick in every guess and scores the Discover plan the same way as the others. Players see the AI judge cards like Jewelosco Scarab and Craft a Card on their merits.\n\n## Why\n- Each determinized world gets its own seed (`crates/ai/src/determinize.rs:360`: `next.seed = format!(\"ai:{}\", int_2_31(rng))`). A catalog Discover shuffles its offer with the state's rng and keys each option by the card's id (`crates/engine/src/effects/choose.rs:1212-1250`). So the answer found on one world is not an option on another.\n- `score_line` (`crates/ai/src/search.rs:231-245`) breaks at the first action missing from that world's `candidate_set`. With the prompt open it skips the closing `EndTurn` (`:250-256`).\n- `reply_score` then returns the static `finalist_score` for a line that stopped on the seat's own prompt, with no reply (`crates/ai/src/reply.rs:452-457`). The finalists are therefore compared on two different footings.\n- #1112's `own_prompt_score` (`crates/ai/src/simulate.rs:482-490`) already answers open prompts with `best_auto_answer` for the beam's ranking, but the re-scoring on the other worlds has no such step.\n- `crates/ai/src/shadow_ban.rs:101-108` records the blind spot on Craft a Card (`core-099`): \"the beam's open-prompt states read as a spent spell with no payoff \u2026 0 plays in 16 affordable turns\".\n\n## Proposal\nIn `score_line`, when the line's next action is not a candidate while the seat's own prompt is open, answer that prompt with `best_auto_answer(.., AnswersTried::Drawn, ..)`, as `own_prompt_score` and the reply already do. Then carry on with the rest of the line. Answer at most `AI_SEARCH.max_auto_answers` prompts this way. A line that breaks for any other reason is scored as today.\n\n## Where it lands\n- `crates/ai/src/search.rs` (`score_line`)\n- `crates/ai/src/decide.rs`, only if the re-scoring reserve (`per_finalist`) needs the extra nodes\n- `crates/ai/tests/ai/search.rs` or `crates/ai/tests/ai/surface.rs`\n- SPEC \u00a79.9 and `docs/polish/3-ai.md`: the paragraph on re-scoring the finalists\n\n## Acceptance criteria\n- [ ] Test, failing today: take the line [play Jewelosco Scarab `core-007`, its Discover answer] found on one world. Scored on a second world whose offer differs, it reaches the seat's next decision (the reply ran) and is no longer the static score at the open prompt.\n- [ ] A line that breaks on a refused play, not an open prompt, scores exactly as before (a test pins it).\n- [ ] The existing decide tests drop no world from the finalists' scoring for lack of nodes.\n- [ ] `cargo test -p jackioh-ai --lib --test ai --test ai_slow`, clippy and `cargo jackioh gate` pass. The change is screened on the dev set as `training/improve.md` says, and the result is in the pull request.\n\n## Size and risks\nAbout 20 lines and 2\u20133 tests. It is AI work, so hard. Each answered prompt costs up to `max_auto_answer_options` nodes from the re-scoring reserve. If that drops worlds, `per_finalist` has to grow, which the pull request states. The pick is the AI's own guess on a world it already built, as in `own_prompt_score`, so nothing hidden is read.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T15:00:15Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1636: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
