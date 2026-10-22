@@ -1,8 +1,8 @@
 // #1578, R1578000: the Play hub is one screen. jsdom cannot measure layout, so this mounts the route in
 // a browser at a desktop and a phone size, serves the reads it makes from fixtures, and checks that the
 // page does not scroll, that online play comes first, and that every way to play and the room are in
-// view on a desktop, and on a phone, where the online panel comes first and whole, reachable by
-// scrolling the hub's own region. The signed-out variant is held to the same.
+// view on a desktop and on a 390x844 phone, with no scroll inside the hub either. The signed-out
+// variant is held to the same.
 
 import { CATALOG, CATALOG_VERSION } from "@jackioh/cards";
 import { DECK_SIZE } from "@jackioh/engine/config";
@@ -118,16 +118,16 @@ function expectInView(viewport: Viewport, testids: readonly string[]): void {
   });
 }
 
-/** Each testid is reached by scrolling the hub's own region, never the page. */
-function expectReachable(viewport: Viewport, testids: readonly string[]): void {
-  for (const testid of testids) {
-    cy.get(byTestid(testid)).scrollIntoView().should("be.visible");
-    expectInView(viewport, [testid]);
-  }
-  cy.window({ log: false }).should((win) => {
-    expect(win.scrollY, "the page itself never scrolled").to.eq(0);
+/** Nothing in the hub scrolls: no region has more to show than its box. */
+function expectNoHubScroll(): void {
+  cy.get(".play-layout").should(($layout) => {
+    const layout = $layout[0] as HTMLElement;
+    expect(layout.scrollHeight, "the hub's region has nothing below the fold").to.be.at.most(layout.clientHeight);
   });
-  expectNoPageScroll(viewport);
+  cy.get(byTestid(playTestid.online)).find(".play-panel--setup").should(($setup) => {
+    const setup = $setup[0] as HTMLElement;
+    expect(setup.scrollHeight, "the setup panel is not a scroller").to.be.at.most(setup.clientHeight);
+  });
 }
 
 /** The online panel starts at or before the ways beside it (left of them) or under it (above them). */
@@ -166,13 +166,9 @@ describe("#1578 the Play hub is one screen", () => {
       expectNoPageScroll(viewport);
       expectOnlineFirst();
       expectInView(viewport, [playTestid.queue, playTestid.deckSelect, playTestid.rank]);
-      if (viewport.label === "desktop") {
-        // A desktop shows every way to play and the room at once.
-        expectInView(viewport, [...WAYS, playTestid.createRoom, playTestid.joinInput, playTestid.joinSubmit]);
-      } else {
-        // A phone stacks them under the online panel, in the hub's own scroll region.
-        expectReachable(viewport, [...WAYS, playTestid.createRoom, playTestid.joinInput, playTestid.joinSubmit]);
-      }
+      // Both sizes show every way to play and the room at once.
+      expectInView(viewport, [...WAYS, playTestid.createRoom, playTestid.joinInput, playTestid.joinSubmit]);
+      expectNoHubScroll();
     });
 
     it(`R1578000 signed out at ${size}: no page scroll, sign-in in the online panel, every way in view`, () => {

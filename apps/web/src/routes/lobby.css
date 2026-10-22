@@ -695,9 +695,9 @@
 /* --- the Play hub (#1578, R1578000) -----------------------------------------------------------
    /play is the front door of every way to play, and one screen: the shell is the viewport's height
    and the page never scrolls. Online play is the first and the largest panel, and the other ways to
-   play are four smaller links beside it. On a desktop everything is in view, a deck list longer than
-   its room scrolling inside the setup panel. On a phone the panels stack, the online panel first and
-   whole, and `.play-layout` scrolls under it to the ways and the room. Every rule sits under
+   play are four smaller links beside it. On a desktop and on a 390x844 phone everything is in view
+   at once, a desktop's deck list longer than its room scrolling inside the setup panel. A screen
+   shorter than a phone's scrolls `.play-layout`, the one scroller on a stacked hub. Every rule sits under
    `.play-hub`, because the series screen shares `.play-screen`. */
 
 .tavern.play-screen.play-hub {
@@ -768,11 +768,8 @@
   gap: 10px;
 }
 
-/* The one panel that scrolls on the page's behalf. */
 .tavern.play-screen.play-hub .play-panel--setup {
-  max-height: min(18rem, 36dvh);
   padding: 16px 16px 18px;
-  overflow-y: auto;
 }
 
 /* Find a match is the screen's one glowing action: the brightest edge and the tallest button. */
@@ -853,36 +850,122 @@
   margin: 0;
 }
 
-/* A phone: the notes go and the ways are two by two, so the first row of them peeks under the
-   queue and the rest is a scroll away. */
+/* A phone (390x844 and up): everything fits whole, with no scroll inside the hub. The brand and the
+   panels' step headings go to screen readers only, the three modes stand side by side, the four ways
+   are one row and the room's explanation goes. A screen shorter than that scrolls `.play-layout`,
+   the one scroller, never the setup panel inside it. */
 @media (max-width: 619px) {
+  .tavern.play-screen.play-hub {
+    padding-bottom: 10px;
+  }
+
+  .tavern.play-screen.play-hub .play-hero .brand,
+  .tavern.play-screen.play-hub .play-panel--queue .play-panel__heading,
+  .tavern.play-screen.play-hub .play-panel--room .play-panel__heading,
+  .tavern.play-screen.play-hub .play-panel__heading--sub,
+  .tavern.play-screen.play-hub .play-online__heading {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .tavern.play-screen.play-hub > .play-layout,
+  .tavern.play-screen.play-hub .play-online,
+  .tavern.play-screen.play-hub .play-side {
+    gap: 8px;
+  }
+
+  .tavern.play-screen.play-hub .play-panel {
+    gap: 8px;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank {
+    flex-wrap: nowrap;
+    align-items: baseline;
+    padding: 6px 12px;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank .play-panel__heading {
+    white-space: nowrap;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank p {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--rank a {
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .tavern.play-screen.play-hub .play-panel--setup,
+  .tavern.play-screen.play-hub .play-panel--queue,
+  .tavern.play-screen.play-hub .play-panel--room {
+    padding: 10px 12px 12px;
+  }
+
+  .tavern.play-screen.play-hub .lobby-modes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .tavern.play-screen.play-hub .play-mode-tile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "icon"
+      "text";
+    justify-items: center;
+    gap: 4px;
+    padding: 8px 6px;
+    text-align: center;
+  }
+
+  .tavern.play-screen.play-hub .play-mode-tile input[type="radio"] {
+    top: 6px;
+    right: 6px;
+  }
+
+  .tavern.play-screen.play-hub .play-mode-tile .lobby-mode__name {
+    font-size: 14px;
+  }
+
+  .tavern.play-screen.play-hub .play-mode-tile .lobby-mode__hint,
+  .tavern.play-screen.play-hub .play-mode-tile__waiting,
   .tavern.play-screen.play-hub .play-way__note,
   .tavern.play-screen.play-hub .play-panel--room .lobby-note {
     display: none;
   }
 
-  .tavern.play-screen.play-hub .play-online__heading {
-    font-size: 20px;
+  .tavern.play-screen.play-hub .lobby-select,
+  .tavern.play-screen.play-hub .play-join input {
+    min-height: 40px;
   }
 
-  /* The rank panel's label and its Leaderboard link share a line, the rank under them. */
-  .tavern.play-screen.play-hub .play-panel--rank .play-panel__heading {
-    order: 1;
+  .tavern.play-screen.play-hub .play-cta {
+    min-height: 52px;
   }
 
-  .tavern.play-screen.play-hub .play-panel--rank a {
-    order: 2;
-    margin-left: auto;
+  .tavern.play-screen.play-hub .play-ways {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
   }
 
-  .tavern.play-screen.play-hub .play-panel--rank p {
-    order: 3;
-    flex: 0 0 100%;
+  .tavern.play-screen.play-hub .play-way {
+    justify-content: center;
+    min-height: 44px;
+    padding: 4px 6px;
+    text-align: center;
   }
 
-  .tavern.play-screen.play-hub .play-panel--setup,
-  .tavern.play-screen.play-hub .play-panel--queue {
-    padding: 14px 14px 16px;
+  .tavern.play-screen.play-hub .play-way__name {
+    font-size: 14px;
+    line-height: 1.15;
   }
 }
 
@@ -920,8 +1003,9 @@
   }
 
   .tavern.play-screen.play-hub .play-panel--setup {
-    max-height: none;
     min-height: 0;
+    padding: 12px 16px 14px;
+    overflow-y: auto;
   }
 
   .tavern.play-screen.play-hub .play-online--signed-out {
