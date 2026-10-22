@@ -254,11 +254,23 @@ pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce:
 /// summed, as Armor sums (a numbered keyword, §10.4). R1180000: one sum, whatever gives it — it adds
 /// every Spell Damage aura acting on either side that reaches this player (Meditative+ #9's "Both
 /// players have Spell Damage +X") and, R1180001, their live "Spell Damage +N this turn" modifiers
-/// (Meditative+ #11). Without either, the number is the Units' alone, as before (D9).
+/// (Meditative+ #11). Without either, the number is the Units' alone, as before (D9). R1563002: the
+/// keyword printed on a face-up backrow card it controls counts as a Unit's does (C #23 Devil's Pact).
 pub fn spell_damage_of(state: &GameState, player: PlayerId) -> i32 {
     let mut total = 0;
-    for card in crate::zones::active_units_of(state, player) {
+    let units = crate::zones::active_units_of(state, player);
+    for card in &units {
         for keyword in crate::layers::unit_view(state, card).keywords {
+            if let Keyword::SpellDamage { n } = keyword {
+                total += n;
+            }
+        }
+    }
+    for card in acting_texts_of(state, player) {
+        if units.iter().any(|unit| unit.id == card.id) {
+            continue;
+        }
+        for keyword in crate::layers::card_keywords(state, &card) {
             if let Keyword::SpellDamage { n } = keyword {
                 total += n;
             }

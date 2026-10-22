@@ -36,12 +36,15 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexMap;
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind, Rng, active_units_of,
-    mulligan_prompt_for, reduce_unpiloted,
+    ANSWER_STOP_KEY, Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, PromptKind,
+    PromptOption, Rng, active_units_of, mulligan_prompt_for, reduce_unpiloted,
 };
 
 use crate::candidates::candidate_actions;
-use crate::config::{AI_EVAL, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
+use crate::config::{
+    AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE,
+    AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
+};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::lethal::find_lethal;
 use crate::match_::replacements_for;
@@ -92,18 +95,39 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 /// redacted copy judges no answer right, so a search would score the four answers and Stop alike and
 /// spend a decision's budget on a guess, up to `KY_COMPETITION_MAX` times in one turn, past the turn
 /// clock (R79); worked out, each answer costs one redaction. It never stops: a miss would end the
-/// sequence with the streak a Stop keeps, so answering is never worse. `None` for any other prompt, or
-/// a statement it cannot work out, which the search then answers.
-fn worked_answer_action(public: &GameState, seat: PlayerId) -> Option<ActionBody> {
+/// sequence with the streak a Stop keeps, so answering is never worse. R1563005: like a player in a
+/// hurry it slips: it answers right `AI_KY_COMPETITION_ACCURACY` of the time (the Radiant face's easier
+/// sums `AI_KY_COMPETITION_RADIANT_ACCURACY`), and otherwise gives one of the wrong answers, both drawn
+/// from its own stream. `None` for any other prompt, or a statement it cannot work out, which the
+/// search then answers.
+fn worked_answer_action(public: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     let pending = public.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer || pending.streak.is_none() {
         return None;
     }
     let answer = worked_answer(&pending.prompt)?.to_string();
     let option = pending.options.iter().find(|option| option.label == answer)?;
+    let accuracy = if pending.resume.radiant {
+        AI_KY_COMPETITION_RADIANT_ACCURACY
+    } else {
+        AI_KY_COMPETITION_ACCURACY
+    };
+    let selection = if rng.chance(accuracy) {
+        option.selection.clone()
+    } else {
+        let wrong: Vec<&PromptOption> = pending
+            .options
+            .iter()
+            .filter(|other| other.label != answer && other.key != ANSWER_STOP_KEY)
+            .collect();
+        match wrong.get(rng.int(wrong.len() as i32).max(0) as usize) {
+            Some(miss) => miss.selection.clone(),
+            None => option.selection.clone(),
+        }
+    };
     Some(ActionBody::Answer {
         choice_id: pending.id.clone(),
-        selection: vec![option.selection.clone()],
+        selection: vec![selection],
     })
 }
 
@@ -333,8 +357,9 @@ fn plan(
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
-    // 3, R1184002: a question of a sequence, worked out from its statement, at once.
-    if let Some(answer) = worked_answer_action(&public, seat) {
+    // 3, R1184002: a question of a sequence, worked out from its statement, at once (R1563005: right
+    // most of the time).
+    if let Some(answer) = worked_answer_action(&public, seat, rng) {
         return Plan::Immediate(answer, DecisionReason::Prompt);
     }
 

@@ -25,6 +25,7 @@ function count(value: unknown): number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
 }
 
+/** One card's counters, each of CARD_COUNTERS; one missing (stored before R1582000's counters) or not a whole positive number reads as 0. */
 function parseCounters(raw: unknown): CardCounters | null {
   if (!isRecord(raw)) return null;
   const counters = Object.fromEntries(CARD_COUNTERS.map((counter) => [counter, count(raw[counter])])) as Record<

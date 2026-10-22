@@ -1,9 +1,13 @@
 //! R1184002: the AI's answer to Meditative+ #20 KY's Competition's question sequence (R1184000). The
 //! AI works each question out from the statement its redacted prompt shows, at once and with no
 //! search, and never stops: thirty questions cost it what one redaction does, inside its decision
-//! budget, and it never reads the key (R465).
+//! budget, and it never reads the key (R465). R1563005: it answers right 85% of the time on the base
+//! face and 93% on the Radiant one, a miss one of the wrong answers, drawn from its own stream.
 
-use jackioh_ai::{AI_BUDGET, AiOptions, DecisionReason, decide, play_ai_turn, redact};
+use jackioh_ai::{
+    AI_BUDGET, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AiOptions, DecisionReason,
+    decide, play_ai_turn, redact,
+};
 use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::testkit::{
     ANSWER_KEY, ANSWER_STOP_KEY, ActionBody, GameState, KY_COMPETITION_MAX, PromptKind, Selection,
@@ -49,11 +53,12 @@ mod r1184002_the_ai_works_a_question_out_from_its_statement {
     use super::*;
 
     #[test]
-    fn r1184002_each_answer_is_the_right_one_given_at_once_with_no_search_until_the_cap_ends_it() {
+    fn r1184002_r1563005_each_answer_is_given_at_once_with_no_search_a_letter_never_stop_until_a_miss_or_the_cap()
+     {
         for radiant in [false, true] {
             let mut state = asked(&format!("r1184002-run-{radiant}"), radiant);
             let mut ai = AiOptions::with_budget(create_rng("r1184002-run", 0), AI_BUDGET);
-            let mut answered = 0;
+            let mut right = 0;
             while state.pending.is_some() {
                 let decision = decide(&state, AI, &mut ai).unwrap_or_else(|| panic!("a decision"));
                 assert_eq!(decision.reason, DecisionReason::Prompt);
@@ -61,14 +66,56 @@ mod r1184002_the_ai_works_a_question_out_from_its_statement {
                 let ActionBody::Answer { selection, .. } = &decision.action else {
                     panic!("an answer, not {:?}", decision.action);
                 };
-                assert_eq!(selection, &vec![right_selection(&state)]);
+                assert_ne!(
+                    selection,
+                    &vec![Selection::Mode {
+                        option: ANSWER_STOP_KEY.to_string()
+                    }]
+                );
                 assert!(legal_actions(&state, AI).contains(&decision.action));
+                let was_right = selection == &vec![right_selection(&state)];
                 state = act(&state, AI, &decision.action);
-                answered += 1;
-                assert!(answered <= KY_COMPETITION_MAX);
+                if !was_right {
+                    break;
+                }
+                right += 1;
+                assert!(right <= KY_COMPETITION_MAX);
             }
-            assert_eq!(answered, KY_COMPETITION_MAX);
-            assert_eq!(kenny_x(&state), vec![KY_COMPETITION_MAX]);
+            assert!(state.pending.is_none(), "a miss or the cap ends the sequence");
+            let summoned = kenny_x(&state);
+            if right == 0 {
+                assert!(summoned.is_empty());
+            } else {
+                assert_eq!(summoned, vec![right]);
+            }
+        }
+    }
+
+    #[test]
+    fn r1563005_it_answers_right_85_percent_of_the_time_and_93_on_the_radiant_face() {
+        for (radiant, accuracy) in [
+            (false, AI_KY_COMPETITION_ACCURACY),
+            (true, AI_KY_COMPETITION_RADIANT_ACCURACY),
+        ] {
+            let mut asked_count = 0;
+            let mut right = 0;
+            for n in 0..400 {
+                let state = asked(&format!("r1563005-{radiant}-{n}"), radiant);
+                let mut ai = AiOptions::with_budget(create_rng(&format!("r1563005-ai-{n}"), 0), AI_BUDGET);
+                let decision = decide(&state, AI, &mut ai).unwrap_or_else(|| panic!("a decision"));
+                let ActionBody::Answer { selection, .. } = &decision.action else {
+                    panic!("an answer");
+                };
+                asked_count += 1;
+                if selection == &vec![right_selection(&state)] {
+                    right += 1;
+                }
+            }
+            let rate = f64::from(right) / f64::from(asked_count);
+            assert!(
+                (rate - accuracy).abs() < 0.06,
+                "radiant {radiant}: {rate} against {accuracy}"
+            );
         }
     }
 
@@ -133,7 +180,8 @@ mod r1184002_the_ai_works_a_question_out_from_its_statement {
     }
 
     #[test]
-    fn r1184002_its_turn_answers_every_question_and_plays_on_inside_play_ai_turn_s_ceiling() {
+    fn r1184002_r1563005_its_turn_answers_until_a_miss_or_the_cap_and_plays_on_inside_play_ai_turn_s_ceiling()
+    {
         let state = asked("r1184002-turn", false);
         let mut ai = AiOptions::with_budget(create_rng("r1184002-turn", 0), AI_BUDGET);
         let turn = play_ai_turn(&state, AI, &mut ai);
@@ -142,14 +190,16 @@ mod r1184002_the_ai_works_a_question_out_from_its_statement {
             .iter()
             .take_while(|decision| matches!(decision.action, ActionBody::Answer { .. }))
             .count();
-        assert_eq!(answers, KY_COMPETITION_MAX as usize);
+        assert!((1..=KY_COMPETITION_MAX as usize).contains(&answers));
         assert!(
             turn.decisions
                 .iter()
                 .take(answers)
                 .all(|decision| decision.stats.nodes == 0)
         );
-        assert_eq!(kenny_x(&turn.state), vec![KY_COMPETITION_MAX]);
+        // Every answer but a last miss was right: the Kenny's X is the streak.
+        let kenny = kenny_x(&turn.state);
+        assert!(kenny.is_empty() || kenny == vec![answers as i32] || kenny == vec![answers as i32 - 1]);
         assert!(
             turn.state
                 .pending

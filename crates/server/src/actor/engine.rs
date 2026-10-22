@@ -85,6 +85,8 @@ pub struct MatchSnapshot {
     /// swaps, the engine's `seats_swapped`). Public: the `glitched` event announced every swap. The
     /// account that began the match in p1 plays p2 while this is true, and the other way round.
     pub seats_swapped: bool,
+    /// R1563006: the question of a sequence open now, the sequence clock's input (public).
+    pub sequence: Option<jackioh_engine::prompts::SequenceQuestion>,
 }
 
 fn registered() {
@@ -280,6 +282,7 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
         result: state.result,
         // R677: the engine's own answer to "do the accounts hold each other's seat".
         seats_swapped: jackioh_engine::seats_swapped(state),
+        sequence: jackioh_engine::prompts::sequence_question_of(state),
     }
 }
 

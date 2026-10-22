@@ -1,8 +1,8 @@
 //! C+ #71 Book of Buff (SPEC §8.7 row 71, R386; BUILD M9 row C+ 71). (1) Spell, Book, Epic.
-//!   Both faces: "Buff a card {times|time|times}. It may be a card in your hand." — times 5, Radiant 10
+//!   Both faces: "Buff a card {times|time|times}. It may be a card in your hand." — times 4, Radiant 8
 //!
 //! A declared target (R81): a permanent on either side or a card in your own hand. `times` separate
-//! Upgrades, each its own draw (R386); an Immutable card is left alone. The Radiant ten is the declared
+//! Upgrades, each its own draw (R386); an Immutable card is left alone. The Radiant eight is the declared
 //! `times`, so both faces run this one script.
 
 use jackioh_engine::effects::upgrade;
@@ -26,11 +26,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #71 Book of Buff — SPEC §8.7 row 71, BUILD M9 row C+ 71: Upgrades one card 5 times, the target
+// C+ #71 Book of Buff — SPEC §8.7 row 71, BUILD M9 row C+ 71: Upgrades one card 4 times, the target
 // chosen with the play (R81) — a permanent on either side (an enemy face-down trap offered by id only,
 // R177) or a card in your hand; each Upgrade its own draw (R386); an Immutable target is unchanged; a
 // hand card's changes are hidden from the opponent (R97); the count reads through `param()`; radiant
-// 10 times.
+// 8 times.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,13 +112,13 @@ mod tests {
         }
 
         #[test]
-        fn r386_upgrades_a_unit_5_times_each_its_own_draw() {
+        fn r386_upgrades_a_unit_4_times_each_its_own_draw() {
             crate::register_all();
             let mut s = book(false);
             let unit = s.unit(P2, 1).expect("p2's unit");
             s.play(BOOK, json!({ "targets": pick(&unit.id) }));
             let events = upgrades(s.events());
-            assert_eq!(events.len(), 5);
+            assert_eq!(events.len(), 4);
             assert!(events.iter().all(|event| event["instanceId"] == json!(unit.id)));
             assert!(events.iter().all(|event| event["change"]["kind"] != json!("none")));
         }
@@ -130,11 +130,11 @@ mod tests {
             let mut s = book(false);
             let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
             s.play(BOOK, json!({ "targets": pick(&held.id) }));
-            assert_eq!(upgrades(s.events()).len(), 5);
+            assert_eq!(upgrades(s.events()).len(), 4);
             let live = s.card(&held.id);
             assert!(live.tuning.is_some() || live.cost_mod != 0);
             let theirs = upgrades(&s.view(P2).events);
-            assert_eq!(theirs.len(), 5);
+            assert_eq!(theirs.len(), 4);
             assert!(theirs.iter().all(|event| event["instanceId"] == json!(hidden_id) && event["defId"] == json!(hidden_id)));
             assert!(upgrades(&s.view(P1).events).iter().all(|event| event["instanceId"] == json!(held.id)));
         }
@@ -146,7 +146,7 @@ mod tests {
             let mut s = book(false);
             let trap = s.backrow(P2, 1).expect("p2's trap");
             s.play(BOOK, json!({ "targets": pick(&trap.id) }));
-            assert_eq!(upgrades(s.events()).len(), 5);
+            assert_eq!(upgrades(s.events()).len(), 4);
             assert!(upgrades(&s.view(P1).events).iter().all(|event| event["instanceId"] == json!(hidden_id)));
             assert!(upgrades(&s.view(P2).events).iter().all(|event| event["instanceId"] == json!(trap.id)));
         }
@@ -172,9 +172,9 @@ mod tests {
         }
 
         #[test]
-        fn r386_the_count_reads_through_param_an_upgrade_of_times_makes_6_a_degrade_4() {
+        fn r386_the_count_reads_through_param_an_upgrade_of_times_makes_5_a_degrade_3() {
             crate::register_all();
-            for (steps, count) in [(1, 6), (-1, 4)] {
+            for (steps, count) in [(1, 5), (-1, 3)] {
                 let mut s = book(false);
                 step_param(s.card_mut(BOOK), "times", steps);
                 let target = s.unit(P1, 1).expect("p1's unit").id;
@@ -188,12 +188,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r386_upgrades_its_target_10_times() {
+        fn r386_upgrades_its_target_8_times() {
             crate::register_all();
             let mut s = book(true);
             let unit = s.unit(P1, 1).expect("p1's unit");
             s.play(BOOK, json!({ "targets": pick(&unit.id) }));
-            assert_eq!(upgrades(s.events()).len(), 10);
+            assert_eq!(upgrades(s.events()).len(), 8);
             assert!(upgrades(s.events()).iter().all(|event| event["instanceId"] == json!(unit.id)));
         }
 
@@ -203,7 +203,7 @@ mod tests {
             let mut s = book(true);
             let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
             s.play(BOOK, json!({ "targets": pick(&held.id) }));
-            assert_eq!(upgrades(s.events()).len(), 10);
+            assert_eq!(upgrades(s.events()).len(), 8);
         }
     }
 }

@@ -67,7 +67,9 @@ mod tests {
     /// The probes, in hand and never played except where a test says so.
     const COST_3: &str = "core-070"; // Spiteful Stab (Flood costs (4) since patch v0.2.0)
     const COST_4: &str = "core-025"; // 4-mana 7/7 — a Unit, so it has a lane to enter
-    const COST_6: &str = "core-029"; // GIGA Glowy Jelly Bean
+    /// #17 Flood, a (4) Spell raised to (6) by a `costMod` of 2: no Core card prints (5) or (6) since
+    /// #1563 made GIGA Glowy Jelly Bean (7), whose Float discount would move under a cross-turn test.
+    const COST_6: &str = "core-017";
 
     /// There is no printed cost-5 card in Core, so "Cost (4)+" above 4 is read at 6 (§8.3, R363).
     const PROBES: [&str; 3] = [COST_3, COST_4, COST_6];
@@ -111,7 +113,10 @@ mod tests {
     fn board(radiant: bool) -> Scenario {
         crate::register_all();
         let hand: Vec<Value> = std::iter::once(json!({ "def": CURVATURE, "radiant": radiant }))
-            .chain(PROBES.iter().map(|probe| json!(probe)))
+            .chain(PROBES.iter().map(|probe| match *probe {
+                COST_6 => json!({ "def": COST_6, "costMod": 2 }),
+                probe => json!(probe),
+            }))
             .collect();
         scenario(json!({
             "p1": {

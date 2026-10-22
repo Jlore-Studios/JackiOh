@@ -1,7 +1,7 @@
 //! Pick N different entries of a list (`doRandomEntries`): N different entries (R60) drawn from
 //! the match rng as the effect resolves, resolved in the list's order and named to both players
 //! before they resolve (R436); N at or above the list's length does every entry with no rng draw.
-//! Meditative #49.1 YileGPT Unleashed (MD-C23, R1023) is its user.
+//! Meditative #49.1 YileGPT Prime (MD-C23, R1023) is its user.
 
 use jackioh_engine::effects::{DoRandomEntriesArgs, RandomEntry, do_random_entries};
 use jackioh_engine::testkit::PlayerId::P1;

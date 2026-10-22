@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn r1421_yilegpt_unleashed_is_a_prime_pool_card() {
-        // Patch v0.3.10 (#831): M #49.1 YileGPT Unleashed, the token M #49's Death puts in the deck,
+        // Patch v0.3.10 (#831): M #49.1 YileGPT Prime, the token M #49's Death puts in the deck,
         // is a Prime, so the pool this Fruit, M #31's Radiant face and M #95 draw from holds it.
         crate::register_all();
         let ids: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["Prime"] })))

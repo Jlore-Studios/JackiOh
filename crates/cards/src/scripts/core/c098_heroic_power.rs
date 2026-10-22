@@ -997,7 +997,7 @@ mod tests {
     mod n98_heroic_power_each_number_is_its_power_s_r1430_r1431 {
         use super::*;
 
-        /// C+ #71 Book of Buff: "Upgrade a card 5 times." C+ #72 Book of Nerf: "Degrade a permanent 5
+        /// C+ #71 Book of Buff: "Upgrade a card 4 times." C+ #72 Book of Nerf: "Degrade a permanent 5
         /// times." C+ #41 KY's Constant: "Change a random number on a card in your hand to 3."
         const BOOK_OF_BUFF: &str = "classicplus-071";
         const BOOK_OF_NERF: &str = "classicplus-072";
@@ -1092,7 +1092,7 @@ mod tests {
                             assert!(own.contains(&key), "{name} radiant {radiant_face}: {key}");
                         }
                     }
-                    // Played for real: five Upgrades, or five Degrades, of the card on the field. Its cost,
+                    // Played for real: four Upgrades, or five Degrades, of the card on the field. Its cost,
                     // its keyword and its Activate count are rows of their own; every declared number they
                     // draw, and every number its tuning holds after, is the power's.
                     for book in [BOOK_OF_BUFF, BOOK_OF_NERF] {
@@ -1186,7 +1186,7 @@ mod tests {
             s.play(BOOK_OF_BUFF, json!({ "targets": unit_pick(&insect) }));
             let drawn = drawn_numbers(&s);
             let live = s.card(card.id.as_str()).clone();
-            // Of the five Upgrades, those the Number row drew are each a step of Die Insect's 8 (step 2);
+            // Of the four Upgrades, those the Number row drew are each a step of Die Insect's 8 (step 2);
             // the others raised its Activate count (B3.2 rule 9). Ping's 2 is untouched.
             assert!(!drawn.is_empty() && drawn.iter().all(|key| key == "insect"), "{drawn:?}");
             let insect_now = 8 + 2 * drawn.len() as i32;

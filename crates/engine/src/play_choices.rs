@@ -361,11 +361,11 @@ fn cost_with(state: &GameState, card: &CardInstance, x: Option<i32>, embiggen: O
 }
 
 /// The card stamped with a play's embiggen choice, as §10.5 step 1 stamps it before it reads the price
-/// (`play_steps::validate_play`): an embiggen card carries the version chosen, any other card is as it
-/// is. R214, R1181002: the face a play's choices answer is read off it, since Mountaintop Garden's
+/// (`play_steps::validate_play`): a card with a dearer price carries the price chosen, any other card is
+/// as it is. R214, R1181002: the face a play's choices answer is read off it, since Mountaintop Garden's
 /// dearer price makes the play Radiant.
 fn stamped_with_embiggen(state: &GameState, card: &CardInstance, embiggen: Option<bool>) -> CardInstance {
-    if has_embiggen_price(state, card) {
+    if has_dearer_price(state, card) {
         CardInstance {
             embiggened: Some(embiggen == Some(true)),
             ..card.clone()
@@ -748,10 +748,18 @@ pub fn has_embiggen_price(state: &GameState, card: &CardInstance) -> bool {
     )
 }
 
+/// R1563004: a card offers a dearer price when it is an embiggen card, or while Mountaintop Garden
+/// offers it its Radiant price (`mana::garden_offers_radiant`); the play names the dearer one with
+/// `embiggen: true` either way.
+pub fn has_dearer_price(state: &GameState, card: &CardInstance) -> bool {
+    has_embiggen_price(state, card) || crate::mana::garden_offers_radiant(state, card)
+}
+
 /// R1181002: while Mountaintop Garden reaches a Radiant card, its dearer price (a Radiant play) is no
-/// choice, and it has its normal price only.
+/// choice, and it has its normal price only. R1563004: a card of one price that is not Radiant has the
+/// Garden's dearer price beside it.
 pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<bool> {
-    if !has_embiggen_price(state, card) {
+    if !has_dearer_price(state, card) {
         Vec::new()
     } else if card.radiant && crate::mana::garden_reaches(state, card) {
         vec![false]
@@ -2037,7 +2045,7 @@ fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<
     } else {
         vec![None]
     };
-    let embiggens: Vec<Option<bool>> = if has_embiggen_price(state, card) {
+    let embiggens: Vec<Option<bool>> = if has_dearer_price(state, card) {
         legal_embiggen_choices(state, card)
             .into_iter()
             .map(Some)
@@ -2101,7 +2109,7 @@ pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &Card
     } else {
         vec![None]
     };
-    let embiggens: Vec<Option<bool>> = if has_embiggen_price(state, card) {
+    let embiggens: Vec<Option<bool>> = if has_dearer_price(state, card) {
         legal_embiggen_choices(state, card)
             .into_iter()
             .map(Some)
