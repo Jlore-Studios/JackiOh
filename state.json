@@ -10384,15 +10384,15 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-10-22T01:30:59Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "39708329880",
+      "run_id": "pending:af3c8e7a-1792637152",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-22T01:53:57Z",
+      "started_at": "2026-10-22T02:46:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 5,
@@ -13759,9 +13759,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T02:33:29Z",
+    "at": "2026-10-22T02:46:21Z",
     "url": "",
-    "what": "review #1611 on claude-1"
+    "what": "revise #1557 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-22T02:30:24Z",
