@@ -11334,6 +11334,13 @@
     "1594": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T02:31:24Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails easy on the shared surface wire/events.rs and engine src; not hard, since it changes no rule or the resolution loop, only the view's redaction of two events"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
