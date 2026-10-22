@@ -17,6 +17,7 @@ import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardFace } from "../CardFace.tsx";
+import { useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { ascentLevelOf } from "../shortText.ts";
@@ -38,6 +39,8 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const ascentLevel = ascentLevelOf(face.values);
+  // R1655000: the viewer's own card's sheet wears its cosmetics, as it prints its full art.
+  const own = useOwnCopy();
 
   return createPortal(
     <div className="inspect-layer inspect-layer--sheet" {...OVERLAY_ROOT_PROPS}>
@@ -53,7 +56,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
         <div className="inspect-sheet-body">
           <RefsInteractive>
             <div className="inspect-face inspect-face--sheet" data-testid={INSPECT_FACE}>
-              <CardFace face={face} layout="full" ascentLevel={ascentLevel} />
+              <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
               <InspectNote note={note} />
             </div>
             <Extended face={face} ascentLevel={ascentLevel} />

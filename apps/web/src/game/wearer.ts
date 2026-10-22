@@ -2,7 +2,8 @@
 // board the viewer plays (`wearCosmetics`: a match, a practice game, a hotseat game, a co-op seat's
 // own duel) names the viewer, and only that seat's own cards wear them; a replay, a watched game, a
 // teammate's duel and a bare board name nobody, and every card there draws the defaults. Drawn
-// state only (CLAUDE.md rule 7): nothing here reaches the engine or the view.
+// state only (CLAUDE.md rule 7): nothing here reaches the engine or the view. R1655000: what that
+// own card wears is the picks of its own card first (cards/cosmetics.ts), where the viewer owns them.
 //
 // R1297000: the same seat wears the deck slots (the playmat, the backdrop and the card back), and
 // the provider also carries the picks of the deck the viewer plays, which beat the account's.

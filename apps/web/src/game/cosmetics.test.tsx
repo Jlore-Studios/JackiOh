@@ -7,18 +7,29 @@
 // backdrop behind it, and the back of the viewer's face-down cards and deck pile. A saved deck's
 // picks beat the account's; the opponent's side and a board that wears none draw as they always did.
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlayerView } from "@jackioh/shared";
 
-import { DEFAULT_CARD_COSMETICS, cosmeticsOf, deckCosmeticsOf, resetCosmeticsForTests, writeCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
+import {
+  DEFAULT_CARD_COSMETICS,
+  cosmeticsOf,
+  deckCosmeticsOf,
+  resetCosmeticsForTests,
+  writeCardPick,
+  writeCosmetics,
+  type CosmeticId,
+  type CosmeticKind,
+} from "../cards/cosmetics.ts";
+import { closeInspect } from "../cards/inspect/store.ts";
+import { INSPECT_HOVER, INSPECT_SHEET } from "../cards/inspect/testids.ts";
 import { baseView, card, emptySide, faceUpBackrow, fullBoardView, resetIds, unit } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
 import { BACKDROP_PARTICLE_MAX } from "./config.ts";
 
 /** The registry's first entry of `kind` that is not its default. */
-function item(kind: CosmeticKind): string {
+function item(kind: CosmeticKind): CosmeticId {
   const found = cosmeticsOf(kind).find((cosmetic) => !cosmetic.default);
   if (found === undefined) throw new Error(`no ${kind} item`);
   return found.id;
@@ -187,5 +198,95 @@ describe("R1297000 the board's deck slots and the device's cosmetics", () => {
     expect(document.querySelectorAll("[data-card-back]")).toHaveLength(0);
     expect(backs(document).every((back) => back === null)).toBe(true);
     expect(document.querySelectorAll(".cf-back").length).toBeGreaterThan(0);
+  });
+});
+
+/** Longer than any inspect delay (hover or long-press), as in Card.test.tsx. */
+const PAST_ANY_INSPECT_DELAY_MS = 2_000;
+
+describe("R1655000 the board's cards and the picks of each card", () => {
+  /** The card with picks of its own, and the card with none. */
+  const OWN = "core-004";
+  const OTHER = "core-005";
+  const CARD_BORDER = (() => {
+    const found = cosmeticsOf("border").filter((cosmetic) => !cosmetic.default)[1];
+    if (found === undefined) throw new Error("no second border");
+    return found.id;
+  })();
+
+  /** Both sides play the same card: the viewer's copies wear its picks, the opponent's draw the defaults. */
+  function picksView(): PlayerView {
+    resetIds();
+    return baseView({
+      you: emptySide("p1", {
+        hand: [card({ defId: OWN }), card({ defId: OTHER })],
+        units: [unit("p1", { defId: OWN }), null, null, null, null],
+      }),
+      opponent: emptySide("p2", { hand: { count: 3 }, units: [unit("p2", { defId: OWN }), null, null, null, null] }),
+    });
+  }
+
+  function frameOf(root: ParentNode, defId: string): string | null {
+    return root.querySelector<HTMLElement>(`.card[data-def-id="${defId}"] > .cf`)?.getAttribute("data-frame") ?? null;
+  }
+
+  afterEach(() => {
+    closeInspect();
+    vi.useRealTimers();
+  });
+
+  it("R1655000 the viewer's copy wears its card's picks, another card keeps the account's, the opponent's copy the defaults", () => {
+    writeCardPick(OWN, "border", CARD_BORDER);
+    render(<Board view={picksView()} wearCosmetics />);
+
+    const hand = screen.getByTestId("hand-you");
+    expect(frameOf(hand, OWN)).toBe(CARD_BORDER);
+    expect(frameOf(hand, OTHER)).toBe(BORDER);
+    // The viewer's unit of the same card wears them too; the opponent's copy draws the defaults.
+    const yours = facesOwnedBy("p1");
+    expect(yours).toHaveLength(1);
+    expect(yours[0]?.getAttribute("data-frame")).toBe(CARD_BORDER);
+    const theirs = facesOwnedBy("p2");
+    expect(theirs).toHaveLength(1);
+    expect(theirs[0]?.getAttribute("data-frame")).toBeNull();
+
+    // A board that wears none draws the card's picks nowhere.
+    cleanup();
+    render(<Board view={picksView()} />);
+    expect(document.querySelectorAll(".cf[data-frame]")).toHaveLength(0);
+  });
+
+  it("R1655000 the hover preview and the touch sheet of the viewer's own card wear its picks; the opponent's copy's do not", () => {
+    vi.useFakeTimers();
+    writeCardPick(OWN, "border", CARD_BORDER);
+    render(<Board view={picksView()} wearCosmetics />);
+    const hand = screen.getByTestId("hand-you").querySelector<HTMLElement>(`.card[data-def-id="${OWN}"]`);
+    if (hand === null) throw new Error("no hand card");
+
+    fireEvent.pointerEnter(hand, { pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+    });
+    expect(screen.getByTestId(INSPECT_HOVER).querySelector(".cf")?.getAttribute("data-frame")).toBe(CARD_BORDER);
+    fireEvent.pointerLeave(hand, { pointerType: "mouse" });
+    expect(screen.queryByTestId(INSPECT_HOVER)).toBeNull();
+
+    fireEvent.pointerDown(hand, { pointerType: "touch", clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+    });
+    expect(screen.getByTestId(INSPECT_SHEET).querySelector(".cf")?.getAttribute("data-frame")).toBe(CARD_BORDER);
+    cleanup();
+    closeInspect();
+
+    // The opponent's copy of the same card previews as its defaults.
+    render(<Board view={picksView()} wearCosmetics />);
+    const opposing = document.querySelector<HTMLElement>('.card[data-owner="p2"]');
+    if (opposing === null) throw new Error("no opposing card");
+    fireEvent.pointerEnter(opposing, { pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
+    });
+    expect(screen.getByTestId(INSPECT_HOVER).querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
   });
 });

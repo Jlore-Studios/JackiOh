@@ -18,6 +18,7 @@ import type { PlayerView } from "@jackioh/shared";
 
 import { AUDIO_SETTINGS_KEY } from "../audio/constants.ts";
 import { DEFAULT_AUDIO_SETTINGS, readAudioSettings, resetAudioSettingsForTests } from "../audio/settings.ts";
+import { readCardPicks, resetCosmeticsForTests, writeCardFullArt, writeCardPick } from "../cards/cosmetics.ts";
 import { CardFace, faceModel, INSPECT_HOVER, closeInspect } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, CARD_SETTINGS_KEY, readCardSettings, writeCardSettings } from "../cards/settings.ts";
@@ -44,6 +45,7 @@ beforeEach(() => {
   __resetSettingsForTests();
   resetFxSettingsForTests();
   resetAudioSettingsForTests();
+  resetCosmeticsForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
   localStorage.clear();
 });
@@ -58,6 +60,7 @@ afterEach(() => {
   __resetSettingsForTests();
   resetFxSettingsForTests();
   resetAudioSettingsForTests();
+  resetCosmeticsForTests();
   writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
   localStorage.clear();
 });
@@ -119,8 +122,19 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
     for (const label of ["Foil", "Finish", "Border", "Playmat", "Backdrop", "Card back"]) {
       expect(screen.queryByLabelText(label), label).toBeNull();
     }
-    // Full-art cards stays a setting: no full art is a pick (R1313000).
+    // Full-art cards stays a setting, the default of a card with no pick of its own (R1655000).
     expect(screen.getByTestId("setting-fullArt")).toBeInTheDocument();
+  });
+
+  it("R1655000 the Full-art cards setting is the default of a card with no pick, and no settings reset touches a card's picks", () => {
+    writeCardFullArt("core-008", false);
+    writeCardPick("core-004", "border", "border-bone");
+    writeCardSettings({ fullArt: false });
+    for (const slot of SETTINGS_SLOTS) slot.reset?.();
+    // The setting is back at its default; each card keeps the picks of its own.
+    expect(readCardSettings().fullArt).toBe(CARD_SETTINGS_DEFAULTS.fullArt);
+    expect(readCardPicks("core-008")).toEqual({ fullArt: false });
+    expect(readCardPicks("core-004")).toEqual({ border: "border-bone" });
   });
 
   it("the panel shows effects speed, intensity and foil after Reduce motion, and the audio controls in their section", () => {
