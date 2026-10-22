@@ -897,9 +897,8 @@ export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
 // `collectionTestid` in collection/collection.ts, none of which this project can import (each
 // reaches `@jackioh/*`, which only the client's own build resolves).
 
-/** `/account`: the Card packs toggle (shop, opening, token picker) and the Dev tools toggle (R1300000). */
+/** `/account`: the Dev tools toggle (R1300000). */
 export const ACCOUNT_SCREEN = "account-screen";
-export const ACCOUNT_PACKS_TOGGLE = "account-packs-toggle";
 export const ACCOUNT_DEV_TOGGLE = "account-dev-toggle";
 
 /** §14.10: the Dev tools panel; its status line says "Done." or the server's refusal word for word. */
