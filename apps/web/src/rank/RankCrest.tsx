@@ -25,8 +25,8 @@ import "./rankCrest.css";
 
 export type RankCrestSize = "small" | "large";
 
-/** A crest's edge in CSS px: small for rows and the phone's rank line, large for the profile, Play and the ladder's own standing. */
-export const CREST_SIZE_PX: Readonly<Record<RankCrestSize, number>> = { small: 16, large: 32 };
+/** A crest's edge in CSS px: small for rows and the phone's rank line, large for the profile, Play and the ladder's own standing. Large stays 24 so the Play hub fits one screen (R1578000). */
+export const CREST_SIZE_PX: Readonly<Record<RankCrestSize, number>> = { small: 16, large: 24 };
 
 export type RankCrestProps =
   | { rank: VisibleRank; size: RankCrestSize }
