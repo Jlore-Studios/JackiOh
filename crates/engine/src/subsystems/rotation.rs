@@ -16,6 +16,7 @@ use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 
+use crate::config::ROTATION_RING;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{GameEvent, PlayerId, Row, ZoneName};
@@ -25,6 +26,13 @@ pub use crate::wire::RotationDirection;
 
 /// R14: two rings, rotated together.
 pub const ROTATION_ROWS: &[Row] = &[Row::Units, Row::Backrow];
+
+// R14 (`ROTATION_RING`): `ROTATION_ROWS` turns the units and the backrow as two rings, the one
+// topology this file plays.
+const _: () = assert!(
+    matches!(ROTATION_RING.as_bytes(), b"two-rings"),
+    "R14: subsystems/rotation.rs turns two independent rings, the units and the backrow"
+);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

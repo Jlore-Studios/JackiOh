@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use crate::brittle_count::active_brittle_count;
 use crate::catalog::def_of;
 use crate::config::{
-    ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
+    ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, FIENDER_STATS_MODE,
+    RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
 };
 use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, Position};
@@ -403,6 +404,13 @@ struct Layered {
     keywords: Vec<Keyword>,
     position: Position,
 }
+
+// R39 (`FIENDER_STATS_MODE`): layer 2 adds Felinor Fiender's sum of your Felinors to its printed
+// stats, each sum floored at 0, the one mode `compute_layers` plays.
+const _: () = assert!(
+    matches!(FIENDER_STATS_MODE.as_bytes(), b"printed-plus-sum"),
+    "R39: layers.rs's layer 2 plays Felinor Fiender as its printed stats plus the sum of your Felinors"
+);
 
 /// §10.4's five layers, attack unfloored: `unit_view` floors it, `unclamped_attack` reads it raw.
 /// Layer 5 reads a sweep's aura entries (`AuraTable`) when given them, else asks every source.

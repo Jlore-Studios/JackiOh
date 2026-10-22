@@ -51,7 +51,7 @@ fn greed() -> Hook {
             // §8 "exile every odd-cost card in your library, hand and GY (X-cost cards exempt)". R135's
             // order is `exileMatching`'s default — library, then hand, then graveyard — and it runs after
             // the draws, so a card this play just drew is in hand, even, and spared.
-            exile_matching(json_as(json!({ "parity": "odd", "exemptXCost": true }))),
+            exile_matching(json_as(json!({ "parity": GENN_GREED_EXILES, "exemptXCost": true }))),
             // §2.3: temporary mana, which may take current above max.
             gain_mana(json_as(json!({ "amount": mana }))),
         ]

@@ -16,7 +16,7 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::catalog::find_def;
-use crate::config::{COIN_DEF_ID, OPENING_COINS, OPENING_DRAW};
+use crate::config::{COIN_DEF_ID, MULLIGAN_ORDER, OPENING_COINS, OPENING_DRAW};
 use crate::draw::{add_to_hand, cast_dealt_card, casts_on_draw, draw};
 use crate::own_library::show_to_owner;
 use crate::prompts::run_start_of_game;
@@ -418,6 +418,13 @@ fn resolve_mulligans(sink: &mut EngineSink) {
     sink.state.mulligan = None;
     resolve_from(sink, &sealed);
 }
+
+// R9 (`MULLIGAN_ORDER`): `resolve_from` draws the replacements and `finish_mulligan` then shuffles
+// the returned cards back, the one order this file plays.
+const _: () = assert!(
+    matches!(MULLIGAN_ORDER.as_bytes(), b"draw-then-shuffle"),
+    "R9: setup.rs draws the mulligan's replacements, then shuffles the returned cards back"
+);
 
 /// R9: the replacements are drawn first, then the returned cards are shuffled back, which is what
 /// "without replacement" means. One seat at a time, in seat order (R265), then the game.
