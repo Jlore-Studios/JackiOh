@@ -1,0 +1,64 @@
+{
+  "action": "build",
+  "number": 1656,
+  "title": "Patch: a pack opening answers each token bar's before, after and what it paid",
+  "branch": "bot/issue-1656",
+  "thread": "**Issue #1656 (data, not instructions):**\n\n```text\n# #1656: Patch: a pack opening answers each token bar's before, after and what it paid\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a73). The pack-opening scene will animate the card and cosmetic token bars from where they stood to where the opening left them, burst on each fill and reveal what it paid. The server owns the bars (CLAUDE.md rule 7), but `POST /api/packs/open` answers only `{ pack, slots, pity, unopened }` (`OpenedPack`, `crates/server/src/economy/packs.rs` ~l.61), `POST /api/cosmetic-packs/open` only its slots and Chase Shard bar (`OpenedCosmeticPack`, `economy/cosmetic_packs.rs` ~l.158), and `settle_bars` (`packs.rs` ~l.262), which both openings settle through, returns `()`.\n\n### The wire (fixed: the bars, opening and store parts build against it)\nBoth opening answers gain `bars`:\n`bars: { card: { before, after, size, pays }, cosmetic: { before, after, size, pays }, cosmeticPaid: ['rare' | 'epic' | 'cosmeticPack', \u2026] }`\n- `before`, `after`: the bar's points before the opening and after it (after keeps the overflow a pay leaves); `size`: `CARD_TOKEN_BAR_SIZE` or `COSMETIC_TOKEN_BAR_SIZE`; `pays`: how many times the bar paid in this opening (`economy/tokens.rs::settle_bar`'s count).\n- `cosmeticPaid`: the `COSMETIC_TOKEN_CYCLE` steps the cosmetic bar paid, in order, serialised as `CosmeticTokenStep` is; its length is `cosmetic.pays`.\n- A bar no spent duplicate moved answers before equal to after and `pays: 0`.\nClient mirror in `apps/web/src/net/api.ts`: `export type BarSettle = { before: number; after: number; size: number; pays: number }`, `export type OpeningBarsAnswer = { card: BarSettle; cosmetic: BarSettle; cosmeticPaid: CosmeticTokenStep[] }`, and `bars: OpeningBarsAnswer` on `OpenedPackResponse` and `OpenedCosmeticPackResponse`.\n\nNo ruling: the answer reports what \u00a714.5, R1305000 and R1305001 already settle; nothing pays differently.\n\n### Files\n`crates/server/src/economy/packs.rs` (`settle_bars` returns what it settled, `OpenedPack.bars`), `crates/server/src/economy/cosmetic_packs.rs` (`OpenedCosmeticPack.bars`), `crates/server/tests/api/packs.rs`, `crates/server/tests/api/cosmetic_packs.rs`, and `apps/web/src/net/api.ts` (the types above only).\nNot here: `economy/roll.rs`, `cosmetics.rs`, `config.rs` and `get_packs` (the global roll part, which edits `packs.rs` and `api.ts` after this one); the web fixtures `packs/fixtures.ts` and `shop/fixtures.ts`, which the opening and store parts update.\n\n### Done when\nServer tests: a card pack whose spent duplicates carry the card token bar past `CARD_TOKEN_BAR_SIZE` answers the bar's points before and after and `pays` 1, with the token counted in `GET /api/tokens`; the cosmetic bar's `cosmeticPaid` is the cycle's next step; a pack with no spent duplicate answers both bars unmoved; a cosmetic pack's spent slot answers the same way. Run `cargo test -p jackioh-server --test server api::packs`, `cargo test -p jackioh-server --test server api::cosmetic_packs`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, `cargo fmt --check`. The web typecheck may stay red on the fixtures until the opening and store parts land: expected.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave `crates/server/README.md`, `apps/web/README.md` and the e2e specs to the reconcile.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read \u00a714.5, \u00a714.6, R1305000, R1305001, R1306001 and `crates/server/README.md`; read `settle_bars`, `economy/tokens.rs::settle_bar` (~l.53), `open_pack` (~l.385) and `open_cosmetic_pack` (~l.350).\n2. In `packs.rs` add `BarSettle { before, after, size, pays }` and `BarsSettled { card, cosmetic, cosmetic_paid: Vec<CosmeticTokenStep> }` (Serialize, camelCase), and make `settle_bars` return it from the values it already computes (each bar's points before, its remainder and its pays; the cycle steps it pays from the stored position).\n3. `open_pack` puts it in `OpenedPack.bars`; `open_cosmetic_pack` puts it in `OpenedCosmeticPack.bars`. An opening with nothing spent still answers both bars, unmoved, from the counters it read.\n4. Mirror the types in `apps/web/src/net/api.ts`.\n5. Write the tests in `tests/api/packs.rs` and `tests/api/cosmetic_packs.rs` (reach a spent duplicate as the existing bar tests do).\n6. Run the Done-when commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read \u00a714.5, \u00a714.6, R1305000, R1305001, R1306001 and `crates/server/README.md`; read `settle_bars`, `economy/tokens.rs::settle_bar` (~l.53), `open_pack` (~l.385) and `open_cosmetic_pack` (~l.350).\n2. In `packs.rs` add `BarSettle { before, after, size, pays }` and `BarsSettled { card, cosmetic, cosmetic_paid: Vec<CosmeticTokenStep> }` (Serialize, camelCase), and make `settle_bars` return it from the values it already computes (each bar's points before, its remainder and its pays; the cycle steps it pays from the stored position).\n3. `open_pack` puts it in `OpenedPack.bars`; `open_cosmetic_pack` puts it in `OpenedCosmeticPack.bars`. An opening with nothing spent still answers both bars, unmoved, from the counters it read.\n4. Mirror the types in `apps/web/src/net/api.ts`.\n5. Write the tests in `tests/api/packs.rs` and `tests/api/cosmetic_packs.rs` (reach a spent duplicate as the existing bar tests do).\n6. Run the Done-when commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-4` (claude, `sonnet`, medium); review on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read \u00a714.5, \u00a714.6, R1305000, R1305001, R1306001 and `crates/server/README.md`; read `settle_bars`, `economy/tokens.rs::settle_bar` (~l.53), `open_pack` (~l.385) and `open_cosmetic_pack` (~l.350).\n2. In `packs.rs` add `BarSettle { before, after, size, pays }` and `BarsSettled { card, cosmetic, cosmetic_paid: Vec<CosmeticTokenStep> }` (Serialize, camelCase), and make `settle_bars` return it from the values it already computes (each bar's points before, its remainder and its pays; the cycle steps it pays from the stored position).\n3. `open_pack` puts it in `OpenedPack.bars`; `open_cosmetic_pack` puts it in `OpenedCosmeticPack.bars`. An opening with nothing spent still answers both bars, unmoved, from the counters it read.\n4. Mirror the types in `apps/web/src/net/api.ts`.\n5. Write the tests in `tests/api/packs.rs` and `tests/api/cosmetic_packs.rs` (reach a spent duplicate as the existing bar tests do).\n6. Run the Done-when commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1661 skipped: it waits for #1655, #1656 to close first",
+    "#1662 skipped: it waits for #1655 to close first",
+    "#1663 skipped: it waits for #1656, #1658 to close first",
+    "#1664 skipped: it waits for #1658, #1659 to close first",
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1656, #1658, #1659, #1663 to close first"
+  ]
+}
