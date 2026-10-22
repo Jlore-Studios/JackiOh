@@ -12419,11 +12419,11 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "queued_at": "2026-10-22T20:31:09Z",
       "requested_by": "jgoetzmann",
-      "run_id": "39850417882",
-      "started_at": "2026-10-22T20:37:04Z",
+      "run_id": "pending:ce9c136c-1792702151",
+      "started_at": "2026-10-22T20:49:27Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -13336,9 +13336,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T20:37:59Z",
+    "at": "2026-10-22T20:49:27Z",
     "url": "",
-    "what": "build #1651 on claude-3"
+    "what": "plan #1676 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-22T20:35:58Z",
