@@ -11431,7 +11431,9 @@
     },
     "1638": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6343887793"
+      ],
       "difficulty_by": {
         "at": "2026-10-22T15:12:46Z",
         "difficulty": "medium",
@@ -11464,9 +11466,7 @@
       "started_at": "2026-10-22T14:59:29Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6343887793"
-      ]
+      "taken_asks": []
     },
     "1640": {
       "asks": [
