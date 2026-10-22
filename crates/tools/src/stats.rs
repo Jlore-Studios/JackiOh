@@ -50,6 +50,9 @@
 //! `cargo jackioh stats fit-dealt <file>…` refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena record
 //! files and prints them to paste (`dealt_fit.rs`).
 //!
+//! `cargo jackioh stats from-selfplay <log>… --out <file>` files `selfplay` logs, the learn lane's
+//! exports, as development records instead (`selfplay_records.rs`, R1676000).
+//!
 //! Tooling, so it may read files, the clock and the console; `crates/ai` stays pure.
 
 use std::io::Write as _;
@@ -72,7 +75,8 @@ use jackioh_engine::{
 };
 
 use crate::arena::{self, paired_interval, wilson_interval};
-use crate::{dealt_fit, golden};
+use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
+use crate::{dealt_fit, golden, selfplay_records};
 
 /// Seconds print with this many decimals.
 const SECONDS_DECIMALS: usize = 1;
@@ -159,6 +163,8 @@ pub enum Command {
     FitDealt(dealt_fit::Args),
     /// R1284000: two forced runs compared: the holder's win rate before and after, and the paired difference.
     Compare(CompareArgs),
+    /// R1676000: selfplay logs filed as development records, one GameRecord per line.
+    FromSelfplay(selfplay_records::Args),
 }
 
 /// `cargo jackioh stats compare --before <file>… --after <file>… --card <id>`: two runs of
@@ -869,6 +875,13 @@ fn run_compare(args: &CompareArgs) -> Result<()> {
 /// an unshipped set's card is refused. A forced run files under its default series, so its records'
 /// ids never collide with a plain run's in `stats-import`; an explicit `--series` with `--force` is refused.
 fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
+    if let Some(series) = &args.series
+        && series.starts_with(SELFPLAY_SERIES_PREFIX)
+    {
+        return Err(anyhow!(
+            "--series {series} is refused: a series beginning \"{SELFPLAY_SERIES_PREFIX}\" is the learn lane's exports' (stats from-selfplay), whose record ids a run under it would take (R1676000)"
+        ));
+    }
     let force = args.force.as_deref().map(golden::resolve_forced).transpose()?;
     if let (Some(series), Some(card)) = (&args.series, &force) {
         return Err(anyhow!(
@@ -944,6 +957,7 @@ pub fn run(args: Args) -> Result<()> {
         Some(Command::Report(report)) => return run_report(report),
         Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
         Some(Command::Compare(compared)) => return run_compare(compared),
+        Some(Command::FromSelfplay(from)) => return selfplay_records::run(from),
         None => {}
     }
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
@@ -1735,6 +1749,30 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(refused.contains("has not shipped (R1420)"), "{refused}");
+    }
+
+    #[test]
+    fn r1676000_a_run_under_a_selfplay_series_is_refused() {
+        let refused = options_of(&["--series=selfplay:learned"])
+            .unwrap_err()
+            .to_string();
+        assert!(refused.contains("R1676000"), "{refused}");
+        assert!(refused.contains("selfplay:learned"), "{refused}");
+        // A series that only starts like the prefix's base is a plain one, as is the gather lane's.
+        assert_eq!(options_of(&["--series=gather"]).unwrap().series, "gather");
+        assert_eq!(options_of(&["--series=selfplay"]).unwrap().series, "selfplay");
+
+        assert_eq!(
+            parse(&["from-selfplay", "a.jsonl", "--out", "r.jsonl"])
+                .unwrap()
+                .command,
+            Some(Command::FromSelfplay(selfplay_records::Args {
+                logs: vec![PathBuf::from("a.jsonl")],
+                out: PathBuf::from("r.jsonl"),
+            }))
+        );
+        assert!(parse(&["from-selfplay", "a.jsonl"]).is_err(), "no --out");
+        assert!(parse(&["from-selfplay", "--out", "r.jsonl"]).is_err(), "no log");
     }
 
     /// `compare`'s options as `main.rs` mounts the subcommand.
