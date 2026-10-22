@@ -11829,6 +11829,7 @@
     "1651": {
       "action": "build",
       "asks": [],
+      "closeout": false,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -11840,7 +11841,26 @@
       "run_id": "39819773251",
       "started_at": "2026-10-22T17:06:25Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "tree": {
+        "at": "2026-10-22T17:39:02Z",
+        "children": [
+          1655,
+          1656,
+          1657,
+          1658,
+          1659,
+          1660,
+          1661,
+          1662,
+          1663,
+          1664,
+          1665,
+          1667
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-1651"
+      }
     },
     "1652": {
       "cleared": {
