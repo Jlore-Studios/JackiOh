@@ -1,0 +1,57 @@
+{
+  "action": "build",
+  "number": 1667,
+  "title": "Patch: the Shop shelves packs as physical objects, and the Chase Shard bar fills",
+  "branch": "bot/issue-1667",
+  "thread": "**Issue #1667 (data, not instructions):**\n\n```text\n# #1667: Patch: the Shop shelves packs as physical objects, and the Chase Shard bar fills\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a75, \u00a73 and \u00a72). It is built on the opening part's pack object, the bars part's components, the pill part's wallet store and the bars-answer part's types, and is blocked by them.\n\n### Do\n- **The shelf** (`apps/web/src/shop/Shop.tsx` ~l.120\u2013170): each pack kind (`shopPacks()`: each shipped set, then the global pack) is a `<PackObject pack={kind} size=shelf>` (`packs/PackObject.tsx`) with its count, price and Buy. Buy presses it (`state=pressed`). On the buy answer, a copy of the pack flies (transform and opacity) into that kind's unopened count, and the panel calls `announceWallet(bought.jlore)` (`economy/wallet.ts`). Keep the wallet line, the shortfall, the disabled Buy and every test id (`shop-wallet`, `shop-buy-<pack>`, `shop-held-<pack>`, \u2026).\n- **The cosmetic pack** (`shop/CosmeticPacks.tsx`): the unopened cosmetic pack is a `<PackObject pack=cosmetic size=shelf>` above Open. Remove the two odds lines (`shopTestid.odds`, `shopTestid.flooredOdds`, ~l.177\u2013187), the `tierPercents` import and the header comment's odds: they move to `/purchases`.\n- **The Chase Shard bar** (`ShardBar`, ~l.252): a FillBar (`economy/FillBar.tsx`) labelled Chase Shard. It fills from the shard points the panel read before the opening to the opening answer's, with no `fills`: a full bar holds (R1306002). When it reaches full it bursts, and the chase choice is revealed as a moment of its own (`economy/RewardReveal.tsx`), not a line of text. Keep `shopTestid.shardBar` on it.\n- **Spent cosmetic slots:** when an opening's `bars` moved (`OpenedCosmeticPackResponse.bars`), the reveal mounts `<OpeningBars bars={opened.bars} />` (`economy/OpeningBars.tsx`).\n- Reduce motion holds every animation still; transform and opacity only.\n\n### Files\n`apps/web/src/shop/Shop.tsx`, `shop/CosmeticPacks.tsx`, `shop/shop.css`, `shop/shop.ts` (test ids), `shop/fixtures.ts` (the cosmetic opening's `bars`), `shop/Shop.test.tsx`.\nNot here: `shop/TokenPicker.tsx` (the bars part), `packs/*` (the opening part), `routes/shop.tsx` (the Purchases part).\n\n### Done when\n`shop/Shop.test.tsx`:\n- delete `R1339000 the cosmetic packs panel shows the server's odds for each slot and the guaranteed one`, and add a test, with no R-id in its title, that the panel shows no odds (the Purchases part's ruling covers the move);\n- each pack kind renders a PackObject;\n- Buy presses it and calls `announceWallet` with the answer's `jlore`;\n- the Chase Shard bar fills from before to after and, at full, reveals the chase choice;\n- under reduced motion the end state shows at once;\n- a stylesheet test reads `shop.css`: its keyframes animate only `transform` and `opacity`.\nRun `pnpm --dir apps/web exec vitest run src/shop src/routes/shop.test.tsx`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec (`shop-screen.cy.tsx` and spec 45 among them). Keep every existing test id.\n\nBlocked by #1663, #1658, #1659, #1656.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read \u00a714.3, \u00a714.5, \u00a714.6, R1306002, R1580000 and `apps/web/README.md`'s `shop/` row; read `shop/Shop.tsx`, `shop/CosmeticPacks.tsx`, `shop/shop.ts`, `shop/shop.css`, `shop/fixtures.ts` and `shop/Shop.test.tsx`, then the opening part's `packs/PackObject.tsx`, the bars part's `economy/FillBar.tsx`, `RewardReveal.tsx` and `OpeningBars.tsx`, and the pill part's `economy/wallet.ts`.\n2. `Shop.tsx`: the shelf of PackObjects, the press on Buy, the fly into the count, `announceWallet(bought.jlore)`.\n3. `CosmeticPacks.tsx`: the cosmetic PackObject; remove the odds lines; the Chase Shard FillBar with its full-bar reveal; OpeningBars on a reveal whose bars moved.\n4. Styles in `shop/shop.css` (transform and opacity only, still under reduce motion); test ids in `shop/shop.ts`; `bars` in the cosmetic opening fixture.\n5. Write the tests in Done when, the stylesheet test among them; run the commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read \u00a714.3, \u00a714.5, \u00a714.6, R1306002, R1580000 and `apps/web/README.md`'s `shop/` row; read `shop/Shop.tsx`, `shop/CosmeticPacks.tsx`, `shop/shop.ts`, `shop/shop.css`, `shop/fixtures.ts` and `shop/Shop.test.tsx`, then the opening part's `packs/PackObject.tsx`, the bars part's `economy/FillBar.tsx`, `RewardReveal.tsx` and `OpeningBars.tsx`, and the pill part's `economy/wallet.ts`.\n2. `Shop.tsx`: the shelf of PackObjects, the press on Buy, the fly into the count, `announceWallet(bought.jlore)`.\n3. `CosmeticPacks.tsx`: the cosmetic PackObject; remove the odds lines; the Chase Shard FillBar with its full-bar reveal; OpeningBars on a reveal whose bars moved.\n4. Styles in `shop/shop.css` (transform and opacity only, still under reduce motion); test ids in `shop/shop.ts`; `bars` in the cosmetic opening fixture.\n5. Write the tests in Done when, the stylesheet test among them; run the commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-6` (claude, `sonnet`, medium); review on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read \u00a714.3, \u00a714.5, \u00a714.6, R1306002, R1580000 and `apps/web/README.md`'s `shop/` row; read `shop/Shop.tsx`, `shop/CosmeticPacks.tsx`, `shop/shop.ts`, `shop/shop.css`, `shop/fixtures.ts` and `shop/Shop.test.tsx`, then the opening part's `packs/PackObject.tsx`, the bars part's `economy/FillBar.tsx`, `RewardReveal.tsx` and `OpeningBars.tsx`, and the pill part's `economy/wallet.ts`.\n2. `Shop.tsx`: the shelf of PackObjects, the press on Buy, the fly into the count, `announceWallet(bought.jlore)`.\n3. `CosmeticPacks.tsx`: the cosmetic PackObject; remove the odds lines; the Chase Shard FillBar with its full-bar reveal; OpeningBars on a reveal whose bars moved.\n4. Styles in `shop/shop.css` (transform and opacity only, still under reduce motion); test ids in `shop/shop.ts`; `bars` in the cosmetic opening fixture.\n5. Write the tests in Done when, the stylesheet test among them; run the commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
