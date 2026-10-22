@@ -458,12 +458,12 @@ describe("#1308 the card packs panel", () => {
     const server = packsServer();
     await panel();
 
-    // Each row: the rarity, a slot's odds, the guaranteed slot's, and the counter for a tracked one.
+    // Each row: the rarity, a slot's odds and the guaranteed slot's; pity is apart from them (R1580000).
     expect(text(T.oddsRow("common"))).toBe("Common50%0%");
     expect(text(T.oddsRow("rare"))).toBe("Rare32%82%");
-    expect(text(T.oddsRow("epic"))).toBe("Epic12.3%12.3%7 / 10 packs");
-    expect(text(T.oddsRow("legendary"))).toBe("Legendary4.5%4.5%13 / 20 packs");
-    expect(text(T.oddsRow("mythic"))).toBe("Mythic1.2%1.2%21 / 40 packs");
+    expect(text(T.oddsRow("epic"))).toBe("Epic12.3%12.3%");
+    expect(text(T.oddsRow("legendary"))).toBe("Legendary4.5%4.5%");
+    expect(text(T.oddsRow("mythic"))).toBe("Mythic1.2%1.2%");
     expect(text(T.pity("epic"))).toBe("7 / 10 packs");
     expect(text(T.pity("legendary"))).toBe("13 / 20 packs");
     expect(text(T.pity("mythic"))).toBe("21 / 40 packs");
@@ -489,6 +489,29 @@ describe("#1308 the card packs panel", () => {
     expect(text(T.pity("legendary"))).toBe("14 / 20 packs");
     expect(text(T.pity("mythic"))).toBe("0 / 40 packs");
     expect(text(T.heldRow("Core"))).toContain("Core pack: 1 unopened");
+  });
+
+  it("R1580000 pity shows once, apart from the odds, above the packs held", async () => {
+    packsServer();
+    await panel();
+
+    const pity = screen.getByTestId(T.pityPanel);
+    expect(within(pity).getByRole("heading", { name: "Pity" })).toBeInTheDocument();
+    expect(pity).toHaveTextContent("Every card pack counts toward the same pity.");
+    expect(within(pity).getByTestId(T.pity("epic"))).toHaveTextContent("7 / 10 packs");
+    expect(within(pity).getByTestId(T.pity("legendary"))).toHaveTextContent("13 / 20 packs");
+    expect(within(pity).getByTestId(T.pity("mythic"))).toHaveTextContent("21 / 40 packs");
+    expect(within(pity).getByTestId(T.pityLine)).toBeInTheDocument();
+    expect(screen.getAllByTestId(T.pity("epic")), "pity shows once, not once per pack").toHaveLength(1);
+    expect(
+      screen.getByTestId(T.odds).querySelector('[data-testid^="packs-pity"]'),
+      "the odds hold no pity",
+    ).toBeNull();
+    expect(
+      pity.compareDocumentPosition(screen.getByTestId(T.held)) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "pity comes before the packs held",
+    ).not.toBe(0);
+    expect(screen.getByRole("heading", { name: "Card packs" })).toBeInTheDocument();
   });
 
   it("an account with no packs is told so", async () => {

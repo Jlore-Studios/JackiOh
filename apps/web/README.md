@@ -237,23 +237,25 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other; the page never
+                        scrolls, its body does
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
                         when /api/auth/me says isDev; the server decides every grant, and the panel shows
                         its answer or refusal; /account's "Manage sign-in & account" shows every account
                         its account secret ID, hidden until asked for, with a copy button
-packs/                  #1308: the card packs on /account (SPEC §14.3, §14.4; `PackOpening.tsx`, lazy-loaded from
-                        routes/account.tsx, shown to an active account once `ECONOMY_LIVE` and before it to a dev
-                        one): the odds and pity counters `GET /api/packs` states, the packs held, and the scene
+packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
+                        by routes/shop.tsx): the pity counters `GET /api/packs` states, shown once for every
+                        card pack, apart from the odds, then the packs held, the odds and the scene
                         that opens one (`POST /api/packs/open`): a tear or swipe, the best rarity tinting the
                         glow, cards turned one at a time (Epic and above on a hold), what each became, a
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
                         at once; the server decided every slot before anything animates (`packs.ts` holds the
                         pure model and the test ids, `fixtures.ts` the fixture responses, `packs.css` the look)
-shop/                   #1309: spending what the economy pays, on /account behind the same packs toggle
-                        (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, lazy-loaded from
-                        routes/account.tsx beside the opening): the Jlore shop buys set and global packs at
+shop/                   #1309: spending what the economy pays, on /shop (R1580000) beside the opening
+                        (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, imported by
+                        routes/shop.tsx): the Jlore shop buys set and global packs at
                         `GET /api/packs`' price (`POST /api/packs/buy`), the button disabled with the
                         shortfall shown when the wallet (`GET /api/wallet`) is short; the token picker shows
                         both token bars and the cycle's next step (`GET /api/tokens`), a card token browsing
