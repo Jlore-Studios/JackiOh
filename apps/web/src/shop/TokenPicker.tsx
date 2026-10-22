@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { CATALOG } from "@jackioh/cards";
 
 import { CardFace, faceModel } from "../cards/index.ts";
+import FillBar from "../economy/FillBar.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   getCollection,
@@ -222,15 +223,23 @@ function TokenBody({
   const cosmetics = redeemableCosmetics(tier, owned, quantities);
   return (
     <>
-      <p className="token-bar" data-testid={shopTestid.cardBar}>
-        {t("Card token bar")}: {bars.cardBar.points} / {bars.cardBar.size}
-      </p>
-      <p className="token-bar" data-testid={shopTestid.cosmeticBar}>
-        {t("Cosmetic token bar")}: {bars.cosmeticBar.points} / {bars.cosmeticBar.size}
-      </p>
-      <p className="token-next" data-testid={shopTestid.nextStep}>
-        {t("Next: {step}", { step: nextStepWords(bars.nextStep) })}
-      </p>
+      <FillBar
+        label={t("Card token bar")}
+        size={bars.cardBar.size}
+        value={bars.cardBar.points}
+        testid={shopTestid.cardBar}
+      />
+      <div className="fill-bar-row">
+        <FillBar
+          label={t("Cosmetic token bar")}
+          size={bars.cosmeticBar.size}
+          value={bars.cosmeticBar.points}
+          testid={shopTestid.cosmeticBar}
+        />
+        <p className="token-next" data-testid={shopTestid.nextStep}>
+          {t("Next: {step}", { step: nextStepWords(bars.nextStep) })}
+        </p>
+      </div>
 
       <h4 className="shop-subheading">{t("Card tokens")}</h4>
       <p className="token-held" data-testid={shopTestid.heldCard}>
