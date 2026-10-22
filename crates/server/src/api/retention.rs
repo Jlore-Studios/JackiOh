@@ -20,23 +20,31 @@
 //! `app.rs` spawns `run_purge`, which runs it at boot and then every
 //! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
 //! `app.purge_expired_rows` (migration 0013, with 0029's third cutoff and 0041's fourth).
+//!
+//! Before it purges, the loop files again any finished match's game record whose write failed (R1596000,
+//! `refile_unfiled`), so the purge never takes the log of a game the card statistics lack.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::json;
 
-use crate::api::game_records::fold_pending;
+use crate::api::game_records::{fold_pending, refile_live_game};
 use crate::api::http::{log_info, log_warn, now_ms};
 use crate::app::App;
 use crate::config::{
-    CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS,
-    PLAY_TELEMETRY_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
+    CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, GAME_RECORD_REFILE_GRACE_SECONDS,
+    GAME_RECORD_REFILE_WINDOW_SECONDS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
+    RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 
 /// Unit conversion, not configuration.
 const MS_PER_DAY: i64 = 86_400_000;
+/// Unit conversion, not configuration.
+const MS_PER_SECOND: i64 = 1_000;
+/// The epoch: a range's start every match ended after.
+const EPOCH_MS: i64 = 0;
 
 pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError> {
     let now = now_ms();
@@ -53,6 +61,35 @@ pub async fn purge_expired(app: &App) -> Result<RetentionPurgeResult, StoreError
     Ok(purged)
 }
 
+/// R1596000: refiles every finished match whose record never landed, while its log is held: each
+/// pass, those that ended inside the window but past the grace, and, a last time, those whose log
+/// the purge takes before its next pass. Answers how many it wrote.
+pub async fn refile_unfiled(app: &App) -> Result<usize, StoreError> {
+    let now = now_ms();
+    let ranges = [
+        (
+            now - GAME_RECORD_REFILE_WINDOW_SECONDS * MS_PER_SECOND,
+            now - GAME_RECORD_REFILE_GRACE_SECONDS * MS_PER_SECOND,
+        ),
+        (
+            EPOCH_MS,
+            now - MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY + RETENTION_PURGE_INTERVAL_SECONDS * MS_PER_SECOND,
+        ),
+    ];
+    let mut filed = 0;
+    for (ended_after, ended_before) in ranges {
+        let mut tx = app.db.begin(None).await?;
+        let unfiled = tx.game_records_unfiled(ended_after, ended_before).await?;
+        tx.commit().await?;
+        for match_id in unfiled {
+            if refile_live_game(app, &match_id).await.is_some() {
+                filed += 1;
+            }
+        }
+    }
+    Ok(filed)
+}
+
 /// The retention purge's loop: once now, since a free instance may sleep before an hour is up, and
 /// then on its interval. A failure is logged and the next run tries again. Never returns; `app.rs`
 /// spawns it.
@@ -65,6 +102,15 @@ pub async fn run_purge(app: Arc<App>) {
             Ok(folded) => log_info("game_records.folded", json!({ "records": folded })),
             Err(error) => log_warn(
                 "game_records.fold_failed",
+                json!({ "message": error.to_string() }),
+            ),
+        }
+        // R1596000: a record whose filing failed is filed again before the purge below can take its log.
+        match refile_unfiled(&app).await {
+            Ok(0) => {}
+            Ok(filed) => log_info("game_records.refiled", json!({ "records": filed })),
+            Err(error) => log_warn(
+                "game_records.refile_failed",
                 json!({ "message": error.to_string() }),
             ),
         }

@@ -4686,6 +4686,36 @@ pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result
     Ok(ids.len())
 }
 
+/// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
+/// result, a final hash (R768; a ceiling draw has none, R112, R1253000), a log the purge has not
+/// taken and no game record, even an emptied one (R1044001). Earliest ended first, then by id.
+pub async fn game_records_unfiled(
+    t: &mut PgTx<'_>,
+    ended_after: i64,
+    ended_before: i64,
+) -> Result<Vec<String>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select m.id from public.matches m",
+        " where m.status = 'over'",
+        " and m.final_hash is not null",
+        " and m.ended_at >= ",
+        ts!("$1"),
+        " and m.ended_at < ",
+        ts!("$2"),
+        " and exists (select 1 from public.results r where r.match_id = m.id)",
+        " and exists (select 1 from public.match_actions a where a.match_id = m.id)",
+        " and not exists (select 1 from public.game_records g where g.id = m.id::text)",
+        " order by m.ended_at, m.id",
+    ))
+    .bind(ended_after)
+    .bind(ended_before)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "id")).collect()
+}
+
 /// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`.
 fn co_json(co: &IndexMap<String, CoCount>) -> Value {
     Value::Object(

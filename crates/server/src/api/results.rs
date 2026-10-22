@@ -515,7 +515,7 @@ pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<R
     // failure to start it is the sweeper's to heal (R263), never this result's.
     resume_series(app, written.series.as_ref()).await;
     // R376: after the commit too, and never at the result's expense — it logs and swallows its
-    // own failures, and a second write of the same match files nothing.
+    // own failures, and a second write of the same match files nothing, and one that failed is filed again by the retention loop while the match's log is held (R1596000).
     record_live_game(app, &input.match_id).await;
     Ok(written.row)
 }

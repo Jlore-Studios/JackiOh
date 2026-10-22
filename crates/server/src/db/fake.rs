@@ -2756,6 +2756,37 @@ pub fn game_records_fold_pending(f: &mut FakeTx<'_>, limit: usize) -> Result<usi
     Ok(pending.len())
 }
 
+/// R1596000: the store's [`crate::db::store::Tx::game_records_unfiled`].
+pub fn game_records_unfiled(
+    f: &mut FakeTx<'_>,
+    ended_after: i64,
+    ended_before: i64,
+) -> Result<Vec<String>, StoreError> {
+    call(f, "gameRecords.unfiled")?;
+    let tables: &FakeTables = f.tables();
+    let mut unfiled: Vec<(i64, String)> = tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Finished
+                && row.final_hash.is_some()
+                && row
+                    .finished_at
+                    .is_some_and(|at| ended_after <= at && at < ended_before)
+                && tables.results.iter().any(|result| result.match_id == row.id)
+                && tables
+                    .match_actions
+                    .iter()
+                    .any(|logged| logged.match_id == row.id)
+                && !tables.game_record_ledger.contains_key(&row.id)
+                && !tables.game_records.iter().any(|record| record.id == row.id)
+        })
+        .filter_map(|row| row.finished_at.map(|at| (at, row.id.clone())))
+        .collect();
+    unfiled.sort();
+    Ok(unfiled.into_iter().map(|(_, id)| id).collect())
+}
+
 /// R1044000: the totals the query reads.
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
     call(f, "statsTotals.load")?;
