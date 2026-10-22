@@ -301,6 +301,18 @@ describe("#1309 the cosmetic packs", () => {
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
+  it("R1579000 an opened cosmetic pack links to the Collection's cosmetics", async () => {
+    cosmeticServer();
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    expect(screen.queryByTestId(T.equipLink)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    expect(screen.getByTestId(T.equipLink)).toHaveAttribute("href", "/collection?section=cosmetics");
+  });
+
   it("a refused open shows its reason and changes nothing on screen", async () => {
     cosmeticServer({ open: refusal(409, "conflict", "no unopened cosmetic pack") });
     const onChanged = vi.fn<() => void>();
