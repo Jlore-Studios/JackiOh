@@ -1,0 +1,51 @@
+{
+  "action": "plan",
+  "number": 1584,
+  "title": "Patch: the floor below the tavern cycles through animated stat cards",
+  "branch": "bot/issue-1584",
+  "thread": "**Issue #1584 (data, not instructions):**\n\n```text\n# #1584: Patch: the floor below the tavern cycles through animated stat cards\nOpened by @MaxGoetzmann.\n\nPart of #1576 (the tavern menu overhaul). Read the tracker's Goals and its stat table first.\n\nBlocked by #1577\nBlocked by #1582\nBlocked by #1583\n\n## What\n\nReplace the text-box stats on the landing's second screen (below the floor; `stats/PlayerStatsCard.tsx`, \"Your table\") with a **showcase that cycles through stats one at a time**. Each stat shows:\n\n- its title (Most Toppled, Most Coveted, Pocket Pick, Old Faithful, Arch-Nemesis, Fallen Hero, The Record, Last Laugh, Springloaded, Survivor: those the stats parts delivered and the player has data for),\n- the card, as a real card face,\n- the player's number for it (\"taken down 37\u00d7\", \"stolen 6\u00d7\", \"you play it 4\u00d7 as often as everyone else\"),\n- and **the card plays an in-game animation that fits**, reused from the board's FX (`apps/web/src/fx/`: exits, entrances, the trap reveal, the Allure mark and steal, attack lunges, ...). Examples from the brief:\n  - **Most Toppled**: the card plays its Death animation.\n  - **Most Coveted**: the Allure effect is placed on it, then it is taken.\n  - **Pocket Pick**: the Trap reveal animation.\n\nReuse, don't rebuild: drive the existing FX on a card outside a game board. Where an FX assumes a board (anchors, lanes), give it a small stage on the landing rather than duplicating the effect. New FX only where no existing one fits a stat, and say which in the PR.\n\nBehaviour:\n- Cycles on a named interval (a constant, not a literal); the player can step forward/back and pick a stat directly.\n- Holds still under reduced motion, under a pointer or focus and while the page is hidden, like the home hand (R639); reduced motion shows the static card and number.\n- Stats with no data are skipped; with no games at all the floor shows what it shows today for a new player.\n- The whole floor still fits exactly one screen below the main one, desktop and phone, no further scrolling (the tracker's one exception).\n- The clear-stats control stays.\n\n## Done when\n\n- Component tests cover the cycle, skipping empty stats, the pause conditions and reduced motion; `landing.test.tsx` covers the floor.\n- A ruling note in this issue's block (or an R639 amendment) states the showcase, with its proving tests.\n- A screenshot of a few stats mid-animation, on desktop and phone, in the PR.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1584: needs a plan; `claude-7` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1584 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first"
+  ]
+}
