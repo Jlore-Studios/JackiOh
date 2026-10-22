@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 1638,
+  "title": "Patch: a rematch after a card patch is refused, as a room's join is",
+  "branch": "bot/issue-1638",
+  "thread": "**Issue #1638 (data, not instructions):**\n\n```text\n# #1638: Patch: a rematch after a card patch is refused, as a room's join is\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAfter a game, both players can press Rematch to play again with the same decks. If a card patch went live between the end of that game and the rematch, the new game still starts on the old cards. The old match's card version is copied onto it, so a nerfed card plays its pre-nerf rules while the client shows today's cards. An All Random rematch is stranger still: its fresh decks are dealt from today's cards but played under the old rules. Every other way into a game already turns away an out-of-date card version. Once this is built, a rematch across a patch is refused with a message saying the cards changed and to start a new game.\n\n## Why\n- Rooms refuse a stale catalog: \"\u00a79.4: a stale catalog is rejected at every door into a match\" (`crates/server/src/actor/rooms.rs:216-219`, answering `UpdateRequired`).\n- The co-op join refuses it too: \"The host's deck was checked against the catalog it was frozen under, which may not deal it now\" (`crates/server/src/duos/rooms.rs:304-313`).\n- The rematch path never compares versions:\n  - `offer_as` (`crates/server/src/api/rematch.rs:565-589`) checks the stakes, that the match is finished and that it is not a series game.\n  - `create_rematch` copies `catalog_version: finished.catalog_version.clone()` (`rematch.rs:318`).\n  - `Registry::start` folds any version this build still carries (`crates/server/src/actor/registry.rs:277-282`).\n- An All Random rematch deals from this build's catalog (`deal_random_deck`, `rematch.rs:211-217`) and plays under the finished match's catalog.\n- Offers are timed per offer (`REMATCH_OFFER_TTL_MS`), not from the match's end. `a_stale_offer_is_ignored_past_the_ttl` (`crates/server/tests/api/rematch.rs:676-703`) makes a rematch more than a TTL after the match finished.\n- The client draws its own current catalog (`apps/web/src/game/currentCatalog.ts`), not the match's.\n- SPEC \u00a79.4 says a \"stale catalog version is rejected at save and queue\". \u00a79.5's rematch paragraph says nothing about versions.\n\n## Proposal\nIn `offer_as`, which serves both people's offers and ladder bots' (`offer_for_bot`), refuse an offer on a match whose `catalog_version` is not `app.catalog.version` before the offer is recorded. Answer 409 `update_required` with the `expected`/`received` details the co-op join sends, and the message \"The cards changed since this game. Start a new one.\" The rematch panel already shows the server's message (`apps/web/src/routes/Rematch.tsx:122-123`). Record the decision as a ruling in the issue's block.\n\nThe alternative is to start the rematch on today's catalog and re-check the frozen decks. It is rejected because a frozen deck may not be legal under the new catalog, as the co-op join's comment says, and it adds a validation path no other door has.\n\n## Where it lands\n- `crates/server/src/api/rematch.rs` (`offer_as`)\n- `crates/server/tests/api/rematch.rs`\n- `spec/rulings/R<issue block>.md`; SPEC \u00a79.5's rematch paragraph and \u00a79.4's list of doors\n\n## Acceptance criteria\n- [ ] Test, failing today (the second offer answers 200 with a `matchId` whose row keeps the old `catalogVersion`): a finished ranked match on an earlier version this build carries; both seats offer, and the second offer answers 409 `update_required` with no live match created.\n- [ ] The same holds for an All Random match and for a ladder bot's offer.\n- [ ] A rematch of a match on the current catalog works as before: the existing rematch tests pass unchanged.\n- [ ] The ruling note lists its test in `proven_in`, and `cargo jackioh spec index` and `cargo jackioh spec check` pass.\n- [ ] `cargo test -p jackioh-server` and `cargo clippy -p jackioh-server --all-targets -- -D warnings` pass.\n\n## Size and risks\nAbout 10 lines, 3 tests and a ruling note: medium. A rematch of a game that ended just before a deploy is refused, which is what rooms and the queue already do. Ladder bots offer fewer rematches in the minutes after a deploy.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T14:58:48Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1638: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1634 needs a plan",
+    "#1638 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
