@@ -2,6 +2,7 @@
 
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 
+import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -53,6 +54,7 @@ export function BackLink({
         {label === undefined ? t("← Back") : t(label)}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
+      {showSettings ? <JlorePill /> : null}
       {showSettings ? <LanguageButton placement="nav" /> : null}
       {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>
