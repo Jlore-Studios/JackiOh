@@ -11320,6 +11320,13 @@
     "1593": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T02:55:43Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails easy line 5 (crates/ai/src, plus a two-word visibility change in crates/engine/src); not hard: this is redaction, not the AI's search or the engine's rules"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
