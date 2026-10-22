@@ -1,0 +1,189 @@
+/* The bar that fills and the reward reveal (#1658, part of #1651): the token bars, the pack opening's
+   two bars and the rewards that fly out of them. Every @keyframes moves only transform and opacity
+   (the fill is a scaleX), each taking its duration from the constants in bars.ts through
+   `--fill-ms`, `--burst-ms` and `--reveal-ms`, and `--fill-from` and `--fill-to` as fractions of the
+   bar. Every animation sits in the one gate below: with the system's reduced motion or the settings'
+   Reduce motion on <html> (`data-reduce-motion`), nothing moves and each element holds its end state
+   (cards/cosmetics.css's gate). The components draw that end state at once under either switch too. */
+
+.fill-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.fill-bar__label {
+  grid-row: 1;
+  grid-column: 1;
+  font-size: 17px;
+}
+
+/* The bar is the main read: its caption is small and secondary. */
+.fill-bar__caption {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: 13px;
+  color: var(--tavern-text-dim, rgb(239 224 191 / 0.72));
+}
+
+.fill-bar__track {
+  position: relative;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  height: 14px;
+}
+
+/* The well clips the fill to the track's rounded ends; the burst rides outside it. */
+.fill-bar__well {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgb(201 149 63 / 0.45);
+  border-radius: 7px;
+  background: var(--tavern-well, #0e0905);
+}
+
+.fill-bar__fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--tavern-brass, #c9953f), var(--tavern-gold, #f3c969));
+  transform-origin: 0 50%;
+}
+
+/* A full bar's burst, at the bar's right end: a glow that grows and fades. */
+.fill-bar__burst {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  margin: -14px -14px 0 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--tavern-gold-pale, #fbe7b0) 0%, var(--tavern-flame, #ffb347) 40%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The native <progress> is for screen readers and specs: out of the picture, in the accessibility tree. */
+.fill-bar__progress {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A bar with a note beside it, wrapping under it on a phone. */
+.fill-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.fill-bar-row > .fill-bar {
+  flex: 1 1 14rem;
+}
+
+.fill-bar-row > p {
+  margin: 0;
+}
+
+/* The two bars of an opening, one above the other, and the rewards under them. */
+.opening-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 24rem);
+}
+
+.reward-reveal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reward-reveal__item {
+  padding: 6px 12px;
+  border: 1px solid var(--tavern-brass, #c9953f);
+  border-radius: 999px;
+  background: rgb(239 224 191 / 0.08);
+  font-weight: 600;
+}
+
+.reward-reveal__item[data-rarity="Rare"] {
+  border-color: var(--rarity-rare, #3d8bfd);
+}
+
+.reward-reveal__item[data-rarity="Epic"] {
+  border-color: var(--rarity-epic, #a45cf0);
+}
+
+.reward-reveal__item[data-rarity="Legendary"] {
+  border-color: var(--rarity-legendary, #ff9f1c);
+}
+
+.reward-reveal__item[data-rarity="Mythic"] {
+  border-color: var(--rarity-mythic, #ff5fd2);
+}
+
+@keyframes fill-bar-sweep {
+  from {
+    transform: scaleX(var(--fill-from));
+  }
+
+  to {
+    transform: scaleX(var(--fill-to));
+  }
+}
+
+@keyframes fill-bar-burst {
+  from {
+    transform: scale(0.3);
+    opacity: 0.95;
+  }
+
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes reward-reveal-fly {
+  from {
+    transform: translateY(28px) scale(0.6);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .fill-bar__fill--sweep {
+    will-change: transform;
+    animation: fill-bar-sweep var(--fill-ms) ease-out both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .fill-bar__burst {
+    will-change: transform, opacity;
+    animation: fill-bar-burst var(--burst-ms) ease-out both;
+  }
+
+  :root:not([data-reduce-motion="true"]) .reward-reveal__item {
+    will-change: transform, opacity;
+    animation: reward-reveal-fly var(--reveal-ms) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+}

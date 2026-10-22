@@ -151,6 +151,49 @@ describe("#1309 the token picker", () => {
     expect(screen.queryByTestId(T.cardPick("core-051-1"))).toBeNull();
   });
 
+  it("#1658 both bars are FillBars at the server's points and size, the next step beside the cosmetic bar", async () => {
+    tokenServer();
+    render(<TokenPicker token={TOKEN} />);
+
+    const card = await screen.findByTestId(T.cardBar);
+    const cosmetic = screen.getByTestId(T.cosmeticBar);
+    expect(card).toHaveClass("fill-bar");
+    expect(card).toHaveTextContent("Card token bar");
+    expect(card.querySelector("progress")).toHaveProperty("value", 149);
+    expect(card.querySelector("progress")).toHaveProperty("max", 150);
+    expect(cosmetic).toHaveClass("fill-bar");
+    expect(cosmetic).toHaveTextContent("Cosmetic token bar");
+    expect(cosmetic.querySelector("progress")).toHaveProperty("value", 30);
+    expect(cosmetic.querySelector("progress")).toHaveProperty("max", 150);
+    // Drawn at the points with no animation, and the cycle's next step beside the cosmetic bar.
+    expect(card).toHaveAttribute("data-state", "resting");
+    expect(cosmetic).toHaveAttribute("data-state", "resting");
+    expect(cosmetic.querySelector<HTMLElement>(".fill-bar__fill")?.style.transform).toBe("scaleX(0.2)");
+    expect(cosmetic.parentElement).toHaveClass("fill-bar-row");
+    expect(cosmetic.parentElement).toContainElement(screen.getByTestId(T.nextStep));
+    expect(cosmetic.parentElement).not.toContainElement(card);
+  });
+
+  it("#1658 a redemption's answer moves the bars to its points without playing them", async () => {
+    const bars = tokenBars();
+    tokenServer({
+      redeem: {
+        status: 200,
+        body: { ...bars, cardBar: { points: 4, size: 150 }, tokens: { ...bars.tokens, card: 0 } } satisfies TokenBarsResponse,
+      },
+    });
+    render(<TokenPicker token={TOKEN} />);
+    await screen.findByTestId(T.cardPick("core-002"));
+
+    fireEvent.click(screen.getByTestId(T.cardPick("core-002")));
+
+    await waitFor(() => {
+      expect(screen.getByTestId(T.cardBar)).toHaveTextContent("4 / 150");
+    });
+    expect(screen.getByTestId(T.cardBar).querySelector("progress")).toHaveProperty("value", 4);
+    expect(screen.getByTestId(T.cardBar)).toHaveAttribute("data-state", "resting");
+  });
+
   it("a Rare token lists no Epic, Legendary or Mythic cosmetic", async () => {
     tokenServer();
     render(<TokenPicker token={TOKEN} />);
