@@ -1,0 +1,17 @@
+{
+  "title": "The other player sees only that a prompt is open",
+  "sources": "#1594",
+  "notes": "R81, §10.6: a prompt's promptOpened and promptAnswered events reach the other seat as their player alone; the kind and the choice id stay the holder's. Only the views change: no state, event or legal action does, so every game's view hashes move and the classifier reads it as a rule every game meets.",
+  "player": {
+    "title": "Your choices stay private",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "While you make a choice, your opponent sees only that you are choosing, not what kind of choice it is."
+    ]
+  },
+  "cards": [],
+  "rule": true
+}

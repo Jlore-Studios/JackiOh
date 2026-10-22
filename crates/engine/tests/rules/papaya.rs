@@ -449,7 +449,7 @@ mod r831003_each_cell_is_discovered_among_3_random_cells {
                 .map(|fields| fields.keys().cloned().collect())
                 .unwrap_or_default();
             keys.sort();
-            assert_eq!(keys, vec!["choiceId", "kind", "player", "type"]);
+            assert_eq!(keys, vec!["player", "type"]);
         }
     }
 }

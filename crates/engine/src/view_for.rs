@@ -15,7 +15,7 @@
 //!   - R13, §3.2: the lower cards of a Stack pile are dormant and not on the field. The view shows
 //!     the top card and a count of what is buried under it, never a buried card's identity.
 //!   - R81: only the viewer's own prompt carries its options; the other player's prompt shows that
-//!     it is open and whose it is, nothing more.
+//!     it is open and whose it is, nothing more, and so do its `promptOpened` and `promptAnswered`.
 //!   - R97: the event stream is redacted, not truncated. An event that names a card the viewer may
 //!     not read keeps its type and its animation fields and shows `HIDDEN_ID` for that card.
 //!   - R764: a Glitch's reset or boards (R676, R678) takes cards out of the match unseen, so the events
@@ -2239,8 +2239,19 @@ fn redact_event(
             rebuild(shown)
         }
 
-        // Public through and through: these name a player, a zone or a number, never a card. A
-        // `promptOpened` event says a prompt is open and whose, which is all §10.6 grants.
+        // R81, §10.6: the other seat learns that a prompt is open and whose, and nothing more. Its
+        // kind would narrow the card that asked, a hidden one among them, and its id counts the
+        // match's prompts. The holder reads both.
+        GameEventType::PromptOpened | GameEventType::PromptAnswered => {
+            if text_at(&shown, "player") == viewer.as_str() {
+                return event.clone();
+            }
+            shown.remove("choiceId");
+            shown.remove("kind");
+            rebuild(shown)
+        }
+
+        // Public through and through: these name a player, a zone or a number, never a card.
         // R315: a fatigue draw names a player and two numbers, and the fatigue count is public (§10.8).
         GameEventType::HealthLost
         | GameEventType::Fatigue
@@ -2253,8 +2264,6 @@ fn redact_event(
         | GameEventType::TurnStarted
         | GameEventType::TurnEnded
         | GameEventType::TurnAutoEnded
-        | GameEventType::PromptOpened
-        | GameEventType::PromptAnswered
         | GameEventType::DrawOffered
         | GameEventType::DrawAnswered
         // MD-D29, R1127: an emote names no card, so both seats read it as it is.

@@ -629,7 +629,7 @@ mod tests {
             matches!(
                 event,
                 GameEvent::PromptOpened {
-                    kind: PromptKind::Reward,
+                    kind: Some(PromptKind::Reward),
                     ..
                 }
             )
