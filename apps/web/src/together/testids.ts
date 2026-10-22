@@ -87,8 +87,11 @@ export const challengeToastTestid = {
 export const watchTestid = {
   /** `data-connection` (`connecting|open|closed|refused`). */
   screen: "watch-screen",
+  /** The panel before the first view: the wait, or (#1599) the notice that the reopens ran out. */
   waiting: "watch-waiting",
   refused: "watch-refused",
+  /** #1599: the sentence that stands in for the wait once the reopens ran out before any view. */
+  gone: "watch-gone",
   status: "watch-status",
   back: "watch-back",
   /** #1570: "Reconnect now", once the screen's own reopens have run out on a game still running. */

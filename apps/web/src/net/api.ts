@@ -1332,6 +1332,16 @@ export function getCardDrillDown(
   });
 }
 
+/** R1583000: `GET /api/stats/play-rates`: each listed card's share of the human live seats that played it. */
+export type PlayRatesResponse = {
+  decks: number;
+  cards: { id: string; rate: number }[];
+};
+
+export function getPlayRates(signal?: AbortSignal): Promise<PlayRatesResponse> {
+  return apiRequest<PlayRatesResponse>("/api/stats/play-rates", { signal });
+}
+
 export type PlayerStatsAccountResponse = {
   stats: Record<string, unknown>;
   isPrivate: boolean;
