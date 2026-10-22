@@ -291,6 +291,14 @@ class GitHub:
             if exc.status != 404:
                 raise
 
+    def lock(self, number: int) -> None:
+        """Lock an issue's or pull request's conversation: only collaborators may comment
+        (`.github/workflows/lock-conversations.yml`). The empty body sends a Content-Length."""
+        self.request("PUT", f"{self._r}/issues/{int(number)}/lock", {})
+
+    def unlock(self, number: int) -> None:
+        self.request("DELETE", f"{self._r}/issues/{int(number)}/lock")
+
     def list_labels(self) -> list[dict]:
         return self.paginate(f"{self._r}/labels")
 
