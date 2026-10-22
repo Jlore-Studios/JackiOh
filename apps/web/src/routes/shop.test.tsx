@@ -3,7 +3,7 @@
 // the caller's token and the others again when one changes the account (#1309, moved from the account
 // screen). The route table serves it behind the gate like `/collection` (the anonymous and pending
 // bounces live in gate.test.tsx beside the other routes'): an active account sees the shop, the
-// landing's Shop door lands on it and so does the account screen's link.
+// landing's Shop door lands on it, and the account screen links it no more (R1646000).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -258,17 +258,18 @@ describe("#1577 the /shop route through the route table", () => {
   });
 });
 
-describe("R1580000 the account screen links the Shop", () => {
-  it("R1580000 the account screen's Shop link ends on /shop", async () => {
+describe("R1646000 the account screen links no Shop", () => {
+  it("R1646000 the account screen, through the route table, offers no link to /shop", async () => {
     serveShop();
     signedIn();
     at(paths.account);
     render(<App />);
 
-    fireEvent.click(await screen.findByTestId(accountTestid.shop, undefined, SLOW), { button: 0 });
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.shop);
-    }, SLOW);
-    expect(await screen.findByTestId(packTestid.pity("epic"), undefined, SLOW)).toHaveTextContent("7 / 10 packs");
+    const record = await screen.findByTestId(accountTestid.record, undefined, SLOW);
+    const account = screen.getByTestId(accountTestid.screen);
+    expect(account).toContainElement(record);
+    expect(account.querySelector(`a[href="${paths.shop}"]`)).toBeNull();
+    expect(within(account).queryByRole("link", { name: "Shop" })).toBeNull();
+    expect(window.location.pathname).toBe(paths.account);
   });
 });

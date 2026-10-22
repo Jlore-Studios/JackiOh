@@ -209,7 +209,7 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
-                        largest, Practice, Card creator, Play together and Replays as four smaller links
+                        largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
                         panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
