@@ -17,6 +17,7 @@ use crate::rules::fixtures::play_pipeline_b::{
     jogg_box, mode_spell, named_caster, pb_act, pb_playing, pb_reduce, solarius, target_spell, their_choice,
     tyrant, x_spell, x_target,
 };
+use crate::rules::fixtures::prompts::{BACK_BUDGET, back_from_gy, register_prompt_fixtures, rewind};
 
 // Inline cards for the chain cap and the nested cases, indexed clear of the shared fixtures.
 fn spell(name: &str, index: u32) -> CardDef {
@@ -43,6 +44,8 @@ const CASTS_DISCOVER: &str = "pbc-casts-discover";
 // R656: a helpful Spell — its target declaration aims "help", so a cast that targets enemies
 // prefers friends for it.
 const HEAL_FRIEND: &str = "pbc-heal-friend";
+// R452: a Unit whose Cry aims at any unit or hero, triggered by a random cast of Rewind.
+const CRY_ANY: &str = "pbc-cry-any";
 
 fn inline_defs() -> Vec<CardDef> {
     vec![
@@ -52,6 +55,12 @@ fn inline_defs() -> Vec<CardDef> {
         spell("casts-named", 4604),
         spell("casts-discover", 4605),
         spell("heal-friend", 4606),
+        json_as(json!({
+            "id": CRY_ANY, "index": "4690", "name": "cry-any (casts)", "set": "Core", "type": "Unit",
+            "tags": [], "rarity": "Common", "token": false, "cost": 1,
+            "base": { "attack": 1, "health": 3, "keywords": [], "text": "cry-any" },
+            "radiant": { "attack": 2, "health": 6, "keywords": [], "text": "cry-any" },
+        })),
     ]
 }
 
@@ -134,6 +143,18 @@ fn inline_scripts() -> IndexMap<String, CardScripts> {
                 vec![heal(json_as(
                     json!({ "target": { "of": "chosen" }, "amount": 3 }),
                 ))]
+            })),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        CRY_ANY.to_string(),
+        both(Script {
+            targets: vec![json_as(json!({
+                "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] }
+            }))],
+            cry: Some(hook(|_ctx| {
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]
             })),
             ..Script::default()
         }),
@@ -302,6 +323,21 @@ fn added_def_ids(events: &[GameEvent]) -> Vec<String> {
 
 fn set_damage(state: &mut GameState, id: &str, damage: i32) {
     find_instance_mut(state, id).expect("the unit").damage = damage;
+}
+
+/// R452: p2 has two Units, p1's one Unit is CRY_ANY, whose Cry a cast Rewind (the prompts fixture) triggers.
+fn cry_board(state: &mut GameState) -> CardInstance {
+    register_prompt_fixtures();
+    put(state, "fx-3", slot(PlayerId::P2, Row::Units, 2), json!({}));
+    put(state, "fx-3", slot(PlayerId::P2, Row::Units, 3), json!({}));
+    put(state, CRY_ANY, slot(PlayerId::P1, Row::Units, 1), json!({}))
+}
+
+/// One random cast of the prompts fixture's Rewind.
+fn cast_rewind(target_enemies: bool) -> Vec<Effect> {
+    vec![cast_random(json_as(json!({
+        "query": { "defId": rewind().id }, "count": 1, "targetEnemies": target_enemies
+    })))]
 }
 
 mod e12_casts_from_anywhere_r70_r453 {
@@ -817,6 +853,71 @@ mod e12_random_casts_r452 {
         )));
         assert!(DISCOVER_POOL.contains(&mine.as_str()));
     }
+
+    #[test]
+    fn r452_a_random_cast_s_budgeted_pick_summons_only_a_set_that_fits_its_budget() {
+        let mut summoned = 0;
+        for seed in 1..=8 {
+            let mut state = playing(&format!("r452-budget-{seed}"));
+            register_prompt_fixtures();
+            let costs = [3, 3, 4, 4];
+            let graves: Vec<(String, i32)> = costs
+                .iter()
+                .map(|&cost| {
+                    let mut card = new_instance(
+                        &mut state,
+                        "fx-2",
+                        PlayerId::P1,
+                        Zone::Graveyard { player: PlayerId::P1 },
+                    );
+                    card.cost_override = Some(cost);
+                    state.players[PlayerId::P1].graveyard.push(card.clone());
+                    (card.id, cost)
+                })
+                .collect();
+            run(
+                &mut state,
+                vec![cast_random(json_as(
+                    json!({ "query": { "defId": back_from_gy().id }, "count": 1 }),
+                ))],
+                None,
+            );
+            assert!(state.pending.is_none());
+            let on_field: Vec<&(String, i32)> = graves
+                .iter()
+                .filter(|(id, _)| {
+                    find_instance(&state, id).is_some_and(|card| matches!(card.zone, Zone::Field { .. }))
+                })
+                .collect();
+            let spent: i32 = on_field.iter().map(|(_, cost)| cost).sum();
+            assert!(
+                spent <= BACK_BUDGET,
+                "seed {seed}: summoned costs {:?}, over the budget of {BACK_BUDGET}",
+                on_field.iter().map(|(_, cost)| cost).collect::<Vec<_>>()
+            );
+            summoned += on_field.len();
+        }
+        assert!(summoned > 0);
+    }
+
+    #[test]
+    fn r452_a_cry_a_random_cast_triggers_draws_its_target_from_the_rng_and_asks_nobody() {
+        let mut targets: BTreeSet<String> = BTreeSet::new();
+        for seed in 1..=6 {
+            let mut state = playing(&format!("r452-cry-{seed}"));
+            cry_board(&mut state);
+            let mut again = round_trip(&state);
+            let events = run(&mut state, cast_rewind(false), None);
+            run(&mut again, cast_rewind(false), None);
+            assert!(state.pending.is_none());
+            assert!(events_of_type(&events, GameEventType::PromptOpened).is_empty());
+            assert_eq!(hash_state(&again), hash_state(&state));
+            let hits = damage_targets(&events);
+            assert_eq!(hits.len(), 1, "seed {seed}: {hits:?}");
+            targets.extend(hits);
+        }
+        assert!(targets.len() > 1, "{targets:?}");
+    }
 }
 
 mod e39_target_enemies_on_a_cast_its_caster_makes_r452 {
@@ -1079,5 +1180,21 @@ mod r656_aimed_random_targets {
             }
         }
         assert_eq!(seen, BTreeSet::from(["friend", "enemy"]));
+    }
+
+    #[test]
+    fn r656_a_random_cast_that_targets_enemies_aims_the_cry_it_triggers_at_an_enemy() {
+        for seed in 1..=6 {
+            let mut state = playing(&format!("r656-cry-{seed}"));
+            let mine = cry_board(&mut state);
+            let events = run(&mut state, cast_rewind(true), None);
+            assert!(state.pending.is_none());
+            let hit = damage_targets(&events);
+            assert_eq!(hit.len(), 1, "seed {seed}: {hit:?}");
+            assert!(
+                ![mine.id.clone(), "hero-p1".to_string()].contains(&hit[0]),
+                "seed {seed}: {hit:?}"
+            );
+        }
     }
 }
