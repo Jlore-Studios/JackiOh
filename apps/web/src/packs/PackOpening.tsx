@@ -1,5 +1,6 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4): the odds and the pity
-// counters the server states, the packs the account holds, and the scene that opens one.
+// counters the server states, the packs the account holds, and the scene that opens one. It is on the
+// Shop screen (`routes/shop.tsx`), where pity shows once for every card pack (R1580000).
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `PackScene` never rolls: it draws the slots `POST
 // /api/packs/open` already settled, and nothing on screen changes before that answer. Tearing is a
@@ -40,6 +41,7 @@ import {
   PACK_SWIPE_PX,
   PACK_TEAR_MS,
   ODDS_RARITIES,
+  PITY_RARITIES,
   bestRarity,
   holdsToFlip,
   packName,
@@ -411,6 +413,7 @@ export default function PackOpening({
 
   return (
     <div className="form-card packs-panel" data-testid={packTestid.panel}>
+      <h3 className="shop-heading">{t("Card packs")}</h3>
       {loadError === null ? null : (
         <>
           <p className="notice" role="alert" data-testid={packTestid.loadError}>
@@ -437,8 +440,9 @@ export default function PackOpening({
       ) : null}
       {info === null ? null : (
         <>
-          <PackOdds info={info} />
+          <PackPity info={info} />
           <PacksHeld info={info} onOpen={start} />
+          <PackOdds info={info} />
         </>
       )}
       {scene === null ? null : (
@@ -459,11 +463,41 @@ export default function PackOpening({
 }
 
 /**
- * The odds per rarity of a slot and of the floored slot, the fallback included, the counters and
- * pity's guarantee, all as `GET /api/packs` states them (R1339000).
+ * R1580000: how close each tracked rarity's pity is, as `GET /api/packs` states it; one counter set
+ * counts every card pack (R1298000), so it shows once.
+ */
+function PackPity({ info }: { info: PacksResponse }): ReactElement {
+  const { pity, thresholds } = info;
+  return (
+    <div className="packs-pity" data-testid={packTestid.pityPanel}>
+      <h4 className="shop-subheading">{t("Pity")}</h4>
+      <p>{t("Every card pack counts toward the same pity.")}</p>
+      <ul className="packs-pity__list">
+        {PITY_RARITIES.map(({ key, rarity }) => (
+          <li key={key} className="packs-pity__row">
+            <span>{t(rarity)}</span>
+            <span data-testid={packTestid.pity(key)}>
+              {t("{count} / {threshold} packs", { count: pity[key], threshold: thresholds[key] })}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p data-testid={packTestid.pityLine}>
+        {t(
+          "Pity guarantees an Epic within {epic} packs, a Legendary within {legendary} packs and a Mythic within {mythic} packs.",
+          thresholds,
+        )}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The odds per rarity of a slot and of the floored slot, the fallback included, and what a
+ * duplicate becomes, all as `GET /api/packs` states them (R1339000). Pity is `PackPity`'s.
  */
 function PackOdds({ info }: { info: PacksResponse }): ReactElement {
-  const { odds, pity, thresholds } = info;
+  const { odds } = info;
   return (
     <div data-testid={packTestid.odds}>
       <table className="packs-odds">
@@ -472,7 +506,6 @@ function PackOdds({ info }: { info: PacksResponse }): ReactElement {
             <th scope="col">{t("Rarity")}</th>
             <th scope="col">{t("Each slot")}</th>
             <th scope="col">{t("Guaranteed slot")}</th>
-            <th scope="col">{t("Pity")}</th>
           </tr>
         </thead>
         <tbody>
@@ -481,23 +514,10 @@ function PackOdds({ info }: { info: PacksResponse }): ReactElement {
               <th scope="row">{t(rarity)}</th>
               <td>{percent(odds.slot[key])}</td>
               <td>{percent(odds.flooredSlot[key])}</td>
-              {key === "common" || key === "rare" ? (
-                <td />
-              ) : (
-                <td data-testid={packTestid.pity(key)}>
-                  {t("{count} / {threshold} packs", { count: pity[key], threshold: thresholds[key] })}
-                </td>
-              )}
             </tr>
           ))}
         </tbody>
       </table>
-      <p data-testid={packTestid.pityLine}>
-        {t(
-          "Pity guarantees an Epic within {epic} packs, a Legendary within {legendary} packs and a Mythic within {mythic} packs.",
-          thresholds,
-        )}
-      </p>
       <p data-testid={packTestid.duplicate}>
         {t(
           "A duplicate becomes a cosmetic: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}. With none of that rarity left to own, it fills both token bars.",

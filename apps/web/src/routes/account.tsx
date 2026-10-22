@@ -32,14 +32,8 @@
 // hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
 // gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
 //
-// CARD PACKS (#1308, SPEC §14.3, §14.4): an active account gets "Card packs" behind a toggle too: the
-// odds and pity counters the server states, the packs held, and the scene that opens one
-// (`packs/PackOpening.tsx`), now that the economy is live (`ECONOMY_LIVE`, §14.12, R1310000); with the
-// switch off only a dev account is offered it (`packsShown`). The same toggle mounts what the economy pays for
-// them (#1309, `shop/`): the Jlore shop, the token picker and the cosmetic packs with the Chase
-// Shard bar. Each panel holds its own reads, so when one changes the account the others read it
-// again (`readAgain`): a pack bought in the shop can be opened at once, and an opening's bars,
-// cards and cosmetics show in the picker.
+// THE SHOP (#1580, R1580000): packs, opening, pity, tokens and cosmetic packs live on `/shop`; this
+// screen links it and keeps account things only.
 //
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
@@ -47,8 +41,6 @@
 // page. A refusal leaves everything as it was and says why.
 
 import {
-  lazy,
-  Suspense,
   useEffect,
   useId,
   useState,
@@ -57,7 +49,7 @@ import {
   type ReactElement,
 } from "react";
 
-import { AUTH_SIGN_OUT_WAIT_SECONDS, ECONOMY_LIVE } from "@jackioh/server-config";
+import { AUTH_SIGN_OUT_WAIT_SECONDS } from "@jackioh/server-config";
 import {
   deleteAccount,
   getOwnRank,
@@ -84,14 +76,6 @@ import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 import "../auth/tavern.css";
 import "./account.css";
 
-// This file is in the entry chunk, so the pack scene, its fx director and its card faces load only
-// once the panel is opened. The shop, the token picker and the cosmetic packs ride the same
-// chunk: they mount beside the opening, behind the same toggle.
-const PackOpening = lazy(() => import("../packs/PackOpening.tsx"));
-const Shop = lazy(() => import("../shop/Shop.tsx"));
-const TokenPicker = lazy(() => import("../shop/TokenPicker.tsx"));
-const CosmeticPacks = lazy(() => import("../shop/CosmeticPacks.tsx"));
-
 export const accountTestid = {
   screen: "account-screen",
   email: "account-email",
@@ -103,9 +87,10 @@ export const accountTestid = {
   badges: "account-badges",
   leaderboard: "account-leaderboard",
   collection: "account-collection",
+  /** R1580000: the link to the Shop. */
+  shop: "account-shop",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
-  packsToggle: "account-packs-toggle",
   record: "account-record",
   winRate: "account-win-rate",
   signOut: "account-sign-out",
@@ -259,7 +244,6 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [attempt, setAttempt] = useState(0);
   const [manageOpen, setManageOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
-  const [packsOpen, setPacksOpen] = useState(false);
 
   useEffect(() => {
     if (pending) return;
@@ -389,7 +373,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               </div>
             </div>
             {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
-            {/* §14.9's quests moved to /collection (#1307). */}
+            {/* §14.9's quests moved to /collection (#1307), the packs to /shop (R1580000). */}
             <div className="account-actions">
               <a
                 className="button-secondary"
@@ -399,18 +383,16 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               >
                 {t("Collection")}
               </a>
+              <a
+                className="button-secondary"
+                href={paths.shop}
+                data-testid={accountTestid.shop}
+                onClick={followInApp(paths.shop)}
+              >
+                {t("Shop")}
+              </a>
             </div>
           </>
-        ) : null}
-
-        {packsShown(me) ? (
-          <AccountPacks
-            open={packsOpen}
-            onToggle={() => {
-              setPacksOpen(!packsOpen);
-            }}
-            token={token}
-          />
         ) : null}
 
         <AccountManage
@@ -587,77 +569,6 @@ function AccountDevTools({
       {open ? (
         <div className="account-manage__body" id={bodyId}>
           <DevTools token={token} />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * Whether the account is offered card packs: an active account while the economy is live
- * (`ECONOMY_LIVE`, §14.12, R1310000), and with the switch off a dev account alone (the server's word,
- * `me.isDev`), as it was before going live, so the opening could be tried on staging and production
- * before players saw it. The routes check the account again.
- */
-export function packsShown(me: MeResponse | undefined, live: boolean = ECONOMY_LIVE): boolean {
-  return me?.profile.status === "active" && (live || me.isDev === true);
-}
-
-/** The panels behind the Card-packs toggle, each reading its own part of the account. */
-type PacksPanel = "opening" | "shop" | "tokens" | "cosmetics";
-
-/** How many times each panel has been told to read again. */
-type PanelReads = Record<PacksPanel, number>;
-
-/**
- * The reads after `by` changed the account (a pack bought or opened, a token redeemed, a chase
- * bought): every other panel reads again, since a buy fills the opening's packs and an opening
- * fills the bars, the collection and the cosmetics. `by` already holds its answer.
- */
-function readAgain(reads: PanelReads, by: PacksPanel): PanelReads {
-  return {
-    opening: reads.opening + (by === "opening" ? 0 : 1),
-    shop: reads.shop + (by === "shop" ? 0 : 1),
-    tokens: reads.tokens + (by === "tokens" ? 0 : 1),
-    cosmetics: reads.cosmetics + (by === "cosmetics" ? 0 : 1),
-  };
-}
-
-/** "Card packs": the odds, the pity counters, the packs held and the opening scene, behind a toggle. */
-function AccountPacks({ open, onToggle, token }: { open: boolean; onToggle: () => void; token: string }): ReactElement {
-  const bodyId = useId();
-  const [reads, setReads] = useState<PanelReads>({ opening: 0, shop: 0, tokens: 0, cosmetics: 0 });
-  const changedBy = (by: PacksPanel) => (): void => {
-    setReads((before) => readAgain(before, by));
-  };
-  return (
-    <div className="account-manage">
-      <div className="account-actions">
-        <button
-          type="button"
-          className="account-manage__toggle"
-          data-testid={accountTestid.packsToggle}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          onClick={onToggle}
-        >
-          {t("Card packs")}
-        </button>
-      </div>
-      {open ? (
-        <div className="account-manage__body" id={bodyId}>
-          <Suspense
-            fallback={
-              <p className="notice" role="status">
-                {t("Loading your packs…")}
-              </p>
-            }
-          >
-            <PackOpening token={token} revision={reads.opening} onChanged={changedBy("opening")} />
-            <Shop token={token} revision={reads.shop} onChanged={changedBy("shop")} />
-            <TokenPicker token={token} revision={reads.tokens} onChanged={changedBy("tokens")} />
-            <CosmeticPacks token={token} revision={reads.cosmetics} onChanged={changedBy("cosmetics")} />
-          </Suspense>
         </div>
       ) : null}
     </div>
