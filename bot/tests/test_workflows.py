@@ -444,6 +444,28 @@ class TriageWorkflowTests(unittest.TestCase):
                       "github.event.label.name == 'human'", job(self.text, "triage"))
 
 
+class WakeWorkflowTests(unittest.TestCase):
+    text = read("claude-wake.yml")
+
+    def test_each_wake_holds_one_secret_and_no_write_token(self):
+        ping = job(self.text, "ping")
+        self.assertIn("permissions: {}", ping)
+        self.assertEqual(set(re.findall(r"\$\{\{\s*(secrets[^}]*?)\s*\}\}", ping)),
+                         {"secrets[matrix.account.secret]"})
+
+    def test_the_clock_reads_only_and_learns_only_which_secrets_are_set(self):
+        clock = job(self.text, "clock")
+        perms = re.search(r"permissions:\n((?:\s{6}.*\n)+)", clock).group(1)
+        grants = dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", perms, re.M))
+        self.assertEqual(grants, {"contents": "read", "actions": "read"})
+        for mention in re.findall(r"secrets\.(\w+)[^}]*", clock):
+            self.assertIn(f"secrets.{mention} != '' && '{mention}'", clock)
+        self.assertNotIn("secrets[", clock)
+
+    def test_it_is_linted(self):
+        self.assertTrue(linted("claude-wake.yml"))
+
+
 class RequiredChecksTests(unittest.TestCase):
     def test_every_required_check_is_a_job_that_runs_on_every_pull_request(self):
         cfg = config.load(env={})

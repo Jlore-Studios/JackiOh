@@ -456,6 +456,14 @@ as set up; turn one off with `enabled: false`, or for a while, without a pull re
 `/harness suspend <id>` (until `/harness resume <id>`). `python3 -m harness providers` in `bot/`
 prints each one and whether it could start now, and `/harness status` does the same on GitHub.
 
+**The morning start.** `claude-wake.yml` starts each Claude account's 5-hour session at 06:00
+America/Chicago (`wake.py`), Squishy's included, so it resets at 11:00 rather than at whatever hour
+the first run of the day lands. An account whose session the state file shows running, one
+suspended, and every account of a halted bot are left alone; each other one gets one turn of
+`claude-haiku-5-5` at low effort, in a job holding only its own secret. GitHub starts schedules
+late, so it fires in the hours before and sleeps until 06:00; run it by hand with `now` to wake
+them at any hour.
+
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
   carry their effort (`gemini-3.8-flash-high`; `agy models` lists them), and `effort` matches it.
@@ -1285,6 +1293,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `asks.py` | the reactions that follow a request from its comment to its answer |
 | `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
 | `quiet.py` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
+| `wake.py` | the morning start (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago |
 | `providers.py` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
 | `runner.py` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
