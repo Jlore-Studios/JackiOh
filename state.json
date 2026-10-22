@@ -12106,6 +12106,13 @@
     "1615": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T05:00:10Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "hard's 'engine rules (crates/engine/src/)' was the close call: engine/src only loses two entries of a constant list and its lookup table, no rule logic; a new ruling, a card-play fragment and 19 files rule out easy"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
