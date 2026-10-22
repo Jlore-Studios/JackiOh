@@ -8,8 +8,9 @@
 //!   fresh seed and every grant written, its cards, cosmetics, pity counters and bars, a full bar
 //!   paying its tokens with the overflow kept (`economy::tokens::settle_bar`, R1305000, R1305001),
 //!   with the opening's log (its catalog, cosmetics, seed and result) in the `ref` of every
-//!   economy row it writes (R1301003). The whole opening or nothing: every refusal returns before
-//!   the commit, and the dropped `Tx` rolls it all back.
+//!   economy row it writes (R1301003). It answers what each bar did, its points before and after
+//!   and what it paid ([`BarsSettled`]). The whole opening or nothing: every refusal returns
+//!   before the commit, and the dropped `Tx` rolls it all back.
 //! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters, the odds and the
 //!   unopened packs held), `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
 //!   or `GLOBAL_PACK_NAME`.
@@ -18,7 +19,8 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 use jackioh_engine::wire::SHIPPED_SETS;
-use serde::{Deserialize, Serialize};
+use serde::de::Error as _;
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{Value, json};
 
 use crate::api::collection::{caller_profile, owned_in};
@@ -54,8 +56,8 @@ pub struct BoughtPack {
     pub unopened: i64,
 }
 
-/// What opening a pack answers: the pack, its slots in order, the pity counters after it and the
-/// packs of its kind still held.
+/// What opening a pack answers: the pack, its slots in order, the pity counters after it, the
+/// packs of its kind still held and what the opening did to both token bars.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedPack {
@@ -63,6 +65,47 @@ pub struct OpenedPack {
     pub slots: Vec<Slot>,
     pub pity: PityCounters,
     pub unopened: i64,
+    pub bars: BarsSettled,
+}
+
+/// One token bar across an opening (R1305000): its points `before` the opening and `after` it (the
+/// overflow a pay leaves kept), its `size` and how many times it `pays` in this opening. A bar no
+/// spent duplicate moved has `before == after` and `pays == 0`.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BarSettle {
+    pub before: i64,
+    pub after: i64,
+    pub size: i64,
+    pub pays: i64,
+}
+
+/// What an opening did to both token bars (R1305000, R1305001), for the client to animate from
+/// where each stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the
+/// cycle's steps it paid, in order, so its length is `cosmetic.pays`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BarsSettled {
+    pub card: BarSettle,
+    pub cosmetic: BarSettle,
+    #[serde(deserialize_with = "paid_from")]
+    pub cosmetic_paid: Vec<CosmeticTokenStep>,
+}
+
+/// Reads the steps `cosmetic_paid` holds back by the names `CosmeticTokenStep` serialises to.
+/// `config.rs` derives only `Serialize` for the step, so a test decoding an answer whole reads it
+/// here.
+fn paid_from<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<CosmeticTokenStep>, D::Error> {
+    const NAMES: [&str; 3] = ["rare", "epic", "cosmeticPack"];
+    Vec::<String>::deserialize(deserializer)?
+        .into_iter()
+        .map(|name| match name.as_str() {
+            "rare" => Ok(CosmeticTokenStep::Rare),
+            "epic" => Ok(CosmeticTokenStep::Epic),
+            "cosmeticPack" => Ok(CosmeticTokenStep::CosmeticPack),
+            other => Err(D::Error::unknown_variant(other, &NAMES)),
+        })
+        .collect()
 }
 
 /// The inventory row a pack is counted in (§14.3): a set's under its set's name, the global
@@ -199,11 +242,16 @@ pub(crate) fn bar_before(counters: &[CounterEntry], counter: Counter) -> i64 {
         .map_or(0, |entry| entry.value)
 }
 
+/// The step the cosmetic token cycle stands at after `position` steps paid (§14.5).
+pub(crate) fn cycle_at(position: i64) -> CosmeticTokenStep {
+    COSMETIC_TOKEN_CYCLE[(position % COSMETIC_TOKEN_CYCLE.len() as i64) as usize]
+}
+
 /// What the cosmetic token cycle pays at `position`, its steps paid so far (§14.5): a Rare or an
 /// Epic cosmetic token, or a cosmetic pack. A pack opening's bar and a dev account's fill
 /// (`api::dev::fill_bar`, R1310003) both pay through it.
 pub(crate) fn cycle_step(position: i64) -> (InventoryItem, String) {
-    match COSMETIC_TOKEN_CYCLE[(position % COSMETIC_TOKEN_CYCLE.len() as i64) as usize] {
+    match cycle_at(position) {
         CosmeticTokenStep::Rare => (
             InventoryItem::CosmeticToken,
             CosmeticRarity::Rare.as_str().to_string(),
@@ -257,8 +305,8 @@ pub(crate) async fn grant_unlocked(
 /// (R1305000, R1305001): the points accrue, a bar that reaches its size pays its tokens and keeps
 /// the overflow, and the cosmetic bar's payouts are the cycle's next steps, whose stored position
 /// then advances. Each bar's write carries `reference`, the opening's log, and every row shares
-/// `at`; `counters` is the account's before the opening. A card pack's opening and a cosmetic
-/// pack's both settle through it (R1306001).
+/// `at`; `counters` is the account's before the opening. It answers what each bar did, for the
+/// opening's answer. A card pack's opening and a cosmetic pack's both settle through it (R1306001).
 pub(crate) async fn settle_bars(
     tx: &mut Tx<'_>,
     profile_id: &str,
@@ -266,7 +314,7 @@ pub(crate) async fn settle_bars(
     spent: i64,
     reference: &Option<String>,
     at: i64,
-) -> Result<(), ApiError> {
+) -> Result<BarsSettled, ApiError> {
     let card_bar_before = bar_before(counters, Counter::CardTokenBar);
     let cosmetic_bar_before = bar_before(counters, Counter::CosmeticTokenBar);
     let cycle_before = bar_before(counters, Counter::CosmeticTokenCycle);
@@ -370,7 +418,23 @@ pub(crate) async fn settle_bars(
         )
         .await?;
     }
-    Ok(())
+    Ok(BarsSettled {
+        card: BarSettle {
+            before: card_bar_before,
+            after: card_remainder,
+            size: CARD_TOKEN_BAR_SIZE,
+            pays: card_pays,
+        },
+        cosmetic: BarSettle {
+            before: cosmetic_bar_before,
+            after: cosmetic_remainder,
+            size: COSMETIC_TOKEN_BAR_SIZE,
+            pays: cosmetic_pays,
+        },
+        cosmetic_paid: (0..cosmetic_pays)
+            .map(|paid| cycle_at(cycle_before + paid))
+            .collect(),
+    })
 }
 
 /// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock
@@ -494,7 +558,7 @@ pub async fn open_pack(
             .count(),
     )?;
 
-    settle_bars(&mut tx, profile_id, &counters, spent, &reference, at).await?;
+    let bars = settle_bars(&mut tx, profile_id, &counters, spent, &reference, at).await?;
 
     tx.commit().await?;
     tracing::info!(
@@ -509,6 +573,7 @@ pub async fn open_pack(
         slots: opening.slots,
         pity: opening.pity,
         unopened,
+        bars,
     })
 }
 

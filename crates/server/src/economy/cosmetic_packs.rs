@@ -40,7 +40,7 @@ use crate::config::{
     PACK_FLOORED_SLOT,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity, cosmetic_pack_cosmetics};
-use crate::economy::packs::{bar_before, delta_of, grant_counter, grant_unlocked, settle_bars};
+use crate::economy::packs::{BarsSettled, bar_before, delta_of, grant_counter, grant_unlocked, settle_bars};
 use crate::economy::roll::{PackKind, PoolCard, pack_pool};
 use crate::economy::store::{
     CosmeticGrant, Counter, EconomyReason, InventoryGrant, InventoryItem, OwnedCosmetics,
@@ -151,14 +151,15 @@ impl CosmeticOpeningLog {
     }
 }
 
-/// What opening a cosmetic pack answers: its slots in order, the Chase Shard bar after it and the
-/// cosmetic packs still held.
+/// What opening a cosmetic pack answers: its slots in order, the Chase Shard bar after it, the
+/// cosmetic packs still held and what the opening did to both token bars.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedCosmeticPack {
     pub slots: Vec<CosmeticSlot>,
     pub shard_bar: BarState,
     pub unopened: i64,
+    pub bars: BarsSettled,
 }
 
 /// A cosmetic pack's odds as `GET /api/cosmetic-packs` shows them (R1339000): one roll of a slot
@@ -450,7 +451,7 @@ pub async fn open_cosmetic_pack(
             .filter(|slot| slot.grant == CosmeticSlotGrant::Bars)
             .count(),
     )?;
-    settle_bars(&mut tx, profile_id, &counters, spent, &reference, at).await?;
+    let bars = settle_bars(&mut tx, profile_id, &counters, spent, &reference, at).await?;
 
     tx.commit().await?;
     tracing::info!(
@@ -466,6 +467,7 @@ pub async fn open_cosmetic_pack(
             size: CHASE_SHARD_PACKS,
         },
         unopened,
+        bars,
     })
 }
 

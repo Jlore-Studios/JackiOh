@@ -530,8 +530,30 @@ export type PackSlotGrant =
 
 export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotGrant };
 
-/** `POST /api/packs/open`: the slots in order, the pity counters after them and the packs of that kind left. */
-export type OpenedPackResponse = { pack: string; slots: PackSlot[]; pity: PackCounters; unopened: number };
+/**
+ * One token bar across an opening: its points before it and after it (the overflow a pay leaves
+ * kept), its size and how many times it paid in this opening. A bar no spent duplicate moved
+ * answers `before` equal to `after` and `pays` 0.
+ */
+export type BarSettle = { before: number; after: number; size: number; pays: number };
+
+/**
+ * What an opening did to both token bars (R1305000, R1305001): `cosmeticPaid` is the cycle's steps
+ * the cosmetic bar paid, in order, so its length is `cosmetic.pays`.
+ */
+export type OpeningBarsAnswer = { card: BarSettle; cosmetic: BarSettle; cosmeticPaid: CosmeticTokenStep[] };
+
+/**
+ * `POST /api/packs/open`: the slots in order, the pity counters after them, the packs of that kind
+ * left and what the opening did to both token bars.
+ */
+export type OpenedPackResponse = {
+  pack: string;
+  slots: PackSlot[];
+  pity: PackCounters;
+  unopened: number;
+  bars: OpeningBarsAnswer;
+};
 
 export function getPacks(token: string): Promise<PacksResponse> {
   return apiRequest<PacksResponse>("/api/packs", { token });
@@ -661,8 +683,16 @@ export type CosmeticSlotGrant =
 /** One slot of an opened cosmetic pack: the rarity it rolled and what that granted. */
 export type CosmeticSlot = { rarity: CosmeticRarity; grant: CosmeticSlotGrant };
 
-/** `POST /api/cosmetic-packs/open`: its slots in order, the shard bar after it and the packs left. */
-export type OpenedCosmeticPackResponse = { slots: CosmeticSlot[]; shardBar: TokenBarState; unopened: number };
+/**
+ * `POST /api/cosmetic-packs/open`: its slots in order, the shard bar after it, the packs left and
+ * what the opening did to both token bars.
+ */
+export type OpenedCosmeticPackResponse = {
+  slots: CosmeticSlot[];
+  shardBar: TokenBarState;
+  unopened: number;
+  bars: OpeningBarsAnswer;
+};
 
 export function openCosmeticPack(token: string): Promise<OpenedCosmeticPackResponse> {
   return apiRequest<OpenedCosmeticPackResponse>("/api/cosmetic-packs/open", { method: "POST", token, body: {} });

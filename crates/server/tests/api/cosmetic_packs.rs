@@ -16,8 +16,8 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, owned_map};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
-    COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
+    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY,
+    COSMETIC_PACK_SLOTS, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
 use jackioh_server::db::store::CollectionEntry;
@@ -25,6 +25,7 @@ use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase,
     open_cosmetic_pack, roll_cosmetic_pack,
 };
+use jackioh_server::economy::packs::{BarSettle, BarsSettled};
 use jackioh_server::economy::roll::{PackKind, pack_pool};
 use jackioh_server::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
@@ -533,6 +534,146 @@ async fn r1306001_nothing_unowned_pays_bar_points() {
         assert!(rows[0].reference.is_some());
     }
     assert!(holdings(&app).await.card_cosmetics.is_empty());
+}
+
+#[tokio::test]
+async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    // The card bar one point short of full, the cosmetic bar left at its start; an empty registry
+    // drops nothing, so every slot is spent and both bars gain.
+    set_counter(&app, Counter::CardTokenBar, CARD_TOKEN_BAR_SIZE - 1).await;
+    let pack = open_cosmetic_pack(&app, PROFILE, &[], "bars-spent")
+        .await
+        .expect("the opening");
+    let spent = COSMETIC_PACK_SLOTS as i64;
+    assert!(
+        pack.slots
+            .iter()
+            .all(|slot| slot.grant == CosmeticSlotGrant::Bars)
+    );
+    let card_gain = spent * CARD_TOKEN_BAR_POINTS_PER_DUPLICATE;
+    let cosmetic_gain = spent * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE;
+    assert_eq!(
+        pack.bars,
+        BarsSettled {
+            card: BarSettle {
+                before: CARD_TOKEN_BAR_SIZE - 1,
+                after: CARD_TOKEN_BAR_SIZE - 1 + card_gain - CARD_TOKEN_BAR_SIZE,
+                size: CARD_TOKEN_BAR_SIZE,
+                pays: 1,
+            },
+            cosmetic: BarSettle {
+                before: 0,
+                after: cosmetic_gain,
+                size: COSMETIC_TOKEN_BAR_SIZE,
+                pays: 0,
+            },
+            cosmetic_paid: Vec::new(),
+        }
+    );
+    // What it answers is what it left.
+    assert_eq!(
+        counter_of(&app, Counter::CardTokenBar).await,
+        pack.bars.card.after
+    );
+    assert_eq!(
+        counter_of(&app, Counter::CosmeticTokenBar).await,
+        pack.bars.cosmetic.after
+    );
+    assert_eq!(held(&app, InventoryItem::CardToken, "").await, 1);
+
+    // On the wire the answer is `bars` in camelCase, the cosmetic bar's paid list empty.
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let bars = &body["bars"];
+    assert_eq!(bars["card"]["before"], json!(pack.bars.card.after));
+    assert_eq!(bars["cosmetic"]["size"], json!(COSMETIC_TOKEN_BAR_SIZE));
+    assert_eq!(bars["cosmeticPaid"], json!([]));
+    assert_eq!(opened(&body).bars.cosmetic.before, pack.bars.cosmetic.after);
+}
+
+#[tokio::test]
+async fn a_cosmetic_pack_answers_the_cycle_s_next_step_when_its_cosmetic_bar_pays() {
+    let (app, _) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    let gain = COSMETIC_PACK_SLOTS as i64 * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE;
+    // One step into the cycle, so the next is its second (an Epic token).
+    set_counter(&app, Counter::CosmeticTokenCycle, 1).await;
+    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE - gain).await;
+    let pack = open_cosmetic_pack(&app, PROFILE, &[], "bars-cycle")
+        .await
+        .expect("the opening");
+    assert_eq!(
+        pack.bars.cosmetic,
+        BarSettle {
+            before: COSMETIC_TOKEN_BAR_SIZE - gain,
+            after: 0,
+            size: COSMETIC_TOKEN_BAR_SIZE,
+            pays: 1,
+        }
+    );
+    assert_eq!(pack.bars.cosmetic_paid, vec![CosmeticTokenStep::Epic]);
+    assert_eq!(
+        serde_json::to_value(&pack.bars).expect("the bars")["cosmeticPaid"],
+        json!(["epic"])
+    );
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenCycle).await, 2);
+    // The card bar only gained.
+    assert_eq!(pack.bars.card.pays, 0);
+}
+
+#[tokio::test]
+async fn a_cosmetic_pack_with_no_spent_slot_answers_both_bars_unmoved() {
+    let (app, _) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    set_counter(&app, Counter::CardTokenBar, 7).await;
+    set_counter(&app, Counter::CosmeticTokenBar, 11).await;
+    // A foil at each tier fits any card, so no slot is left with nothing to own.
+    let registry = vec![
+        foil("foil-fixture-common", CosmeticRarity::Common),
+        foil("foil-fixture-rare", CosmeticRarity::Rare),
+        foil("foil-fixture-epic", CosmeticRarity::Epic),
+    ];
+    let pack = open_cosmetic_pack(&app, PROFILE, &registry, "bars-unspent")
+        .await
+        .expect("the opening");
+    assert!(
+        pack.slots
+            .iter()
+            .all(|slot| slot.grant != CosmeticSlotGrant::Bars),
+        "{:?}",
+        pack.slots
+    );
+    assert_eq!(
+        pack.bars,
+        BarsSettled {
+            card: BarSettle {
+                before: 7,
+                after: 7,
+                size: CARD_TOKEN_BAR_SIZE,
+                pays: 0,
+            },
+            cosmetic: BarSettle {
+                before: 11,
+                after: 11,
+                size: COSMETIC_TOKEN_BAR_SIZE,
+                pays: 0,
+            },
+            cosmetic_paid: Vec::new(),
+        }
+    );
+    assert_eq!(counter_of(&app, Counter::CardTokenBar).await, 7);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenBar).await, 11);
 }
 
 #[tokio::test]
