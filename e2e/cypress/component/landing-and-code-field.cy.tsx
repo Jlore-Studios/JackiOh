@@ -21,6 +21,8 @@ import {
   resetTestid,
 } from "../../../apps/web/src/auth/testids.ts";
 import LandingRoute from "../../../apps/web/src/routes/landing.tsx";
+import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION } from "../../../apps/web/src/stats/config.ts";
+import { dropPlayerStatsCache } from "../../../apps/web/src/stats/store.ts";
 import LoginRoute from "../../../apps/web/src/routes/login.tsx";
 import ResetPasswordRoute from "../../../apps/web/src/routes/reset-password.tsx";
 
@@ -154,6 +156,55 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
           height,
         );
       });
+    });
+
+    // R1584000: with stats to show, the floor below the hero is one screen: the showcase, the Clear
+    // control and the footer are inside it, and nothing in it scrolls.
+    it(`B39 R1584000 the stats floor fits one screen below the hero at ${where(viewport)}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      cy.window({ log: false }).then((win) => {
+        win.localStorage.setItem(
+          PLAYER_STATS_KEY,
+          JSON.stringify({
+            v: PLAYER_STATS_VERSION,
+            games: 12,
+            wins: 7,
+            losses: 5,
+            draws: 0,
+            cards: { "core-004": { seen: 12, played: 9, defeated: 4 } },
+          }),
+        );
+        dropPlayerStatsCache();
+      });
+      cy.mount(<LandingRoute />);
+
+      cy.get(byTestid(landingTestid.showcase)).should("exist");
+      cy.get(".landing .landing-floor").should(($floor) => {
+        const floor = $floor[0];
+        expect(floor, "the floor is mounted").to.not.eq(undefined);
+        if (floor === undefined) return;
+        const win = floor.ownerDocument.defaultView;
+        const box = floor.getBoundingClientRect();
+        expect(box.height, `the floor is one screen at ${where(viewport)}`).to.be.at.most((win?.innerHeight ?? viewport.height) + 1);
+        const stats = floor.querySelector(".landing-stats");
+        expect(stats, "the stats are in the floor").to.not.eq(null);
+        if (stats === null) return;
+        expect(stats.scrollHeight, `the stats do not scroll at ${where(viewport)}`).to.be.at.most(stats.clientHeight + 1);
+        const footer = floor.querySelector(".site-footer");
+        expect(footer, "the footer is in the floor").to.not.eq(null);
+        if (footer !== null) {
+          expect(footer.getBoundingClientRect().bottom, `the footer ends in the floor at ${where(viewport)}`).to.be.at.most(box.bottom + 1);
+        }
+        for (const testid of [landingTestid.showcase, landingTestid.statsClear]) {
+          const inside = floor.querySelector(byTestid(testid));
+          expect(inside, `${testid} is in the floor`).to.not.eq(null);
+          if (inside === null) continue;
+          const at = inside.getBoundingClientRect();
+          expect(at.top, `${testid} starts in the floor at ${where(viewport)}`).to.be.at.least(box.top - 1);
+          expect(at.bottom, `${testid} ends in the floor at ${where(viewport)}`).to.be.at.most(box.bottom + 1);
+        }
+      });
+      expectNoHorizontalOverflow(viewport);
     });
   }
 });
