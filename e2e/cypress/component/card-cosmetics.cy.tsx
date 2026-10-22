@@ -38,6 +38,8 @@ const ITEMS = KINDS.flatMap((kind) =>
 
 const FOILS = ITEMS.filter((item) => item.kind === "foil");
 
+const BORDERS = ITEMS.filter((item) => item.kind === "border");
+
 function face() {
   return faceModel({ defId: DEF_ID, def: CATALOG[DEF_ID], radiant: false });
 }
@@ -111,15 +113,44 @@ describe("R1295000 the card cosmetics on a face", () => {
     });
   }
 
+  // A border is one object on the full face and on the minion: the face paints it as its edge, and the
+  // minion, whose panel covers the edge, as a ring layer (the panel's ::before) painted with that same
+  // edge and masked down to a ring, over the panel's inner shadow, which the border leaves as it was.
   it("R1295000 a worn minion wears the border", () => {
-    writeCosmetics({ border: ITEMS.find((item) => item.kind === "border")?.id });
-    cy.mount(<Pair minion />);
-    cy.document().should((doc) => {
-      const shadow = (which: "worn" | "plain"): string => {
-        const scale = faceOf(doc, which).querySelector(".cf-scale");
-        return scale === null ? "" : getComputedStyle(scale).boxShadow;
-      };
-      expect(shadow("worn")).to.not.equal(shadow("plain"));
+    const edges: string[] = [];
+    for (const border of BORDERS) {
+      let edge = "";
+      // A command, so that each border is the pick when its own faces mount, not the last one's.
+      cy.then(() => {
+        writeCosmetics({ border: border.id });
+      });
+
+      cy.mount(<Pair />);
+      cy.document().should((doc) => {
+        edge = getComputedStyle(faceOf(doc, "worn")).backgroundImage;
+        expect(edge, `${border.id}'s edge on the full face`).to.not.equal("none");
+      });
+
+      cy.mount(<Pair minion />);
+      cy.document().should((doc) => {
+        const scaleOf = (which: "worn" | "plain"): Element => {
+          const scale = faceOf(doc, which).querySelector(".cf-scale");
+          if (scale === null) throw new Error(`no ${which} panel`);
+          return scale;
+        };
+        const ring = getComputedStyle(scaleOf("worn"), "::before");
+        expect(ring.backgroundImage, `${border.id}'s ring paints the full face's edge`).to.equal(edge);
+        expect(ring.maskComposite, `${border.id}'s ring is masked to a ring`).to.contain("exclude");
+        expect(ring.position, `${border.id}'s ring lies over the panel`).to.equal("absolute");
+        expect(getComputedStyle(scaleOf("worn")).boxShadow, `${border.id} keeps the panel's inner shadow`).to.equal(
+          getComputedStyle(scaleOf("plain")).boxShadow,
+        );
+        expect(getComputedStyle(scaleOf("plain"), "::before").content, "the plain minion has no ring").to.equal("none");
+        edges.push(edge);
+      });
+    }
+    cy.then(() => {
+      expect(new Set(edges).size, "each border has an edge of its own").to.equal(BORDERS.length);
     });
   });
 

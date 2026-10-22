@@ -7,7 +7,7 @@
  *
  * A border is three trim colours, none in the Radiant gold (cosmetics.test.tsx holds them out of
  * it), drawn as the full face's edge and the art's bezel, and on the board minion, whose panel
- * covers its edge, as a rim inside the panel. A finish is the print: a linen weave over the face,
+ * covers its edge, as a ring over the panel painted with that same edge. A finish is the print: a linen weave over the face,
  * a panel in black ink, or a gold hairline round the edge. A foil is a sheen over the art window
  * only. Each foil's still version comes first; it moves only inside the motion gate below, and
  * only on a face that holds one of COSMETIC_FOIL_ANIMATED_MAX slots (`data-cosmetic-motion`), by
@@ -52,10 +52,22 @@
   --cf-edge: repeating-linear-gradient(100deg, var(--trim-3) 0 2px, transparent 2px 7px), linear-gradient(150deg, var(--trim-1), var(--trim-2));
 }
 
-.cf[data-layout="minion"][data-frame] .cf-scale {
-  box-shadow:
-    inset 0 0 0 1.2cqmin var(--trim-2),
-    inset 0 -3cqh 5cqh #0007;
+/* The minion's panel fills its root and covers the edge, so its border is a ring laid over the panel:
+   the face's own `--cf-edge`, the gradient, grain or traces a full face wears, masked down to a ring
+   as wide as that face's edge (1.7% of its width). The ring sits over the panel's inner shadow, which
+   stays as cards.css draws it, and under what the panel prints (the gems, the plate, the chips). */
+.cf[data-layout="minion"][data-frame] .cf-scale::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.7cqmin;
+  border-radius: inherit;
+  background-image: var(--cf-edge);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* --------------------------------------------------------------------------- finishes --- */
