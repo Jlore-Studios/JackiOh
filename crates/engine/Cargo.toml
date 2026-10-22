@@ -34,6 +34,9 @@ name = "rules"
 path = "tests/rules.rs"
 required-features = ["testkit"]
 
+# The golden replay (§13), through `jackioh_engine::testkit::golden`, which `cargo jackioh golden check`
+# shares (#1641), so it too builds only with that feature.
 [[test]]
 name = "golden"
 path = "tests/golden.rs"
+required-features = ["testkit"]
