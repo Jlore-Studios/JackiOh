@@ -11360,6 +11360,13 @@
     "1599": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T01:51:22Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 2 (one place) fails: the watch testid mirror in e2e/support/testids.ts is a second package, and 10 files sits at the limit"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
