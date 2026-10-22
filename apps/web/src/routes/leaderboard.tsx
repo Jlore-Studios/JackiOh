@@ -54,94 +54,95 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
   }, [token, attempt]);
 
   return (
-    <div className="app-shell tavern leaderboard-screen" data-testid={leaderboardTestid.screen}>
+    <div className="app-shell tavern leaderboard-screen one-screen" data-testid={leaderboardTestid.screen}>
       <BackLink />
-      <section className="panel panel--auth">
+      <section className="panel panel--auth one-screen__frame">
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
         <h2>{t("Leaderboard")}</h2>
+        <div className="one-screen__body one-screen__stack" tabIndex={0}>
+          {error !== null ? (
+            <>
+              <p className="notice" data-testid={leaderboardTestid.error} role="alert">
+                {t(error)}
+              </p>
+              <div className="row">
+                <button
+                  type="button"
+                  className="button-primary"
+                  data-testid={leaderboardTestid.retry}
+                  onClick={() => {
+                    setError(null);
+                    setAttempt((before) => before + 1);
+                  }}
+                >
+                  {t("Try again")}
+                </button>
+              </div>
+            </>
+          ) : null}
 
-        {error !== null ? (
-          <>
-            <p className="notice" data-testid={leaderboardTestid.error} role="alert">
-              {t(error)}
+          {board === null && error === null ? (
+            <p className="notice shell-panel__loading" data-testid={leaderboardTestid.loading} role="status">
+              {t("Loading the ladder…")}
             </p>
-            <div className="row">
-              <button
-                type="button"
-                className="button-primary"
-                data-testid={leaderboardTestid.retry}
-                onClick={() => {
-                  setError(null);
-                  setAttempt((before) => before + 1);
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </div>
-          </>
-        ) : null}
+          ) : null}
 
-        {board === null && error === null ? (
-          <p className="notice shell-panel__loading" data-testid={leaderboardTestid.loading} role="status">
-            {t("Loading the ladder…")}
-          </p>
-        ) : null}
+          {board !== null ? (
+            <>
+              <p data-testid={leaderboardTestid.season}>{t("Season {season}", { season: board.season })}</p>
+              <p data-testid={leaderboardTestid.you}>
+                {board.jlorious.some((row) => row.you) || board.tiers.some((tier) => tier.players.some((row) => row.you))
+                  ? t("You are {rank}", { rank: rankWords(board.you) })
+                  : t("You are {rank} — play rated games to climb", { rank: rankWords(board.you) })}
+              </p>
 
-        {board !== null ? (
-          <>
-            <p data-testid={leaderboardTestid.season}>{t("Season {season}", { season: board.season })}</p>
-            <p data-testid={leaderboardTestid.you}>
-              {board.jlorious.some((row) => row.you) || board.tiers.some((tier) => tier.players.some((row) => row.you))
-                ? t("You are {rank}", { rank: rankWords(board.you) })
-                : t("You are {rank} — play rated games to climb", { rank: rankWords(board.you) })}
-            </p>
+              <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
+              {board.jlorious.length === 0 ? (
+                <p>{t("No Jlorious players yet this season.")}</p>
+              ) : (
+                <ol data-testid={leaderboardTestid.jlorious}>
+                  {board.jlorious.map((row) => (
+                    <li key={row.profileId} data-you={row.you ? "you" : undefined}>
+                      {t("#{position}", { position: row.position })} <Username name={row.username} />
+                      {row.you ? ` ${t("(you)")}` : ""}
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-            <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
-            {board.jlorious.length === 0 ? (
-              <p>{t("No Jlorious players yet this season.")}</p>
-            ) : (
-              <ol data-testid={leaderboardTestid.jlorious}>
-                {board.jlorious.map((row) => (
-                  <li key={row.profileId} data-you={row.you ? "you" : undefined}>
-                    {t("#{position}", { position: row.position })} <Username name={row.username} />
-                    {row.you ? ` ${t("(you)")}` : ""}
-                  </li>
-                ))}
-              </ol>
-            )}
+              {board.tiers.map((tier) => (
+                <section key={tier.tier} data-testid={leaderboardTestid.tier} data-tier={tier.tier}>
+                  <h3 className="leaderboard-heading">
+                    {tierName(tier.tier)} ({tier.count})
+                  </h3>
+                  {tier.players.length === 0 ? (
+                    <p>{t("Nobody here yet.")}</p>
+                  ) : (
+                    <ul>
+                      {tier.players.map((row) => (
+                        <li key={row.profileId} data-you={row.you ? "you" : undefined}>
+                          <Username name={row.username} /> · {t("Division {division}", { division: divisionNumeral(row.division) })} ·{" "}
+                          {row.pips === 1 ? t("{n} pip", { n: row.pips }) : t("{n} pips", { n: row.pips })}
+                          {row.you ? ` ${t("(you)")}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              ))}
 
-            {board.tiers.map((tier) => (
-              <section key={tier.tier} data-testid={leaderboardTestid.tier} data-tier={tier.tier}>
-                <h3 className="leaderboard-heading">
-                  {tierName(tier.tier)} ({tier.count})
-                </h3>
-                {tier.players.length === 0 ? (
-                  <p>{t("Nobody here yet.")}</p>
-                ) : (
-                  <ul>
-                    {tier.players.map((row) => (
-                      <li key={row.profileId} data-you={row.you ? "you" : undefined}>
-                        <Username name={row.username} /> · {t("Division {division}", { division: divisionNumeral(row.division) })} ·{" "}
-                        {row.pips === 1 ? t("{n} pip", { n: row.pips }) : t("{n} pips", { n: row.pips })}
-                        {row.you ? ` ${t("(you)")}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-
-            <p data-testid={leaderboardTestid.raisins}>
-              {board.raisins === 0
-                ? t("Nobody is playing placements right now.")
-                : board.raisins === 1
-                  ? t("{n} player is still playing placements.", { n: board.raisins })
-                  : t("{n} players are still playing placements.", { n: board.raisins })}
-            </p>
-          </>
-        ) : null}
+              <p data-testid={leaderboardTestid.raisins}>
+                {board.raisins === 0
+                  ? t("Nobody is playing placements right now.")
+                  : board.raisins === 1
+                    ? t("{n} player is still playing placements.", { n: board.raisins })
+                    : t("{n} players are still playing placements.", { n: board.raisins })}
+              </p>
+            </>
+          ) : null}
+        </div>
       </section>
     </div>
   );

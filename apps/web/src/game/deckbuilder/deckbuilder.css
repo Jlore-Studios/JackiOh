@@ -1155,6 +1155,16 @@
   }
 }
 
+/* R1581000: the phone's builder is one screen too. The page is the window's height, and the pool
+   scrolls inside the workshop's or the almanac's one region (workshop.css, routes/almanac.css),
+   not the page, as a desktop's does. */
+@media (max-width: 760px) and (min-height: 501px) {
+  .deckbuilder.app-shell {
+    height: 100vh;
+    height: 100dvh;
+  }
+}
+
 /* Phone and narrow tablet: one column, the sidebar first. The pool drops its frame so two
    columns fit in a 390 px viewport even with a classic scrollbar. */
 @media (max-width: 760px) {

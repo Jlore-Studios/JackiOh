@@ -32,6 +32,17 @@ after a face lands, and `cards/fit.ts` refits every mounted box once `document.f
 `loadingdone`. A font file's name carries its version, since `/fonts/*` is cached for a year
 (`public/_headers` and `vercel.json`, held equal by `net/cloudflare-config.test.ts`).
 
+Every menu is one screen (R1581000): at 1280x720 and 390x844 the page is no taller or wider than the
+window, and what a menu holds past its room scrolls in its one region, never in the page, with its
+top (Back, the gear, the title) staying put. A menu's root takes `one-screen` (`index.css`, which
+makes the shell the window's height); its region takes `one-screen__body`; a box between the two
+that must shrink (a tavern panel) takes `one-screen__frame`, and a wrapper that stacks its children
+as the shell does takes `one-screen__stack`. Under 501 px tall (a phone on its side) the page
+scrolls as it did. The deck builder and the almanac do the same on a phone (`deckbuilder.css`,
+`workshop.css`, `almanac.css`), as they already did on a desktop. No type shrinks to make it fit.
+The tavern home alone may be two screens tall (#1576). e2e spec `46` visits every menu at both
+sizes and fails when the page is taller or wider than its allowance.
+
 ## Three flows at the table
 
 None of them is a rule (CLAUDE.md rule 7): each reads the view, takes its moves from `legal`, and

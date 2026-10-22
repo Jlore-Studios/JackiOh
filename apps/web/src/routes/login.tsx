@@ -1024,11 +1024,11 @@ export default function LoginRoute(): ReactElement {
   );
 
   return (
-    <div className="app-shell auth-screen tavern">
+    <div className="app-shell auth-screen tavern one-screen">
       <BackLink />
       {/* Two parts, so a phone held sideways can set them side by side (auth/tavern.css): what is
           going on (the title and every notice) beside the form. Elsewhere they are one column. */}
-      <section className="panel panel--auth panel--split">
+      <section className="panel panel--auth panel--split one-screen__body">
         <div className="auth-board__head">
           <div className="brand">
             <h1>JackiOh</h1>

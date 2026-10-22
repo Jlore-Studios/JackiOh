@@ -271,166 +271,167 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const played = profile === null ? 0 : profile.record.wins + profile.record.losses + profile.record.draws;
 
   return (
-    <div className="app-shell tavern account-screen" data-testid={accountTestid.screen}>
+    <div className="app-shell tavern account-screen one-screen" data-testid={accountTestid.screen}>
       <BackLink />
 
-      <section className="panel panel--auth">
+      <section className="panel panel--auth one-screen__frame">
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
         <h2>{t("Your account")}</h2>
+        <div className="one-screen__body one-screen__stack">
+          {error !== null ? (
+            <>
+              <p className="notice" data-testid={accountTestid.error} role="alert">
+                {t(error)}
+              </p>
+              <div className="row">
+                <button
+                  type="button"
+                  className="button-primary"
+                  data-testid={accountTestid.retry}
+                  onClick={() => {
+                    setError(null);
+                    setAttempt((before) => before + 1);
+                  }}
+                >
+                  {t("Try again")}
+                </button>
+              </div>
+            </>
+          ) : null}
 
-        {error !== null ? (
-          <>
-            <p className="notice" data-testid={accountTestid.error} role="alert">
-              {t(error)}
+          {pending && me !== undefined ? (
+            <>
+              <AccountIdentity email={me.email} status={me.profile.status} />
+              <p>{t("Online play opens once this account has redeemed an invite code.")}</p>
+              <div className="account-actions">
+                <a
+                  className="button-primary"
+                  href={paths.invite}
+                  data-testid={accountTestid.redeem}
+                  onClick={followInApp(paths.invite)}
+                >
+                  {t("Redeem an invite code")}
+                </a>
+              </div>
+            </>
+          ) : null}
+
+          {!pending && profile === null && error === null ? (
+            <p className="notice shell-panel__loading" data-testid={accountTestid.loading} role="status">
+              {t("Loading your account…")}
             </p>
-            <div className="row">
-              <button
-                type="button"
-                className="button-primary"
-                data-testid={accountTestid.retry}
-                onClick={() => {
-                  setError(null);
-                  setAttempt((before) => before + 1);
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </div>
-          </>
-        ) : null}
+          ) : null}
 
-        {pending && me !== undefined ? (
-          <>
-            <AccountIdentity email={me.email} status={me.profile.status} />
-            <p>{t("Online play opens once this account has redeemed an invite code.")}</p>
-            <div className="account-actions">
-              <a
-                className="button-primary"
-                href={paths.invite}
-                data-testid={accountTestid.redeem}
-                onClick={followInApp(paths.invite)}
-              >
-                {t("Redeem an invite code")}
-              </a>
-            </div>
-          </>
-        ) : null}
+          {profile !== null ? (
+            <>
+              <AccountIdentity email={profile.email} status={profile.status} />
 
-        {!pending && profile === null && error === null ? (
-          <p className="notice shell-panel__loading" data-testid={accountTestid.loading} role="status">
-            {t("Loading your account…")}
-          </p>
-        ) : null}
+              <h3 className="account-heading">{t("Rank")}</h3>
+              {rank !== null ? (
+                <>
+                  <p data-testid={accountTestid.rank}>
+                    <Username name={rank.username} /> ·{" "}
+                    {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
+                  </p>
+                  <p data-testid={accountTestid.badges}>
+                    {rank.badges.length === 0
+                      ? t("No season best yet — finish placements to earn one.")
+                      : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(t(", ")) })}
+                  </p>
+                  <div className="account-actions">
+                    <a
+                      className="button-secondary"
+                      href={paths.leaderboard}
+                      data-testid={accountTestid.leaderboard}
+                      onClick={followInApp(paths.leaderboard)}
+                    >
+                      {t("Leaderboard")}
+                    </a>
+                  </div>
+                </>
+              ) : null}
 
-        {profile !== null ? (
-          <>
-            <AccountIdentity email={profile.email} status={profile.status} />
-
-            <h3 className="account-heading">{t("Rank")}</h3>
-            {rank !== null ? (
-              <>
-                <p data-testid={accountTestid.rank}>
-                  <Username name={rank.username} /> ·{" "}
-                  {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
-                </p>
-                <p data-testid={accountTestid.badges}>
-                  {rank.badges.length === 0
-                    ? t("No season best yet — finish placements to earn one.")
-                    : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(t(", ")) })}
-                </p>
-                <div className="account-actions">
-                  <a
-                    className="button-secondary"
-                    href={paths.leaderboard}
-                    data-testid={accountTestid.leaderboard}
-                    onClick={followInApp(paths.leaderboard)}
-                  >
-                    {t("Leaderboard")}
-                  </a>
+              <h3 className="account-heading">{t("Record")}</h3>
+              <div className="stat-row">
+                <div className="stat">
+                  <span className="stat-value" data-testid={accountTestid.winRate}>
+                    {formatWinRate(profile.winRate)}
+                  </span>
+                  <span className="stat-label">{t("Win rate")}</span>
                 </div>
-              </>
-            ) : null}
-
-            <h3 className="account-heading">{t("Record")}</h3>
-            <div className="stat-row">
-              <div className="stat">
-                <span className="stat-value" data-testid={accountTestid.winRate}>
-                  {formatWinRate(profile.winRate)}
-                </span>
-                <span className="stat-label">{t("Win rate")}</span>
+                <div className="stat">
+                  <span className="stat-value" data-testid={accountTestid.record}>
+                    {profile.record.wins}–{profile.record.losses}–{profile.record.draws}
+                  </span>
+                  <span className="stat-label">{t("W–L–D")}</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{played}</span>
+                  <span className="stat-label">{t("Played")}</span>
+                </div>
               </div>
-              <div className="stat">
-                <span className="stat-value" data-testid={accountTestid.record}>
-                  {profile.record.wins}–{profile.record.losses}–{profile.record.draws}
-                </span>
-                <span className="stat-label">{t("W–L–D")}</span>
+              {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
+              {/* §14.9's quests moved to /collection (#1307), the packs to /shop (R1580000). */}
+              <div className="account-actions">
+                <a
+                  className="button-secondary"
+                  href={paths.collection}
+                  data-testid={accountTestid.collection}
+                  onClick={followInApp(paths.collection)}
+                >
+                  {t("Collection")}
+                </a>
+                <a
+                  className="button-secondary"
+                  href={paths.shop}
+                  data-testid={accountTestid.shop}
+                  onClick={followInApp(paths.shop)}
+                >
+                  {t("Shop")}
+                </a>
               </div>
-              <div className="stat">
-                <span className="stat-value">{played}</span>
-                <span className="stat-label">{t("Played")}</span>
-              </div>
-            </div>
-            {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
-            {/* §14.9's quests moved to /collection (#1307), the packs to /shop (R1580000). */}
-            <div className="account-actions">
-              <a
-                className="button-secondary"
-                href={paths.collection}
-                data-testid={accountTestid.collection}
-                onClick={followInApp(paths.collection)}
-              >
-                {t("Collection")}
-              </a>
-              <a
-                className="button-secondary"
-                href={paths.shop}
-                data-testid={accountTestid.shop}
-                onClick={followInApp(paths.shop)}
-              >
-                {t("Shop")}
-              </a>
-            </div>
-          </>
-        ) : null}
+            </>
+          ) : null}
 
-        <AccountManage
-          open={manageOpen}
-          onToggle={() => {
-            setManageOpen(!manageOpen);
-          }}
-          token={token}
-          own={username}
-          canChange={me?.profile.status === "active"}
-          profileId={me?.profile.id}
-        />
-
-        {/* R1300000: the server's word decides whether the panel shows; each tool asks it again. */}
-        {me?.isDev === true ? (
-          <AccountDevTools
-            open={devOpen}
+          <AccountManage
+            open={manageOpen}
             onToggle={() => {
-              setDevOpen(!devOpen);
+              setManageOpen(!manageOpen);
             }}
             token={token}
+            own={username}
+            canChange={me?.profile.status === "active"}
+            profileId={me?.profile.id}
           />
-        ) : null}
 
-        <div className="account-session">
-          <p>
-            {t("Signing out forgets this session on this device and revokes it.")}
-          </p>
-          <div className="account-actions">
-            <button
-              type="button"
-              data-testid={accountTestid.signOut}
-              disabled={leaving}
-              aria-busy={leaving}
-              onClick={signOut}
-            >
-              {signOutLabel(leaving)}
-            </button>
+          {/* R1300000: the server's word decides whether the panel shows; each tool asks it again. */}
+          {me?.isDev === true ? (
+            <AccountDevTools
+              open={devOpen}
+              onToggle={() => {
+                setDevOpen(!devOpen);
+              }}
+              token={token}
+            />
+          ) : null}
+
+          <div className="account-session">
+            <p>
+              {t("Signing out forgets this session on this device and revokes it.")}
+            </p>
+            <div className="account-actions">
+              <button
+                type="button"
+                data-testid={accountTestid.signOut}
+                disabled={leaving}
+                aria-busy={leaving}
+                onClick={signOut}
+              >
+                {signOutLabel(leaving)}
+              </button>
+            </div>
           </div>
         </div>
       </section>

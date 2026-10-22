@@ -243,7 +243,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
 
   if (view === null) {
     return (
-      <div className="app-shell tavern lobby play-screen series" data-testid={seriesTestid.screen}>
+      <div className="app-shell tavern lobby play-screen series one-screen" data-testid={seriesTestid.screen}>
         <BackLink to={paths.play} />
         <SeriesHero />
         {loadError === null ? (
@@ -267,209 +267,210 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
     you.decks.find((deck) => deck.slot === slot)?.name ?? t("Deck {number}", { number: String(slot + 1) });
 
   return (
-    <div className="app-shell tavern lobby play-screen series" data-testid={seriesTestid.screen} data-status={view.status}>
+    <div className="app-shell tavern lobby play-screen series one-screen" data-testid={seriesTestid.screen} data-status={view.status}>
       <BackLink to={paths.play} />
       <SeriesHero />
+      <div className="one-screen__body one-screen__stack">
+        {showExplainer ? (
+          <ConquestExplainer onDismiss={onDismissExplainer} />
+        ) : (
+          <button
+            type="button"
+            className="link-button series-explainer-toggle"
+            data-testid={seriesTestid.explainerToggle}
+            onClick={() => {
+              setShowExplainer(true);
+            }}
+          >
+            {conquestText("toggleOpen")}
+          </button>
+        )}
 
-      {showExplainer ? (
-        <ConquestExplainer onDismiss={onDismissExplainer} />
-      ) : (
-        <button
-          type="button"
-          className="link-button series-explainer-toggle"
-          data-testid={seriesTestid.explainerToggle}
-          onClick={() => {
-            setShowExplainer(true);
-          }}
-        >
-          {conquestText("toggleOpen")}
-        </button>
-      )}
+        {actionError === null ? null : (
+          <p className="notice" data-testid={seriesTestid.error} role="alert">
+            {t(actionError)}
+          </p>
+        )}
 
-      {actionError === null ? null : (
-        <p className="notice" data-testid={seriesTestid.error} role="alert">
-          {t(actionError)}
-        </p>
-      )}
+        <div className="play-layout">
+          <div className="play-side">
+            {picking ? (
+              <SeriesPicker
+                view={view}
+                secondsLeft={secondsLeft}
+                busy={busy}
+                onLockIn={(slot) => {
+                  onPick(slot, view.gameNo);
+                }}
+              />
+            ) : null}
 
-      <div className="play-layout">
-        <div className="play-side">
-          {picking ? (
-            <SeriesPicker
-              view={view}
-              secondsLeft={secondsLeft}
-              busy={busy}
-              onLockIn={(slot) => {
-                onPick(slot, view.gameNo);
-              }}
-            />
-          ) : null}
+            {view.status === "playing" && view.currentMatchId !== null ? (
+              <section className="lobby-card play-panel series-panel" aria-labelledby="series-game-heading">
+                <h2 id="series-game-heading" className="play-panel__heading">
+                  {t("Game {game} is on", { game: String(view.gameNo) })}
+                </h2>
+                <a
+                  className="button-primary play-cta series-open"
+                  href={paths.match(view.currentMatchId)}
+                  data-testid={seriesTestid.openMatch}
+                  onClick={followInApp(paths.match(view.currentMatchId))}
+                >
+                  {t("Open game {game}", { game: String(view.gameNo) })}
+                </a>
+                {/* R334: a game is conceded on the board; the series can only be forfeited between games. */}
+                <p className="lobby-note">{t("To give up this game, concede it on the board.")}</p>
+              </section>
+            ) : null}
 
-          {view.status === "playing" && view.currentMatchId !== null ? (
-            <section className="lobby-card play-panel series-panel" aria-labelledby="series-game-heading">
-              <h2 id="series-game-heading" className="play-panel__heading">
-                {t("Game {game} is on", { game: String(view.gameNo) })}
+            {view.result === null ? null : (
+              <section
+                className="lobby-card play-panel series-panel series-result"
+                data-testid={seriesTestid.result}
+                data-outcome={view.result.outcome}
+              >
+                <span className="series-result__word">{t(SERIES_OUTCOME_HEADLINE[view.result.outcome])}</span>
+                <p>{endReasonWords(view.result, view.winsNeeded, view.maxGames, { you: you.wins, opponent: opponent.wins })}</p>
+                <p>{ratingWords(view.result)}</p>
+                {view.result.ranked && view.result.outcome !== "abandoned" ? (
+                  <p className="lobby-note" data-testid={seriesTestid.endReminder}>
+                    {conquestText("seriesEndRatingReminder")}
+                  </p>
+                ) : null}
+                <a
+                  className="button-primary play-cta"
+                  href={paths.play}
+                  data-testid={seriesTestid.backToPlay}
+                  onClick={followInApp(paths.play)}
+                >
+                  {t("Back to the lobby")}
+                </a>
+              </section>
+            )}
+          </div>
+
+          <div className="play-side">
+            <section className="lobby-card play-panel series-panel" aria-labelledby="series-standing-heading">
+              <h2 id="series-standing-heading" className="play-panel__heading">
+                {t("The series")}
               </h2>
-              <a
-                className="button-primary play-cta series-open"
-                href={paths.match(view.currentMatchId)}
-                data-testid={seriesTestid.openMatch}
-                onClick={followInApp(paths.match(view.currentMatchId))}
+              <p
+                className="series-score"
+                data-testid={seriesTestid.score}
+                data-you={you.wins}
+                data-opponent={opponent.wins}
               >
-                {t("Open game {game}", { game: String(view.gameNo) })}
-              </a>
-              {/* R334: a game is conceded on the board; the series can only be forfeited between games. */}
-              <p className="lobby-note">{t("To give up this game, concede it on the board.")}</p>
-            </section>
-          ) : null}
+                <span>{t("You {you} – {them} Opponent", { you: String(you.wins), them: String(opponent.wins) })}</span>
+                <span className="series-score__first">
+                  {t("Win with all {count} decks · game {game} of at most {max}", {
+                    count: String(view.winsNeeded),
+                    game: String(view.gameNo),
+                    max: String(view.maxGames),
+                  })}
+                </span>
+              </p>
 
-          {view.result === null ? null : (
-            <section
-              className="lobby-card play-panel series-panel series-result"
-              data-testid={seriesTestid.result}
-              data-outcome={view.result.outcome}
-            >
-              <span className="series-result__word">{t(SERIES_OUTCOME_HEADLINE[view.result.outcome])}</span>
-              <p>{endReasonWords(view.result, view.winsNeeded, view.maxGames, { you: you.wins, opponent: opponent.wins })}</p>
-              <p>{ratingWords(view.result)}</p>
-              {view.result.ranked && view.result.outcome !== "abandoned" ? (
-                <p className="lobby-note" data-testid={seriesTestid.endReminder}>
-                  {conquestText("seriesEndRatingReminder")}
-                </p>
-              ) : null}
-              <a
-                className="button-primary play-cta"
-                href={paths.play}
-                data-testid={seriesTestid.backToPlay}
-                onClick={followInApp(paths.play)}
-              >
-                {t("Back to the lobby")}
-              </a>
-            </section>
-          )}
-        </div>
-
-        <div className="play-side">
-          <section className="lobby-card play-panel series-panel" aria-labelledby="series-standing-heading">
-            <h2 id="series-standing-heading" className="play-panel__heading">
-              {t("The series")}
-            </h2>
-            <p
-              className="series-score"
-              data-testid={seriesTestid.score}
-              data-you={you.wins}
-              data-opponent={opponent.wins}
-            >
-              <span>{t("You {you} – {them} Opponent", { you: String(you.wins), them: String(opponent.wins) })}</span>
-              <span className="series-score__first">
-                {t("Win with all {count} decks · game {game} of at most {max}", {
-                  count: String(view.winsNeeded),
-                  game: String(view.gameNo),
-                  max: String(view.maxGames),
+              <h3 className="series-panel__label">
+                {t("Your decks")} · {you.trioName}
+              </h3>
+              <ul className="play-trio-decks" aria-label={t("Your decks")}>
+                {yourDecks.map((deck) => {
+                  const isPick = you.pick === deck.slot;
+                  return (
+                    <li
+                      key={deck.slot}
+                      className="play-trio-deck series-deck"
+                      data-testid={seriesTestid.deck(deck.slot)}
+                      data-won={deck.won ? "true" : "false"}
+                      data-picked={isPick ? "true" : "false"}
+                      title={deckStanding(deck)}
+                    >
+                      <span className="series-deck__name">{deck.name}</span>
+                      <span className="series-deck__standing">{deck.won ? t("won · locked") : isPick ? t("your pick") : deckStanding(deck).toLowerCase()}</span>
+                    </li>
+                  );
                 })}
-              </span>
-            </p>
+              </ul>
+              <p className="lobby-note">{t("A deck that wins a game is locked for the rest of the series.")}</p>
 
-            <h3 className="series-panel__label">
-              {t("Your decks")} · {you.trioName}
-            </h3>
-            <ul className="play-trio-decks" aria-label={t("Your decks")}>
-              {yourDecks.map((deck) => {
-                const isPick = you.pick === deck.slot;
-                return (
+              <h3 className="series-panel__label">{t("Their decks")}</h3>
+              <ul className="play-trio-decks" aria-label={t("Your opponent's decks")}>
+                {theirDecks.map((deck) => (
                   <li
                     key={deck.slot}
                     className="play-trio-deck series-deck"
-                    data-testid={seriesTestid.deck(deck.slot)}
+                    data-testid={seriesTestid.opponentDeck(deck.slot)}
                     data-won={deck.won ? "true" : "false"}
-                    data-picked={isPick ? "true" : "false"}
-                    title={deckStanding(deck)}
                   >
-                    <span className="series-deck__name">{deck.name}</span>
-                    <span className="series-deck__standing">{deck.won ? t("won · locked") : isPick ? t("your pick") : deckStanding(deck).toLowerCase()}</span>
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="lobby-note">{t("A deck that wins a game is locked for the rest of the series.")}</p>
-
-            <h3 className="series-panel__label">{t("Their decks")}</h3>
-            <ul className="play-trio-decks" aria-label={t("Your opponent's decks")}>
-              {theirDecks.map((deck) => (
-                <li
-                  key={deck.slot}
-                  className="play-trio-deck series-deck"
-                  data-testid={seriesTestid.opponentDeck(deck.slot)}
-                  data-won={deck.won ? "true" : "false"}
-                >
-                  <span className="series-deck__name">{t("Deck {number}", { number: String(deck.slot + 1) })}</span>
-                  <span className="series-deck__standing">{deck.won ? t("won · locked") : t("not won yet")}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {view.games.length === 0 ? null : (
-            <section className="lobby-card play-panel series-panel" aria-labelledby="series-games-heading">
-              <h2 id="series-games-heading" className="play-panel__heading play-panel__heading--sub">
-                {t("Games")}
-              </h2>
-              <ol className="series-history">
-                {view.games.map((game) => (
-                  <li key={game.gameNo} data-testid={seriesTestid.game(game.gameNo)} data-result={game.result ?? "pending"}>
-                    {t("Game {game}: {deck} vs their deck {theirs} —", {
-                      game: String(game.gameNo),
-                      deck: deckName(game.yourSlot),
-                      theirs: String(game.opponentSlot + 1),
-                    })}{" "}
-                    <span className="series-history__result">
-                      {game.result === null ? t("in progress") : t(GAME_RESULT_WORD[game.result])}
-                    </span>{" "}
-                    · {game.youWentFirst ? t("you went first") : t("they went first")}
+                    <span className="series-deck__name">{t("Deck {number}", { number: String(deck.slot + 1) })}</span>
+                    <span className="series-deck__standing">{deck.won ? t("won · locked") : t("not won yet")}</span>
                   </li>
                 ))}
-              </ol>
+              </ul>
             </section>
-          )}
 
-          {picking ? (
-            <section className="lobby-card play-panel series-panel" aria-label={t("Leave the series")}>
-              {confirming ? (
-                <div className="row" role="alertdialog" aria-label={t("Forfeit the series?")}>
-                  <p>
-                    {view.ranked
-                      ? t("Forfeit the series? Your opponent wins it, and your rating moves as for a loss.")
-                      : t("Forfeit the series? Your opponent wins it.")}
-                  </p>
-                  <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
-                    {t("Forfeit")}
-                  </button>
+            {view.games.length === 0 ? null : (
+              <section className="lobby-card play-panel series-panel" aria-labelledby="series-games-heading">
+                <h2 id="series-games-heading" className="play-panel__heading play-panel__heading--sub">
+                  {t("Games")}
+                </h2>
+                <ol className="series-history">
+                  {view.games.map((game) => (
+                    <li key={game.gameNo} data-testid={seriesTestid.game(game.gameNo)} data-result={game.result ?? "pending"}>
+                      {t("Game {game}: {deck} vs their deck {theirs} —", {
+                        game: String(game.gameNo),
+                        deck: deckName(game.yourSlot),
+                        theirs: String(game.opponentSlot + 1),
+                      })}{" "}
+                      <span className="series-history__result">
+                        {game.result === null ? t("in progress") : t(GAME_RESULT_WORD[game.result])}
+                      </span>{" "}
+                      · {game.youWentFirst ? t("you went first") : t("they went first")}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
+
+            {picking ? (
+              <section className="lobby-card play-panel series-panel" aria-label={t("Leave the series")}>
+                {confirming ? (
+                  <div className="row" role="alertdialog" aria-label={t("Forfeit the series?")}>
+                    <p>
+                      {view.ranked
+                        ? t("Forfeit the series? Your opponent wins it, and your rating moves as for a loss.")
+                        : t("Forfeit the series? Your opponent wins it.")}
+                    </p>
+                    <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
+                      {t("Forfeit")}
+                    </button>
+                    <button
+                      type="button"
+                      className="link-button"
+                      data-testid={seriesTestid.forfeitCancel}
+                      onClick={() => {
+                        setConfirming(false);
+                      }}
+                    >
+                      {t("Keep playing")}
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
                     className="link-button"
-                    data-testid={seriesTestid.forfeitCancel}
+                    data-testid={seriesTestid.forfeit}
+                    disabled={busy}
                     onClick={() => {
-                      setConfirming(false);
+                      setConfirming(true);
                     }}
                   >
-                    {t("Keep playing")}
+                    {t("Forfeit the series")}
                   </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="link-button"
-                  data-testid={seriesTestid.forfeit}
-                  disabled={busy}
-                  onClick={() => {
-                    setConfirming(true);
-                  }}
-                >
-                  {t("Forfeit the series")}
-                </button>
-              )}
-            </section>
-          ) : null}
+                )}
+              </section>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

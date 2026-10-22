@@ -571,7 +571,7 @@ function defaultHostFactory(): PracticeHost {
  * is the full-width board (`app-shell--wide`), like `/dev/hotseat` and `/match/<id>`.
  */
 function Shell({ variant, children }: { variant: "lobby" | "game"; children: ReactNode }): ReactElement {
-  const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell tavern";
+  const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell tavern one-screen";
   return <div className={`${shell} practice practice--${variant}`}>{children}</div>;
 }
 
@@ -1152,53 +1152,55 @@ function PracticeScreen({
     return (
       <Shell variant="lobby">
         <BackLink to={paths.play} />
-        {/* The page's one H1, first in the outline and read, not drawn: Back and the path say where
-            the player is. */}
-        <h1 className="tutorial-sr-only">{t("Practice")}</h1>
-        {savedGame === null && liveGame === null && !resumeLost ? null : (
-          <div className="practice-banners">
-            {savedGame === null ? null : (
-              <GameBanner
-                testId={gameBannerTestid.practice}
-                title="Game in progress"
-                action={{ label: "Resume", testId: gameBannerTestid.practiceResume, onPress: onResume }}
-                data={{ difficulty: savedGame.difficulty }}
-              >
-                {t("Your {difficulty} game against the AI is saved where you left it. Starting a new game ends it.", {
-                  difficulty: t(DIFFICULTY_LABEL[savedGame.difficulty]),
-                })}
-              </GameBanner>
-            )}
-            {resumeLost ? (
-              <p className="notice" data-testid={practiceTestid.resumeLost} role="status">
-                {t("Your saved game could not be picked up again, so it has been dropped.")}
-              </p>
-            ) : null}
-            <LiveGameBanner game={liveGame} />
-          </div>
-        )}
-        {tryState === "missing" ? (
-          <p className="notice" data-testid={practiceTestid.tryMissing} role="status">
-            {t("That custom card could not be found: it may have been deleted, or you may need to sign in.")}
-          </p>
-        ) : null}
-        <TutorialPath onStart={onStartLesson} />
-        <header className="practice-lobby__header" ref={practiceHeader}>
-          <h2 className="practice-lobby__title">{t("Practice against the AI")}</h2>
-          <p className="practice-intro">
-            {t(
-              "A full game against a computer opponent, right here in your browser. It plays the same way at every difficulty; only its resources change.",
-            )}
-          </p>
-        </header>
-        <PracticeSetup
-          saved={saved}
-          initial={initial}
-          defs={lobbyCatalog.defs}
-          defsFailed={lobbyCatalog.failed}
-          custom={custom.state}
-          onStart={onStart}
-        />
+        <div className="one-screen__body one-screen__stack">
+          {/* The page's one H1, first in the outline and read, not drawn: Back and the path say where
+              the player is. */}
+          <h1 className="tutorial-sr-only">{t("Practice")}</h1>
+          {savedGame === null && liveGame === null && !resumeLost ? null : (
+            <div className="practice-banners">
+              {savedGame === null ? null : (
+                <GameBanner
+                  testId={gameBannerTestid.practice}
+                  title="Game in progress"
+                  action={{ label: "Resume", testId: gameBannerTestid.practiceResume, onPress: onResume }}
+                  data={{ difficulty: savedGame.difficulty }}
+                >
+                  {t("Your {difficulty} game against the AI is saved where you left it. Starting a new game ends it.", {
+                    difficulty: t(DIFFICULTY_LABEL[savedGame.difficulty]),
+                  })}
+                </GameBanner>
+              )}
+              {resumeLost ? (
+                <p className="notice" data-testid={practiceTestid.resumeLost} role="status">
+                  {t("Your saved game could not be picked up again, so it has been dropped.")}
+                </p>
+              ) : null}
+              <LiveGameBanner game={liveGame} />
+            </div>
+          )}
+          {tryState === "missing" ? (
+            <p className="notice" data-testid={practiceTestid.tryMissing} role="status">
+              {t("That custom card could not be found: it may have been deleted, or you may need to sign in.")}
+            </p>
+          ) : null}
+          <TutorialPath onStart={onStartLesson} />
+          <header className="practice-lobby__header" ref={practiceHeader}>
+            <h2 className="practice-lobby__title">{t("Practice against the AI")}</h2>
+            <p className="practice-intro">
+              {t(
+                "A full game against a computer opponent, right here in your browser. It plays the same way at every difficulty; only its resources change.",
+              )}
+            </p>
+          </header>
+          <PracticeSetup
+            saved={saved}
+            initial={initial}
+            defs={lobbyCatalog.defs}
+            defsFailed={lobbyCatalog.failed}
+            custom={custom.state}
+            onStart={onStart}
+          />
+        </div>
       </Shell>
     );
   }
