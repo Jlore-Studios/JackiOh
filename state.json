@@ -11401,6 +11401,13 @@
     "1608": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T00:48:33Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 6 fails: every line the fix needs is in .github/workflows/ci.yml, a forbidden path, so a person makes it"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
