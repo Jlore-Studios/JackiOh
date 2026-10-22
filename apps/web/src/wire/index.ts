@@ -45,6 +45,7 @@ export type { CraftHatPrice } from "./generated/CraftHatPrice.ts";
 export type { CraftKeyword } from "./generated/CraftKeyword.ts";
 export type { CraftKeywordPrice } from "./generated/CraftKeywordPrice.ts";
 export type { CraftMode } from "./generated/CraftMode.ts";
+export type { CraftOffer } from "./generated/CraftOffer.ts";
 export type { CraftPreview } from "./generated/CraftPreview.ts";
 export type { CraftRecipe } from "./generated/CraftRecipe.ts";
 export type { CraftVerb } from "./generated/CraftVerb.ts";

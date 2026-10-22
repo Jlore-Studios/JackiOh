@@ -1,5 +1,5 @@
 //! M #96.1 Journey Complete (SPEC §8.8 row 96.1, §7; §6.2 Cast on draw, §6.3 Add to hand, Make Radiant;
-//! R40, R58, R70, R746, R766, R1248): (2) Spell, Token, printed Rare.
+//! R40, R58, R70, R746, R766, R1248): (1) Spell, Token, printed Rare.
 //!
 //! Base:    "Cast on draw: Return the cards that went on this journey from exile to hand. They become
 //!          Radiant."

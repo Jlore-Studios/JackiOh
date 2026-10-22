@@ -1,9 +1,9 @@
 # `jackioh-cards`
 
-480 catalog entries in the five shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+482 catalog entries in the five shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
 Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
-spec §8.8) and Meditative+ (26 cards and 4 tokens, spec §8.9, shipped in v0.3.15 by #1187), 396 cards
-and 84 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496 built
+spec §8.8) and Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187), 396 cards
+and 86 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496 built
 it and Meditative+ while issue #1173 did (R1178000), is in no pool that names no set, no deck and no
 random deck until the patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
 `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the

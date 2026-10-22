@@ -34,6 +34,9 @@ import {
   blankRecipe,
   frameOf,
   moveEffect,
+  offeredHats,
+  offeredKeywords,
+  offeredVerbs,
   removeEffect,
   removeHat,
   setEffectSlot,
@@ -45,6 +48,7 @@ import {
   takesKeyword,
   toggleKeyword,
 } from "./recipe.ts";
+import { codeWord, parseRecipeText, recipeText } from "./recipeText.ts";
 import "./craft.css";
 
 /** ME-CRAFT (Meditative #17, R880–R883): the Scratch-style block editor. Blocks snap together for
@@ -55,10 +59,16 @@ import "./craft.css";
  * tap and keyboard equivalent, so nothing needs a drag.
  *
  * The prompt's `craftMode` (Meditative+, #1182) changes the frame, never the rules: `potion` and
- * `hugePotion` pin a Unit whose one hat is its Activate (Jazakus and Jazakus Prime, R1182000,
- * R1182001), with no type or hat palette; `scratch` opens an empty canvas with no suggestions, no
- * prices, no tooltips and no refusal reasons, only the meters and the Craft button (Scratch Pad,
- * R1182002). */
+ * `hugePotion` pin a Spell whose one hat is its When cast (Jazakus and Jazakus Prime, R1182000,
+ * R1182001, R1563008), with no type or hat palette; `scratch` opens a code editor, the recipe typed
+ * as text (R1563010), with no suggestions, no prices, no tooltips and no refusal reasons, only the
+ * blocks by name, the meters and the Craft button (Scratch Pad, R1182002). The palette holds only
+ * the prompt's offer, four keywords, two hats and three effects (R1563007), and the verdict is the
+ * engine's on the answer, its frame and offer included.
+ *
+ * Layout: a header (title and meters), the body (palette, canvas and the card), and a footer whose
+ * Craft button stays in reach; on a phone the body scrolls between them as one column, the card
+ * first. */
 
 const TYPES: readonly CardType[] = ["Unit", "Spell", "Field Spell", "Trap"];
 
@@ -139,6 +149,10 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
   const [recipe, setRecipe] = useState<CraftRecipe>(
     () => presets.find((option) => option.recipe !== undefined)?.recipe ?? blankRecipe(cost, frame),
   );
+  // R1563010: from scratch the recipe is code; the card shown is the last code that read.
+  const [code, setCode] = useState(() => recipeText(blankRecipe(cost)));
+  const [codeRecipe, setCodeRecipe] = useState<CraftRecipe>(() => blankRecipe(cost));
+  const codeArea = useRef<HTMLTextAreaElement>(null);
   const [selectedHat, setSelectedHat] = useState(0);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [sheet, setSheet] = useState(() => sheetQuery()?.matches === true);
@@ -154,16 +168,43 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
     return () => query.removeEventListener("change", onChange);
   }, []);
 
-  const preview = craftPreview(recipe, cost);
+  // R1563007: the palette is the prompt's offer; Scratch Pad's prompt has none, so it is every block.
+  const offer = props.pending.craftOffer;
+  const keywordKinds = offeredKeywords(offer);
+  const hatKinds = offeredHats(offer);
+  const verbs = offeredVerbs(offer);
+
+  const parsed = scratch ? parseRecipeText(code, cost) : null;
+  const shown = scratch ? codeRecipe : recipe;
+  const preview = craftPreview(shown, cost, props.pending);
+  const craftable = preview.valid && parsed?.ok !== false;
   const hatCount = recipe.hats.length;
   const hatIndex = Math.min(selectedHat, Math.max(0, hatCount - 1));
 
   function send(): void {
-    if (!preview.valid) return;
+    if (!craftable) return;
     props.onAction({
       type: "answer",
       choiceId: props.pending.choiceId,
-      selection: [{ pick: "craft", recipe }],
+      selection: [{ pick: "craft", recipe: shown }],
+    });
+  }
+
+  function editCode(text: string): void {
+    setCode(text);
+    const read = parseRecipeText(text, cost);
+    if (read.ok) setCodeRecipe(read.recipe);
+  }
+
+  /** A block's name typed at the caret, as a code editor's completion would. */
+  function insertCode(snippet: string): void {
+    const area = codeArea.current;
+    const start = area?.selectionStart ?? code.length;
+    const end = area?.selectionEnd ?? code.length;
+    editCode(`${code.slice(0, start)}${snippet}${code.slice(end)}`);
+    requestAnimationFrame(() => {
+      area?.focus();
+      area?.setSelectionRange(start + snippet.length, start + snippet.length);
     });
   }
 
@@ -262,6 +303,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
   /** A price or a refusal, shown except from scratch (R1182002). */
   const hint = (text: string): string | undefined => (scratch ? undefined : text);
   const title = titleOf(mode);
+  const grantable = keywordKinds.filter((kind) => kind !== "Armor");
   return (
     <div className="prompt-scrim" data-testid="prompt-scrim">
       <div
@@ -274,287 +316,23 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
         aria-modal="true"
         aria-label={title}
       >
-        <p className="prompt-title">{title}</p>
+        <header className="craft-head">
+          <p className="prompt-title">{title}</p>
+          <p className="craft-meters">
+            <span data-testid="craft-points" data-over={preview.points > preview.pointsBudget}>
+              {t("{points}/{budget} pts", { points: preview.points, budget: preview.pointsBudget })}
+            </span>
+            <span data-testid="craft-loc" data-over={preview.loc > preview.locBudget}>
+              {t("{loc}/{budget} lines", { loc: preview.loc, budget: preview.locBudget })}
+            </span>
+          </p>
+        </header>
         <div className="craft-columns">
-          <nav className="craft-palette" aria-label={t("Blocks")} data-drop-palette="true">
-            <section aria-label={t("Type and stats")}>
-              <h3>{t("Type and stats")}</h3>
-              {frame === undefined && (
-                <div className="craft-row">
-                  {TYPES.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      className="craft-block"
-                      aria-pressed={recipe.type === type}
-                      onClick={() => setRecipe((prev) => setType(prev, type))}
-                    >
-                      {typeName(type)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {recipe.type === "Unit" && (
-                <div className="craft-row">
-                  <Stepper label={t("Attack")} value={recipe.attack} onStep={(delta) => setRecipe((prev) => stepStat(prev, "attack", delta))} />
-                  <Stepper label={t("Health")} value={recipe.health} onStep={(delta) => setRecipe((prev) => stepStat(prev, "health", delta))} />
-                </div>
-              )}
-              {recipe.type === "Spell" && (
-                <div className="craft-row">
-                  <Stepper
-                    label={t("Echo")}
-                    value={recipe.echo}
-                    onStep={(delta) =>
-                      setRecipe((prev) => ({ ...prev, echo: Math.min(CRAFT_MAX_N, Math.max(0, prev.echo + delta)) }))
-                    }
-                  />
-                </div>
-              )}
-              <div className="craft-row">
-                <label>
-                  {t("Name")}{" "}
-                  <select
-                    data-testid="craft-adjective"
-                    value={recipe.adjective}
-                    onChange={(event) => setRecipe((prev) => ({ ...prev, adjective: event.target.value }))}
-                  >
-                    {CRAFT_ADJECTIVES.map((word) => (
-                      <option key={word} value={word}>
-                        {word}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <select
-                    data-testid="craft-noun"
-                    value={recipe.noun}
-                    aria-label={t("Second name word")}
-                    onChange={(event) => setRecipe((prev) => ({ ...prev, noun: event.target.value }))}
-                  >
-                    {CRAFT_NOUNS.map((word) => (
-                      <option key={word} value={word}>
-                        {word}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </section>
-            <section aria-label={t("Keywords")}>
-              <h3>{t("Keywords")}</h3>
-              {recipe.keywords.length > 0 && (
-                <div className="craft-row" aria-label={t("Chosen keywords")}>
-                  {recipe.keywords.map((block) => (
-                    <span key={block.kind} className="craft-chosen">
-                      {block.kind === "Armor" ? t("Armor {n}", { n: block.n ?? 1 }) : keywordName(block.kind)}
-                      {block.kind === "Armor" && (
-                        <span className="craft-stepper" role="group" aria-label={t("Armor")}>
-                          <button type="button" aria-label={t("Decrease {label}", { label: t("Armor") })} onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", -1))}>
-                            −
-                          </button>
-                          <button type="button" aria-label={t("Increase {label}", { label: t("Armor") })} onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", 1))}>
-                            +
-                          </button>
-                        </span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <div className="craft-row">
-                {CRAFT_KEYWORD_PRICES.map((row) => {
-                  // R883: a type that cannot take this keyword leaves its click inert. The button still
-                  // starts the drag of a "Give a unit X" effect, which any type may hold, so it is
-                  // `aria-disabled`, not `disabled`, which would swallow the pointerdown.
-                  const takes = takesKeyword(recipe.type, row.kind);
-                  return (
-                    <button
-                      key={row.kind}
-                      type="button"
-                      className="craft-block"
-                      aria-pressed={recipe.keywords.some((block) => block.kind === row.kind)}
-                      aria-disabled={!takes}
-                      title={hint(
-                        takes
-                          ? keywordPriceText(row.kind)
-                          : t("A {type} cannot take {keyword}", { type: typeName(recipe.type), keyword: keywordName(row.kind) }),
-                      )}
-                      onClick={() =>
-                        clickGuard(() =>
-                          setRecipe((prev) => (takesKeyword(prev.type, row.kind) ? toggleKeyword(prev, row.kind) : prev)),
-                        )
-                      }
-                      onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, t("Give a unit {keyword}", { keyword: keywordName(row.kind) }))}
-                    >
-                      {keywordName(row.kind)}
-                      {!scratch && ` · ${keywordPriceText(row.kind)}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-            {frame === undefined && (
-              <section aria-label={t("Hats")}>
-                <h3>{t("Hats")}</h3>
-                <div className="craft-row">
-                  {CRAFT_HAT_PRICES.filter((row) => takesHat(recipe.type, row.hat)).map((row) => (
-                    <button
-                      key={row.hat}
-                      type="button"
-                      className="craft-block"
-                      title={hint(hatPriceText(row.hat))}
-                      onPointerDown={(event) => beginDrag(event, { from: "palette-hat", hat: row.hat }, t(HAT_LABELS[row.hat]))}
-                      onClick={() => clickGuard(() => setRecipe((prev) => addHat(prev, row.hat)))}
-                    >
-                      {t(HAT_LABELS[row.hat])}
-                      {!scratch && ` · ${hatPriceText(row.hat)}`}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-            <section aria-label={t("Effects")}>
-              <h3>{t("Effects")}</h3>
-              <div className="craft-row">
-                {CRAFT_VERB_PRICES.map((row) => (
-                  <button
-                    key={row.verb}
-                    type="button"
-                    className="craft-block"
-                    title={hint(verbPriceText(row.verb))}
-                    onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: row.verb }, t(VERB_LABELS[row.verb]))}
-                    onClick={() =>
-                      clickGuard(() =>
-                        setRecipe((prev) => {
-                          if (prev.hats[hatIndex] === undefined) return prev;
-                          return addEffect(prev, hatIndex, row.verb);
-                        }),
-                      )
-                    }
-                  >
-                    {t(VERB_LABELS[row.verb])}
-                    {!scratch && ` · ${verbPriceText(row.verb)}`}
-                  </button>
-                ))}
-              </div>
-            </section>
-          </nav>
-          <div className="craft-canvas" aria-label={t("Your card")}>
-            {recipe.hats.map((hat, hi) => (
-              <section
-                key={`${hat.hat}-${hi}`}
-                className="craft-hat"
-                data-drop-hat={hi}
-                aria-pressed={hi === hatIndex}
-                aria-label={t("{hat} hat", { hat: t(HAT_LABELS[hat.hat]) })}
-                onClick={() => setSelectedHat(hi)}
-              >
-                <header>
-                  <strong>{t(HAT_LABELS[hat.hat])}</strong>
-                  {/* R1182000: a Potion's Activate is its frame, pinned to the canvas. */}
-                  {frame === undefined && (
-                    <button type="button" aria-label={t("Remove {hat} hat", { hat: t(HAT_LABELS[hat.hat]) })} onClick={() => setRecipe((prev) => removeHat(prev, hi))}>
-                      ×
-                    </button>
-                  )}
-                </header>
-                {hat.effects.map((effect, ei) => (
-                  <div
-                    key={ei}
-                    className="craft-block craft-placed"
-                    data-drop-hat={hi}
-                    data-drop-at={ei}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={t("{effect} under {hat}", { effect: effectText(effect), hat: t(HAT_LABELS[hat.hat]) })}
-                    onPointerDown={(event) => beginDrag(event, { from: "canvas", hat: hi, effect: ei }, effectText(effect))}
-                    onClick={() => clickGuard(() => setSelectedHat(hi))}
-                    onKeyDown={(event) => {
-                      if (event.key === "+" || event.key === "=") setRecipe((prev) => stepN(prev, hi, ei, 1));
-                      else if (event.key === "-" || event.key === "_") setRecipe((prev) => stepN(prev, hi, ei, -1));
-                      else if (event.key === "Delete" || event.key === "Backspace") setRecipe((prev) => removeEffect(prev, hi, ei));
-                      else if (event.key === "ArrowUp") setRecipe((prev) => moveEffect(prev, { hat: hi, effect: ei }, { hat: hi, effect: ei - 1 }));
-                      else if (event.key === "ArrowDown") setRecipe((prev) => moveEffect(prev, { hat: hi, effect: ei }, { hat: hi, effect: ei + 1 }));
-                      else if (event.key === "Enter") setSelectedHat(hi);
-                      else return;
-                      event.preventDefault();
-                    }}
-                  >
-                    <span>{effectText(effect)}</span>
-                    {effect.n !== undefined && (
-                      <span className="craft-stepper" role="group" aria-label={t("Number")}>
-                        <button type="button" aria-label={t("Decrease number")} onClick={() => setRecipe((prev) => stepN(prev, hi, ei, -1))}>
-                          −
-                        </button>
-                        <button type="button" aria-label={t("Increase number")} onClick={() => setRecipe((prev) => stepN(prev, hi, ei, 1))}>
-                          +
-                        </button>
-                      </span>
-                    )}
-                    {effect.verb === "grantKeyword" && (
-                      <select
-                        aria-label={t("Granted keyword")}
-                        value={effect.keyword ?? ""}
-                        onChange={(event) =>
-                          setRecipe((prev) =>
-                            setEffectSlot(prev, hi, ei, {
-                              keyword:
-                                event.target.value === ""
-                                  ? undefined
-                                  : (event.target.value as Keyword["kind"]),
-                            }),
-                          )
-                        }
-                      >
-                        <option value="">{t("Choose")}</option>
-                        {CRAFT_KEYWORD_PRICES.filter((row) => row.kind !== "Armor").map((row) => (
-                          <option key={row.kind} value={row.kind}>
-                            {keywordName(row.kind)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    {(effect.verb === "addRandom" || effect.verb === "discover") && (
-                      <select
-                        aria-label={t("Card type")}
-                        value={effect.cardType ?? ""}
-                        onChange={(event) =>
-                          setRecipe((prev) =>
-                            setEffectSlot(prev, hi, ei, {
-                              cardType:
-                                event.target.value === "" ? undefined : (event.target.value as CardType),
-                            }),
-                          )
-                        }
-                      >
-                        <option value="">{t("Any")}</option>
-                        {TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {typeName(type)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <button type="button" aria-label={t("Remove {effect}", { effect: effectText(effect) })} onClick={() => setRecipe((prev) => removeEffect(prev, hi, ei))}>
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <div className="craft-gap" data-drop-hat={hi} data-drop-at={hat.effects.length} aria-hidden="true" />
-              </section>
-            ))}
-          </div>
           <aside className="craft-side">
-            <p className="craft-meters">
-              <span data-testid="craft-points">
-                {t("{points}/{budget} pts", { points: preview.points, budget: preview.pointsBudget })}
-              </span>{" "}
-              <span data-testid="craft-loc">
-                {t("{loc}/{budget} lines", { loc: preview.loc, budget: preview.locBudget })}
-              </span>
-            </p>
+            <span className="craft-face" data-testid="craft-face" {...(scratch ? {} : inspect.handlers)}>
+              <CardFace face={face} />
+            </span>
+            {!scratch && inspect.overlay}
             {!scratch && (
               <ul className="craft-reasons" role="status" aria-label={t("Why this recipe is refused")}>
                 {preview.reasons.map((reason) => (
@@ -562,11 +340,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 ))}
               </ul>
             )}
-            <span className="craft-face" data-testid="craft-face" {...(scratch ? {} : inspect.handlers)}>
-              <CardFace face={face} />
-            </span>
-            {!scratch && inspect.overlay}
-            {!scratch && (
+            {!scratch && presets.length > 0 && (
               <div className="craft-suggestions" aria-label={t("Suggestions")}>
                 {presets.map((option, index) =>
                   option.recipe === undefined ? null : (
@@ -582,17 +356,350 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 )}
               </div>
             )}
-            <button
-              type="button"
-              data-testid="prompt-submit"
-              className="prompt-submit"
-              aria-disabled={!preview.valid}
-              onClick={send}
-            >
-              {t("Craft")}
-            </button>
           </aside>
+          {scratch ? (
+            <section className="craft-code" aria-label={t("Your card's code")}>
+              <textarea
+                ref={codeArea}
+                data-testid="craft-code"
+                className="craft-code-text"
+                spellCheck={false}
+                autoCapitalize="off"
+                autoCorrect="off"
+                aria-label={t("Your card's code")}
+                aria-invalid={parsed?.ok === false}
+                value={code}
+                onChange={(event) => editCode(event.target.value)}
+              />
+              {/* A compiler's error, not the engine's verdict: the text does not read as a recipe. */}
+              <p className="craft-code-error" role="status" data-testid="craft-code-error">
+                {parsed?.ok === false ? parsed.errors.join("; ") : ""}
+              </p>
+              {/* R1182002: the blocks by name, which type themselves at the caret. */}
+              <nav className="craft-code-names" aria-label={t("Blocks")}>
+                <div className="craft-row">
+                  {(["Unit", "Spell", "FieldSpell", "Trap"] as const).map((word) => (
+                    <button key={word} type="button" className="craft-block" onClick={() => insertCode(word)}>
+                      {word}
+                    </button>
+                  ))}
+                  <button type="button" className="craft-block" onClick={() => insertCode("stats(, )")}>
+                    stats
+                  </button>
+                  <button type="button" className="craft-block" onClick={() => insertCode("echo()")}>
+                    echo
+                  </button>
+                </div>
+                <div className="craft-row">
+                  {keywordKinds.map((kind) => (
+                    <button key={kind} type="button" className="craft-block" onClick={() => insertCode(`keyword(${codeWord(kind)})`)}>
+                      {codeWord(kind)}
+                    </button>
+                  ))}
+                </div>
+                <div className="craft-row">
+                  {hatKinds.map((hat) => (
+                    <button key={hat} type="button" className="craft-block" onClick={() => insertCode(`${hat} {\n    \n  }`)}>
+                      {hat}
+                    </button>
+                  ))}
+                </div>
+                <div className="craft-row">
+                  {verbs.map((verb) => (
+                    <button key={verb} type="button" className="craft-block" onClick={() => insertCode(`${verb}()`)}>
+                      {verb}
+                    </button>
+                  ))}
+                </div>
+              </nav>
+            </section>
+          ) : (
+            <>
+              <div className="craft-canvas" aria-label={t("Your card")}>
+                {recipe.hats.length === 0 && <p className="craft-empty">{t("Add a hat, then snap effects under it")}</p>}
+                {recipe.hats.map((hat, hi) => (
+                  <section
+                    key={`${hat.hat}-${hi}`}
+                    className="craft-hat"
+                    data-drop-hat={hi}
+                    aria-pressed={hi === hatIndex}
+                    aria-label={t("{hat} hat", { hat: t(HAT_LABELS[hat.hat]) })}
+                    onClick={() => setSelectedHat(hi)}
+                  >
+                    <header>
+                      <strong>{t(HAT_LABELS[hat.hat])}</strong>
+                      {/* R1182000, R1563008: a Potion's When cast is its frame, pinned to the canvas. */}
+                      {frame === undefined && (
+                        <button type="button" aria-label={t("Remove {hat} hat", { hat: t(HAT_LABELS[hat.hat]) })} onClick={() => setRecipe((prev) => removeHat(prev, hi))}>
+                          ×
+                        </button>
+                      )}
+                    </header>
+                    {hat.effects.map((effect, ei) => (
+                      <div
+                        key={ei}
+                        className="craft-block craft-placed"
+                        data-drop-hat={hi}
+                        data-drop-at={ei}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={t("{effect} under {hat}", { effect: effectText(effect), hat: t(HAT_LABELS[hat.hat]) })}
+                        onPointerDown={(event) => beginDrag(event, { from: "canvas", hat: hi, effect: ei }, effectText(effect))}
+                        onClick={() => clickGuard(() => setSelectedHat(hi))}
+                        onKeyDown={(event) => {
+                          if (event.key === "+" || event.key === "=") setRecipe((prev) => stepN(prev, hi, ei, 1));
+                          else if (event.key === "-" || event.key === "_") setRecipe((prev) => stepN(prev, hi, ei, -1));
+                          else if (event.key === "Delete" || event.key === "Backspace") setRecipe((prev) => removeEffect(prev, hi, ei));
+                          else if (event.key === "ArrowUp") setRecipe((prev) => moveEffect(prev, { hat: hi, effect: ei }, { hat: hi, effect: ei - 1 }));
+                          else if (event.key === "ArrowDown") setRecipe((prev) => moveEffect(prev, { hat: hi, effect: ei }, { hat: hi, effect: ei + 1 }));
+                          else if (event.key === "Enter") setSelectedHat(hi);
+                          else return;
+                          event.preventDefault();
+                        }}
+                      >
+                        <span>{effectText(effect)}</span>
+                        {effect.n !== undefined && (
+                          <span className="craft-stepper" role="group" aria-label={t("Number")}>
+                            <button type="button" aria-label={t("Decrease number")} onClick={() => setRecipe((prev) => stepN(prev, hi, ei, -1))}>
+                              −
+                            </button>
+                            <button type="button" aria-label={t("Increase number")} onClick={() => setRecipe((prev) => stepN(prev, hi, ei, 1))}>
+                              +
+                            </button>
+                          </span>
+                        )}
+                        {effect.verb === "grantKeyword" && (
+                          <select
+                            aria-label={t("Granted keyword")}
+                            value={effect.keyword ?? ""}
+                            onChange={(event) =>
+                              setRecipe((prev) =>
+                                setEffectSlot(prev, hi, ei, {
+                                  keyword:
+                                    event.target.value === ""
+                                      ? undefined
+                                      : (event.target.value as Keyword["kind"]),
+                                }),
+                              )
+                            }
+                          >
+                            <option value="">{t("Choose")}</option>
+                            {grantable.map((kind) => (
+                              <option key={kind} value={kind}>
+                                {keywordName(kind)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {(effect.verb === "addRandom" || effect.verb === "discover") && (
+                          <select
+                            aria-label={t("Card type")}
+                            value={effect.cardType ?? ""}
+                            onChange={(event) =>
+                              setRecipe((prev) =>
+                                setEffectSlot(prev, hi, ei, {
+                                  cardType:
+                                    event.target.value === "" ? undefined : (event.target.value as CardType),
+                                }),
+                              )
+                            }
+                          >
+                            <option value="">{t("Any")}</option>
+                            {TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {typeName(type)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <button type="button" aria-label={t("Remove {effect}", { effect: effectText(effect) })} onClick={() => setRecipe((prev) => removeEffect(prev, hi, ei))}>
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <div className="craft-gap" data-drop-hat={hi} data-drop-at={hat.effects.length} aria-hidden="true" />
+                  </section>
+                ))}
+              </div>
+              <nav className="craft-palette" aria-label={t("Blocks")} data-drop-palette="true">
+                <section aria-label={t("Type and stats")}>
+                  <h3>{t("Type and stats")}</h3>
+                  {frame === undefined && (
+                    <div className="craft-row">
+                      {TYPES.map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          className="craft-block"
+                          aria-pressed={recipe.type === type}
+                          onClick={() => setRecipe((prev) => setType(prev, type))}
+                        >
+                          {typeName(type)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {recipe.type === "Unit" && (
+                    <div className="craft-row">
+                      <Stepper label={t("Attack")} value={recipe.attack} onStep={(delta) => setRecipe((prev) => stepStat(prev, "attack", delta))} />
+                      <Stepper label={t("Health")} value={recipe.health} onStep={(delta) => setRecipe((prev) => stepStat(prev, "health", delta))} />
+                    </div>
+                  )}
+                  {recipe.type === "Spell" && (
+                    <div className="craft-row">
+                      <Stepper
+                        label={t("Echo")}
+                        value={recipe.echo}
+                        onStep={(delta) =>
+                          setRecipe((prev) => ({ ...prev, echo: Math.min(CRAFT_MAX_N, Math.max(0, prev.echo + delta)) }))
+                        }
+                      />
+                    </div>
+                  )}
+                  <div className="craft-row">
+                    <label>
+                      {t("Name")}{" "}
+                      <select
+                        data-testid="craft-adjective"
+                        value={recipe.adjective}
+                        onChange={(event) => setRecipe((prev) => ({ ...prev, adjective: event.target.value }))}
+                      >
+                        {CRAFT_ADJECTIVES.map((word) => (
+                          <option key={word} value={word}>
+                            {word}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <select
+                        data-testid="craft-noun"
+                        value={recipe.noun}
+                        aria-label={t("Second name word")}
+                        onChange={(event) => setRecipe((prev) => ({ ...prev, noun: event.target.value }))}
+                      >
+                        {CRAFT_NOUNS.map((word) => (
+                          <option key={word} value={word}>
+                            {word}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </section>
+                <section aria-label={t("Keywords")}>
+                  <h3>{t("Keywords")}</h3>
+                  {recipe.keywords.length > 0 && (
+                    <div className="craft-row" aria-label={t("Chosen keywords")}>
+                      {recipe.keywords.map((block) => (
+                        <span key={block.kind} className="craft-chosen">
+                          {block.kind === "Armor" ? t("Armor {n}", { n: block.n ?? 1 }) : keywordName(block.kind)}
+                          {block.kind === "Armor" && (
+                            <span className="craft-stepper" role="group" aria-label={t("Armor")}>
+                              <button type="button" aria-label={t("Decrease {label}", { label: t("Armor") })} onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", -1))}>
+                                −
+                              </button>
+                              <button type="button" aria-label={t("Increase {label}", { label: t("Armor") })} onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", 1))}>
+                                +
+                              </button>
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="craft-row">
+                    {CRAFT_KEYWORD_PRICES.filter((row) => keywordKinds.includes(row.kind)).map((row) => {
+                      // R883: a type that cannot take this keyword leaves its click inert. The button still
+                      // starts the drag of a "Give a unit X" effect, which any type may hold, so it is
+                      // `aria-disabled`, not `disabled`, which would swallow the pointerdown.
+                      const takes = takesKeyword(recipe.type, row.kind);
+                      return (
+                        <button
+                          key={row.kind}
+                          type="button"
+                          className="craft-block"
+                          aria-pressed={recipe.keywords.some((block) => block.kind === row.kind)}
+                          aria-disabled={!takes}
+                          title={hint(
+                            takes
+                              ? keywordPriceText(row.kind)
+                              : t("A {type} cannot take {keyword}", { type: typeName(recipe.type), keyword: keywordName(row.kind) }),
+                          )}
+                          onClick={() =>
+                            clickGuard(() =>
+                              setRecipe((prev) => (takesKeyword(prev.type, row.kind) ? toggleKeyword(prev, row.kind) : prev)),
+                            )
+                          }
+                          onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, t("Give a unit {keyword}", { keyword: keywordName(row.kind) }))}
+                        >
+                          {keywordName(row.kind)}
+                          {` · ${keywordPriceText(row.kind)}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+                {frame === undefined && (
+                  <section aria-label={t("Hats")}>
+                    <h3>{t("Hats")}</h3>
+                    <div className="craft-row">
+                      {CRAFT_HAT_PRICES.filter((row) => hatKinds.includes(row.hat) && takesHat(recipe.type, row.hat)).map((row) => (
+                        <button
+                          key={row.hat}
+                          type="button"
+                          className="craft-block"
+                          title={hint(hatPriceText(row.hat))}
+                          onPointerDown={(event) => beginDrag(event, { from: "palette-hat", hat: row.hat }, t(HAT_LABELS[row.hat]))}
+                          onClick={() => clickGuard(() => setRecipe((prev) => addHat(prev, row.hat)))}
+                        >
+                          {t(HAT_LABELS[row.hat])}
+                          {` · ${hatPriceText(row.hat)}`}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                <section aria-label={t("Effects")}>
+                  <h3>{t("Effects")}</h3>
+                  <div className="craft-row">
+                    {CRAFT_VERB_PRICES.filter((row) => verbs.includes(row.verb)).map((row) => (
+                      <button
+                        key={row.verb}
+                        type="button"
+                        className="craft-block"
+                        title={hint(verbPriceText(row.verb))}
+                        onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: row.verb }, t(VERB_LABELS[row.verb]))}
+                        onClick={() =>
+                          clickGuard(() =>
+                            setRecipe((prev) => {
+                              if (prev.hats[hatIndex] === undefined) return prev;
+                              return addEffect(prev, hatIndex, row.verb);
+                            }),
+                          )
+                        }
+                      >
+                        {t(VERB_LABELS[row.verb])}
+                        {` · ${verbPriceText(row.verb)}`}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </nav>
+            </>
+          )}
         </div>
+        <footer className="craft-foot">
+          <button
+            type="button"
+            data-testid="prompt-submit"
+            className="prompt-submit"
+            aria-disabled={!craftable}
+            onClick={send}
+          >
+            {t("Craft")}
+          </button>
+        </footer>
       </div>
       {drag?.moved === true && <div className="craft-ghost" style={{ left: drag.x, top: drag.y }}>{drag.label}</div>}
     </div>

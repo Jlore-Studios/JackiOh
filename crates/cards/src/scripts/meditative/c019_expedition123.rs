@@ -1,11 +1,18 @@
 //! Meditative #19 Expedition123 (SPEC §8.8 row 19). (1) Spell, Quickdraw, Epic. Expedition1234 until
 //! patch v0.3.10 (#831), which renamed it and took a turn off its loss.
-//!   Base:    "Lose all mana for your next {turns} turns. Add a Temporal Rift to your hand."
-//!   Radiant: "Lose all mana for your next {turns} turns. Add a Radiant Temporal Rift to your hand."
+//!   Base:    "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Add a Temporal Rift
+//!             to your hand."
+//!   Radiant: the same with a Radiant Temporal Rift.
 //!
-//! ME-TURN's lost refreshes through the next 2 turns (R844), then the Rift (M #19.1) into hand,
-//! Radiant on the Radiant face. A full hand burns it (§2.4). An extra turn from the Rift counts as
-//! one of the two, as Hearthstone's Overload lands on Time Warp's extra turn.
+//! Two next-turn riders (§6.3 Mana, `next_turn_mana`), as Expedition12's (#1563; it was ME-TURN's lost
+//! refreshes, R844, "Lose all mana for your next 2 turns", until then): the first lowers your next
+//! refresh by `loss`; a delayed step at the start of your next turn (§10.1, R62: after that turn's
+//! refresh) sets the second, `lossAfter`, on the refresh after it, carrying the number as it stood at
+//! the cast. Each refresh floors at 0. Then the Rift (M #19.1) into hand, Radiant on the Radiant face; a
+//! full hand burns it (§2.4). An extra turn taken next is "next turn", as Hearthstone's Overload lands
+//! on Time Warp's extra turn.
+//!
+//! `script_v0_4_0f` keeps the card as it ran through v0.4.0f for its replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -14,11 +21,31 @@ pub const ID: &str = "meditative-019";
 /// M #19.1 Temporal Rift, made by this card.
 pub const RIFT_ID: &str = "meditative-019-1";
 
+/// The delayed step that sets the second loss, and the number it carries.
+const TURN_AFTER: &str = "turnAfter";
+const LOSS_AFTER: &str = "lossAfter";
+
 fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     vec![
-        lose_refreshes(json_as(json!({ "turns": param(&*ctx, "turns") }))),
+        next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "loss") }))),
+        delay(json_as(json!({
+            "at": { "phase": "start", "player": "self" },
+            "step": TURN_AFTER,
+            "hook": RESUME_HOOK,
+            "data": { "lossAfter": param(&*ctx, LOSS_AFTER) },
+            "next": true,
+        }))),
         add_to_hand(json_as(json!({ "defId": RIFT_ID, "radiant": ctx.radiant }))),
     ]
+}
+
+/// The start of your next turn: the second loss rides on the refresh after it.
+fn turn_after(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let loss = ctx.data.get(LOSS_AFTER).and_then(Value::as_i64).unwrap_or(0) as i32;
+    if loss <= 0 {
+        return vec![];
+    }
+    vec![next_turn_mana(json_as(json!({ "amount": -loss })))]
 }
 
 pub fn script() -> CardScripts {
@@ -28,6 +55,7 @@ pub fn script() -> CardScripts {
             ..StaticFlags::default()
         }),
         cry: Some(hook(cry)),
+        resume: IndexMap::from([(TURN_AFTER, hook(turn_after))]),
         ..Script::default()
     };
     // The Rift's face is the running face; everything else is the same script.
@@ -35,10 +63,29 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// Meditative #19 Expedition123 — SPEC §8.8 row 19, BUILD M10 row M 19: Quickdraw; your next two
-// refreshes give 0 mana and spend their riders, the third is normal; an extra turn counts among the
-// two; mana gained in those turns still adds; adds a base Temporal Rift to hand, burned at a full
-// hand; turns reads through `param()`; radiant the Rift is Radiant.
+/// R767000: Expedition123 through v0.4.0f: "Lose all mana for your next {turns} turns" (R844).
+pub fn script_v0_4_0f() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            vec![
+                lose_refreshes(json_as(json!({ "turns": param(&*ctx, "turns") }))),
+                add_to_hand(json_as(json!({ "defId": RIFT_ID, "radiant": ctx.radiant }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+// Meditative #19 Expedition123 — SPEC §8.8 row 19, BUILD M10 row M 19: Quickdraw; your next refresh
+// gives 2 less and the one after 3 less, each never below 0, the third normal; an extra turn taken
+// next is the first; mana gained in those turns still adds; adds a base Temporal Rift to hand, burned
+// at a full hand; both losses read through `param()`; radiant the Rift is Radiant.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,12 +98,10 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell Stockpile.
     const COIN: &str = "core-t-coin"; // (0) Spell: gain 1 mana.
 
-    /// p1's first turn (the scenario's default is turn 9), so its later turns are 3, 5, 7 and 9, and
-    /// max mana reaches 4 on turn 9.
+    /// p1's turn 9 (the scenario's default), so its later turns have max mana 4.
     fn board(hand: Value) -> Scenario {
         scenario(json!({
             "seed": "expedition123",
-            "turn": 1,
             "p1": {
                 "hand": hand,
                 "field": [VANILLA],
@@ -71,50 +116,66 @@ mod tests {
         s.hand(P1).into_iter().filter(|held| held.def_id == RIFT_ID).collect()
     }
 
+    /// p1's next turn: the opponent's passes, and p1's refresh and start of turn have run.
+    fn next_turn(s: &mut Scenario) {
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(s.state().active, P1);
+    }
+
+    fn lost(s: &Scenario) -> i32 {
+        let side = &s.state().players.p1;
+        side.mana.max - side.mana.current
+    }
+
     mod base {
         use super::*;
 
         #[test]
-        fn r844_two_lost_then_normal() {
+        fn loses_2_then_3_then_normal() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION]));
             s.play(EXPEDITION, json!({}));
             assert_eq!(rifts(&s).len(), 1);
-
-            // Turns 3 and 5 are p1's lost refreshes; turn 7, its fourth, is normal.
-            for turn in [3, 5] {
-                s.end_turn();
-                s.end_turn();
-                assert_eq!(s.state().turn, turn, "on turn {turn}");
-                assert_eq!(s.state().players.p1.mana.current, 0, "lost on turn {turn}");
-            }
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().turn, 7);
-            assert_eq!(s.state().players.p1.mana.current, 4);
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 2, "next turn");
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 3, "the turn after");
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 0, "then normal");
             assert_eq!(s.state().players.p1.lost_refresh_through, None);
         }
 
         #[test]
-        fn r844_an_extra_turn_counts_among_the_two() {
+        fn each_refresh_floors_at_0() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "expedition123-floor",
+                "turn": 1,
+                "p1": { "hand": [EXPEDITION], "field": [VANILLA], "library": [FILLER, FILLER, FILLER], "mana": 10 },
+                "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER, FILLER] },
+            }));
+            s.play(EXPEDITION, json!({}));
+            // Turns 3 and 5 have max mana 2 and 3: both losses take everything, never below 0.
+            next_turn(&mut s);
+            assert_eq!(s.state().players.p1.mana.current, 0);
+            next_turn(&mut s);
+            assert_eq!(s.state().players.p1.mana.current, 0);
+        }
+
+        #[test]
+        fn an_extra_turn_taken_next_is_the_first() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION]));
             s.play(EXPEDITION, json!({}));
-            // The extra turn's refresh is the first of the two lost ones.
             s.state_mut().players.p1.extra_turns = Some(1);
             s.end_turn();
-            // P1 again: the extra turn, still lost.
             assert_eq!(s.state().active, P1);
-            assert_eq!(s.state().players.p1.mana.current, 0);
-            // The other lost refresh follows on p1's next turn, then normal.
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().turn, 4);
-            assert_eq!(s.state().players.p1.mana.current, 0, "lost on turn 4");
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().turn, 6);
-            assert_eq!(s.state().players.p1.mana.current, 4);
+            assert_eq!(lost(&s), 2, "the extra turn");
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 3, "the turn after it");
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 0);
         }
 
         #[test]
@@ -151,49 +212,41 @@ mod tests {
         }
 
         #[test]
-        fn r844_each_lost_refresh_spends_its_rider() {
-            crate::register_all();
-            let mut s = board(json!([EXPEDITION]));
-            s.play(EXPEDITION, json!({}));
-            for turn in [3, 5] {
-                s.state_mut().players.p1.mana.next_turn_mod = 2;
-                s.end_turn();
-                s.end_turn();
-                assert_eq!(s.state().turn, turn);
-                assert_eq!(s.state().players.p1.mana.current, 0, "lost on turn {turn}");
-                assert_eq!(s.state().players.p1.mana.next_turn_mod, 0, "the rider spent on turn {turn}");
-            }
-        }
-
-        #[test]
-        fn r844_mana_gained_in_those_turns_still_adds() {
+        fn mana_gained_in_those_turns_still_adds() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION, COIN, COIN]));
             s.play(EXPEDITION, json!({}));
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().players.p1.mana.current, 0);
+            next_turn(&mut s);
+            let before = s.state().players.p1.mana.current;
             s.play(COIN, json!({}));
-            assert_eq!(s.state().players.p1.mana.current, 1, "the Coin adds on a lost turn");
+            assert_eq!(s.state().players.p1.mana.current, before + 1, "the Coin adds");
         }
 
         #[test]
-        fn r386_turns_tuned_reads_through_param() {
+        fn s9_3_the_waiting_second_loss_survives_a_json_round_trip() {
             crate::register_all();
             let mut s = board(json!([EXPEDITION]));
-            step_param(s.card_mut(EXPEDITION), "turns", -1);
             s.play(EXPEDITION, json!({}));
-            // One lost refresh, turn 3; turn 5 is normal.
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().turn, 3);
-            assert_eq!(s.state().players.p1.mana.current, 0, "lost on turn 3");
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().turn, 5);
-            let side = &s.state().players.p1;
-            assert!(side.mana.current > 0);
-            assert_eq!(side.mana.current, side.mana.max);
+            let text = serde_json::to_string(s.state()).unwrap_or_default();
+            let back: GameState = serde_json::from_str(&text).expect("the state round-trips");
+            assert_eq!(&back, s.state());
+            next_turn(&mut s);
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 3);
+        }
+
+        #[test]
+        fn r386_both_losses_read_through_param() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION]));
+            // A step down is the Buff's direction for a loss (`better: down`), a step up the Nerf's.
+            step_param(s.card_mut(EXPEDITION), "loss", -1);
+            step_param(s.card_mut(EXPEDITION), "lossAfter", 1);
+            s.play(EXPEDITION, json!({}));
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 1);
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 4);
         }
     }
 
@@ -201,17 +254,17 @@ mod tests {
         use super::*;
 
         #[test]
-        fn radiant_adds_a_radiant_rift() {
+        fn radiant_adds_a_radiant_rift_and_loses_the_same() {
             crate::register_all();
             let mut s = board(json!([{ "def": EXPEDITION, "radiant": true }]));
             s.play(EXPEDITION, json!({}));
             let added = rifts(&s);
             assert_eq!(added.len(), 1);
             assert!(added[0].radiant, "a Radiant Rift");
-            // The loss is the same two turns.
-            s.end_turn();
-            s.end_turn();
-            assert_eq!(s.state().players.p1.mana.current, 0);
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 2);
+            next_turn(&mut s);
+            assert_eq!(lost(&s), 3);
         }
     }
 }

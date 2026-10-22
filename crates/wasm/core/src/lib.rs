@@ -483,12 +483,31 @@ pub fn learned_parity(fixture_json: &str) -> Result<String, String> {
 /// ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost —
 /// a `CraftPreview` — so the block editor shows what the reducer will say and the client decides
 /// nothing (CLAUDE.md rule 7).
-pub fn craft_preview(recipe_json: &str, cost: f64) -> Result<String, String> {
+///
+/// `prompt_json` is the open prompt's `{ craftMode, craftOffer }` (either absent), so the verdict is
+/// the one its answer gets: the mode's frame and the offer's blocks (R1563007).
+pub fn craft_preview(recipe_json: &str, cost: f64, prompt_json: &str) -> Result<String, String> {
     let recipe: CraftRecipe = parse("craftPreview: the recipe", recipe_json)?;
     if !(0.0..=f64::from(i32::MAX)).contains(&cost) || cost.fract() != 0.0 {
         return Err("craftPreview: the cost must be a whole number".to_owned());
     }
-    to_json(&engine::subsystems::craft::craft_preview(&recipe, cost as i32))
+    let prompt: CraftPrompt = parse("craftPreview: the prompt", prompt_json)?;
+    to_json(&engine::subsystems::craft::craft_preview_for(
+        &recipe,
+        cost as i32,
+        prompt.craft_mode,
+        prompt.craft_offer.as_ref(),
+    ))
+}
+
+/// The slice of a craft prompt `craft_preview` reads: `PendingPromptView`'s own fields.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CraftPrompt {
+    #[serde(default)]
+    craft_mode: Option<engine::CraftMode>,
+    #[serde(default)]
+    craft_offer: Option<engine::CraftOffer>,
 }
 
 /// `{ chaosEffects: [{label}], chaosPlusEffects: [{label}], chaosMedEffects: [{label}], heroPowerNames,

@@ -3,7 +3,8 @@
 /**
  * One hat a recipe may put an effect under: the hook the block becomes. A Unit takes `cry`,
  * `death`, `startOfTurn` and `endOfTurn`; a Field Spell takes `cry`, `startOfTurn` and
- * `endOfTurn`; a Spell takes `whenCast`; a Trap takes exactly one reveal hat (R883). A Potion
- * takes `activate` and nothing else, and no other recipe takes it (R1182000).
+ * `endOfTurn`; a Spell takes `whenCast`; a Trap takes exactly one reveal hat (R883). A Potion is
+ * a Spell and takes `whenCast` alone (R1563008). `activate` was a Potion's one hat until #1563
+ * and no recipe takes it now; it stays so an old recipe still reads.
  */
 export type CraftHatKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenCast" | "opponentPlaysUnit" | "opponentPlaysSpell" | "opponentAttacks" | "activate";
