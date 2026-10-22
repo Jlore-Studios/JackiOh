@@ -210,12 +210,14 @@ jobs:
   # Every crate's tests: the engine's rules and golden replay, every card, the AI's units, the server
   # on the fake store, the tools. One job compiling the whole workspace took 14 minutes, nearly all
   # of it compiling, so each group compiles only its own crates and what they build on (the engine
-  # and the cards at opt-level 2, about 80 s in every group), side by side. The engine and the cards
-  # each split further, by test binary: `rules`, the engine's unit tests and the cards' unit tests
-  # (one per card) each take two to three minutes to compile on their own. So does the AI, whose
-  # tests take minutes to play their games rather than to compile. `binaries` lists every test
-  # binary of a crate split that way, checked against Cargo so a new one cannot go unrun; the last
-  # group takes every crate no other group names, so a new crate cannot either.
+  # and the cards at opt-level 2, about two minutes in every group but `engine`, which builds them
+  # at 0), side by side. The engine and the cards each split further, by test binary: `rules`, the
+  # engine's unit tests and the cards' unit tests (one per card) each take two to three minutes to
+  # compile at opt-level 2 on their own, and the golden replay runs apart from the engine's unit
+  # tests (#1608). So does the AI, whose tests take minutes to play their games rather than to
+  # compile. `binaries` lists every test binary of a crate split that way, checked against Cargo so a
+  # new one cannot go unrun; the last group takes every crate no other group names, so a new crate
+  # cannot either.
   # The engine's two features: testkit, which its `rules` binary requires, and ts, whose
   # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
   # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
@@ -241,12 +243,27 @@ jobs:
             scope: engine_rules
             cache: engine-rules
             test: -p jackioh-engine --features jackioh-engine/testkit --test rules
+          # The engine's unit tests (with ts, whose export_bindings tests write wire/generated/), its
+          # constants export and its doc tests, with the engine and the cards at opt-level 0 (#1608).
+          # The unit-test binary links the cards, a dev-dependency, so it waits for them: at
+          # Cargo.toml's opt-level 2 the engine, the cards and that binary took about 240 s to compile
+          # one after another, and at 0 they take about 85 s, the 444 tests running in under a second.
+          # `doc` carries the same flags, or it compiles both crates again at 2. Each `--config` stays
+          # one unquoted word: the `cargo test` step splits TEST and DOC on spaces.
           - group: engine
             scope: engine
             cache: engine
-            test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test golden --test export_config
-            doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts
+            test: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --lib --test export_config --config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0
+            doc: -p jackioh-engine --features jackioh-engine/testkit,jackioh-engine/ts --config profile.test.package.jackioh-engine.opt-level=0 --config profile.test.package.jackioh-cards.opt-level=0
             binaries: jackioh-engine export_config golden rules
+          # The golden replay (§13) at Cargo.toml's opt-level 2, where its 240 games take under 20 s
+          # (over two minutes at 0), and without ts, which it never reads. Everything it reads turns
+          # `rust_engine` on, so it runs on that line; it builds on the dependencies `engine rules`
+          # does, so it shares that cache, as `ai slow` shares `ai`'s (#1608).
+          - group: engine golden
+            scope: engine
+            cache: engine-rules
+            test: -p jackioh-engine --features jackioh-engine/testkit --test golden
           # Every card's tests, ported from TypeScript (V5), and the cross-card tests.
           - group: cards lib
             scope: cards_lib
