@@ -226,7 +226,7 @@ export type FaceModel = {
   englishText?: string;
   /** R849000: in play, why the viewer's own unit cannot attack now (`UnitView.attackReason`), which the inspect notes spell out. */
   attackReason?: string;
-  /** R979000: in play, why a card in the viewer's own hand cannot be played now (`CardView.playReason`), which the inspect notes spell out. */
+  /** R979000: in play, why a card in the viewer's own hand (or, R1571000, graveyard) cannot be played now (`CardView.playReason`), which the inspect notes spell out. */
   playReason?: string;
 };
 /**
@@ -278,7 +278,7 @@ export type InPlay = {
   grants?: readonly string[];
   /** R849000: why the viewer's own unit cannot attack now (`UnitView.attackReason`). */
   attackReason?: string;
-  /** R979000: why a card in the viewer's own hand cannot be played now (`CardView.playReason`). */
+  /** R979000: why a card in the viewer's own hand (or, R1571000, graveyard) cannot be played now (`CardView.playReason`). */
   playReason?: string;
 };
 export type FaceSource = {
