@@ -189,7 +189,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
                         the trio editor that marks every card two of its decks share (R251),
@@ -227,11 +227,18 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
-routes/collection.tsx   /collection (#1307): the account's cards per shipped set, wallet, set tracks and
-                        quests, each panel reading for itself and saying why when its read fails;
-                        collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel) and their
-                        model; every one renders the server's answers and decides nothing (rule 7)
-routes/QuestsPanel.tsx  /collection's quests (§14.9) from GET /api/quests: each held quest's progress and
+routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
+                        Card builder (/creator) as links, Cards and Cosmetics opened in place by
+                        `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
+                        between them and the hub; the page never scrolls, a section's body does. Cards is
+                        the account's cards per shipped set, wallet, set tracks and quests, each panel
+                        reading for itself and saying why when its read fails; Cosmetics is the only place
+                        to equip one (the six selects, collection/CosmeticsPanel.tsx, on the same store and
+                        `cosmetics` settings group as before, R633) beside the owned list from GET
+                        /api/cosmetics; collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel,
+                        CosmeticsPanel) and their model; every one renders the server's answers and
+                        decides nothing (rule 7)
+routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or

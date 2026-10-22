@@ -687,6 +687,27 @@ describe("#1308 the card packs on the account page", () => {
     expect(getCosmeticPacks).toHaveBeenCalledWith(TOKEN);
   });
 
+  it("R1579000 the account screen offers no cosmetic selection, its packs open", async () => {
+    await import("../packs/PackOpening.tsx");
+    await import("../shop/Shop.tsx");
+    await import("../shop/TokenPicker.tsx");
+    await import("../shop/CosmeticPacks.tsx");
+    vi.mocked(getProfile).mockResolvedValue(profileBody());
+    vi.mocked(getPacks).mockResolvedValue(packsInfo());
+    vi.mocked(getWallet).mockResolvedValue(walletInfo());
+    vi.mocked(getTokens).mockResolvedValue(tokenBars());
+    vi.mocked(getCollection).mockResolvedValue(collectionOf());
+    vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+    vi.mocked(getCosmeticPacks).mockResolvedValue(cosmeticPacksInfo());
+    const { container } = render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
+
+    await userEvent.click(screen.getByTestId(accountTestid.packsToggle));
+    expect(await screen.findByTestId(shopTestid.packsPanel)).toBeInTheDocument();
+    expect(container.querySelector('[data-testid^="setting-cosmetic-"]')).toBeNull();
+    expect(container.querySelector('[data-testid^="collection-equip-"]')).toBeNull();
+    expect(screen.queryAllByRole("combobox", { name: /^(Foil|Finish|Border|Playmat|Backdrop|Card back)$/u })).toEqual([]);
+  });
+
   it("#1309 a change in one panel reads the others again: a bought pack opens at once, an opening moves the bars", async () => {
     await import("../packs/PackOpening.tsx");
     await import("../shop/Shop.tsx");

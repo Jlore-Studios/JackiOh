@@ -96,6 +96,7 @@ export const shopTestid = {
   flooredOdds: "cosmetic-packs-floored-odds",
   open: "cosmetic-packs-open",
   reveal: "cosmetic-reveal",
+  equipLink: "cosmetic-packs-equip",
   slot: (index: number) => `cosmetic-slot-${String(index)}`,
   shardBar: "shard-bar",
   shardChoice: "shard-choice",

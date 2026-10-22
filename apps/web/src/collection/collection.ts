@@ -11,13 +11,26 @@ import { CATALOG } from "@jackioh/cards";
 import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
+import type { Cosmetic } from "../cards/cosmetics.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
-import type { CollectionResponse, TrackRewards } from "../net/api.ts";
+import type { CollectionResponse, OwnedCosmeticsResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
 import { quantitiesOf } from "../shop/shop.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
 /** The panels that read for themselves; the quests panel owns its own read. */
-export type CollectionPart = "cards" | "wallet" | "tracks";
+export type CollectionPart = "cards" | "wallet" | "tracks" | "cosmetics";
+
+/** R1579000: the hub's sections that open in place, by `?section=`. */
+export const COLLECTION_SECTIONS = ["cards", "cosmetics"] as const;
+export type CollectionSection = (typeof COLLECTION_SECTIONS)[number];
+export type CollectionDoor = "decks" | "cards" | "cosmetics" | "builder";
+
+/** The section `?section=` names, or null for the hub: an unknown name opens the hub. */
+export function collectionSectionOf(search: string): CollectionSection | null {
+  const named = new URLSearchParams(search).get("section");
+  return COLLECTION_SECTIONS.find((section) => section === named) ?? null;
+}
 
 export const collectionTestid = {
   screen: "collection-screen",
@@ -36,6 +49,11 @@ export const collectionTestid = {
   trackXp: (set: string) => `collection-track-xp-${set}`,
   trackRewards: (set: string) => `collection-track-rewards-${set}`,
   trackLock: (set: string) => `collection-track-lock-${set}`,
+  body: "collection-body",
+  door: (id: CollectionDoor) => `collection-door-${id}`,
+  equip: (kind: string) => `collection-equip-${kind}`,
+  ownedCosmetic: (id: string, cardId: string | null) =>
+    cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;
 
 /** The cards a player can own: not a token, of a set that ships. */
@@ -80,4 +98,45 @@ export function lockWords(): string {
     "Locked: unlocks once the {newest} track reaches level {level}. Older sets then unlock one per game, the most recent first.",
     { newest: t(newestShippedSet()), level: formatNumber(SET_TRACK_UNLOCK_LEVEL) },
   );
+}
+
+/**
+ * R1579000: the cosmetics the account owns, in the registry's order. Every account owns the
+ * starters, on every card (§14.2), so each shows once but for the defaults; the server lists the
+ * rest (R1313000), a per-card one once for each card it sits on. An id this client does not know is
+ * not shown.
+ */
+export function ownedCosmetics(owned: OwnedCosmeticsResponse): { cosmetic: Cosmetic; cardId: string | null }[] {
+  const out: { cosmetic: Cosmetic; cardId: string | null }[] = [];
+  for (const cosmetic of COSMETICS) {
+    if (cosmetic.default) continue;
+    if (cosmetic.starter || owned.account.includes(cosmetic.id)) {
+      out.push({ cosmetic, cardId: null });
+      continue;
+    }
+    for (const row of owned.cards) {
+      if (row.cosmeticId === cosmetic.id) out.push({ cosmetic, cardId: row.cardId });
+    }
+  }
+  return out;
+}
+
+/** A cosmetic's kind in a player's words. */
+export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
+  switch (kind) {
+    case "foil":
+      return t("Foil");
+    case "finish":
+      return t("Finish");
+    case "border":
+      return t("Border");
+    case "table":
+      return t("Playmat");
+    case "field":
+      return t("Backdrop");
+    case "cardBack":
+      return t("Card back");
+    case "fullArt":
+      return t("Full art");
+  }
 }
