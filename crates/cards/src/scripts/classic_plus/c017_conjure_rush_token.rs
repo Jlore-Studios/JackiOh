@@ -138,24 +138,28 @@ mod tests {
         }
 
         /// R21 tuned past the pool, the token gains every keyword R21 leaves it and no repeat: all but
-        /// Rush, and Taunt only when it came before Indestructible, which never leaves Taunt standing
-        /// (R347, R781004)
+        /// Rush, Taunt among them, since the pool holds no Indestructible to hold Taunt down (R1615000)
         #[test]
-        fn r21_r781004_r781005_tuned_past_the_pool_the_token_gains_every_keyword_r21_leaves_it_and_no_repeat() {
+        fn r21_r781005_r1615000_tuned_past_the_pool_the_token_gains_every_keyword_but_rush_and_no_repeat() {
             let mut s = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
             step_param(s.card_mut(CARD), "keywords", 6);
             s.play(CARD, json!({}));
             let token = first_token(&s);
             let gained = gained(&s, &token);
-            for key in RANDOM_KEYWORD_POOL.iter().filter(|key| !["Rush", "Taunt"].contains(key)) {
+            assert_eq!(gained.len(), RANDOM_KEYWORD_POOL.len() - 1, "{gained:?}");
+            for key in RANDOM_KEYWORD_POOL.iter().filter(|key| !["Rush"].contains(key)) {
                 assert!(gained.iter().any(|got| got == key), "{key} was granted: {gained:?}");
             }
+            let shown = s.stats(token.as_str()).keywords;
             assert!(
-                !s.stats(token.as_str())
-                    .keywords
+                shown.iter().any(|keyword| keyword.kind() == KeywordKind::Taunt),
+                "nothing drawn holds its Taunt down"
+            );
+            assert!(
+                !shown
                     .iter()
-                    .any(|keyword| keyword.kind() == KeywordKind::Taunt),
-                "an Indestructible token has no Taunt"
+                    .any(|keyword| matches!(keyword.kind(), KeywordKind::Charge | KeywordKind::Indestructible)),
+                "neither Charge nor Indestructible is in the pool: {shown:?}"
             );
         }
     }

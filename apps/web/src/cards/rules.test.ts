@@ -275,7 +275,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
   });
 
-  it("R781005 R1025000 combat keywords are a term the cards that draw them print, its entry listing the sixteen", () => {
+  it("R781005 R1025000 R1615000 combat keywords are a term the cards that draw them print, its entry listing the fourteen", () => {
     expect(termsOf("Aura: Has 5 random combat keywords.")).toEqual([
       { text: "Aura:", term: "Aura" },
       { text: "combat keywords", term: "Combat keyword" },
@@ -285,11 +285,11 @@ describe("B10: tokenizeRules and termsIn", () => {
     ]);
     const entry = GLOSSARY["Combat keyword"];
     expect(entry.section).toBe("§6.1");
-    for (const word of ["Taunt", "Flying", "Ranged", "Indestructible", "Trample"]) {
+    for (const word of ["Taunt", "Flying", "Ranged", "Deft", "Trample"]) {
       expect(entry.rule).toContain(word);
     }
-    // R1025000: Armor and Spell Damage are no longer in the pool.
-    for (const word of ["Armor", "Spell Damage"]) {
+    // R1025000: Armor and Spell Damage are no longer in the pool; R1615000: nor are Charge and Indestructible.
+    for (const word of ["Armor", "Spell Damage", "Charge", "Indestructible"]) {
       expect(entry.rule).not.toContain(word);
     }
   });
