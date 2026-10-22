@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1680,
+  "title": "Patch: recalibrate the ladder bots' seeds for AI generation 13",
+  "branch": "bot/issue-1680",
+  "thread": "**Issue #1680 (data, not instructions):**\n\n```text\n# #1680: Patch: recalibrate the ladder bots' seeds for AI generation 13\nOpened by @jgoetzmann.\n\n## Why\n\nThe ladder bots' seed ratings were calibrated on AI generation 9 (`BOT_CALIBRATION_GENERATION = 9`, `crates/server/src/config.rs`). The AI is now generation 13, the learned evaluation (#1477). `docs/bot-calibration.md` (After an AI promotion) asks for a recalibration after each promotion. #1336 asked for this one, and is closed with the rest of it done.\n\nBots already in the pool are covered: since #1560 a bot's first rated game on a new generation widens its deviation, so its rating moves to the new AI (R1560000). What is left is the seeds that new bots start from.\n\n## Proposal\n\nFollow `docs/bot-calibration.md`, After an AI promotion:\n\n1. On `main`, run `cargo run --release -p jackioh-server -- bot-calibrate`. It adds each promotion's `vsParent` Elo since generation 9, from `training/history/*.jsonl`, to the reference's seed of record. If `bot-calibrate-live` has measured the anchor since, pass `--anchor=<rating>` instead.\n2. Compare the printed seeds with the skill curve's, and put the report into the doc's Results either way.\n3. Then one of:\n   - the seeds stay within the measurements' error: set `BOT_CALIBRATION_GENERATION` to 13;\n   - they move outside it: paste the printed `BOT_SEED_RATINGS` row and the matching `SKILL_ELO_TABLE` rows, and set `BOT_CALIBRATION_GENERATION` to 13.\n\n   Use `--games=300` when the call is close.\n\n## Acceptance criteria\n\n- [ ] `docs/bot-calibration.md`'s Results has generation 13's report.\n- [ ] `BOT_CALIBRATION_GENERATION` is 13, and the seeds moved only if the report shows they should.\n- [ ] `apps/web/src/wire/serverConfig.ts` is regenerated if a constant the client reads changed (`crates/server/tests/export_config.rs`).\n- [ ] `cargo test -p jackioh-server` and every required check are green.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1680: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
