@@ -12491,6 +12491,7 @@
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-22T20:00:26Z",
+      "interruptions": 1,
       "issue": 1634,
       "kind": "revise",
       "pending_request": false,
