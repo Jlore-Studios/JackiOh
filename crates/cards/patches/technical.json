@@ -368,5 +368,318 @@
     "pr": 1519,
     "title": "patches ship: v0.4.0e, v0.4.0f",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "9eb675e40c9ed512a378ed674f65106fb32130d2",
+    "pr": 1549,
+    "title": "a job ran over 7 minutes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "ddd481ab0e5ab857ce3a262b04501538bba018e2",
+    "pr": 1551,
+    "title": "one countdown issue for good, with Vercel's hold and fast-forward and the queue",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "31a2c5a9eb5f0a0146fd82448bdbedb67695b11e",
+    "pr": 1553,
+    "title": "patches log: 61d47d0..1dfd921",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "af7deef79404fbd219ccef4c1120b4def28b3b33",
+    "pr": 1534,
+    "title": "bot: build pass 1 for #1497",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "a2b122bdf8e3d41ddcfefb0645d7269d29f610a6",
+    "pr": 1558,
+    "title": "the status loop delivers the night runs' work, so deliver stops waiting for a hosted runner",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "215e3c46957ebca1125bc3429255b85e959b740f",
+    "pr": 1559,
+    "title": "a bot's pull request with no passing title writes one, so a CI alert's fix passes the title check",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "b3b8120de0b92dfdd79836a754c3b34102f1e82b",
+    "pr": 1562,
+    "title": "a fused Book of Stats and Autocomplete is replayed without end in one turn",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "60ae54991a6bb6c09e46853ccbd3cf26404b8ba6",
+    "pr": 1564,
+    "title": "the axe check (spec 38) covers the routes added since #757 and the phone layout",
+    "kind": "app",
+    "player": "On a phone, the deck builder's Sort menu now has a name screen readers announce, and the practice difficulty buttons are easier to tap."
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "25f9632b720e3449c07e1b00a0e23e318b332fad",
+    "pr": 1585,
+    "title": "a ladder bot's rating re-settles after an AI promotion",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "6cd41e01f02f0ac91a74b70ea3230f349c15cab2",
+    "pr": 1588,
+    "title": "each job runs on what its change reaches, and the slow sweeps run daily",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "bab8dc2b33527a08a34863c8abf76534c3f160e6",
+    "pr": 1589,
+    "title": "bot: build pass 1 for #1555",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "5b7c9190107a72349e66225bf80f7113b5e759df",
+    "pr": 1591,
+    "title": "the co-op result panel says when the daily Jlore cap held a seat's pay back",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "b709c8254bd7a327eea4e57232bcc7c1d46d2085",
+    "pr": 1592,
+    "title": "a failed read can be retried from the screens that now dead-end",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "576009234cb5e15a407821df65b295024ae489fd",
+    "pr": 1565,
+    "title": "a job ran over 7 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "e750581c943b14d797f2ce607a817215d03ee4d3",
+    "pr": 1605,
+    "title": "the challenge dialog and popups take, hold and return keyboard focus",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "4e4d83e79ee17b2d57c3186db8c94bb2e660db43",
+    "pr": 1604,
+    "title": "a watcher whose reconnects run out can retry by hand",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "84e5c869256e29aa560b58c721f4e33cf987681b",
+    "pr": 1586,
+    "title": "ladder bots draw realistic usernames (edgy, nonsense, real-world refs)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "37e6c50b831ed7cbde91610fc4048b41bc42ac76",
+    "pr": 1606,
+    "title": "the player's stats count more (Most Coveted, Last Laugh, Springloaded, Survivor)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "4f3f2a7f23c9f753561d161e9b01bac857a20533",
+    "pr": 1610,
+    "title": "the fuzz wave plays the endings and server actions it never submits",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "52298ca85f17f0b58d213b17fe8078fc7ce5f958",
+    "pr": 1612,
+    "title": "a refused chosen action falls back to the AI's next-best line, not the generic fallback",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "10b3af75483d7f0daa292878fd4390beea3bb07a",
+    "title": "Merge pull request #1590 from Jlore-Studios/bot/issue-1577",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "0a50ccfb345efe57e09933ff2e06c02413adb66d",
+    "pr": 1611,
+    "title": "the duos fuzz varies team rules, handicaps and dealt decks",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "323db1d484d72133c42770f855048b07ea6030cf",
+    "pr": 1614,
+    "title": "a finished match's statistics record survives a failed first write",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "fb41b6e018edb60e050d57bc8e466291f5410c6f",
+    "pr": 1616,
+    "title": "a lost keyword leaves the board looking like a loss, not a gain",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "77842d0a600ccbfc0c2c88ac1883acef03b3e910",
+    "pr": 1613,
+    "title": "the player base's card play rates, for the Pocket Pick stat",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "ce3aeb7a62cbca3acc78f02515fe162ca24449bc",
+    "pr": 1617,
+    "title": "a socket that closed before the first view says the game is gone, not 'Joining…'",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "f721f013ec4b16d6e0b311417efb2c31e56feb0f",
+    "pr": 1618,
+    "title": "the Collection screen holds decks, cards, cosmetics and the card builder",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "c188525778e91d6fd56788d98935a24be47b720a",
+    "pr": 1619,
+    "title": "the fuzz's forged probes cover malformed prompt answers and unlisted activations",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "695d01fc05accfb858d547c26ceaa198780c476c",
+    "pr": 1609,
+    "title": "a graveyard play that cannot be made says why",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "b2355e7f2c37f379fe01fc63f81f3f96a522d43f",
+    "pr": 1516,
+    "title": "the learn lane runs unattended on the owner's PC alone, gating on main as it is now, and the status issue shows it",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "346a91b4ad3c7d9e8c5671a38d1cc72efcfa7b06",
+    "pr": 1620,
+    "title": "the Play screen holds every mode on one screen, online first",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "17ebb55378500363a8c2e0e96bce33f4d36a33bb",
+    "pr": 1625,
+    "title": "a random cast answers its prompts like a player would",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "965e54c4f54d80c620c7749bf40b5553f3823d04",
+    "pr": 1626,
+    "title": "the Shop screen holds buying packs, opening packs and pity, out of the account menu",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "37fb65c5b581df4f67f02512349d0d2cde0db08b",
+    "pr": 1628,
+    "title": "the AI's evaluator gains terms for face-down cost, fatigue and Windfury, off after their screens",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "ef3fa9db1de1b3643811bb22d6650a5333f1a470",
+    "pr": 1627,
+    "title": "the floor below the tavern cycles through animated stat cards",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "84f6ba4be3b2210f65df1db91a52e3969371296e",
+    "pr": 1622,
+    "title": "the AI's copy of the game stops un-hiding face-down cards",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "2aa8b31e758d1f525a2ff2aa5efb2f9387b202d8",
+    "pr": 1629,
+    "title": "the menus' banner offers the way back to a live co-op game",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "3fd48ec072a552bf327f53a8f82f00e213fa3b4b",
+    "pr": 1624,
+    "title": "Remove Indestructible and Charge from the combat keyword pool",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "cebd429a8e54d96d7930c59ff21164c0f8649e37",
+    "pr": 1632,
+    "title": "a prompt's open and answer events tell the other seat only that a prompt exists",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "3d407a0b82b1c9d146e49cd560dbdbf0b26b1e04",
+    "pr": 1633,
+    "title": "every menu fits one screen, desktop and phone, with a guard that keeps it so",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "ee2d63e63e1f0a716b3197eb769bcac6475ea6c2",
+    "title": "Merge pull request #1557 from Jlore-Studios/bot/issue-1523",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "c0110fc4f05e442ec200043eb5641bf80cdfc133",
+    "title": "Merge pull request #1630 from Jlore-Studios/bot/issue-1600",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "653d59cd1fe2a11cdbcc728b396c381b22a6d271",
+    "pr": 1623,
+    "title": "every conversation locks to collaborators, so outsiders cannot comment",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "c4ad1501fd12cd2a0ce82fdb99c2ebae0e96268e",
+    "pr": 1647,
+    "title": "the Claude sessions start at 06:00 Chicago, one Haiku turn each",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.0",
+    "commit": "dd15804e0e9f48b4318c22e9624b7166af053d66",
+    "pr": 1652,
+    "title": "the queue and rematch routes pass store errors on with `?`, as every other route does",
+    "kind": "app"
   }
 ]
