@@ -697,21 +697,58 @@ describe("R639 your table", () => {
     expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
   });
 
-  it("R639 shows the record and the favourites the device kept, and Clear forgets them", () => {
-    withGames(4, { "core-004": { seen: 4, played: 9, playedAgainst: 0, destroyed: 0, defeated: 0 } });
+  it("R639 R1584000 the floor shows the device's stats one at a time, and Clear forgets them", async () => {
+    withGames(4, { "core-004": { seen: 4, played: 9 } });
+    render(<LandingRoute />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
+    const table = screen.getByTestId(landingTestid.stats);
+    expect(table.textContent).toContain("Old Faithful");
+    expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe("played 9×");
+    expect(table.querySelector('[data-def-id="core-004"]')).not.toBeNull();
+    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
+    expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("The Record");
+    expect(table.textContent).toContain("4 games: 4 won, 0 lost (100% won)");
+    fireEvent.click(screen.getByTestId(landingTestid.statsClear));
+    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+  });
+
+  it("R1584000 the record alone shows while the device holds no card to show", () => {
+    withGames(4);
     render(<LandingRoute />);
     const table = screen.getByTestId(landingTestid.stats);
     expect(table.textContent).toContain("4 games: 4 won, 0 lost (100% won)");
-    expect(table.querySelector('[data-stat="played"]')?.textContent).toContain("played 9×");
-    fireEvent.click(screen.getByTestId(landingTestid.statsClear));
-    expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
+    expect(screen.queryByTestId(landingTestid.showcase)).toBeNull();
+  });
+
+  it("R1584000 the floor holds the stats and the footer, and fills one screen only with stats", () => {
+    withGames(4, { "core-004": { played: 9 } });
+    render(<LandingRoute />);
+    const floor = document.querySelector(".landing-floor");
+    expect(floor).not.toBeNull();
+    expect(floor?.querySelector('[data-testid="landing-stats"]')).not.toBeNull();
+    expect(floor?.querySelector(".site-footer")).not.toBeNull();
+    cleanup();
+    withGames(0);
+    render(<LandingRoute />);
+    expect(document.querySelector(".landing-floor > .site-footer")).not.toBeNull();
+    expect(document.querySelector(".landing-floor > .landing-stats")).toBeNull();
+
+    const sheet = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "landing.css"), "utf8");
+    expect(sheet).toContain(".landing .landing-floor:has(> .landing-stats) {");
+    expect(sheet).toContain("height: 100dvh");
   });
 });
 
 // R765: rejoin a live online game from the main menu
 
 describe("R765 the main menu's live-game banner", () => {
-  function serveInGame(currentMatchId: string | null, currentSeriesId: string | null = null): void {
+  function serveInGame(
+    currentMatchId: string | null,
+    currentSeriesId: string | null = null,
+    currentDuosMatchId: string | null = null,
+  ): void {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: unknown) => {
@@ -724,6 +761,7 @@ describe("R765 the main menu's live-game banner", () => {
               emailVerified: true,
               currentMatchId,
               currentSeriesId,
+              currentDuosMatchId,
               email: "player@example.test",
             }),
           );
@@ -753,6 +791,16 @@ describe("R765 the main menu's live-game banner", () => {
     render(<LandingRoute />);
     const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
     expect(rejoin).toHaveAttribute("href", paths.series("s-3"));
+  });
+
+  it("R1566000 a player whose co-op game is live sees the banner, and Rejoin leads to /duos/<id>", async () => {
+    signedIn();
+    serveInGame(null, null, "d-3");
+    render(<LandingRoute />);
+
+    const banner = await screen.findByTestId(gameBannerTestid.live, undefined, SLOW);
+    expect(banner).toHaveAttribute("data-kind", "duos");
+    await expectLeadsTo(within(banner).getByTestId(gameBannerTestid.rejoin), paths.duos("d-3"));
   });
 
   it("R765 no live game, or no account, shows no banner", async () => {

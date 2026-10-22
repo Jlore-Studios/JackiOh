@@ -118,12 +118,12 @@ use crate::zones::{
 pub const HIDDEN_ID: &str = "hidden";
 
 /// R97, §9.1: the slot a shuffled-in card landed in would give away library order, to either side.
-const HIDDEN_POSITION: i32 = -1;
+pub const HIDDEN_POSITION: i32 = -1;
 
 /// R177: the cost a `costChanged` event reports for a card the viewer may not read. A cost is a
 /// property of the card as much as its definition is — the opponent's hand is a count (§10.8) — and
 /// a sequence of costs over a library would spell out its order (§9.1).
-const HIDDEN_COST: i32 = -1;
+pub const HIDDEN_COST: i32 = -1;
 
 /// R385: the count a `counterChanged` "brittle" reports for a card the viewer may not read.
 const HIDDEN_COUNT: i32 = -1;

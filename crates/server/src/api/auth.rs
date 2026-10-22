@@ -312,6 +312,9 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
     // SPEC §11 R897000: whether this profile holds an open queue ticket, so a client whose ticket
     // expired stops waiting with a rejoin message. Its own row only, like `currentMatchId`.
     let open = tx.tickets_open_for_profile(&profile.id).await?;
+    // R1566000: the live co-op match holding this profile, which sets no in-match flag, so the
+    // menus' banner offers the way back to it (§13.8). Its own only, as `GET /api/duos/live` answers.
+    let duos = tx.duos_matches_live_for(&profile.id).await?;
     tx.commit().await?;
     let needs_invite_code = matches!(profile.status, crate::db::store::ProfileStatus::Pending);
     Ok(json(
@@ -334,6 +337,7 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
             // still authenticates and the actor still stamps the seat from the token (§9.3).
             "currentMatchId": profile.in_match_id,
             "currentSeriesId": series.map(|series| series.id),
+            "currentDuosMatchId": duos,
             "queued": open.is_some(),
             // The address this account is tied to, so a player can see WHICH account they are signed
             // in as. Read from the auth provider's user (the same place §9.4 step 1 reads

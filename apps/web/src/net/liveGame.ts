@@ -1,5 +1,5 @@
 // Client-side online-game follow (SPEC §9.5, R765); the server decides the account state
-// (CLAUDE.md rule 7) through `/api/auth/me` (`currentMatchId`, §9.5; `currentSeriesId`, R259).
+// (CLAUDE.md rule 7) through `/api/auth/me` (`currentMatchId`, §9.5; `currentSeriesId`, R259; `currentDuosMatchId`, R1566000).
 // Queue follow is per-tab session storage; storage failures mean no follow, never a failed queue.
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -20,12 +20,13 @@ export const MATCH_FOUND_STATUS = "Match found! Taking you to your game…";
 
 // Live game
 
-/** A running match or a Conquest series between games. */
-export type LiveGame = { kind: "match" | "series"; id: string; path: string };
+/** A running match, a Conquest series between games, or a live co-op game (R1566000). */
+export type LiveGame = { kind: "match" | "series" | "duos"; id: string; path: string };
 
 /**
  * Where a profile's game is: the board (`currentMatchId`) or, between the games of a series, the
  * series screen (`currentSeriesId`), or nowhere. The board wins when both are set.
+ * A co-op game is no pairing (R1566000): what a queue or the hub follows leaves it out.
  */
 export function liveGameOf(me: { currentMatchId: string | null; currentSeriesId?: string | null }): LiveGame | null {
   if (typeof me.currentMatchId === "string" && me.currentMatchId.length > 0) {
@@ -37,13 +38,30 @@ export function liveGameOf(me: { currentMatchId: string | null; currentSeriesId?
   return null;
 }
 
+/**
+ * R1566000: the game the menus' banner offers: `liveGameOf`'s, else the live co-op game
+ * (`currentDuosMatchId`, §13.8) at `/duos/<id>`.
+ */
+export function bannerGameOf(me: {
+  currentMatchId: string | null;
+  currentSeriesId?: string | null;
+  currentDuosMatchId?: string | null;
+}): LiveGame | null {
+  const game = liveGameOf(me);
+  if (game !== null) return game;
+  if (typeof me.currentDuosMatchId === "string" && me.currentDuosMatchId.length > 0) {
+    return { kind: "duos", id: me.currentDuosMatchId, path: paths.duos(me.currentDuosMatchId) };
+  }
+  return null;
+}
+
 /** Turns a synchronous throw into a rejected promise. */
 function attempt<T>(call: () => Promise<T>): Promise<T> {
   return Promise.resolve().then(call);
 }
 
 /**
- * R765: the live game `account` names, kept current: read again every `SERIES_POLL_SECONDS` for as
+ * R765, R1566000: the live game `account` names, a co-op one included, kept current: read again every `SERIES_POLL_SECONDS` for as
  * long as there is one, and null once a read says it is over. An account that is not ready has none.
  */
 export function useLiveGame(account: Account, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
@@ -54,7 +72,7 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
   const reader = useRef(read);
   reader.current = read;
 
-  const game = me === null ? null : polled !== null && polled.after === me ? polled.game : liveGameOf(me);
+  const game = me === null ? null : polled !== null && polled.after === me ? polled.game : bannerGameOf(me);
   const watched = game?.path ?? null;
 
   useEffect(() => {
@@ -68,7 +86,7 @@ export function useLiveGame(account: Account, read: (token: string) => Promise<M
       attempt(() => reader.current(token))
         .then(
           (next) => {
-            if (!cancelled) setPolled({ after: me, game: liveGameOf(next) });
+            if (!cancelled) setPolled({ after: me, game: bannerGameOf(next) });
           },
           () => undefined,
         )

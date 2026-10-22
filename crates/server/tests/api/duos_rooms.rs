@@ -1566,3 +1566,44 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
         );
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R1566000 — the account read names the live co-op match
+// ---------------------------------------------------------------------------------------------
+
+mod r1566000_the_account_read_names_the_live_co_op_match {
+    use super::*;
+
+    /// `GET /api/auth/me` as `who`.
+    async fn me(app: &Arc<App>, who: &Account) -> Value {
+        let (status, body) = api(app, "GET", "/api/auth/me", &who.token, Value::Null).await;
+        assert_eq!(status, 200, "{body}");
+        body
+    }
+
+    #[tokio::test]
+    async fn r1566000_api_auth_me_names_the_co_op_match_to_both_its_people_while_it_lasts_and_not_after() {
+        let t = three().await;
+        assert!(me(&t.app, &t.host).await["currentDuosMatchId"].is_null());
+
+        let (_, match_id) = t.started().await;
+
+        for who in [&t.host, &t.guest] {
+            let body = me(&t.app, who).await;
+            assert_eq!(body["currentDuosMatchId"], json!(match_id), "{body}");
+            assert!(
+                body["currentMatchId"].is_null(),
+                "a co-op match sets no in-match flag: {body}"
+            );
+        }
+        let body = me(&t.app, &t.third).await;
+        assert!(body["currentDuosMatchId"].is_null(), "{body}");
+
+        finish(&t.app, &match_id).await;
+
+        for who in [&t.host, &t.guest] {
+            let body = me(&t.app, who).await;
+            assert!(body["currentDuosMatchId"].is_null(), "{body}");
+        }
+    }
+}

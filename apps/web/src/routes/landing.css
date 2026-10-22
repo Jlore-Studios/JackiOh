@@ -831,37 +831,158 @@
   color: var(--tavern-text-dim);
 }
 
-.landing .landing-stats-lists {
+/* R1584000: with stats, the floor (the stats and the footer) is one screen below the hero, and
+   nothing in it scrolls. Without them it is the footer alone, and unstyled. */
+.landing .landing-floor:has(> .landing-stats) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.landing .landing-floor:has(> .landing-stats) > .landing-stats {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.landing .landing-floor:has(> .landing-stats) > .site-footer {
+  flex: none;
+}
+
+.landing .landing-floor:has(> .landing-stats) .landing-how-title {
+  margin-bottom: 18px;
+}
+
+/* R1584000: the showcase, a card with its title and its number under it, and its controls under that.
+   The zone and the card set no animation, transform or transition: the board's `[data-animating]`
+   rules (game/animations.css) play on them, and a rule here under `.landing` would outrank those. */
+.landing .landing-showcase {
+  --showcase-card-w: clamp(96px, 26vh, 220px);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 14px;
+  grid-template-areas:
+    "stage"
+    "caption"
+    "controls";
+  justify-items: center;
+  justify-content: center;
+  gap: 10px;
   max-width: var(--tavern-content);
   margin: 0 auto;
-  text-align: left;
 }
 
-.landing .landing-stats-list {
-  padding: 12px 16px;
-  border: 1px solid rgba(201, 149, 63, 0.4);
-  border-radius: 10px;
-  background: rgba(20, 12, 8, 0.55);
+.landing .landing-showcase-stage {
+  grid-area: stage;
 }
 
-.landing .landing-stats-list h3 {
-  margin: 0 0 6px;
+.landing .landing-showcase-zone {
+  position: relative;
+  width: var(--showcase-card-w);
+  height: calc(var(--showcase-card-w) * 1.4);
+}
+
+.landing .landing-showcase-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--showcase-card-w) * 0.07);
+}
+
+/* The way in, and the way back after a death: the card gathers out of pale smoke (R704's apparition). */
+.landing .landing-showcase-card[data-entry] {
+  animation: landing-apparition var(--showcase-lead) ease-in-out backwards;
+}
+
+/* The burn of a death is cut at the card's edge. */
+.landing .landing-showcase-card[data-animating="destroyed"] {
+  overflow: hidden;
+}
+
+.landing .landing-showcase-caption {
+  grid-area: caption;
+}
+
+.landing .landing-showcase-title {
   font-family: var(--tavern-serif);
-  font-size: 16px;
+  font-size: 22px;
   color: var(--tavern-gold);
 }
 
-.landing .landing-stats-list ol {
-  margin: 0;
-  padding-left: 20px;
+.landing .landing-showcase-line {
+  color: var(--tavern-parchment);
 }
 
-.landing .landing-stats-card {
-  font-weight: 600;
-  color: var(--tavern-parchment);
+.landing .landing-showcase-controls {
+  grid-area: controls;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.landing .landing-showcase-step {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(201, 149, 63, 0.55);
+  border-radius: 50%;
+  background: rgba(20, 12, 8, 0.55);
+  color: var(--tavern-gold);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.landing .landing-showcase-picks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* A dot is 24 px to touch and draws a smaller one inside it. */
+.landing .landing-showcase-pick {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.landing .landing-showcase-pick::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid var(--tavern-gold);
+  border-radius: 50%;
+}
+
+.landing .landing-showcase-pick[aria-pressed="true"]::after {
+  background: var(--tavern-gold);
+}
+
+.landing .landing-showcase-step:focus-visible,
+.landing .landing-showcase-pick:focus-visible {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 2px;
+}
+
+/* A phone on its side has the height for the card and the caption beside it, not above. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .landing .landing-showcase {
+    --showcase-card-w: clamp(64px, 26vh, 110px);
+    grid-template-areas:
+      "stage caption"
+      "stage controls";
+    align-items: center;
+    column-gap: 20px;
+  }
 }
 
 .landing .landing-stats-note {
