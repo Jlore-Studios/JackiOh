@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 1639,
+  "title": "Patch: the board shows a Heroic Power already used this turn and an empty deck's fatigue count",
+  "branch": "bot/issue-1639",
+  "thread": "**Issue #1639 (data, not instructions):**\n\n```text\n# #1639: Patch: the board shows a Heroic Power already used this turn and an empty deck's fatigue count\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nTwo facts both players are meant to see never reach the screen.\n\n- **A used Heroic Power.** A power already used this turn looks exactly like one you can't afford (your own) or shows nothing at all (the opponent's). You can't tell at a glance whether the opponent already used theirs this turn.\n- **Fatigue.** Once a deck runs out, the \"Fatigue N\" badge only flashes during the draw animation. Between draws the empty deck just reads 0, and nothing reminds you that the next draw will hurt more.\n\nOnce this is built, a used power is dimmed and marked \"Used\", and an empty deck shows how much fatigue it has dealt, on both sides of the board.\n\n## Why\n- The view already carries both facts to both seats:\n  - `HeroPowerView.usedThisTurn` (`crates/engine/src/wire/view.rs:755`, filled at `crates/engine/src/view_for.rs:1028`)\n  - `SideView.fatigueCount` (`view_for.rs:1418`)\n  - R240: \"the fatigue count both seats read goes up and the next one deals more\".\n- `apps/web/src/game/Hero.tsx:231`, `:248` and `:358` write `usedThisTurn` only as a `data-used` attribute. No stylesheet gives a power a used state (`apps/web/src/game/board.css:205-234`).\n- Your own button's title is always \"{power}: Activate, spend ({x})\" (`Hero.tsx:363`), so a used power reads like an unaffordable one.\n- No web test sets `usedThisTurn: true` on a power.\n- `apps/web/src/game/Board.tsx:463` passes `fatigue={seat.fatigueCount}` to `Pile`, which writes only `data-fatigue` (`:383`), and no CSS reads it.\n- The \"Fatigue N\" badge (`apps/web/src/game/OverflowNotices.tsx:138-143`) exists only while R318's notice plays, and `overflow.test.tsx:419-422` asserts it is gone at rest.\n\n## Proposal\n- **Used power.** A power whose `usedThisTurn` is true gets a \"Used\" mark and a dimmed style, and its title and accessible name say it was used this turn. This applies to the opponent's tag and your own button, extra powers included. It is drawn from the view alone; whether the button is live still comes from `legalActions` (CLAUDE.md rule 7).\n- **Fatigue badge.** A seat whose `libraryCount` is 0 and whose `fatigueCount` is above 0 shows a resting \"Fatigue {count}\" badge on its deck pile, under its own testid. The pile's label carries the same count.\n  - The badge shows the count taken so far. The client works out no next hit, because that would be a rule.\n  - It hides while R318's burst notice is up, so the two never overlap.\n- Record this as a client-display ruling in the issue's block, as R318 is.\n\n## Where it lands\n- `apps/web/src/game/Hero.tsx`, `apps/web/src/game/board.css`\n- `apps/web/src/game/Board.tsx` (`Pile`), `apps/web/src/game/overflow.css`\n- `apps/web/src/i18n/zh-CN.json`: the new strings, which `i18n.test.ts` requires\n- `apps/web/src/game/Hero.test.tsx`, `Board.test.tsx`, `overflow.test.tsx`\n- `spec/rulings/R<issue block>.md`; SPEC \u00a710.10\n\n## Acceptance criteria\n- [ ] Failing today: the opponent's power with `usedThisTurn: true` renders \"Used\" inside its tag, and with `false` it does not. The viewer's own `power` button behaves the same, and its title says it was used.\n- [ ] Failing today: `libraryCount: 0, fatigueCount: 2` with nothing animating shows \"Fatigue 2\" inside that seat's deck pile. A non-empty library or a count of 0 shows no badge. While R318's notice is up, exactly one fatigue badge is in the pile.\n- [ ] Snapshots change only where these elements do. The touched test files (`pnpm --dir apps/web test <file>`), `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web` and `cargo jackioh spec check` pass.\n\n## Size and risks\nAbout 60 lines of client code and 4\u20136 tests, client only: medium. The hero row is tight on a phone, so the mark has to stay inside the existing chip rather than add one. Nothing new reaches the client: both fields are public and already in the view.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T16:42:25Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1639: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1639 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
