@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1602,
+  "title": "Patch: the AI's evaluator prices face-down cost, fatigue and Windfury",
+  "branch": "bot/issue-1602",
+  "thread": "**Issue #1602 (data, not instructions):**\n\n```text\n# #1602: Patch: the AI's evaluator prices face-down cost, fatigue and Windfury\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThree facts every player can see are worth exactly zero in the practice opponent's scoring of a position: the cost printed on the opponent's face-down backrow card (a (6) bomb and a (0) bluff look identical to it), the fatigue countdown (a player deep in fatigue bleeds damage every draw and the AI doesn't feel it), and the Windfury keyword (a unit that can attack twice is priced exactly like a normal unit \u2014 even though the AI's own threat check already counts the second swing). After the fix the computer reads the table it can legally see.\n\n## Why\n\n`material` prices an enemy face-down card as a flat `enemy_face_down` regardless of its shown cost (`crates/ai/src/evaluate.rs:386`, `config.rs:329,432`) \u2014 yet the shown cost is deliberately public (\u00a710.8, R351), survives redaction (`observe.rs:471-490`) and already constrains the AI's own sampling (`determinize.rs:227-247`, R762): the eval is less informed than the determinizer. `fatigue_count` is public state exposed in the view (`crates/engine/src/state.rs:1044`, `view_for.rs:1393`) but no eval or dense-feature term reads it, and the library term caps at `library_comfort: 10` so a nearly-empty library costs nothing extra (`evaluate.rs:398`). `KeywordWeights` returns `None` for Windfury (`config.rs:155-156, 212-237`) while `face_threat` counts the second swing (`evaluate.rs:427-430`) \u2014 a self-inconsistency that also mis-prices trades in `reply.rs`.\n\n## Proposal\n\nThree terms in `crates/ai/src/config.rs` plus arms in `evaluate.rs`: a per-cost term on enemy face-down backrow reading only the publicly shown price; a symmetric fatigue term; a Windfury weight. Each lands with a unit test and an improve-dev A-screen measurement before its weight is kept \u2014 drop any term that loses its screen.\n\n## Where it lands\n\n`crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`. Spec \u00a76.1 (Windfury, fatigue), \u00a72.4, \u00a710.8/R351 (shown face-down cost).\n\n## Acceptance criteria\n\n- [ ] Eval unit tests: positions differing only in each factor score differently in the expected direction (\u00b1shown cost on the face-down card, \u00b1fatigue count, \u00b1Windfury).\n- [ ] The face-down term reads the shown cost only \u2014 asserted with an unrevealed vs revealed backrow case so no hidden information reaches the eval.\n- [ ] `cargo jackioh gate` smoke stays green; each kept term cites its screen result.\n\n## Size and risks\n\nSmall-medium, `crates/ai` only. Weights are tuning \u2014 each needs a measured screen per the training docs, and the fatigue term should stay orthogonal to the library-comfort cap rather than re-tuning it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:37:22Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1602: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
