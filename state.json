@@ -10814,7 +10814,9 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 1619,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-21T19:30:50Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -10825,7 +10827,7 @@
       "taken_asks": [
         "c:6324712375"
       ],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1575": {
       "action": "build",
