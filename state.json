@@ -11415,6 +11415,7 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "in `.github/workflows/ci.yml`, replace the `rust-test` matrix's `engine` entry with the two entries given in Step 1 below (the `engine` group's unit tests at opt-level 0, plus a new `engine golden` group). Optionally fix one header comment in `scripts/ci-scope.sh` (Step 2). Nothing outside `.github/` makes the job faster, so the bot has nothing to build.",
       "run_id": "39697948068",
       "started_at": "2026-10-22T00:09:15Z",
       "stop_requested": false,
