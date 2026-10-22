@@ -11211,6 +11211,9 @@
         }
       }
     },
+    "1593": {
+      "suggestion": true
+    },
     "1604": {
       "action": "review",
       "asks": [],
