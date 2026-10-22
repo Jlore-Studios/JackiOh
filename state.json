@@ -12427,6 +12427,8 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-22T05:41:59Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "39731530394",
       "self_check_findings": [],
       "started_at": "2026-10-22T06:02:47Z",
