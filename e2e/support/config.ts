@@ -35,6 +35,8 @@ export const routes = {
   account: () => env("accountRoute", "/account"),
   /** #1307: the collection, wallet, set tracks and quests. */
   collection: () => env("collectionRoute", "/collection"),
+  /** #1577: the shop. */
+  shop: () => env("shopRoute", "/shop"),
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */

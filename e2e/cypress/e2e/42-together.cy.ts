@@ -1,8 +1,9 @@
 // 42 — Play together (#936, SPEC S7, S8): two accounts become friends, chat, and challenge each other,
 // the browser playing seat one and `cy.request` playing seat two, as spec 06 splits them.
 //
-// Key assertions (B54–B58): the landing offers Play together, which opens behind the gate for an active
-// account; the add form takes a `name#tag` and shows the server's refusal in its words; a request from
+// Key assertions (B54–B58): Play together opens behind the gate for an active account (#1577: the
+// landing offers no door to it anymore, so the spec visits it directly); the add form takes a
+// `name#tag` and shows the server's refusal in its words; a request from
 // the other side can be declined from the page, and one sent from the page, once accepted, makes a
 // friend row; Chat opens the conversation, a message sent is shown, and the friend's reply arrives
 // within a poll; a friend's challenge is a toast whose Accept opens `/play` with the room filled in,
@@ -46,7 +47,6 @@ import {
   IN_MATCH_CHAT_LIST,
   IN_MATCH_CHAT_TOGGLE,
   IN_MATCH_CHAT_UNREAD,
-  LANDING_PLAY_TOGETHER,
   MATCH_WATCH_REPLAY,
   OPPONENT_AIM,
   OPPONENT_AIM_ARROW,
@@ -380,9 +380,8 @@ describe("42 Play together — friends, chat and challenges between two accounts
       ]);
     });
 
-    // B54: the landing offers Play together, which opens for an active account behind the gate.
-    cy.visitAs(one, "/");
-    cy.get(ts(LANDING_PLAY_TOGETHER), { timeout: timeouts.view }).click();
+    // B54: Play together opens for an active account behind the gate (#1577: visited directly).
+    cy.visitAs(one, TOGETHER);
     cy.location("pathname", { timeout: timeouts.view }).should("eq", TOGETHER);
     cy.get(ts(TOGETHER_ADD_INPUT), { timeout: timeouts.view }).should("be.visible");
 

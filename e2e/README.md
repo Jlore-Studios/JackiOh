@@ -130,8 +130,8 @@ for contract reasons rather than rules reasons.
 
 8. **Play together and Duos** (SPEC §9.4, §9.5, §13). Spec 42 is Play together between two fixture
    accounts, and spec 41 a Duos co-op game of those two against the AI team. Both are networked, so
-   the server must be up. Their test ids (`together-*`, `chat-*`, `coop-*`, `duos-*`,
-   `landing-play-together`) are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
+   the server must be up. Their test ids (`together-*`, `chat-*`, `coop-*`, `duos-*`)
+   are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
    sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host. Spec 44 watches a
    friend's live game over `/ws/watch`. A watcher holds no seat, so it reseeds and activates
    `e2e-pending` (R144) for the other seat.
