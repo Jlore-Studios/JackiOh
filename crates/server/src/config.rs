@@ -2342,6 +2342,16 @@ pub const PACK_FLOOR_RARITY: PrintedRarity = PrintedRarity::Rare;
 /// SPEC §14.6, R1339000: the floor of a cosmetic pack's floored slot: it rolls
 /// `COSMETIC_TIER_WEIGHTS`, and a Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
 pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
+/// SPEC §14.3, R1661001: a duplicate's global cosmetic roll (#1661: 10%): with an account cosmetic
+/// left unowned, one draw below `TIER_WEIGHT_TOTAL`, and a draw below this drops an account
+/// cosmetic in place of the duplicate's per-card one.
+pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 100;
+// SPEC §14.3, R1661001: the hit is a share of the same total, so it cannot pass it.
+const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.2, §14.3, R1661000, R1661001: the rarity every account cosmetic but its kind's default
+/// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
+/// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
+pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
 /// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
 /// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter

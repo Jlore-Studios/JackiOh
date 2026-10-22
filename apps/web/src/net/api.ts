@@ -513,8 +513,17 @@ export type PacksResponse = {
   slots: number;
   pity: PackCounters;
   thresholds: PackCounters;
-  /** A slot's card rarity, the floored slot's, and a duplicate's cosmetic rarity. */
-  odds: { slot: TierOdds; flooredSlot: TierOdds; duplicateCosmetic: TierOdds };
+  /**
+   * A slot's card rarity, the floored slot's, and a duplicate's cosmetic rarity; and a duplicate's
+   * global roll (R1661001): `chance`, the share of its cosmetic rolls that drop an account cosmetic
+   * while one is left unowned, and `tiers`, that cosmetic's rarity.
+   */
+  odds: {
+    slot: TierOdds;
+    flooredSlot: TierOdds;
+    duplicateCosmetic: TierOdds;
+    globalCosmetic: { chance: number; tiers: TierOdds };
+  };
   /** One entry per kind of pack held (a shipped set's name, or `global`), the global pack first. */
   unopened: { pack: string; count: number }[];
 };

@@ -8,6 +8,9 @@
 //!   R1339001).
 //! - [`draw_card`]: a slot's card from the pool, leaning toward the cards the account does not
 //!   own, from the nearest rarity the pool holds when it lacks the slot's (R1301001).
+//! - [`global_grant`]: a duplicate's global roll before its per-card one, while an account
+//!   cosmetic is left unowned: one draw, and on a hit an unowned account cosmetic of a tiered roll
+//!   floored at `GLOBAL_COSMETIC_FLOOR_RARITY` (R1661001).
 //! - [`duplicate_grant`]: the dupe chain past an unlock, a duplicate's cosmetic, its rarity its
 //!   own tiered roll on `COSMETIC_TIER_WEIGHTS`, or the bars (R1301002).
 //! - [`roll_opening`]: the whole opening, in R1339002's draw order. Every list it walks is a
@@ -21,12 +24,13 @@ use jackioh_engine::{CardDefs, SetName, set_ships};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    GLOBAL_PACK_NAME, PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
+    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY,
+    PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
 };
-use crate::cosmetics::{Cosmetic, CosmeticRarity, pack_cosmetics};
+use crate::cosmetics::{Cosmetic, CosmeticRarity, global_cosmetics, pack_cosmetics};
 use crate::economy::math::{PityCounters, apply_pity};
 use crate::economy::store::CardCosmetic;
-use crate::economy::tiers::{card_tier, cosmetic_tier};
+use crate::economy::tiers::{card_tier, cosmetic_tier, tier_draw};
 
 /// Which card pack (§14.3): a set's, whose pool is that set, or the global one, whose pool is
 /// every set that ships.
@@ -82,12 +86,14 @@ pub fn pack_pool(defs: &CardDefs, pack: PackKind) -> Vec<PoolCard> {
         .collect()
 }
 
-/// What the account holds as the pack opens: its copies of each card, its per-card cosmetics
-/// and its pity counters (R1298000).
+/// What the account holds as the pack opens: its copies of each card, its per-card cosmetics,
+/// its account cosmetics (R1661001) and its pity counters (R1298000).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Holdings {
     pub owned: IndexMap<String, i64>,
     pub cosmetics: Vec<CardCosmetic>,
+    /// Each account cosmetic owned, by id.
+    pub account_cosmetics: Vec<String>,
     pub pity: PityCounters,
 }
 
@@ -97,7 +103,8 @@ pub struct Holdings {
 pub enum SlotGrant {
     /// A new card: a copy of it.
     Card,
-    /// A duplicate: a per-card cosmetic of the rarity it rolled, for its card.
+    /// A duplicate: a per-card cosmetic of the rarity it rolled, for its card, or an account
+    /// cosmetic of the global roll, for the account and on no card (R1661001).
     Cosmetic {
         cosmetic_id: String,
         cosmetic_rarity: CosmeticRarity,
@@ -138,8 +145,9 @@ pub struct OpeningLog {
     /// `jackioh_cards::catalog_defs_at` holds every older one).
     pub catalog: String,
     pub seed: String,
-    /// The registry's droppable entries the roll picked from ([`pack_cosmetics`]), whole, in
-    /// registry order.
+    /// The registry's droppable entries the roll picked from, whole: the per-card ones
+    /// ([`pack_cosmetics`]), then the account ones of the global roll ([`global_cosmetics`],
+    /// R1661001), each in registry order.
     pub cosmetics: Vec<Cosmetic>,
     pub slots: Vec<Slot>,
     pub pity: PityCounters,
@@ -160,7 +168,7 @@ impl OpeningLog {
             pack: pack.name().to_string(),
             catalog: catalog.to_string(),
             seed: seed.to_string(),
-            cosmetics: pack_cosmetics(registry),
+            cosmetics: [pack_cosmetics(registry), global_cosmetics(registry)].concat(),
             slots: opening.slots.clone(),
             pity: opening.pity,
             draws: opening.draws,
@@ -271,13 +279,49 @@ pub fn duplicate_grant(
     }
 }
 
+/// A duplicate's global roll (R1661001), taken before its per-card one. With none of `global`
+/// (`cosmetics::global_cosmetics`'s) at or above `GLOBAL_COSMETIC_FLOOR_RARITY` left unowned
+/// (`owned`, the account's) it is `None` and draws nothing. Else one draw below
+/// `TIER_WEIGHT_TOTAL`, and one at or past `GLOBAL_COSMETIC_ROLL_WEIGHT` is a miss, `None`. A hit
+/// is a tiered roll on `COSMETIC_TIER_WEIGHTS` floored at `GLOBAL_COSMETIC_FLOOR_RARITY` (one
+/// draw), falling as a cosmetic pack's floored slot does (`cosmetic_packs::slot_grant`, R1306001)
+/// to the first tier with one unowned, every tier at or above the floor first, then one of that
+/// tier's picked uniformly in registry order (one draw): a `SlotGrant::Cosmetic` for the account.
+pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Option<SlotGrant> {
+    let unowned: Vec<&Cosmetic> = global
+        .iter()
+        .filter(|cosmetic| cosmetic.rarity >= GLOBAL_COSMETIC_FLOOR_RARITY)
+        .filter(|cosmetic| !owned.contains(&cosmetic.id))
+        .collect();
+    if unowned.is_empty() || tier_draw(rng) >= GLOBAL_COSMETIC_ROLL_WEIGHT {
+        return None;
+    }
+    let mut order = cosmetic_tier(Some(GLOBAL_COSMETIC_FLOOR_RARITY), rng).fallback_order();
+    // Stable, so each side keeps `fallback_order`'s order. Every one unowned is at the floor or
+    // above it, so a tier there always holds one.
+    order.sort_by_key(|rarity| *rarity < GLOBAL_COSMETIC_FLOOR_RARITY);
+    order.into_iter().find_map(|tier| {
+        let of_tier: Vec<&Cosmetic> = unowned
+            .iter()
+            .copied()
+            .filter(|cosmetic| cosmetic.rarity == tier)
+            .collect();
+        rng.pick(&of_tier).map(|cosmetic| SlotGrant::Cosmetic {
+            cosmetic_id: cosmetic.id.clone(),
+            cosmetic_rarity: tier,
+        })
+    })
+}
+
 /// The whole opening (R1301003, R1339002), pure from the pack's pool, the account's holdings
 /// before it, the cosmetics registry and the opening's seed. Its draws, in this order and no other:
 /// [`slot_tiers`]' one per slot, which pity forces on top of with no draw of its own, then slot by
-/// slot the card's one and, for a duplicate, its cosmetic tier's one and the pick's one when there
-/// is something to pick. A slot keeps its rarity after pity when its card comes from another
-/// (R1301001). Ownership is read slot by slot, so a card unlocked earlier in the pack is a
-/// duplicate later in it (R1301002). `None` for an empty pool.
+/// slot the card's one and, for a duplicate, the global roll's when an account cosmetic is left
+/// unowned ([`global_grant`], R1661001), its tier's and its pick's on a hit, or else its
+/// cosmetic tier's one and the pick's one when there is something to pick. A slot keeps its rarity
+/// after pity when its card comes from another (R1301001). Ownership is read slot by slot, so a
+/// card unlocked earlier in the pack is a duplicate later in it (R1301002), and an account
+/// cosmetic dropped earlier is owned later (R1661001). `None` for an empty pool.
 pub fn roll_opening(
     pool: &[PoolCard],
     holdings: &Holdings,
@@ -285,10 +329,12 @@ pub fn roll_opening(
     seed: &str,
 ) -> Option<Opening> {
     let droppable = pack_cosmetics(registry);
+    let global = global_cosmetics(registry);
     let mut rng = Rng::new(seed, 0);
     let (rarities, pity) = apply_pity(holdings.pity, slot_tiers(&mut rng));
     let mut owned = holdings.owned.clone();
     let mut cosmetics = holdings.cosmetics.clone();
+    let mut account_cosmetics = holdings.account_cosmetics.clone();
     let mut slots = Vec::with_capacity(rarities.len());
     for (at, rarity) in rarities.into_iter().enumerate() {
         let floor = if at == PACK_FLOORED_SLOT {
@@ -301,6 +347,11 @@ pub fn roll_opening(
         let grant = if *copies < i64::from(MAX_COPIES) {
             *copies += 1;
             SlotGrant::Card
+        } else if let Some(grant) = global_grant(&global, &account_cosmetics, &mut rng) {
+            if let SlotGrant::Cosmetic { cosmetic_id, .. } = &grant {
+                account_cosmetics.push(cosmetic_id.clone());
+            }
+            grant
         } else {
             let cosmetic_rarity = cosmetic_tier(None, &mut rng);
             let grant = duplicate_grant(&card.id, cosmetic_rarity, &droppable, &cosmetics, &mut rng);
@@ -328,7 +379,7 @@ pub fn roll_opening(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::PITY_MYTHIC_PACKS;
+    use crate::config::{PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL};
     use crate::cosmetics::CosmeticKind;
     use crate::economy::tiers::{RATE_TOLERANCE, TierOdds, card_odds, cosmetic_odds};
     use jackioh_engine::wire::PrintedRarity::{Common, Epic, Legendary, Mythic, Rare};
@@ -365,6 +416,38 @@ mod tests {
             foil("foil-epic", CosmeticRarity::Epic),
             foil("foil-legendary", CosmeticRarity::Legendary),
         ]
+    }
+
+    /// An account cosmetic the global roll may drop: a playmat (R1661001).
+    fn table(id: &str, rarity: CosmeticRarity) -> Cosmetic {
+        Cosmetic {
+            kind: CosmeticKind::Table,
+            ..foil(id, rarity)
+        }
+    }
+
+    /// `PACK_SLOTS` playmats of each tier at the floor or above, so no tier runs out inside one
+    /// pack and a hit's cosmetic is of the tier it rolled.
+    fn tables() -> Vec<Cosmetic> {
+        [
+            CosmeticRarity::Epic,
+            CosmeticRarity::Legendary,
+            CosmeticRarity::Mythic,
+        ]
+        .into_iter()
+        .flat_map(|rarity| {
+            let name = rarity.as_str().to_lowercase();
+            (0..PACK_SLOTS).map(move |at| table(&format!("table-{name}-{at}"), rarity))
+        })
+        .collect()
+    }
+
+    /// The one of `tables` that `grant` drops, an account cosmetic of the global roll, if any.
+    fn global_drop<'c>(grant: &SlotGrant, tables: &'c [Cosmetic]) -> Option<&'c Cosmetic> {
+        match grant {
+            SlotGrant::Cosmetic { cosmetic_id, .. } => tables.iter().find(|table| table.id == *cosmetic_id),
+            _ => None,
+        }
     }
 
     fn owning(ids: &[&str]) -> IndexMap<String, i64> {
@@ -868,6 +951,7 @@ mod tests {
         let holdings = Holdings {
             owned: owning(&["card-0", "card-1", "card-2"]),
             cosmetics: vec![held("card-0", "foil-common")],
+            account_cosmetics: Vec::new(),
             pity: PityCounters {
                 epic: 3,
                 legendary: 7,
@@ -935,6 +1019,234 @@ mod tests {
         let replayed = roll_opening(&pool, &holdings, &log.cosmetics, &log.seed).expect("the replay");
         assert_eq!(replayed.slots, log.slots);
         assert_eq!(replayed.pity, log.pity);
+        assert_eq!(replayed.draws, log.draws);
+    }
+
+    #[test]
+    fn r1661001_a_duplicate_drops_an_account_cosmetic_at_the_global_weight_epic_or_better() {
+        // One card, owned: every slot is a duplicate, and an account cosmetic is left unowned for
+        // each, so every one takes the global draw.
+        let pool = [card("m", Mythic)];
+        let holdings = Holdings {
+            owned: owning(&["m"]),
+            pity: PityCounters {
+                epic: 3,
+                legendary: 7,
+                mythic: 11,
+            },
+            ..Holdings::default()
+        };
+        let tables = tables();
+        let mut registry = four_foils();
+        registry.extend(tables.clone());
+        let openings = DRAWS / PACK_SLOTS;
+        let mut hits = [0_usize; 5];
+        for seed in 0..openings {
+            let seed = format!("r1661001-{seed}");
+            let opening = roll_opening(&pool, &holdings, &registry, &seed).expect("the pool holds a card");
+            let mut dropped = Vec::new();
+            for slot in &opening.slots {
+                let Some(table) = global_drop(&slot.grant, &tables) else {
+                    continue;
+                };
+                let SlotGrant::Cosmetic { cosmetic_rarity, .. } = slot.grant else {
+                    panic!("a global drop is a cosmetic: {slot:?}");
+                };
+                assert!(cosmetic_rarity >= GLOBAL_COSMETIC_FLOOR_RARITY, "{slot:?}");
+                assert_eq!(table.rarity, cosmetic_rarity);
+                // Owned once dropped, for the rest of the pack.
+                assert!(!dropped.contains(&table.id), "{seed}: {:?}", opening.slots);
+                dropped.push(table.id.clone());
+                hits[usize::from(cosmetic_rarity.tier())] += 1;
+            }
+            // The pity counters come from the slots' tiers alone.
+            assert_eq!(
+                opening.pity,
+                apply_pity(holdings.pity, slot_tiers(&mut Rng::new(&seed, 0))).1,
+                "{seed}"
+            );
+        }
+        let rolls = openings * PACK_SLOTS;
+        let landed: usize = hits.iter().sum();
+        let share = landed as f64 / rolls as f64;
+        let chance = f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL);
+        assert!(
+            (share - chance).abs() <= RATE_TOLERANCE,
+            "the global share {share} outside tolerance of {chance}"
+        );
+        // A hit's tier is the floored table's: never below Epic.
+        assert_eq!(
+            hits[..usize::from(GLOBAL_COSMETIC_FLOOR_RARITY.tier())]
+                .iter()
+                .sum::<usize>(),
+            0
+        );
+        assert_lands_on(
+            hits,
+            landed,
+            cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY)),
+            "a global drop's tier",
+        );
+    }
+
+    #[test]
+    fn r1661001_the_global_draw_follows_the_card_s_and_takes_two_more_on_a_hit() {
+        // Every slot a duplicate, and no per-card cosmetic to drop: a slot draws its card and the
+        // global roll, then a hit its tier and its pick, and a miss its cosmetic tier alone.
+        let pool = [card("m", Mythic)];
+        let holdings = Holdings {
+            owned: owning(&["m"]),
+            ..Holdings::default()
+        };
+        let tables = tables();
+        let (mut hit, mut miss) = (false, false);
+        for seed in 0..200 {
+            let seed = format!("r1661001-order-{seed}");
+            let opening = roll_opening(&pool, &holdings, &tables, &seed).expect("the pool holds a card");
+            let hits = opening
+                .slots
+                .iter()
+                .filter(|slot| global_drop(&slot.grant, &tables).is_some())
+                .count();
+            assert_eq!(opening.draws as usize, 4 * PACK_SLOTS + hits, "{seed}");
+            // The first slot's global draw is the one after the slots' tiers and its card's.
+            let mut rng = Rng::new(&seed, 0);
+            let rarities = slot_tiers(&mut rng);
+            draw_card(&pool, rarities[0], PACK_FLOOR_RARITY, &holdings.owned, &mut rng);
+            let landed = tier_draw(&mut rng) < GLOBAL_COSMETIC_ROLL_WEIGHT;
+            assert_eq!(
+                global_drop(&opening.slots[0].grant, &tables).is_some(),
+                landed,
+                "{seed}"
+            );
+            hit |= landed;
+            miss |= !landed;
+        }
+        assert!(hit && miss, "the seeds hit and missed");
+    }
+
+    #[test]
+    fn r1661001_with_nothing_unowned_the_opening_takes_no_draw_of_it() {
+        let pool = pool_of(40);
+        let ids: Vec<&str> = pool.iter().map(|card| card.id.as_str()).collect();
+        // Half the pool owned: unlocks and duplicates both.
+        let holdings = Holdings {
+            owned: owning(&ids[..ids.len() / 2]),
+            ..Holdings::default()
+        };
+        let tables = tables();
+        let with = |tables: Vec<Cosmetic>| [four_foils(), tables].concat();
+        // Every account cosmetic owned, every one a starter, or every one below the floor (a
+        // registry the check refuses, R1661000): none can drop.
+        let owning_all = Holdings {
+            account_cosmetics: tables.iter().map(|table| table.id.clone()).collect(),
+            ..holdings.clone()
+        };
+        let starters = with(
+            tables
+                .iter()
+                .map(|table| Cosmetic {
+                    starter: true,
+                    ..table.clone()
+                })
+                .collect(),
+        );
+        let below_floor = with(vec![table("table-rare", CosmeticRarity::Rare)]);
+        for seed in 0..200 {
+            let seed = format!("r1661001-none-{seed}");
+            let today = roll_opening(&pool, &holdings, &four_foils(), &seed);
+            assert_eq!(
+                roll_opening(&pool, &owning_all, &with(tables.clone()), &seed),
+                today
+            );
+            assert_eq!(roll_opening(&pool, &holdings, &starters, &seed), today);
+            assert_eq!(roll_opening(&pool, &holdings, &below_floor, &seed), today);
+        }
+        // The shipped registry leaves no account cosmetic to drop: on a pool with no full art's
+        // card, every slot a duplicate takes its tier's, its card's and its cosmetic tier's three
+        // draws, as before.
+        let shipped = crate::cosmetics::shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let all = Holdings {
+            owned: owning(&ids),
+            ..Holdings::default()
+        };
+        for seed in 0..50 {
+            let opening =
+                roll_opening(&pool, &all, &shipped, &format!("r1661001-shipped-{seed}")).expect("an opening");
+            assert_eq!(opening.draws as usize, 3 * PACK_SLOTS);
+        }
+    }
+
+    #[test]
+    fn r1661001_a_hit_falls_to_the_nearest_tier_with_one_unowned_at_or_above_the_floor() {
+        let epic = table("table-epic", CosmeticRarity::Epic);
+        let legendary = table("table-legendary", CosmeticRarity::Legendary);
+        let global = [epic.clone(), legendary.clone()];
+        let mut rng = Rng::new("r1661001-fall", 0);
+        let mut hits = (0, 0);
+        for _ in 0..DRAWS {
+            // The Epic owned: every hit, an Epic roll's included, takes the Legendary.
+            if let Some(grant) = global_grant(&global, std::slice::from_ref(&epic.id), &mut rng) {
+                assert_eq!(global_drop(&grant, &global), Some(&legendary));
+                hits.0 += 1;
+            }
+            // The Legendary owned: a Legendary or Mythic roll falls to the Epic.
+            if let Some(grant) = global_grant(&global, std::slice::from_ref(&legendary.id), &mut rng) {
+                assert_eq!(global_drop(&grant, &global), Some(&epic));
+                hits.1 += 1;
+            }
+        }
+        assert!(hits.0 > 0 && hits.1 > 0, "{hits:?}");
+        // Nothing unowned, or nothing at or above the floor: no grant and no draw.
+        let cursor = rng.cursor();
+        assert_eq!(
+            global_grant(&global, &[epic.id.clone(), legendary.id.clone()], &mut rng),
+            None
+        );
+        assert_eq!(
+            global_grant(&[table("table-rare", CosmeticRarity::Rare)], &[], &mut rng),
+            None
+        );
+        assert_eq!(global_grant(&[], &[], &mut rng), None);
+        assert_eq!(rng.cursor(), cursor);
+    }
+
+    #[test]
+    fn r1661001_the_log_holds_the_account_cosmetics_and_replays_their_drops() {
+        let pool = vec![card("owned", Common)];
+        let holdings = Holdings {
+            owned: owning(&["owned"]),
+            account_cosmetics: vec!["table-epic-0".to_owned()],
+            ..Holdings::default()
+        };
+        let mut registry = four_foils();
+        registry.extend(tables());
+        let (seed, opening) = (0..200)
+            .map(|seed| format!("r1661001-log-{seed}"))
+            .find_map(|seed| {
+                let opening = roll_opening(&pool, &holdings, &registry, &seed).expect("an opening");
+                opening
+                    .slots
+                    .iter()
+                    .any(|slot| global_drop(&slot.grant, &tables()).is_some())
+                    .then_some((seed, opening))
+            })
+            .expect("a seed that drops an account cosmetic");
+        // The owned one never drops again.
+        assert!(opening.slots.iter().all(|slot| {
+            !matches!(&slot.grant, SlotGrant::Cosmetic { cosmetic_id, .. } if cosmetic_id == "table-epic-0")
+        }));
+        let log = OpeningLog::of(
+            PackKind::Set(SetName::Core),
+            "catalog-v1",
+            &registry,
+            &seed,
+            &opening,
+        );
+        // The per-card ones, then the account ones.
+        assert_eq!(log.cosmetics, registry);
+        let replayed = roll_opening(&pool, &holdings, &log.cosmetics, &log.seed).expect("the replay");
+        assert_eq!(replayed, opening);
         assert_eq!(replayed.draws, log.draws);
     }
 

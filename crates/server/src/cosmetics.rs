@@ -18,13 +18,17 @@
 //! card, each naming its card. A player owns one on its card and never picks one, so the kind has
 //! no default, and the check refuses a full art with no card, a card with two, a default one and a
 //! card named by any other kind.
+//!
+//! R1661000: every account cosmetic (a playmat, a backdrop, a card back) but its kind's default is
+//! `GLOBAL_COSMETIC_FLOOR_RARITY` or better, the floor of a duplicate's global roll
+//! ([`global_cosmetics`], R1661001), and the check refuses one below it.
 
 use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::PLAYER_SETTINGS_TEXT_MAX_LENGTH;
+use crate::config::{GLOBAL_COSMETIC_FLOOR_RARITY, PLAYER_SETTINGS_TEXT_MAX_LENGTH};
 
 /// The registry's text, compiled in.
 pub const COSMETICS_JSON: &str = include_str!("../cosmetics.json");
@@ -210,6 +214,15 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
         if cosmetic.kind == CosmeticKind::FullArt && cosmetic.default {
             out.push(format!("the full art {id:?} is a default, which no full art is"));
         }
+        // R1661000: an account cosmetic but its kind's default is at the global roll's floor or
+        // above.
+        if !cosmetic.kind.is_per_card() && !cosmetic.default && cosmetic.rarity < GLOBAL_COSMETIC_FLOOR_RARITY
+        {
+            out.push(format!(
+                "the account cosmetic {id:?} is {}, below GLOBAL_COSMETIC_FLOOR_RARITY's {GLOBAL_COSMETIC_FLOOR_RARITY}, which only its kind's default may be",
+                cosmetic.rarity
+            ));
+        }
         if !is_slug(id) {
             out.push(format!(
                 "the id {id:?} is not a lower-case slug (a letter, then letters, digits and hyphens)"
@@ -256,6 +269,18 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
         .filter(|cosmetic| cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter)
+        .cloned()
+        .collect()
+}
+
+/// The account cosmetics a duplicate's global roll may drop (R1661001): the playmats, backdrops and
+/// card backs that are neither a default nor a starter, in the registry's order. Every one is
+/// `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000); the shipped registry has none
+/// yet, every account cosmetic being a starter.
+pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
+    cosmetics
+        .iter()
+        .filter(|cosmetic| !cosmetic.kind.is_per_card() && !cosmetic.default && !cosmetic.starter)
         .cloned()
         .collect()
 }
@@ -564,6 +589,89 @@ mod tests {
             .map(|cosmetic| cosmetic.id)
             .collect();
         assert_eq!(ids, vec!["foil-new", "finish-new", "border-new", "full-art-new"]);
+    }
+
+    #[test]
+    fn r1661000_an_account_cosmetic_below_epic_is_refused_and_the_shipped_file_passes() {
+        let rated = |id: &str, kind: CosmeticKind, rarity: CosmeticRarity| Cosmetic {
+            rarity,
+            chase: rarity.is_chase(),
+            ..entry(id, kind, false)
+        };
+        // A Rare playmat is refused, and so is a Common backdrop or a Rare card back.
+        for (id, kind, rarity) in [
+            ("table-rare", CosmeticKind::Table, CosmeticRarity::Rare),
+            ("field-common", CosmeticKind::Field, CosmeticRarity::Common),
+            ("card-back-rare", CosmeticKind::CardBack, CosmeticRarity::Rare),
+        ] {
+            let mut cosmetics = defaults();
+            cosmetics.push(rated(id, kind, rarity));
+            assert_eq!(
+                problems(&cosmetics),
+                vec![format!(
+                    "the account cosmetic {id:?} is {rarity}, below GLOBAL_COSMETIC_FLOOR_RARITY's {GLOBAL_COSMETIC_FLOOR_RARITY}, which only its kind's default may be"
+                )]
+            );
+        }
+        // At the floor or above passes, each kind's default stays Common, and a per-card cosmetic
+        // keeps any rarity.
+        let mut fine = defaults();
+        fine.extend([
+            rated("table-epic", CosmeticKind::Table, GLOBAL_COSMETIC_FLOOR_RARITY),
+            rated("field-legendary", CosmeticKind::Field, CosmeticRarity::Legendary),
+            rated("card-back-mythic", CosmeticKind::CardBack, CosmeticRarity::Mythic),
+            rated("foil-common", CosmeticKind::Foil, CosmeticRarity::Common),
+            rated("border-rare", CosmeticKind::Border, CosmeticRarity::Rare),
+        ]);
+        assert!(problems(&fine).is_empty(), "{:?}", problems(&fine));
+
+        // The shipped file passes: each account kind's default is Common, its three items are Epic
+        // and every one is a starter, owned by every account, so the global roll has none to drop.
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        for kind in [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack] {
+            for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind == kind) {
+                let rarity = if cosmetic.default {
+                    CosmeticRarity::Common
+                } else {
+                    GLOBAL_COSMETIC_FLOOR_RARITY
+                };
+                assert_eq!(cosmetic.rarity, rarity, "{}", cosmetic.id);
+                assert!(cosmetic.starter, "{}", cosmetic.id);
+            }
+        }
+        assert!(global_cosmetics(&cosmetics).is_empty());
+    }
+
+    #[test]
+    fn r1661001_the_global_roll_drops_account_cosmetics_neither_default_nor_starter() {
+        let dropping = |id: &str, kind: CosmeticKind| Cosmetic {
+            rarity: GLOBAL_COSMETIC_FLOOR_RARITY,
+            starter: false,
+            ..entry(id, kind, false)
+        };
+        let mut cosmetics = defaults();
+        // A default that is not marked a starter is still a default.
+        cosmetics[3].starter = false;
+        cosmetics.extend([
+            Cosmetic {
+                rarity: GLOBAL_COSMETIC_FLOOR_RARITY,
+                ..entry("table-starter", CosmeticKind::Table, false)
+            },
+            dropping("foil-new", CosmeticKind::Foil),
+            dropping("table-new", CosmeticKind::Table),
+            dropping("field-new", CosmeticKind::Field),
+            Cosmetic {
+                card: Some("core-001".to_owned()),
+                ..dropping("full-art-new", CosmeticKind::FullArt)
+            },
+            dropping("card-back-new", CosmeticKind::CardBack),
+        ]);
+        assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
+        let ids: Vec<String> = global_cosmetics(&cosmetics)
+            .into_iter()
+            .map(|cosmetic| cosmetic.id)
+            .collect();
+        assert_eq!(ids, vec!["table-new", "field-new", "card-back-new"]);
     }
 
     #[test]

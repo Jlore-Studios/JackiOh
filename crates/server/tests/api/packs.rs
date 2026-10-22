@@ -18,10 +18,11 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_cata
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE,
-    COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep, GLOBAL_PACK_NAME,
-    PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS,
-    PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
+    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS,
+    COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep,
+    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, PACK_FLOOR_RARITY,
+    PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    TIER_WEIGHT_TOTAL,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, pack_cosmetics, shipped};
 use jackioh_server::db::store::{CollectionEntry, StoreError};
@@ -187,16 +188,13 @@ async fn set_counter(app: &App, which: Counter, value: i64) {
 async fn holdings(app: &App) -> Holdings {
     let owned = owned_map(app, PROFILE).await.expect("the collection");
     let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
-    let cosmetics = tx
-        .economy_cosmetics_get(PROFILE)
-        .await
-        .expect("the cosmetics")
-        .cards;
+    let cosmetics = tx.economy_cosmetics_get(PROFILE).await.expect("the cosmetics");
     tx.commit().await.expect("the commit");
     let pity = |name| usize::try_from(name).expect("a pity counter fits a usize");
     Holdings {
         owned,
-        cosmetics,
+        cosmetics: cosmetics.cards,
+        account_cosmetics: cosmetics.account,
         pity: PityCounters {
             epic: pity(counter(app, Counter::PityEpic).await),
             legendary: pity(counter(app, Counter::PityLegendary).await),
@@ -1035,6 +1033,10 @@ async fn r1339000_get_reads_the_pity_counters_and_the_tables() {
             "slot": card_odds(None),
             "flooredSlot": card_odds(Some(PACK_FLOOR_RARITY)),
             "duplicateCosmetic": cosmetic_odds(None),
+            "globalCosmetic": {
+                "chance": f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL),
+                "tiers": cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY)),
+            },
         })
     );
     // The tables as percentages' fractions, the computed fallback included, and no Common in the
@@ -1058,6 +1060,126 @@ async fn r1339000_get_reads_the_pity_counters_and_the_tables() {
         body["pity"],
         serde_json::to_value(opened.pity).expect("the counters")
     );
+}
+
+#[tokio::test]
+async fn r1661001_get_answers_the_global_cosmetic_line() {
+    let (app, token) = setup().await;
+    let (status, _, body) = call(&app, "GET", "/api/packs", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    let line = &body["odds"]["globalCosmetic"];
+    // The hit's share of one draw, and the floored table's odds, the floor taking what is below it.
+    let total = f64::from(TIER_WEIGHT_TOTAL);
+    assert_eq!(
+        line["chance"],
+        json!(f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / total)
+    );
+    assert_eq!(
+        line["tiers"],
+        serde_json::to_value(cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY))).expect("the odds")
+    );
+    assert_eq!(line["tiers"]["common"], json!(0.0));
+    assert_eq!(line["tiers"]["rare"], json!(0.0));
+    let w = COSMETIC_TIER_WEIGHTS;
+    assert_eq!(
+        line["tiers"]["epic"],
+        json!(f64::from(TIER_WEIGHT_TOTAL - w.legendary - w.mythic) / total)
+    );
+    assert_eq!(line["tiers"]["legendary"], json!(f64::from(w.legendary) / total));
+    assert_eq!(line["tiers"]["mythic"], json!(f64::from(w.mythic) / total));
+}
+
+#[tokio::test]
+async fn r1661001_an_account_cosmetic_a_duplicate_drops_is_owned_on_no_card_and_then_drops_no_more() {
+    let (app, token) = setup().await;
+    grant_entire_catalog(&app, PROFILE, None)
+        .await
+        .expect("R111's grant");
+    // One account cosmetic a pack may drop, and nothing per card: every slot a duplicate, so each
+    // takes the global draw until the playmat is owned.
+    let playmat = Cosmetic {
+        kind: CosmeticKind::Table,
+        ..foil("table-fixture-epic", GLOBAL_COSMETIC_FLOOR_RARITY)
+    };
+    let registry = vec![playmat.clone()];
+    let mut dropped = None;
+    for at in 0..20 {
+        buy(&app, &token, "Core").await;
+        let before = holdings(&app).await;
+        let seed = format!("r1661001-account-{at}");
+        let opened = open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &registry, &seed)
+            .await
+            .expect("the opening");
+        let log = last_log(&app).await;
+        assert_eq!(log.cosmetics, registry);
+        let replayed = roll_opening(
+            &pack_pool(defs(&app), PackKind::Set(SetName::Core)),
+            &before,
+            &log.cosmetics,
+            &log.seed,
+        )
+        .expect("the replay");
+        assert_eq!(replayed.slots, opened.slots);
+        assert_eq!(replayed.draws, log.draws);
+        let hits: Vec<&Slot> = opened
+            .slots
+            .iter()
+            .filter(|slot| matches!(slot.grant, SlotGrant::Cosmetic { .. }))
+            .collect();
+        if let [slot] = hits.as_slice() {
+            assert_eq!(
+                slot.grant,
+                SlotGrant::Cosmetic {
+                    cosmetic_id: playmat.id.clone(),
+                    cosmetic_rarity: playmat.rarity,
+                }
+            );
+            dropped = Some(log);
+            break;
+        }
+        assert!(hits.is_empty(), "the playmat drops once: {:?}", opened.slots);
+    }
+    let log = dropped.expect("a seed that drops the playmat");
+
+    // Owned for the account, on no card, by one `pack_open` row carrying the opening's log.
+    let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
+    let cosmetics = tx.economy_cosmetics_get(PROFILE).await.expect("the cosmetics");
+    let ledger = tx.economy_ledger_get(PROFILE).await.expect("the ledger");
+    tx.commit().await.expect("the commit");
+    assert_eq!(cosmetics.account, vec![playmat.id.clone()]);
+    assert!(cosmetics.cards.is_empty(), "{:?}", cosmetics.cards);
+    let rows: Vec<_> = ledger
+        .cosmetics
+        .iter()
+        .map(|row| {
+            (
+                row.card_id.clone(),
+                row.cosmetic_id.clone(),
+                row.delta,
+                row.reason,
+            )
+        })
+        .collect();
+    assert_eq!(rows, vec![(None, playmat.id.clone(), 1, EconomyReason::PackOpen)]);
+    assert_eq!(
+        ledger.cosmetics[0].reference,
+        Some(serde_json::to_string(&log).expect("a log"))
+    );
+
+    // Owned, it leaves nothing to drop: the next opening takes no global draw, each duplicate its
+    // tier's, its card's and its cosmetic tier's three, and every slot is spent.
+    buy(&app, &token, "Core").await;
+    let opened = open_pack(
+        &app,
+        PROFILE,
+        PackKind::Set(SetName::Core),
+        &registry,
+        "r1661001-owned",
+    )
+    .await
+    .expect("the opening");
+    assert_eq!(spent(&opened.slots), PACK_SLOTS as i64);
+    assert_eq!(last_log(&app).await.draws as usize, 3 * PACK_SLOTS);
 }
 
 #[tokio::test]
