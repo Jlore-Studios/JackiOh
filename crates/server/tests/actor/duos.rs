@@ -693,11 +693,16 @@ struct Duos {
 }
 
 async fn duos(difficulty: &str) -> Duos {
-    duos_with(difficulty, None).await
+    duos_with(difficulty, None, None).await
 }
 
-/// A Duos match whose host brings `host_deck` as a saved deck (dealt at random when `None`).
-async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
+/// A Duos match whose host brings `host_deck` and whose guest brings `guest_deck` as saved decks
+/// (each dealt at random when `None`).
+async fn duos_with(
+    difficulty: &str,
+    host_deck: Option<Vec<String>>,
+    guest_deck: Option<Vec<String>>,
+) -> Duos {
     jackioh_cards::register_all();
     let app = empty_test_app().await;
     let host = account(&app, 1, "Hana").await;
@@ -711,6 +716,14 @@ async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
         }
         None => json!({ "difficulty": difficulty, "random": true }),
     };
+    let guest_choice = match &guest_deck {
+        Some(cards) => {
+            let deck_id = uuid(801);
+            save_deck(&app, &guest, &deck_id, cards).await;
+            json!({ "deckId": deck_id })
+        }
+        None => json!({ "random": true }),
+    };
     let (status, created) = api(&app, "POST", "/api/duos/rooms", &host.token, room).await;
     assert_eq!(status, 201, "{created}");
     let code = created["code"].as_str().expect("a room code").to_string();
@@ -719,7 +732,7 @@ async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
         "POST",
         &format!("/api/duos/rooms/{code}/join"),
         &guest.token,
-        json!({ "random": true }),
+        guest_choice,
     )
     .await;
     assert_eq!(status, 200, "{joined}");
@@ -1834,7 +1847,7 @@ mod r268_the_mulligan_clock {
         // Every card costs 4 or more: the AI's own mulligan, which keeps the cheap ones, would send
         // nearly all of the host's opening hand back.
         let costly = deck_where(|def| def["cost"].as_i64().is_some_and(|cost| cost >= 4));
-        let h = duos_with("easy", Some(costly)).await;
+        let h = duos_with("easy", Some(costly), None).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         let dealt_a1 = hand_ids(&first_view(&a1)["view"]["own"]);
@@ -1893,7 +1906,7 @@ mod b37_b38_the_ais_hold {
         // Units of cost 1 or less: playing A1's round 1 outright, the AI always has a card to play.
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
-        let h = duos_with("easy", Some(cheap)).await;
+        let h = duos_with("easy", Some(cheap), None).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
@@ -2223,13 +2236,15 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     /// Round 1 open with both people seated, and the first `play` A1 may make. Every play of a card of
-    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`.
+    /// the cheap deck by team A panics (`install_panicking_plays`), counted in `runs`. The guest
+    /// brings the cheap deck too: a random deal could hold a Cast-on-draw autopilot (M+ #18, R1183002)
+    /// that plays A2's first turn, and a panicking card in it, before anyone has acted.
     async fn opened() -> (Duos, WsClient, WsClient, Arc<AtomicUsize>, Value) {
         let cheap =
             deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
         let runs = Arc::new(AtomicUsize::new(0));
         install_panicking_plays(&cheap, Arc::clone(&runs));
-        let h = duos_with("easy", Some(cheap)).await;
+        let h = duos_with("easy", Some(cheap.clone()), Some(cheap)).await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
