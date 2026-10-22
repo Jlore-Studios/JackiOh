@@ -2337,6 +2337,42 @@ mod r1253000_a_live_coop_action_the_engine_panics_on {
         assert_eq!(runs.load(Ordering::SeqCst), 1);
         assert_eq!(h.app.bug_reports.recorded().len(), 1);
     }
+
+    /// R1523000: the ceiling's draw is a co-op result like any other, so both people leave the
+    /// match's seats once it lands, not a reaper tick later.
+    #[tokio::test(start_paused = true)]
+    async fn r1523000_a_ceiling_draw_from_a_panicked_server_action_releases_both_seats() {
+        let (h, _a1, _a2, _runs, play) = opened().await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let seat = jackioh_server::seats::Seat::Duos(h.match_id.clone());
+        for person in [&h.host, &h.guest] {
+            assert_eq!(
+                h.app.seats.of(&person.id),
+                Some(seat.clone()),
+                "the join seated {}",
+                person.id
+            );
+        }
+
+        let seq = actor.next_seq();
+        actor
+            .submit(
+                DuosSeat::A1,
+                format!("{SERVER_NONCE_PREFIX}ai-{seq}"),
+                serde_json::from_value(play).expect("a legal action is an action"),
+            )
+            .await;
+
+        assert!(actor.is_finished(), "the match ended at once");
+        for person in [&h.host, &h.guest] {
+            assert_eq!(
+                h.app.seats.of(&person.id),
+                None,
+                "{} still holds the match",
+                person.id
+            );
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------------------------

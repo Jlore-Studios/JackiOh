@@ -1278,7 +1278,17 @@ impl DuosActor {
             self.let_go("duos.result.unrecorded");
             return;
         }
+        self.release_seats();
         self.let_go("duos.panicked.drawn");
+    }
+
+    /// R1523000: once the result has landed, both people leave the match's seats.
+    fn release_seats(&self) {
+        let row = &self.shared.row;
+        let seat = Seat::Duos(row.id.clone());
+        for person in [&row.a1, &row.a2] {
+            self.shared.app.seats.release(person, &seat);
+        }
     }
 
     /// B35: after every applied action, both people get fresh views and clocks; then the result is
@@ -1326,12 +1336,7 @@ impl DuosActor {
             self.let_go("duos.result.unrecorded");
             return;
         }
-        // R1523000: once the result has landed, both people leave the match's seats.
-        let row = &self.shared.row;
-        let seat = Seat::Duos(row.id.clone());
-        for person in [&row.a1, &row.a2] {
-            self.shared.app.seats.release(person, &seat);
-        }
+        self.release_seats();
         self.load_jlore_caps(true).await;
         tracing::info!(event = "duos.over", matchId = %self.match_id_str(), outcome = %result.outcome, reason = %result.reason);
     }
