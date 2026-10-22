@@ -1,0 +1,57 @@
+{
+  "action": "build",
+  "number": 1665,
+  "title": "Patch: a Purchases page holds the pack odds and pity, off the Shop and pack screens",
+  "branch": "bot/issue-1665",
+  "thread": "**Issue #1665 (data, not instructions):**\n\n```text\n# #1665: Patch: a Purchases page holds the pack odds and pity, off the Shop and pack screens\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a72). Today `/shop` shows the pity counters (`n / threshold packs`) and an odds table on the pack panel (`packs/PackOpening.tsx` `PackPity`, `PackOdds`) and the cosmetic packs' odds (`shop/CosmeticPacks.tsx`), as R1339000 and R1580000 place them and \u00a714.4 says. They move to a new **Purchases** page; the opening and store parts take them off their panels. The odds stay the server's and stay published (\u00a714.4): only where they show changes. This part comes after the global roll part, whose `odds.globalCosmetic` it shows and after whose spec edits it edits the same files.\n\n### The page\n- `/purchases` (`apps/web/src/routes/purchases.tsx`, new, lazy and ungated like `/terms`): a `BackLink`, then a short disclaimer: Jlore is earned by playing and never sold, nothing here is bought with money, and what a pack holds is the server's seeded, logged roll (\u00a714.1, \u00a714.11).\n- **Signed in** (a session, `readSession()`), it reads `GET /api/packs` (`getPacks`) and `GET /api/cosmetic-packs` (`getCosmeticPacks`). It shows the server's odds as percentages (`packs/packs.ts::tierPercents`, the fallback included):\n  - a card pack slot's odds, and the guaranteed slot's;\n  - a duplicate's cosmetic;\n  - the global roll's line (`odds.globalCosmetic`: its chance, then its tiers from Epic);\n  - a cosmetic pack slot's, and its guaranteed slot's.\n  Then it shows the account's pity counters, `n / threshold packs` for Epic, Legendary and Mythic, with the line that pity guarantees each within its threshold, once for every card pack (R1298000). A read that fails says why in its place.\n- **Signed out:** the disclaimer and a sign-in link, and no request.\n- **Links:** `routes/SiteFooter.tsx` gets `Purchases` beside Privacy and Terms (`siteFooterTestid.purchases`); `routes/shop.tsx` gets one small `Odds & pity` text link at the bottom of `/shop`.\n- **Wiring:** `paths.purchases` in `net/navigate.ts`, the lazy route in `main.tsx`, its title in `net/head.ts`, and its rewrite in both `vercel.json` and `apps/web/vercel.json` (`net/deploy-routes.test.ts` holds them). It is not a prerendered public page: `apps/web/static-pages.ts` is unchanged.\n\n### The ruling\n`spec/rulings/R<N>000.md`, N this issue's number: the odds and pity show on `/purchases`, linked from the footer and the Shop, and no longer on the pack screen, the Shop or the cosmetic packs panel. They are still the server's percentages, never the client's (CLAUDE.md rule 7). It supersedes the placement in R1339000 (`What players see`) and R1580000 (`Pity`):\n- their titles gain `; placement superseded by R<N>000`;\n- `R1339000.md`'s `proven_in` drops `apps/web/src/packs/PackOpening.test.tsx` and `apps/web/src/shop/Shop.test.tsx`;\n- `R1580000.md`'s drops `apps/web/src/packs/PackOpening.test.tsx` (the opening and store parts delete those tests).\nEdit \u00a714.4 (where the odds and counters show, the global roll's line among them), add a paragraph at the end of `spec/11-rulings.md`, and rewrite `spec/INDEX.md` with `cargo jackioh spec index`. Hearthstone semantics: odds are published on a page of their own, apart from the store.\n\n### Files\n`apps/web/src/routes/purchases.tsx` and `routes/purchases.test.tsx` (new; style with `routes/privacy.css`, or a new `routes/purchases.css`), `routes/SiteFooter.tsx`, `routes/shop.tsx`, `routes/shop.test.tsx`, `net/navigate.ts`, `net/head.ts`, `main.tsx`, `vercel.json`, `apps/web/vercel.json`, and the spec files above.\nNot here: `packs/*` and `shop/*` (the opening and store parts remove the old panels).\n\n### Done when\n- `routes/purchases.test.tsx`, tests named `R<N>000 \u2026`: signed in, the page shows the server's odds, the global roll's line and the pity counters from fixture answers; signed out, it shows the disclaimer and makes no request; the footer links it.\n- `routes/shop.test.tsx`: `/shop` renders no pity counters and no odds table, and links `/purchases`. This test stays red until the store part lands, which is expected. Update `R1580000 buying, opening and pity are on the Shop, and the opening plays over the screen` to drop pity.\nRun `pnpm --dir apps/web exec vitest run src/routes/purchases.test.tsx src/routes/shop.test.tsx src/net/deploy-routes.test.ts`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`, `cargo jackioh spec index`, `cargo jackioh spec check`.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec (`shop-screen.cy.tsx` and spec 45 among them). Keep every existing test id.\n\nBlocked by #1661.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read `spec/README.md`, \u00a714.1, \u00a714.4, \u00a714.6, \u00a714.11, R1298000, R1339000, R1580000, the global roll part's ruling on the branch and `apps/web/README.md`; read `routes/terms.tsx`, `routes/privacy.tsx` with `privacy.css`, `routes/SiteFooter.tsx`, `routes/shop.tsx` and its test, `packs/PackOpening.tsx`' `PackPity` and `PackOdds` (to draw the same facts), `net/navigate.ts`, `net/head.ts`, `main.tsx` (~l.121\u2013143, ~l.739\u2013747), both `vercel.json` files and `net/deploy-routes.test.ts`.\n2. Write `routes/purchases.tsx` (the disclaimer; signed in, the two reads and their sections; signed out, the sign-in link).\n3. Wire it: `paths.purchases`, the lazy ungated route, the title, both rewrites.\n4. Add the footer link and the `/shop` link.\n5. Write `routes/purchases.test.tsx` and the `routes/shop.test.tsx` changes.\n6. Spec: the note, the two superseded titles and `proven_in` edits, \u00a714.4, the `spec/11-rulings.md` paragraph; `cargo jackioh spec index`, then `cargo jackioh spec check`.\n7. Run the Done-when commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read `spec/README.md`, \u00a714.1, \u00a714.4, \u00a714.6, \u00a714.11, R1298000, R1339000, R1580000, the global roll part's ruling on the branch and `apps/web/README.md`; read `routes/terms.tsx`, `routes/privacy.tsx` with `privacy.css`, `routes/SiteFooter.tsx`, `routes/shop.tsx` and its test, `packs/PackOpening.tsx`' `PackPity` and `PackOdds` (to draw the same facts), `net/navigate.ts`, `net/head.ts`, `main.tsx` (~l.121\u2013143, ~l.739\u2013747), both `vercel.json` files and `net/deploy-routes.test.ts`.\n2. Write `routes/purchases.tsx` (the disclaimer; signed in, the two reads and their sections; signed out, the sign-in link).\n3. Wire it: `paths.purchases`, the lazy ungated route, the title, both rewrites.\n4. Add the footer link and the `/shop` link.\n5. Write `routes/purchases.test.tsx` and the `routes/shop.test.tsx` changes.\n6. Spec: the note, the two superseded titles and `proven_in` edits, \u00a714.4, the `spec/11-rulings.md` paragraph; `cargo jackioh spec index`, then `cargo jackioh spec check`.\n7. Run the Done-when commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-7` (claude, `sonnet`, medium); review on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read `spec/README.md`, \u00a714.1, \u00a714.4, \u00a714.6, \u00a714.11, R1298000, R1339000, R1580000, the global roll part's ruling on the branch and `apps/web/README.md`; read `routes/terms.tsx`, `routes/privacy.tsx` with `privacy.css`, `routes/SiteFooter.tsx`, `routes/shop.tsx` and its test, `packs/PackOpening.tsx`' `PackPity` and `PackOdds` (to draw the same facts), `net/navigate.ts`, `net/head.ts`, `main.tsx` (~l.121\u2013143, ~l.739\u2013747), both `vercel.json` files and `net/deploy-routes.test.ts`.\n2. Write `routes/purchases.tsx` (the disclaimer; signed in, the two reads and their sections; signed out, the sign-in link).\n3. Wire it: `paths.purchases`, the lazy ungated route, the title, both rewrites.\n4. Add the footer link and the `/shop` link.\n5. Write `routes/purchases.test.tsx` and the `routes/shop.test.tsx` changes.\n6. Spec: the note, the two superseded titles and `proven_in` edits, \u00a714.4, the `spec/11-rulings.md` paragraph; `cargo jackioh spec index`, then `cargo jackioh spec check`.\n7. Run the Done-when commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
