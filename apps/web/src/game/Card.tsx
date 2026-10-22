@@ -80,6 +80,7 @@ import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
+import { useKeywordLost } from "./keywordLoss.ts";
 import { useWearerSeat, useWornDeckCosmetics } from "./wearer.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr } from "./glow.ts";
@@ -328,6 +329,8 @@ export default function Card(props: CardProps): ReactElement {
   const selected = isSelected(props.highlight, testId);
   const clickable = target !== null && target !== undefined;
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
+  // #1598: a `keywordGranted` that takes the keyword away plays as the icon going (keywordLoss.ts).
+  const keywordLost = useKeywordLost(testId);
   // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
   // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
   const explains = card?.playReason !== undefined;
@@ -364,6 +367,7 @@ export default function Card(props: CardProps): ReactElement {
     "data-legal": clickable ? legalAttr(legal) : undefined,
     "data-selected": selected ? "true" : undefined,
     "data-animating": animatingEvent,
+    "data-lost": keywordLost ? "true" : undefined,
     "data-glow": glowAttr(props.highlight, testId),
     "aria-disabled": clickable && !legal ? ("true" as const) : undefined,
     onClick: clickable ? fire : undefined,

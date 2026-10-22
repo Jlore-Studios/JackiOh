@@ -335,7 +335,6 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "drawn",
   "addedToHand",
   "shuffledIn",
-  "keywordGranted",
   "counterChanged",
   "radiantSet",
   "deradianted",
@@ -404,6 +403,7 @@ describe("B17 SOUND_CUES is total over GameEvent types", () => {
       destroyed(TOKEN),
       trapFired(HIDDEN_DEF_ID, "p2"),
       { type: "buffed", instanceId: "u2", attack: -3, health: 0 },
+      { type: "keywordGranted", instanceId: "u2", keyword: { kind: "Taunt" }, lost: true },
       { type: "gameOver", winner: "p2", reason: "concede" },
       { type: "gameOver", winner: "draw", reason: "draw-accepted" },
       { type: "turnStarted", player: "p2", turn: 4 },
@@ -744,6 +744,14 @@ describe("B21 amounts", () => {
       [-2, -2],
     ] as const) {
       expect(shape({ type: "buffed", instanceId: "u2", attack, health }), `${String(attack)}/${String(health)}`).toEqual([sfx("debuff")]);
+    }
+  });
+
+  it("#1598 keywordGranted gives buff on a grant and debuff on a loss", () => {
+    expect(shape(SAMPLES.keywordGranted)).toEqual([sfx("buff")]);
+    for (const keyword of [{ kind: "Taunt" }, { kind: "Divine Shield" }, { kind: "Rush" }] as const) {
+      expect(shape({ type: "keywordGranted", instanceId: "u2", keyword }), keyword.kind).toEqual([sfx("buff")]);
+      expect(shape({ type: "keywordGranted", instanceId: "u2", keyword, lost: true }), keyword.kind).toEqual([sfx("debuff")]);
     }
   });
 });
