@@ -21,7 +21,9 @@ use jackioh_engine::{PlayerId, ShippedCatalog};
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::api::game_records::record_live_game;
 use jackioh_server::api::results::record_result;
+use jackioh_server::api::retention::{refile_unfiled, run_purge};
 use jackioh_server::app::App;
+use jackioh_server::config::GAME_RECORD_REFILE_GRACE_SECONDS;
 use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
 
 use crate::support::deps::{TestAppOptions, test_app, test_app_with};
@@ -463,5 +465,99 @@ mod live_game_records {
             .and_then(|entry| entry["version"].as_str())
             .expect("a newest version");
         assert_eq!(jackioh_cards::catalog_version(), newest);
+    }
+
+    /// Past the grace, so the retention pass may file what the result's own filing missed.
+    async fn past_the_grace() {
+        tokio::time::advance(Duration::from_secs(
+            u64::try_from(GAME_RECORD_REFILE_GRACE_SECONDS).expect("a grace") + 1,
+        ))
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1596000_the_retention_pass_files_a_record_whose_first_write_failed() {
+        let (logs, _guard) = log_lines();
+        let app = test_app_with(TestAppOptions {
+            env: vec![("RENDER_GIT_COMMIT".into(), "0123abcdef".into())],
+            ..TestAppOptions::default()
+        })
+        .await;
+        let mut h = live_match_in(app, Some("bo1"), None).await;
+        fake_lock(&h.app).await.on_call = Some(Arc::new(|method: &str| {
+            if method == "gameRecords.insert" {
+                return Err(StoreError::Other("the records table is gone".to_string()));
+            }
+            Ok(())
+        }));
+        play_to_concession(&mut h).await;
+
+        assert_eq!(logs.count("game.record.failed"), 1);
+        fake_lock(&h.app).await.on_call = None;
+        assert_eq!(game_records(&h.app).await, json!([]));
+
+        // Still inside the grace: the retention pass leaves the missing record alone.
+        assert_eq!(refile_unfiled(&h.app).await.expect("the refile"), 0);
+        assert_eq!(game_records(&h.app).await, json!([]));
+
+        past_the_grace().await;
+        let purge = tokio::spawn(run_purge(Arc::clone(&h.app)));
+        for _ in 0..500 {
+            if logs.count("game_records.refiled") == 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        assert_eq!(logs.count("game_records.refiled"), 1);
+        purge.abort();
+
+        let records = game_records(&h.app).await;
+        let records = records.as_array().expect("a list");
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0]["id"], MATCH_ID);
+        assert_eq!(records[0]["mode"], "bo1");
+        assert_eq!(records[0]["game"]["reason"], "concede");
+        // R1367000: the refile names no build: the filing deploy did not play the game.
+        assert!(
+            records[0].get("build").is_none(),
+            "build: {}",
+            records[0]["build"]
+        );
+        assert!(fake_lock(&h.app).await.tables.game_record_ledger[MATCH_ID].folded);
+        assert_eq!(
+            fake_lock(&h.app)
+                .await
+                .tables
+                .stats_totals
+                .records
+                .values()
+                .sum::<i64>(),
+            1
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1596000_the_retention_pass_leaves_a_filed_record_as_it_is() {
+        let (logs, _guard) = log_lines();
+        let mut h = live_match(Some("bo1")).await;
+        play_to_concession(&mut h).await;
+        let filed = game_records(&h.app).await;
+        assert_eq!(filed.as_array().map(Vec::len), Some(1));
+
+        past_the_grace().await;
+        assert_eq!(refile_unfiled(&h.app).await.expect("the refile"), 0);
+
+        assert_eq!(game_records(&h.app).await, filed);
+        assert_eq!(logs.count("game.recorded"), 1);
+        assert_eq!(
+            fake_lock(&h.app)
+                .await
+                .tables
+                .stats_totals
+                .records
+                .values()
+                .sum::<i64>(),
+            1
+        );
     }
 }
