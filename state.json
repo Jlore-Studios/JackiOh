@@ -11376,6 +11376,13 @@
     "1596": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T02:08:32Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy on line 3 (a new ruling R1596000 and edits to spec/ \u00a79.11, R376, INDEX.md) and line 1 (15 files); not hard: crates/server only, no migration, no engine or AI code"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
