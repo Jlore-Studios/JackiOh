@@ -14513,12 +14513,8 @@
     "what": "revise #1624 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-22T07:11:55Z",
-    "notes": [
-      "delivered revise #1624 on claude-3 (run 39732584720): approved",
-      "started revise #1624 on claude-3 (run 39738978209)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 61%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 97h 46m; `muse` its last run could not work, 2 times in a row (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-10-22T09:05:49Z; `agy` 7-day usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-23T22:00:08Z; it can start a build or a plan again in 38h 46m; `gpt` it refused a call; its limit resets at 2026-10-27T18:45:27Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-24T05:00:00Z; it can start a build or a plan again in 45h 46m; `devin` is idle, but nothing queued is for it"
-    ],
+    "at": "2026-10-22T07:19:14Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15118,7 +15114,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T07:11:55Z",
+  "loop_tick": "2026-10-22T07:19:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
