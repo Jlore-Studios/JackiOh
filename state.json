@@ -11534,6 +11534,13 @@
     "1600": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T02:54:06Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule lines 1, 2 and 6 fail: 11 files across four crates plus docs, about 450 lines, and a new test that runs clippy itself; none of it is engine rules or AI work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
