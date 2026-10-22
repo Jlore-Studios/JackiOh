@@ -418,6 +418,7 @@ describe("R1369000 the technical log on the Patch notes page", () => {
     const log = await realPatchSource.technical();
     await screen.findAllByTestId(patchTestid.patch, undefined, SLOW);
     openEverySet();
+    await screen.findAllByTestId(patchTestid.technicalLog, undefined, SLOW);
     for (const { version, kind, player } of log) {
       if (kind === "internal" || player === undefined) continue;
       expect(patchEntry(version)).toHaveTextContent(player);

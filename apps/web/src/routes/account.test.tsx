@@ -4,7 +4,7 @@
 // their record, and — the one that actually trapped people — could not sign out at all:
 // `net/session.ts` wrote the token and nothing ever cleared it.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -153,10 +153,16 @@ describe("the account screen", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} />);
 
-    expect(await screen.findByTestId("account-rank")).toHaveTextContent(
-      "Max#3 · Normal Grape III · 1/3 pips · Season v0.2",
-    );
-    expect(screen.getByTestId("account-badges")).toHaveTextContent("Season best: Normal Grape II · v0.1");
+    const rank = await screen.findByTestId("account-rank");
+    expect(rank).toHaveTextContent("Max#3 · Normal Grape III · Season v0.2");
+    // #1650: the crest carries the pips, and the long words are its name.
+    const crest = within(rank).getByRole("img", { name: "Normal Grape III · 1/3 pips" });
+    expect(crest).toHaveAttribute("data-size", "large");
+    expect(crest.querySelectorAll(".rank-crest__pip")).toHaveLength(3);
+    expect(crest.querySelectorAll('.rank-crest__pip[data-filled="true"]')).toHaveLength(1);
+    const badges = screen.getByTestId("account-badges");
+    expect(badges).toHaveTextContent("Season best: Normal Grape II · Season v0.1");
+    expect(within(badges).getByRole("img", { name: "Normal Grape II · v0.1" })).toBeInTheDocument();
     expect(screen.getByTestId("account-leaderboard")).toHaveAttribute("href", "/leaderboard");
     expect(screen.queryByTestId("account-rating")).toBeNull();
   });

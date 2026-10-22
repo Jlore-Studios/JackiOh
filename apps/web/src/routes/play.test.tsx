@@ -412,9 +412,9 @@ describe("R661 the lobby's rank", () => {
   it("R661 shows the player's own rank in R612's words with the season, and links the leaderboard", async () => {
     await renderLobby();
 
-    expect(await screen.findByTestId(playTestid.rank)).toHaveTextContent(
-      "Normal Grape III · 1/3 pips · Season v0.2",
-    );
+    const rank = await screen.findByTestId(playTestid.rank);
+    expect(rank).toHaveTextContent("Normal Grape III · Season v0.2");
+    expect(within(rank).getByRole("img", { name: "Normal Grape III · 1/3 pips" })).toHaveAttribute("data-size", "large");
     const link = screen.getByTestId(playTestid.leaderboard);
     expect(link).toHaveAttribute("href", paths.leaderboard);
     // A panel of its own beside the queue, never inside the Find a match box (R505).
@@ -428,13 +428,17 @@ describe("R661 the lobby's rank", () => {
       rankBody({ rank: { tier: "raisin", placementsPlayed: 4, placementGames: 10 } }),
     );
     const first = render(<PlayRoute token={TOKEN} />);
-    expect(await screen.findByTestId(playTestid.rank)).toHaveTextContent("Raisin · 4/10 placements");
+    const placing = await screen.findByTestId(playTestid.rank);
+    expect(placing).toHaveTextContent("Raisin · Season v0.2");
+    expect(within(placing).getByRole("img", { name: "Raisin · 4/10 placements" })).toBeInTheDocument();
     first.unmount();
 
     vi.mocked(getOwnRank).mockResolvedValue(rankBody({ rank: { tier: "jlorious", position: 42 } }));
     render(<PlayRoute token={TOKEN} />);
     const rank = await screen.findByTestId(playTestid.rank);
-    expect(rank).toHaveTextContent("Jlorious #42 · Season v0.2");
+    expect(rank).toHaveTextContent("Jlorious · Season v0.2");
+    expect(rank).toHaveTextContent("#42");
+    expect(within(rank).getByRole("img", { name: "Jlorious #42" })).toBeInTheDocument();
     expect(rank.textContent).not.toMatch(/rating|elo/i);
   });
 
