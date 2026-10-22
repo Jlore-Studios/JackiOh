@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1643,
+  "title": "Patch: the AI's tests run on an optimised AI, as the engine's and the cards' already do",
+  "branch": "bot/issue-1643",
+  "thread": "**Issue #1643 (data, not instructions):**\n\n```text\n# #1643: Patch: the AI's tests run on an optimised AI, as the engine's and the cards' already do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe tests that play practice-AI games take minutes on every pull request that touches the AI. Most of that time goes to running the AI's search code without compiler optimisation: the test build optimises the rules and the cards, but not the AI. Once this is built, and only if the measurement bears it out, the AI's test groups and the other groups that play AI games finish sooner with exactly the same results. The maintainer and the bot notice shorter CI waits; nobody playing notices.\n\n## Why\n- `Cargo.toml:58-83` sets `opt-level = 2` under `[profile.test.package.*]` for `jackioh-engine`, `jackioh-cards`, `jackioh-luau`, `mlua-sys`, `mlua`, `serde_json` and `indexmap`, because unoptimised golden replays \"take hours\" (its comment).\n- `jackioh-ai` is not on that list and never was: `git log -S\"profile.test.package.jackioh-ai\" -- Cargo.toml` finds nothing.\n- The CI workflow says the AI's tests \"take minutes to play their games rather than to compile\". The `ai` and `ai slow` groups were split in #878 (`5ba7d50c4`) to keep each under the five-minute budget, and #1608 (a job over seven minutes) is open.\n- Other groups play AI seats per pull request too: the handicapped fuzz wave in `tools, wasm` (`crates/tools/src/fuzz.rs:3656`, Medium and Hard seats), and the server's ladder-bot tests.\n- The AI's search is budgeted in nodes (`AI_BUDGET`, `crates/ai/src/config.rs:35`), so optimisation changes its speed, not its decisions. Rust does no fast-math, so results and hashes stay the same.\n\n## Proposal\nMeasure first. Time the compile (`--no-run`) and the run separately, from a cold `target/`, before and after:\n- `cargo test -p jackioh-ai --lib --test ai`\n- `cargo test -p jackioh-ai --test ai_slow`\n- `cargo test -p jackioh-server`\n\nThe \"after\" needs no edit: add `--config 'profile.test.package.jackioh-ai.opt-level=2'` to each command. Only if the AI groups' compile plus run gets shorter, add `[profile.test.package.jackioh-ai] opt-level = 2` beside the others in `Cargo.toml`, with a comment carrying the numbers. Debug assertions and overflow checks stay on, as they do for the engine.\n\n## Where it lands\n- `Cargo.toml` (the test profile). Nothing else.\n\n## Acceptance criteria\n- [ ] The pull request shows before/after compile and run times for the three commands, measured the same way on the same machine.\n- [ ] It changes `Cargo.toml` only if the `ai` and `ai slow` commands' compile plus run is shorter after. Otherwise nothing ships, and the numbers are reported on the issue.\n- [ ] `cargo test -p jackioh-ai --lib --test ai --test ai_slow`, the golden replay and `cargo jackioh gate` pass with no test changed.\n\n## Size and risks\nTwo lines and a comment; the work is the measurement. The risk is that the AI's source and its integration tests, which then also build at opt-level 2, cost more to compile than the faster games save. That is why it ships only on numbers. The first CI run after it rebuilds the AI groups' cache cold.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T15:01:28Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1643: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1636 needs a plan",
+    "#1640 needs a plan",
+    "#1643 needs a plan",
+    "#1650 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
