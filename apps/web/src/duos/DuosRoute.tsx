@@ -207,6 +207,22 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
         </ShellPanel>
       );
     }
+    // #1599: a socket closed for good before any view (a voided match's VOIDED_CLOSE_CODE, game/net.ts)
+    // has nothing left to wait for, so the panel says so rather than Joining.
+    if (match.connection === "closed") {
+      return (
+        <ShellPanel testId={duosTestid.connecting}>
+          <p className="notice" data-testid={duosTestid.gone} role="alert">
+            {t("This co-op match is no longer available. It closed before the board could load.")}
+          </p>
+          <div className="row">
+            <a className="button-primary" href={paths.together} onClick={followInApp(paths.together)}>
+              {t("Back to Play together")}
+            </a>
+          </div>
+        </ShellPanel>
+      );
+    }
     return (
       <Loading what="Joining the co-op match…" slow testId={duosTestid.connecting}>
         <p className="auth-hint">

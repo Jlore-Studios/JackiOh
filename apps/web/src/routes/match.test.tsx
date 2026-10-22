@@ -16,7 +16,7 @@ import type { ActionBody } from "@jackioh/shared";
 
 import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
-import type { SocketLike } from "../game/net.ts";
+import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
@@ -513,6 +513,23 @@ describe("the match screen in a player's words", () => {
     } finally {
       logged.mockRestore();
     }
+  });
+
+  it("#1599 a match voided before the first view says it is gone and offers the lobby, not Joining", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    expect(screen.getByTestId("match-connecting")).toHaveTextContent("Joining the match…");
+
+    act(() => {
+      live().onclose?.({ code: VOIDED_CLOSE_CODE, reason: "voided", wasClean: true });
+    });
+    expect(screen.getByTestId("match-gone")).toHaveTextContent("This match is no longer available.");
+    expect(screen.getByTestId("match-connecting")).not.toHaveTextContent("Joining the match…");
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId("match-refused")).toBeNull();
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to the lobby" })).toHaveAttribute("href", "/play");
+    // A voided match has no socket to reopen (R679).
+    expect(sockets).toHaveLength(1);
   });
 
   it("names the connection on the board's bar in words", () => {
