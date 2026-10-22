@@ -415,8 +415,8 @@ past the hour.
   `serverConfig.ts`), and production's client trails the server by up to a day (section 2), so
   promote them together: once Render serves the commit (`x-deployed-commit` on `GET /api/catalog`)
   and its CI on main is green, comment `/fast-forward` on the countdown issue. Until the client
-  catches up, players see no packs on `/account`, a practice game pays nothing and every full art
-  prints for everyone, while the server already pays ladder games. Then, in Studio's SQL editor:
+  catches up, a practice game pays nothing and every full art prints for everyone, while the
+  server already pays ladder games. Then, in Studio's SQL editor:
   - A fresh account that redeems a code owns 39 cards and holds 100 Jlore, its newest track's
     level-1 reward (`reward_for_level(1)` in `crates/server/src/economy/track_rewards.rs`):
     `select count(*) from public.collection where profile_id = '<id>';` → 39, and

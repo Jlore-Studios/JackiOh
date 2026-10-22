@@ -1274,3 +1274,226 @@ mod dormant_cards_1506 {
         assert_eq!(scored(&piled, &GREEDY_EVAL), scored(&bare(&piled), &GREEDY_EVAL));
     }
 }
+
+mod shown_cost_fatigue_windfury_1602 {
+    use super::*;
+    use jackioh_ai::{DeterminizeOptions, EvalWeights, KeywordWeights, determinize, redact};
+    use jackioh_engine::testkit::{KeywordKind, create_rng};
+
+    /// #1602's three terms at their starts, whatever AI_EVAL holds (each term's screen decides
+    /// that), so these tests pin the terms, not their tuning.
+    const PRICED: EvalWeights = EvalWeights {
+        enemy_face_down_per_cost: 0.8,
+        fatigue_draw: 1.0,
+        keyword: KeywordWeights {
+            windfury: 1.0,
+            ..AI_EVAL.keyword
+        },
+        ..AI_EVAL
+    };
+
+    /// The same weights with the three terms off.
+    const UNPRICED: EvalWeights = EvalWeights {
+        enemy_face_down_per_cost: 0.0,
+        fatigue_draw: 0.0,
+        keyword: KeywordWeights {
+            windfury: 0.0,
+            ..AI_EVAL.keyword
+        },
+        ..AI_EVAL
+    };
+
+    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
+    const SHEEPISH: &str = "core-041"; // (1) Trap
+    const PAWN: &str = "core-096"; // (1) Trap
+    const PRIME: &str = "meditative-091-1"; // Windfurious Prime: 5/10 Rush, Windfury
+
+    fn scored(state: &GameState, w: &EvalWeights) -> f64 {
+        evaluate(state, AI, NextSwing::Enemy, w)
+    }
+
+    /// A 4/4 on each side.
+    fn even() -> GameState {
+        board(json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [VANILLA] } }))
+    }
+
+    /// `even()` plus p2's face-down `trap`, its shown cost moved by `cost_mod` (R65, R351).
+    fn backed(trap: &str, cost_mod: i32) -> GameState {
+        board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "field": [VANILLA], "backrow": [{ "def": trap, "faceUp": false, "costMod": cost_mod }] },
+        }))
+    }
+
+    /// `state` with p2's backrow card revealed (R686): both seats read it while it stays armed.
+    fn revealed(state: &GameState) -> GameState {
+        let mut out = clone(state);
+        if let Some(card) = out.players[HUMAN].backrow.iter_mut().flatten().next() {
+            card.revealed = Some(true);
+        }
+        out
+    }
+
+    /// `state` with `player`'s fatigue count at `count` (§2.4).
+    fn tired(state: &GameState, player: PlayerId, count: i32) -> GameState {
+        let mut out = clone(state);
+        out.players[player].fatigue_count = count;
+        out
+    }
+
+    /// `state` with `player`'s lane-1 unit granted Windfury.
+    fn windfurious(state: &GameState, player: PlayerId) -> GameState {
+        let mut out = clone(state);
+        if let Some(unit) = out.players[player].units[0]
+            .as_mut()
+            .and_then(|pile| pile.first_mut())
+        {
+            unit.granted_keywords.push(Keyword::Windfury);
+        }
+        out
+    }
+
+    /// `player`'s lane-1 unit.
+    fn lane_one(state: &GameState, player: PlayerId) -> CardInstance {
+        state.players[player].units[0]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned()
+            .expect("setup: a unit in lane 1")
+    }
+
+    #[test]
+    fn an_enemy_face_down_card_scores_lower_by_each_crystal_of_cost_it_shows() {
+        let cheap = backed(SHEEPISH, 0);
+        let dear = backed(SHEEPISH, 4);
+        // Without the term the two backs score alike: only it tells them apart.
+        assert_eq!(scored(&cheap, &UNPRICED), scored(&dear, &UNPRICED));
+        assert!(scored(&dear, &PRICED) < scored(&cheap, &PRICED));
+        assert_close(
+            scored(&cheap, &PRICED) - scored(&dear, &PRICED),
+            4.0 * PRICED.enemy_face_down_per_cost,
+            9,
+        );
+        // Sheepish shows (1): the term takes that many crystals off the enemy's side.
+        assert_close(
+            scored(&cheap, &UNPRICED) - scored(&cheap, &PRICED),
+            PRICED.enemy_face_down_per_cost,
+            9,
+        );
+    }
+
+    #[test]
+    fn an_unrevealed_card_is_priced_by_the_cost_it_shows_alone_and_a_revealed_one_by_its_face() {
+        let sheepish = backed(SHEEPISH, 4);
+        let pawn = backed(PAWN, 4);
+        // Unrevealed: two cards that show the same cost score alike, and so do the seat's own view
+        // (a placeholder that keeps only the shown cost, R185, R351) and a world sampled from it (R762).
+        assert_eq!(scored(&sheepish, &PRICED), scored(&pawn, &PRICED));
+        let view = redact(&sheepish, AI);
+        assert_eq!(scored(&view, &PRICED), scored(&sheepish, &PRICED));
+        let world = determinize(
+            &view,
+            AI,
+            &mut create_rng("shown-cost-1602", 0),
+            DeterminizeOptions::default(),
+        );
+        assert_eq!(scored(&world, &PRICED), scored(&sheepish, &PRICED));
+        assert_ne!(scored(&sheepish, &PRICED), scored(&sheepish, &UNPRICED));
+        // Revealed (R686): the seat reads the card, so its face prices it and the face-down term
+        // leaves it alone.
+        let shown = revealed(&sheepish);
+        assert_eq!(scored(&shown, &PRICED), scored(&shown, &UNPRICED));
+        assert_eq!(scored(&redact(&shown, AI), &PRICED), scored(&shown, &PRICED));
+    }
+
+    #[test]
+    fn each_fatigue_draw_a_side_has_taken_counts_fatigue_draw_against_it() {
+        let state = even();
+        let base = scored(&state, &PRICED);
+        assert!(scored(&tired(&state, AI, 3), &PRICED) < base);
+        assert!(scored(&tired(&state, HUMAN, 3), &PRICED) > base);
+        assert_close(
+            base - scored(&tired(&state, AI, 3), &PRICED),
+            3.0 * PRICED.fatigue_draw,
+            9,
+        );
+        assert_close(
+            scored(&tired(&state, HUMAN, 3), &PRICED) - base,
+            3.0 * PRICED.fatigue_draw,
+            9,
+        );
+        // Symmetric: the same count on both sides cancels.
+        assert_close(scored(&tired(&tired(&state, AI, 3), HUMAN, 3), &PRICED), base, 9);
+        // Orthogonal to the library terms: a stocked library moves the step not at all.
+        let stocked = board(json!({
+            "p1": { "field": [VANILLA], "library": ["core-001", "core-002", "core-003"] },
+            "p2": { "field": [VANILLA] },
+        }));
+        assert_close(
+            scored(&stocked, &PRICED) - scored(&tired(&stocked, AI, 3), &PRICED),
+            3.0 * PRICED.fatigue_draw,
+            9,
+        );
+        assert_eq!(
+            scored(&tired(&state, AI, 3), &UNPRICED),
+            scored(&state, &UNPRICED)
+        );
+    }
+
+    #[test]
+    fn a_windfury_unit_is_worth_the_windfury_weight_more_and_the_table_names_it() {
+        assert_eq!(
+            PRICED.keyword.of(KeywordKind::Windfury),
+            Some(PRICED.keyword.windfury)
+        );
+        let state = even();
+        let own = windfurious(&state, AI);
+        let enemy = windfurious(&state, HUMAN);
+        assert_close(
+            unit_worth(&own, &lane_one(&own, AI), &PRICED)
+                - unit_worth(&state, &lane_one(&state, AI), &PRICED),
+            PRICED.keyword.windfury,
+            9,
+        );
+        // Our Windfury raises the score and theirs lowers it ...
+        assert!(scored(&own, &PRICED) > scored(&state, &PRICED));
+        assert!(scored(&enemy, &PRICED) < scored(&state, &PRICED));
+        // ... and the weight is all the term adds to the second swing `face_threat` already counts.
+        assert_close(
+            scored(&own, &PRICED) - scored(&own, &UNPRICED),
+            PRICED.keyword.windfury,
+            9,
+        );
+        assert_close(
+            scored(&enemy, &UNPRICED) - scored(&enemy, &PRICED),
+            PRICED.keyword.windfury,
+            9,
+        );
+        // A printed Windfury reads the same.
+        let prime = board(json!({ "p1": { "field": [PRIME] }, "p2": { "field": [VANILLA] } }));
+        assert_close(
+            unit_worth(&prime, &lane_one(&prime, AI), &PRICED)
+                - unit_worth(&prime, &lane_one(&prime, AI), &UNPRICED),
+            PRICED.keyword.windfury,
+            9,
+        );
+    }
+
+    #[test]
+    fn greedy_eval_prices_no_shown_cost_no_fatigue_and_no_windfury() {
+        assert_eq!(
+            scored(&backed(SHEEPISH, 0), &GREEDY_EVAL),
+            scored(&backed(SHEEPISH, 4), &GREEDY_EVAL)
+        );
+        let state = even();
+        assert_eq!(
+            scored(&tired(&state, AI, 3), &GREEDY_EVAL),
+            scored(&state, &GREEDY_EVAL)
+        );
+        let own = windfurious(&state, AI);
+        assert_eq!(
+            unit_worth(&own, &lane_one(&own, AI), &GREEDY_EVAL),
+            unit_worth(&state, &lane_one(&state, AI), &GREEDY_EVAL)
+        );
+    }
+}

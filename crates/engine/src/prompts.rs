@@ -1424,7 +1424,8 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         options: args.options.clone(),
         min: clamp(args.min.unwrap_or(1), 0, max),
         max,
-        budget: None,
+        // B5 E18: the budget `open_prompt` gives the prompt, so a random answer is one a player could pick.
+        budget: args.budget.map(|budget| budget.max(0)),
         craft_mode: None,
         craft_offer: None,
         streak: None,

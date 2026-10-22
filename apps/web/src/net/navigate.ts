@@ -117,7 +117,7 @@ export const paths = {
   collection: "/collection",
   /** R1579000: a Collection section that opens in place. */
   collectionSection: (section: "cards" | "cosmetics"): string => `/collection?section=${section}`,
-  /** #1577: the shop, rendering the same panel the account screen shows. */
+  /** #1577, R1580000: the shop: buying and opening packs, pity, the tokens and the cosmetic packs. */
   shop: "/shop",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
