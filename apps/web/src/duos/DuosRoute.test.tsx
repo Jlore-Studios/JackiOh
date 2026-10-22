@@ -6,7 +6,7 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SocketLike } from "../game/net.ts";
+import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { must, stubServer } from "../test/stubServer.ts";
@@ -83,6 +83,24 @@ describe("the co-op route's connection line", () => {
     });
     expect(screen.getByTestId(duosTestid.connection)).toHaveAttribute("data-connection", "open");
     expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
+  });
+});
+
+describe("the co-op route before its first view", () => {
+  it("#1599 a co-op match voided before the first view says it is gone and offers Play together, not Joining", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    expect(screen.getByTestId(duosTestid.connecting)).toHaveTextContent("Joining the co-op match…");
+
+    act(() => {
+      latest().onclose?.({ code: VOIDED_CLOSE_CODE, reason: "", wasClean: true });
+    });
+    expect(screen.getByTestId(duosTestid.gone)).toHaveTextContent("This co-op match is no longer available.");
+    expect(screen.getByTestId(duosTestid.connecting)).not.toHaveTextContent("Joining the co-op match…");
+    expect(screen.queryByTestId("gate-loading")).toBeNull();
+    expect(screen.queryByTestId(duosTestid.refused)).toBeNull();
+    expect(screen.queryByTestId(duosTestid.reconnect)).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to Play together" })).toHaveAttribute("href", "/together");
+    expect(sockets).toHaveLength(1);
   });
 });
 
