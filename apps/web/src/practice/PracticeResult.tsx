@@ -11,6 +11,7 @@ import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from 
 import type { Difficulty } from "@jackioh/engine/config";
 import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
+import XpReveal from "../economy/XpReveal.tsx";
 import { t } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "./config.ts";
 import { earningText, type PracticeEarning } from "./earning.ts";
@@ -75,7 +76,7 @@ type PracticeResultProps = {
   onWatchReplay?: () => void;
   /** R768000: the kept game's replay at its last step, making its last turn's GIF. */
   onShareLastTurn?: () => void;
-  /** R1303000: what a game on a server seed earned, or why not; absent for any other game. */
+  /** R1303000: what a game on a server seed earned, or why not; absent for any other game. #1664: a paid one plays its tracks and quests. */
   earning?: PracticeEarning;
 };
 
@@ -147,6 +148,9 @@ export function PracticeResult({
             {earningText(earning)}
           </p>
         )}
+        {earning?.kind === "paid" ? (
+          <XpReveal economy={{ tracks: earning.tracks ?? [], quests: earning.quests ?? [] }} />
+        ) : null}
         <div className="practice-result__actions">
           <button
             ref={playAgain}

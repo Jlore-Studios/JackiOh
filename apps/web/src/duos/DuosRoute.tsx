@@ -256,6 +256,7 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
             pings={match.pings}
             onPing={match.sendPing}
             jloreCapped={match.jloreCapped}
+            economy={match.economy}
             error={
               refusedWith === null
                 ? match.error
