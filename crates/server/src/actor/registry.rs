@@ -228,8 +228,7 @@ impl Registry {
             // R1452: the ladder bot at either seat, which the actor plays.
             let bots = bots_of(&mut t, &players).await?;
             (boards, sampled, derived_mode, bots)
-        })
-        .map_err(|error| ApiError::internal(error.to_string()))?;
+        })?;
 
         let glitch_boards = (
             sampled.first().cloned().unwrap_or_default(),
@@ -295,8 +294,7 @@ impl Registry {
         }))
         .map_err(|payload| ApiError::internal(panic_text(payload)))?;
 
-        one_tx!(app.db, |t| t.matches_create(&match_row).await?)
-            .map_err(|error| ApiError::internal(error.to_string()))?;
+        one_tx!(app.db, |t| t.matches_create(&match_row).await?)?;
         let match_id = match_row.id.clone();
         let players = match_row.players.clone();
         let actor = create_match_actor(
