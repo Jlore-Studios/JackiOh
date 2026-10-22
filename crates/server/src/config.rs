@@ -897,6 +897,13 @@ pub const CARD_STATS_KEPT_REPORTS: usize = 256;
 /// most games first.
 pub const CARD_STATS_CO_PLAYED_TOP: usize = 10;
 
+/// SPEC §11 R1583000: how long the server keeps the play rates (`GET /api/stats/play-rates`) before
+/// reading them off the totals again, and the `Cache-Control` max-age it answers with, in seconds.
+pub const PLAY_RATES_REFRESH_SECONDS: i64 = 3600;
+
+/// SPEC §11 R1583000: the human live seats that must have held a card before its play rate is listed.
+pub const PLAY_RATES_MIN_GAMES: i64 = 20;
+
 /// R1044000: how many game records one transaction folds into the totals, both when `stats-import`
 /// writes a run's file and when `stats-fold` (or the retention loop) folds the records written
 /// before the totals. A batch rewrites each card row it touches once, so a bigger one rewrites
