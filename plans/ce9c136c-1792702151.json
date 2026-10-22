@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 1676,
+  "title": "Patch: development card statistics from the learn lane's self-play export",
+  "branch": "bot/issue-1676",
+  "thread": "**Issue #1676 (data, not instructions):**\n\n```text\n# #1676: Patch: development card statistics from the learn lane's self-play export\nOpened by @jgoetzmann.\n\n## Why\n\nThe card statistics have a development source beside the live games (SPEC \u00a79.11, R376 to R378). Today it comes from the `gather` lane (`training/gather.md`), which plays AI-against-AI All Random games without end on the training box: one game at a time, on one core, with `jackioh stats --series gather`. The training box is being given back to the night bot (#682's audit), so `gather` loses its home.\n\nThe learn lane already plays the same kind of game, at much greater volume:\n- `jackioh selfplay` plays the AI on `main` against itself on R258's All Random deals, with nothing banned.\n- It plays at `AI_GATE_BUDGET`, which is defined as `AI_BUDGET`, the browser's budget the gather lane plays at.\n- Each learn run exports 100,000 games (`.github/workflows/selfplay.yml`, `training/learn.md`). Each game is one JSON line: seed, decks, log, final hash, result, turns, catalog version and commit.\n\nTurning those logs into development records gives the statistics many more games for no extra compute.\n\n## Proposal\n\n1. **A `cargo jackioh` command** that reads `selfplay` log files and writes R378 `GameRecord`s, one per line. A name such as `stats from-selfplay <logs>\u2026 --out <file>` fits beside `stats report`; the planner chooses.\n   - Each game is replayed under the catalog it was played on, as `positions` does (R1006003). A game that no longer reaches its hash, has no result, names a catalog this build does not carry, or carries `faults` (R1489000) files nothing, and is counted as dropped.\n   - Each record is what the gather lane files for a game: `source: \"dev\"`, `mode: \"random\"`, both pilots `ai`, and the patch its catalog version names. It carries the build (R1367000), the log's commit, and `crates/ai/generation.json`'s generation at that commit when it can be read.\n   - Ids must never collide with the gather lane's (`dev:<patch>:gather:<n>`) or a `stats` run's. Use the export's base and game number, for example `dev:<patch>:selfplay:<base>:<n>`.\n   - The output is byte-identical whatever the thread count, as `stats` and `selfplay` are.\n2. **Rulings.** If the new series or its ids need one, take the lowest free number in this issue's block. Name the proving tests after it (CLAUDE.md rule 3).\n3. **A person adds one step to `learn.yml`** (`.github/` is off limits to the bots). After the export's `count` job, on the local runner: run the command over the export's shards and upload the records as an artifact. When the repository has the database secret the training box's gather lane used (`DATABASE_URL`), load them with `jackioh-server stats-import`, once per export.\n\n## Acceptance criteria\n\n- [ ] The command turns a fixture `selfplay` file into records that `stats report` and `stats report --games` read.\n- [ ] A test pins the record a known game files: the card figures that game yields (in deck, opening hand, played, drawn and never played) and its id.\n- [ ] A game that fails to replay, has no result, or carries `faults` files nothing and is counted. A test covers it.\n- [ ] `stats-import` accepts the file (`crates/server`'s import test, or a test that round-trips one record through its parser).\n- [ ] `crates/tools/README.md` lists the command. `training/README.md` and `training/gather.md` say the development games now come from the learn lane's exports.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` are green.\n\n## Size and risks\n\n- **Size:** `crates/tools` (one new module and its tests), the README rows and a ruling if needed. Medium: no engine, AI or card change.\n- **Fewer, lumpier figures.** Records arrive once per export (about weekly), not continuously. A patch that ships between exports has no development games until the next one, and `stats` can still be run by hand for it.\n- **Not live data.** These are AI-against-AI figures. R378 and R1451 already keep `dev` records out of every live figure unless a query asks for `--source=all`.\n\nPart of the plan in #682's audit (`reviews/2026-10-22-issue-682-subscriptions.md`).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1676: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-10-22T20:39:17Z",
+    "family": "muse",
+    "kind": "draft",
+    "notes": "",
+    "provider": "muse",
+    "reason": "`muse` reached its usage limit",
+    "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-4/_work/_temp/work/item-1676 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-4/_work/_temp/work/item-1676/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- agent loop failed: model failed: API error 429 [request_id=eb2be54c-ad89-4d78-85ed-2e4204b3a67a]: Subscription quota exhausted. Your usage window resets at 2026-10-26T00:00:00Z. (rate_limit_error)"
+  },
+  "journal": "# Journal of #1676\n\nEvery night-bot run on #1676, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-10-22 20:48 UTC \u00b7 plan #1676 \u00b7 `muse` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39850417882) on `muse` (`muse-spark-1.3-contributor` (medium)). It ended **interrupted**: `muse` reached its usage limit\nModel calls: 1, 0.1 model minutes.\nIts work ended at `bcb8030c14c1` on `bot/issue-1676`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 20:39 | start | from `origin/main` |  | at `bcb8030c14c1` |\n| 2 | 20:39 | plan (`muse-spark-1.3-contributor`) | plan the item before anyone builds it | 0.1 min | refused: the usage limit |\n| 3 | 20:39 | stop | `muse` reached its usage limit |  |  |\n",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
