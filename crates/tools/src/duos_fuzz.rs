@@ -15,9 +15,14 @@
 //!      no probe reuses one. A failure is an error beginning `wrong-seat probe` or `reused-nonce probe`
 //!      and names the step.
 //!
-//! A seed fixes the game: the four decks are one seeded shuffle of the gate's pool (`FUZZ_POOL`, so
-//! 80 distinct cards), and the policy's picks come from streams of the seed's own, outside the state
-//! (`fuzz.rs`'s header says why that is what replay equality proves). The policy is §10.7's over a
+//! A seed fixes the game. Its setup rotates by seed the way a co-op match is made (§13.7, #1573,
+//! `duos_setup_for_seed`): team A plays `DUOS_HUMAN_TEAM` with no handicap, team B is the AI team at
+//! one of `DUOS_FUZZ_TIERS`, under `duos_ai_team` with `AI_DIFFICULTY`'s handicap on each seat (none at
+//! Easy), and the seats of one of `DUOS_DEALT_SEATS` play a dealt deck (R433). The four decks are one
+//! seeded shuffle of the gate's pool (`FUZZ_POOL`), dealt in seat order at each seat's deck size
+//! (R184), so no card is in two decks, and a failure prints the setup, the options and every deck.
+//! The policy's picks come from streams of the seed's own, outside the state (`fuzz.rs`'s header
+//! says why that is what replay equality proves). The policy is §10.7's over a
 //! Duos seat's legal actions: a seat that may act is drawn uniformly, it ends its turn when nothing
 //! else is on offer or with AI_END_TURN_PROBABILITY, and otherwise takes one of the rest, a pass
 //! included, uniformly; it never emotes (`AI_SKIPPED_ACTIONS`).
@@ -33,11 +38,12 @@ use jackioh_engine::testkit::{
     DuosInvariantMonitor, I6_GATE_STRIDE, create_duos_invariant_monitor, preview_every_set,
 };
 use jackioh_engine::{
-    AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS, DUOS_NONCE_PREFIX,
-    DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DUOS_SEATS,
-    DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosReduceResult, DuosReplayInput, DuosSeat,
-    DuosState, Rng, TURN_CAP_PLAYER_TURNS, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions,
-    duos_reduce, duos_seats_to_act,
+    AI_DIFFICULTY, AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS,
+    DUOS_HUMAN_TEAM, DUOS_NONCE_PREFIX, DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED,
+    DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DUOS_SEATS, Difficulty, DuosAction, DuosActionBody,
+    DuosCreateOptions, DuosDecks, DuosHandicaps, DuosReduceResult, DuosReplayInput, DuosSeat, DuosState,
+    HUMAN_HANDICAP, PerTeam, Rng, TURN_CAP_PLAYER_TURNS, duos_ai_team, duos_begin, duos_create, duos_fold,
+    duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
 };
 use rayon::prelude::*;
 
@@ -103,16 +109,105 @@ fn duos_wave_size(raw: Option<u32>) -> u32 {
 
 /// One seeded shuffle of the pool, a deck of DECK_SIZE cards to each seat in seat order (A1, A2, B1,
 /// B2), so no card is in two decks.
+/// `duos_decks_for_handicaps` with no handicap: the decks `cargo test`'s co-op games deal.
+#[cfg(test)]
 pub fn duos_decks_for_seed(seed: u32) -> DuosDecks {
+    duos_decks_for_handicaps(seed, &DuosHandicaps::default())
+}
+
+/// The tiers the seeds rotate the AI team (team B) through (#1573), as a co-op match sets it up
+/// (§13.7): its rules `duos_ai_team(tier)` and each of its seats' handicap `AI_DIFFICULTY[tier]`.
+/// Easy is the humans' rules and resources, the setup every seed played before #1573.
+const DUOS_FUZZ_TIERS: [Difficulty; 3] = [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard];
+
+/// The seats whose deck a seed deals rather than builds (R433), rotating (#1573): none; A1's alone,
+/// so duel 1 deals none; A2's and B1's, a seat of each duel and of each team, so `create_duel` maps a
+/// team B seat to its duel's `p2`; both human seats', as a match of two All Random players has it.
+const DUOS_DEALT_SEATS: [&[DuosSeat]; 4] = [
+    &[],
+    &[DuosSeat::A1],
+    &[DuosSeat::A2, DuosSeat::B1],
+    &[DuosSeat::A1, DuosSeat::A2],
+];
+
+/// One seed's setup beyond its decks (#1573): the AI team's tier and the seats dealt their deck.
+/// Team A always plays `DUOS_HUMAN_TEAM` with no handicap, as a co-op match's people do (§13.7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct DuosSetup {
+    tier: Difficulty,
+    dealt: &'static [DuosSeat],
+}
+
+impl DuosSetup {
+    /// Each seat's handicap: team B's `AI_DIFFICULTY[tier]`, none at Easy, whose resources are a
+    /// person's (a co-op match stores none for it either); team A's none.
+    fn handicaps(self) -> DuosHandicaps {
+        let handicap = AI_DIFFICULTY[self.tier];
+        let ai = (handicap != HUMAN_HANDICAP).then_some(handicap);
+        DuosHandicaps {
+            a1: None,
+            a2: None,
+            b1: ai,
+            b2: ai,
+        }
+    }
+
+    /// What a failure prints for the setup: `AI team <tier>, dealt <seats, or none>`.
+    fn label(self) -> String {
+        let dealt: Vec<&str> = self.dealt.iter().map(|seat| seat.as_str()).collect();
+        let dealt = if dealt.is_empty() {
+            "none".to_string()
+        } else {
+            dealt.join(", ")
+        };
+        format!("AI team {}, dealt {dealt}", self.tier)
+    }
+}
+
+/// The seed's setup (#1573), rotating as `handicap_for_seed` does: the tier by the seed modulo the
+/// tiers, the dealt seats by the quotient, so every 12 consecutive seeds play each pairing once. The
+/// seed alone fixes it, so `--from <seed> --seeds 1` plays the same game.
+fn duos_setup_for_seed(seed: u32) -> DuosSetup {
+    let at = usize::try_from(seed).unwrap_or(0);
+    let tiers = DUOS_FUZZ_TIERS.len();
+    DuosSetup {
+        tier: DUOS_FUZZ_TIERS[at % tiers],
+        dealt: DUOS_DEALT_SEATS[(at / tiers) % DUOS_DEALT_SEATS.len()],
+    }
+}
+
+/// One seeded shuffle of the pool dealt in seat order (A1, A2, B1, B2), each seat its handicap's
+/// deck size (R184) or DECK_SIZE, so no card is in two decks. Team A's two decks, and with no
+/// handicap all four, are the ones every seed was dealt before #1573.
+fn duos_decks_for_handicaps(seed: u32, handicaps: &DuosHandicaps) -> DuosDecks {
     let mut rng = Rng::new(&format!("jackioh-duos-fuzz-decks-{seed}"), 0);
-    let shuffled = rng.shuffle(FUZZ_POOL.as_slice());
-    let size = usize::try_from(DECK_SIZE).unwrap_or(0);
-    let deck = |at: usize| shuffled[at * size..(at + 1) * size].to_vec();
+    let mut rest = rng.shuffle(FUZZ_POOL.as_slice()).into_iter();
+    let mut deal = |seat: DuosSeat| -> Vec<String> {
+        let size = handicaps
+            .get(seat)
+            .map_or(DECK_SIZE, |handicap| handicap.deck_size);
+        rest.by_ref().take(usize::try_from(size).unwrap_or(0)).collect()
+    };
     DuosDecks {
-        a1: deck(0),
-        a2: deck(1),
-        b1: deck(2),
-        b2: deck(3),
+        a1: deal(DuosSeat::A1),
+        a2: deal(DuosSeat::A2),
+        b1: deal(DuosSeat::B1),
+        b2: deal(DuosSeat::B2),
+    }
+}
+
+/// What seed `seed`'s game is created, folded and checkpointed with (#1573): its stream, its setup's
+/// team rules, handicaps and dealt seats, and decks sized to the handicaps.
+fn duos_options_for_seed(seed: u32) -> DuosCreateOptions {
+    let setup = duos_setup_for_seed(seed);
+    let handicaps = setup.handicaps();
+    DuosCreateOptions {
+        seed: format!("jackioh-duos-fuzz-{seed}"),
+        decks: duos_decks_for_handicaps(seed, &handicaps),
+        teams: Some(PerTeam::new(DUOS_HUMAN_TEAM, duos_ai_team(setup.tier))),
+        handicaps: Some(handicaps),
+        dealt: (!setup.dealt.is_empty()).then(|| setup.dealt.to_vec()),
+        ..DuosCreateOptions::default()
     }
 }
 
@@ -257,11 +352,7 @@ where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
     register_all();
-    let options = DuosCreateOptions {
-        seed: format!("jackioh-duos-fuzz-{seed}"),
-        decks: duos_decks_for_seed(seed),
-        ..DuosCreateOptions::default()
-    };
+    let options = duos_options_for_seed(seed);
     let begun = duos_begin(&duos_create(&options));
     let mut state = begun.state;
     let mut monitor = create_duos_invariant_monitor(&state);
@@ -607,9 +698,38 @@ fn failure_lines(outcomes: &[DuosSeedOutcome]) -> Vec<String> {
             outcome
                 .error
                 .as_ref()
-                .map(|error| format!("seed {}: {error}", outcome.seed))
+                .map(|error| failure_report(outcome.seed, error))
         })
         .collect()
+}
+
+/// One failed seed's report (#1573): `seed N: <error>`, then what its game was created with, the
+/// setup, the options a fold takes besides the seed and decks, and each seat's deck, as the 1v1
+/// report prints its two.
+fn failure_report(seed: u32, error: &str) -> String {
+    let options = duos_options_for_seed(seed);
+    let mut lines = vec![
+        format!("seed {seed}: {error}"),
+        format!("  setup: {}", duos_setup_for_seed(seed).label()),
+        format!("  options: {}", setup_options_json(&options)),
+    ];
+    for seat in DUOS_SEATS {
+        lines.push(format!(
+            "  seed {seed} {seat} deck: {}",
+            options.decks.of(seat).join(", ")
+        ));
+    }
+    lines.join("\n")
+}
+
+/// The options a seed's game was created with besides its seed and decks (#1573): the teams'
+/// rules, the seats' handicaps and the dealt seats, as one JSON object.
+fn setup_options_json(options: &DuosCreateOptions) -> serde_json::Value {
+    serde_json::json!({
+        "teams": options.teams,
+        "handicaps": options.handicaps,
+        "dealt": options.dealt,
+    })
 }
 
 /// The heaviest actions of the games that passed, one per game (#1364): a failed seed adds
@@ -647,8 +767,8 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
 }
 
 /// `--duos --json`: the wave's failures, each measure's heaviest actions and the growth bounds
-/// (#1364). Failures carry only seed and message: Duos has no stage taxonomy, so the `growth:`
-/// prefix in the message is the stage name.
+/// (#1364). Failures carry the seed, the message and the seed's whole create options (#1573):
+/// Duos has no stage taxonomy, so the `growth:` prefix in the message is the stage name.
 fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::Value {
     let passed: Vec<&DuosSeedOutcome> = outcomes
         .iter()
@@ -667,6 +787,7 @@ fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::V
         "failures": outcomes.iter().filter_map(|outcome| outcome.error.as_ref().map(|error| serde_json::json!({
             "seed": outcome.seed,
             "message": error,
+            "options": duos_options_for_seed(outcome.seed),
         }))).collect::<Vec<_>>(),
         "heaviest": passed_heaviest(outcomes),
         "bounds": {
@@ -700,6 +821,157 @@ mod tests {
         let distinct: indexmap::IndexSet<&String> = all.iter().copied().collect();
         assert_eq!(distinct.len(), size * DUOS_SEATS.len());
         assert_ne!(duos_decks_for_seed(1), duos_decks_for_seed(2));
+    }
+
+    #[test]
+    fn the_setup_rotates_by_seed_through_every_tier_and_dealt_seats() {
+        assert_eq!(
+            duos_setup_for_seed(1),
+            DuosSetup {
+                tier: Difficulty::Medium,
+                dealt: &[],
+            }
+        );
+        assert_eq!(
+            duos_setup_for_seed(2),
+            DuosSetup {
+                tier: Difficulty::Hard,
+                dealt: &[],
+            }
+        );
+        assert_eq!(
+            duos_setup_for_seed(3),
+            DuosSetup {
+                tier: Difficulty::Easy,
+                dealt: &[DuosSeat::A1],
+            }
+        );
+        assert_eq!(
+            duos_setup_for_seed(7),
+            DuosSetup {
+                tier: Difficulty::Medium,
+                dealt: &[DuosSeat::A2, DuosSeat::B1],
+            }
+        );
+        assert_eq!(
+            duos_setup_for_seed(11),
+            DuosSetup {
+                tier: Difficulty::Hard,
+                dealt: &[DuosSeat::A1, DuosSeat::A2],
+            }
+        );
+        let seen: Vec<DuosSetup> = (1..=12).map(duos_setup_for_seed).collect();
+        for tier in DUOS_FUZZ_TIERS {
+            for dealt in DUOS_DEALT_SEATS {
+                assert!(seen.contains(&DuosSetup { tier, dealt }), "{tier} {dealt:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn two_seeds_create_different_options_and_a_seed_always_the_same() {
+        assert_eq!(duos_options_for_seed(7), duos_options_for_seed(7));
+        let medium = duos_options_for_seed(1);
+        let hard = duos_options_for_seed(2);
+        assert_ne!(medium.teams, hard.teams);
+        assert_ne!(medium.handicaps, hard.handicaps);
+        assert_ne!(duos_options_for_seed(1).dealt, duos_options_for_seed(4).dealt);
+    }
+
+    #[test]
+    fn a_seed_s_options_are_a_co_op_match_s_at_its_tier() {
+        for seed in 1..=3 {
+            let tier = duos_setup_for_seed(seed).tier;
+            let options = duos_options_for_seed(seed);
+            assert_eq!(
+                options.teams,
+                Some(PerTeam::new(DUOS_HUMAN_TEAM, duos_ai_team(tier)))
+            );
+            let handicaps = options
+                .handicaps
+                .clone()
+                .expect("a seed names its seats' handicaps");
+            assert_eq!((handicaps.a1, handicaps.a2), (None, None));
+            let ai = (tier != Difficulty::Easy).then_some(AI_DIFFICULTY[tier]);
+            assert_eq!((handicaps.b1, handicaps.b2), (ai, ai));
+            for seat in DUOS_SEATS {
+                assert_eq!(
+                    options.decks.of(seat).len(),
+                    usize::try_from(handicaps.get(seat).map_or(DECK_SIZE, |h| h.deck_size)).unwrap_or(0)
+                );
+            }
+            let all: Vec<&String> = DUOS_SEATS
+                .into_iter()
+                .flat_map(|seat| options.decks.of(seat).iter())
+                .collect();
+            let distinct: indexmap::IndexSet<&String> = all.iter().copied().collect();
+            assert_eq!(distinct.len(), all.len());
+            assert_eq!(options.decks.a1, duos_decks_for_seed(seed).a1);
+            assert_eq!(options.decks.a2, duos_decks_for_seed(seed).a2);
+        }
+    }
+
+    #[test]
+    fn a_dealt_seat_is_dealt_in_its_own_duel_and_seat_only() {
+        use jackioh_engine::PlayerId;
+        register_all();
+        let _preview = preview_every_set();
+        let dealt = |seed: u32| {
+            duos_create(&duos_options_for_seed(seed))
+                .duels
+                .into_iter()
+                .map(|duel| duel.opening.as_ref().and_then(|opening| opening.dealt.clone()))
+                .collect::<Vec<Option<Vec<PlayerId>>>>()
+        };
+        assert_eq!(dealt(7), vec![Some(vec![PlayerId::P2]), Some(vec![PlayerId::P1])]);
+        assert_eq!(dealt(3), vec![Some(vec![PlayerId::P1]), None]);
+        assert_eq!(dealt(1), vec![None, None]);
+    }
+
+    #[test]
+    fn a_failure_names_its_setup_options_and_four_decks() {
+        let outcome = DuosSeedOutcome {
+            seed: 7,
+            reason: None,
+            error: Some("planted".to_string()),
+            heaviest: Heaviest::default(),
+            checkpoint_paused: false,
+            checkpoint_ms: 0,
+        };
+        let lines = failure_lines(std::slice::from_ref(&outcome));
+        assert_eq!(lines.len(), 1);
+        assert!(
+            lines[0].starts_with("seed 7: planted\n  setup: AI team medium, dealt a2, b1\n"),
+            "unexpected report: {}",
+            lines[0]
+        );
+        let options = duos_options_for_seed(7);
+        assert!(
+            lines[0].contains(&format!("\n  options: {}\n", setup_options_json(&options))),
+            "unexpected report: {}",
+            lines[0]
+        );
+        assert!(
+            lines[0].contains("\"dealt\":[\"a2\",\"b1\"]"),
+            "unexpected report: {}",
+            lines[0]
+        );
+        for seat in DUOS_SEATS {
+            assert!(
+                lines[0].contains(&format!(
+                    "\n  seed 7 {seat} deck: {}",
+                    options.decks.of(seat).join(", ")
+                )),
+                "unexpected report: {}",
+                lines[0]
+            );
+        }
+        let json = wave_json(7, 1, &[outcome]);
+        assert_eq!(json["failures"][0]["seed"], serde_json::json!(7));
+        assert_eq!(
+            json["failures"][0]["options"],
+            serde_json::to_value(&options).expect("options serialize")
+        );
     }
 
     #[test]
