@@ -206,7 +206,7 @@ function practiceHandle(): Cypress.Chainable<PracticeHandleLike> {
 
 function practiceUrl(seed: string, difficulty: Difficulty, seat: PlayerId): string {
   // Issue #1113: the seeded games deal the AI from the frozen fixture pool, so a shadow-ban
-  // change re-deals none of them. Identical deals today, since the frozen pool copies the table.
+  // change re-deals none of them. The frozen pool copies the table as it stood when they were dealt.
   const params = new URLSearchParams({ seed, difficulty, deck: "random", seat, pace: "fast", aipool: "fixture" });
   return `/practice?${params.toString()}`;
 }

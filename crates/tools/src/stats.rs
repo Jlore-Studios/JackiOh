@@ -762,15 +762,24 @@ fn paired_difference(before: &[GameRecord], after: &[GameRecord], card: &str) ->
 
 /// R186, R390: the table that lists `card` and why, `SHADOW_BAN` before `SHADOW_WATCH`.
 fn shadow_row(card: &str) -> Option<(&'static str, &'static str)> {
+    shadow_row_in(card, SHADOW_BAN, SHADOW_WATCH)
+}
+
+/// `shadow_row` over the tables `ban` and `watch`, `ban` first.
+fn shadow_row_in(
+    card: &str,
+    ban: &'static [(&'static str, &'static str)],
+    watch: &'static [(&'static str, &'static str)],
+) -> Option<(&'static str, &'static str)> {
     let listed = |table: &'static [(&'static str, &'static str)]| {
         table
             .iter()
             .find(|(id, _)| *id == card)
             .map(|(_, reason)| *reason)
     };
-    listed(SHADOW_BAN)
+    listed(ban)
         .map(|reason| ("SHADOW_BAN", reason))
-        .or_else(|| listed(SHADOW_WATCH).map(|reason| ("SHADOW_WATCH", reason)))
+        .or_else(|| listed(watch).map(|reason| ("SHADOW_WATCH", reason)))
 }
 
 /// R1284000: what `stats compare` prints, as data.
@@ -1891,12 +1900,18 @@ mod tests {
 
     #[test]
     fn r1284000_compare_adds_the_shadow_ban_or_watch_line() {
-        // The ids come from the tables, which every sweep rewrites.
-        let (banned, why_banned) = SHADOW_BAN[0];
-        let compared = compare(&[], &[], banned);
-        assert_eq!(compared.shadow, Some(("SHADOW_BAN", why_banned)));
+        // A ban row from a fixture table: the live one may be empty, as #1675's sweep left it.
+        const BAN: &[(&str, &str)] = &[("test-card", "timeout: easy: fixture")];
+        let row = Some(("SHADOW_BAN", "timeout: easy: fixture"));
+        assert_eq!(shadow_row_in("test-card", BAN, &[]), row);
+        // SHADOW_BAN before SHADOW_WATCH.
+        assert_eq!(shadow_row_in("test-card", BAN, BAN), row);
+        let compared = Comparison {
+            shadow: shadow_row_in("test-card", BAN, &[]),
+            ..compare(&[], &[], "test-card")
+        };
         let text = render_compare(&compared, None);
-        assert!(text.contains(&format!("{banned} is in SHADOW_BAN (")), "{text}");
+        assert!(text.contains("test-card is in SHADOW_BAN ("), "{text}");
         assert!(
             text.ends_with("its figures measure the AI as much as the card"),
             "{text}"

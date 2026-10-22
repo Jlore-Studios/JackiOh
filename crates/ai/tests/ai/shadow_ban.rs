@@ -332,6 +332,7 @@ mod sweep_flags_b25 {
                 now: None,
                 retime: None,
                 tier: None,
+                banned: None,
             },
         ));
         assert_eq!(result["defId"], json!("core-011"));
@@ -530,8 +531,11 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
 
     // One test per tier, each with its own 300 s. The two shared one test and ran 267 s on a developer
     // sandbox and 313 s on the night bot's, past its limit; the time is all Easy's (251 s of the 267
-    // for two seeds, Hard's two take 12 s). Whether a card is affordable at four crystals follows from
-    // its cost, never from the seed, so Easy's check plays one game.
+    // for two seeds, Hard's two take 12 s). Easy's check plays one game: game 1 ends on turn 11, before
+    // the Floats of R1563000 ("Float reduces cost") bring the card down to four crystals. A longer game
+    // can: #1675's empty `SHADOW_BAN` re-dealt game 1 into 21 turns, the card affordable on two of them.
+    // So both checks deal from the frozen fixture pool (issue #1113), and a shadow-ban change re-deals
+    // neither.
     //
     // Hard's check plays five: re-pinned for v0.3.5, the Meditative set joins the greedy seat's deck (a
     // player's, which the AI's soft gate leaves whole, R1390), and the AI wins games 1 and 2 on turns 7
@@ -550,6 +554,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Easy),
+                banned: Some(FIXTURE_BANNED_IDS),
             },
         ));
         assert_eq!(easy["tier"], json!("easy"));
@@ -569,6 +574,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Hard),
+                banned: Some(FIXTURE_BANNED_IDS),
             },
         ));
         assert_eq!(hard["tier"], json!("hard"));
@@ -1051,6 +1057,7 @@ mod the_two_pass_sweep_r390 {
                 now: Some(&now),
                 retime: None,
                 tier: Some(Difficulty::Easy),
+                banned: None,
             },
         ));
         assert_eq!(timed["forced"], json!("classic-013"));
@@ -1100,6 +1107,7 @@ mod the_two_pass_sweep_r390 {
                 now: None,
                 retime: None,
                 tier: Some(Difficulty::Easy),
+                banned: None,
             },
         ));
         assert_eq!(plain["suspects"], json!([]));
@@ -1149,6 +1157,7 @@ mod a_slow_decision_timed_again_r977000 {
             now: Some(&now),
             retime: Some(&retime),
             tier: Some(Difficulty::Easy),
+            banned: None,
         });
         (out, handed.get(), budget.get())
     }
@@ -1219,6 +1228,7 @@ mod a_slow_decision_timed_again_r977000 {
                 now: Some(&slow),
                 retime: None,
                 tier: Some(Difficulty::Easy),
+                banned: None,
             },
         );
         assert!(result.timeouts > 0);
