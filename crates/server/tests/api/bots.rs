@@ -62,6 +62,7 @@ use jackioh_server::db::store::{
 use jackioh_server::env::SERVER_ONLY_ENV_VARS;
 use jackioh_server::ranked::ladder::{GrapeTier, fresh_rank, tier_bottom};
 use jackioh_server::ranked::season::season_id_of;
+use jackioh_server::seats::Seat;
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 use crate::support::store::{fake_lock, q};
@@ -1989,4 +1990,86 @@ async fn r1555000_a_bot_match_cut_off_by_a_restart_is_resumed() {
     assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
     assert!(app.matches.has(&started), "the match was folded back");
     assert_eq!(fake_lock(&app).await.tables.matches.len(), 1);
+}
+
+// R1523000 — a match between two bots holds its seats in the ledger
+
+/// Nothing a bot match's claim writes: no match, no skeleton and neither bot in a match.
+async fn assert_no_bot_match(app: &App, bots: &[&str], why: &str) {
+    assert!(matches(app).await.is_empty(), "{why}: no match");
+    assert!(
+        fake_lock(app).await.tables.reserved.is_empty(),
+        "{why}: no skeleton"
+    );
+    for id in bots {
+        assert_eq!(
+            bot_row(app, id).await.in_match_id,
+            None,
+            "{why}: {id} has no flag"
+        );
+        assert_eq!(app.seats.of(id), None, "{why}: {id} holds no seat");
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1523000_a_match_between_two_bots_holds_both_bots_seats_until_it_ends() {
+    let app = app_with_bots(true).await;
+    let one = grinder(&app, 1200.0).await;
+    let other = new_bot(&app, BotSpec::rated(1190.0)).await;
+    let started = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect("a kickoff")
+        .expect("a match between two bots");
+    for id in [&one, &other] {
+        assert_eq!(app.seats.of(id), Some(Seat::Match(started.clone())), "{id}");
+    }
+
+    end_bot_match(&app, &started, PlayerId::P2).await;
+    for id in [&one, &other] {
+        assert_eq!(
+            bot_row(&app, id).await.in_match_id,
+            None,
+            "PREMISE: {id} was let go"
+        );
+        assert_eq!(
+            app.seats.of(id),
+            None,
+            "{id} leaves the ledger as its flag clears"
+        );
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r1523000_a_bot_another_door_holds_or_an_old_epoch_starts_no_bot_match() {
+    let app = app_with_bots(true).await;
+    let one = grinder(&app, 1200.0).await;
+    let other = new_bot(&app, BotSpec::rated(1190.0)).await;
+
+    // Another door holds the bot's seat, its own claim still in flight: the kickoff's claim loses.
+    let rival = app
+        .seats
+        .reserve(&[&other], Seat::Match("rival-match".to_string()))
+        .expect("the rival's seat");
+    assert_eq!(kick_off_bot_match(&app, now_ms()).await.expect("a kickoff"), None);
+    assert_eq!(app.seats.of(&one), None, "the grinder holds no seat");
+    drop(rival);
+    assert_no_bot_match(&app, &[&one, &other], "a held seat").await;
+
+    // A newer server has booted: this one's claim is fenced, answers 503 and writes nothing.
+    fake_lock(&app).await.tables.seat_epoch += 1;
+    let fenced = kick_off_bot_match(&app, now_ms())
+        .await
+        .expect_err("a fenced claim");
+    assert_eq!(fenced.code.as_str(), "unavailable", "{}", fenced.message);
+    assert_no_bot_match(&app, &[&one, &other], "an old epoch").await;
+
+    // On the current epoch the next kickoff starts one.
+    let epoch = fake_lock(&app).await.tables.seat_epoch;
+    app.seats.set_epoch(epoch);
+    assert!(
+        kick_off_bot_match(&app, now_ms())
+            .await
+            .expect("a kickoff")
+            .is_some()
+    );
 }

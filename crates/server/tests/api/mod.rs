@@ -42,6 +42,7 @@ pub mod results;
 pub mod retention;
 pub mod rewards;
 pub mod season;
+pub mod seats;
 pub mod series;
 pub mod series_rules;
 pub mod settings;

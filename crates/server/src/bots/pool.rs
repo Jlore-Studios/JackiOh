@@ -465,7 +465,8 @@ async fn claim_name(app: &App, profile_id: &str, name: &str, now: i64) -> Result
 /// R1454: lets go every bot whose claimed match was still unstarted `BOT_STALE_START_SECONDS` after
 /// the claim, and that match's player with it: a start a crash or a restart cut off. The queue's
 /// sweeper runs it every sweep whatever `LADDER_BOTS` says (`run_matchmaker`), so neither is held
-/// out of the queue for longer than about that. Answers how many bots it let go.
+/// out of the queue for longer than about that; a release holds the seat ledger to the record at
+/// once (R1523000). Answers how many bots it let go.
 pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreError> {
     let mut tx = app.db.begin(None).await?;
     let released = tx
@@ -474,6 +475,11 @@ pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreErr
     tx.commit().await?;
     for bot_id in &released {
         tracing::warn!(event = "bots.start.released", botId = %bot_id);
+    }
+    if !released.is_empty() {
+        // R1523000: the bots and players let go here leave the seat ledger too, which a restart
+        // filled from their flags.
+        crate::seats::reconcile(app).await;
     }
     Ok(released.len())
 }

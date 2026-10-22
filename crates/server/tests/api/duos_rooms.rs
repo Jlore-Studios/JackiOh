@@ -1502,11 +1502,15 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
         let code = room(&t.app, &t.host).await;
         let body = json!({ "difficulty": "easy", "random": true });
 
-        // A guest in a 1v1 match.
+        // A guest in a 1v1 match. R1523000: each seat written straight into the store is read as a
+        // restart would read it.
         store!(t.app, tx => tx
             .profiles_set_in_match(&t.guest.id, Some("elsewhere"))
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
         let (status, refused) = create(&t.app, &t.guest, body.clone()).await;
         assert_eq!(status, 409, "{refused}");
         assert!(code_is(&refused, "already_in_match"), "{refused}");
@@ -1517,12 +1521,18 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             .profiles_set_in_match(&t.guest.id, None)
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
 
         // A host in a 1v1 match.
         store!(t.app, tx => tx
             .profiles_set_in_match(&t.host.id, Some("elsewhere"))
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
         let (status, refused) = join(&t.app, &t.guest, &code).await;
         assert_eq!(status, 409, "{refused}");
         assert!(code_is(&refused, "conflict"), "{refused}");
@@ -1530,6 +1540,9 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             .profiles_set_in_match(&t.host.id, None)
             .await
             .expect("profiles.setInMatch"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
 
         // A guest in a series that is not over.
         let trio = json!({ "name": "t", "decks": [{ "name": "a", "cards": [] }, { "name": "b", "cards": [] }, { "name": "c", "cards": [] }] });
@@ -1556,6 +1569,9 @@ mod r1065000_a_live_co_op_match_holds_its_players_out_of_1v1 {
             "version": 1,
         }));
         store!(t.app, tx => tx.series_create(&series).await.expect("series.create"));
+        jackioh_server::seats::hydrate(&t.app)
+            .await
+            .expect("the ledger reads the store");
         let (status, refused) = create(&t.app, &t.guest, body).await;
         assert_eq!(status, 409, "{refused}");
         assert!(code_is(&refused, "already_in_match"), "{refused}");

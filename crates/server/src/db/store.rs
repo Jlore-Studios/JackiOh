@@ -67,6 +67,11 @@ pub enum StoreError {
     /// no clash: the log answers it with that row. The field is the message.
     #[error("{0}")]
     SeqClash(String),
+    /// R1523000: `seats_fence` found the seat epoch moved past the one this process booted on, so a
+    /// newer server holds the seats. The claiming transaction writes nothing, and its door answers
+    /// 503.
+    #[error("the seat ledger's epoch has moved on: a newer server holds the seats")]
+    Fenced,
     /// The driver's own failure: a lost connection, a constraint, a function's `raise`.
     #[error(transparent)]
     Db(#[from] sqlx::Error),
@@ -235,6 +240,14 @@ impl Profile {
     pub fn username(&self) -> String {
         render_username(&self.username_base, self.username_tag)
     }
+}
+
+/// R1523000: one profile whose in-match flag is set, and the match it names (`profiles_seated`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SeatedProfile {
+    pub profile_id: String,
+    pub match_id: String,
 }
 
 /// `profiles_create`'s argument. The new profile's username is the store's to give, the lowest
@@ -1683,6 +1696,12 @@ impl Tx<'_> {
         dispatch!(self, profiles_clear_in_match(profile_id, match_id))
     }
 
+    /// R1523000: every profile whose in-match flag is set, with its match, by profile id: the seat
+    /// ledger's boot and reconcile read it.
+    pub async fn profiles_seated(&mut self) -> StoreResult<Vec<SeatedProfile>> {
+        dispatch!(self, profiles_seated())
+    }
+
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
     /// trios, custom cards (R915008), tutorial progress, its age check and terms acceptances
     /// (R757000, R757001), queue
@@ -1692,6 +1711,22 @@ impl Tx<'_> {
     /// refuses a profile in a live match, series or co-op match first.
     pub async fn profiles_remove(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_remove(profile_id))
+    }
+
+    // seats (R1523000, migration 0054): the seat ledger's epoch
+
+    /// The fence every claiming transaction runs before it writes a seat: `Err(Fenced)` unless
+    /// `app.seat_epoch` still holds `epoch`, the one this process booted on. In Postgres it takes
+    /// the row `for share`, which never blocks another claim but makes a newer process's
+    /// `seats_bump_epoch` wait until this transaction ends.
+    pub async fn seats_fence(&mut self, epoch: i64) -> StoreResult<()> {
+        dispatch!(self, seats_fence(epoch))
+    }
+
+    /// Moves the epoch on by one and answers it: a booting process's first write, which fences every
+    /// claim an older process makes from then on.
+    pub async fn seats_bump_epoch(&mut self) -> StoreResult<i64> {
+        dispatch!(self, seats_bump_epoch())
     }
 
     // codes

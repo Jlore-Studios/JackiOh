@@ -28,7 +28,7 @@ use jackioh_engine::{PlayerId, pick_portrait_from_seed};
 use crate::actor::engine::{deal_random_deck, lean_of};
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_free_to_play, assert_host_free, freeze_choice, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, host_busy, in_game, read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_response};
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
@@ -39,6 +39,7 @@ use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
 use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
+use crate::seats::Seat;
 
 /// SPEC §11 R149: a room code "is minted by retrying a bounded number of times against the codes
 /// still in use and then reporting that no code is available"; the bound is config's, like R79's
@@ -320,8 +321,8 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
     let expires_at = now + ttl_ms;
 
     // R890000: one host holds at most `MAX_OPEN_ROOMS_PER_HOST` unclaimed unexpired rooms, so its
-    // rooms cannot amplify a seat race without bound. Advisory: the seat compare-and-set in `join`
-    // is what stops a double seat, not this count.
+    // rooms cannot amplify a seat race without bound. Advisory: the seats `join` reserves
+    // (R1523000) are what stop a double seat, not this count.
     {
         let mut tx = app.db.begin(None).await?;
         let open = tx.rooms_count_open_by_host(&profile_id, now).await?;
@@ -425,14 +426,39 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let frozen = freeze_choice(app, &profile_id, &choice).await?;
-    assert_host_free(app, &room.host_profile_id).await?;
 
     let match_id = new_uuid();
+    let series_id = new_uuid();
     let now = now_ms();
 
+    // R1523000: the guest's seat and the host's, or neither, before anything is written: a match,
+    // or for Conquest the series. A guest who holds a game meets the refusal `assert_free_to_play`
+    // answers, and a host who holds one (they may have been matched since the room opened) the
+    // host's; a rival door that reserved either first wins, and this one writes nothing.
+    let seat = if matches!(frozen, FrozenChoice::Bo3 { .. }) {
+        Seat::Series {
+            id: series_id.clone(),
+            game: None,
+        }
+    } else {
+        Seat::Match(match_id.clone())
+    };
+    let lease = app
+        .seats
+        .reserve(&[&profile_id, &room.host_profile_id], seat)
+        .map_err(|taken| {
+            if taken.profile == profile_id {
+                in_game(&taken.seat)
+            } else {
+                host_busy()
+            }
+        })?;
+
     // The atomic single-claim: whoever wins this statement is the guest, and there is no second
-    // winner (§9.5, mirroring `tickets_claim_pair`).
+    // winner (§9.5, mirroring `tickets_claim_pair`). Fenced first (R1523000): once a newer server's
+    // epoch has overtaken this one, nothing is claimed and the join answers 503.
     let mut tx = app.db.begin(None).await?;
+    tx.seats_fence(app.seats.epoch()).await?;
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
     // SPEC S7, B49: accepting a challenge is joining its room, so the claim accepts it, in the
@@ -464,7 +490,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             )));
         };
         let input = NewSeriesInput {
-            series_id: new_uuid(),
+            series_id,
             first_match_id: match_id.clone(),
             sides: (
                 NewSeriesSide {
@@ -485,13 +511,17 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         // queue and the room until the pick deadline (R333).
         let started: Result<SeriesRow, ApiError> = async {
             let mut tx = app.db.begin(None).await?;
+            tx.seats_fence(app.seats.epoch()).await?;
             let series = start_series(app, input, &mut tx).await?;
             tx.commit().await?;
             Ok(series)
         }
         .await;
         let series = match started {
-            Ok(series) => series,
+            Ok(series) => {
+                lease.commit();
+                series
+            }
             Err(error) => {
                 // The claim has committed, so the room's `open` row would stay claimed and
                 // pointing at no series; `matches_discard_open` releases it and frees the room code.
@@ -537,15 +567,17 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
     // "clears both players' in-match state" when the result lands). Both seats are claimed
     // compare-and-set (R890000) before the start, while the claim's renamed `open` row satisfies
-    // the `current_match_id` foreign key, as the queue path's comment states: a queue sweep that
-    // seated a seat between `assert_host_free` and now loses one seat here instead of seating
-    // them twice. Dropping `tx` on a loss rolls both stores back, and `matches_discard_open`
-    // deletes the claim and frees the room code, so the room stays joinable.
+    // the `current_match_id` foreign key, as the queue path's comment states: the record, and a
+    // second guard behind the seats reserved above (R1523000), so a seat it refuses is drift.
+    // Dropping `tx` on a loss rolls both stores back, and `matches_discard_open` deletes the claim
+    // and frees the room code, so the room stays joinable. A fenced write claims no seat at all.
     {
         let mut tx = app.db.begin(None).await?;
-        let host_seated = tx
-            .profiles_set_in_match(&claimed.host_profile_id, Some(&match_id))
-            .await?;
+        let fenced = tx.seats_fence(app.seats.epoch()).await;
+        let host_seated = fenced.is_ok()
+            && tx
+                .profiles_set_in_match(&claimed.host_profile_id, Some(&match_id))
+                .await?;
         let guest_seated = host_seated && tx.profiles_set_in_match(&profile_id, Some(&match_id)).await?;
         if host_seated && guest_seated {
             tx.commit().await?;
@@ -557,6 +589,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             let mut cleanup = app.db.begin(None).await?;
             cleanup.matches_discard_open(&match_id).await?;
             cleanup.commit().await?;
+            fenced?;
+            tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             if host_seated {
                 return Err(ApiError::new(
                     ApiErrorCode::AlreadyInMatch,
@@ -569,6 +603,9 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             ));
         }
     }
+    // R1523000: the record holds both seats now, so the ledger does: a start that fails from here
+    // lets go of them as its cleanup clears the flags.
+    lease.commit();
     if let Err(error) = app
         .matches
         .start(
@@ -595,6 +632,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 .await?;
             tx.profiles_clear_in_match(&profile_id, &match_id).await?;
             tx.commit().await?;
+            let seat = Seat::Match(match_id.clone());
+            for seated in [&claimed.host_profile_id, &profile_id] {
+                app.seats.release(seated, &seat);
+            }
             let mut cleanup = app.db.begin(None).await?;
             cleanup.matches_discard_open(&match_id).await?;
             cleanup.commit().await?;

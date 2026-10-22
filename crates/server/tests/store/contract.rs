@@ -9282,6 +9282,99 @@ mod economy {
     );
 }
 
+/// R1523000: the seat ledger's epoch (migration 0054's `app.seat_epoch`). A claim fences on the epoch
+/// its server booted on; once a newer server's bump has moved it on, the claim's transaction writes
+/// nothing.
+mod r1523000_seat_epoch {
+    use super::*;
+
+    /// A claim's transaction, as every door writes one: the fence first, then its seat.
+    async fn claim(
+        harness: &StoreHarness,
+        epoch: i64,
+        profile_id: &str,
+        match_id: &str,
+    ) -> Result<bool, StoreError> {
+        let mut t = harness.db.begin(None).await?;
+        t.seats_fence(epoch).await?;
+        let seated = t.profiles_set_in_match(profile_id, Some(match_id)).await?;
+        t.commit().await?;
+        Ok(seated)
+    }
+
+    fn flag_of(profile: Option<Profile>) -> Value {
+        j(&must(profile, "the profile"))["inMatchId"].clone()
+    }
+
+    async fn r1523000_a_fence_on_an_older_epoch_refuses_and_its_transaction_writes_nothing(
+        harness: &StoreHarness,
+    ) {
+        let profile = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &profile.id, &other.id, harness, harness.now())));
+
+        let older = q!(harness, t => t.seats_bump_epoch());
+        let current = q!(harness, t => t.seats_bump_epoch());
+        assert_eq!(
+            current,
+            older + 1,
+            "{}: a bump moves the epoch on by one",
+            harness.name
+        );
+
+        let fenced = claim(harness, older, &profile.id, &match_id).await;
+        assert!(
+            matches!(fenced, Err(StoreError::Fenced)),
+            "{}: {fenced:?}",
+            harness.name
+        );
+        assert!(
+            flag_of(q!(harness, t => t.profiles_get_by_id(&profile.id))).is_null(),
+            "{}: the fenced claim wrote nothing",
+            harness.name
+        );
+
+        // The control: the epoch the newest server booted on lets the same claim land.
+        let landed = claim(harness, current, &profile.id, &match_id).await;
+        assert!(matches!(landed, Ok(true)), "{}: {landed:?}", harness.name);
+        assert_eq!(
+            flag_of(q!(harness, t => t.profiles_get_by_id(&profile.id))),
+            match_id.as_str()
+        );
+    }
+
+    async fn r1523000_lists_every_profile_seated_in_a_match(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let free = active_profile(harness, None).await;
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &a.id, &b.id, harness, harness.now())));
+        q!(harness, t => t.profiles_set_in_match(&a.id, Some(match_id.as_str())));
+        q!(harness, t => t.profiles_set_in_match(&b.id, Some(match_id.as_str())));
+
+        let seated = q!(harness, t => t.profiles_seated());
+        let mut expected = vec![a.id.clone(), b.id.clone()];
+        expected.sort();
+        assert_eq!(
+            seated
+                .iter()
+                .map(|row| row.profile_id.clone())
+                .collect::<Vec<_>>(),
+            expected,
+            "{}: by profile id, the free one left out",
+            harness.name
+        );
+        assert!(seated.iter().all(|row| row.match_id == match_id));
+        assert!(!seated.iter().any(|row| row.profile_id == free.id));
+    }
+
+    both_stores!(
+        r1523000_a_fence_on_an_older_epoch_refuses_and_its_transaction_writes_nothing,
+        r1523000_lists_every_profile_seated_in_a_match,
+    );
+}
+
 mod tx {
     use super::*;
 

@@ -13,7 +13,8 @@
 #   1. A database owned by `migrator`, a login role that is NOT a superuser, as Supabase's
 #      `postgres` role is not; the Supabase-managed pieces (tests/db/bootstrap.sql: roles,
 #      auth.users, auth.uid()) are installed by the superuser, as Supabase installs them, and
-#      granted to it.
+#      granted to it; and what it creates in `public` is service_role's by default, as what
+#      Supabase's `postgres` creates is.
 #   2. The image, built from render.yaml's dockerfilePath and dockerContext exactly as Render builds
 #      it, run with render.yaml's own non-secret env values (NODE_ENV, TRUSTED_PROXY_HOPS,
 #      CATALOG_VERSION), read from the file so the rehearsal cannot drift from the deploy. The
@@ -247,6 +248,15 @@ admin -d "$DB" \
   -c "grant usage on schema auth to migrator with grant option" \
   -c "grant all on all tables in schema auth to migrator with grant option" \
   -c "grant execute on all functions in schema auth to migrator with grant option"
+# Supabase's default privileges for the role that migrates: service_role may use every table,
+# sequence and function it creates in `public`. bootstrap.sql's own `alter default privileges`
+# binds to the superuser that ran it, and the migrations here run as migrator, so without these
+# the server, which runs every statement as service_role (src/db/pg.rs), could read none of the
+# tables they make; the seat ledger's boot (R1523000) is the first such read before /readyz.
+admin -d "$DB" \
+  -c "alter default privileges for role migrator in schema public grant all on tables to service_role" \
+  -c "alter default privileges for role migrator in schema public grant all on sequences to service_role" \
+  -c "alter default privileges for role migrator in schema public grant all on functions to service_role"
 if [ "$(admin -d "$DB" -tAc "select rolsuper from pg_roles where rolname = 'migrator'")" != "f" ]; then
   echo "FAIL: migrator must not be a superuser, or this rehearses nothing" >&2
   exit 1

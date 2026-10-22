@@ -48,6 +48,7 @@ use crate::db::store::{
     MatchSeat, ProfileKind, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput,
     StoreError, Tx,
 };
+use crate::seats::Seat;
 
 pub use crate::api::series_rules::NewSeriesInput;
 
@@ -173,6 +174,23 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
 
     let seated = game_seats(series)?;
     let (seats, seed) = (seated.seats, seated.seed);
+    // R1523000: both sides move from between games to this game, or neither does: a series admits
+    // its own next game, and a side seated elsewhere keeps that seat. Another start of this game in
+    // flight holds it pending, so this one stops, as it would on the row that start writes.
+    let Ok(lease) = app.seats.reserve(
+        &[&seats.0.profile_id, &seats.1.profile_id],
+        Seat::Series {
+            id: series.id.clone(),
+            game: Some(match_id.clone()),
+        },
+    ) else {
+        tracing::info!(
+            event = "series.seat_taken",
+            seriesId = %series.id,
+            matchId = %match_id,
+        );
+        return Ok(false);
+    };
     let existing = one_tx!(app.db, |t| t.matches_get(&match_id).await?)?;
     if let Some(existing) = existing {
         if matches!(existing.status, crate::db::store::MatchStatus::Live) {
@@ -180,7 +198,9 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
             // itself rebuilds from its log when a socket arrives, so only the flags need healing.
             // A seat another match holds meanwhile cannot be healed now; the game is reported as
             // not started by this call either way, and a later transition retries it (R890000).
-            if !mark_in_match(app, &seats, &match_id).await? {
+            if mark_in_match(app, &seats, &match_id).await? {
+                lease.commit();
+            } else {
                 tracing::info!(
                     event = "series.seat_taken",
                     seriesId = %series.id,
@@ -229,20 +249,30 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
 
     // After the start, not before: for every game after the first the match row is what `profiles`'
     // in-match reference points at, and only the start writes it.
-    if !mark_in_match(app, &seats, &match_id).await? {
+    let marked = mark_in_match(app, &seats, &match_id).await;
+    let fenced = matches!(marked, Err(SeriesError::Store(StoreError::Fenced)));
+    if fenced || matches!(marked, Ok(false)) {
         // A seat found another game mid-start: it keeps that game. Undo this one — stop the
         // actor, then erase the live match with no result (R679), whose `on delete set null`
         // releases the winner seat's flag while the taken seat is untouched — and report a game
-        // that never started, so the next transition retries with the same `next_match_id`.
-        tracing::info!(
-            event = "series.seat_taken",
-            seriesId = %series.id,
-            matchId = %match_id,
-        );
+        // that never started, so the next transition retries with the same `next_match_id`. The
+        // ledger granted both seats, so the compare-and-set's refusal is drift (R1523000); the
+        // lease puts both sides back between games as it drops. A write a newer server's epoch
+        // fenced is undone the same way, and that server starts the game.
+        if !fenced {
+            tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
+            tracing::info!(
+                event = "series.seat_taken",
+                seriesId = %series.id,
+                matchId = %match_id,
+            );
+        }
         app.matches.stop(&match_id).await;
         one_tx!(app.db, |t| t.matches_forget_voided(&match_id).await?)?;
-        return Ok(false);
+        return marked.map(|_| false);
     }
+    marked?;
+    lease.commit();
     tracing::info!(
         event = "series.game_started",
         seriesId = %series.id,
@@ -255,7 +285,8 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
 
 /// §9.5's in-match state for both players of a series game, in one transaction. Each seat is
 /// claimed compare-and-set (R890000): `false` when another match holds it, without writing. A
-/// flag already equal to `match_id` counts as success, for idempotent retry.
+/// flag already equal to `match_id` counts as success, for idempotent retry. Fenced first
+/// (R1523000): once a newer server's epoch has overtaken this one it writes nothing.
 async fn mark_in_match(
     app: &App,
     seats: &(MatchSeat, MatchSeat),
@@ -263,6 +294,7 @@ async fn mark_in_match(
 ) -> Result<bool, SeriesError> {
     let ids = vec![seats.0.profile_id.clone(), seats.1.profile_id.clone()];
     Ok(one_tx!(app.db, |t| {
+        t.seats_fence(app.seats.epoch()).await?;
         let profiles = t.profiles_get_many(&ids).await?;
         let mut seated = true;
         for profile in &profiles {
@@ -436,6 +468,8 @@ async fn write_transition(
         t.commit().await?;
         let Some(after) = after else { continue };
         let written = Written { before, after };
+        // R1523000: a series this write ended lets both its sides go.
+        crate::seats::free_series(app, &written.after);
         if !matches!(written.before.status, SeriesStatus::Playing) {
             resume_series(app, Some(&written.after)).await;
         }

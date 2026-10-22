@@ -174,7 +174,19 @@ async fn write_result(
         }
         .await;
         match outcome {
-            Ok(written) => return Ok(written),
+            Ok(written) => {
+                // R1523000: the ending's release, once the flags' clear has landed (a repeat of the
+                // write releases again, which changes nothing): both seats leave the match, a series
+                // game's back to between games, so a next game the write began is admitted, and a
+                // series the game ended lets both sides go.
+                for seat in [&input.seats.0, &input.seats.1] {
+                    app.seats.end_game(&seat.profile_id, &input.match_id);
+                }
+                if let Some(series) = &written.series {
+                    crate::seats::free_series(app, series);
+                }
+                return Ok(written);
+            }
             // `results_get_by_match` cannot see a concurrent first writer's uncommitted row, so two
             // writers resolving one match at once both pass the read and one loses on
             // `results_pkey`. That loss is the same repeat, arriving the hard way: the winner's row
@@ -581,6 +593,11 @@ pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), Api
     let series = tx.series_by_match(&input.match_id).await.map_err(failure)?;
     tx.matches_forget_voided(&input.match_id).await.map_err(failure)?;
     tx.commit().await.map_err(failure)?;
+    // R1523000: both players leave the match the store forgot; a series game's back to between
+    // games, which admits the same game started again below.
+    for profile_id in [&input.players.0, &input.players.1] {
+        app.seats.end_game(profile_id, &input.match_id);
+    }
     let players = [input.players.0.clone(), input.players.1.clone()];
     tracing::warn!(
         event = "match.voided",
@@ -767,7 +784,8 @@ async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> 
 /// started, a queue pairing's reservation whose start failed and whose cleanup failed too
 /// (`queue.pair_cleanup_failed`). That frees its room code and both players. The grace outlasts any
 /// start in flight: a room is claimed only before its expiry, and a reservation is started straight
-/// after its claim or, for a Conquest series, within the pick clock and the start give-up.
+/// after its claim or, for a Conquest series, within the pick clock and the start give-up. A sweep
+/// that deleted rows holds the seat ledger to the record at once (R1523000).
 ///
 /// Answers how many rows it deleted.
 pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
@@ -777,6 +795,9 @@ pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
     tx.commit().await.map_err(failure)?;
     if reaped > 0 {
         tracing::warn!(event = "reaper.open_released", rows = reaped);
+        // R1523000: the players these rows held go from the seat ledger too, which a start whose
+        // cleanup failed left holding them as the record did.
+        crate::seats::reconcile(app).await;
     }
     Ok(reaped)
 }
@@ -803,9 +824,10 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// `MATCH_REAPER_INTERVAL_SECONDS`), as TS's `start()` in `src/index.ts` ran it: the first sweep one
 /// interval after boot, each next one an interval after the last finished, a failure logged and the
 /// next sweep tried all the same. Runs until its task is aborted. Each tick resolves the stuck
-/// matches, then deletes the `open` rows past their grace (R1450), then drops the finished actors
-/// whose rematch window has passed (`Registry::reap_finished`), then the rematch offers past that
-/// window whose finished match no actor holds (`rematch::sweep_rematch_offers`).
+/// matches, then deletes the `open` rows past their grace (R1450), then holds the seat ledger to the
+/// record (`seats::reconcile`, R1523000), then drops the finished actors whose rematch window has
+/// passed (`Registry::reap_finished`), then the rematch offers past that window whose finished match
+/// no actor holds (`rematch::sweep_rematch_offers`).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -822,6 +844,7 @@ pub async fn run_reaper(app: Arc<App>) {
         if let Err(error) = reap_open_matches(&app).await {
             tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
         }
+        crate::seats::reconcile(&app).await;
         app.matches.reap_finished(now_ms()).await;
         sweep_rematch_offers(&app, now_ms());
     }

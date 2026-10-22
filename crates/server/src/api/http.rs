@@ -225,10 +225,19 @@ impl std::fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
-/// A store failure is TS's thrown `Error` from inside a handler: a 500.
+/// A store failure is TS's thrown `Error` from inside a handler: a 500. A fenced claim is the one
+/// store answer a person can do something about, a 503 (R1523000).
 impl From<StoreError> for ApiError {
     fn from(error: StoreError) -> ApiError {
-        ApiError::internal(error.to_string())
+        match error {
+            // R1523000: a claim fenced by a newer server's epoch wrote nothing; the caller retries,
+            // and the retry reaches the server that holds the seats now.
+            StoreError::Fenced => ApiError::new(
+                ApiErrorCode::Unavailable,
+                "a new server is taking over; try again",
+            ),
+            error => ApiError::internal(error.to_string()),
+        }
     }
 }
 

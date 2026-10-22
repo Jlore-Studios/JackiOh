@@ -780,6 +780,10 @@ mod rematch_creation_guards {
         q!(app, matches_finish(&chained, now_ms()));
         q!(app, profiles_set_in_match(&a, None));
         q!(app, profiles_set_in_match(&b, None));
+        // R1523000: the ending written straight into the store, read as a restart would read it.
+        jackioh_server::seats::hydrate(&app)
+            .await
+            .expect("the ledger reads the store");
 
         // The rematch is ranked exactly when the finished match was, so it can double (R672).
         offer(&app, &token_a, &chained, STAKE_DOUBLE).await;
@@ -792,6 +796,9 @@ mod rematch_creation_guards {
         // An unranked rematch refuses the double like any unranked match.
         q!(app, profiles_set_in_match(&a, None));
         q!(app, profiles_set_in_match(&b, None));
+        jackioh_server::seats::hydrate(&app)
+            .await
+            .expect("the ledger reads the store");
         let casual_id = "chained-casual";
         finished_match(&app, casual_id, &a, &b, json!({ "ranked": false })).await;
         offer(&app, &token_a, casual_id, STAKE_NORMAL).await;
