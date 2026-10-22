@@ -25,6 +25,7 @@ mod promote;
 mod replay;
 mod retcon;
 mod selfplay;
+mod selfplay_records;
 mod spec;
 mod stats;
 mod sweep;
