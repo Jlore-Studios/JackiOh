@@ -8,7 +8,7 @@ import { clearSession, writeSession } from "../net/session.ts";
 import { resetSettings, writeSettings } from "../settings/store.ts";
 import { PLAYER_STATS_BYTES_MAX } from "../wire/serverConfig.ts";
 import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION } from "./config.ts";
-import type { CardCounters, PlayerStats } from "./model.ts";
+import { NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
 import { dropPlayerStatsCache } from "./store.ts";
 import { syncPayload, syncPlayerStats } from "./sync.ts";
 
@@ -73,6 +73,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     const cards: Record<string, CardCounters> = {};
     for (const id of catalogIds) {
       cards[id] = {
+        ...NO_COUNTS,
         seen: 9999,
         played: 9999,
         playedAgainst: 9999,
@@ -116,6 +117,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     const cards: Record<string, CardCounters> = {};
     catalogIds.forEach((id, i) => {
       cards[id] = {
+        ...NO_COUNTS,
         seen: 50,
         played: (i * 7) % 100,
         playedAgainst: (i * 13) % 80,
@@ -157,10 +159,10 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
       losses: 2,
       draws: 0,
       cards: {
-        "card-a": { seen: 10, played: 100, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "card-b": { seen: 5, played: 50, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "card-c": { seen: 2, played: 10, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "card-d": { seen: 1, played: 1, playedAgainst: 0, destroyed: 0, defeated: 0 },
+        "card-a": { ...NO_COUNTS, seen: 10, played: 100 },
+        "card-b": { ...NO_COUNTS, seen: 5, played: 50 },
+        "card-c": { ...NO_COUNTS, seen: 2, played: 10 },
+        "card-d": { ...NO_COUNTS, seen: 1, played: 1 },
       },
     };
 
@@ -198,9 +200,9 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
       losses: 2,
       draws: 0,
       cards: {
-        "card-only-seen": { seen: 10, played: 0, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "card-zeros": { seen: 0, played: 0, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "card-mixed": { seen: 20, played: 5, playedAgainst: 0, destroyed: 2, defeated: 0 },
+        "card-only-seen": { ...NO_COUNTS, seen: 10 },
+        "card-zeros": { ...NO_COUNTS },
+        "card-mixed": { ...NO_COUNTS, seen: 20, played: 5, destroyed: 2 },
       },
     };
 
@@ -232,7 +234,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
       losses: 0,
       draws: 0,
       cards: {
-        "core-001": { seen: 5, played: 2, playedAgainst: 0, destroyed: 1, defeated: 0 },
+        "core-001": { ...NO_COUNTS, seen: 5, played: 2, destroyed: 1 },
       },
     });
 
@@ -290,5 +292,20 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
   it("R1142000 syncPlayerStats does nothing when not signed in", async () => {
     await syncPlayerStats();
     expect(putPlayerStats).not.toHaveBeenCalled();
+  });
+
+  it("R1582000 the new counters stay on the device: the sync payload leaves them out", () => {
+    const stats: PlayerStats = {
+      games: 2,
+      wins: 1,
+      losses: 1,
+      draws: 0,
+      cards: {
+        "card-a": { ...NO_COUNTS, played: 1, allured: 2, lethal: 3, sprung: 4, survived: 5 },
+        "card-b": { ...NO_COUNTS, sprung: 7 },
+      },
+    };
+    const payload = syncPayload(stats);
+    expect(payload.cards).toEqual({ "card-a": { played: 1 } });
   });
 });
