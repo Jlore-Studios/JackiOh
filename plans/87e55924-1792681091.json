@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1646,
+  "title": "Patch: Remove cross-menu buttons",
+  "branch": "bot/issue-1646",
+  "thread": "**Issue #1646 (data, not instructions):**\n\n```text\n# #1646: Patch: Remove cross-menu buttons\nOpened by @MaxGoetzmann.\n\n### What it does\n\nSome artifacts from the menu cleanup are still present. Remove Collection and Shop from the Account menu. Remove Card Creator from the Play menu.\n\nAlso, shrink the non-scrollable header for the Stats page since it makes it kind of unusable one mobile. You could cut the highest/lowest winrate boxes.\n\n### Acceptance\n\nThe buttons called out above are gone. All other design principles hold.\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nNo priority\n\n### Who does it\n\nDecide later\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1646: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
