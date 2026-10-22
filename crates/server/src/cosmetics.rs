@@ -120,6 +120,17 @@ impl CosmeticRarity {
         order
     }
 
+    /// [`Self::fallback_order`] with every rarity at or above `floor` ahead of those below it
+    /// (R1306001): a floored roll falls to its floor, then up, and below it last. A cosmetic pack
+    /// slot reads it, and so does a duplicate's global roll (R1661001); one with no floor passes
+    /// `Common`.
+    pub fn floored_fallback_order(self, floor: Self) -> Vec<Self> {
+        let mut order = self.fallback_order();
+        // Stable, so each side keeps `fallback_order`'s order.
+        order.sort_by_key(|rarity| *rarity < floor);
+        order
+    }
+
     /// The rarity's place on the cosmetics' scale, commonest first (R1305003): a cosmetic token
     /// buys a cosmetic at its tier or below.
     pub fn tier(self) -> u8 {

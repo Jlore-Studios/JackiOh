@@ -61,6 +61,14 @@ export function readOwnedFullArt(
 }
 
 /**
+ * Drops the session's answer, so the next screen reads what the account owns again: called where an
+ * answer may have granted a per-card cosmetic (a card pack, a cosmetic pack, a token, the Chase Shard).
+ */
+export function forgetOwnedCosmetics(): void {
+  cached = null;
+}
+
+/**
  * The cosmetics the faces below it wear: `token`'s account's own once ownership decides (`gated`),
  * none past the defaults and starters for no token (a pending account's screen) or until the read
  * answers, and every one otherwise.

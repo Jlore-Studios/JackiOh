@@ -331,20 +331,14 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
 
 /// A [`TrackGain`] for each shipped set's track that differs from `before` to `after`, in catalog
 /// order. A track with no row stands on its first level with no XP and no level paid, as
-/// [`pay_xp`] reads it; the levels a gain lists are those paid in between, `(claimed, claimed']`.
+/// [`pay_xp`] reads it ([`held_track`]); the levels a gain lists are those paid in between,
+/// `(claimed, claimed']`.
 fn track_gains(before: &[SetTrack], after: &[SetTrack]) -> Vec<TrackGain> {
-    let held = |tracks: &[SetTrack], set: SetName| {
-        tracks
-            .iter()
-            .find(|track| track.set_id == set.as_str())
-            .map(|track| (track.level, track.xp, track.rewards_claimed))
-            .unwrap_or((SET_TRACK_FIRST_LEVEL, 0, 0))
-    };
     SHIPPED_SETS
         .iter()
         .filter_map(|set| {
-            let (old_level, old_xp, old_claimed) = held(before, *set);
-            let (level, xp, claimed) = held(after, *set);
+            let (old_xp, old_level, old_claimed) = held_track(before, *set);
+            let (xp, level, claimed) = held_track(after, *set);
             ((level, xp, claimed) != (old_level, old_xp, old_claimed)).then(|| TrackGain {
                 set_id: set.as_str().to_string(),
                 before: TrackPoint::at(old_level, old_xp),
@@ -403,6 +397,16 @@ pub async fn pay_starting_rewards(tx: &mut Tx<'_>, profile_id: &str, at: i64) ->
     pay_level_rewards(tx, &payout, &newest, claimed, SET_TRACK_FIRST_LEVEL).await
 }
 
+/// `set`'s track in `tracks` as `(xp, level, levels paid)`: its row's, or, with none, its first
+/// level with no XP and no level paid (§14.7).
+fn held_track(tracks: &[SetTrack], set: SetName) -> (i64, i64, i64) {
+    tracks
+        .iter()
+        .find(|track| track.set_id == set.as_str())
+        .map(|track| (track.xp, track.level, track.rewards_claimed))
+        .unwrap_or((0, SET_TRACK_FIRST_LEVEL, 0))
+}
+
 /// Pays `payout.xp` XP onto every active set track in the caller's transaction, each newly reached
 /// level's rewards, and at most one newly unlocked older track ([[R1302003]]). No XP writes no
 /// track row.
@@ -412,13 +416,7 @@ pub async fn pay_xp(tx: &mut Tx<'_>, payout: &XpPayout<'_>) -> StoreResult<()> {
         return Ok(());
     }
     let tracks = tx.economy_tracks_get(payout.profile_id).await?;
-    let held = |set: SetName| {
-        tracks
-            .iter()
-            .find(|track| track.set_id == set.as_str())
-            .map(|track| (track.xp, track.level, track.rewards_claimed))
-            .unwrap_or((0, SET_TRACK_FIRST_LEVEL, 0))
-    };
+    let held = |set: SetName| held_track(&tracks, set);
     let newest = newest_shipped_set();
     // Every active track gains all of the payout's XP: the newest set's, active from the start,
     // and every older shipped set that already has a row.

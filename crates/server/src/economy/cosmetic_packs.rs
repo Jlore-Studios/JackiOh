@@ -151,12 +151,16 @@ impl CosmeticOpeningLog {
     }
 }
 
-/// What opening a cosmetic pack answers: its slots in order, the Chase Shard bar after it, the
-/// cosmetic packs still held and what the opening did to both token bars.
+/// What opening a cosmetic pack answers: its slots in order, the Chase Shard bar's points before
+/// it and the bar after it, the cosmetic packs still held and what the opening did to both token
+/// bars.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenedCosmeticPack {
     pub slots: Vec<CosmeticSlot>,
+    /// The Chase Shard bar's points the opening found, read in its transaction, so a client fills
+    /// the bar from here to `shard_bar` as it does the token bars (`bars`).
+    pub shard_before: i64,
     pub shard_bar: BarState,
     pub unopened: i64,
     pub bars: BarsSettled,
@@ -239,8 +243,8 @@ pub fn pick_card<'c>(
 }
 
 /// What a slot grants once its rarity `rolled` (R1306000, R1306001): the first rarity in
-/// `rolled.fallback_order()` with a cosmetic of `droppable` still open, with every rarity at or
-/// above `floor` ahead of those below it, supplies one, picked uniformly (one draw); a per-card
+/// `rolled.floored_fallback_order(floor)` with a cosmetic of `droppable` still open, every rarity
+/// at or above `floor` ahead of those below it, supplies one, picked uniformly (one draw); a per-card
 /// one then takes its card by [`pick_card`] (one draw), and an account one has none. A Legendary
 /// or Mythic one is a chase, and drops like any other (R1333000). With nothing open in any rarity
 /// the slot is spent: `Bars`, with no draw.
@@ -252,10 +256,7 @@ pub fn slot_grant(
     holdings: &CosmeticHoldings,
     rng: &mut Rng,
 ) -> CosmeticSlotGrant {
-    let mut order = rolled.fallback_order();
-    // Stable, so each side keeps `fallback_order`'s order.
-    order.sort_by_key(|rarity| *rarity < floor);
-    for tier in order {
+    for tier in rolled.floored_fallback_order(floor) {
         let open: Vec<&Cosmetic> = droppable
             .iter()
             .filter(|cosmetic| cosmetic.rarity == tier)
@@ -429,7 +430,8 @@ pub async fn open_cosmetic_pack(
     }
 
     // The Chase Shard bar (R1306002): one per opening, and a full bar holds.
-    let mut shard = bar_before(&counters, Counter::ChaseShardBar);
+    let shard_before = bar_before(&counters, Counter::ChaseShardBar);
+    let mut shard = shard_before;
     if shard < CHASE_SHARD_PACKS {
         grant_counter(
             &mut tx,
@@ -462,6 +464,7 @@ pub async fn open_cosmetic_pack(
     );
     Ok(OpenedCosmeticPack {
         slots: opening.slots,
+        shard_before,
         shard_bar: BarState {
             points: shard,
             size: CHASE_SHARD_PACKS,

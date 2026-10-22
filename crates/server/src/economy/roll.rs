@@ -284,8 +284,9 @@ pub fn duplicate_grant(
 /// (`owned`, the account's) it is `None` and draws nothing. Else one draw below
 /// `TIER_WEIGHT_TOTAL`, and one at or past `GLOBAL_COSMETIC_ROLL_WEIGHT` is a miss, `None`. A hit
 /// is a tiered roll on `COSMETIC_TIER_WEIGHTS` floored at `GLOBAL_COSMETIC_FLOOR_RARITY` (one
-/// draw), falling as a cosmetic pack's floored slot does (`cosmetic_packs::slot_grant`, R1306001)
-/// to the first tier with one unowned, every tier at or above the floor first, then one of that
+/// draw), falling as a cosmetic pack's floored slot does (`CosmeticRarity::floored_fallback_order`,
+/// as `cosmetic_packs::slot_grant` reads it, R1306001) to the first tier with one unowned, every
+/// tier at or above the floor first, then one of that
 /// tier's picked uniformly in registry order (one draw): a `SlotGrant::Cosmetic` for the account.
 pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Option<SlotGrant> {
     let unowned: Vec<&Cosmetic> = global
@@ -296,10 +297,9 @@ pub fn global_grant(global: &[Cosmetic], owned: &[String], rng: &mut Rng) -> Opt
     if unowned.is_empty() || tier_draw(rng) >= GLOBAL_COSMETIC_ROLL_WEIGHT {
         return None;
     }
-    let mut order = cosmetic_tier(Some(GLOBAL_COSMETIC_FLOOR_RARITY), rng).fallback_order();
-    // Stable, so each side keeps `fallback_order`'s order. Every one unowned is at the floor or
-    // above it, so a tier there always holds one.
-    order.sort_by_key(|rarity| *rarity < GLOBAL_COSMETIC_FLOOR_RARITY);
+    // Every one unowned is at the floor or above it, so a tier there always holds one.
+    let order = cosmetic_tier(Some(GLOBAL_COSMETIC_FLOOR_RARITY), rng)
+        .floored_fallback_order(GLOBAL_COSMETIC_FLOOR_RARITY);
     order.into_iter().find_map(|tier| {
         let of_tier: Vec<&Cosmetic> = unowned
             .iter()
