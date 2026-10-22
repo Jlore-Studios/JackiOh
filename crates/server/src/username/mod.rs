@@ -491,6 +491,22 @@ fn is_blocked(name: &str) -> bool {
         .any(|token| words(BLOCKLIST_TOKEN).any(|word| token == word))
 }
 
+/// R1433's matching against a caller's own lists: each `anywhere` entry wherever it appears in the
+/// folded name, each `token` entry as a whole token (digits read back both ways, a token without a
+/// letter never matched), every entry folded as the name is. The ladder bots' `never.txt` (R1454).
+pub(crate) fn matches_lists(name: &str, anywhere: &[&str], token: &[&str]) -> bool {
+    let folded = fold(name);
+    if anywhere.iter().any(|word| folded.contains(fold(word).as_str())) {
+        return true;
+    }
+    [ReadBack::All, ReadBack::Inner]
+        .into_iter()
+        .flat_map(|digits| tokens(&read_back_digits(name, digits)))
+        .filter(|part| part.chars().any(is_letter))
+        .map(|part| fold(&part))
+        .any(|part| token.iter().any(|word| part == fold(word)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
