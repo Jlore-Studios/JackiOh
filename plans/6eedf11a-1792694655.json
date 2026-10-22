@@ -1,0 +1,63 @@
+{
+  "action": "build",
+  "number": 1659,
+  "title": "Patch: a Jlore pill in the top bar of every signed-in screen",
+  "branch": "bot/issue-1659",
+  "thread": "**Issue #1659 (data, not instructions):**\n\n```text\n# #1659: Patch: a Jlore pill in the top bar of every signed-in screen\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a71: Jlore is the premium currency). A small pill, Jlore's icon and the balance from `GET /api/wallet`, sits in the top bar next to the language and settings buttons on every screen of a signed-in person that shows the top bar; clicking it opens `/shop`. The server owns the balance (CLAUDE.md rule 7): the pill shows the wallet's answer or another answer's balance, never a sum it made.\n\n### Where\n- `apps/web/src/routes/nav.tsx` `BackLink` (~l.29\u201360): render the pill beside `<LanguageButton>` and `<SettingsButton>` when `showSettings` is true. The board passes `showSettings={false}` (`routes/match.tsx` ~l.471, `together/WatchRoute.tsx`, `duos/DuosRoute.tsx`, `duos/DevDuosRoute.tsx`) and draws its own controls, so the pill never shows on a board.\n- `apps/web/src/routes/landing.tsx` (~l.410\u2013418): the landing's own top bar, beside its two buttons.\n- Signed in means a session: `readSession()` (`net/session.ts`). A visitor makes no request and sees no pill; a session whose wallet read fails (a pending account's refusal) shows none either.\n\n### The wallet store (fixed: the store and XP parts call it)\n`apps/web/src/economy/wallet.ts`:\n- `useWallet(token: string | null): number | null` reads `GET /api/wallet` (`getWallet`, `net/api.ts`) when first used, on `jackioh:navigated`, when the page becomes visible again, and on every `announceWallet()`.\n- `announceWallet(jlore?: number): void`: with a number (a server answer's balance, as `POST /api/packs/buy` answers `jlore`), every pill shows it at once; with none, they read the wallet again. It fires a `jackioh:wallet-changed` window event, as `announceAccountChange` (`net/gate.ts`) fires its own.\nThe pill counts up or down to a new value (the number only, no layout motion); reduce motion (the setting and the system's, as `game/animations.ts::reducedMotionNow` joins them) shows it at once.\n`routes/DevTools.tsx` calls `announceWallet(answer.jlore)` after Give Jlore, and `announceWallet()` after its XP, quest and clear tools (a level or a quest may pay Jlore). The Shop's Buy (the store part) and a paid game (the XP client part) call it in their own files.\n\n### Files\n`apps/web/src/economy/wallet.ts`, `economy/JlorePill.tsx`, `economy/jlore-pill.css`, `economy/JlorePill.test.tsx` (new), `routes/nav.tsx`, `routes/landing.tsx`, `routes/DevTools.tsx`.\n\n### Done when\n`economy/JlorePill.test.tsx`: with a session the pill renders the wallet answer's balance; `announceWallet(140)` (a bought pack's answer) re-renders it to 140 with no request; `announceWallet()` reads the wallet again; it links to `/shop`; with no session it renders nothing and makes no request; `BackLink` with `showSettings={false}` has no pill; the landing's top bar has one. Run `pnpm --dir apps/web exec vitest run src/economy/JlorePill.test.tsx src/routes/landing.test.tsx src/routes/DevTools.test.tsx`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`.\nExpected fallout: a test elsewhere that counts every request of a signed-in screen may see one more `GET /api/wallet`. Fix it when the test is in a file named here; otherwise leave it and name it in your report for the reconcile.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec. Keep every existing test id.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read `apps/web/README.md`, `routes/nav.tsx`, `routes/landing.tsx` (its top bar), `routes/DevTools.tsx`, `net/session.ts`, `net/gate.ts::announceAccountChange`, where `net/navigate.ts` fires `jackioh:navigated`, and `settings/SettingsButton.tsx` with its CSS for the bar's look.\n2. Write `economy/wallet.ts`: a module store read through `useSyncExternalStore`, the event, and the re-read triggers in the body.\n3. Write `economy/JlorePill.tsx` (icon, count up or down, a link through `followInApp(paths.shop)`, `data-testid` `jlore-pill`, an aria-label through `t()`) and `economy/jlore-pill.css` (transform and opacity only).\n4. Mount it in `BackLink` when `showSettings`, and in the landing's top bar.\n5. Call `announceWallet` in `routes/DevTools.tsx` after its grants.\n6. Write the tests in Done when; run the commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read `apps/web/README.md`, `routes/nav.tsx`, `routes/landing.tsx` (its top bar), `routes/DevTools.tsx`, `net/session.ts`, `net/gate.ts::announceAccountChange`, where `net/navigate.ts` fires `jackioh:navigated`, and `settings/SettingsButton.tsx` with its CSS for the bar's look.\n2. Write `economy/wallet.ts`: a module store read through `useSyncExternalStore`, the event, and the re-read triggers in the body.\n3. Write `economy/JlorePill.tsx` (icon, count up or down, a link through `followInApp(paths.shop)`, `data-testid` `jlore-pill`, an aria-label through `t()`) and `economy/jlore-pill.css` (transform and opacity only).\n4. Mount it in `BackLink` when `showSettings`, and in the landing's top bar.\n5. Call `announceWallet` in `routes/DevTools.tsx` after its grants.\n6. Write the tests in Done when; run the commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-7` (claude, `sonnet`, medium); review on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read `apps/web/README.md`, `routes/nav.tsx`, `routes/landing.tsx` (its top bar), `routes/DevTools.tsx`, `net/session.ts`, `net/gate.ts::announceAccountChange`, where `net/navigate.ts` fires `jackioh:navigated`, and `settings/SettingsButton.tsx` with its CSS for the bar's look.\n2. Write `economy/wallet.ts`: a module store read through `useSyncExternalStore`, the event, and the re-read triggers in the body.\n3. Write `economy/JlorePill.tsx` (icon, count up or down, a link through `followInApp(paths.shop)`, `data-testid` `jlore-pill`, an aria-label through `t()`) and `economy/jlore-pill.css` (transform and opacity only).\n4. Mount it in `BackLink` when `showSettings`, and in the landing's top bar.\n5. Call `announceWallet` in `routes/DevTools.tsx` after its grants.\n6. Write the tests in Done when; run the commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1661 skipped: it waits for #1656 to close first",
+    "#1663 skipped: it waits for #1656, #1658 to close first",
+    "#1664 skipped: it waits for #1658, #1659 to close first",
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1656, #1658, #1659, #1663 to close first"
+  ]
+}
