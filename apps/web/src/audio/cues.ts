@@ -514,7 +514,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
     sfx: "buff",
     cues: (event) => (event.attack + event.health >= 0 ? [sfx("buff")] : [sfx("debuff")]),
   },
-  keywordGranted: { sfx: "buff", cues: () => [sfx("buff")] },
+  // #1598: a keyword the unit loses (R46) sounds as `buffed`'s negative case does.
+  keywordGranted: { sfx: "buff", cues: (event) => (event.lost === true ? [sfx("debuff")] : [sfx("buff")]) },
   counterChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   costChanged: silent("the gem ticks visually, and a cost recomputed on every read (#100) would chatter"),
   // R506: #21 Hinder's rider landing on the victim's next refresh (added, or cancelling a rider

@@ -1671,7 +1671,7 @@ would keep the two from drifting apart.
   BUILD M5-T4's `keywordGranted` row ("icon present") should gain the `lost` case with it. On main
   the effects layer and the sound treat it as a grant too: `fx/cues.ts` plays the keyword's grant
   recipe (a dust ring for Taunt) and `audio/cues.ts` the `buff` sound, where a loss would read as
-  `buffed`'s negative case does (the `debuff` sound, arrows down).
+  `buffed`'s negative case does (the `debuff` sound, arrows down). **Closed by #1598:** the board marks the card `data-lost` (`game/keywordLoss.ts`) and animations.css plays `jk-icon-pop-out` on it, the `keyword` recipe plans arrows down and a void burst, and the cue plays `debuff`.
 
 ### SPEC and BUILD outside §4.1 and the new §11 rows
 
@@ -1768,6 +1768,5 @@ R242 split and integration's closing of the face-down id channel.
   not change. The `it.fails` in `turn-clock-and-legality.test.ts` is now an ordinary `it("R227 …")`.
 - **The hunt is not finished** (see "Hunt status"): it was halted after round 8 and continued at the
   user's request for rounds 9 and 10; in round 10 seven of the ten lenses still found something.
-- **No sleep marker** for a sick unit, and a lost keyword animates as a pop (see the seams under
-  task 7).
+- **No sleep marker** for a sick unit (see the seams under task 7). A lost keyword animating as a pop was **closed by #1598**.
 - **Transform readiness** (see "Out of scope").
