@@ -12805,9 +12805,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-22T10:15:09Z",
+        "at": "2026-10-22T10:52:49Z",
         "by": "`claude` (strong)",
-        "sha": "42ca9096c33a06a0c401bd66d9efed3d800905e4"
+        "carried_from": "42ca9096c33a06a0c401bd66d9efed3d800905e4",
+        "resolved_by": "`muse` (medium)",
+        "sha": "46138fb047f642cd24db856856c647df664d0a72"
       },
       "difficulty": "medium",
       "failures": 0,
