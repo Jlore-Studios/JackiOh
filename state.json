@@ -11380,6 +11380,13 @@
     "1634": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T15:58:29Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the 'AI's search (crates/ai/src/)' line: the change is in reply.rs, the opponent's reply that the search scores every finalist after, so it is AI search work however few lines it takes"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
