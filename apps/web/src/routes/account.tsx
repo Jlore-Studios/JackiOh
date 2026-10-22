@@ -32,8 +32,9 @@
 // hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
 // gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
 //
-// THE SHOP (#1580, R1580000): packs, opening, pity, tokens and cosmetic packs live on `/shop`; this
-// screen links it and keeps account things only.
+// THE SHOP (#1580, R1580000): packs, opening, pity, tokens and cosmetic packs live on `/shop`. This
+// screen keeps account things only and links no other menu (R1646000): the tavern home's doors lead
+// to the Collection and the Shop.
 //
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
@@ -86,9 +87,6 @@ export const accountTestid = {
   rank: "account-rank",
   badges: "account-badges",
   leaderboard: "account-leaderboard",
-  collection: "account-collection",
-  /** R1580000: the link to the Shop. */
-  shop: "account-shop",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
   record: "account-record",
@@ -373,25 +371,6 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 </div>
               </div>
               {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
-              {/* §14.9's quests moved to /collection (#1307), the packs to /shop (R1580000). */}
-              <div className="account-actions">
-                <a
-                  className="button-secondary"
-                  href={paths.collection}
-                  data-testid={accountTestid.collection}
-                  onClick={followInApp(paths.collection)}
-                >
-                  {t("Collection")}
-                </a>
-                <a
-                  className="button-secondary"
-                  href={paths.shop}
-                  data-testid={accountTestid.shop}
-                  onClick={followInApp(paths.shop)}
-                >
-                  {t("Shop")}
-                </a>
-              </div>
             </>
           ) : null}
 

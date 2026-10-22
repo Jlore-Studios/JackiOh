@@ -5,8 +5,9 @@
 // one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
 // R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
 // R1578000: /play is the hub every play mode starts from, online first: the queue, its setup and the
-// rank are the primary panel, the other ways to play are four smaller links beside it, and a visitor
+// rank are the primary panel, the other ways to play are three smaller links beside it, and a visitor
 // with no account sees the same screen with a sign-in where the online panel's controls would be.
+// R1646000: the Card creator is not one of them; the Collection's Card builder door leads to it.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -78,7 +79,6 @@ export const playTestid = {
   screen: "play-screen",
   online: "play-online",
   ways: "play-ways",
-  creator: "play-creator",
   together: "play-together",
   /** R1578000: a visitor with no account is offered sign-in where the online panel's controls would be. */
   signIn: "play-sign-in",
@@ -709,12 +709,6 @@ function waysToPlay(): readonly Way[] {
       testid: playTestid.practice,
       name: t("Practice"),
       note: t("Solo games against the AI, including the tutorial."),
-    },
-    {
-      href: paths.creator,
-      testid: playTestid.creator,
-      name: t("Card creator"),
-      note: t("Make custom cards and try them against the AI."),
     },
     {
       href: paths.together,
