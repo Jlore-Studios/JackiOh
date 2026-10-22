@@ -12421,7 +12421,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-22T20:31:09Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:ce09be80-1792703384",
+      "run_id": "39855005016",
       "started_at": "2026-10-22T21:09:57Z",
       "stop_requested": false,
       "taken_asks": []
