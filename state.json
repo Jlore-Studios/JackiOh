@@ -11590,6 +11590,13 @@
     "1602": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T03:26:45Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Only crates/ai, 3 files, but the rule names crates/ai/src/ (the AI's search) as hard and CLAUDE.md rule 11 rates the AI hard; torn, the higher."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
