@@ -4999,6 +4999,86 @@ mod game_records {
         }
     }
 
+    /// A match between `p1` and `p2` finished at `ended_at`, with a result unless `result` is
+    /// false, a final hash unless `hash` is false, and one logged action unless `log` is false.
+    async fn ended_match(
+        harness: &StoreHarness,
+        (p1, p2): (&str, &str),
+        ended_at: i64,
+        result: bool,
+        hash: bool,
+        log: bool,
+    ) -> String {
+        let match_id = id();
+        let now = harness.now();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, now)));
+        if log {
+            q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+        }
+        if result {
+            let row: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [p1, p2],
+                "winnerProfileId": p1,
+                "reason": "concede",
+                "turns": 3,
+                "endedAt": ended_at,
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            }));
+            q!(harness, t => t.results_insert(&row));
+        }
+        q!(harness, t => t.matches_finish(&match_id, ended_at));
+        if hash {
+            q!(harness, t => t.matches_record_final_hash(&match_id, "final-hash"));
+        }
+        match_id
+    }
+
+    /// R1596000: the finished matches with a result, a final hash and a kept log that hold no
+    /// record, even an emptied one, in `[ended_after, ended_before)`, earliest ended first.
+    async fn r1596000_lists_the_finished_matches_whose_record_was_never_filed(harness: &StoreHarness) {
+        const DAY: i64 = 86_400_000;
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let after = now - 10_000;
+        let before = now - 1_000;
+        // Every flag true unless the list says otherwise.
+        let first = ended_match(harness, (&a.id, &b.id), after, true, true, true).await;
+        let second = ended_match(harness, (&a.id, &b.id), before - 1, true, true, true).await;
+        let _at_before = ended_match(harness, (&a.id, &b.id), before, true, true, true).await;
+        let too_old = ended_match(harness, (&a.id, &b.id), after - 1, true, true, true).await;
+        let filed = ended_match(harness, (&a.id, &b.id), after + 1, true, true, true).await;
+        q!(harness, t => t.game_records_insert(&game_record(&filed, json!({}))));
+        let emptied = ended_match(harness, (&a.id, &b.id), after + 2, true, true, true).await;
+        q!(harness, t => t.game_records_insert(&game_record(&emptied, json!({}))));
+        harness.age_game_record(&emptied, 8 * DAY).await;
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * DAY,
+            "matchActionsEndedBefore": now - 90 * DAY,
+            "playTelemetryEndedBefore": now - 365 * DAY,
+            "gameRecordsRecordedBefore": now - 7 * DAY,
+        }));
+        q!(harness, t => t.purge_expired(&cutoffs));
+        let _no_result = ended_match(harness, (&a.id, &b.id), after + 3, false, true, true).await;
+        let _no_hash = ended_match(harness, (&a.id, &b.id), after + 4, true, false, true).await;
+        let _no_log = ended_match(harness, (&a.id, &b.id), after + 5, true, true, false).await;
+        // A live match with a log that is never finished.
+        let live = id();
+        q!(harness, t => t.matches_create(&match_row(&live, &a.id, &b.id, harness, now)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&live, 1, "p1", "n1", now)]));
+
+        assert_eq!(
+            q!(harness, t => t.game_records_unfiled(after, before)),
+            vec![first.clone(), second.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_unfiled(0, before)),
+            vec![too_old, first, second]
+        );
+    }
+
     /// R1044000: a record written is folded into the totals once, in the transaction that writes
     /// it, and the totals give every report the records gave.
     async fn r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give(
@@ -5169,6 +5249,7 @@ mod game_records {
         r1044000_folds_each_record_written_once_and_reads_every_report_the_records_give,
         r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time,
         r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
+        r1596000_lists_the_finished_matches_whose_record_was_never_filed,
     );
 }
 
