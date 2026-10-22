@@ -11399,7 +11399,9 @@
     },
     "1594": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6330543214"
+      ],
       "died": 1,
       "difficulty_by": {
         "at": "2026-10-22T02:31:24Z",
@@ -11437,9 +11439,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6330543214"
-      ]
+      "taken_asks": []
     },
     "1595": {
       "action": "build",
