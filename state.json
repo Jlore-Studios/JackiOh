@@ -12417,13 +12417,21 @@
       }
     },
     "1622": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-22T04:51:06Z",
       "issue": 1593,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-10-22T05:41:59Z",
+      "run_id": "pending:66551b7d-1792648947",
       "self_check_findings": [],
+      "started_at": "2026-10-22T06:02:47Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -14250,9 +14258,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T05:42:47Z",
+    "at": "2026-10-22T06:02:47Z",
     "url": "",
-    "what": "build #1594 on muse"
+    "what": "review #1622 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-22T05:49:21Z",
