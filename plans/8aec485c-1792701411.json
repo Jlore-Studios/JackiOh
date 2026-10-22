@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1676,
+  "title": "Patch: development card statistics from the learn lane's self-play export",
+  "branch": "bot/issue-1676",
+  "thread": "**Issue #1676 (data, not instructions):**\n\n```text\n# #1676: Patch: development card statistics from the learn lane's self-play export\nOpened by @jgoetzmann.\n\n## Why\n\nThe card statistics have a development source beside the live games (SPEC \u00a79.11, R376 to R378). Today it comes from the `gather` lane (`training/gather.md`), which plays AI-against-AI All Random games without end on the training box: one game at a time, on one core, with `jackioh stats --series gather`. The training box is being given back to the night bot (#682's audit), so `gather` loses its home.\n\nThe learn lane already plays the same kind of game, at much greater volume:\n- `jackioh selfplay` plays the AI on `main` against itself on R258's All Random deals, with nothing banned.\n- It plays at `AI_GATE_BUDGET`, which is defined as `AI_BUDGET`, the browser's budget the gather lane plays at.\n- Each learn run exports 100,000 games (`.github/workflows/selfplay.yml`, `training/learn.md`). Each game is one JSON line: seed, decks, log, final hash, result, turns, catalog version and commit.\n\nTurning those logs into development records gives the statistics many more games for no extra compute.\n\n## Proposal\n\n1. **A `cargo jackioh` command** that reads `selfplay` log files and writes R378 `GameRecord`s, one per line. A name such as `stats from-selfplay <logs>\u2026 --out <file>` fits beside `stats report`; the planner chooses.\n   - Each game is replayed under the catalog it was played on, as `positions` does (R1006003). A game that no longer reaches its hash, has no result, names a catalog this build does not carry, or carries `faults` (R1489000) files nothing, and is counted as dropped.\n   - Each record is what the gather lane files for a game: `source: \"dev\"`, `mode: \"random\"`, both pilots `ai`, and the patch its catalog version names. It carries the build (R1367000), the log's commit, and `crates/ai/generation.json`'s generation at that commit when it can be read.\n   - Ids must never collide with the gather lane's (`dev:<patch>:gather:<n>`) or a `stats` run's. Use the export's base and game number, for example `dev:<patch>:selfplay:<base>:<n>`.\n   - The output is byte-identical whatever the thread count, as `stats` and `selfplay` are.\n2. **Rulings.** If the new series or its ids need one, take the lowest free number in this issue's block. Name the proving tests after it (CLAUDE.md rule 3).\n3. **A person adds one step to `learn.yml`** (`.github/` is off limits to the bots). After the export's `count` job, on the local runner: run the command over the export's shards and upload the records as an artifact. When the repository has the database secret the training box's gather lane used (`DATABASE_URL`), load them with `jackioh-server stats-import`, once per export.\n\n## Acceptance criteria\n\n- [ ] The command turns a fixture `selfplay` file into records that `stats report` and `stats report --games` read.\n- [ ] A test pins the record a known game files: the card figures that game yields (in deck, opening hand, played, drawn and never played) and its id.\n- [ ] A game that fails to replay, has no result, or carries `faults` files nothing and is counted. A test covers it.\n- [ ] `stats-import` accepts the file (`crates/server`'s import test, or a test that round-trips one record through its parser).\n- [ ] `crates/tools/README.md` lists the command. `training/README.md` and `training/gather.md` say the development games now come from the learn lane's exports.\n- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` are green.\n\n## Size and risks\n\n- **Size:** `crates/tools` (one new module and its tests), the README rows and a ruling if needed. Medium: no engine, AI or card change.\n- **Fewer, lumpier figures.** Records arrive once per export (about weekly), not continuously. A patch that ships between exports has no development games until the next one, and `stats` can still be run by hand for it.\n- **Not live data.** These are AI-against-AI figures. R378 and R1451 already keep `dev` records out of every live figure unless a query asks for `--source=all`.\n\nPart of the plan in #682's audit (`reviews/2026-10-22-issue-682-subscriptions.md`).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1676: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
