@@ -521,29 +521,13 @@ export default function StatsRoute(): ReactElement {
           <h1 className="stats-title">{t("Statistics")}</h1>
         </header>
 
-        {/* Summary tiles */}
+        {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top */}
         {cardStatsData && (
           <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label={t("Statistics summary")}>
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
               <span className="stats-summary-label">{t("Games on patch {patch}", { patch: cardStatsData.patch })}</span>
               <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
             </div>
-            {summary?.bestCard && (
-              <div className="stats-summary-tile" data-testid={statsTestid.summaryBestCard}>
-                <span className="stats-summary-label">{t("Top card (win rate)")}</span>
-                <span className="stats-summary-highlight">
-                  {shownName(summary.bestCard.id, summary.bestCard.name)} ({Math.round(summary.bestCard.winRate * 100)}%)
-                </span>
-              </div>
-            )}
-            {summary?.worstCard && (
-              <div className="stats-summary-tile" data-testid={statsTestid.summaryWorstCard}>
-                <span className="stats-summary-label">{t("Lowest card (win rate)")}</span>
-                <span className="stats-summary-highlight">
-                  {shownName(summary.worstCard.id, summary.worstCard.name)} ({Math.round(summary.worstCard.winRate * 100)}%)
-                </span>
-              </div>
-            )}
           </section>
         )}
 
