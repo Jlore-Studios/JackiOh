@@ -12518,15 +12518,6 @@
       "failures": 0,
       "feedback_since": "2026-10-22T22:08:51Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-22T21:31:11Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": "- said: You've hit your session limit \u00b7 resets 11:20pm (UTC)"
-      },
       "interruptions": 0,
       "issue": 1634,
       "kind": "revise",
