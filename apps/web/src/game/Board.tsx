@@ -48,7 +48,7 @@ import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
-import { BurnNotice, PileNotice, noticesFrom, type OverflowNotices } from "./OverflowNotices.tsx";
+import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
 import { countedTestids, glowAttr, hasMovesLeft } from "./glow.ts";
@@ -88,6 +88,11 @@ const FIELD_ROWS: readonly { side: Side; row: Row }[] = [
  */
 function countId(pile: "library" | "graveyard" | "exile", side: Side): string {
   return `${pile}-count-${side}`;
+}
+
+/** R1639000: the fatigue an empty deck has dealt so far, which it shows at rest; null while it holds cards or has dealt none. */
+function restingFatigue(count: number, fatigue: number | undefined): number | null {
+  return count === 0 && fatigue !== undefined && fatigue > 0 ? fatigue : null;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -352,6 +357,9 @@ function Pile({
   const title = browse?.title ?? label;
   const browsable = entries.length > 0;
   const orderNote = order === undefined ? {} : { order };
+  // R1639000: an empty deck that has dealt fatigue says how much in its label as well as its badge.
+  const fatigued = restingFatigue(count, fatigue);
+  const named = fatigued === null ? label : t("{label}, Fatigue {count}", { label, count: fatigued });
   const inspect = useInspectTrigger(
     browsable
       ? {
@@ -378,7 +386,7 @@ function Pile({
         className={cx("pile", browsable && "pile--browsable")}
         data-card-back={back}
         // The preview replaces the native tooltip; with previews off, the label comes back.
-        title={browsable && hoverPreviews ? undefined : label}
+        title={browsable && hoverPreviews ? undefined : named}
         data-testid={regionId}
         data-fatigue={fatigue}
         data-animating={animating?.get(regionId)}
@@ -440,6 +448,9 @@ function Seat({
   // back adds no attribute, so a board wearing nothing is the board it was before.
   const { cardBack } = useWornDeckCosmetics(side === "you");
   const back = cardBack === DEFAULT_CARD_COSMETICS.cardBack ? undefined : cardBack;
+  // R1639000: the empty deck's resting badge, from the view alone; it stands down while R318's notice
+  // is on the pile (the board then shows the view from before the burst, whose count is a draw behind).
+  const restingCount = notices.pile.get(side) === undefined ? restingFatigue(seat.libraryCount, seat.fatigueCount) : null;
   return (
     <div className={cx("seat", `seat-${side}`)} data-side={side} data-player={seat.player}>
       <Hero
@@ -470,6 +481,11 @@ function Seat({
           back={back}
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
+          {restingCount !== null && (
+            <span className="pile-fatigue" data-testid={noticeTestid.fatigue(side)}>
+              {t("Fatigue {count}", { count: restingCount })}
+            </span>
+          )}
         </Pile>
         <Pile
           label={t("Graveyard")}
