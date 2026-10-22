@@ -1,0 +1,91 @@
+# Locks every issue and pull request conversation, so only collaborators can comment: the people,
+# `@jgoetzmann-bot` and `@squishy-squooby` all have write access, and an outsider can no longer
+# flood a thread the bots read or mention anyone through it. A thread is
+# locked as it opens; an hourly sweep locks the rest, open or closed, at most MAX_LOCKS a run,
+# so the first sweeps work through the backlog without tripping GitHub's limits on writes. A
+# thread a person unlocks is locked again by the next sweep.
+#
+# The workflow's own token cannot comment on a locked thread, so the threads `github-actions[bot]`
+# opened stay unlocked: the CI alerts (ci-duration.yml, super.yml, deploy-watch.yml,
+# patches-ship.yml), the production countdown (promote-production.yml) and the weekly hygiene
+# issues post there with it. patches-ship's "Shipped as" comment on a thread it did not open
+# unlocks, comments and locks again (`harness.titles.retitle_shipped`). Vercel's preview comment
+# does not post on a locked pull request; its deployment still shows in the checks.
+name: lock conversations
+
+on:
+  schedule:
+    - cron: "29 * * * *"
+  workflow_dispatch: {}
+  issues:
+    types: [opened]
+  # _target: nothing from the pull request is checked out or run; the job reads the event only.
+  pull_request_target:
+    types: [opened]
+
+permissions: {}
+
+env:
+  MAX_LOCKS: "150"
+  KEEP_OPEN: "github-actions[bot]"
+
+jobs:
+  # The thread that just opened, at once. No concurrency group: a group keeps one pending run and
+  # cancels the rest, and locking is idempotent.
+  opened:
+    name: lock the new thread
+    if: github.event_name == 'issues' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: lock it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.issue.user.login || github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          if [ "$AUTHOR" = "$KEEP_OPEN" ]; then
+            echo "#$NUMBER was opened by $AUTHOR, whose token comments on it: left unlocked"
+            exit 0
+          fi
+          gh api -X PUT "repos/$REPO/issues/$NUMBER/lock" --silent
+          echo "locked #$NUMBER"
+
+  sweep:
+    name: lock the rest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: lock-conversations
+      cancel-in-progress: false
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: lock every unlocked thread, newest first
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          numbers=$(gh api --paginate "repos/$REPO/issues?state=all&per_page=100" \
+            --jq ".[] | select(.locked | not) | select(.user.login != env.KEEP_OPEN) | .number")
+          total=$(printf '%s\n' "$numbers" | grep -c . || true)
+          locked=0
+          for number in $numbers; do
+            [ "$locked" -ge "$MAX_LOCKS" ] && break
+            if gh api -X PUT "repos/$REPO/issues/$number/lock" --silent; then
+              locked=$((locked + 1))
+            else
+              echo "::warning::could not lock #$number"
+            fi
+            # GitHub limits writes to 80 a minute.
+            sleep 1
+          done
+          echo "locked $locked of the $total unlocked threads" | tee -a "$GITHUB_STEP_SUMMARY"

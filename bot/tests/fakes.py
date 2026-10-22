@@ -175,7 +175,16 @@ class FakeGitHub:
         return [c for c in getattr(self, "commits", [])
                 if not author or (c.get("author") or {}).get("login") == author][:limit]
 
+    def lock(self, number: int) -> None:
+        self.threads[number]["locked"] = True
+
+    def unlock(self, number: int) -> None:
+        self.threads[number]["locked"] = False
+
     def create_comment(self, number: int, body: str) -> dict[str, Any]:
+        if self.threads.get(number, {}).get("locked"):
+            # As the workflow's own token finds a locked thread (lock-conversations.yml).
+            raise GitHubError("Unable to create comment because issue is locked.", 403)
         comment = {"id": next(self._ids), "body": with_marker(body), "user": dict(BOT),
                    "author_association": "COLLABORATOR", "created_at": "2026-09-29T00:00:00Z",
                    "issue_url": f"https://api.github.com/repos/{self.repo}/issues/{number}"}

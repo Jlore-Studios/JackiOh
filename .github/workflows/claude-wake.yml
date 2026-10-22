@@ -1,0 +1,127 @@
+# Starts every Claude subscription's 5-hour session at 06:00 America/Chicago (bot/harness/wake.py),
+# so each resets five hours later, rather than at whatever hour the first run of the day lands. A
+# session the bots' state file shows running is left alone; each other one gets one turn of Haiku
+# at low effort, the smallest call there is.
+#
+# GitHub starts this repository's schedules late and drops some, so it fires four times in the
+# hours before and the first run sleeps until 06:00 (`wake --wait`). Its later firings queue
+# behind it and stop once a run has finished green since 06:00; one that GitHub starts up to two
+# hours late still wakes the sessions. GitHub's cron is UTC: the firings cover 06:00 in both CDT
+# (11:00 UTC) and CST (12:00 UTC). Run it by hand with `now` to wake them at any hour.
+#
+# Each subscription's turn runs in a job of its own, holding that one secret and no write token.
+name: claude wake
+
+on:
+  schedule:
+    - cron: "13 8,9,10,11 * * *"
+  workflow_dispatch:
+    inputs:
+      now:
+        description: "Wake the sessions at once, at any hour"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: claude-wake
+  cancel-in-progress: false
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  clock:
+    name: wait for 06:00 Chicago
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    permissions:
+      contents: read         # the state files on the bots' state branches
+      actions: read          # whether an earlier run already woke today's sessions
+    outputs:
+      accounts: ${{ steps.list.outputs.accounts }}
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch || 'main' }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Sleep until 06:00 Chicago
+        id: wait
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NOW: ${{ inputs.now }}
+        run: |
+          if [ "${NOW}" = "true" ]; then
+            python -m harness wake --wait --now
+          else
+            python -m harness wake --wait
+          fi
+
+      # Which Claude secrets exist, never their values (providers.SECRETS).
+      - name: The sessions not running, the night bot's and Squishy's
+        id: list
+        if: steps.wait.outputs.go == 'true'
+        working-directory: bot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HARNESS_SECRETS_SET: >-
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_2 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_2' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_3 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_3' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_4 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_4' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_7 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_7' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
+        run: |
+          set -euo pipefail
+          night="$(python -m harness wake --list | tail -n 1)"
+          squishy="$(HARNESS_HOME=.squishy python -m harness wake --list | tail -n 1)"
+          echo "accounts=$(jq -cn --argjson a "${night}" --argjson b "${squishy}" '$a + $b')" \
+            >> "$GITHUB_OUTPUT"
+
+  ping:
+    name: wake ${{ matrix.account.id }}
+    needs: clock
+    if: needs.clock.outputs.accounts != '' && needs.clock.outputs.accounts != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    strategy:
+      fail-fast: false
+      matrix:
+        account: ${{ fromJSON(needs.clock.outputs.accounts) }}
+    steps:
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch || 'main' }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the claude CLI
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          claude --version
+
+      - name: One turn of Haiku at low effort
+        working-directory: bot
+        env:
+          HARNESS_HOME: ${{ matrix.account.home }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets[matrix.account.secret] }}
+          ACCOUNT: ${{ matrix.account.id }}
+        run: python -m harness wake --ping "${ACCOUNT}"
