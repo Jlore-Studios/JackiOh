@@ -22,7 +22,20 @@ export const landingTestid = {
   inviteOnly: "landing-invite-only",
   stats: "landing-stats",
   statsClear: "landing-stats-clear",
+  /** R1584000: the floor's stat showcase. */
+  showcase: "landing-showcase",
+  showcaseTitle: "landing-showcase-title",
+  showcaseLine: "landing-showcase-line",
+  showcasePrev: "landing-showcase-prev",
+  showcaseNext: "landing-showcase-next",
+  showcaseStage: "landing-showcase-stage",
+  showcaseFx: "landing-showcase-fx",
 } as const;
+
+/** R1584000: `landing-showcase-pick-${key}`, the dot that shows one stat. */
+export function landingShowcasePickTestid(key: string): string {
+  return `landing-showcase-pick-${key}`;
+}
 
 /** `landing-fan-card-${index}`, 0..4. */
 export function landingFanCardTestid(index: number): string {
