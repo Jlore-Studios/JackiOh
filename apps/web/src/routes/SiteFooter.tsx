@@ -1,6 +1,6 @@
-// The site footer: the privacy policy, the terms, the accessibility and copyright pages, the patch
-// notes (R388), the Card Almanac (R630), the replays (R768000), and a way to reach the people who run
-// JackiOh.
+// The site footer: the privacy policy, the terms, the purchases page (R1665000), the accessibility and
+// copyright pages, the patch notes (R388), the Card Almanac (R630), the replays (R768000), and a way to
+// reach the people who run JackiOh.
 //
 // On the landing page and the sign-in screen, where a visitor decides whether to hand over an
 // email address. Kept off the board. The contact is the owner's email address, the one the Terms,
@@ -23,6 +23,7 @@ export const siteFooterTestid = {
   root: "site-footer",
   privacy: "site-footer-privacy",
   terms: "site-footer-terms",
+  purchases: "site-footer-purchases",
   accessibility: "site-footer-accessibility",
   copyright: "site-footer-copyright",
   patchNotes: "site-footer-patch-notes",
@@ -41,6 +42,9 @@ export function SiteFooter(): ReactElement {
         </a>
         <a href={paths.terms} data-testid={siteFooterTestid.terms} onClick={followInApp(paths.terms)}>
           {t("Terms")}
+        </a>
+        <a href={paths.purchases} data-testid={siteFooterTestid.purchases} onClick={followInApp(paths.purchases)}>
+          {t("Purchases")}
         </a>
         <a
           href={paths.accessibility}

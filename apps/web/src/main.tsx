@@ -132,6 +132,7 @@ const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 const TermsRoute = lazy(() => import("./routes/terms.tsx"));
+const PurchasesRoute = lazy(() => import("./routes/purchases.tsx"));
 const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
 const CopyrightRoute = lazy(() => import("./routes/copyright.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
@@ -745,6 +746,8 @@ export function App(): ReactElement {
     }
     if (path === paths.privacy) return <PrivacyRoute />;
     if (path === paths.terms) return <TermsRoute />;
+    // R1665000: the odds are published to anyone; the page reads the account's counters itself, with a session.
+    if (path === paths.purchases) return <PurchasesRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.

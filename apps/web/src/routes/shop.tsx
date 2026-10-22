@@ -1,9 +1,10 @@
 // `/shop`: the one place for spending and opening (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000). Its
 // four panels left the account screen, which links here and keeps account things only: the Jlore
-// shop and its wallet, the card packs the account holds (pity, odds and the opening scene), the
-// cosmetic packs with the Chase Shard bar, and the token picker. Each panel holds its own reads, so
-// when one changes the account the others read it again (`readAgain`): a pack bought in the shop
-// can be opened at once, and an opening's bars, cards and cosmetics show in the picker.
+// shop and its wallet, the card packs the account holds and the opening scene, the cosmetic packs with
+// the Chase Shard bar, and the token picker. Their odds and the pity are `/purchases`', linked at the
+// foot. Each panel holds its own reads, so when one changes the account the others read it again
+// (`readAgain`): a pack bought in the shop can be opened at once, and an opening's bars, cards and
+// cosmetics show in the picker.
 //
 // The client decides nothing (CLAUDE.md rule 7): every price, odds, pity counter and refusal is the
 // server's, and a refused read says why in its panel. Gated like `/collection`: an anonymous visitor
@@ -20,11 +21,17 @@ import Shop from "../shop/Shop.tsx";
 import TokenPicker from "../shop/TokenPicker.tsx";
 import { shopTestid } from "../shop/shop.ts";
 import { t } from "../i18n/i18n.ts";
-import { BackLink } from "./nav.tsx";
+import { paths } from "../net/navigate.ts";
+import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
+import "./purchases.css";
 import "../shop/shop.css";
+
+export const shopRouteTestid = {
+  purchases: "shop-purchases-link",
+} as const;
 
 /** The panels on the screen, each reading its own part of the account. */
 type ShopPanel = "opening" | "shop" | "tokens" | "cosmetics";
@@ -65,6 +72,12 @@ export default function ShopRoute({ token }: { token: string }): ReactElement {
           <CosmeticPacks token={token} revision={reads.cosmetics} onChanged={changedBy("cosmetics")} />
           <TokenPicker token={token} revision={reads.tokens} onChanged={changedBy("tokens")} />
         </div>
+        {/* R1665000: the odds and the pity are on their own page, not in the panels above. */}
+        <p className="shop-purchases-link">
+          <a href={paths.purchases} data-testid={shopRouteTestid.purchases} onClick={followInApp(paths.purchases)}>
+            {t("Odds & pity")}
+          </a>
+        </p>
       </section>
     </div>
   );
