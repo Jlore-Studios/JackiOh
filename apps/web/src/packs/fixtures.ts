@@ -25,7 +25,10 @@ export function packsInfo(): PacksResponse {
   };
 }
 
-/** `POST /api/packs/open` for a Core pack with a Mythic, an Epic, a cosmetic, a bar and a card. */
+/**
+ * `POST /api/packs/open` for a Core pack with a Mythic, an Epic, a cosmetic, a bar and a card, the
+ * duplicate moving both token bars without filling either.
+ */
 export function openedPack(): OpenedPackResponse {
   return {
     pack: "Core",
@@ -42,5 +45,10 @@ export function openedPack(): OpenedPackResponse {
     ],
     pity: { epic: 0, legendary: 14, mythic: 0 },
     unopened: 1,
+    bars: {
+      card: { before: 3, after: 7, size: 12, pays: 0 },
+      cosmetic: { before: 5, after: 9, size: 30, pays: 0 },
+      cosmeticPaid: [],
+    },
   };
 }

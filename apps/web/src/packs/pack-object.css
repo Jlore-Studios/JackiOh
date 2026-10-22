@@ -1,0 +1,272 @@
+/* The pack as a physical object (#1663, PackObject.tsx): a foil wrapper crimped at the top and the
+   bottom, the set's emblem and colours (custom properties per `data-pack`), a sheen that follows the
+   pointer, a slight tilt toward it, a press and a tear. Every @keyframes moves only transform and
+   opacity (PackObject.test.tsx holds this sheet and packs.css to that); the pointer moves the sheen and
+   the tilt by transform from `--pack-px` and `--pack-py` (0 to 1 across the face, 0.5 at rest), and the
+   tear takes its duration from `--pack-tear-ms`, the tilt its reach from `--pack-tilt-deg`, both set
+   from packs.ts. `data-motion="reduce"` holds the tilt, the sheen and the tear still. */
+
+.pack-object {
+  --pack-px: 0.5;
+  --pack-py: 0.5;
+  --pack-foil-a: #3a3f5c;
+  --pack-foil-b: #171a2b;
+  --pack-accent: #bba8dc;
+  --pack-crimp-a: #c9ced9;
+  --pack-crimp-b: #7d8496;
+  --pack-ink: #f2f4fa;
+
+  position: relative;
+  display: block;
+  aspect-ratio: 5 / 7;
+  color: var(--pack-ink);
+  perspective: 40rem;
+}
+
+.pack-object[data-size="shelf"] {
+  width: min(30vw, 7rem);
+}
+
+.pack-object[data-size="scene"] {
+  width: min(40vw, 12rem);
+}
+
+/* ---------------------------------------------------------------------------- colours per pack --- */
+
+.pack-object[data-pack="Core"] {
+  --pack-foil-a: #3b4a6e;
+  --pack-foil-b: #171d33;
+  --pack-accent: #9fb4e8;
+}
+
+.pack-object[data-pack="Classic"] {
+  --pack-foil-a: #6b4a1c;
+  --pack-foil-b: #2a1906;
+  --pack-accent: #e6b35c;
+  --pack-crimp-a: #e6c46e;
+  --pack-crimp-b: #8c7220;
+}
+
+.pack-object[data-pack="Classic+"] {
+  --pack-foil-a: #2c5a2a;
+  --pack-foil-b: #0f2e0a;
+  --pack-accent: #9dff8a;
+  --pack-crimp-a: #e6c46e;
+  --pack-crimp-b: #8c7220;
+}
+
+.pack-object[data-pack="Meditative"] {
+  --pack-foil-a: #efe6d2;
+  --pack-foil-b: #b8ad93;
+  --pack-accent: #c8322b;
+  --pack-crimp-a: #c8322b;
+  --pack-crimp-b: #5a0f0b;
+  --pack-ink: #17130f;
+}
+
+.pack-object[data-pack="global"] {
+  --pack-foil-a: #5b3fa0;
+  --pack-foil-b: #1d1530;
+  --pack-accent: #bba8dc;
+}
+
+.pack-object[data-pack="cosmetic"] {
+  --pack-foil-a: #8a2d6b;
+  --pack-foil-b: #2a0f21;
+  --pack-accent: #ff8ad0;
+  --pack-crimp-a: #ffc2e6;
+  --pack-crimp-b: #a04880;
+}
+
+/* --------------------------------------------------------------------------------- the object --- */
+
+/* The tilt leans the whole pack toward the pointer. */
+.pack-object__tilt {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transform: rotateX(calc((var(--pack-py) - 0.5) * -2 * var(--pack-tilt-deg, 0) * 1deg))
+    rotateY(calc((var(--pack-px) - 0.5) * 2 * var(--pack-tilt-deg, 0) * 1deg));
+  transition: transform 120ms ease-out;
+}
+
+/* The wrapper takes the press and the burst, so neither fights the tilt for the transform. */
+.pack-object__wrap {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 1.5rem var(--pack-glow, var(--pack-accent));
+  transform-origin: 50% 70%;
+  transition: transform 80ms ease-out;
+}
+
+.pack-object[data-state="pressed"]:not([data-motion="reduce"]) .pack-object__wrap {
+  transform: scale(0.96);
+}
+
+.pack-object__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 16% 0.5rem;
+  border: 2px solid var(--pack-accent);
+  border-radius: 0.5rem;
+  background:
+    radial-gradient(circle at 50% 38%, rgb(255 255 255 / 0.16), transparent 55%),
+    linear-gradient(160deg, var(--pack-foil-a), var(--pack-foil-b));
+  text-align: center;
+}
+
+.pack-object__emblem {
+  display: block;
+  width: 38%;
+  height: auto;
+  filter: drop-shadow(0 0.15rem 0.25rem rgb(0 0 0 / 0.5));
+}
+
+.pack-object__name {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pack-object[data-size="shelf"] .pack-object__name {
+  font-size: 0.8rem;
+}
+
+/* The crimped seals: foil pinched in ridges, the top one the strip that tears off. */
+.pack-object__seal {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  height: 11%;
+  background: repeating-linear-gradient(90deg, var(--pack-crimp-a) 0 0.2rem, var(--pack-crimp-b) 0.2rem 0.4rem);
+  box-shadow: inset 0 -0.2rem 0.25rem rgb(0 0 0 / 0.35);
+}
+
+.pack-object__seal--top {
+  top: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+  transform-origin: 0 100%;
+}
+
+.pack-object__seal--bottom {
+  bottom: 0;
+  border-radius: 0 0 0.5rem 0.5rem;
+  box-shadow: inset 0 0.2rem 0.25rem rgb(0 0 0 / 0.35);
+}
+
+/* The sheen is a soft highlight twice the face's size, clipped to it; the pointer slides it by
+   transform, a quarter of its own size either way from the middle. */
+.pack-object__sheen {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  pointer-events: none;
+}
+
+.pack-object__sheen::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.42), transparent 42%);
+  transform: translate(calc((var(--pack-px) - 0.5) * 50%), calc((var(--pack-py) - 0.5) * 50%));
+  transition: transform 120ms ease-out;
+}
+
+.pack-object__flash {
+  position: absolute;
+  inset: -20%;
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.95), transparent 62%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------------- tearing and open --- */
+
+.pack-object[data-state="tearing"] .pack-object__wrap {
+  animation: pack-object-swell calc(var(--pack-tear-ms) * 1ms) ease-in-out both;
+}
+
+.pack-object[data-state="tearing"] .pack-object__seal--top {
+  animation: pack-object-tear calc(var(--pack-tear-ms) * 1ms) ease-in both;
+}
+
+.pack-object[data-state="tearing"] .pack-object__flash {
+  animation: pack-object-flash calc(var(--pack-tear-ms) * 1ms) ease-out both;
+}
+
+/* Open: the strip is gone and stays gone. */
+.pack-object[data-state="open"] .pack-object__seal--top {
+  transform: translateY(-160%) rotate(-12deg);
+  opacity: 0;
+}
+
+/* ---------------------------------------------------------------------------------- motion --- */
+
+@keyframes pack-object-tear {
+  from {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-160%) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pack-object-swell {
+  from {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.08);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes pack-object-flash {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  40% {
+    opacity: 0.9;
+  }
+
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* Reduced motion holds the tilt, the sheen and the tear still: no animation, no transition, and the
+   pointer's properties move nothing. */
+.pack-object[data-motion="reduce"],
+.pack-object[data-motion="reduce"] *,
+.pack-object[data-motion="reduce"] *::before,
+.pack-object[data-motion="reduce"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.pack-object[data-motion="reduce"] .pack-object__tilt,
+.pack-object[data-motion="reduce"] .pack-object__sheen::before {
+  transform: none;
+}

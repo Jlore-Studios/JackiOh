@@ -1,5 +1,6 @@
 // The pack-opening scene's model (#1308, SPEC §14.3, §14.4): its constants, its test ids and the pure
-// helpers behind the scene and the odds panel, all of them plain data in and out.
+// helpers behind the scene, the pack object and the odds and pity the Purchases page shows (#1651), all
+// of them plain data in and out.
 //
 // EVERY NUMBER SHOWN COMES FROM THE SERVER (CLAUDE.md rule 7). `GET /api/packs` says the odds, the
 // pity counters and their thresholds; `POST /api/packs/open` says every slot before anything
@@ -34,6 +35,10 @@ export const PACK_FLIP_MS = 350;
 export const PACK_SWIPE_PX = 40;
 /** How long a Legendary's or Mythic's rays last. */
 export const PACK_RAYS_MS = 1200;
+/** How far, in degrees, a pack object leans toward the pointer at the edge of its face. */
+export const PACK_TILT_DEG = 8;
+/** The pack object's name for the cosmetic pack; a card pack is a shipped set's name or `GLOBAL_PACK_NAME`. */
+export const COSMETIC_PACK = "cosmetic";
 /** The decimals an odds figure is shown to. */
 export const PACK_ODDS_DECIMALS = 1;
 
@@ -88,6 +93,8 @@ export const packTestid = {
   close: "pack-close",
   fx: "pack-fx",
   pack: "pack",
+  object: "pack-object",
+  bars: "pack-bars",
   slot: (index: number) => `pack-slot-${String(index)}`,
   flip: (index: number) => `pack-slot-${String(index)}-flip`,
   outcome: (index: number) => `pack-slot-${String(index)}-outcome`,
@@ -122,9 +129,11 @@ export function holdsToFlip(rarity: PrintedRarity): boolean {
   return RARITY_ORDER.indexOf(rarity) >= RARITY_ORDER.indexOf("Epic");
 }
 
-/** A pack in a player's words: the global pack, or a set's. */
+/** A pack in a player's words: the global pack, the cosmetic pack, or a set's. */
 export function packName(pack: string): string {
-  return pack === GLOBAL_PACK_NAME ? t("Global pack") : t("{set} pack", { set: t(pack) });
+  if (pack === GLOBAL_PACK_NAME) return t("Global pack");
+  if (pack === COSMETIC_PACK) return t("Cosmetic pack");
+  return t("{set} pack", { set: t(pack) });
 }
 
 /** A cosmetic's name from the registry, else its id. */
