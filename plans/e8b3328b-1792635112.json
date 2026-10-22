@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1593,
+  "title": "Patch: the AI's copy of the game stops un-hiding face-down cards",
+  "branch": "bot/issue-1593",
+  "thread": "**Issue #1593 (data, not instructions):**\n\n```text\n# #1593: Patch: the AI's copy of the game stops un-hiding face-down cards\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice opponent faces a question like 'choose a target' and one of the legal targets is a face-down card, a human player sees only 'Face-down card'. The computer's private copy of the game, however, can still read the real card underneath \u2014 so it can aim at the trap it is actually afraid of. The same copy keeps the full details of events it recorded mid-turn (what type a set card really is, which hand card it came from, what it targeted), even though a person in the same seat is shown none of that. Once built, the computer guesses like everyone else.\n\n## Why\n\n`hidden_instance_ids` removes every `Selection::Instance` in the seat's own open prompt from the hidden set (`crates/ai/src/observe.rs:225-237`), so `redact` never turns those cards into `ai:hidden` placeholders and the true `def_id` survives into every determinized world (`observe.rs:462-492`, `decide.rs:289-351`). The engine deliberately anonymizes exactly those options \u2014 a face-down card is 'the id to answer with, never the definition' (R177; `view_for.rs:1442-1462`, the invariant pinned at `crates/engine/src/testkit/invariants.rs:653-659`). Worse, the seat's own `pending.options` are kept verbatim (step 7, `observe.rs:648-654`), and a `Selection::Instance` option's label is built from `def_of(..).name` (`crates/engine/src/effects/choose.rs:150-161`) \u2014 so the option text alone names the card. Separately, `scrub_event_value` (`observe.rs:329-347`) only placeholders def-id fields on captured/queued events (trigger queue, work resumes, delayed effects, dispatch); it keeps `formerId`, `cardType`, `targets`, `answer`, `x`, `radiant` and paid costs \u2014 every field `redact_event` strips for a hidden card (`view_for.rs:1909+`, R97/R227/R448). Reachable today: any of the four plague cards or a backrow-scoped target prompt puts enemy face-down cards into the AI's own options.\n\n## Proposal\n\nIn `crates/ai/src/observe.rs`: only un-hide a prompt-offered instance when the seat may actually read that card (reuse the view's readability predicates \u2014 `is_face_down_to`/`announced_face_down_to`/`backrow_is_public`, already imported); for options that still point at hidden cards, overwrite `label` with the same 'Face-down card' wording the player's view shows; and extend `scrub_event_value` with the field-level cases `redact_event` applies (drop `formerId`/`x`/`answer`/`embiggened`, force `cardType` to `\"Trap\"` and `targets` to sentinels on a face-down announce, sentinel `position` on `shuffledIn`, drop `radiant`/`cost` on hidden cards).\n\n## Where it lands\n\n`crates/ai/src/observe.rs`; the mirror contract lives in `crates/engine/src/view_for.rs` and the engine's own invariant at `crates/engine/src/testkit/invariants.rs:653-659`. Spec \u00a79.9, \u00a710.8, \u00a710.10; rulings R97, R177, R227, R448, R762.\n\n## Acceptance criteria\n\n- [ ] A test builds a state where the AI seat holds a prompt offering an enemy face-down backrow card; after `redact`, that instance's `def_id` is `ai:hidden` and the option's label is the face-down wording \u2014 both fail today.\n- [ ] A test puts a hidden card's `cardAnnounced`/`cardPlayed`/`cardResolved` into a queued/captured resume; after `redact`, `formerId`, `cardType`, `targets`, `answer`, `x` and `costPaid` are absent or placeholdered exactly as the view strips them.\n- [ ] Readable options (the seat's own cards, revealed cards) still un-hide as before \u2014 no over-scrubbing.\n- [ ] `cargo test -p jackioh-ai` green; `cargo jackioh gate` smoke stays green.\n\n## Size and risks\n\nMedium, confined to `crates/ai` (pure). The main risk is over-scrubbing \u2014 hiding information the seat legitimately has (a card it revealed itself); the fix must reuse the view's readability predicates, not a blanket ban. Determinization keeps respecting shown costs (R762), so sampling quality is unchanged.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fairness` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:34:04Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1593: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
