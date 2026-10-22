@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_LOG,
   EMPTY_STATS,
+  NO_COUNTS,
   addGame,
   logIsEmpty,
   logSeen,
@@ -49,8 +50,8 @@ describe("R639 the device's totals", () => {
     log = logWith(log, "defeated", "core-002");
     const once = addGame(EMPTY_STATS, log, "win");
     expect(once).toMatchObject({ games: 1, wins: 1, losses: 0, draws: 0 });
-    expect(once.cards["core-001"]).toEqual({ seen: 1, played: 1, playedAgainst: 0, destroyed: 1, defeated: 0 });
-    expect(once.cards["core-002"]).toEqual({ seen: 1, played: 0, playedAgainst: 0, destroyed: 0, defeated: 1 });
+    expect(once.cards["core-001"]).toEqual({ seen: 1, played: 1, playedAgainst: 0, destroyed: 1, defeated: 0, allured: 0, lethal: 0, sprung: 0, survived: 0 });
+    expect(once.cards["core-002"]).toEqual({ seen: 1, played: 0, playedAgainst: 0, destroyed: 0, defeated: 1, allured: 0, lethal: 0, sprung: 0, survived: 0 });
 
     const twice = addGame(once, log, "loss");
     expect(twice).toMatchObject({ games: 2, wins: 1, losses: 1 });
@@ -69,10 +70,10 @@ describe("R639 the device's totals", () => {
     const stats = {
       ...EMPTY_STATS,
       cards: {
-        "core-003": { seen: 1, played: 2, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "core-001": { seen: 1, played: 2, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "core-002": { seen: 1, played: 5, playedAgainst: 0, destroyed: 0, defeated: 0 },
-        "core-004": { seen: 9, played: 0, playedAgainst: 0, destroyed: 0, defeated: 0 },
+        "core-003": { ...NO_COUNTS, seen: 1, played: 2 },
+        "core-001": { ...NO_COUNTS, seen: 1, played: 2 },
+        "core-002": { ...NO_COUNTS, seen: 1, played: 5 },
+        "core-004": { ...NO_COUNTS, seen: 9 },
       },
     };
     expect(topCards(stats, "played", 3)).toEqual([
@@ -83,6 +84,39 @@ describe("R639 the device's totals", () => {
     expect(topCards(stats, "played", 1)).toEqual([{ id: "core-002", count: 5 }]);
     expect(topCards(stats, "destroyed", 3)).toEqual([]);
     expect(topCards(stats, "played", 0)).toEqual([]);
+  });
+});
+
+describe("R1582000 the new counters", () => {
+  it("R1582000 Allure's takings, lethal blows, Traps fired and survivors count in a game's log and fold into the card's totals", () => {
+    let log = logWith(EMPTY_LOG, "allured", "core-050");
+    log = logWith(log, "lethal", "core-001");
+    log = logWith(log, "sprung", "core-020");
+    log = logWith(log, "sprung", "core-020");
+    log = logWith(log, "survived", "core-001");
+    const stats = addGame(EMPTY_STATS, log, "win");
+    expect(stats.cards["core-001"]).toEqual({ ...NO_COUNTS, lethal: 1, survived: 1 });
+    expect(stats.cards["core-020"]).toEqual({ ...NO_COUNTS, sprung: 2 });
+    expect(stats.cards["core-050"]).toEqual({ ...NO_COUNTS, allured: 1 });
+    expect(topCards(stats, "sprung", 3)).toEqual([{ id: "core-020", count: 2 }]);
+  });
+
+  it("R1582000 each new counter alone makes a log non-empty, and every one starts at 0", () => {
+    for (const counter of ["allured", "lethal", "sprung", "survived"] as const) {
+      expect(logIsEmpty(logWith(EMPTY_LOG, counter, "core-001"))).toBe(false);
+    }
+    expect(NO_COUNTS).toEqual({
+      seen: 0,
+      played: 0,
+      playedAgainst: 0,
+      destroyed: 0,
+      defeated: 0,
+      allured: 0,
+      lethal: 0,
+      sprung: 0,
+      survived: 0,
+    });
+    expect(EMPTY_LOG).toMatchObject({ allured: {}, lethal: {}, sprung: {}, survived: {} });
   });
 });
 

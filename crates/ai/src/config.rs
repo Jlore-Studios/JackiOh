@@ -20,6 +20,12 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
     missed_lethal_chance: 0.0,
 };
 
+/// R1563005 (Meditative+ #20 KY's Competition): the chance, in [0, 1], that the AI answers a question
+/// of a sequence right, on the base face's three-digit sums and on the Radiant face's one- and two-digit
+/// ones; a miss is one of the wrong answers. Drawn from the AI's own stream, never the match's.
+pub const AI_KY_COMPETITION_ACCURACY: f64 = 0.85;
+pub const AI_KY_COMPETITION_RADIANT_ACCURACY: f64 = 0.93;
+
 /// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
 /// decision, 1.0 follows the AI at every decision as it did before the knob.
 pub const AI_SKILL_MIN: f64 = 0.0;

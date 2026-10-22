@@ -1,18 +1,20 @@
-//! Meditative+ #16 Jazakus (SPEC §8.9 row 16, ME-CRAFT's potion mode, R880–R883, R1182000, R1182001).
+//! Meditative+ #16 Jazakus (SPEC §8.9 row 16, ME-CRAFT's potion mode, R880–R883, R1182000, R1182001,
+//! R1563007, R1563008).
 //! (1) Unit, Human, Catalyst, Epic, 2/2 → 4/4.
 //!   Base:    "Cry: Craft a custom Potion. It costs (1).
 //!             Death: Shuffle a Jazakus Prime into your deck."
 //!   Radiant: "Cry: Craft a custom Radiant Potion. It costs (1).
 //!             Death: Shuffle a Radiant Jazakus Prime into your deck."
 //!
-//! THE CRY (R1182000). Meditative #17's `craft` prompt in its potion mode, with no cost prompt: the
-//! frame is fixed, a Unit tagged Potion whose one hat is "Activate: Tribute this." with the effects
-//! the player snaps under it, at cost (1) (`CRAFT_POTION_COST`) and that cost's points (7) and lines
-//! (24). The stats and keywords are the player's, within the points. A valid recipe compiles into a
-//! transient definition named by its digest (R882), of the Meditative+ set, tagged Potion, and a
-//! fresh card of it reaches the hand at (1), Radiant on the Radiant face, or burns on a full one
-//! (§2.4). The prompt's options are four seeded Potions, so the AI, the random policy and a timeout
-//! answer with one (R881). The picks travel in `ctx.targets`, read with `chosen_recipe`.
+//! THE CRY (R1182000, R1563008). Meditative #17's `craft` prompt in its potion mode, with no cost
+//! prompt: the frame is fixed, a Spell tagged Potion with no stats whose one hat is When cast, with
+//! the effects the player snaps under it, at cost (1) (`CRAFT_POTION_COST`), `CRAFT_POTION_POINTS`
+//! points and 24 lines. The blocks are the prompt's offer (R1563007): the keywords a Spell takes, its
+//! When cast, and three verbs that fit the points, drawn as the prompt opens. A valid recipe compiles
+//! into a transient definition named by its digest (R882), of the Meditative+ set, tagged Potion, and
+//! a fresh card of it reaches the hand at (1), Radiant on the Radiant face, or burns on a full one
+//! (§2.4). The prompt's options are seeded Potions of the offer, so the AI, the random policy and a
+//! timeout answer with one (R881). The picks travel in `ctx.targets`, read with `chosen_recipe`.
 //!
 //! THE DEATH (Catalyst, C+ #38's shape, R1421): a Jazakus Prime (M+ #16.1) shuffled into its owner's
 //! deck, Radiant on the Radiant face.
@@ -66,19 +68,20 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #16 Jazakus — SPEC §8.9 row 16, R79, R97, R881, R882, R1182000, R1421.
+// Meditative+ #16 Jazakus — SPEC §8.9 row 16, R79, R97, R881, R882, R1182000, R1421, R1563007, R1563008.
 //
-// BUILD M11 row M+ 16: "Cry (played): opens the crafter in potion mode, its frame a Unit tagged
-// Potion with one Activate (Tribute this) and cost (1); a recipe over the points or the lines, or
-// with another hook, is refused with the prompt open; a valid one adds a transient Potion whose
-// script survives a JSON round trip and a replay (R882); the AI, the random policy and a timeout
-// answer with a preset (R881); Death shuffles a base Jazakus Prime into your deck; radiant 4/4, the
-// potion Radiant and the Prime Radiant".
+// BUILD M11 row M+ 16: "Cry (played): opens the crafter in potion mode, its frame a Spell tagged
+// Potion with one When cast and cost (1), its blocks the prompt's offer; a recipe over the points or
+// the lines, with another hook or a block the offer lacks, is refused with the prompt open; a valid
+// one adds a transient Potion whose script survives a JSON round trip and a replay (R882); the AI,
+// the random policy and a timeout answer with a preset (R881); Death shuffles a base Jazakus Prime into
+// your deck; radiant 4/4, the potion Radiant and the Prime Radiant".
 #[cfg(test)]
 mod tests {
     use super::*;
     use jackioh_engine::replay::hash_state;
     use jackioh_engine::subsystems::ai_policy::choose_action;
+    use jackioh_engine::subsystems::craft::whole_palette;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -87,12 +90,12 @@ mod tests {
     const HIT_JOB: &str = "core-016"; // Spell: destroy a target Unit.
     const VANILLA: &str = "core-008"; // 4/4
 
-    /// A 2/2 Potion whose Activate deals 4 to the enemy hero: 3 + 4 = 7 points, the whole budget.
+    /// A Potion that deals 4 to the enemy hero: 4 points, the whole budget.
     fn potion_recipe() -> Value {
         json!({
-            "cost": 1, "type": "Unit", "adjective": "Pure", "noun": "Closure",
-            "attack": 2, "health": 2, "keywords": [], "echo": 0,
-            "hats": [{ "hat": "activate", "effects": [{ "verb": "damageEnemyHero", "n": 4 }] }],
+            "cost": 1, "type": "Spell", "adjective": "Pure", "noun": "Closure",
+            "attack": 0, "health": 1, "keywords": [], "echo": 0,
+            "hats": [{ "hat": "whenCast", "effects": [{ "verb": "damageEnemyHero", "n": 4 }] }],
             "frame": "potion",
         })
     }
@@ -105,6 +108,16 @@ mod tests {
             "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
         }));
         s.play(ID, json!({ "zone": 1 }));
+        s
+    }
+
+    /// `crafting`, its prompt's offer widened to every block, for the tests of the frame's rules,
+    /// which the offer (R1563007) only narrows.
+    fn any_block(radiant: bool) -> Scenario {
+        let mut s = crafting(radiant);
+        if let Some(pending) = s.state_mut().pending.as_mut() {
+            pending.craft_offer = Some(whole_palette());
+        }
         s
     }
 
@@ -137,7 +150,7 @@ mod tests {
 
     /// Refused with `reason`, the state unchanged and the prompt still open.
     fn refused(recipe: Value, reason: &str) {
-        let mut s = crafting(false);
+        let mut s = any_block(false);
         let before = hash_state(s.state());
         s.expect_refused_with(|s| s.answer(json!([{ "pick": "craft", "recipe": recipe }])), reason);
         assert_eq!(
@@ -187,27 +200,33 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1182000_the_cry_opens_the_crafter_in_potion_mode_at_cost_1() {
+        fn r1182000_r1563007_r1563008_the_cry_opens_the_crafter_in_potion_mode_at_cost_1() {
             let s = crafting(false);
             let pending = s.state().pending.clone().expect("the craft prompt is open");
             assert_eq!(pending.kind, PromptKind::Craft);
             assert_eq!(pending.player_id, P1);
             assert_eq!(pending.budget, Some(CRAFT_POTION_COST));
             assert_eq!(pending.craft_mode, Some(CraftMode::Potion));
+            let offer = pending.craft_offer.clone().expect("a potion prompt rolls an offer");
+            assert_eq!(offer.hats, vec![CraftHatKind::WhenCast]);
+            assert_eq!(offer.keywords.len(), CRAFT_OFFER_KEYWORDS);
+            assert!(!offer.verbs.is_empty() && offer.verbs.len() <= CRAFT_OFFER_VERBS);
             let offered = presets(&s);
-            assert_eq!(offered.len(), CRAFT_PRESETS);
+            assert!(!offered.is_empty() && offered.len() <= offer.verbs.len());
             for recipe in &offered {
                 assert_eq!(recipe.frame, Some(CraftFrame::Potion));
-                assert_eq!(recipe.type_, CardType::Unit);
+                assert_eq!(recipe.type_, CardType::Spell);
                 assert_eq!(recipe.cost, 1);
+                assert_eq!((recipe.attack, recipe.health), (0, 1), "a Potion has no stats");
                 assert_eq!(recipe.hats.len(), 1);
-                assert_eq!(recipe.hats[0].hat, CraftHatKind::Activate);
+                assert_eq!(recipe.hats[0].hat, CraftHatKind::WhenCast);
+                assert!(recipe.hats[0].effects.iter().all(|effect| offer.verbs.contains(&effect.verb)));
             }
         }
 
         #[test]
-        fn r1182000_a_valid_recipe_adds_a_meditative_plus_potion_to_the_hand() {
-            let mut s = crafting(false);
+        fn r1182000_r1563008_a_valid_recipe_adds_a_meditative_plus_potion_spell_to_the_hand() {
+            let mut s = any_block(false);
             s.answer(json!([{ "pick": "craft", "recipe": potion_recipe() }]));
             assert!(s.state().pending.is_none());
             let card = crafted(s.state());
@@ -215,69 +234,76 @@ mod tests {
             let def = s.state().transient_defs.get(&card.def_id).expect("its definition").clone();
             assert_eq!(def.set, SetName::MeditativePlus);
             assert_eq!(def.tags, vec![Tag::Potion]);
-            assert_eq!(def.type_, CardType::Unit);
+            assert_eq!(def.type_, CardType::Spell);
             assert_eq!(def.cost, CardCost::Fixed(1));
             assert_eq!(def.name, "Pure Closure Potion");
             assert!(!def.token);
-            assert_eq!(def.base.text, "Activate: Tribute this. Deal {b1} damage to the enemy hero.");
+            assert_eq!(def.base.text, "Deal {b1} damage to the enemy hero.");
         }
 
         #[test]
-        fn r1182000_the_potion_activates_once_tributing_itself() {
-            let mut s = crafting(false);
+        fn r1563008_the_potion_is_cast_for_its_effects_then_goes_to_the_graveyard() {
+            let mut s = any_block(false);
             s.answer(json!([{ "pick": "craft", "recipe": potion_recipe() }]));
             let potion = crafted(s.state());
-            s.play(&potion.id, json!({ "zone": 2 }));
-            s.activate(&potion.id, json!({}));
+            s.play(&potion.id, json!({}));
             s.expect_health(P2, 26);
             s.expect_in_zone(&potion.id, "graveyard");
         }
 
         #[test]
-        fn r1182000_a_recipe_over_the_points_or_the_lines_or_with_another_hook_is_refused() {
-            // A 3/2 dealing 4: 4 + 4 = 8 points, over the budget of 7.
+        fn r1182000_r1563007_a_recipe_over_the_points_or_the_lines_with_another_hook_or_unoffered_is_refused() {
+            // Dealing 5: 5 points, over the budget of 4.
             let mut over_points = potion_recipe();
-            over_points["attack"] = json!(3);
-            refused(over_points, "over the budget of 7");
-            // Nine aimed blocks: 3 + 4 + 9 × 2 = 25 lines, over 24 (and over 8 effects).
+            over_points["hats"][0]["effects"][0]["n"] = json!(5);
+            refused(over_points, "over the budget of 4");
+            // Nine aimed blocks: 3 + 2 + 9 × 2 = 23 lines, and over 8 effects.
             let aimed = json!({ "verb": "damageTarget", "n": 1 });
-            let mut over_lines = potion_recipe();
-            over_lines["attack"] = json!(0);
-            over_lines["health"] = json!(1);
-            over_lines["hats"][0]["effects"] = json!([aimed, aimed, aimed, aimed, aimed, aimed, aimed, aimed, aimed]);
-            refused(over_lines, "lines, over the budget of 24");
-            // A Cry instead of the Activate, or a Death beside it.
+            let mut over_effects = potion_recipe();
+            over_effects["hats"][0]["effects"] = json!([aimed, aimed, aimed, aimed, aimed, aimed, aimed, aimed, aimed]);
+            refused(over_effects, "more than 8");
+            // A Cry instead of the When cast, or a Unit with stats.
             let mut cry = potion_recipe();
             cry["hats"][0]["hat"] = json!("cry");
-            refused(cry, "exactly one hat, its Activate");
-            let mut death = potion_recipe();
-            death["hats"] = json!([
-                { "hat": "activate", "effects": [{ "verb": "damageEnemyHero", "n": 1 }] },
-                { "hat": "death", "effects": [{ "verb": "damageEnemyHero", "n": 1 }] },
-            ]);
-            refused(death, "exactly one hat, its Activate");
+            refused(cry, "exactly one hat, its When cast");
+            let mut unit = potion_recipe();
+            unit["type"] = json!("Unit");
+            unit["attack"] = json!(1);
+            refused(unit, "a Potion is a Spell");
             // Meditative #17's recipe, outside the frame.
             let mut free = potion_recipe();
             free.as_object_mut().expect("an object").remove("frame");
-            free["hats"] = json!([]);
             refused(free, "this prompt crafts a Potion");
+            // A verb the prompt's own offer lacks (R1563007).
+            let mut s = crafting(false);
+            let offer = s.state().pending.clone().and_then(|pending| pending.craft_offer).expect("an offer");
+            let missing = CRAFT_VERB_PRICES
+                .iter()
+                .map(|row| row.verb)
+                .find(|verb| !offer.verbs.contains(verb) && *verb != CraftVerb::GrantKeyword)
+                .expect("three verbs of the table leave some out");
+            let mut unoffered = potion_recipe();
+            unoffered["hats"][0]["effects"] = json!([{ "verb": missing, "n": 1 }]);
+            s.expect_refused_with(
+                |s| s.answer(json!([{ "pick": "craft", "recipe": unoffered }])),
+                "was not offered",
+            );
         }
 
         #[test]
         fn r882_the_potion_survives_a_json_round_trip_and_a_replay() {
-            let mut s = crafting(false);
+            let mut s = any_block(false);
             s.answer(json!([{ "pick": "craft", "recipe": potion_recipe() }]));
             let potion = crafted(s.state());
-            s.play(&potion.id, json!({ "zone": 2 }));
             let tripped: GameState = serde_json::from_value(crate::js(s.state())).expect("the state round-trips");
-            let activate = by_p1(json!({
-                "type": "activate", "playerId": "p1", "instanceId": potion.id, "nonce": "jazakus-replay",
+            let cast = by_p1(json!({
+                "type": "play", "playerId": "p1", "instanceId": potion.id, "nonce": "jazakus-replay",
             }));
-            let live = reduce(s.state(), &activate);
-            let after_trip = reduce(&tripped, &activate);
+            let live = reduce(s.state(), &cast);
+            let after_trip = reduce(&tripped, &cast);
             assert_eq!(live.error, None);
             assert_eq!(after_trip.error, None);
-            assert_eq!(after_trip.state.players.p2.hero.health, 26, "the rebuilt Activate deals its 4");
+            assert_eq!(after_trip.state.players.p2.hero.health, 26, "the rebuilt When cast deals its 4");
             assert_eq!(hash_state(&after_trip.state), hash_state(&live.state), "it replays exactly");
         }
 
@@ -306,9 +332,12 @@ mod tests {
 
         #[test]
         fn r97_the_opponent_sees_only_an_open_prompt_then_a_hidden_card() {
-            let mut s = crafting(false);
+            let mut s = any_block(false);
             let open = serde_json::to_string(&s.view(P2)).expect("the view serializes");
-            assert!(!open.contains("recipe") && !open.contains("craftMode"), "{open}");
+            assert!(
+                !open.contains("recipe") && !open.contains("craftMode") && !open.contains("craftOffer"),
+                "{open}"
+            );
             s.answer(json!([{ "pick": "craft", "recipe": potion_recipe() }]));
             let view = s.view(P2);
             assert!(
@@ -329,15 +358,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1182000_the_potion_is_radiant_doubling_its_numbers_and_stats() {
-            let mut s = crafting(true);
+        fn r1182000_r1563008_the_potion_is_radiant_doubling_its_numbers() {
+            let mut s = any_block(true);
             s.answer(json!([{ "pick": "craft", "recipe": potion_recipe() }]));
             let potion = crafted(s.state());
             assert!(potion.radiant, "the Radiant face crafts it Radiant");
-            let def = s.state().transient_defs.get(&potion.def_id).expect("its definition").clone();
-            assert_eq!([def.radiant.attack, def.radiant.health], [Some(4), Some(4)]);
-            s.play(&potion.id, json!({ "zone": 2 }));
-            s.activate(&potion.id, json!({}));
+            s.play(&potion.id, json!({}));
             s.expect_health(P2, 22);
             s.expect_in_zone(&potion.id, "graveyard");
         }

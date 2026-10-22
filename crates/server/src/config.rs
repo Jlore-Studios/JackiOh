@@ -1303,18 +1303,218 @@ pub const BOT_ACCOUNT_AGE_MAX_DAYS: i64 = 180;
 /// R1454: the share of bots that keep the `Player#n` name a new account is given, as people do
 /// who skip the username prompt (R1435).
 pub const BOT_DEFAULT_USERNAME_SHARE: f64 = 0.3;
-/// R1454: the first halves of a bot's username, `{first}{second}`; each at most eight letters, so
-/// every name fits `USERNAME_MAX_LENGTH`.
-pub const BOT_NAME_FIRST: &[&str] = &[
-    "Quiet", "Brave", "Lucky", "Sly", "Mighty", "Silver", "Rusty", "Clever", "Swift", "Gentle", "Bold",
-    "Sunny", "Misty", "Lazy", "Grumpy", "Jolly", "Cosmic", "Frosty", "Golden", "Hidden", "Little", "Shadow",
-    "Velvet", "Wild",
+/// R1454: one shape a bot's username may take, filled from the word lists beside the pool
+/// (`crates/server/src/bots/names/`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BotNameShape {
+    /// R1454: the word as the list spells it.
+    Bare,
+    /// R1454: the word lowercased.
+    Lower,
+    /// R1454: both words capitalised and run together.
+    Camel,
+    /// R1454: both words lowercased and run together.
+    LowerPair,
+    /// R1454: both words lowercased with `_` between them.
+    SnakePair,
+    /// R1454: both words lowercased and run together, then a number.
+    LowerPairDigits,
+    /// R1454: the word, then a number.
+    Digits,
+    /// R1454: the word lowercased, then a number.
+    LowerDigits,
+    /// R1454: the word, then `_`, then a number.
+    SnakeDigits,
+    /// R1454: the word inside `xX…Xx` (or `xX_…_Xx`).
+    Xx,
+    /// R1454: an affix from `PREFIXES` capitalised with the word.
+    Prefix,
+    /// R1454: the word with an affix from `SUFFIXES`.
+    Suffix,
+    /// R1454: the word with a fan affix from `FAN_SUFFIXES`.
+    FanSuffix,
+    /// R1454: a fan affix from `FAN_PREFIXES` capitalised with the word.
+    FanPrefix,
+    /// R1454: the word in leetspeak (`a→4`, `e→3`, `o→0`, `i→1`).
+    Leet,
+    /// R1454: the word lowercased with one vowel stretched.
+    Stretch,
+    /// R1454: the word with its last letter doubled or an `ii`/`zz`/`_` ending.
+    Doubled,
+    /// R1454: nonsense syllables strung from the consonant-vowel table.
+    Syllables,
+    /// R1454: the given name with an initial (`LuisM`, `Luis_M`).
+    Initial,
+    /// R1454: the given name's diminutive (`Luisito`, `Lucita`).
+    Diminutive,
+    /// R1454: the given name (or its diminutive) with `Gamer` and maybe a year.
+    Gamer,
+    /// R1454: the word with the first `BOT_NAME_COMPOUND_LETTERS` letters of the lead word.
+    Compound,
+}
+
+/// R1454: the share of named bots whose username is drawn from plain words.
+pub const BOT_NAME_SHARE_PLAIN: f64 = 0.22;
+/// R1454: the share of named bots whose username is drawn from nonsense words.
+pub const BOT_NAME_SHARE_NONSENSE: f64 = 0.08;
+/// R1454: the share of named bots whose username is drawn from gamer filler.
+pub const BOT_NAME_SHARE_GAMER: f64 = 0.05;
+/// R1454: the share of named bots whose username is drawn from edgy words.
+pub const BOT_NAME_SHARE_EDGY: f64 = 0.12;
+/// R1454: the share of named bots whose username is drawn from anime references.
+pub const BOT_NAME_SHARE_ANIME: f64 = 0.13;
+/// R1454: the share of named bots whose username is drawn from Han characters.
+pub const BOT_NAME_SHARE_CHINESE_HAN: f64 = 0.05;
+/// R1454: the share of named bots whose username is drawn from pinyin.
+pub const BOT_NAME_SHARE_CHINESE_PINYIN: f64 = 0.05;
+/// R1454: the share of named bots whose username is drawn from given names other than Luis.
+pub const BOT_NAME_SHARE_GIVEN: f64 = 0.06;
+/// R1454: the share of named bots whose username is drawn from crude and meme bait.
+pub const BOT_NAME_SHARE_CRUDE: f64 = 0.09;
+/// R1454: the share of named bots whose username is drawn from other references.
+pub const BOT_NAME_SHARE_OTHER_REFS: f64 = 0.06;
+/// R1454: the share of named bots whose username is drawn from politics and public life.
+pub const BOT_NAME_SHARE_POLITICS: f64 = 0.06;
+/// R1454: the share of all bots named Luis, the most common given name on the ladder: about four
+/// in a full pool of 200, the later ones tagged `Luis#1`, `Luis#2`, …
+pub const BOT_NAME_LUIS_SHARE: f64 = 0.02;
+/// R1454: how many names the bot's register draws before it keeps its `Player#n`.
+pub const BOT_NAME_DRAW_ATTEMPTS: usize = 10;
+/// R1454: the smallest two-digit number a `{word}{digits}` shape draws.
+pub const BOT_NAME_TWO_DIGIT_MIN: i64 = 10;
+/// R1454: the largest two-digit number a `{word}{digits}` shape draws.
+pub const BOT_NAME_TWO_DIGIT_MAX: i64 = 99;
+/// R1454: the earliest birth year a `{word}{digits}` shape draws.
+pub const BOT_NAME_BIRTH_YEAR_MIN: i64 = 1985;
+/// R1454: the latest birth year a `{word}{digits}` shape draws.
+pub const BOT_NAME_BIRTH_YEAR_MAX: i64 = 2012;
+/// R1454: the fewest extra repeats a stretched letter draws.
+pub const BOT_NAME_STRETCH_MIN: i64 = 2;
+/// R1454: the most extra repeats a stretched letter draws.
+pub const BOT_NAME_STRETCH_MAX: i64 = 5;
+/// R1454: the fewest syllables a nonsense shape draws.
+pub const BOT_NAME_SYLLABLES_MIN: i64 = 1;
+/// R1454: the most syllables a nonsense shape draws.
+pub const BOT_NAME_SYLLABLES_MAX: i64 = 3;
+/// R1454: the share of drawn numbers that are a birth year.
+pub const BOT_NAME_YEAR_SHARE: f64 = 0.35;
+/// R1454: the share of drawn numbers that are a filler number (`69`, `420`, …).
+pub const BOT_NAME_FILLER_NUMBER_SHARE: f64 = 0.2;
+/// R1454: the share of drawn Chinese numbers that are a birth year.
+pub const BOT_NAME_CHINESE_YEAR_SHARE: f64 = 0.3;
+/// R1454: how many letters of the lead word a `Compound` shape keeps.
+pub const BOT_NAME_COMPOUND_LETTERS: usize = 3;
+/// R1454: the filler numbers a `{word}{digits}` shape draws from.
+pub const BOT_NAME_FILLER_NUMBERS: &[i64] = &[69, 420, 1337, 666, 777, 999, 123, 360, 101];
+/// R1454: the numbers a Chinese shape draws from (the Chinese-internet set).
+pub const BOT_NAME_CHINESE_NUMBERS: &[i64] = &[520, 1314, 666, 999, 8, 233, 2333, 521];
+/// R1454: the shapes a plain register draws, each with its weight.
+pub const BOT_NAME_SHAPES_PLAIN: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Camel, 0.28),
+    (BotNameShape::LowerPair, 0.10),
+    (BotNameShape::SnakePair, 0.08),
+    (BotNameShape::LowerPairDigits, 0.06),
+    (BotNameShape::Digits, 0.14),
+    (BotNameShape::LowerDigits, 0.09),
+    (BotNameShape::Prefix, 0.07),
+    (BotNameShape::Suffix, 0.06),
+    (BotNameShape::Leet, 0.05),
+    (BotNameShape::Stretch, 0.04),
+    (BotNameShape::Doubled, 0.03),
 ];
-/// R1454: the second halves of a bot's username.
-pub const BOT_NAME_SECOND: &[&str] = &[
-    "Otter", "Falcon", "Badger", "Panda", "Comet", "Wizard", "Knight", "Pickle", "Turnip", "Mango", "Raven",
-    "Tiger", "Walrus", "Lemon", "Rocket", "Golem", "Pirate", "Goblin", "Ferret", "Beetle", "Dragon",
-    "Muffin", "Noodle", "Sparrow",
+/// R1454: the shapes a nonsense register draws, each with its weight.
+pub const BOT_NAME_SHAPES_NONSENSE: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Bare, 0.25),
+    (BotNameShape::Syllables, 0.30),
+    (BotNameShape::Digits, 0.12),
+    (BotNameShape::Camel, 0.08),
+    (BotNameShape::Stretch, 0.08),
+    (BotNameShape::Doubled, 0.06),
+    (BotNameShape::Xx, 0.06),
+    (BotNameShape::LowerDigits, 0.05),
+];
+/// R1454: the shapes a gamer register draws, each with its weight.
+pub const BOT_NAME_SHAPES_GAMER: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Camel, 0.30),
+    (BotNameShape::LowerPair, 0.10),
+    (BotNameShape::Bare, 0.10),
+    (BotNameShape::Digits, 0.15),
+    (BotNameShape::Prefix, 0.10),
+    (BotNameShape::Xx, 0.10),
+    (BotNameShape::Stretch, 0.10),
+    (BotNameShape::Doubled, 0.05),
+];
+/// R1454: the shapes an edgy register draws, each with its weight.
+pub const BOT_NAME_SHAPES_EDGY: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Camel, 0.25),
+    (BotNameShape::LowerPair, 0.08),
+    (BotNameShape::SnakePair, 0.05),
+    (BotNameShape::Bare, 0.07),
+    (BotNameShape::Digits, 0.12),
+    (BotNameShape::Xx, 0.12),
+    (BotNameShape::Prefix, 0.08),
+    (BotNameShape::Leet, 0.10),
+    (BotNameShape::Stretch, 0.03),
+    (BotNameShape::Doubled, 0.05),
+    (BotNameShape::Suffix, 0.05),
+];
+/// R1454: the shapes an anime or other-reference register draws, each with its weight.
+pub const BOT_NAME_SHAPES_REFERENCE: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Bare, 0.25),
+    (BotNameShape::Lower, 0.08),
+    (BotNameShape::FanSuffix, 0.20),
+    (BotNameShape::FanPrefix, 0.06),
+    (BotNameShape::SnakeDigits, 0.10),
+    (BotNameShape::Digits, 0.10),
+    (BotNameShape::Xx, 0.08),
+    (BotNameShape::Leet, 0.05),
+    (BotNameShape::Camel, 0.04),
+    (BotNameShape::Doubled, 0.04),
+];
+/// R1454: the shapes a crude register draws, each with its weight.
+pub const BOT_NAME_SHAPES_CRUDE: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Bare, 0.35),
+    (BotNameShape::Lower, 0.10),
+    (BotNameShape::Digits, 0.15),
+    (BotNameShape::SnakeDigits, 0.05),
+    (BotNameShape::Xx, 0.10),
+    (BotNameShape::Suffix, 0.08),
+    (BotNameShape::Prefix, 0.05),
+    (BotNameShape::Leet, 0.07),
+    (BotNameShape::Doubled, 0.05),
+];
+/// R1454: the shapes a politics register draws, each with its weight.
+pub const BOT_NAME_SHAPES_POLITICS: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Bare, 0.55),
+    (BotNameShape::Lower, 0.10),
+    (BotNameShape::Digits, 0.15),
+    (BotNameShape::FanSuffix, 0.12),
+    (BotNameShape::FanPrefix, 0.08),
+];
+/// R1454: the shapes a given-name register draws, each with its weight.
+pub const BOT_NAME_SHAPES_GIVEN: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Bare, 0.22),
+    (BotNameShape::LowerDigits, 0.18),
+    (BotNameShape::Digits, 0.08),
+    (BotNameShape::Initial, 0.12),
+    (BotNameShape::Diminutive, 0.10),
+    (BotNameShape::Gamer, 0.06),
+    (BotNameShape::Prefix, 0.08),
+    (BotNameShape::Compound, 0.06),
+    (BotNameShape::Xx, 0.06),
+    (BotNameShape::Lower, 0.04),
+];
+/// R1454: the shapes a Han register draws, each with its weight.
+pub const BOT_NAME_SHAPES_CHINESE_HAN: &[(BotNameShape, f64)] =
+    &[(BotNameShape::Bare, 0.55), (BotNameShape::Digits, 0.45)];
+/// R1454: the shapes a pinyin register draws, each with its weight.
+pub const BOT_NAME_SHAPES_CHINESE_PINYIN: &[(BotNameShape, f64)] = &[
+    (BotNameShape::Camel, 0.25),
+    (BotNameShape::LowerPair, 0.15),
+    (BotNameShape::SnakePair, 0.12),
+    (BotNameShape::LowerPairDigits, 0.18),
+    (BotNameShape::LowerDigits, 0.20),
+    (BotNameShape::Lower, 0.10),
 ];
 /// R1452: the prior for a bot's first move of a turn, until `THINK_TIME_FITS` holds a fit for it:
 /// the mean of `ln(think_ms)`.

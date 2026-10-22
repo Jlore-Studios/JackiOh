@@ -743,7 +743,8 @@ mod tests {
             let players = &s.state().players;
             assert_eq!([players.p1.hero.health, players.p2.hero.health], health);
             assert_eq!([players.p1.library.len(), players.p2.library.len()], libraries);
-            s.expect_mana(P1, 0);
+            // Rollback costs (3) since #1563, so one of the four is left.
+            s.expect_mana(P1, 1);
             let mut mine = graveyards[0].clone();
             mine.push(s.card(ROLLBACK).id.clone());
             assert_eq!(ids(&s.state().players.p1.graveyard), mine);

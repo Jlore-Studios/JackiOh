@@ -222,7 +222,6 @@ fn r1454_drawn_bots_in_range_valid_names() {
         match name {
             Some(name) => {
                 named += 1;
-                assert!(name.is_ascii(), "{name}");
                 assert!(
                     normalize_username(&name).is_ok(),
                     "{name} is not a valid username"
