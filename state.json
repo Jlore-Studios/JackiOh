@@ -11536,6 +11536,13 @@
     "1640": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T16:52:00Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "it edits crates/engine/src, which the hard line names, but no rule changes: only compile-time asserts and one rewrite of can_offer_draw that plays the same, all checked in a scratch copy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
