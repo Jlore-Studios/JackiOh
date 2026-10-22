@@ -48,6 +48,8 @@ export const duosTestid = {
   // The route's own: before the first view, its clock, and its connection line and Reconnect now.
   connecting: "duos-connecting",
   refused: "duos-refused",
+  /** #1599: the sentence that stands in for a socket closed for good before any view (a voided match). */
+  gone: "duos-gone",
   connection: "duos-connection",
   reconnect: "duos-reconnect",
   clock: "duos-clock",

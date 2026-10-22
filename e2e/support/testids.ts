@@ -828,6 +828,7 @@ export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
 export const WATCH_SCREEN = "watch-screen";
 export const WATCH_WAITING = "watch-waiting";
 export const WATCH_REFUSED = "watch-refused";
+export const WATCH_GONE = "watch-gone";
 export const WATCH_STATUS = "watch-status";
 export const WATCH_BACK = "watch-back";
 export const WATCH_RECONNECT = "watch-reconnect";
