@@ -139,9 +139,12 @@ fn setups(base: &str, from: i32, games: i32) -> Vec<ArenaGame> {
         .collect()
 }
 
+/// The commit a log names when its binary was built without git (`commit`).
+pub(crate) const UNKNOWN_COMMIT: &str = "unknown";
+
 /// The commit this checkout is on, for the logs' provenance; `"unknown"` without git.
 fn commit() -> String {
-    build_commit().unwrap_or_else(|| "unknown".to_string())
+    build_commit().unwrap_or_else(|| UNKNOWN_COMMIT.to_string())
 }
 
 /// R1367000: the commit this tool was built from, which the games it plays file as their build:
