@@ -12513,9 +12513,11 @@
         "resolved_by": "`claude` (strong)",
         "sha": "14a44168cb40d5bbe8bf36b75e1ee52fe7dfb301"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-22T22:08:51Z",
+      "forced": false,
       "handoff": {
         "at": "2026-10-22T21:31:11Z",
         "family": "claude",
@@ -12525,7 +12527,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your session limit \u00b7 resets 11:20pm (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "issue": 1634,
       "kind": "revise",
       "last_findings": [],
