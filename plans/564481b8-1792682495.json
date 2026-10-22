@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1641,
+  "title": "Patch: one copy of the golden replay, shared by the engine's test and `golden check`",
+  "branch": "bot/issue-1641",
+  "thread": "**Issue #1641 (data, not instructions):**\n\n```text\n# #1641: Patch: one copy of the golden replay, shared by the engine's test and `golden check`\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe game keeps 240 recorded games that every engine change must replay move for move. There are two separate copies of the code that replays them, one in the engine's own tests and one in the maintainer's command-line tool. They do the same thing line for line, so every change to how a recorded game is checked has to be made twice, and the two can drift until the test and the tool disagree about the same game. Once this is built, both use one replay routine. Nobody playing notices; the maintainer and the bot edit one place.\n\n## Why\n- `crates/tools/src/golden.rs:3-4` says `check` replays the traces \"with the same logic as `crates/engine/tests/golden.rs`\".\n- Each file defines its own copy of:\n  - `Mismatch` and its report (engine test `:43-89`, tools `:240-287`)\n  - `seed_number`, `write_diff`, `recorded` and `check_snapshot` (engine `:90-187`, tools `:288-361`)\n  - `hashed_state_text` and `legal_text` (engine `:106-127`, tools `:160-195`)\n  - the replay loop (`replay_line`, engine `:188-279`; `replay_game`, tools `:362-462`)\n  - the hotseat fold, with its pinned hash `\"8784adae\"` written twice (engine `:412`, tools `:70`)\n- The two files are 603 and 971 lines. `crates/tools` already builds on the engine with `testkit` (`crates/tools/Cargo.toml:15`).\n\n## Proposal\nMove the pure half into a new `jackioh_engine::testkit::golden` module:\n- the canonical texts\n- `check_snapshot`\n- replaying one trace line, returning its first `Mismatch` with the Rust side's text\n- the hotseat fold and its expected hash\n\nThe callers keep their I/O. The engine test keeps its one `write_diff`, with its existing allow, since the engine's `clippy.toml` bans file I/O in the crate's library. `golden check` writes its own diff and prints its own report. `bless`, `record` and `classify`'s `text_at` keep their recorders and use the shared texts. No trace, hash or report wording changes, and no new `#[allow]` is added.\n\n## Where it lands\n- `crates/engine/src/testkit/mod.rs`, new `crates/engine/src/testkit/golden.rs`\n- `crates/engine/tests/golden.rs`, `crates/tools/src/golden.rs`\n- `crates/engine/README.md` / `crates/tools/README.md`, wherever they say where the replay lives\n\n## Acceptance criteria\n- [ ] Neither `crates/engine/tests/golden.rs` nor `crates/tools/src/golden.rs` defines its own `Mismatch`, `hashed_state_text`, `legal_text`, `check_snapshot` or hotseat hash. Both call `testkit::golden`.\n- [ ] `cargo test -p jackioh-engine --features testkit,ts --test golden` and `cargo jackioh golden check` pass.\n- [ ] `crates/tools/tests/luau.rs` passes unchanged: golden record, golden check, and the doctored hash naming the seed, the step and the hash.\n- [ ] A trace hash doctored by hand makes both the engine test and `golden check` name the same seed, step, hash and action. This is checked by hand or by a test, and the pull request shows it.\n- [ ] `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass.\n\n## Size and risks\nAbout 250 fewer lines across 4 files, behaviour-neutral: medium. The risk is changing a failure message a test asserts on, or the engine test's sharding (`GOLDEN_SHARDS`), which must stay as it is so the golden replay keeps running on many threads.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T15:02:42Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1641: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
