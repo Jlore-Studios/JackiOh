@@ -27634,9 +27634,9 @@
     ],
     "idle_since": "2026-10-22T10:22:43Z",
     "last_run": "2026-10-22T10:22:43Z",
-    "provider": "claude-7",
+    "provider": null,
     "requested": false,
-    "run_id": "39762648592",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
