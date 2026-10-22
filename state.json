@@ -16377,6 +16377,10 @@
         {
           "at": "2026-10-22T22:39:16Z",
           "minutes": 6.4
+        },
+        {
+          "at": "2026-10-22T22:53:05Z",
+          "minutes": 5.8
         }
       ],
       "tokens_spent": [
@@ -17035,9 +17039,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-23T00:50:00Z",
-          "utilization": 0.24
+          "utilization": 0.4
         },
-        "observed_at": "2026-10-22T22:39:16Z",
+        "observed_at": "2026-10-22T22:53:05Z",
         "status": "allowed"
       }
     },
