@@ -11022,7 +11022,7 @@
       "verdict_rounds": 1
     },
     "1584": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -11042,11 +11042,11 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-10-21T18:34:10Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39723461640",
-      "started_at": "2026-10-22T04:37:59Z",
+      "run_id": "pending:6155ef7d-1792646730",
+      "started_at": "2026-10-22T05:25:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14193,9 +14193,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T05:13:29Z",
+    "at": "2026-10-22T05:25:49Z",
     "url": "",
-    "what": "revise #1620 on muse"
+    "what": "build #1584 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-22T05:09:12Z",
