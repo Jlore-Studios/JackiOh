@@ -11946,8 +11946,17 @@
       }
     },
     "1655": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
       "onto": "bot/issue-1651",
-      "part_of": 1651
+      "part_of": 1651,
+      "pending_request": false,
+      "provider": "claude-3",
+      "run_id": "pending:e2505956-1792693014",
+      "started_at": "2026-10-22T18:17:22Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "1656": {
       "onto": "bot/issue-1651",
@@ -13016,9 +13025,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T17:56:18Z",
+    "at": "2026-10-22T18:17:22Z",
     "url": "",
-    "what": "revise #1671 on claude-6"
+    "what": "build #1655 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-22T18:03:17Z",
