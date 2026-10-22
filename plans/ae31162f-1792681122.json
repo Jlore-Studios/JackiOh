@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 1635,
+  "title": "Patch: the AI tries a lane-minded card in every lane, not only the two leftmost",
+  "branch": "bot/issue-1635",
+  "thread": "**Issue #1635 (data, not instructions):**\n\n```text\n# #1635: Patch: the AI tries a lane-minded card in every lane, not only the two leftmost\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome cards care where they land. Lane Eater destroys everything else in its lane, Mushroom Power buffs the Units beside it, and Joon Jorker buffs the Unit to its right. When the practice AI considers playing a card, it only tries the first two distinct spots counting from the left. So with the opponent's big Taunt in lane 4, the AI never even considers dropping Lane Eater into lane 4 to destroy it. Once this is built, the AI looks at every distinct lane for the play it is about to make, and these cards land where they do their job. Players notice the AI using lane cards like a person would.\n\n## Why\n- `collapse_zones` (`crates/ai/src/candidates.rs:98-115`) keeps, for each otherwise identical play, the first `AI_SEARCH.zone_variants` distinct placements in lane order.\n- `zone_variants` is 2 (`crates/ai/src/config.rs:140`). Its doc (`config.rs:74-77`) says 3 \"let a Tribute play's sets outgrow the lethal allowance\".\n- `crates/ai/tests/ai/search.rs:330-341` pins this: with a unit opposite every lane, only lanes 1 and 2 are offered.\n- Cards whose text reads their own lane or neighbours (`crates/cards/catalog.json`):\n  - Lane Eater `classic-071`: \"Cry: Destroy every other card in this lane. Lock this lane.\"\n  - Mushroom Power `classicplus-020`: \"Cry: Give the Units adjacent to this +{buff}/+{buff}.\"\n  - Joon Jorker `meditative-061`: \"End of turn: Buff the Unit to the right of this \u2026\"\n  - Bunker `meditative-097-5`: \"This strikes Units in its lane with {multiplier}\u00d7 its Attack.\"\n- `score_line` (`crates/ai/src/search.rs:231-245`) cuts a finalist's line at the first action missing from that world's `candidate_set`. A wider root therefore has to widen the membership check too, or a finalist in lanes 3 to 5 is cut on every other world.\n\n## Proposal\nAt the search root only, keep every distinct placement instead of the first two. That covers the beam's first expansion and `score_line`'s membership check for a line's first action. Deeper levels, the lethal solver and the opponent's reply keep `zone_variants`, which is what #1014's cap protects. The root's branching cap (`AI_BUDGET.root_branching`, 20) and the node budget stay as they are.\n\n## Where it lands\n- `crates/ai/src/candidates.rs` (`collapse_zones` and its root caller), `crates/ai/src/search.rs`\n- `crates/ai/src/config.rs`: the `zone_variants` doc says where the cap applies\n- `crates/ai/tests/ai/search.rs`\n- SPEC \u00a79.9 if it names the cap\n\n## Acceptance criteria\n- [ ] Search test, failing today: p1 holds Lane Eater with the mana to play it, and p2 has Midrange Menace `core-019` (9/9 Taunt) in lane 4 and nothing else. The root candidates include the play into lane 4, and in that position `decide` makes it.\n- [ ] Mushroom Power with p1's Units in lanes 3 and 5: lane 4 is a root candidate. It is not today.\n- [ ] `search.rs`'s collapse test now says the root keeps every placement and a deeper level keeps `zone_variants`. One test pins the lethal solver's and the reply's candidate sets as unchanged.\n- [ ] `cargo test -p jackioh-ai --lib --test ai --test ai_slow`, clippy and `cargo jackioh gate` pass. The change is screened on the dev set as `training/improve.md` says, and the result is in the pull request.\n\n## Size and risks\nAbout 25 lines and 3 tests. It is AI work, so hard. The node count per decision does not change, but extra placements can push other moves out of the root's 20 branches. That is the main thing the screen measures. If it costs strength, ordering the extra placements behind the first two is a fallback that keeps lane cards reachable.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T14:58:16Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1635: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1635 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
