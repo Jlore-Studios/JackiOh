@@ -12181,14 +12181,17 @@
       "asks": [],
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "onto": "bot/issue-1651",
       "part_of": 1651,
       "pending_request": false,
       "provider": "claude-6",
+      "round_tier": "",
       "run_id": "39842703759",
       "started_at": "2026-10-22T19:44:15Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1669": {
       "action": "revise",
