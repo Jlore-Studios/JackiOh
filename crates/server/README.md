@@ -647,8 +647,9 @@ series still makes its picks.
 A strength's `skill` is the chance each of a bot's decisions follows the AI, the rest being a random
 legal action (`crates/ai/README.md`, Matches). `expected_elo_for_skill(skill)` in `config.rs` is the
 Elo a bot at that skill is expected to hold: `SKILL_ELO_TABLE` read by straight lines between its
-rows, clamped to its ends, with the full-skill reference at `SKILL_ELO_ANCHOR` (1200: the strongest
-bot's old seed, so that a player who has climbed still finds a bot to be paired with, R1453). Each
+rows, clamped to its ends, with the full-skill reference at `SKILL_ELO_ANCHOR` (1832 since generation 13's
+calibration, `docs/bot-calibration.md`, and 1200, the strongest bot's old seed, before it: high, so that a
+player who has climbed still finds a bot to be paired with, R1453). Each
 strength's `seed_rating` is that function at its skill, and a test holds them equal. The table is a
 prior: a bot's live Glicko-2 rating (R610) is the calibration that goes on.
 
@@ -659,6 +660,11 @@ prior: a bot's live Glicko-2 rating (R610) is the calibration that goes on.
 | 0.5 | 900 | −300 | 32 of 200 (−288) | 172 of 200 (+315, −312) |
 | 0.75 | 1080 | −123 | 66 of 200 (−123) | not run |
 | 1 (the reference) | 1200 | 0 | | |
+
+This table is R747000's measurement, held at 1200. Since generation 13 the rows of `SKILL_ELO_TABLE` are
+R748000's calibration of the strengths instead, 1216, 1383, 1536, 1692 and 1832 (`docs/bot-calibration.md`,
+Results). Its gaps to the reference agree with this table's to within 21 Elo, and the anchor moved by the
+promotions of generations 10 to 13.
 
 The games are `cargo jackioh arena` between this build's AI at each skill and the reference, and
 between each skill and the random policy, in a release build, on seeds a run's own name gives
