@@ -159,7 +159,7 @@ describe("issue #479 a successful sign-in lands on the main menu", () => {
     expect(await screen.findByTestId(landingTestid.root, undefined, SLOW)).toBeInTheDocument();
   });
 
-  it("a pending account lands on the main menu as well, and its online screens still lead to the code screen", async () => {
+  it("a pending account lands on the main menu as well, and its gated doors still lead to the code screen", async () => {
     stubFetch("pending");
     at(paths.landing);
     render(<App />);
@@ -169,7 +169,9 @@ describe("issue #479 a successful sign-in lands on the main menu", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
-    fireEvent.click(await screen.findByTestId(landingTestid.playOnline, undefined, SLOW));
+    // #1577: no door leads to an online screen anymore; the Collection door is gated, so a
+    // pending account following it lands on the code screen. (The Play door needs no account.)
+    fireEvent.click(await screen.findByTestId(landingTestid.collection, undefined, SLOW));
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.invite);
     }, SLOW);

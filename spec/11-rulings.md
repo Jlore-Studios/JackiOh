@@ -479,4 +479,8 @@ The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195
 
 **[[R1582000]] counts four more of the player's statistics (issue #1582, part of #1576, 2026-10-21)**: the device's tally ([[R639]]) also counts, per card, what the opponent's Allure took, the lethal blow of a game the player won, the player's Traps fired and the player's Units standing when a game they won ended, read off the views and their new events for the landing's showcase; none syncs ([[R1142000]]). It takes R1582000, the first number of issue #1582's block. It edits [[§9.11]] and amends [[R639]].
 
+**[[R1577000]] gives the tavern landing's three doors their destinations (issue #1577, part of #1576)**: Play leads to `/practice`, the one play screen needing no account; Collection to `/collection`; Shop to a new `/shop` rendering the same panel the account screen shows until the Shop part removes it there. No old path moves, so no redirect is added. It edits [[§9.5]].
+
+**[[R1596000]] files again a game record that failed to write (issue #1596, 2026-10-22)**: [[R376]] only logged a failed filing, so the game was lost once the purge took its log; the retention loop now refiles it while the log is held. It takes R1596000, the first number of issue #1596's block, amends [[R376]] and edits [[§9.11]].
+
 **[[R1583000]] is the Pocket Pick and the player base's play rates (issue #1583, part of #1576, 2026-10-21)**: the server serves each card's share of the human live seats that played it, read off the totals ([[R1044000]]), and the client picks the card whose device rate ([[R639]]) is the most times it, once the device has logged enough games and plays. It takes R1583000, the first number of issue #1583's block, and edits [[§9.11]].

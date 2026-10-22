@@ -138,6 +138,7 @@ const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
 const CollectionRoute = lazy(() => import("./routes/collection.tsx"));
+const ShopRoute = lazy(() => import("./routes/shop.tsx"));
 const StatsRoute = lazy(() => import("./routes/stats.tsx"));
 const CreatorRoute = lazy(() => import("./routes/creator.tsx"));
 // #936: Play together and a friend's game watched.
@@ -727,6 +728,14 @@ export function App(): ReactElement {
               <CollectionRoute token={account.token} />
             </EngineGate>
           )}
+        </Gated>
+      );
+    }
+    // #1577: the shop reads only the server's projections, never the engine, so no EngineGate.
+    if (path === paths.shop) {
+      return (
+        <Gated key={path}>
+          {(account) => <ShopRoute token={account.token} />}
         </Gated>
       );
     }
