@@ -5,7 +5,8 @@
 //! set tracks (§14.7) and its quests (§14.9, `quests::move_quests`, [[R1304001]]). Practice
 //! earning calls into this same hook: it owns no transaction of its own, so each caller pays in
 //! the transaction that records its game, and a failure rolls the game back with it. A bot's side
-//! is paid nothing and moves no quest: a ladder bot earns nothing ([[R1454]]).
+//! is paid nothing and moves no quest: a ladder bot earns nothing ([[R1454]]). It answers what it
+//! paid as the game's [`GameEconomy`], which its callers hand the seat it paid (#1657).
 //!
 //! - Where the server ran the match, it counts the actions from its own log and pays in the
 //!   transaction that records the result; the client reports nothing. `api::results`'s write pays
@@ -19,7 +20,7 @@
 //! - A day's games pay an account at most `JLORE_GAMES_DAILY_CAP` Jlore, every mode's together,
 //!   counted over the UTC day the game ended in ([[R1483000]]). The game that crosses
 //!   the cap is paid the part that fits and the ones after it no Jlore, with no Jlore row; XP and
-//!   quests are paid in full. Quest and track Jlore neither count nor stop. [`GameRewards`] says
+//!   quests are paid in full. Quest and track Jlore neither count nor stop. [`GameEconomy`] says
 //!   what was paid and whether the cap held some back.
 //! - XP is [`game_xp`]: `XP_PER_ACTION` for each counted action, `XP_WIN_BONUS` more for a win,
 //!   never above `XP_GAME_CAP`, so a loop of empty actions cannot farm it; a practice game earns
@@ -45,11 +46,14 @@
 
 use jackioh_engine::wire::{SHIPPED_SETS, SetName, newest_shipped_set};
 use jackioh_engine::{ActionBody, PlayerId};
+use serde::{Deserialize, Serialize};
 
-use super::math::level_for_xp;
-use super::quests::{GameTally, move_quests};
-use super::store::{EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, TrackGrant};
-use super::track_rewards::reward_for_level;
+use super::math::{level_for_xp, level_span_xp, xp_to_next_level};
+use super::quests::{GameTally, QuestDef, move_quests, quest_xp};
+use super::store::{
+    EconomyReason, InventoryGrant, InventoryItem, JloreGrant, JloreReason, SetTrack, TrackGrant,
+};
+use super::track_rewards::{LevelReward, reward_for_level};
 use crate::config::{
     JLORE_CONQUEST_LOSS, JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP,
     JLORE_LADDER_LOSS, JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, JLORE_UNRANKED_LOSS,
@@ -100,14 +104,87 @@ pub struct GameSummary {
     pub tally: GameTally,
 }
 
-/// What [`pay_game_rewards`] paid one game ([[R1483000]]): all zero for a bot's side.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct GameRewards {
+/// Where one set track stands (§14.7), as `GET /api/tracks` spells it (`api::economy::get_tracks`):
+/// its level and XP, the XP its level spans and the XP to the next level, so a client draws the bar
+/// without knowing the curve. A track on its last level, `SET_TRACK_LEVELS`, has neither
+/// ([[R1302005]]).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackPoint {
+    pub level: i64,
+    pub xp: i64,
+    pub level_xp: Option<i64>,
+    pub xp_to_next: Option<i64>,
+}
+
+impl TrackPoint {
+    /// A track on `level` holding `xp` XP.
+    pub fn at(level: i64, xp: i64) -> TrackPoint {
+        let next = level < i64::from(SET_TRACK_LEVELS);
+        TrackPoint {
+            level,
+            xp,
+            level_xp: next.then(|| level_span_xp(xp)),
+            xp_to_next: next.then(|| xp_to_next_level(xp)),
+        }
+    }
+}
+
+/// A level a payout reached and what it paid ([`reward_for_level`]).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LevelReached {
+    pub level: i64,
+    pub rewards: LevelReward,
+}
+
+/// How far one game's payout moved one set track, the XP of every quest it completed included:
+/// where the track stood before and after, and each level it paid, in order. A track the payout
+/// unlocked stood on its first level with no XP before, as `GET /api/tracks` reads a locked one.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackGain {
+    pub set_id: String,
+    pub before: TrackPoint,
+    pub after: TrackPoint,
+    pub levels: Vec<LevelReached>,
+}
+
+/// A quest a game completed (§14.9), named as `GET /api/quests` names it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestPaid {
+    pub quest_id: String,
+    pub title: String,
+    pub jlore: i64,
+    pub xp: i64,
+}
+
+impl QuestPaid {
+    fn of(def: &QuestDef) -> QuestPaid {
+        QuestPaid {
+            quest_id: def.id.clone(),
+            title: def.title.clone(),
+            jlore: i64::from(def.jlore),
+            xp: quest_xp(def),
+        }
+    }
+}
+
+/// What [`pay_game_rewards`] paid one game (#1657): its own Jlore and XP, whether the daily cap
+/// held some of that Jlore back ([[R1483000]]), each set track it moved and each quest it
+/// completed. All zero and empty for a bot's side.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct GameEconomy {
     /// The Jlore written: the game's rate, or what was left under the daily cap.
     pub jlore: i64,
     pub xp: i64,
     /// Whether the daily cap held part or all of the game's Jlore back.
     pub jlore_capped: bool,
+    /// One per track the payout moved, in catalog order, as `GET /api/tracks` lists them.
+    pub tracks: Vec<TrackGain>,
+    pub quests: Vec<QuestPaid>,
 }
 
 /// One XP payout onto every active set track (§14.7): a game's or a completed quest's.
@@ -198,15 +275,18 @@ pub fn utc_day_bounds(at: i64) -> (i64, i64) {
 
 /// Pays one finished game's rewards in the caller's transaction: its Jlore, held to the account's
 /// daily cap ([[R1483000]]), its XP on every active set track ([`pay_xp`]), and then moves its
-/// quests, which may pay too ([[R1304001]]). A bot's side writes nothing.
-pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<GameRewards> {
+/// quests, which may pay too ([[R1304001]]). A bot's side writes nothing. Answers what it paid,
+/// each track's gain read off the account's tracks before and after the whole payout, so a
+/// completed quest's XP is in the same gain as the game's.
+pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<GameEconomy> {
     if summary.bot {
-        return Ok(GameRewards::default());
+        return Ok(GameEconomy::default());
     }
     // [[R1301003]]: one account's payouts run one after the other, as its openings do: the
     // account's economy lock, taken before any track or quest is read. A completed quest paying
     // through `pay_xp` in this same transaction is unaffected: the advisory lock is re-entrant.
     tx.economy_lock_account(&summary.profile_id).await?;
+    let before = tx.economy_tracks_get(&summary.profile_id).await?;
     let rate = i64::from(game_jlore(summary.mode, summary.won));
     let (from, until) = utc_day_bounds(summary.at);
     let paid_today = tx
@@ -238,12 +318,46 @@ pub async fn pay_game_rewards(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreRe
         },
     )
     .await?;
-    move_quests(tx, summary).await?;
-    Ok(GameRewards {
+    let completed = move_quests(tx, summary).await?;
+    let after = tx.economy_tracks_get(&summary.profile_id).await?;
+    Ok(GameEconomy {
         jlore,
         xp,
         jlore_capped: jlore < rate,
+        tracks: track_gains(&before, &after),
+        quests: completed.into_iter().map(QuestPaid::of).collect(),
     })
+}
+
+/// A [`TrackGain`] for each shipped set's track that differs from `before` to `after`, in catalog
+/// order. A track with no row stands on its first level with no XP and no level paid, as
+/// [`pay_xp`] reads it; the levels a gain lists are those paid in between, `(claimed, claimed']`.
+fn track_gains(before: &[SetTrack], after: &[SetTrack]) -> Vec<TrackGain> {
+    let held = |tracks: &[SetTrack], set: SetName| {
+        tracks
+            .iter()
+            .find(|track| track.set_id == set.as_str())
+            .map(|track| (track.level, track.xp, track.rewards_claimed))
+            .unwrap_or((SET_TRACK_FIRST_LEVEL, 0, 0))
+    };
+    SHIPPED_SETS
+        .iter()
+        .filter_map(|set| {
+            let (old_level, old_xp, old_claimed) = held(before, *set);
+            let (level, xp, claimed) = held(after, *set);
+            ((level, xp, claimed) != (old_level, old_xp, old_claimed)).then(|| TrackGain {
+                set_id: set.as_str().to_string(),
+                before: TrackPoint::at(old_level, old_xp),
+                after: TrackPoint::at(level, xp),
+                levels: (old_claimed + 1..=claimed)
+                    .map(|level| LevelReached {
+                        level,
+                        rewards: reward_for_level(level),
+                    })
+                    .collect(),
+            })
+        })
+        .collect()
 }
 
 /// What the starting rewards' rows name as their `reference` ([`pay_starting_rewards`]).

@@ -4849,6 +4849,152 @@ mod the_result_says_what_the_daily_cap_held_back {
 }
 
 // ---------------------------------------------------------------------------
+// #1657 — a finished match's views carry what its result paid each seat
+// ---------------------------------------------------------------------------
+
+mod the_result_s_views_carry_what_it_paid_each_seat {
+    use super::*;
+    use jackioh_engine::wire::newest_shipped_set;
+    use jackioh_server::config::{JLORE_LADDER_LOSS, JLORE_LADDER_WIN, SPECTATE_DELAY_MS};
+
+    /// The `economy` of each `view` frame a client was sent, in order (`None`: no such key).
+    fn economies(socket: &Client) -> Vec<Option<Value>> {
+        socket
+            .of_type("view")
+            .iter()
+            .map(|frame| frame.get("economy").cloned())
+            .collect()
+    }
+
+    /// `profile`'s newest set's track as the store holds it: its level, its XP and the levels paid.
+    async fn newest_track(app: &App, profile: &str) -> (i64, i64, i64) {
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        let tracks = tx.economy_tracks_get(profile).await.expect("the tracks");
+        tx.commit().await.expect("commit");
+        tracks
+            .iter()
+            .find(|track| track.set_id == newest_shipped_set().as_str())
+            .map(|track| (track.level, track.xp, track.rewards_claimed))
+            .unwrap_or_else(|| panic!("{profile} has no newest track: {tracks:?}"))
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn each_seat_is_sent_its_own_pay_and_a_watcher_and_a_rebuilt_actor_none() {
+        let h = harness(Options {
+            economy_live: true,
+            ..Options::default()
+        })
+        .await;
+        let watcher = Client::new();
+        h.actor
+            .attach_watcher(P1, "watcher-1", watcher.socket())
+            .expect("the watcher is let in");
+        h.idle().await;
+
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        assert_eq!(
+            last_view(&h.p1)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+
+        // Each seat's view of the finished game carries what the result paid its own account: its
+        // game's Jlore and XP, and its own newest track from its first level with no XP to where
+        // the store holds it now, every level paid on the way.
+        let mut paid = Vec::new();
+        for (socket, profile, jlore) in [
+            (&h.p1, "profile-1", JLORE_LADDER_LOSS),
+            (&h.p2, "profile-2", JLORE_LADDER_WIN),
+        ] {
+            let sent = economies(socket);
+            let economy = sent
+                .last()
+                .cloned()
+                .flatten()
+                .unwrap_or_else(|| panic!("{profile}'s last view carries no economy: {sent:?}"));
+            assert!(
+                sent[..sent.len() - 1].iter().all(Option::is_none),
+                "the views before the result carry nothing: {sent:?}"
+            );
+            let (level, xp, claimed) = newest_track(&h.app, profile).await;
+            assert_eq!(economy["jlore"], json!(jlore), "{profile}: {economy}");
+            assert_eq!(economy["xp"], json!(xp), "{profile}: {economy}");
+            assert_eq!(economy["quests"], json!([]), "{profile}: {economy}");
+            let tracks = economy["tracks"].as_array().expect("the tracks");
+            assert_eq!(tracks.len(), 1, "{profile}: {economy}");
+            assert_eq!(tracks[0]["setId"], json!(newest_shipped_set().as_str()));
+            assert_eq!(
+                (&tracks[0]["before"]["level"], &tracks[0]["before"]["xp"]),
+                (&json!(1), &json!(0)),
+                "{profile}: {economy}"
+            );
+            assert_eq!(
+                (&tracks[0]["after"]["level"], &tracks[0]["after"]["xp"]),
+                (&json!(level), &json!(xp)),
+                "{profile}: {economy}"
+            );
+            let levels: Vec<i64> = tracks[0]["levels"]
+                .as_array()
+                .expect("the levels")
+                .iter()
+                .map(|reached| reached["level"].as_i64().expect("a level"))
+                .collect();
+            assert_eq!(levels, (1..=claimed).collect::<Vec<_>>(), "{profile}: {economy}");
+            paid.push(economy);
+        }
+        assert_ne!(paid[0], paid[1], "each seat is sent its own, not the other's");
+
+        // A watcher is sent the finished game, and never a seat's pay.
+        sleep_settled(SPECTATE_DELAY_MS + SECOND).await;
+        let watched = watcher.of_type("view");
+        assert!(
+            watched
+                .iter()
+                .any(|frame| frame["view"]["result"] == json!({ "winner": "p2", "reason": "concede" })),
+            "the watcher saw the end: {watched:?}"
+        );
+        assert!(
+            watched.iter().all(|frame| frame.get("economy").is_none()),
+            "{watched:?}"
+        );
+
+        // A reconnect to this actor is sent its own again.
+        let (again1, again2) = (Client::new(), Client::new());
+        h.actor.attach(P1, again1.socket());
+        h.actor.attach(P2, again2.socket());
+        h.idle().await;
+        assert_eq!(economies(&again1), vec![Some(paid[0].clone())]);
+        assert_eq!(economies(&again2), vec![Some(paid[1].clone())]);
+
+        // An actor rebuilt on the finished match paid nothing, so it sends no pay.
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        for client in [&h.p1, &h.p2, &again1, &again2] {
+            client.drop_transport();
+        }
+        settle().await;
+        let app = h.app.clone();
+        drop(h);
+        settle().await;
+        assert_eq!(
+            app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        let rebuilt = app
+            .matches
+            .actor_for(&app, MATCH_ID)
+            .await
+            .expect("the rebuilt actor");
+        let (back1, back2) = (Client::new(), Client::new());
+        rebuilt.attach(P1, back1.socket());
+        rebuilt.attach(P2, back2.socket());
+        rebuilt.idle().await;
+        settle().await;
+        assert_eq!(economies(&back1), vec![None]);
+        assert_eq!(economies(&back2), vec![None]);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R672 — a finished actor leaves the registry once its rematch window has passed
 // ---------------------------------------------------------------------------
 

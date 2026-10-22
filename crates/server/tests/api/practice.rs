@@ -20,22 +20,26 @@ use std::time::{Duration, Instant};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use jackioh_engine::wire::newest_shipped_set;
 use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, PlayerId, Rng, SandboxOp};
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_SEED_TTL_SECONDS,
-    PRACTICE_SEEDS_OPEN_MAX, PRACTICE_VERIFY_CONCURRENCY, STARTER_CARDS,
+    PRACTICE_SEEDS_OPEN_MAX, PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
+    STARTER_CARDS,
 };
 use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
 use jackioh_server::db::store::{LastBoardKind, ProfileStatus};
+use jackioh_server::economy::math::{level_span_xp, xp_to_next_level};
 use jackioh_server::economy::practice::{self, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
-use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action};
+use jackioh_server::economy::rewards::{GameMode, game_xp, is_player_action, track_level};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, JloreGrant, JloreReason, PracticeDeck, PracticeSeed, PracticeSetup,
     QuestChange, QuestGrant,
 };
+use jackioh_server::economy::track_rewards::reward_for_level;
 
 use crate::support::deps::{add_user, call, test_app as built_app};
 use crate::support::store::{fake_ref, store};
@@ -282,6 +286,38 @@ fn refusal(reason: &str) -> Value {
     json!({ "paid": false, "reason": reason })
 }
 
+/// A paid claim's answer for A's first paid game (#1657), its Jlore `jlore` and its XP `xp`: the
+/// newest set's track moved from its first level with no XP, each level that XP reached paid, the
+/// first among them, and no quest completed, since none has arrived yet (R1304000).
+fn first_paid(jlore: impl Into<i64>, xp: i64, capped: bool) -> Value {
+    let point = |level: i64, xp: i64| {
+        let next = level < i64::from(SET_TRACK_LEVELS);
+        json!({
+            "level": level,
+            "xp": xp,
+            "levelXp": next.then(|| level_span_xp(xp)),
+            "xpToNext": next.then(|| xp_to_next_level(xp)),
+        })
+    };
+    let level = track_level(xp);
+    let levels: Vec<Value> = (SET_TRACK_FIRST_LEVEL..=level)
+        .map(|level| json!({ "level": level, "rewards": reward_for_level(level) }))
+        .collect();
+    json!({
+        "paid": true,
+        "jlore": jlore.into(),
+        "xp": xp,
+        "jloreCapped": capped,
+        "tracks": [{
+            "setId": newest_shipped_set().as_str(),
+            "before": point(SET_TRACK_FIRST_LEVEL, 0),
+            "after": point(level, xp),
+            "levels": levels,
+        }],
+        "quests": [],
+    })
+}
+
 // ---------------------------------------------------------------------------
 // Honest games pay practice rates.
 // ---------------------------------------------------------------------------
@@ -300,7 +336,7 @@ async fn an_honest_loss_pays_practice_rates() {
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp, "jloreCapped": false })
+        first_paid(JLORE_PRACTICE_LOSS, xp, false)
     );
     assert_paid(&app, &seed, JLORE_PRACTICE_LOSS, xp).await;
 }
@@ -313,7 +349,7 @@ async fn an_honest_win_pays_practice_rates() {
     let xp = game_xp(GameMode::Practice, human_actions(log), true);
     assert_eq!(
         claim(&app, &token, seed, "win", log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_WIN, "xp": xp, "jloreCapped": false })
+        first_paid(JLORE_PRACTICE_WIN, xp, false)
     );
     assert_paid(&app, seed, JLORE_PRACTICE_WIN, xp).await;
 }
@@ -341,7 +377,7 @@ async fn a_game_on_a_list_of_cards_pays_too() {
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp, "jloreCapped": false })
+        first_paid(JLORE_PRACTICE_LOSS, xp, false)
     );
 }
 
@@ -414,7 +450,7 @@ async fn r1310004_practice_takes_cards_the_account_does_not_own() {
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": JLORE_PRACTICE_LOSS, "xp": xp, "jloreCapped": false })
+        first_paid(JLORE_PRACTICE_LOSS, xp, false)
     );
 }
 
@@ -480,6 +516,88 @@ async fn r1304001_a_paid_practice_game_moves_the_quests_by_what_it_did() {
     assert!(
         (1..=cards.target).contains(&played[0].0) && played[0].1 == Some(reference),
         "the cards the human played count: {played:?}"
+    );
+}
+
+/// The newest set's track as `GET /api/tracks` serves it to A: its `level`, `xp`, `levelXp` and
+/// `xpToNext`, and how many levels have paid.
+async fn newest_track(app: &Arc<App>, token: &str) -> (Value, i64) {
+    let (status, _, body) = call(app, "GET", "/api/tracks", Some(token), Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    let track = body["tracks"]
+        .as_array()
+        .expect("the tracks")
+        .iter()
+        .find(|track| track["setId"] == newest_shipped_set().as_str())
+        .cloned()
+        .expect("the newest track");
+    let point = json!({
+        "level": track["level"],
+        "xp": track["xp"],
+        "levelXp": track["levelXp"],
+        "xpToNext": track["xpToNext"],
+    });
+    (point, track["rewardsClaimed"].as_i64().expect("a count"))
+}
+
+#[tokio::test]
+async fn a_paid_claim_answers_the_tracks_it_moved_and_the_quests_it_completed() {
+    let (app, token) = authed().await;
+    let (seed, setup, log, _) = honest_win();
+    insert(&app, seed, setup, now_ms()).await;
+    // A holds the pool's one-win quest, which this game completes, and none falls due meanwhile.
+    store!(app, |t| t.economy_quests_set_next_due(
+        A,
+        Some(now_ms() + 10 * quest_interval_ms())
+    ));
+    let win = pool()
+        .iter()
+        .filter(|quest| quest.goal == QuestGoal::WinGames)
+        .min_by_key(|quest| quest.target)
+        .expect("the pool has a win quest");
+    assert_eq!(win.target, 1, "one win completes it");
+    assert!(store!(app, |t| t.economy_quests_change(&QuestGrant {
+        profile_id: A.to_owned(),
+        quest_id: win.id.clone(),
+        change: QuestChange::Arrived,
+        progress: 0,
+        reason: EconomyReason::Dev,
+        reference: None,
+        dev: true,
+        at: now_ms(),
+    })));
+    let (status, _, held) = call(&app, "GET", "/api/quests", Some(&token), Value::Null).await;
+    assert_eq!(status, 200, "{held}");
+    let named = &held["quests"][0];
+    assert_eq!(named["questId"], json!(win.id));
+    let (was, claimed) = newest_track(&app, &token).await;
+
+    let answer = claim(&app, &token, seed, "win", log).await;
+    let (now, now_claimed) = newest_track(&app, &token).await;
+    let levels: Vec<Value> = (claimed + 1..=now_claimed)
+        .map(|level| json!({ "level": level, "rewards": reward_for_level(level) }))
+        .collect();
+    assert!(!levels.is_empty(), "the game and the quest reach a level");
+    assert_eq!(
+        answer,
+        json!({
+            "paid": true,
+            "jlore": JLORE_PRACTICE_WIN,
+            "xp": game_xp(GameMode::Practice, human_actions(log), true),
+            "jloreCapped": false,
+            "tracks": [{
+                "setId": newest_shipped_set().as_str(),
+                "before": was,
+                "after": now,
+                "levels": levels,
+            }],
+            "quests": [{
+                "questId": named["questId"],
+                "title": named["title"],
+                "jlore": named["jlore"],
+                "xp": named["xp"],
+            }],
+        })
     );
 }
 
@@ -921,7 +1039,7 @@ async fn r1483000_a_capped_claim_pays_xp_reports_zero_jlore_and_writes_no_game_r
     assert!(xp > 0, "a conceded game still moved");
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": 0, "xp": xp, "jloreCapped": true })
+        first_paid(0, xp, true)
     );
     assert_eq!(
         game_rows(&app).await,
@@ -946,7 +1064,7 @@ async fn r1483000_a_claim_that_crosses_the_cap_pays_the_remainder() {
     let xp = game_xp(GameMode::Practice, human_actions(&log), false);
     assert_eq!(
         claim(&app, &token, &seed, "loss", &log).await,
-        json!({ "paid": true, "jlore": left, "xp": xp, "jloreCapped": true })
+        first_paid(left, xp, true)
     );
     let paid: Vec<(i64, Option<String>)> = game_rows(&app)
         .await
@@ -1102,7 +1220,7 @@ async fn r1303002_the_ai_rerun_matches_the_game_the_worker_played() {
             &fixture.log
         )
         .await,
-        json!({ "paid": true, "jlore": jlore, "xp": xp, "jloreCapped": false }),
+        first_paid(jlore, xp, false),
         "{rerecord}"
     );
     assert_paid(&app, &fixture.seed, jlore, xp).await;

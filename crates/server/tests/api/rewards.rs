@@ -43,7 +43,7 @@ use jackioh_server::duos::store::{DuosActionRow, DuosMatch};
 use jackioh_server::duos::{ceiling_draw, finish_match};
 use jackioh_server::economy::math::total_xp_for_level;
 use jackioh_server::economy::quests::{QuestGoal, pool, quest_interval_ms};
-use jackioh_server::economy::rewards::{self, GameMode, track_level};
+use jackioh_server::economy::rewards::{self, GameEconomy, GameMode, track_level};
 use jackioh_server::economy::store::{
     EconomyLedger, EconomyReason, InventoryEntry, InventoryItem, JloreGrant, JloreReason, QuestChange,
     QuestGrant, SetTrack, TrackGrant,
@@ -1629,6 +1629,11 @@ mod coop {
     /// Ends the match with `result` at `at` in a transaction of its own, as the actor does;
     /// whether this write was the one that landed it.
     async fn finish(app: &App, result: &DuosResult, at: i64) -> bool {
+        finish_paying(app, result, at).await.is_some()
+    }
+
+    /// `finish`, answering what the write that landed paid each person (#1657).
+    async fn finish_paying(app: &App, result: &DuosResult, at: i64) -> Option<[Option<GameEconomy>; 2]> {
         let mut t = app.db.begin(None).await.expect("a store transaction begins");
         let landed = finish_match(&mut t, app, &coop_match(), result, at)
             .await
@@ -1667,6 +1672,44 @@ mod coop {
             rewards::game_xp(GameMode::Coop, 1, true)
         );
         assert_eq!(quest_progress(&app, A, &quest).await, 2);
+    }
+
+    #[tokio::test]
+    async fn a_coop_result_answers_each_person_their_own_pay() {
+        let app = coop_game().await;
+        let paid = finish_paying(&app, &won_by(Team::A), now_ms())
+            .await
+            .expect("this write landed");
+        // A1 sent three moves and A2 one (`coop_game_on`'s log), each answered its own.
+        for ((profile, moves), economy) in [(A, 3), (B, 1)].into_iter().zip(paid) {
+            let economy = economy.unwrap_or_else(|| panic!("{profile} was paid"));
+            let xp = rewards::game_xp(GameMode::Coop, moves, true);
+            assert_eq!(
+                (economy.jlore, economy.xp, economy.jlore_capped),
+                (i64::from(JLORE_COOP_WIN), xp, false),
+                "{profile}"
+            );
+            let tracks: Vec<(String, i64, i64)> = economy
+                .tracks
+                .iter()
+                .map(|gain| (gain.set_id.clone(), gain.before.xp, gain.after.xp))
+                .collect();
+            assert_eq!(
+                tracks,
+                vec![(newest().as_str().to_owned(), 0, newest_xp(&app, profile).await)],
+                "{profile}"
+            );
+            assert_eq!(newest_xp(&app, profile).await, xp, "{profile}");
+        }
+
+        // A repeat of the write pays nothing, so it answers nothing.
+        assert_eq!(finish_paying(&app, &won_by(Team::B), now_ms()).await, None);
+        // Nor does a game the economy does not pay.
+        let off = coop_game_on(economy_app(false).await).await;
+        assert_eq!(
+            finish_paying(&off, &won_by(Team::A), now_ms()).await,
+            Some([None, None])
+        );
     }
 
     #[tokio::test]
@@ -1738,5 +1781,305 @@ mod coop {
             newest_xp(&app, A).await,
             rewards::game_xp(GameMode::Coop, 3, true)
         );
+    }
+}
+
+// #1657: a finished game's answer carries what it paid each seat: each set track it moved, as
+// `GET /api/tracks` reads it before and after, every level it paid with that level's rewards, and
+// the quests it completed, as `GET /api/quests` names them.
+
+mod the_answer_carries_what_it_paid {
+    use super::*;
+    use jackioh_server::api::results::{Recorded, record_result_with_economy};
+    use jackioh_server::economy::quests::quest_xp;
+
+    /// A and B as signed-in accounts on the ranked match `MATCH_ID`, and their tokens.
+    async fn authed() -> (Arc<App>, [String; 2]) {
+        let app = test_app().await;
+        fresh_store(&app).await;
+        for (id, user) in [(A, "user-a"), (B, "user-b")] {
+            seed_profile(
+                &app,
+                json!({ "id": id, "userId": user, "status": "active", "inMatchId": MATCH_ID }),
+            )
+            .await;
+        }
+        create_match(&app, MATCH_ID, true, false).await;
+        let tokens = [
+            add_user(&app, "user-a", "a@example.test", true),
+            add_user(&app, "user-b", "b@example.test", true),
+        ];
+        (app, tokens)
+    }
+
+    /// The newest set's track as `GET /api/tracks` serves it to `token`'s account: its point
+    /// (`level`, `xp`, `levelXp`, `xpToNext`) and how many levels have paid.
+    async fn newest_point(app: &Arc<App>, token: &str) -> (Value, i64) {
+        let (status, _, body) = call(app, "GET", "/api/tracks", Some(token), Value::Null).await;
+        assert_eq!(status, 200, "{body}");
+        let track = body["tracks"]
+            .as_array()
+            .expect("the tracks")
+            .iter()
+            .find(|track| track["setId"] == newest().as_str())
+            .cloned()
+            .expect("the newest track");
+        let point = json!({
+            "level": track["level"],
+            "xp": track["xp"],
+            "levelXp": track["levelXp"],
+            "xpToNext": track["xpToNext"],
+        });
+        (point, track["rewardsClaimed"].as_i64().expect("a count"))
+    }
+
+    /// The levels a gain lists between `claimed` and `now_claimed` levels paid, each with its rewards.
+    fn levels_paid(claimed: i64, now_claimed: i64) -> Value {
+        Value::Array(
+            (claimed + 1..=now_claimed)
+                .map(|level| json!({ "level": level, "rewards": j(&reward_for_level(level)) }))
+                .collect(),
+        )
+    }
+
+    /// `record_on` for `MATCH_ID`, answering what the write paid each seat.
+    async fn record_paying(app: &Arc<App>, outcome: TerminalOutcome) -> Recorded {
+        record_result_with_economy(
+            app,
+            RecordResultInput {
+                match_id: MATCH_ID.to_owned(),
+                seats: seats(),
+                outcome,
+                turns: 3,
+                at: now_ms(),
+                last_boards: None,
+                final_hash: None,
+            },
+        )
+        .await
+        .expect("the result is written")
+    }
+
+    fn a_wins() -> TerminalOutcome {
+        play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })])
+    }
+
+    #[tokio::test]
+    async fn a_result_answers_each_seat_its_own_tracks_before_and_after_and_the_levels_reached() {
+        install_test_cards();
+        let (app, [token_a, token_b]) = authed().await;
+        // A's newest track one XP short of its third level, its first two paid; B's untouched.
+        grant_track(&app, A, newest(), total_xp_for_level(3) - 1, 2, 2).await;
+        let before = [
+            newest_point(&app, &token_a).await,
+            newest_point(&app, &token_b).await,
+        ];
+        let mut log = actions_of("p1", 10);
+        log.extend(actions_of("p2", 3));
+        append_log_to(&app, MATCH_ID, &log).await;
+        let recorded = record_paying(&app, a_wins()).await;
+        let after = [
+            newest_point(&app, &token_a).await,
+            newest_point(&app, &token_b).await,
+        ];
+
+        for (index, (seat, won, actions, jlore)) in [
+            (PlayerId::P1, true, 10, JLORE_LADDER_WIN),
+            (PlayerId::P2, false, 3, JLORE_LADDER_LOSS),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let ((was, claimed), (now, now_claimed)) = (&before[index], &after[index]);
+            assert!(now_claimed > claimed, "{seat}'s game reached a level");
+            let paid = recorded.economy[seat]
+                .as_ref()
+                .unwrap_or_else(|| panic!("{seat} was paid"));
+            assert_eq!(
+                j(paid),
+                json!({
+                    "jlore": jlore,
+                    "xp": game_xp(actions, won),
+                    "jloreCapped": false,
+                    "tracks": [{
+                        "setId": newest().as_str(),
+                        "before": was,
+                        "after": now,
+                        "levels": levels_paid(*claimed, *now_claimed),
+                    }],
+                    "quests": [],
+                }),
+                "{seat}"
+            );
+        }
+        // B's track is new to the payout: it stood on its first level with no XP, and its first
+        // level paid as its first XP landed.
+        assert_eq!(before[1].0["level"], json!(SET_TRACK_FIRST_LEVEL));
+        assert_eq!(before[1].0["xp"], json!(0));
+    }
+
+    #[tokio::test]
+    async fn a_game_that_reaches_no_level_answers_no_levels() {
+        install_test_cards();
+        let (app, [token_a, _]) = authed().await;
+        // A's newest track has just reached its second level; one action's XP leaves it there.
+        grant_track(&app, A, newest(), total_xp_for_level(2), 2, 2).await;
+        let (was, _) = newest_point(&app, &token_a).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 1)).await;
+        let lost = TerminalOutcome {
+            winner: Winner::P2,
+            reason: GameOverReason::Concede,
+        };
+        let recorded = record_paying(&app, lost).await;
+        let (now, _) = newest_point(&app, &token_a).await;
+        assert_eq!(now["level"], was["level"], "the game reached no level");
+
+        let paid = recorded.economy[PlayerId::P1].clone().expect("A was paid");
+        assert_eq!(
+            j(&paid.tracks),
+            json!([{ "setId": newest().as_str(), "before": was, "after": now, "levels": [] }])
+        );
+        assert_eq!(
+            paid.tracks[0].after.xp - paid.tracks[0].before.xp,
+            game_xp(1, false)
+        );
+    }
+
+    #[tokio::test]
+    async fn a_quest_the_game_completes_is_listed_and_its_xp_is_in_the_same_track_gain() {
+        install_test_cards();
+        let (app, [token_a, _]) = authed().await;
+        let quest_id = hold_quest(&app, A, QuestGoal::WinGames).await;
+        let quest = pool()
+            .iter()
+            .find(|quest| quest.id == quest_id)
+            .expect("the held quest is the pool's");
+        assert_eq!(quest.target, 1, "one win completes it");
+        let (status, _, held) = call(&app, "GET", "/api/quests", Some(&token_a), Value::Null).await;
+        assert_eq!(status, 200, "{held}");
+        let named = &held["quests"][0];
+        let (was, claimed) = newest_point(&app, &token_a).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 10)).await;
+        let recorded = record_paying(&app, a_wins()).await;
+        let (now, now_claimed) = newest_point(&app, &token_a).await;
+
+        let paid = recorded.economy[PlayerId::P1].clone().expect("A was paid");
+        assert_eq!(
+            j(&paid.quests),
+            json!([{
+                "questId": named["questId"],
+                "title": named["title"],
+                "jlore": named["jlore"],
+                "xp": named["xp"],
+            }])
+        );
+        assert_eq!(named["questId"], json!(quest.id));
+        // The game's XP and the quest's land on the track as one gain, every level both reached
+        // listed once, in order.
+        assert_eq!(paid.xp, game_xp(10, true));
+        assert_eq!(now["xp"].as_i64(), Some(game_xp(10, true) + quest_xp(quest)));
+        assert_eq!(
+            j(&paid.tracks),
+            json!([{
+                "setId": newest().as_str(),
+                "before": was,
+                "after": now,
+                "levels": levels_paid(claimed, now_claimed),
+            }])
+        );
+    }
+
+    #[tokio::test]
+    async fn a_track_the_payout_unlocked_stood_on_its_first_level_before() {
+        install_test_cards();
+        let (app, [token_a, _]) = authed().await;
+        let unlock = SET_TRACK_UNLOCK_LEVEL;
+        grant_track(
+            &app,
+            A,
+            newest(),
+            total_xp_for_level(unlock),
+            i64::from(unlock),
+            i64::from(unlock),
+        )
+        .await;
+        // The locked track, as `GET /api/tracks` reads it before the payout unlocks it.
+        let (status, _, body) = call(&app, "GET", "/api/tracks", Some(&token_a), Value::Null).await;
+        assert_eq!(status, 200, "{body}");
+        let locked = body["tracks"]
+            .as_array()
+            .expect("the tracks")
+            .iter()
+            .find(|track| track["setId"] == second_newest().as_str())
+            .cloned()
+            .expect("the second track");
+        assert_eq!(locked["unlocked"], json!(false));
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 1)).await;
+        let recorded = record_paying(&app, a_wins()).await;
+
+        let paid = recorded.economy[PlayerId::P1].clone().expect("A was paid");
+        let unlocked = track_of(&tracks_of(&app, A).await, second_newest()).expect("it unlocked");
+        // One gain per track the payout moved, in catalog order: the older track first.
+        let sets: Vec<&str> = paid.tracks.iter().map(|gain| gain.set_id.as_str()).collect();
+        assert_eq!(sets, vec![second_newest().as_str(), newest().as_str()]);
+        assert_eq!(
+            j(&paid.tracks[0].before),
+            json!({
+                "level": locked["level"],
+                "xp": locked["xp"],
+                "levelXp": locked["levelXp"],
+                "xpToNext": locked["xpToNext"],
+            })
+        );
+        assert_eq!(paid.tracks[0].before.level, SET_TRACK_FIRST_LEVEL);
+        assert_eq!(
+            (paid.tracks[0].after.level, paid.tracks[0].after.xp),
+            (unlocked.level, unlocked.xp)
+        );
+        assert_eq!(
+            j(&paid.tracks[0].levels),
+            levels_paid(0, unlocked.rewards_claimed)
+        );
+    }
+
+    #[tokio::test]
+    async fn a_bot_s_side_and_a_repeated_write_answer_no_economy() {
+        install_test_cards();
+        let app = test_app().await;
+        fresh_store(&app).await;
+        seed_profile(&app, json!({ "id": A, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
+        seed_profile(
+            &app,
+            json!({ "id": B, "kind": "bot", "rating": 1000.0, "inMatchId": MATCH_ID }),
+        )
+        .await;
+        create_match(&app, MATCH_ID, true, false).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 3)).await;
+        let outcome = a_wins();
+        let recorded = record_paying(&app, outcome).await;
+        assert!(recorded.economy[PlayerId::P1].is_some(), "the person is paid");
+        assert_eq!(
+            recorded.economy[PlayerId::P2],
+            None,
+            "a bot's side is paid nothing (R1454), so it is told nothing"
+        );
+
+        // The write already recorded pays nothing again, so it has nothing to tell either seat.
+        let again = record_paying(&app, outcome).await;
+        assert_eq!(again.row.match_id, MATCH_ID);
+        assert_eq!((again.economy.p1, again.economy.p2), (None, None));
+    }
+
+    #[tokio::test]
+    async fn nothing_is_answered_while_the_economy_is_off() {
+        install_test_cards();
+        let app = economy_app(false).await;
+        fresh_store(&app).await;
+        seed_profile(&app, json!({ "id": A, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
+        seed_profile(&app, json!({ "id": B, "rating": 1000.0, "inMatchId": MATCH_ID })).await;
+        create_match(&app, MATCH_ID, true, false).await;
+        append_log_to(&app, MATCH_ID, &actions_of("p1", 3)).await;
+        let recorded = record_paying(&app, a_wins()).await;
+        assert_eq!((recorded.economy.p1, recorded.economy.p2), (None, None));
     }
 }

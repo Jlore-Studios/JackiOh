@@ -78,6 +78,7 @@ use crate::config::{
 use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
 };
+use crate::economy::rewards::GameEconomy;
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -323,6 +324,11 @@ struct Core {
     /// home like `sockets`. Read off the ledger (`results::game_jlore_caps`) once the result has
     /// landed, or as an actor arms on a match already finished; each seat's views carry its own.
     jlore_capped: PerPlayer<bool>,
+    /// #1657: what the result's write paid each account, keyed by home like `sockets`, as the write
+    /// answered it; each seat's views carry its own from then on. `None` for a bot's home, before
+    /// the write, and on an actor whose write found the result already there or that was rebuilt on
+    /// a finished match: nothing paid then, so nothing is told.
+    economy: PerPlayer<Option<GameEconomy>>,
     /// When this actor's rematch window opened (R672): the game's end, or, for an actor rebuilt on a
     /// match already `finished`, the rebuild. `None` while the game is on. `Registry::reap_finished`
     /// counts `REMATCH_OFFER_TTL_MS` from here.
@@ -566,6 +572,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         voided: false,
         finished: matches!(match_row.status, MatchStatus::Finished),
         jlore_capped: PerPlayer::new(false, false),
+        economy: PerPlayer::new(None, None),
         finished_at: matches!(match_row.status, MatchStatus::Finished).then(now_ms),
         stopped: false,
         persisted_clocks: match_row.clocks.clone(),
@@ -843,10 +850,12 @@ impl MatchActor {
     /// Both are read off the same `state` under the same lock, so the array is always true of the
     /// view it travels with — the actor's queue means no `reduce` can land between them.
     fn push_view(&self, core: &Core, player: PlayerId) {
+        let home = playing(core, player);
         let message = view_message(
             self.view_of(core, player),
             &engine::legal_actions(self.shared.pinned, &core.state, player),
-            core.jlore_capped[playing(core, player)],
+            core.jlore_capped[home],
+            core.economy[home].clone(),
         );
         self.send(core, player, &message);
     }
@@ -1209,9 +1218,18 @@ impl MatchActor {
         // The write finishes the match row in the same transaction, so nothing else here does: a row
         // finished apart from it would outlive a failed write, with no result and both players stuck
         // in the match. R1437: a write that never lands leaves the match `live` for the next socket.
-        if !self.record_result_with_retries(input, true).await {
+        let Some(mut economy) = self.record_result_with_retries(input, true).await else {
             self.let_go_unrecorded();
             return;
+        };
+        // #1657: the write answers each seat by the engine seat it credited, the core keeps each
+        // account's by home; `load_jlore_caps` sends it.
+        {
+            let mut core = self.lock();
+            for seat in PLAYERS {
+                let home = playing(&core, seat);
+                core.economy[home] = economy[seat].take();
+            }
         }
         self.load_jlore_caps(true).await;
         // R1442: the play telemetry goes after the result, so its write can never cost it.
@@ -1243,23 +1261,24 @@ impl MatchActor {
     /// R1483000: whether the daily Jlore cap held back either account's pay for this match, read
     /// off the ledger now that the result is in it. Every view of a seat it held back carries it;
     /// `announce` sends those seats a fresh one now, for a result just written (an actor arming on
-    /// a finished match sends its sockets theirs as each attaches). A read that fails costs the
-    /// line, never the result: it is logged, and the next rebuilt actor reads it again.
+    /// a finished match sends its sockets theirs as each attaches), and with them each seat the
+    /// write paid (`Core::economy`, #1657), so one view tells a seat both. A read that fails costs
+    /// the line, never the result or the pay: it is logged, and the next rebuilt actor reads it
+    /// again.
     async fn load_jlore_caps(&self, announce: bool) {
         let caps = match crate::api::results::game_jlore_caps(&self.shared.deps, self.match_id_str()).await {
             Ok(caps) => caps,
             Err(error) => {
                 tracing::warn!(event = "match.jloreCaps.failed", matchId = %self.match_id_str(), message = %error);
-                return;
+                PerPlayer::new(false, false)
             }
         };
-        if !caps.p1 && !caps.p2 {
-            return;
-        }
         let mut core = self.lock();
-        core.jlore_capped = caps;
+        if caps.p1 || caps.p2 {
+            core.jlore_capped = caps;
+        }
         for home in PLAYERS {
-            if announce && core.jlore_capped[home] {
+            if announce && (core.jlore_capped[home] || core.economy[home].is_some()) {
                 self.push_view(&core, playing(&core, home));
             }
         }
@@ -1355,17 +1374,27 @@ impl MatchActor {
     /// `MATCH_RECORD_RESULT_BACKOFF_MS` and each next one twice the last. A repeat is safe: a write
     /// that finds the match's row already written answers that row (`api/results.rs`). It runs on the
     /// actor's queue, which the game's end has left nothing to do but refuse actions and push views.
-    /// Answers whether the result landed.
-    async fn record_result_with_retries(&self, input: RecordResultInput, rated: bool) -> bool {
+    /// Answers what the write paid each seat (`results::Recorded`, #1657) once the result landed,
+    /// `None` when it never did. A ceiling draw pays the seats too, but the actor lets go straight
+    /// after it, so it answers no seat's pay.
+    async fn record_result_with_retries(
+        &self,
+        input: RecordResultInput,
+        rated: bool,
+    ) -> Option<PerPlayer<Option<GameEconomy>>> {
         let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
         for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
             let written = if rated {
-                crate::api::results::record_result(&self.shared.deps, input.clone()).await
+                crate::api::results::record_result_with_economy(&self.shared.deps, input.clone())
+                    .await
+                    .map(|recorded| recorded.economy)
             } else {
-                crate::api::results::record_ceiling_draw(&self.shared.deps, input.clone()).await
+                crate::api::results::record_ceiling_draw(&self.shared.deps, input.clone())
+                    .await
+                    .map(|_| PerPlayer::new(None, None))
             };
             match written {
-                Ok(_) => return true,
+                Ok(economy) => return Some(economy),
                 Err(error) => {
                     tracing::error!(event = "match.recordResult.failed", matchId = %self.match_id_str(), attempt = attempt, message = %error);
                 }
@@ -1375,7 +1404,7 @@ impl MatchActor {
                 wait_ms *= 2;
             }
         }
-        false
+        None
     }
 
     /// R1253000, R112: a clock's action whose `reduce` panicked ends the match as the reaper ends one at
@@ -1395,7 +1424,7 @@ impl MatchActor {
             self.shared.clock.stop();
         }
         let input = crate::api::results::ceiling_draw_input(&self.shared.match_row, at);
-        if !self.record_result_with_retries(input, false).await {
+        if self.record_result_with_retries(input, false).await.is_none() {
             self.let_go_unrecorded();
             return;
         }
@@ -2778,7 +2807,12 @@ impl MatchActor {
         }
         let now = now_ms();
         for home in PLAYERS {
-            let frame = encode(&view_message(self.view_of(core, playing(core, home)), &[], false));
+            let frame = encode(&view_message(
+                self.view_of(core, playing(core, home)),
+                &[],
+                false,
+                None,
+            ));
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[home].push_back(SpectateFrame {

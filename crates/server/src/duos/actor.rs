@@ -84,6 +84,7 @@ use crate::duos::protocol::{
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
 use crate::duos::{ceiling_at, ceiling_draw, finish_match};
+use crate::economy::rewards::GameEconomy;
 use crate::seats::Seat;
 
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
@@ -466,6 +467,10 @@ struct Core {
     /// By `HUMAN_SEATS`: R1483000, each seat's own flag for whether the daily Jlore cap held back
     /// its pay for this match.
     jlore_capped: [bool; 2],
+    /// By `HUMAN_SEATS`: #1657, what the result's write paid each seat's person, as the write
+    /// answered it. `None` before the write, and on an actor whose write found the result already
+    /// there or that was rebuilt on a finished match: nothing paid then, so nothing is told.
+    economy: [Option<GameEconomy>; 2],
     stopped: bool,
 }
 
@@ -554,6 +559,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         finished,
         finished_at: finished.then(now_ms),
         jlore_capped: [false, false],
+        economy: [None, None],
         stopped: false,
     };
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -681,6 +687,7 @@ impl DuosActor {
             view: Box::new(view),
             legal,
             jlore_capped: human(seat).map(|index| core.jlore_capped[index]).unwrap_or(false),
+            economy: human(seat).and_then(|index| core.economy[index].clone()),
         }));
     }
 
@@ -1274,7 +1281,7 @@ impl DuosActor {
             core.finished = true;
             core.finished_at = Some(at);
         }
-        if !self.record_result(&result, at).await {
+        if self.record_result(&result, at).await.is_none() {
             self.let_go("duos.result.unrecorded");
             return;
         }
@@ -1332,11 +1339,13 @@ impl DuosActor {
             core.forced = [None, None, None, None];
             (result, at)
         };
-        if !self.record_result(&result, at).await {
+        let Some(economy) = self.record_result(&result, at).await else {
             self.let_go("duos.result.unrecorded");
             return;
-        }
+        };
         self.release_seats();
+        // #1657: each seat's pay, which `load_jlore_caps` sends.
+        self.lock().economy = economy;
         self.load_jlore_caps(true).await;
         tracing::info!(event = "duos.over", matchId = %self.match_id_str(), outcome = %result.outcome, reason = %result.reason);
     }
@@ -1344,23 +1353,26 @@ impl DuosActor {
     /// R1483000: whether the daily Jlore cap held back either seat's pay for this match, read off
     /// the ledger now that the result is in it. Every view of a seat it held back carries it;
     /// `announce` sends those seats a fresh one now, for a result just written (an actor arming on
-    /// a finished match sends its sockets theirs as each attaches). A read that fails costs the
-    /// line, never the result: it is logged, and the next rebuilt actor reads it again.
+    /// a finished match sends its sockets theirs as each attaches), and with them each seat the
+    /// write paid (`Core::economy`, #1657), so one view tells a seat both. A read that fails costs
+    /// the line, never the result or the pay: it is logged, and the next rebuilt actor reads it
+    /// again.
     async fn load_jlore_caps(&self, announce: bool) {
         let caps = match super::duos_game_jlore_caps(&self.shared.app, self.match_id_str()).await {
             Ok(caps) => caps,
             Err(error) => {
                 tracing::warn!(event = "duos.jloreCaps.failed", matchId = %self.match_id_str(), message = %error);
-                return;
+                [false, false]
             }
         };
-        if !caps.iter().any(|capped| *capped) {
-            return;
-        }
         let mut core = self.lock();
-        core.jlore_capped = caps;
+        if caps.iter().any(|capped| *capped) {
+            core.jlore_capped = caps;
+        }
         for seat in HUMAN_SEATS {
-            if announce && human(seat).is_some_and(|index| core.jlore_capped[index]) {
+            if announce
+                && human(seat).is_some_and(|index| core.jlore_capped[index] || core.economy[index].is_some())
+            {
                 self.push_view(&core, seat);
             }
         }
@@ -1368,8 +1380,9 @@ impl DuosActor {
 
     /// `MATCH_RECORD_RESULT_ATTEMPTS` tries, the waits doubling from `MATCH_RECORD_RESULT_BACKOFF_MS`.
     /// A write that finds the result already there has landed too. The write that lands pays both
-    /// people (`finish_match`, [[R1502000]]).
-    async fn record_result(&self, result: &DuosResult, at: i64) -> bool {
+    /// people (`finish_match`, [[R1502000]]). Answers what it paid each, by `HUMAN_SEATS`, once the
+    /// result landed (nothing for one already there, #1657), and `None` when it never did.
+    async fn record_result(&self, result: &DuosResult, at: i64) -> Option<[Option<GameEconomy>; 2]> {
         let mut wait_ms = MATCH_RECORD_RESULT_BACKOFF_MS;
         for attempt in 1..=MATCH_RECORD_RESULT_ATTEMPTS {
             let written = one_tx!(self.shared.app.db, |t| finish_match(
@@ -1381,7 +1394,7 @@ impl DuosActor {
             )
             .await?);
             match written {
-                Ok(_) => return true,
+                Ok(paid) => return Some(paid.unwrap_or_default()),
                 Err(error) => {
                     tracing::error!(event = "duos.result.failed", matchId = %self.match_id_str(), attempt = attempt, message = %error);
                 }
@@ -1391,7 +1404,7 @@ impl DuosActor {
                 wait_ms *= 2;
             }
         }
-        false
+        None
     }
 
     /// The registry forgets this actor and both sockets close as `halt` closes them; the next socket

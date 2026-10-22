@@ -421,9 +421,11 @@ pub async fn complete_quest(
 /// [[R1304001]]: one finished game moves the account's quests, in the reward hook's transaction.
 /// The account is topped up at the game's end first, so a quest that fell due as it ended counts
 /// it too. Each held quest then moves by what the game did, never past its target, and one that
-/// reaches its target completes and pays.
-pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<()> {
+/// reaches its target completes and pays. Answers the quests it completed, in the order held, so
+/// the game's answer names them (#1657).
+pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<Vec<&'static QuestDef>> {
     let book = top_up_quests(tx, &summary.profile_id, summary.at).await?;
+    let mut completed = Vec::new();
     for held in &book.held {
         let Some(def) = quest_def(&held.quest_id) else {
             continue;
@@ -446,8 +448,8 @@ pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<
         {
             continue;
         }
-        if held.progress.saturating_add(step) >= def.target {
-            complete_quest(
+        if held.progress.saturating_add(step) >= def.target
+            && complete_quest(
                 tx,
                 &summary.profile_id,
                 def,
@@ -456,10 +458,12 @@ pub async fn move_quests(tx: &mut Tx<'_>, summary: &GameSummary) -> StoreResult<
                 false,
                 summary.at,
             )
-            .await?;
+            .await?
+        {
+            completed.push(def);
         }
     }
-    Ok(())
+    Ok(completed)
 }
 
 #[cfg(test)]

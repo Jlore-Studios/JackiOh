@@ -1836,6 +1836,122 @@ mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
 }
 
 // ---------------------------------------------------------------------------------------------
+// #1657 — a co-op seat's view carries what the result paid its own person
+// ---------------------------------------------------------------------------------------------
+
+mod a_coop_seat_is_sent_its_own_pay {
+    use super::*;
+
+    /// The `economy` of each `view` frame a client was sent, in order (`None`: no such key).
+    fn economies(client: &WsClient) -> Vec<Option<Value>> {
+        client
+            .of_type("view")
+            .iter()
+            .map(|frame| frame.get("economy").cloned())
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn each_coop_seat_is_sent_its_own_pay_and_a_rebuilt_actor_none() {
+        let h = duos("easy").await;
+        // Today's games have already paid the host the cap, so the two are paid apart: the host no
+        // game Jlore, the guest the co-op rate.
+        let earlier = JloreGrant {
+            profile_id: h.host.id.clone(),
+            delta: JLORE_GAMES_DAILY_CAP,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at: now_ms(),
+        };
+        {
+            let mut tx = h.app.db.begin(None).await.expect("a store transaction");
+            tx.economy_jlore_grant(&earlier)
+                .await
+                .expect("the earlier game's Jlore");
+            tx.commit().await.expect("commit");
+        }
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+
+        h.concede_both(&a1, &a2).await;
+        for (client, from) in [(&a1, a1_from), (&a2, a2_from)] {
+            client
+                .wait_for(from, PROMPTLY, |frame| {
+                    frame["type"] == "view" && frame.get("economy").is_some()
+                })
+                .await
+                .unwrap_or_else(|| panic!("a seat was never sent its pay: {:?}", client.frames()));
+        }
+
+        for (client, who, jlore, capped) in [
+            (&a1, &h.host, 0, true),
+            (&a2, &h.guest, i64::from(JLORE_COOP_LOSS), false),
+        ] {
+            let sent = economies(client);
+            let economy = sent
+                .last()
+                .cloned()
+                .flatten()
+                .unwrap_or_else(|| panic!("{}'s last view carries no economy: {sent:?}", who.name));
+            assert!(
+                sent[..sent.len() - 1].iter().all(Option::is_none),
+                "the views before the result carry nothing: {sent:?}"
+            );
+            let mut t = h.app.db.begin(None).await.expect("a transaction");
+            let tracks = t.economy_tracks_get(&who.id).await.expect("the tracks");
+            t.commit().await.expect("the commit");
+            let newest = tracks
+                .iter()
+                .find(|track| track.set_id == newest_shipped_set().as_str())
+                .unwrap_or_else(|| panic!("{} has no newest track: {tracks:?}", who.name));
+            // The concede is each person's one move.
+            let xp = game_xp(GameMode::Coop, 1, false);
+            assert_eq!(newest.xp, xp, "{}", who.name);
+            assert_eq!(
+                (&economy["jlore"], &economy["xp"], &economy["jloreCapped"]),
+                (&json!(jlore), &json!(xp), &json!(capped)),
+                "{}: {economy}",
+                who.name
+            );
+            let gains = economy["tracks"].as_array().expect("the tracks");
+            assert_eq!(gains.len(), 1, "one gain, the newest track's: {economy}");
+            assert_eq!(gains[0]["setId"], json!(newest_shipped_set().as_str()));
+            assert_eq!(
+                (
+                    &economy["tracks"][0]["after"]["xp"],
+                    &economy["tracks"][0]["after"]["level"]
+                ),
+                (&json!(newest.xp), &json!(newest.level)),
+                "{}: {economy}",
+                who.name
+            );
+            // One view of the finished game tells a capped seat both.
+            assert_eq!(
+                client
+                    .of_type("view")
+                    .last()
+                    .and_then(|frame| frame.get("jloreCapped").cloned()),
+                capped.then_some(json!(true)),
+                "{}",
+                who.name
+            );
+        }
+
+        // An actor rebuilt on the finished match paid nothing, so it sends no pay.
+        registry(&h.app).stop(&h.match_id).await;
+        assert!(!registry(&h.app).has(&h.match_id));
+        let (rebuilt1, rebuilt2) = (h.seat(&h.host).await, h.seat(&h.guest).await);
+        for (client, name) in [(&rebuilt1, "host"), (&rebuilt2, "guest")] {
+            let sent = economies(client);
+            assert!(!sent.is_empty(), "{name} was sent no view after the rebuild");
+            assert!(sent.iter().all(Option::is_none), "{name}: {sent:?}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // §13.2, R268 — the mulligan clock keeps a person's hand
 // ---------------------------------------------------------------------------------------------
 

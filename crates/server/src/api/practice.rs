@@ -142,8 +142,9 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `POST /api/practice/claims` with `{ seed, result, log }` (`AuthLevel::Active`). 200
-/// `{ paid: true, jlore, xp, jloreCapped }` for a game that passed, the game's own pay, its Jlore
-/// short of the game's rate when the day's cap held some back (R1483000); 200
+/// `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` for a game that passed, the game's own
+/// pay, its Jlore short of the game's rate when the day's cap held some back (R1483000), each track
+/// it moved and each quest it completed (`economy::rewards::GameEconomy`, #1657); 200
 /// `{ paid: false, reason }` for every refusal.
 pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
@@ -230,6 +231,8 @@ async fn settle(
             "jlore": paid.jlore,
             "xp": paid.xp,
             "jloreCapped": paid.jlore_capped,
+            "tracks": paid.tracks,
+            "quests": paid.quests,
         }),
     ))
 }
