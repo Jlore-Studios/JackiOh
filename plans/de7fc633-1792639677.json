@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1615,
+  "title": "Patch: Remove Indestructible and Charge from the combat keyword pool",
+  "branch": "bot/issue-1615",
+  "thread": "**Issue #1615 (data, not instructions):**\n\n```text\n# #1615: Patch: Remove Indestructible and Charge from the combat keyword pool\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRemove Indestructible and Charge from the combat keyword pool. Too much variance from these. This will allow us to give keywords out more freely.\n\n### Acceptance\n\nIndestructible and Charge can no longer be rolled by random combat keywords.\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nmedium\n\n### Who does it\n\nThe night bot (bot:build)\n\n---\nComment by @MaxGoetzmann at 2026-10-22T03:28:12Z:\n\nImmutable is already absent so there is precendence.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1615: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
