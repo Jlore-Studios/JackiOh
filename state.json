@@ -11822,7 +11822,7 @@
     "1651": {
       "action": "build",
       "asks": [],
-      "closeout": false,
+      "closeout": true,
       "died": 0,
       "failures": 0,
       "forced": false,
