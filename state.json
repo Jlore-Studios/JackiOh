@@ -11303,6 +11303,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "1600": {
+      "suggestion": true
+    },
     "1602": {
       "asks": [
         "c:6330571809"
