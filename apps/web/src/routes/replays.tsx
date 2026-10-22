@@ -324,158 +324,160 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   }
 
   return (
-    <div className="app-shell replays" data-testid={replaysTestid.root}>
+    <div className="app-shell replays one-screen" data-testid={replaysTestid.root}>
       <BackLink />
       <h1>{t("Replays")}</h1>
       <p className="auth-hint">{t("Watch your recent games again, step by step, and share a turn as a GIF.")}</p>
-      <OpenReplayJson ready={lookup !== null} onOpen={setOpen} />
+      <div className="one-screen__body one-screen__stack">
+        <OpenReplayJson ready={lookup !== null} onOpen={setOpen} />
 
-      <section className="replays__section" aria-labelledby="replays-practice-heading">
-        <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
-        {practice.kind === "loading" ? <p role="status">{t("Reading the games kept on this device…")}</p> : null}
-        {practice.kind === "failed" ? (
-          <>
-            <p role="alert">{t(practice.message)}</p>
-            <p>
-              <button
-                type="button"
-                data-testid={replaysTestid.practiceRetry}
-                onClick={() => {
-                  setPractice({ kind: "loading" });
-                  setPracticeRound((before) => before + 1);
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </p>
-          </>
-        ) : null}
-        {practice.kind === "ready" && practice.rows.length === 0 ? (
-          <p data-testid={replaysTestid.noPractice}>{t("Finish a practice game and it is kept here.")}</p>
-        ) : null}
-        {practice.kind === "ready" && practice.rows.length > 0 ? (
-          <ul className="replays__list">
-            {practice.rows.map((row) => {
-              const why = unavailableText(row.unavailable);
-              return (
-                <li key={row.game} className="replays__row" data-testid={replaysTestid.practice(row.game)}>
-                  <span className="replays__what">
-                    <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("Practice")} ·{" "}
-                    {turnsText(row.turns)} · {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
-                    {why === null ? null : <span className="replays__why"> · {why}</span>}
-                  </span>
-                  {why === null ? (
-                    <DownloadJson
-                      testKey={`practice-${String(row.game)}`}
-                      game={practiceGame(row)}
-                      open={() => (host.current === null ? null : practiceReplaySource(host.current, row))}
-                    />
-                  ) : null}
-                  <button type="button" onClick={() => openPractice(row)} disabled={why !== null}>
-                    {t("Watch")}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-      </section>
-
-      <section className="replays__section" aria-labelledby="replays-online-heading">
-        <h2 id="replays-online-heading">{t("Online games")}</h2>
-        {account.kind === "loading" ? <p role="status">{t("Checking your account…")}</p> : null}
-        {account.kind === "anonymous" ? (
-          <p data-testid={replaysTestid.signIn}>
-            <a href={paths.login} onClick={followInApp(paths.login)}>
-              {t("Sign in")}
-            </a>{" "}
-            {t("to watch your online games again.")}
-          </p>
-        ) : null}
-        {account.kind === "error" ? <p role="alert">{account.message}</p> : null}
-        {consentOwed ? (
-          <p data-testid={replaysTestid.consent}>
-            {t("Agree to the Terms and the Privacy Policy to see your online games.")}{" "}
-            <button type="button" onClick={() => setAgreeing(true)}>
-              {t("Continue")}
-            </button>
-          </p>
-        ) : null}
-        {token === null ? null : (
-          // #936 B59: the replays friends shared with this account are listed on Play together.
-          <p>
-            <a href={sharedWithMePath()} data-testid={replaysTestid.sharedWithMe} onClick={followInApp(sharedWithMePath())}>
-              {t("Shared with me →")}
-            </a>
-          </p>
-        )}
-        {token !== null && online.kind === "loading" ? <p role="status">{t("Reading your online games…")}</p> : null}
-        {token !== null && online.kind === "failed" ? (
-          <>
-            <p role="alert">{t(online.message)}</p>
-            <p>
-              <button
-                type="button"
-                data-testid={replaysTestid.onlineRetry}
-                onClick={() => {
-                  setOnline({ kind: "loading" });
-                  setOnlineRound((before) => before + 1);
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </p>
-          </>
-        ) : null}
-        {token !== null && online.kind === "ready" && online.rows.length === 0 ? (
-          <p data-testid={replaysTestid.noOnline}>{t("No online game of yours is kept. A game is kept for a while after it ends.")}</p>
-        ) : null}
-        {token !== null && online.kind === "ready" && online.rows.length > 0 ? (
-          <>
+        <section className="replays__section" aria-labelledby="replays-practice-heading">
+          <h2 id="replays-practice-heading">{t("Practice games on this device")}</h2>
+          {practice.kind === "loading" ? <p role="status">{t("Reading the games kept on this device…")}</p> : null}
+          {practice.kind === "failed" ? (
+            <>
+              <p role="alert">{t(practice.message)}</p>
+              <p>
+                <button
+                  type="button"
+                  data-testid={replaysTestid.practiceRetry}
+                  onClick={() => {
+                    setPractice({ kind: "loading" });
+                    setPracticeRound((before) => before + 1);
+                  }}
+                >
+                  {t("Try again")}
+                </button>
+              </p>
+            </>
+          ) : null}
+          {practice.kind === "ready" && practice.rows.length === 0 ? (
+            <p data-testid={replaysTestid.noPractice}>{t("Finish a practice game and it is kept here.")}</p>
+          ) : null}
+          {practice.kind === "ready" && practice.rows.length > 0 ? (
             <ul className="replays__list">
-              {online.rows.map((row) => {
+              {practice.rows.map((row) => {
                 const why = unavailableText(row.unavailable);
-                const opponent = row.opponent.username === "" ? t("a deleted account") : row.opponent.username;
                 return (
-                  <li key={row.matchId} className="replays__row" data-testid={replaysTestid.online(row.matchId)}>
+                  <li key={row.game} className="replays__row" data-testid={replaysTestid.practice(row.game)}>
                     <span className="replays__what">
-                      <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("vs {opponent}", { opponent })}
-                      {row.mode === null ? null : <> · {t(MODE_WORDS[row.mode])}</>} · {turnsText(row.turns)} ·{" "}
-                      {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
+                      <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("Practice")} ·{" "}
+                      {turnsText(row.turns)} · {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                       {why === null ? null : <span className="replays__why"> · {why}</span>}
                     </span>
                     {why === null ? (
                       <DownloadJson
-                        testKey={`online-${row.matchId}`}
-                        game={onlineGame(row)}
-                        open={() => (token === null ? null : onlineReplaySource(token, row))}
+                        testKey={`practice-${String(row.game)}`}
+                        game={practiceGame(row)}
+                        open={() => (host.current === null ? null : practiceReplaySource(host.current, row))}
                       />
                     ) : null}
-                    <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
+                    <button type="button" onClick={() => openPractice(row)} disabled={why !== null}>
                       {t("Watch")}
                     </button>
-                    {/* #936 B59: a game that can be watched can be shared with a friend. */}
-                    {why === null ? <ShareWithFriend matchId={row.matchId} /> : null}
                   </li>
                 );
               })}
             </ul>
-            {online.next === null ? null : (
-              <>
-                <button type="button" data-testid={replaysTestid.more} onClick={loadMore} disabled={online.loadingMore}>
-                  {online.loadingMore ? t("Loading…") : t("Show older games")}
+          ) : null}
+        </section>
+
+        <section className="replays__section" aria-labelledby="replays-online-heading">
+          <h2 id="replays-online-heading">{t("Online games")}</h2>
+          {account.kind === "loading" ? <p role="status">{t("Checking your account…")}</p> : null}
+          {account.kind === "anonymous" ? (
+            <p data-testid={replaysTestid.signIn}>
+              <a href={paths.login} onClick={followInApp(paths.login)}>
+                {t("Sign in")}
+              </a>{" "}
+              {t("to watch your online games again.")}
+            </p>
+          ) : null}
+          {account.kind === "error" ? <p role="alert">{account.message}</p> : null}
+          {consentOwed ? (
+            <p data-testid={replaysTestid.consent}>
+              {t("Agree to the Terms and the Privacy Policy to see your online games.")}{" "}
+              <button type="button" onClick={() => setAgreeing(true)}>
+                {t("Continue")}
+              </button>
+            </p>
+          ) : null}
+          {token === null ? null : (
+            // #936 B59: the replays friends shared with this account are listed on Play together.
+            <p>
+              <a href={sharedWithMePath()} data-testid={replaysTestid.sharedWithMe} onClick={followInApp(sharedWithMePath())}>
+                {t("Shared with me →")}
+              </a>
+            </p>
+          )}
+          {token !== null && online.kind === "loading" ? <p role="status">{t("Reading your online games…")}</p> : null}
+          {token !== null && online.kind === "failed" ? (
+            <>
+              <p role="alert">{t(online.message)}</p>
+              <p>
+                <button
+                  type="button"
+                  data-testid={replaysTestid.onlineRetry}
+                  onClick={() => {
+                    setOnline({ kind: "loading" });
+                    setOnlineRound((before) => before + 1);
+                  }}
+                >
+                  {t("Try again")}
                 </button>
-                {online.moreFailed === null ? null : (
-                  <span role="alert" className="replays__why" data-testid={replaysTestid.moreFailed}>
-                    {" "}
-                    {t(online.moreFailed)}
-                  </span>
-                )}
-              </>
-            )}
-          </>
-        ) : null}
-      </section>
+              </p>
+            </>
+          ) : null}
+          {token !== null && online.kind === "ready" && online.rows.length === 0 ? (
+            <p data-testid={replaysTestid.noOnline}>{t("No online game of yours is kept. A game is kept for a while after it ends.")}</p>
+          ) : null}
+          {token !== null && online.kind === "ready" && online.rows.length > 0 ? (
+            <>
+              <ul className="replays__list">
+                {online.rows.map((row) => {
+                  const why = unavailableText(row.unavailable);
+                  const opponent = row.opponent.username === "" ? t("a deleted account") : row.opponent.username;
+                  return (
+                    <li key={row.matchId} className="replays__row" data-testid={replaysTestid.online(row.matchId)}>
+                      <span className="replays__what">
+                        <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("vs {opponent}", { opponent })}
+                        {row.mode === null ? null : <> · {t(MODE_WORDS[row.mode])}</>} · {turnsText(row.turns)} ·{" "}
+                        {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
+                        {why === null ? null : <span className="replays__why"> · {why}</span>}
+                      </span>
+                      {why === null ? (
+                        <DownloadJson
+                          testKey={`online-${row.matchId}`}
+                          game={onlineGame(row)}
+                          open={() => (token === null ? null : onlineReplaySource(token, row))}
+                        />
+                      ) : null}
+                      <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
+                        {t("Watch")}
+                      </button>
+                      {/* #936 B59: a game that can be watched can be shared with a friend. */}
+                      {why === null ? <ShareWithFriend matchId={row.matchId} /> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              {online.next === null ? null : (
+                <>
+                  <button type="button" data-testid={replaysTestid.more} onClick={loadMore} disabled={online.loadingMore}>
+                    {online.loadingMore ? t("Loading…") : t("Show older games")}
+                  </button>
+                  {online.moreFailed === null ? null : (
+                    <span role="alert" className="replays__why" data-testid={replaysTestid.moreFailed}>
+                      {" "}
+                      {t(online.moreFailed)}
+                    </span>
+                  )}
+                </>
+              )}
+            </>
+          ) : null}
+        </section>
+      </div>
     </div>
   );
 }

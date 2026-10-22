@@ -44,7 +44,7 @@ export default function CreatorRoute({ token, api }: CreatorRouteProps): ReactEl
   }, [unsaved]);
 
   return (
-    <div className="app-shell app-shell--wide tavern creator-screen">
+    <div className="app-shell app-shell--wide tavern creator-screen one-screen">
       <BackLink
         onPress={() => {
           if (unsaved) setLeaving(true);

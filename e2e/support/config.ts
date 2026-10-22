@@ -106,6 +106,13 @@ export const timeouts = {
   axe: 30_000,
 };
 
+/** BUILD M5-T1's two sizes, a desktop's and a phone's; spec 46 holds every menu to one screen at both (R1581000). */
+export const viewports = {
+  desktop: { label: "desktop", width: 1280, height: 720 },
+  phone: { label: "phone", width: 390, height: 844 },
+} as const;
+export type MenuViewport = (typeof viewports)[keyof typeof viewports];
+
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {
   DECK_SIZE: 20,

@@ -1131,7 +1131,7 @@ SPEC §8.9 and §7's Meditative+ rows. The set is built on main behind R1420's r
 - Catalog: `crates/cards/tests/cross/catalog.rs` diffs `catalog.json` against a fixture transcribed from SPEC §8; `cargo jackioh catalog check` holds its shape and census.
 - Wire: the client's TypeScript types and constants are generated from the Rust (`--features ts`, each crate's `tests/export_config.rs`), and CI fails when they differ from what is committed.
 - Coverage floor: 90% lines over `crates/engine`, `crates/cards` and `crates/ai` (`cargo llvm-cov`, `.github/coverage-floor.txt`, in the daily super run); every catalog id has a script file with its tests (`crates/cards/build.rs` fails the build on a missing one).
-- E2E: the specs above, headless on Chrome: specs 01, 06, 10, 13 and 19 on every pull request, all of them daily.
+- E2E: the specs above, headless on Chrome: specs 01, 06, 10, 13, 19 and 46 on every pull request, all of them daily.
 
 ## 5. Definition of done
 

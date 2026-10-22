@@ -16,9 +16,9 @@ import "../auth/tavern.css";
 
 export default function PatchNotesRoute(): ReactElement {
   return (
-    <div className="app-shell tavern patch-notes-screen" data-testid={patchTestid.screen}>
+    <div className="app-shell tavern patch-notes-screen one-screen" data-testid={patchTestid.screen}>
       <BackLink />
-      <main className="patch-notes" aria-labelledby="patch-notes-title">
+      <main className="patch-notes one-screen__body" aria-labelledby="patch-notes-title">
         <header className="patch-notes__head">
           <h1 id="patch-notes-title" className="patch-notes__title">
             {t("Patch notes")}

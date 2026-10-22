@@ -1,4 +1,4 @@
-# `e2e/` — the forty-five specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44` and the economy loop's `45`, plus twenty-one component specs
+# `e2e/` — the forty-six specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41`, Play together's `42`, the preview rings' `43`, watching a friend's `44`, the economy loop's `45` and every menu on one screen's `46`, plus twenty-one component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44, 45
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42, 44, 45, 46
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
@@ -52,7 +52,7 @@ compiled into it. It reseeds its fixture accounts and invite codes at every boot
 `POST /api/e2e/reseed` (R144), which spec 10 calls before its first test, so spec 10 re-runs against the
 same server with no restart. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
-then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19,
+then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 46,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
 Electron is no longer run.
 

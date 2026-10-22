@@ -515,7 +515,7 @@ export default function StatsRoute(): ReactElement {
 
   return (
     <CardDefsProvider defs={CATALOG}>
-      <div className="app-shell app-shell--wide tavern stats-page" data-testid={statsTestid.screen}>
+      <div className="app-shell app-shell--wide tavern stats-page one-screen" data-testid={statsTestid.screen}>
         <header className="stats-header">
           <BackLink />
           <h1 className="stats-title">{t("Statistics")}</h1>
@@ -637,7 +637,7 @@ export default function StatsRoute(): ReactElement {
 
         {/* CARDS TAB */}
         {tab === "cards" && (
-          <section id="stats-panel-cards" role="tabpanel" aria-labelledby="stats-tab-cards" className="stats-panel">
+          <section id="stats-panel-cards" role="tabpanel" aria-labelledby="stats-tab-cards" className="stats-panel one-screen__body">
             {/* Filter controls */}
             <div className="stats-filter-bar">
               <input
@@ -1237,7 +1237,7 @@ export default function StatsRoute(): ReactElement {
 
         {/* PLAYERS TAB */}
         {tab === "players" && (
-          <section id="stats-panel-players" role="tabpanel" aria-labelledby="stats-tab-players" className="stats-panel">
+          <section id="stats-panel-players" role="tabpanel" aria-labelledby="stats-tab-players" className="stats-panel one-screen__body">
             <div className="stats-player-head">
               <input
                 type="search"

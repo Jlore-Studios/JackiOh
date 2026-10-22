@@ -375,7 +375,7 @@ export function TogetherRoute(): ReactElement {
   const outgoingChallenges = challenges.kind === "ready" ? challenges.value.outgoing : [];
 
   return (
-    <div className="app-shell tavern lobby together-screen" data-testid={togetherTestid.root}>
+    <div className="app-shell tavern lobby together-screen one-screen" data-testid={togetherTestid.root}>
       <BackLink />
 
       <header className="together-hero">
@@ -394,7 +394,7 @@ export function TogetherRoute(): ReactElement {
         </p>
       )}
 
-      <div className="together-layout">
+      <div className="together-layout one-screen__body">
         <section className="lobby-card together-panel" aria-labelledby="together-friends-heading">
           <h2 id="together-friends-heading" className="together-panel__heading">
             {t("Friends")}

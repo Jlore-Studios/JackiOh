@@ -434,7 +434,7 @@ export function Creator({ token, api = DEFAULT_CREATOR_API, onTry, onUnsaved }: 
   }, [draft.id, reload]);
 
   return (
-    <div className="creator" data-testid={creatorTestid.screen}>
+    <div className="creator one-screen__body" data-testid={creatorTestid.screen}>
       <aside className="creator-list" data-testid={creatorTestid.list} aria-label={t("Your custom cards")}>
         <h2>{t("Your custom cards")}</h2>
         {state.kind === "loading" ? <p className="creator-hint">{t("Loading your cards…")}</p> : null}
