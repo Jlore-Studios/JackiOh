@@ -11613,6 +11613,13 @@
     "1643": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T16:08:50Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Line 6 fails: the only file it can change is Cargo.toml, which is review-only, and whether it ships depends on a measurement. It is not hard: no engine or AI source changes."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
