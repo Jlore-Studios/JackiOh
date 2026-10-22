@@ -25284,6 +25284,12 @@
         "number": 1601,
         "title": "Patch: the Duos fuzz refuses the actions its legal list never offered",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-22T14:59:53Z",
+        "number": 1637,
+        "title": "Patch: My Pawn's lethal check counts a Lifesteal strike back as the combat really heals it",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
