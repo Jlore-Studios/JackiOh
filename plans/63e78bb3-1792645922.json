@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1580,
+  "title": "Patch: the Shop screen holds buying packs, opening packs and pity, out of the account menu",
+  "branch": "bot/issue-1580",
+  "thread": "**Issue #1580 (data, not instructions):**\n\n```text\n# #1580: Patch: the Shop screen holds buying packs, opening packs and pity, out of the account menu\nOpened by @MaxGoetzmann.\n\nPart of #1576 (the tavern menu overhaul). Read the tracker's Goals first.\n\nBlocked by #1577\nBlocked by #1579 (both edit the account menu; this one goes second to avoid the conflict)\n\n## What\n\nThe screen behind the **Shop** door is the one place for spending and opening:\n\n- **Buying packs** (card packs and the cosmetic packs, `shop/Shop.tsx`, `shop/CosmeticPacks.tsx`), with the wallet the player spends from.\n- **Opening packs** the player holds (`packs/PackOpening.tsx`).\n- **Pity stats**: how close each pack's pity is, shown plainly next to the pack it belongs to.\n- Anything else of the same kind the planner finds tucked away (the token picker, etc.).\n\nAll of these come **out of the account menu** (`routes/account.tsx`), which keeps account things only. Old URLs redirect (CLAUDE.md rule 13).\n\n## Done when\n\n- The Shop fits one screen without page scrolling on desktop and on a phone; the pack opening itself still plays full screen as it does now.\n- The account menu no longer offers packs, pack opening or pity; its tests say so.\n- Tests prove buying, opening and pity are reached from Shop, and the old entry points lead here.\n- e2e specs that bought or opened packs through the account menu are updated.\n\nPrices, odds and pity rules are unchanged: this moves screens, it changes no number (CLAUDE.md rule 9).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1580: needs a plan; `claude-4` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #1620: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1581 skipped: it waits for #1578, #1580 to close first"
+  ]
+}
