@@ -14633,12 +14633,10 @@
     "what": "revise #1624 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-22T09:01:47Z",
+    "at": "2026-10-22T09:09:19Z",
     "notes": [
-      "#1630: approved and green, so its strikes are cleared",
-      "delivered suggest on claude-3 (run 39750579807): interrupted",
-      "delivered plan #1581 on claude-1 (run 39735895034): planned",
-      "started build #1581 on claude-1 (run 39752426879)",
+      "delivered revise #1624 on claude-3 (run 39738978209): interrupted",
+      "started revise #1624 on muse (run 39753356405)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15310,7 +15308,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T09:01:47Z",
+  "loop_tick": "2026-10-22T09:09:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
