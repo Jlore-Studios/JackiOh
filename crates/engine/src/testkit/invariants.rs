@@ -82,16 +82,19 @@
 //!      ended mid-sequence keeps what it owed (`settle` stops at the result, and nothing runs after it,
 //!      I5), so a game over is not checked: the fuzz reaches such game overs (Classic #52 Final
 //!      Gambit's `afterRedirect`, Classic #56 Spell Tyrant's `resolve`).
-//!   I8 every attack and switch `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192): the server
-//!      reduces what a client sends without reading `legal_actions`. For the seat that may act, every
+//!   I8 every attack, switch and activation `reduce` accepts is listed (§4.1, §4.2, §9.1, §10.2; #1192): the
+//!      server reduces what a client sends without reading `legal_actions`. For the seat that may act, every
 //!      `switchPosition` naming a card on either field (a pile's top, a card dormant under it, a Unit a
 //!      carrier holds) and every `attack` from a card on its field on any of those or either hero is
-//!      built from the board alone; each the list lacks is reduced on a copy without the action history
-//!      (as `scorer::dry_run_base` leaves it: nothing a refusal reads is in it), and each accepted is
-//!      reported. Not probed: kinds never listed by design (R345, R923000, R79), and `play` and `answer`
-//!      (R90's bound lists a slice, #992). Under a Mayor (R1200) a named target is refused. Its first
-//!      run, every state of seeds 1–1000 of both waves (2026-10-18), found nothing. `I8_GATE_STRIDE`
-//!      is how often the 1,000-seed waves run it.
+//!      built from the board alone, and so is every `activate` of every ability of each of those cards,
+//!      crossed with its declared choices (`play_choice_combinations`, R90), and the `activatePower` alias
+//!      for the ability it names, judged against the `activate` it stands for (#1574); each the list
+//!      lacks is reduced on a copy without the action history (as `scorer::dry_run_base` leaves it:
+//!      nothing a refusal reads is in it), and each accepted is reported. Not probed: kinds never listed by design (R345, R923000, R79), and `play` and a
+//!      well-formed `answer` (R90's bound lists a slice, #992); a malformed answer is the fuzz's
+//!      `malformed-answer` probe (`malformed_answers`, #1574). Under a Mayor (R1200) a named target is
+//!      refused. Its first run, every state of seeds 1–1000 of both waves (2026-10-18), found nothing.
+//!      `I8_GATE_STRIDE` is how often the 1,000-seed waves run it.
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -112,8 +115,8 @@ use crate::duos::{DuosState, duos_view_for};
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::wire::{
     Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
-    Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, Selection, Team,
-    TuningChange, ZoneName, has_keyword, opponent_of,
+    Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, PromptKind, Selection,
+    Team, TuningChange, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -950,16 +953,72 @@ fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     out
 }
 
-/// I8 for one seat: every `switchPosition` and `attack` built from the board alone that `legal` does
-/// not hold and `reduce` accepts (§4.1, §4.2, §9.1). Empty when clean.
+/// I8's forged activations of one card for `player` (#1574), each with the `activate` the list would hold
+/// for it: every ability the card has (`abilities_of`) crossed with the target and mode combinations it
+/// declares (`play_choice_combinations`, the list's own bound, R90), spelled as `legal_actions` spells
+/// one (the ability named, a Tribute paid with the first of `player`'s units other than the card); and for
+/// the ability an `activatePower` names (the card's power, or its only ability, `reduce::activate_card`),
+/// each combination with no mode and no Tribute as that alias too (§10.2, R43, R384).
+fn forged_activations(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+) -> Vec<(ActionBody, ActionBody)> {
+    let abilities = crate::subsystems::activate::abilities_of(state, card);
+    let aliased: Option<String> = crate::subsystems::hero_power::power_ability_of(state, card)
+        .map(|decl| decl.id)
+        .or_else(|| match abilities.as_slice() {
+            [only] => Some(only.id.clone()),
+            _ => None,
+        });
+    let units: Vec<String> = crate::zones::active_units_of(state, player)
+        .into_iter()
+        .filter(|unit| unit.id != card.id)
+        .map(|unit| unit.id.clone())
+        .collect();
+    let mut out: Vec<(ActionBody, ActionBody)> = Vec::new();
+    for decl in &abilities {
+        let need = usize::try_from(decl.cost.and_then(|cost| cost.tribute).unwrap_or(0)).unwrap_or(0);
+        let tributes = (need > 0).then(|| units.iter().take(need).cloned().collect::<Vec<String>>());
+        let declared = crate::play_choices::DeclaredChoices {
+            targets: decl.targets.clone(),
+            modes: decl.modes.clone(),
+        };
+        for choice in crate::play_choices::play_choice_combinations(state, player, card, Some(&declared)) {
+            let activate = ActionBody::Activate {
+                instance_id: card.id.clone(),
+                ability: Some(decl.id.clone()),
+                targets: choice.targets.clone(),
+                modes: choice.modes.clone(),
+                tributes: tributes.clone(),
+            };
+            if aliased.as_deref() == Some(decl.id.as_str()) && choice.modes.is_none() && tributes.is_none() {
+                let alias = ActionBody::ActivatePower {
+                    instance_id: card.id.clone(),
+                    targets: choice.targets.clone(),
+                };
+                out.push((alias, activate.clone()));
+            }
+            out.push((activate.clone(), activate));
+        }
+    }
+    out
+}
+
+/// I8 for one seat: every `switchPosition`, `attack`, `activate` and `activatePower` built from the board
+/// alone that `legal` does not hold and `reduce` accepts (§4.1, §4.2, §9.1, §10.2). Empty when clean.
 pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBody]) -> Vec<String> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
-    let accepts = |body: ActionBody| {
-        !legal.contains(&body)
+    let accepts_as = |body: ActionBody, listed: &ActionBody| {
+        !legal.contains(listed)
             && crate::reduce::reduce(&probed, &Action::new(body, player, PROBE_NONCE))
                 .error
                 .is_none()
+    };
+    let accepts = |body: ActionBody| {
+        let listed = body.clone();
+        accepts_as(body, &listed)
     };
     let field: Vec<&CardInstance> = PLAYER_IDS
         .into_iter()
@@ -999,7 +1058,87 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
             }
         }
     }
+    for card in &field {
+        for (forged, listed) in forged_activations(state, player, card) {
+            if accepts_as(forged.clone(), &listed) {
+                found.push(format!(
+                    "I8 unlisted activation accepted: {player} may send {} for {} on turn {}, though \
+                     legalActions does not list it (§10.2, R384)",
+                    serde_json::to_string(&forged).unwrap_or_default(),
+                    name_of(card),
+                    state.turn
+                ));
+            }
+        }
+    }
     found
+}
+
+/// The malformed-answer probe's variants (#1574), each named in its failure.
+pub const STALE_CHOICE_ANSWER: &str = "stale-choice";
+pub const OTHER_SEAT_ANSWER: &str = "other-seat";
+pub const DROPPED_PICK_ANSWER: &str = "dropped-pick";
+pub const DOUBLED_PICK_ANSWER: &str = "doubled-pick";
+pub const UNOFFERED_PICK_ANSWER: &str = "unoffered-pick";
+/// What `stale-choice` appends to the open prompt's id: a prompt that is not open.
+const STALE_CHOICE_SUFFIX: &str = "-stale";
+/// The pick `unoffered-pick` makes: no instance has this id, so no prompt offers it.
+const UNOFFERED_INSTANCE_ID: &str = "i8-unoffered";
+
+/// #1574: `answer`, a listed answer to the open prompt, made malformed every way `prompts::why_answer_refused`
+/// refuses, each with the seat that sends it: another prompt's id, the holder's opponent, fewer picks
+/// than `min`, a pick twice, a pick no option offers (§10.6, R221). Each is malformed by construction,
+/// never merely unlisted, since R90's bound lists only a slice of the answers. Empty with no prompt open
+/// (a mulligan has its own action) or when `answer` is not an answer to it.
+pub fn malformed_answers(
+    state: &GameState,
+    answer: &ActionBody,
+) -> Vec<(&'static str, PlayerId, ActionBody)> {
+    let (Some(pending), ActionBody::Answer { choice_id, selection }) = (&state.pending, answer) else {
+        return Vec::new();
+    };
+    if pending.kind == PromptKind::Mulligan || *choice_id != pending.id {
+        return Vec::new();
+    }
+    let holder = pending.player_id;
+    let answer_with = |selection: Vec<Selection>| ActionBody::Answer {
+        choice_id: choice_id.clone(),
+        selection,
+    };
+    let mut out: Vec<(&'static str, PlayerId, ActionBody)> = vec![
+        (
+            STALE_CHOICE_ANSWER,
+            holder,
+            ActionBody::Answer {
+                choice_id: format!("{choice_id}{STALE_CHOICE_SUFFIX}"),
+                selection: selection.clone(),
+            },
+        ),
+        (OTHER_SEAT_ANSWER, opponent_of(holder), answer.clone()),
+    ];
+    if let Ok(keep) = usize::try_from(pending.min - 1) {
+        let mut dropped = selection.clone();
+        dropped.truncate(keep);
+        out.push((DROPPED_PICK_ANSWER, holder, answer_with(dropped)));
+    }
+    if let Some(first) = selection.first() {
+        let mut doubled = selection.clone();
+        match doubled.len() {
+            1 => doubled.push(first.clone()),
+            len => doubled[len - 1] = first.clone(),
+        }
+        out.push((DOUBLED_PICK_ANSWER, holder, answer_with(doubled)));
+    }
+    let unoffered = Selection::Instance {
+        instance_id: UNOFFERED_INSTANCE_ID.to_string(),
+    };
+    let mut swapped = selection.clone();
+    match swapped.first_mut() {
+        Some(first) => *first = unoffered,
+        None => swapped.push(unoffered),
+    }
+    out.push((UNOFFERED_PICK_ANSWER, holder, answer_with(swapped)));
+    out
 }
 
 /// The turn and stint of an instance's latest declared attack, and how many it has declared in them.
@@ -1561,8 +1700,8 @@ impl InvariantMonitor {
         found
     }
 
-    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack and switch
-    /// `reduce` accepts. Empty when clean.
+    /// I8 on a state the fuzz reached, for the seat that may act: every unlisted attack, switch and
+    /// activation `reduce` accepts. Empty when clean.
     pub fn unlisted(&self, state: &GameState) -> Vec<String> {
         let Some(player) = crate::reduce::seat_to_act(state) else {
             return Vec::new();

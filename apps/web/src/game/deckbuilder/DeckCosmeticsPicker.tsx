@@ -81,8 +81,9 @@ export default function DeckCosmeticsPicker({
       </button>
       {open ? (
         <div className="ws-cosmetics-panel" role="dialog" aria-label={t("Deck cosmetics")}>
-          {/* R1297000: the deck's own playmat, backdrop and card back; "Your settings' choice" leaves the
-              pick to the account's (settings), then the default. */}
+          {/* R1297000: the deck's own playmat, backdrop and card back; "As equipped in Collection" leaves
+              the pick to the account's, equipped in the collection's Cosmetics section (R1579000), then
+              the default. */}
           {DECK_COSMETIC_FIELDS.map((slot) => {
             const pick = deck[slot.key] ?? null;
             return (
@@ -96,7 +97,7 @@ export default function DeckCosmeticsPicker({
                     onCosmetic(slot.kind, event.target.value === "" ? null : event.target.value);
                   }}
                 >
-                  <option value="">{t("Your settings' choice")}</option>
+                  <option value="">{t("As equipped in Collection")}</option>
                   {cosmeticsOf(slot.kind).map((cosmetic) => (
                     <option key={cosmetic.id} value={cosmetic.id}>
                       {t(cosmetic.name)}

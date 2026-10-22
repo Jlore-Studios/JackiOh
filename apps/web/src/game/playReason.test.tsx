@@ -4,20 +4,22 @@
 
 import { CATALOG } from "@jackioh/cards";
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/index.ts";
+import { CARD_SETTINGS_DEFAULTS, closeInspect, writeCardSettings } from "../cards/index.ts";
 import { StateNotes, hasStateNotes } from "../cards/inspect/StateNotes.tsx";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { IDLE, onClickTarget } from "./actions.ts";
 import Board from "./Board.tsx";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { liveFace } from "./faces.ts";
+import { testid } from "./contract.ts";
+import { listedFace, liveFace } from "./faces.ts";
 import Game from "./Game.tsx";
 
 afterEach(() => {
   cleanup();
+  closeInspect();
   writeCardSettings(CARD_SETTINGS_DEFAULTS);
 });
 
@@ -131,5 +133,84 @@ describe("R979000 a card in hand that cannot be played says why", () => {
     expect(container.querySelector('[data-state="playReason"]')).toHaveTextContent(REASON);
 
     expect(faceOf(handCard(view, "c2")).playReason).toBeUndefined();
+  });
+});
+
+describe("R1571000 a card in your graveyard that cannot be played says why", () => {
+  const GY_REASON = "that card costs 3, more than your mana";
+
+  /** gy1 cannot be played and says why; gy2 may be played. */
+  function graveyardView(): PlayerView {
+    return baseView({
+      you: emptySide("p1", {
+        graveyard: [
+          card({ instanceId: "gy1", defId: "core-001", playReason: GY_REASON }),
+          card({ instanceId: "gy2", defId: "core-004" }),
+        ],
+      }),
+    });
+  }
+
+  /** Only gy2 is offered a play. */
+  const GY_LEGAL: readonly ActionBody[] = [
+    { type: "play", instanceId: "gy2" },
+    { type: "endTurn" },
+    { type: "concede" },
+  ];
+
+  function gyCard(view: PlayerView, id: string): CardView {
+    const found = view.you.graveyard.find((candidate) => candidate.instanceId === id);
+    if (found === undefined) throw new Error(`the fixture has no graveyard card ${id}`);
+    return found;
+  }
+
+  function tileIn(sheet: HTMLElement, key: string): HTMLElement {
+    const tile = within(sheet)
+      .getAllByTestId("inspect-list-card")
+      .find((element) => element.getAttribute("data-entry-key") === key);
+    if (tile === undefined) throw new Error(`${key} is not in the sheet`);
+    return tile;
+  }
+
+  it("R1571000 the graveyard's sheet shows the reason where Play would be, in the grid and opened large, and sends nothing", () => {
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Game view={graveyardView()} legal={GY_LEGAL} onAction={onAction} />
+      </CatalogContext.Provider>,
+    );
+
+    fireEvent.click(el(testid.graveyard("you")));
+    const sheet = el("inspect-list-sheet");
+
+    // gy1 offers no play, so where "Play" would be it says why; gy2 keeps its button.
+    expect(within(sheet).queryByTestId(testid.pilePlay("gy1"))).toBeNull();
+    const gy1 = tileIn(sheet, "gy1");
+    expect(gy1.parentElement).toHaveAttribute("data-playable", "false");
+    expect(gy1.parentElement?.querySelector('[data-state="playReason"]')).toHaveTextContent(GY_REASON);
+    expect(within(sheet).getByTestId(testid.pilePlay("gy2"))).toHaveTextContent("Play");
+    const gy2 = tileIn(sheet, "gy2");
+    expect(gy2.parentElement?.querySelector('[data-state="playReason"]')).toBeNull();
+
+    // Opening gy1 large shows the reason beside the missing Play, and clicks send nothing.
+    fireEvent.click(gy1);
+    expect(el("inspect-list-detail")).toBeInTheDocument();
+    expect(
+      document.querySelector('.inspect-list-actions [data-state="playReason"]'),
+    ).toHaveTextContent(GY_REASON);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R1571000 a graveyard card's playReason reaches its face, whose inspect notes spell it out", () => {
+    const view = graveyardView();
+
+    const face = listedFace(lookup, view, gyCard(view, "gy1"));
+    if (face === null) throw new Error("gy1 has no face");
+    expect(face.playReason).toBe(GY_REASON);
+    expect(hasStateNotes(face)).toBe(true);
+    const { container } = render(<StateNotes face={face} />);
+    expect(container.querySelector('[data-state="playReason"]')).toHaveTextContent(GY_REASON);
+
+    expect(listedFace(lookup, view, gyCard(view, "gy2"))?.playReason).toBeUndefined();
   });
 });

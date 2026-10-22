@@ -1,0 +1,39 @@
+{
+  "title": "A graveyard card you cannot play says why",
+  "sources": "#1571",
+  "notes": "Presentation only (R1571000): a card in your own graveyard that a permission admits but no play of which is listed carries playReason in the view, shown in the graveyard's sheet. Only the view differs, which the classifier's games read as a different play.",
+  "player": {
+    "title": "A graveyard card you can't play says why",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "No card plays differently: your own graveyard only says why a card it admits cannot be played."
+    ],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "classic-014",
+    "classic-017",
+    "classic-028",
+    "classic-039",
+    "classic-074",
+    "classic-086",
+    "classicplus-017",
+    "classicplus-059",
+    "classicplus-072",
+    "classicplus-076",
+    "core-001",
+    "core-003",
+    "core-007",
+    "core-068",
+    "core-098",
+    "meditative-010",
+    "meditative-036",
+    "meditative-045",
+    "meditative-061",
+    "meditative-077",
+    "meditativeplus-024"
+  ]
+}
