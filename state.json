@@ -11425,6 +11425,13 @@
     "1635": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T17:24:45Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the change is the AI's search (crates/ai/src/candidates.rs, search.rs), which the rule rates hard outright; nothing else was in doubt"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
