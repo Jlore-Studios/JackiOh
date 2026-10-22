@@ -1335,3 +1335,120 @@ mod make_radiant_targets_1143 {
         );
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// #1636: a finalist re-scored on another world answers that world's own Discover
+// ---------------------------------------------------------------------------------------------
+
+mod rescored_own_prompts_1636 {
+    use super::*;
+
+    /// Jewelosco Scarab (#7): (1) 1/1, "Cry: Discover a 2-cost card".
+    const SCARAB: &str = "core-007";
+    /// (4) 7/7 Armor 7: more than the turn's one crystal pays for.
+    const BIG: &str = "core-025";
+
+    /// The Scarab's turn at `mana` crystals on the world of `seed`: the same cards on every world,
+    /// but each world's seed draws its own Discover offer.
+    fn scarab_turn(seed: &str, mana: i32) -> GameState {
+        jackioh_cards::register_all();
+        let library = ["core-008", "core-011", "core-008", "core-011"];
+        scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [SCARAB, BIG], "mana": mana, "library": library },
+            "p2": { "hand": ["core-005"], "library": library },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// The candidate that plays the AI's hand card of `def_id`.
+    fn play_of(state: &GameState, def_id: &str) -> ActionBody {
+        let id = hand_id(state, def_id);
+        candidate_actions(state, AI)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id))
+            .unwrap_or_else(|| panic!("{def_id} is not a candidate"))
+    }
+
+    /// The answers of the AI's open prompt, Concede aside.
+    fn answers(state: &GameState) -> Vec<ActionBody> {
+        legal_actions(state, AI)
+            .into_iter()
+            .filter(|action| *action != ActionBody::Concede)
+            .collect()
+    }
+
+    /// `line` scored on `world` after the opponent's reply, as `decide` re-scores a finalist.
+    fn rescore(world: &GameState, line: &[ActionBody], counter: &dyn NodeCounter) -> Option<f64> {
+        score_line(world, AI, line, counter, true, None)
+    }
+
+    /// #1636: the line [Scarab, its answer] found on one world, scored on a world whose offer lacks
+    /// that answer, answers that world's own Discover, ends its turn and is scored after the
+    /// opponent's reply, as a line that answers that world's offer is. Before, it stopped at the
+    /// prompt with the prompt's static score while every other finalist was replied to.
+    #[test]
+    fn a_discover_answer_another_world_does_not_offer_is_answered_there_and_the_line_replied_to() {
+        let found_on = scarab_turn("search-rescore-a", 1);
+        let play = play_of(&found_on, SCARAB);
+        let answer = answers(&act(&found_on, AI, &play))
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("the Discover is not open"));
+        let line = [play.clone(), answer.clone()];
+
+        let world = scarab_turn("search-rescore-b", 1);
+        let Some(Ok(at_prompt)) = simulate(&world, AI, &play, &create_node_counter(AI_BUDGET.nodes, None))
+        else {
+            panic!("the Scarab was refused");
+        };
+        assert_eq!(
+            at_prompt.pending.as_ref().map(|pending| pending.player_id),
+            Some(AI)
+        );
+        let offered = answers(&at_prompt);
+        assert!(
+            !offered.contains(&answer),
+            "{answer:?} is offered on this world too"
+        );
+
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let score = rescore(&world, &line, &counter).unwrap_or_else(|| panic!("the counter ran out"));
+        assert_ne!(score, finalist_score(&at_prompt, AI, NextSwing::Enemy));
+        // The Scarab, each answer tried, the closing endTurn, and the reply's own steps past them.
+        assert!(counter.used() > 2 + offered.len(), "{} nodes", counter.used());
+        let answered: Vec<f64> = offered
+            .iter()
+            .filter_map(|own| {
+                rescore(
+                    &world,
+                    &[play.clone(), own.clone()],
+                    &create_node_counter(AI_BUDGET.nodes, None),
+                )
+            })
+            .collect();
+        assert!(answered.contains(&score), "{score} is none of {answered:?}");
+    }
+
+    /// #1636: a line cut at a refused play, no prompt open, is scored as before: where it stopped,
+    /// its turn ended and the opponent's reply played, the rest of the line dropped.
+    #[test]
+    fn a_line_cut_at_a_refused_play_with_no_prompt_open_scores_as_before() {
+        let world = scarab_turn("search-rescore-b", 1);
+        let big = play_of(&scarab_turn("search-rescore-b", 4), BIG);
+        assert!(
+            !is_legal(&world, AI, &big),
+            "the 4-cost play is legal at one crystal"
+        );
+        assert_eq!(world.pending, None);
+
+        let cut_counter = create_node_counter(AI_BUDGET.nodes, None);
+        let cut = rescore(&world, &[big, play_of(&world, SCARAB)], &cut_counter);
+        let stopped_counter = create_node_counter(AI_BUDGET.nodes, None);
+        let stopped = rescore(&world, &[], &stopped_counter);
+        assert!(cut.is_some());
+        assert_eq!(cut, stopped);
+        assert_eq!(cut_counter.used(), stopped_counter.used());
+    }
+}

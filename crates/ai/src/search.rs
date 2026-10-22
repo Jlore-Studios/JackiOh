@@ -12,13 +12,14 @@ use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{candidate_actions, candidate_set, root_candidate_actions, root_candidate_set};
-use crate::config::{AI_MOVE_ORDER, MoveOrder};
+use crate::config::{AI_MOVE_ORDER, AI_SEARCH, MoveOrder};
 use crate::evaluate::NextSwing;
 use crate::learned::{finalist_score, line_score, open_score};
 use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{
-    LineStatus, close_line, line_status, own_prompt_score, search_signature, simulate, static_score,
+    AnswersTried, LineStatus, best_auto_answer, close_line, line_status, own_prompt_score, search_signature,
+    simulate, static_score,
 };
 use crate::types::{NodeCounter, SearchBudget};
 
@@ -251,9 +252,13 @@ pub fn beam_search_with(
 
 /// Replay `actions` on another determinization. At the first action whose action_key is not in that
 /// state's candidate_actions (the first action's: the root's, `root_candidate_set`, #1635) the line is
-/// truncated. What is left ends its turn and is scored: after the opponent's reply when `reply` is set
-/// (`reply_score`, with `hidden` as there, by default the opponent's unseen cards in `det`), statically
-/// otherwise. `None` if the counter ran out.
+/// truncated, unless the seat's own prompt is open there (#1636): each world draws its own Discover
+/// offer, so the line's answer may not be one of this world's. The seat then answers the prompt as
+/// `own_prompt_score` does (`best_auto_answer`, nonce `line:${counter.used}`, each answer tried one
+/// node), at most AI_SEARCH.max_auto_answers prompts, drops the line's answer (any other action is
+/// tried again) and plays on. What is left ends its turn and is scored: after the opponent's reply
+/// when `reply` is set (`reply_score`, with `hidden` as there, by default the opponent's unseen cards
+/// in `det`), statically otherwise. `None` if the counter ran out.
 pub fn score_line(
     det: &GameState,
     seat: PlayerId,
@@ -264,8 +269,10 @@ pub fn score_line(
 ) -> Option<f64> {
     let root_turn = det.turn;
     let mut state = det.clone();
+    let mut answered: usize = 0;
+    let mut at = 0;
 
-    for (at, action) in actions.iter().enumerate() {
+    while let Some(action) = actions.get(at) {
         if line_status(&state, seat, root_turn) != LineStatus::Open {
             break;
         }
@@ -277,13 +284,31 @@ pub fn score_line(
             candidate_set(&state, seat)
         };
         if !candidates.iter().any(|candidate| candidate == action) {
-            break;
+            // #1636: the seat's own prompt offers what the line's world did not: answer it here and
+            // play on. Anything else ends the line where it stands.
+            let own_prompt = state
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == seat);
+            if !own_prompt || answered >= AI_SEARCH.max_auto_answers as usize {
+                break;
+            }
+            match best_auto_answer(&state, seat, AnswersTried::Drawn, counter, "line")? {
+                Err(_) => break,
+                Ok(next) => state = next,
+            }
+            answered += 1;
+            if matches!(action, ActionBody::Answer { .. }) {
+                at += 1;
+            }
+            continue;
         }
         match simulate(&state, seat, action, counter) {
             None => return None,
             Some(Err(_)) => break,
             Some(Ok(next)) => state = next,
         }
+        at += 1;
     }
 
     // A line still open at the seat's main phase ends its turn here, so every finalist is scored at
