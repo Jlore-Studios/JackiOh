@@ -12732,7 +12732,7 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-22T07:27:03Z",
-      "run_id": "pending:2a6bddda-1792654018",
+      "run_id": "39740594794",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-22T07:27:14Z",
