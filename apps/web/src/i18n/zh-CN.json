@@ -3061,7 +3061,7 @@
   "Playmat": "桌垫",
   "Backdrop": "背景",
   "Card back": "卡背",
-  "Your settings' choice": "使用设置中的选择",
+  "As equipped in Collection": "使用收藏中装备的外观",
   "The playmat on your side. A deck can pick its own.": "你这一侧的桌垫。每套卡组可以选择自己的桌垫。",
   "The backdrop behind your side. Reduce motion holds it still.": "你这一侧身后的背景。开启“减少动态效果”时它保持静止。",
   "The back of your own face-down cards and your deck.": "你自己的盖放卡牌和卡组的卡背。",
@@ -3202,5 +3202,17 @@
   "All rewards claimed.": "所有奖励均已领取。",
   "{count} × {pack}": "{count} × {pack}",
   "{count} × card token": "{count} × 卡牌代币",
-  "Locked: unlocks once the {newest} track reaches level {level}. Older sets then unlock one per game, the most recent first.": "未解锁：{newest}进度轨道达到第 {level} 级后解锁。之后每局游戏解锁一个更早的系列，从最近的开始。"
+  "Locked: unlocks once the {newest} track reaches level {level}. Older sets then unlock one per game, the most recent first.": "未解锁：{newest}进度轨道达到第 {level} 级后解锁。之后每局游戏解锁一个更早的系列，从最近的开始。",
+  "Cosmetics": "外观",
+  "Card builder": "卡牌工坊",
+  "Owned cards": "已拥有的卡牌",
+  "Equipped": "已装备",
+  "Full art": "全画",
+  "Loading your cosmetics…": "正在加载你的外观…",
+  "See and equip your cosmetics in your Collection": "在你的收藏中查看并装备外观",
+  "Your decks and trios, and the deck builder.": "你的卡组和三套卡组，以及卡组构筑器。",
+  "The cards you own, your wallet, set tracks and quests.": "你拥有的卡牌、钱包、系列进度轨道和任务。",
+  "The cosmetics you own, and the ones you wear.": "你拥有的外观，以及你正在使用的外观。",
+  "Make your own cards and try them against the AI.": "制作你自己的卡牌，并与 AI 对战试用。",
+  "Your own cards and your side of the board wear these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.": "在你进行的每局游戏中，你自己的卡牌和你这一侧的棋盘都会使用这些外观。卡组可以在卡组构筑器中选择自己的桌垫、背景和卡背。"
 }

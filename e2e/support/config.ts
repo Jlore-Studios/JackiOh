@@ -35,6 +35,8 @@ export const routes = {
   account: () => env("accountRoute", "/account"),
   /** #1307: the collection, wallet, set tracks and quests. */
   collection: () => env("collectionRoute", "/collection"),
+  /** R1579000: the Cards section. */
+  collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
   /** #1577: the shop. */
   shop: () => env("shopRoute", "/shop"),
 };

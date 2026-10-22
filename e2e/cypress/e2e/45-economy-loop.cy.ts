@@ -370,7 +370,7 @@ function winALadderGame(loop: Loop): void {
   cy.expectResult("Win");
 
   // The result's transaction pays (api/results.rs), so the next screen reads what it paid.
-  cy.visitAs(econ(), routes.collection());
+  cy.visitAs(econ(), routes.collectionCards());
   cy.get(ts(COLLECTION_SCREEN), { timeout: timeouts.view }).should("be.visible");
   cy.then(() => {
     read<WalletBody>(econ(), "/api/wallet").then((wallet) => {
@@ -531,7 +531,7 @@ function receiveAQuest(): void {
     read<QuestsBody>(econ(), "/api/quests").then((body) => {
       expect(body.quests.map((quest) => quest.questId), "§14.10: the dev tool gave the account that quest").to.deep.eq([given]);
     });
-    cy.visitAs(econ(), routes.collection());
+    cy.visitAs(econ(), routes.collectionCards());
     cy.get(ts(QUESTS_QUEST), { timeout: timeouts.view }).should("have.length", [given].length).and("have.attr", "data-quest-id", given);
   });
 }
