@@ -11827,12 +11827,12 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-3",
       "queued_at": "2026-10-22T20:35:22Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "39866664744",
-      "started_at": "2026-10-22T22:40:32Z",
+      "run_id": "pending:5aacc013-1792711337",
+      "started_at": "2026-10-22T23:22:28Z",
       "stop_requested": false,
       "taken_asks": [],
       "tree": {
@@ -13587,9 +13587,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T23:22:03Z",
+    "at": "2026-10-22T23:22:28Z",
     "url": "",
-    "what": "build #1675 on claude-3"
+    "what": "build #1651 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-22T23:14:57Z",
