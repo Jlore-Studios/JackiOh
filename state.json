@@ -11454,6 +11454,13 @@
     "1636": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T17:14:03Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the change is in the AI's search (crates/ai/src/search.rs, score_line), which the rule names hard outright"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
