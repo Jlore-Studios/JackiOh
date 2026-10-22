@@ -11522,6 +11522,13 @@
     "1639": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T17:04:42Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule line 3 fails outright: the task adds ruling R1639000 and edits spec \u00a710.10 and 11-rulings.md, and the CSS is visual polish judged by eye"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
