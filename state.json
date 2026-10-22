@@ -11082,6 +11082,11 @@
     "1590": {
       "action": "revise",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-22T00:35:23Z",
+        "by": "`claude` (strong)",
+        "sha": "78b2b9ae1dacc0e704394870fe7aa16da3b01d6a"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-21T22:39:58Z",
