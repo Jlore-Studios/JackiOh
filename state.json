@@ -12527,13 +12527,13 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-1",
       "queued_at": "2026-10-22T21:28:51Z",
       "round_tier": "strong",
-      "run_id": "39857695004",
+      "run_id": "pending:8262c66b-1792706915",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-22T21:29:33Z",
+      "started_at": "2026-10-22T22:08:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -13538,9 +13538,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-22T22:08:22Z",
+    "at": "2026-10-22T22:08:51Z",
     "url": "",
-    "what": "build #1651 on claude-7"
+    "what": "revise #1683 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-22T22:00:07Z",
