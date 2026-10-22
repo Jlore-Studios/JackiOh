@@ -1,14 +1,14 @@
-//! M #49.1 YileGPT Unleashed (SPEC §8.8 row 49.1): (10) Unit, CN, Acclaimed, Prime, Token (printed
-//! Mythic), 8/20 → 16/40, Can't attack (Radiant: Can't attack, Armor 5).
+//! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (10) Unit, CN, Acclaimed, Prime, Token (printed
+//! Mythic), 8/20 → 16/40, Can't attack (Radiant: Can't attack, Armor 5). YileGPT Unleashed until #1563.
 //!
 //! "Start of turn: Make [a random permanent / {radiants} random permanents] of yours Radiant" and
-//! "Whenever your turn ends with unspent mana, this costs that much less." plus "Cry: Do {picks} of
-//! these at random …" / Radiant "Cry: [all five] …"
+//! "Float reduces cost." plus "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …"
 //! Engine:
-//! - The discount is a hand trigger and a deck trigger (R464) on its owner's `turnEnded`: they read
-//!   the event's `unspentMana` (the number Bread and Butter reads) into a `costMod` of minus that
-//!   (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile (R766), and the price
-//!   floors at 0.
+//! - "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger and a
+//!   deck trigger (R464) on its owner's `turnEnded`: the event's `unspentMana`, the Float, becomes a
+//!   `costMod` of minus that (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile
+//!   (R766), and the price floors at 0. Until #1563 the face printed it as "Whenever your turn ends
+//!   with unspent mana, this costs that much less", the same rule.
 //! - The Cry is ME-PICK-N (MD-C23) over the five entries below: the base face does `picks` different
 //!   ones by the match rng, named to both players and resolved in list order; the Radiant face does
 //!   all five in order, with two Radiant Viruses for the opponent in place of the fill (MD-C24).
@@ -16,8 +16,8 @@
 //!   this one included.
 
 use jackioh_engine::effects::{
-    DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board, set_cost_mod,
-    set_radiant_random, summon,
+    DoRandomEntriesArgs, RandomEntry, add_to_hand, degrade, do_random_entries, fill_board, set_radiant_random,
+    summon,
 };
 use jackioh_engine::prelude::*;
 
@@ -115,37 +115,6 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
     ]
 }
 
-/// MD-C22: the ending player's unspent mana off the event — the number Bread and Butter reads — for
-/// this card's owner only.
-fn discount_for(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
-    let (player, unspent) = match event {
-        GameEvent::TurnEnded {
-            player, unspent_mana, ..
-        } => (*player, *unspent_mana),
-        _ => return vec![],
-    };
-    if player != ctx.controller || unspent <= 0 {
-        return vec![];
-    }
-    vec![set_cost_mod(json_as(json!({
-        "target": { "of": "self" },
-        "amount": -unspent,
-    })))]
-}
-
-fn discount_trigger(id: &str) -> TriggerDef {
-    TriggerDef::new(id, &[GameEventType::TurnEnded], discount_for).with_when(|ctx, event| {
-        matches!(
-            event,
-            GameEvent::TurnEnded {
-                player,
-                unspent_mana,
-                ..
-            } if *player == ctx.controller && *unspent_mana > 0
-        )
-    })
-}
-
 fn unleashed(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -168,8 +137,9 @@ fn unleashed(radiant: bool) -> Script {
                 "count": param(&*ctx, "radiants"),
             })))]
         })),
-        hand_triggers: vec![discount_trigger("unleashed-discount-hand")],
-        deck_triggers: vec![discount_trigger("unleashed-discount-deck")],
+        // "Float reduces cost" (R1563000), its trigger ids kept from before the keyword.
+        hand_triggers: vec![float_reduces_cost("unleashed-discount-hand")],
+        deck_triggers: vec![float_reduces_cost("unleashed-discount-deck")],
         ..Script::default()
     }
 }
@@ -181,7 +151,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #49.1 YileGPT Unleashed — SPEC §8.8 row 49.1, BUILD M10 row M 49.1.
+// M #49.1 YileGPT Prime — SPEC §8.8 row 49.1, BUILD M10 row M 49.1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -198,7 +168,7 @@ mod tests {
     const VIRUS: &str = "meditative-049-2";
     const FILLER: &str = "core-005";
 
-    /// p1 holds the Unleashed (base unless `radiant_face`) with 10 mana to play it.
+    /// p1 holds the Prime (base unless `radiant_face`) with 10 mana to play it.
     fn holding(seed: &str, radiant_face: bool) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -311,7 +281,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1022_unspent_mana_lowers_its_cost_in_hand_and_deck_never_below_0() {
+            fn r1022_r1563000_a_float_lowers_its_cost_in_hand_and_deck_never_below_0() {
                 let mut s = scenario(json!({
                     "seed": "unleashed-discount",
                     "p1": {
@@ -338,7 +308,7 @@ mod tests {
             }
 
             #[test]
-            fn r1022_no_unspent_mana_changes_nothing() {
+            fn r1022_r1563000_no_float_changes_nothing() {
                 let mut s = scenario(json!({
                     "seed": "unleashed-discount-none",
                     "p1": {
@@ -361,7 +331,7 @@ mod tests {
 
             #[test]
             fn r1022_the_discount_ends_as_the_card_leaves_hand_and_deck() {
-                // A Yile's Virus's Death discards it. YileGPT Unleashed is a token, so it reaches no
+                // A Yile's Virus's Death discards it. YileGPT Prime is a token, so it reaches no
                 // graveyard: it ceases to exist (R11) and its discount with it.
                 let mut s = scenario(json!({
                     "seed": "unleashed-discount-graveyard",

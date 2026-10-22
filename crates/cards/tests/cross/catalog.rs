@@ -394,7 +394,7 @@ const CORE: &[SpecRow] = &[
     row(
         "29",
         "GIGA Glowy Jelly Bean",
-        c(6),
+        c(7),
         T::Spell,
         &[],
         R::Rare,
@@ -1497,7 +1497,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "37",
         "Last Hurrah",
-        c(1),
+        c(0),
         T::Spell,
         &[],
         R::Epic,
@@ -2506,7 +2506,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "35",
         "Rollback",
-        c(4),
+        c(3),
         T::Spell,
         &[],
         R::Legendary,
@@ -3373,7 +3373,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "20",
         "Aestheticize the Game",
-        c(1),
+        c(0),
         T::Spell,
         &[G::Quickdraw, G::Wincon],
         R::Mythic,
@@ -3752,7 +3752,7 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "49",
-        "YileGPT Tamed",
+        "YileGPT",
         c(2),
         T::Unit,
         &[G::Cn, G::Acclaimed, G::Catalyst],
@@ -3762,7 +3762,7 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "49.1",
-        "YileGPT Unleashed",
+        "YileGPT Prime",
         c(10),
         T::Unit,
         &[G::Cn, G::Acclaimed, G::Prime, G::Token],
@@ -4314,7 +4314,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "96",
         "Meditative Journey",
-        c(2),
+        c(1),
         T::Spell,
         &[],
         R::Rare,
@@ -4324,7 +4324,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "96.1",
         "Journey Complete",
-        c(2),
+        c(1),
         T::Spell,
         &[G::Token],
         R::Token,
@@ -4503,6 +4503,26 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "1.2",
         "Spa Day",
+        c(2),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "1.3",
+        "Garage Sale",
+        c(1),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "1.4",
+        "Leg Day",
         c(2),
         T::Spell,
         &[G::Ai, G::Token],
@@ -4884,7 +4904,7 @@ const SET_SIZES: &[SetSize] = &[
     SetSize {
         set: "Meditative+",
         cards: 26,
-        tokens: 4,
+        tokens: 6,
     },
 ];
 
@@ -5341,13 +5361,14 @@ mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is
     }
 
     #[test]
-    fn r1178000_the_set_s_census_is_26_cards_and_4_tokens_5_9_9_1_2() {
+    fn r1178000_the_set_s_census_is_26_cards_and_6_tokens_5_9_9_1_2() {
         let tokens: Vec<&str> = MEDITATIVE_PLUS
             .iter()
             .filter(|row| row.rarity == Rarity::Token)
             .map(|row| row.index)
             .collect();
-        assert_eq!(tokens, ["1.1", "1.2", "16.1", "20.1"]);
+        // #1563 added Bob's Plan's #1.3 Garage Sale and #1.4 Leg Day (R1563003).
+        assert_eq!(tokens, ["1.1", "1.2", "1.3", "1.4", "16.1", "20.1"]);
         let mut rarities: BTreeMap<&str, usize> = BTreeMap::new();
         for row in MEDITATIVE_PLUS.iter().filter(|row| row.rarity != Rarity::Token) {
             *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
@@ -5590,10 +5611,13 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     #[test]
     fn r1178000_prints_the_designer_s_rarity_on_meditative_plus_16_1_and_20_1_and_none_on_its_ai_helpers() {
         // §7: Jazakus Prime the designer's Epic, Lil' Kenny his Rare; the plan's AI generated
-        // helpers, #1.1 Base Camp and #1.2 Spa Day, none, as the T-AI cards (B2.5).
+        // helpers, #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, none, as the T-AI
+        // cards (B2.5).
         const MEDITATIVE_PLUS_PRINTED: &[(&str, Option<&str>)] = &[
             ("1.1", None),
             ("1.2", None),
+            ("1.3", None),
+            ("1.4", None),
             ("16.1", Some("Epic")),
             ("20.1", Some("Rare")),
         ];
@@ -6004,7 +6028,7 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     #[test]
     fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_meditative_45_49_and_91_and_meditative_plus_16_catalyst_and_no_other_entry()
      {
-        // Meditative #49 YileGPT Tamed since patch v0.3.10 (#831).
+        // Meditative #49 YileGPT since patch v0.3.10 (#831).
         assert_eq!(
             tagged(Tag::Catalyst),
             [
@@ -6038,14 +6062,13 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
             .concat()
         );
         // Every entry named "<card> Prime" carries the tag, and each Prime is the token its Catalyst
-        // defines. M #49.1 YileGPT Unleashed, the token M #49's Death puts in the deck, took the tag in
-        // patch v0.3.10 (#831) and kept its name.
+        // defines. M #49.1, the token M #49's Death puts in the deck, took the tag in patch v0.3.10
+        // (#831) as YileGPT Unleashed, and its name in #1563: YileGPT Prime, of M #49 YileGPT.
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.ends_with(" Prime"))
             .map(|entry| entry.id.clone())
             .collect();
-        named.push("meditative-049-1".to_string());
         named.sort();
         assert_eq!(named, tagged(Tag::Prime), "entries named <card> Prime");
         for id in tagged(Tag::Prime) {
@@ -6056,11 +6079,9 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 catalyst.is_some_and(|entry| entry.tags.contains(&Tag::Catalyst)),
                 "{id}"
             );
-            // The designer named M #91.1 Windfurious Prime, not "Windfast Prime", and M #49.1 YileGPT
-            // Unleashed.
+            // The designer named M #91.1 Windfurious Prime, not "Windfast Prime".
             if let Some(name) = match id.as_str() {
                 "meditative-091-1" => Some("Windfurious Prime"),
-                "meditative-049-1" => Some("YileGPT Unleashed"),
                 _ => None,
             } {
                 assert_eq!(
@@ -6093,9 +6114,9 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_tamed_and_yilegpt_unleashed_acclaimed_and_no_other_entry()
+    fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_and_yilegpt_prime_acclaimed_and_no_other_entry()
      {
-        // §8.8 rows 49 and 49.1 print the tag on YileGPT Tamed and YileGPT Unleashed (the designer's
+        // §8.8 rows 49 and 49.1 print the tag on YileGPT and YileGPT Prime (the designer's
         // "Acclaimed"); Yile's Virus and AI Girlfriend lost it in patch v0.3.10 (#831).
         assert_eq!(
             tagged(Tag::Acclaimed),

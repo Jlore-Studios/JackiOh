@@ -50,6 +50,20 @@ pub struct ClockView {
     /// over (R268).
     pub mulligan_owed: Vec<PlayerId>,
     pub over: bool,
+    /// R1563006: the question of a sequence open now (Meditative+ #20 KY's Competition), the sequence
+    /// clock's whole input; `None` with none open. Public: who holds it, its streak and its prompt id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sequence: Option<SequenceClockView>,
+}
+
+/// R1563006: one question of a sequence, as the sequence clock reads it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SequenceClockView {
+    pub player: PlayerId,
+    /// The right answers so far: 0 on a sequence's first question, where its clock starts.
+    pub streak: i32,
+    pub prompt_id: String,
 }
 
 /// Which clock ran out, tagged on `kind` as TS's union was.
@@ -68,6 +82,8 @@ pub enum ClockExpiry {
     Grace { player: PlayerId },
     /// R79: the hard wall-clock ceiling; `ceilingReached` ends the match in a draw.
     Ceiling,
+    /// R1563006: a question sequence's clock ran out; its question is answered Stop for its player.
+    Sequence { player: PlayerId },
 }
 
 impl ClockExpiry {
@@ -79,6 +95,7 @@ impl ClockExpiry {
             ClockExpiry::Mulligan => "mulligan",
             ClockExpiry::Grace { .. } => "grace",
             ClockExpiry::Ceiling => "ceiling",
+            ClockExpiry::Sequence { .. } => "sequence",
         }
     }
 }

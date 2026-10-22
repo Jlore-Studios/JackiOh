@@ -681,6 +681,7 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
             max: 2,
             budget: None,
             craft_mode: None,
+            craft_offer: None,
             streak: None,
             resume: Resume {
                 def_id: String::new(),

@@ -13,6 +13,7 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
 import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
+import { stopFollowingChallenge } from "./follow.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -27,6 +28,11 @@ const TESTID = {
   requestAccept: "together-request-accept",
   requestDecline: "together-request-decline",
   challenge: "together-challenge",
+  challengeForm: "together-challenge-form",
+  challengeModeBo1: "together-challenge-mode-bo1",
+  challengeDeck: "together-challenge-deck",
+  challengeSend: "together-challenge-send",
+  challengeClose: "together-challenge-close",
   watch: "together-watch",
   chatOpen: "together-chat-open",
   chatInput: "chat-input",
@@ -267,6 +273,11 @@ async function clickConfirmed(control: HTMLElement, done: () => boolean): Promis
     .queryAllByRole("button")
     .find((button) => /remove|block|yes|confirm|ok/i.test(button.textContent ?? ""));
   if (confirm !== undefined) fireEvent.click(confirm);
+}
+
+/** A key pressed wherever the focus is: the challenge dialog reads Escape and Tab at the window (ConfirmConcede.test.tsx). */
+function press(key: string, options: { shiftKey?: boolean } = {}): void {
+  fireEvent.keyDown(document.activeElement ?? document.body, { key, ...options });
 }
 
 const IN_MATCH = /in[\s_-]?(a\s)?(match|game)|playing/i;
@@ -656,5 +667,101 @@ describe("B60 the page holds the co-op panel", () => {
   it("B60 /together shows the co-op panel's create control", async () => {
     await renderPage();
     expect(await screen.findByTestId(TESTID.coopCreate, undefined, SLOW)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// the challenge dialog is a modal for the keyboard (#1569), as the card drill-down is (#1527)
+// ---------------------------------------------------------------------------------------------
+
+describe("the challenge dialog's focus (#1569)", () => {
+  /** Press Ann's Challenge button. `fireEvent.click` leaves the focus where it was, as Safari does. */
+  function openChallenge(): HTMLElement {
+    const challenge = within(rowOf(ANN)).getByTestId(TESTID.challenge);
+    fireEvent.click(challenge);
+    return challenge;
+  }
+
+  it("opening it takes the focus to its checked mode, and Escape closes it from anywhere and gives the focus back to the Challenge button", async () => {
+    await renderPage();
+    const challenge = openChallenge();
+    const form = await screen.findByTestId(TESTID.challengeForm);
+    expect(form).toHaveAttribute("role", "dialog");
+    expect(form).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByTestId(TESTID.challengeModeBo1)).toHaveFocus();
+
+    (document.activeElement as HTMLElement | null)?.blur();
+    press("Escape");
+    expect(screen.queryByTestId(TESTID.challengeForm)).toBeNull();
+    expect(challenge).toHaveFocus();
+  });
+
+  it("keeps Tab and Shift+Tab on its controls, the mode group one stop, and brings them back inside from the page behind", async () => {
+    await renderPage();
+    openChallenge();
+    await screen.findByTestId(TESTID.challengeDeck, undefined, SLOW);
+    const mode = screen.getByTestId(TESTID.challengeModeBo1);
+    const deck = screen.getByTestId(TESTID.challengeDeck);
+    const send = screen.getByTestId(TESTID.challengeSend);
+    const cancel = screen.getByTestId(TESTID.challengeClose);
+
+    expect(mode).toHaveFocus();
+    press("Tab");
+    expect(deck).toHaveFocus();
+    press("Tab");
+    expect(send).toHaveFocus();
+    press("Tab");
+    expect(cancel).toHaveFocus();
+    press("Tab");
+    expect(mode).toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(cancel).toHaveFocus();
+    press("Tab", { shiftKey: true });
+    expect(send).toHaveFocus();
+
+    const behind = screen.getByTestId(TESTID.addInput);
+    behind.focus();
+    press("Tab");
+    expect(mode).toHaveFocus();
+    behind.focus();
+    press("Tab", { shiftKey: true });
+    expect(cancel).toHaveFocus();
+  });
+
+  it("closes on a click on the scrim, never on one inside it, and on Cancel, each time giving the focus back to the Challenge button", async () => {
+    await renderPage();
+    const challenge = openChallenge();
+    const form = await screen.findByTestId(TESTID.challengeForm);
+
+    fireEvent.click(form);
+    expect(screen.getByTestId(TESTID.challengeForm)).toBeInTheDocument();
+
+    fireEvent.click(must(document.querySelector<HTMLElement>(".together-dialog-scrim"), "the scrim"));
+    expect(screen.queryByTestId(TESTID.challengeForm)).toBeNull();
+    expect(challenge).toHaveFocus();
+
+    openChallenge();
+    await screen.findByTestId(TESTID.challengeForm);
+    expect(challenge).not.toHaveFocus();
+    fireEvent.click(screen.getByTestId(TESTID.challengeClose));
+    expect(screen.queryByTestId(TESTID.challengeForm)).toBeNull();
+    expect(challenge).toHaveFocus();
+  });
+
+  it("a sent challenge closes it and gives the focus back to the Challenge button", async () => {
+    const server = await renderPage(world(), (call) =>
+      call.method === "POST" && call.path === "/api/challenges"
+        ? { status: 201, body: { challengeId: "ch-1", roomCode: "ROOM01" } }
+        : undefined,
+    );
+    const challenge = openChallenge();
+    await screen.findByTestId(TESTID.challengeDeck, undefined, SLOW);
+    fireEvent.click(screen.getByTestId(TESTID.challengeSend));
+    await waitFor(() => {
+      expect(screen.queryByTestId(TESTID.challengeForm)).toBeNull();
+    }, SLOW);
+    expect(challenge).toHaveFocus();
+    expect(server.to("POST", "/api/challenges")).toHaveLength(1);
+    stopFollowingChallenge();
   });
 });

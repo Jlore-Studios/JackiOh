@@ -11,7 +11,10 @@
 //!    mulligans are open (R265), reported as the prompt deadline; the turn clock does not run then;
 //!  - a disconnect grace per player (§9.5: `DISCONNECT_GRACE_SECONDS`), which does **not** pause
 //!    the turn clock;
-//!  - the hard ceiling (R79: `MATCH_CEILING_MINUTES`), measured from `started_at`.
+//!  - the hard ceiling (R79: `MATCH_CEILING_MINUTES`), measured from `started_at`;
+//!  - R1563006: a question sequence's clock (Meditative+ #20 KY's Competition, the engine's
+//!    `KY_COMPETITION_SECONDS`), armed at a sequence's first question and run beside the turn clock, never
+//!    instead of it; its expiry answers the open question Stop.
 //!
 //! No system clock: `now_ms()` reads tokio's, so tests are exact with `tokio::time::pause()` and
 //! `advance()` (docs/v0.3.0/SURFACE.md §11.2). Every number comes from `crate::config` (R79).
@@ -30,6 +33,7 @@ use crate::config::{
     TURN_CLOCK_SECONDS,
 };
 use crate::db::store::MatchClocks;
+use jackioh_engine::config::KY_COMPETITION_SECONDS;
 
 // Unit conversions, not configuration: these two are the definitions of a second and a minute,
 // and every lifecycle *duration* comes from `crate::config` (R79) rather than from here.
@@ -178,6 +182,12 @@ struct ClockState {
 
     grace: PerPlayer<Countdown>,
 
+    // R1563006: the question sequence's clock, armed at its first question (`sequence_first`, that
+    // question's prompt id) and kept over the questions after it, so each answer spends from one window.
+    sequence_ms: i64,
+    sequence: Countdown,
+    sequence_first: Option<String>,
+
     // R79: one timer for the whole match, measured from `started_at` — so a clock rebuilt after a
     // crash inherits the ceiling the match already had rather than starting a fresh hour.
     ceiling: Option<Timer>,
@@ -289,11 +299,46 @@ impl ClockState {
         }
     }
 
+    /// R1563006: the sequence clock for `player`, running out `ms` from now.
+    fn arm_sequence_in(&mut self, player: PlayerId, ms: i64) {
+        self.sequence.cancel();
+        self.sequence.deadline = Some(now_ms() + ms);
+        let me = self.me.clone();
+        self.sequence.timer = Some(after(ms, move |id| {
+            fire(&me, |clock| {
+                if !clock.sequence.armed_by(id) {
+                    return None;
+                }
+                clock.sequence.take_fired();
+                clock.sequence.deadline = None;
+                Some(ClockExpiry::Sequence { player })
+            });
+        }));
+    }
+
+    /// R1563006: a sequence's first question (streak 0, a prompt id this clock has not started on) arms
+    /// a fresh window; a later question keeps it; none open clears it. A question met mid-sequence with
+    /// no window (a rebuilt actor) arms a fresh one, as the turn clock does.
+    fn sync_sequence(&mut self, view: &ClockView) {
+        let Some(question) = &view.sequence else {
+            self.sequence.cancel();
+            self.sequence_first = None;
+            return;
+        };
+        let first =
+            question.streak == 0 && self.sequence_first.as_deref() != Some(question.prompt_id.as_str());
+        if first || self.sequence_first.is_none() {
+            self.sequence_first = Some(question.prompt_id.clone());
+            self.arm_sequence_in(question.player, self.sequence_ms);
+        }
+    }
+
     fn stop(&mut self) {
         self.stopped = true;
         self.turn.cancel();
         self.clear_prompt();
         self.close_mulligan();
+        self.sequence.cancel();
         for player in PLAYER_IDS {
             self.grace[player].cancel();
         }
@@ -378,6 +423,8 @@ impl ClockState {
             Some(holder) if holder != view.active => self.pause_turn(),
             _ => self.arm_turn(),
         }
+
+        self.sync_sequence(view);
     }
 
     // §9.5: "Disconnect grace (60 s) and concede end the match as a loss" and "the grace countdown
@@ -458,6 +505,12 @@ impl ClockState {
             ClockExpiry::Ceiling => {
                 if self.ceiling.is_none() {
                     self.arm_ceiling_in(ms);
+                }
+            }
+            // R1563006: only a window still open on its sequence re-arms.
+            ClockExpiry::Sequence { player } => {
+                if self.sequence_first.is_some() && self.sequence.timer.is_none() {
+                    self.arm_sequence_in(player, ms);
                 }
             }
         }
@@ -587,6 +640,9 @@ pub fn create_match_clock(input: CreateMatchClockInput) -> MatchClock {
             mulligan_open: false,
             mulligan_expired: false,
             grace: PerPlayer::new(idle(), idle()),
+            sequence_ms: i64::from(KY_COMPETITION_SECONDS) * MS_PER_SECOND,
+            sequence: idle(),
+            sequence_first: None,
             ceiling: None,
         })
     });

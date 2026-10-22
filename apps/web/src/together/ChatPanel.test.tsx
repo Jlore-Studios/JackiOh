@@ -359,6 +359,29 @@ describe("B58 the in-match chat toggle", () => {
     }, SLOW);
   });
 
+  it("B58 closing the conversation, by its close control or by Escape, gives the focus back to the toggle, which names its list while open", async () => {
+    serveFriends();
+    render(<InMatchChat />);
+    const toggle = screen.getByTestId("in-match-chat-toggle");
+    expect(toggle).not.toHaveAttribute("aria-controls");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-controls", screen.getByTestId("in-match-chat-list").id);
+    const ann = must((await screen.findByText(wholeText("Ann#2"), undefined, SLOW)).closest("button"), "Ann's button");
+    fireEvent.click(ann);
+    expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
+    expect(toggle).not.toHaveAttribute("aria-controls");
+
+    fireEvent.click(screen.getByTestId("chat-close"));
+    expect(screen.queryByTestId("chat-panel")).toBeNull();
+    expect(toggle).toHaveFocus();
+
+    fireEvent.click(toggle);
+    fireEvent.click(must((await screen.findByText(wholeText("Ann#2"), undefined, SLOW)).closest("button"), "Ann's button"));
+    fireEvent.keyDown(await screen.findByTestId("chat-input", undefined, SLOW), { key: "Escape" });
+    expect(screen.queryByTestId("chat-panel")).toBeNull();
+    expect(toggle).toHaveFocus();
+  });
+
   it("B58 the toggle does not list offline friends", async () => {
     serveFriends();
     render(<InMatchChat />);

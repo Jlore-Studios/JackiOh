@@ -2,7 +2,7 @@
 //!   Base:    "End of Turn: Add a random AI generated card to your hand. It costs (0)."
 //!   Radiant: "… random Radiant AI generated card …"
 //!   Engine:  "Its controller's end of turn (R62). The pool is the AI generated cards (T-AI-1 to
-//!            T-AI-10, and M+ #1.1 and #1.2 since Meditative+ shipped, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
+//!            T-AI-10, and M+ #1.1 to #1.4 since Meditative+ shipped and #1563, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
 //!            it (§2.4). Tunes: none (balance patch 1: the count is fixed at one)."
 //!
 //! An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
@@ -13,7 +13,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-078";
 
-/// §8.7: "a random AI generated card" — the AI tag's tokens (twelve), which a pool names by asking for tokens.
+/// §8.7: "a random AI generated card" — the AI tag's tokens (fourteen since #1563), which a pool names by asking for tokens.
 fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
@@ -45,7 +45,7 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: at each end
-// of your turn adds a random AI generated card (T-AI-1 to T-AI-10 and M+ #1.1 and #1.2, the pool its text names) that costs
+// of your turn adds a random AI generated card (T-AI-1 to T-AI-10 and M+ #1.1 to #1.4, the pool its text names) that costs
 // (0) to your hand; nothing at the opponent's end; a full hand burns it; hidden from the opponent (R97);
 // the count is fixed at 1 with no tunable (balance patch 1); radiant the card is Radiant".
 #[cfg(test)]
@@ -63,10 +63,18 @@ mod tests {
 
     /// The AI generated cards of the sets that ship, sorted (§7, R1421): T-AI-1 to T-AI-10 and M+ #1.1
     /// Base Camp and #1.2 Spa Day. Re-pinned for v0.3.15 (Meditative+ ships, #1187): Bob's Plan's two
-    /// AI tokens join the pool, which is now twelve.
+    /// AI tokens join the pool, which is now twelve; #1563's #1.3 and #1.4 make it fourteen.
     fn ai_ids() -> Vec<String> {
         let mut ids: Vec<String> = (1..=10).map(|at| format!("classicplus-t-ai-{at:02}")).collect();
-        ids.extend(["meditativeplus-001-1", "meditativeplus-001-2"].map(String::from));
+        ids.extend(
+            [
+                "meditativeplus-001-1",
+                "meditativeplus-001-2",
+                "meditativeplus-001-3",
+                "meditativeplus-001-4",
+            ]
+            .map(String::from),
+        );
         ids
     }
 
@@ -106,7 +114,7 @@ mod tests {
         }
 
         #[test]
-        fn s7_the_pool_its_text_names_is_the_twelve_ai_generated_cards_tokens_all() {
+        fn s7_the_pool_its_text_names_is_the_fourteen_ai_generated_cards_tokens_all() {
             crate::register_all();
             let mut pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["AI"], "token": true })))
                 .iter()
@@ -138,7 +146,7 @@ mod tests {
             }
 
             #[test]
-            fn r60_every_seed_draws_from_the_twelve_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
+            fn r60_every_seed_draws_from_the_fourteen_ai_cards_and_nothing_else_and_more_than_one_of_them_turns_up() {
                 let mut seen: IndexSet<String> = IndexSet::new();
                 for seed in 0..24 {
                     let seed = format!("datacenter-{seed}");

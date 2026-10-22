@@ -116,7 +116,8 @@ mod tests {
     use jackioh_engine::resolve::{HookOptions, make_context};
     use jackioh_engine::subsystems::ai_policy::choose_action;
     use jackioh_engine::subsystems::craft::{
-        compile_crafted_scripts, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, validate_recipe,
+        compile_crafted_scripts, craft_id, craft_presets, craft_preview, recipe_loc, recipe_points, roll_offer,
+        validate_recipe, whole_palette,
     };
     use jackioh_engine::testkit::*;
 
@@ -166,30 +167,70 @@ mod tests {
         s
     }
 
+    /// `crafted_at`, its prompt's offer widened to every block, for the tests of R880–R883's rules,
+    /// which the offer (R1563007) only narrows.
+    fn any_block_at(cost: i32) -> Scenario {
+        let mut s = crafted_at(cost);
+        if let Some(pending) = s.state_mut().pending.as_mut() {
+            pending.craft_offer = Some(whole_palette());
+        }
+        s
+    }
+
     mod base {
         use super::*;
 
         #[test]
-        fn r880_asks_a_cost_then_offers_four_presets() {
+        fn r880_r1563007_asks_a_cost_then_offers_presets_built_from_its_offer() {
             let s = crafted_at(2);
             let pending = s.state().pending.clone().expect("the craft prompt is open");
             assert_eq!(pending.kind, PromptKind::Craft);
-            assert_eq!(pending.options.len(), 4);
             assert_eq!(pending.budget, Some(2));
-            let types: Vec<String> = pending
+            let offer = pending.craft_offer.clone().expect("the free crafter rolls an offer");
+            assert_eq!(offer.keywords.len(), CRAFT_OFFER_KEYWORDS);
+            assert_eq!(offer.hats.len(), CRAFT_OFFER_HATS);
+            assert!(offer.verbs.len() <= CRAFT_OFFER_VERBS);
+            let recipes: Vec<CraftRecipe> = pending
                 .options
                 .iter()
                 .map(|option| match &option.selection {
-                    Selection::Craft { recipe } => recipe.type_.as_str().to_string(),
+                    Selection::Craft { recipe } => recipe.clone(),
                     other => panic!("a preset is a recipe, not {other:?}"),
                 })
                 .collect();
-            assert_eq!(types, vec!["Unit", "Spell", "Field Spell", "Trap"]);
+            assert!((1..=4).contains(&recipes.len()));
+            assert_eq!(recipes[0].type_, CardType::Unit, "the Unit preset needs no hat, so it is always there");
+            for recipe in &recipes {
+                assert!(recipe.keywords.iter().all(|block| offer.keywords.contains(&block.kind)));
+                for hat in &recipe.hats {
+                    assert!(offer.hats.contains(&hat.hat), "{recipe:?}");
+                    assert!(hat.effects.iter().all(|effect| offer.verbs.contains(&effect.verb)));
+                }
+            }
+        }
+
+        #[test]
+        fn r1563007_a_block_outside_the_offer_is_refused() {
+            let mut s = crafted_at(4);
+            let offer = s.state().pending.clone().and_then(|pending| pending.craft_offer).expect("an offer");
+            let hat = [CraftHatKind::Cry, CraftHatKind::Death]
+                .into_iter()
+                .find(|hat| !offer.hats.contains(hat))
+                .expect("two hats of eight leave one of these out");
+            let recipe = json!({
+                "cost": 4, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+                "attack": 1, "health": 1, "keywords": [], "echo": 0,
+                "hats": [{ "hat": hat, "effects": [{ "verb": "draw", "n": 1 }] }],
+            });
+            s.expect_refused_with(
+                |s| s.answer(json!([{ "pick": "craft", "recipe": recipe }])),
+                "was not offered",
+            );
         }
 
         #[test]
         fn r880_refuses_an_over_budget_recipe() {
-            let mut s = crafted_at(0);
+            let mut s = any_block_at(0);
             let before = jackioh_engine::replay::hash_state(s.state());
             // A 10/10 Unit costs 19 points, over the budget of 2.
             s.expect_refused_with(
@@ -206,7 +247,7 @@ mod tests {
 
         #[test]
         fn r882_adds_a_crafted_card_to_hand() {
-            let mut s = crafted_at(1);
+            let mut s = any_block_at(1);
             // A 3/4 Unit costs 6 points, within the budget of 7.
             s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
             assert!(s.state().pending.is_none());
@@ -226,7 +267,7 @@ mod tests {
 
         #[test]
         fn r882_it_is_exiled_after_it_resolves() {
-            let mut s = crafted_at(1);
+            let mut s = any_block_at(1);
             let spell = s.card(ID).clone();
             s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
             assert!(s.hand(P1)[0].def_id.starts_with("craft:"));
@@ -240,7 +281,7 @@ mod tests {
             crate::register_all();
             let shipped = crate::shipped_catalog("v0.3.0c").expect("v0.3.0c is carried");
             jackioh_engine::with_shipped(Some(shipped), || {
-                let mut s = crafted_at(1);
+                let mut s = any_block_at(1);
                 let spell = s.card(ID).clone();
                 s.answer(json!([{ "pick": "craft", "recipe": unit_recipe(1, 3, 4) }]));
                 assert!(s.hand(P1)[0].def_id.starts_with("craft:"));
@@ -250,7 +291,7 @@ mod tests {
 
         #[test]
         fn r882_a_crafted_spell_deals_its_damage() {
-            let mut s = crafted_at(1);
+            let mut s = any_block_at(1);
             // N=5 at 1 point each: 5 points, within the budget of 7.
             s.answer(json!([{
                 "pick": "craft",
@@ -307,7 +348,7 @@ mod tests {
 
         /// Refused with "cannot be crafted" and `reason`, the state unchanged and the prompt open.
         fn refused(cost: i32, recipe: Value, reason: &str) {
-            let mut s = crafted_at(cost);
+            let mut s = any_block_at(cost);
             let before = hash_state(s.state());
             s.expect_refused_with(|s| s.answer(json!([{ "pick": "craft", "recipe": recipe }])), reason);
             assert_eq!(
@@ -329,7 +370,7 @@ mod tests {
         /// Craft `recipe` at its cost and hand back the scenario and the crafted card.
         fn minted(recipe: Value) -> (Scenario, CardInstance) {
             let cost = recipe["cost"].as_i64().expect("a cost") as i32;
-            let mut s = crafted_at(cost);
+            let mut s = any_block_at(cost);
             s.answer(json!([{ "pick": "craft", "recipe": recipe }]));
             let card = s
                 .hand(P1)
@@ -368,7 +409,9 @@ mod tests {
 
             let offered = presets(&s);
             let mut rng = Rng::new(&seed, cursor);
-            assert_eq!(offered, craft_presets(&mut rng, 3), "the match rng rolls them");
+            let offer = roll_offer(&mut rng, None, 3).expect("the free crafter's offer");
+            assert_eq!(s.state().pending.as_ref().and_then(|pending| pending.craft_offer.clone()), Some(offer.clone()));
+            assert_eq!(offered, craft_presets(&mut rng, 3, &offer), "the match rng rolls them");
             assert_eq!(s.state().rng_cursor, rng.cursor());
             for recipe in &offered {
                 assert_eq!(recipe.cost, 3);
@@ -396,7 +439,7 @@ mod tests {
 
         #[test]
         fn r880_a_recipe_of_more_than_8_effects_is_refused() {
-            let armor = json!({ "verb": "gainArmor", "n": 1 });
+            let armor = json!({ "verb": "healYourHero", "n": 1 });
             refused(
                 4,
                 spell(4, json!([armor, armor, armor, armor, armor, armor, armor, armor, armor])),
@@ -482,9 +525,11 @@ mod tests {
 
         #[test]
         fn every_number_is_a_param_that_a_nerf_or_a_buff_moves() {
-            // A cost-4 Spell dealing 10: its only movable row is the declared number.
-            for (verb, below) in [("degrade", true), ("upgrade", false)] {
-                let (mut s, card) = minted(spell(4, json!([{ "verb": "damageEnemyHero", "n": 10 }])));
+            // A cost-4 Spell dealing 10 for the Nerf, a cost-0 one dealing 2 for the Buff: the cost row
+            // cannot move either way there (never above 4, never below 0), so the only movable row is
+            // the declared number.
+            for (verb, cost, n, below) in [("degrade", 4, 10, true), ("upgrade", 0, 2, false)] {
+                let (mut s, card) = minted(spell(cost, json!([{ "verb": "damageEnemyHero", "n": n }])));
                 let def = transient_of(&s, &card);
                 assert_eq!(def.params.as_ref().map(|params| params.len()), Some(1));
                 let change = json_as(json!({ "scope": { "zones": ["hand"] }, "random": 1 }));
@@ -505,9 +550,9 @@ mod tests {
                 s.play(&card.id, json!({}));
                 let dealt = 30 - s.state().players.p2.hero.health;
                 if below {
-                    assert!(dealt < 10, "a Nerf lowers it: {dealt}");
+                    assert!(dealt < n, "a Nerf lowers it: {dealt}");
                 } else {
-                    assert!(dealt > 10, "a Buff raises it: {dealt}");
+                    assert!(dealt > n, "a Buff raises it: {dealt}");
                 }
             }
         }
@@ -534,7 +579,7 @@ mod tests {
 
         #[test]
         fn the_ai_and_a_timeout_answer_only_with_presets() {
-            let s = crafted_at(2);
+            let s = any_block_at(2);
             let offered = presets(&s);
 
             let mut rng = Rng::new("craft-policy", 0);
@@ -558,7 +603,7 @@ mod tests {
 
         #[test]
         fn r97_the_opponent_sees_only_an_open_prompt_then_a_hidden_card() {
-            let mut s = crafted_at(1);
+            let mut s = any_block_at(1);
             let open = s.view(P2);
             assert!(matches!(open.pending, Some(PendingView::Elsewhere(_))));
             let text = serde_json::to_string(&open).expect("the view serializes");
@@ -587,7 +632,7 @@ mod tests {
                 let preview = craft_preview(&json_as(recipe.clone()), cost);
                 assert_eq!(preview.valid, valid, "{recipe}");
                 assert_eq!(preview.reasons.is_empty(), valid);
-                let mut s = crafted_at(cost);
+                let mut s = any_block_at(cost);
                 let answer = json!([{ "pick": "craft", "recipe": recipe }]);
                 if valid {
                     s.answer(answer);
@@ -611,6 +656,10 @@ mod tests {
             }));
             s.play(ID, json!({}));
             s.answer(json!(["2"]));
+            // R1563007's offer only narrows what R882 holds: widen it to every block.
+            if let Some(pending) = s.state_mut().pending.as_mut() {
+                pending.craft_offer = Some(whole_palette());
+            }
             // A 4/5 Unit with Armor 2 and a Cry dealing N=3: 4+5-1+4+3 = 15 points, over 12 —
             // so a 3/4 with Armor 2 and N=3: 3+4-1+4+3 = 13, still over — a 3/4 with Armor 1
             // and N=3: 3+4-1+2+3 = 11, within 12.

@@ -361,13 +361,10 @@ mod r280_the_core_cards_that_declare_preview {
                 .map(|entry| entry.label)
                 .collect()
         };
-        assert_eq!(
-            labels(BREAD_AND_BUTTER, FaceKind::Base),
-            vec!["X = that player's unspent mana"]
-        );
+        assert_eq!(labels(BREAD_AND_BUTTER, FaceKind::Base), vec!["X = the Float"]);
         assert_eq!(
             labels(BREAD_AND_BUTTER, FaceKind::Radiant),
-            vec!["X = 3 × that player's unspent mana"]
+            vec!["X = 3 × the Float"]
         );
         assert_eq!(
             labels(MATH_EQUATION, FaceKind::Base),

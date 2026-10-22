@@ -38,7 +38,7 @@ export type LuauBindings = {
   build_ai_deck(options: string): string;
   choose_action(state: string, seat: string, rngSeed: string, rngCursor: number): string;
   constants(): string;
-  craft_preview(recipe: string, cost: number): string;
+  craft_preview(recipe: string, cost: number, prompt: string): string;
   engine_tables(): string;
   validator(call: string, input: string): string;
   check_custom_card(card: string): string;
@@ -105,7 +105,8 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
     choose_action: (state, seat, rngSeed, rngCursor) =>
       withArgs([state, seat, rngSeed], ([p = 0, q = 0, r = 0]) => take(m._choose_action(p, q, r, rngCursor))),
     constants: () => take(m._constants()),
-    craft_preview: (recipe, cost) => withArgs([recipe], ([p = 0]) => take(m._craft_preview(p, cost))),
+    craft_preview: (recipe, cost, prompt) =>
+      withArgs([recipe, prompt], ([p = 0, q = 0]) => take(m._craft_preview(p, cost, q))),
     engine_tables: () => take(m._engine_tables()),
     validator: two((a, b) => m._validator(a, b)),
     check_custom_card: one((a) => m._check_custom_card(a)),
