@@ -67,6 +67,9 @@ export function paletteFor(color: string): MarkPalette {
 /** A mark's words: a short name for the badge, and the sentence its tooltip and hidden text say. */
 export type MarkWords = { name: string; text: string };
 
+/** The engine's `ALLURE_MARK` (`effects/delay.rs`): the mark Allure puts on a card it will take (R963, R1045000). */
+export const ALLURE_MARK = "allure";
+
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
