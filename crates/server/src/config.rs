@@ -259,6 +259,13 @@ pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 pub const GAME_RECORD_RAW_RETENTION_DAYS: i64 = 7;
 /// How often the retention purge runs. It also runs once at boot, since a free instance sleeps.
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
+/// R1596000: seconds after a match ended before the retention loop files its missing game record
+/// again, so the filing that follows the result has long finished and is never raced.
+pub const GAME_RECORD_REFILE_GRACE_SECONDS: i64 = 10 * 60;
+/// R1596000: seconds after a match ended during which each retention pass files its missing game
+/// record again. A write that failed once lands within the hour; past this, the match gets one try
+/// more as the purge is about to take its log.
+pub const GAME_RECORD_REFILE_WINDOW_SECONDS: i64 = 24 * 60 * 60;
 
 // ---------------------------------------------------------------------------------------------
 // The background loops' supervisor (`loops.rs`). Not in SPEC, and no R-row (#842).

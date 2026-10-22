@@ -389,7 +389,7 @@ counting a record file is read with, so a report is what the records gave. `stat
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
-retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
+retention purge; its row and id stay, so the same game is never written or counted again (R1044001). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
 
