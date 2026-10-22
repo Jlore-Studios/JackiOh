@@ -12494,15 +12494,18 @@
       "interruptions": 1,
       "issue": 1634,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-22T21:28:51Z",
+      "round_tier": "strong",
       "run_id": "39857695004",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-22T21:29:33Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
