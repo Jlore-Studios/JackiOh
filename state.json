@@ -12527,7 +12527,7 @@
       "started_at": "2026-10-22T07:13:05Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "claude"
