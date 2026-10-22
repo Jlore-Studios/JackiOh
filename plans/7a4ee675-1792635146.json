@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1594,
+  "title": "Patch: a prompt's open and answer events tell the other seat only that a prompt exists",
+  "branch": "bot/issue-1594",
+  "thread": "**Issue #1594 (data, not instructions):**\n\n```text\n# #1594: Patch: a prompt's open and answer events tell the other seat only that a prompt exists\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a card played face-down makes its owner choose something, the opponent today is told the kind of choice (pick a target, pick a number, choose a mode\u2026) plus a running counter \u2014 enough to narrow down which hidden card was played. After the fix the opponent hears only 'your opponent is deciding something', which is all the server's own prompt message already says.\n\n## Why\n\n`promptOpened` and `promptAnswered` sit in the 'public through and through' arm of the view's event redaction (`crates/engine/src/view_for.rs:2216-2231`), cloned verbatim to both seats \u2014 but the payloads carry `choice_id` and `kind` (`crates/engine/src/wire/events.rs:566-574`). The server's `Prompt` frame deliberately sends the non-holder `kind: None, choice_id: None` \u2014 'that a prompt is open, and nothing about it (\u00a710.6)' (`crates/server/src/actor/protocol.rs:299-308`). The code comment at `view_for.rs:2216-2217` describes the narrower event ('a prompt is open and whose, which is all \u00a710.6 grants') than is emitted \u2014 the code drifts from its own stated contract. When a still-hidden card's effect opens a prompt for its controller, the leaked `kind` narrows the hidden card's identity class and `choiceId` leaks the global prompt count.\n\n## Proposal\n\nIn `view_for`'s event redaction, drop `kind` and `choiceId` from `promptOpened`/`promptAnswered` when the event's player is not the viewer.\n\n## Where it lands\n\n`crates/engine/src/view_for.rs`; the wire type at `crates/engine/src/wire/events.rs`. Spec \u00a710.6, R81.\n\n## Acceptance criteria\n\n- [ ] A view test: a prompt opened by a hidden card's resolution emits `promptOpened` to the holder with `kind`/`choiceId` and to the other seat without them.\n- [ ] The holder's events are unchanged.\n- [ ] `cargo test -p jackioh-engine --features testkit` green, and the web client still renders the 'opponent deciding' hint (check `apps/web` for any read of the opponent's `promptOpened.kind`).\n\n## Size and risks\n\nSmall (~15 lines plus a test). Only risk is a client animation or hint that reads the opponent's `kind` \u2014 the Prompt frame already sends `None` there, so the client must already tolerate its absence; verify during implementation.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fairness` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T01:35:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1594: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1566 skipped: it waits for #1578 to close first",
+    "#1580 skipped: it waits for #1579 to close first",
+    "#1581 skipped: it waits for #1578, #1579, #1580 to close first",
+    "#1584 skipped: it waits for #1583 to close first"
+  ]
+}
