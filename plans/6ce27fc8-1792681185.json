@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1634,
+  "title": "Patch: the AI sees an opponent's lethal that takes more than one attack",
+  "branch": "bot/issue-1634",
+  "thread": "**Issue #1634 (data, not instructions):**\n\n```text\n# #1634: Patch: the AI sees an opponent's lethal that takes more than one attack\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nBefore it moves, the practice AI imagines the opponent's next turn to see what its move leaves it open to. In that imagined turn the opponent only notices a win when one attack is enough. When two attackers would finish the AI only together, the imagined opponent often spends one of them killing a unit instead. The AI then thinks it survives, plays greedily, and loses to the two obvious swings. Once this is built, the AI sees those boards coming and spends its turn blocking, healing or removing an attacker. Players notice the AI stop walking into lethal they could see.\n\n## Why\n- The opponent's reply works as \"a static trader\": \"of every attack it may declare, it takes the one with the best value read off the layers (lethal, a kill it survives, a trade up, the face)\" (`crates/ai/src/reply.rs:14-15`).\n- `reply_face_value` (`crates/ai/src/reply.rs:109-115`) returns `AI_EVAL.win` only when that one hit's `damage >= effective_life(state, seat)`. Otherwise it scores `AI_REPLY.face_per_damage` (1.0, `crates/ai/src/config.rs:676`) per point.\n- A kill scores the target's whole `unit_worth` (`trade_value`, `reply.rs:92-103`). So the trader takes any kill worth more than an attacker's damage, even when the attacks together are lethal.\n- `simulate_reply` (`reply.rs:358-433`) takes the top of `ranked_attacks` one attack at a time and never asks whether the attacks left can reach the face.\n- The check the fix needs already exists. `lethal::ready_gap` (`crates/ai/src/lethal.rs:171-200`) sums what the units that may still attack would deal past the Taunts, and \"zero or less means the attacks left could end the game\".\n- The only lethal test for the reply, `b41_takes_lethal_when_the_face_is_in_reach` (`crates/ai/tests/ai/reply.rs:81`), has a single attacker.\n\n## Proposal\nIn the static-trader step of `simulate_reply`, ask `ready_gap(&current, opp) <= 0.0`. When it is, rank attacks on the seat's hero as the win, so the face goes first while the open attacks still reach it. Otherwise keep today's ranking. That is one board read per reply step, with no new search and no extra nodes.\n\n## Where it lands\n- `crates/ai/src/reply.rs` (`ranked_attacks` / `simulate_reply`)\n- `crates/ai/tests/ai/reply.rs`, plus one decision test in `crates/ai/tests/ai/`\n- SPEC \u00a79.9 and `docs/polish/3-ai.md` (\"The opponent's reply\"): one sentence on the new rule\n\n## Acceptance criteria\n- [ ] Reply test, failing today (the game is not over): the AI's seat is at 8 health with one unit. The opponent has two units whose attacks only together reach 8, and either of them can kill the AI's unit. The builder picks cards whose kill outranks the hit, for instance Mr. Vanilla `core-008` facing two `core-025`. `simulate_reply` ends with the opponent winning.\n- [ ] The existing single-attacker B41 reply tests pass unchanged.\n- [ ] Decision test: in a position where removing or blocking one of the two attackers is the only way to survive, `decide` picks such a line, and it does not today.\n- [ ] `cargo test -p jackioh-ai --lib --test ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings` and `cargo jackioh gate` pass.\n- [ ] The change is screened on the dev set as `training/improve.md` says (400 games against the committed AI), and the pull request states the result. A change the screen does not keep ships switched off behind its constant, as #1628's terms did.\n\n## Size and risks\nAbout 10 lines of code and 2\u20133 tests. It is AI work, so hard by CLAUDE.md rule 11. It changes the score of every line after which the opponent has lethal on board, and SPEC \u00a79.9 records that earlier search changes did not move the gate's greedy matchup past noise. The screen is therefore the judge of strength, and the visible misplay is the reason to build it. Nothing hidden is read: `ready_gap` counts the attacks `legal_actions` offers on the determinized board the reply already plays on.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T14:58:27Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1634: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
