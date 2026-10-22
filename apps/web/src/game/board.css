@@ -229,6 +229,30 @@
   cursor: pointer;
 }
 
+/* R1639000: a Heroic Power already used this turn, on either seat: greyed and dimmed (a button
+   that is not live is dimmed by index.css's disabled rule as well), with "Used" first in its chip,
+   where the chip's clip never reaches it. Drawn from the view, never obeyed (CLAUDE.md rule 7). */
+.power-button[data-used="true"],
+.power-tag[data-used="true"] {
+  filter: grayscale(0.9);
+}
+
+.power-tag[data-used="true"] {
+  opacity: 0.6;
+}
+
+.power-used {
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .power-x {
   color: #93c5fd;
   font-weight: 700;

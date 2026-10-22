@@ -9,7 +9,7 @@
 // Nothing here computes legality; that is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody } from "@jackioh/shared";
@@ -623,10 +623,17 @@ describe("the match screen's ranks (R604, R612)", () => {
     const banner = await screen.findByTestId("match-ranks");
     const full = banner.querySelector(".match-ranks__full");
     expect(full).toHaveTextContent("Ranked match");
-    expect(full).toHaveTextContent("Normal Grape III · 1/3 pips");
+    expect(full).toHaveTextContent("Normal Grape III");
     const short = banner.querySelector(".match-ranks__short");
-    expect(short).toHaveTextContent("Normal III 1/3");
-    expect(short).toHaveTextContent("Raisin 2/5");
+    expect(short).toHaveTextContent("Normal III");
+    expect(short).toHaveTextContent("Raisin");
+    // #1650: a small crest beside each seat's words on both lines, which carry no pips or placements words.
+    for (const name of ["Normal Grape III · 1/3 pips", "Raisin · 2/5 placements"]) {
+      const crests = within(banner).getAllByRole("img", { name, hidden: true });
+      expect(crests).toHaveLength(2);
+      for (const crest of crests) expect(crest).toHaveAttribute("data-size", "small");
+    }
+    expect(banner.textContent).not.toMatch(/pips|placements/);
     const names = [...(short?.querySelectorAll("bdi.username") ?? [])];
     expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
   });
