@@ -12177,6 +12177,8 @@
       "run_id": "39725755101",
       "started_at": "2026-10-22T05:02:31Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
