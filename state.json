@@ -11510,6 +11510,13 @@
     "1641": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-22T15:57:54Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "two crates (engine testkit and tools) plus a Cargo.toml: fails easy's 'one place' and 'no crates/engine/src' lines; not hard, since it is test tooling, not rules"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
