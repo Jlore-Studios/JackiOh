@@ -5,7 +5,7 @@
 //!      is one `duos_reduce` accepts.
 //!   2. TERMINATION: the game ends — a pool emptied, a duel's own ending, or R2's turn cap — inside a
 //!      bounded number of actions. The policy never concedes (R84), so `concede` and the server's
-//!      `ceiling` cannot occur.
+//!      `ceiling` occur only in a game that takes the endings channel (#1572, below).
 //!   3. REPLAY EQUALITY: `duos_fold` of `(options, log)` refuses nothing and reaches the live hash.
 //!   4. PROBES (#1386): every `probe_stride()`-th state, two forged actions that are never logged, each
 //!      owed a refusal with no events and the state exactly as it was. A reused-nonce probe sends the
@@ -13,7 +13,7 @@
 //!      so it can only come once a round has closed; a wrong-seat probe sends the body from a seat the
 //!      game is not waiting on. A seat's own nonces are the server's to dedupe in Duos (§9.3, §13.9), so
 //!      no probe reuses one. A failure is an error beginning `wrong-seat probe` or `reused-nonce probe`
-//!      and names the step.
+//!      and names the step. The probes skip a step the endings channel sent.
 //!
 //! A seed fixes the game. Its setup rotates by seed the way a co-op match is made (§13.7, #1573,
 //! `duos_setup_for_seed`): team A plays `DUOS_HUMAN_TEAM` with no handicap, team B is the AI team at
@@ -26,6 +26,16 @@
 //! Duos seat's legal actions: a seat that may act is drawn uniformly, it ends its turn when nothing
 //! else is on offer or with AI_END_TURN_PROBABILITY, and otherwise takes one of the rest, a pass
 //! included, uniformly; it never emotes (`AI_SKIPPED_ACTIONS`).
+//!
+//! # The endings channel (#1572)
+//!
+//! On `ENDINGS_SHARE` of seeds, drawn from the seed's own stream as the 1v1 waves do (`fuzz.rs`), a game
+//! also takes an endings channel: at each step, from a stream of its own, it may send a seat's concede
+//! (B11, the teammate answering a standing offer at `ENDINGS_ANSWER_CHANCE`) or the server's ceiling
+//! (R79) in the policy's place, logged like any action so the fold reaches the live hash. Duos refuses
+//! a draw, a timeout, an expired disconnect and the R82 setting (B9, B10, B37, B38), so the channel
+//! sends none of them. A game that took it may end by `DUOS_ENDINGS_REASONS`; the summary and `--json`
+//! count the seeds that took it.
 
 use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
@@ -39,20 +49,20 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS,
-    DUOS_HUMAN_TEAM, DUOS_NONCE_PREFIX, DUOS_REASON_DUEL_RESULT, DUOS_REASON_POOL_EMPTIED,
-    DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DUOS_SEATS, Difficulty, DuosAction, DuosActionBody,
-    DuosCreateOptions, DuosDecks, DuosHandicaps, DuosReduceResult, DuosReplayInput, DuosSeat, DuosState,
-    HUMAN_HANDICAP, PerTeam, Rng, TURN_CAP_PLAYER_TURNS, duos_ai_team, duos_begin, duos_create, duos_fold,
-    duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    DUOS_HUMAN_TEAM, DUOS_NONCE_PREFIX, DUOS_REASON_CEILING, DUOS_REASON_CONCEDE, DUOS_REASON_DUEL_RESULT,
+    DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DUOS_REASON_VOIDED, DUOS_SEATS, Difficulty, DuosAction,
+    DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosReduceResult, DuosReplayInput, DuosSeat,
+    DuosState, HUMAN_HANDICAP, PerTeam, Rng, TURN_CAP_PLAYER_TURNS, duos_ai_team, duos_begin, duos_create,
+    duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
 };
 use rayon::prelude::*;
 
 use crate::agent::panic_message;
 use crate::fuzz::{
     CHECKPOINT_TIME_BOUND_MS, DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND,
-    DUOS_GROWTH_NUMBER_BOUND, FUZZ_POOL, Heaviest, Heavy, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE,
-    checkpoint_step, duos_acting_card, duos_growth_breach, duos_heaviest_lines, probe_stride, round_trip,
-    state_paused, verify_round_trip, weigh_duos,
+    DUOS_GROWTH_NUMBER_BOUND, ENDINGS_ANSWER_CHANCE, ENDINGS_SHARE, FUZZ_POOL, Heaviest, Heavy, MEASURES,
+    REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, checkpoint_step, duos_acting_card, duos_growth_breach,
+    duos_heaviest_lines, probe_stride, round_trip, state_paused, verify_round_trip, weigh_duos,
 };
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
@@ -69,6 +79,18 @@ const DUOS_TERMINAL_REASONS: &[&str] = &[
     DUOS_REASON_TURN_CAP,
     DUOS_REASON_VOIDED,
 ];
+
+/// The endings only the endings channel reaches (#1572): a team's concede (B11) and the server's
+/// ceiling (R79).
+const DUOS_ENDINGS_REASONS: &[&str] = &[DUOS_REASON_CONCEDE, DUOS_REASON_CEILING];
+
+/// Per step, in a game that takes the endings channel: the chance a seat concedes in the policy's
+/// place (B11).
+pub const DUOS_ENDINGS_CONCEDE_CHANCE: f64 = 0.004;
+
+/// Per step, in a game that takes the endings channel: the chance the server's ceiling ends the game
+/// in the policy's place (R79).
+pub const DUOS_ENDINGS_CEILING_CHANCE: f64 = 0.0015;
 
 /// Plays the Duos wave from seed `from` and prints its numbers; fails (exit 1) when a seed failed.
 /// With `json`, prints the wave as one JSON object instead of the text summary.
@@ -227,6 +249,8 @@ struct DuosRun {
     /// The prefix lengths whose end state held paused work in some duel (#1387): step 0 is the
     /// setup state, otherwise the state after that many actions.
     paused: Vec<usize>,
+    /// Whether the game took the endings channel (#1572), which lets it end by `DUOS_ENDINGS_REASONS`.
+    endings: bool,
 }
 
 /// Whether some duel holds paused work (SPEC §10.1): the Duos form of the gate's `state_paused`.
@@ -271,6 +295,44 @@ fn choose(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosAction
         return end;
     }
     rng.pick(&others).cloned()
+}
+
+/// Whether the game for `seed` takes the endings channel (#1572): `ENDINGS_SHARE` of seeds, drawn
+/// from a stream of the seed's own.
+fn duos_takes_endings(seed: u32) -> bool {
+    Rng::new(&format!("jackioh-duos-fuzz-endings-{seed}"), 0).chance(ENDINGS_SHARE)
+}
+
+/// What the endings channel sends at `state` in the policy's place, and from which seat, or `None`
+/// when the policy acts (#1572). Duos refuses draws, timeouts, expired disconnects and the R82
+/// setting (B9, B10, B37, B38), so it sends only the server's ceiling and a seat's concede.
+fn duos_endings_action(state: &DuosState, rng: &mut Rng) -> Option<(DuosSeat, DuosActionBody)> {
+    if rng.chance(DUOS_ENDINGS_CEILING_CHANCE) {
+        let seat = *rng.pick(&DUOS_SEATS)?;
+        return Some((
+            seat,
+            DuosActionBody::Duel {
+                body: ActionBody::CeilingReached,
+            },
+        ));
+    }
+    // B11: a seat whose teammate's concede offer stands may end the game by conceding too; an offer
+    // the round's end reaches unanswered lapses.
+    if let Some(&seat) = DUOS_SEATS
+        .iter()
+        .find(|seat| state.concede_offer[seat.team()] == Some(seat.teammate()))
+        && rng.chance(ENDINGS_ANSWER_CHANCE)
+    {
+        return Some((seat, DuosActionBody::Concede));
+    }
+    if !rng.chance(DUOS_ENDINGS_CONCEDE_CHANCE) {
+        return None;
+    }
+    let conceding: Vec<DuosSeat> = DUOS_SEATS
+        .into_iter()
+        .filter(|seat| duos_legal_actions(state, *seat).contains(&DuosActionBody::Concede))
+        .collect();
+    rng.pick(&conceding).map(|seat| (*seat, DuosActionBody::Concede))
 }
 
 /// What a probe's forged action goes through: `duos_reduce`, or in a test a broken one (#1386).
@@ -371,6 +433,9 @@ where
 
     let mut policy = Rng::new(&format!("jackioh-duos-fuzz-policy-{seed}"), 0);
     let mut order = Rng::new(&format!("jackioh-duos-fuzz-order-{seed}"), 0);
+    // #1572: the endings channel's own stream, in a game that takes it.
+    let takes_endings = duos_takes_endings(seed);
+    let mut endings = takes_endings.then(|| Rng::new(&format!("jackioh-duos-fuzz-endings-steps-{seed}"), 0));
     let mut log: Vec<DuosAction> = Vec::new();
     let mut heaviest = Heaviest::default();
     let max_actions = max_duos_actions();
@@ -389,11 +454,19 @@ where
                 state.round
             ));
         };
-        let Some(body) = choose(&state, seat, &mut policy) else {
-            return Err(format!(
-                "{seat} was waited on but chose nothing in round {}",
-                state.round
-            ));
+        // #1572: in a game that takes the endings channel, the channel may send this step's action.
+        let sent = endings.as_mut().and_then(|rng| duos_endings_action(&state, rng));
+        let from_channel = sent.is_some();
+        let (seat, body) = if let Some(sent) = sent {
+            sent
+        } else {
+            let Some(body) = choose(&state, seat, &mut policy) else {
+                return Err(format!(
+                    "{seat} was waited on but chose nothing in round {}",
+                    state.round
+                ));
+            };
+            (seat, body)
         };
         let mut action = DuosAction {
             seat,
@@ -408,8 +481,10 @@ where
             return Err(format!("at step {}: {first}", log.len()));
         }
 
-        // #1386: forged actions against this state, never logged.
-        if log.len().is_multiple_of(probe_stride)
+        // #1386: forged actions against this state, never logged. A channel action is skipped: a
+        // seat the game is not waiting on may send a concede or the ceiling too.
+        if !from_channel
+            && log.len().is_multiple_of(probe_stride)
             && let Some(message) = probe_duos_state(&state, &action, &seats, log.len(), probe)
         {
             return Err(message);
@@ -418,8 +493,14 @@ where
         let result = duos_reduce(&state, &action);
         if let Some(error) = result.error {
             return Err(format!(
-                "duos_legal_actions offered {} {:?} but duos_reduce refused it: {error}",
-                seat, action.body
+                "{} {} {:?} but duos_reduce refused it: {error}",
+                if from_channel {
+                    "the endings channel sent"
+                } else {
+                    "duos_legal_actions offered"
+                },
+                seat,
+                action.body
             ));
         }
         let action_type = duos_action_name(&action.body);
@@ -463,6 +544,7 @@ where
         state,
         heaviest,
         paused: paused_steps,
+        endings: takes_endings,
     })
 }
 
@@ -471,7 +553,9 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
     let Some(result) = &run.state.result else {
         return Err("the game loop exited with no result".to_string());
     };
-    if !DUOS_TERMINAL_REASONS.contains(&result.reason.as_str()) {
+    // #1572: a game that took the endings channel may also end by one of its endings.
+    let channel = run.endings && DUOS_ENDINGS_REASONS.contains(&result.reason.as_str());
+    if !DUOS_TERMINAL_REASONS.contains(&result.reason.as_str()) && !channel {
         return Err(format!(
             "ended with reason \"{}\"; the policy never concedes (R84), so only {} can occur",
             result.reason,
@@ -742,6 +826,14 @@ fn passed_heaviest(outcomes: &[DuosSeedOutcome]) -> Heaviest {
     heaviest
 }
 
+/// How many of `outcomes`' seeds, passed or failed, took the endings channel (#1572).
+fn channel_seeds(outcomes: &[DuosSeedOutcome]) -> usize {
+    outcomes
+        .iter()
+        .filter(|outcome| duos_takes_endings(outcome.seed))
+        .count()
+}
+
 fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
     let failed = outcomes.iter().filter(|outcome| outcome.error.is_some()).count();
     let mut endings: IndexMap<String, usize> = IndexMap::new();
@@ -759,9 +851,10 @@ fn summary(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> String {
         .max()
         .unwrap_or(0);
     format!(
-        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n  checkpoints: {paused} paused, {} mid-game fallback; slowest {slowest_ms}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n{}",
+        "[fuzz-duos] {ran} seed(s) from {from}: {failed} failed; endings {}\n  checkpoints: {paused} paused, {} mid-game fallback; slowest {slowest_ms}ms of {CHECKPOINT_TIME_BOUND_MS}ms\n  endings channel: {} seed(s)\n{}",
         serde_json::to_string(&endings).unwrap_or_default(),
         outcomes.len() - failed - paused,
+        channel_seeds(outcomes),
         duos_heaviest_lines(&passed_heaviest(outcomes)),
     )
 }
@@ -790,6 +883,7 @@ fn wave_json(from: u32, ran: u32, outcomes: &[DuosSeedOutcome]) -> serde_json::V
             "options": duos_options_for_seed(outcome.seed),
         }))).collect::<Vec<_>>(),
         "heaviest": passed_heaviest(outcomes),
+        "endingsChannel": channel_seeds(outcomes),
         "bounds": {
             "events": DUOS_GROWTH_EVENTS_BOUND,
             "largest": DUOS_GROWTH_NUMBER_BOUND,
@@ -984,6 +1078,40 @@ mod tests {
     fn r679_duos_seed_1427_whose_glitch_voids_the_game_passes() {
         // The seed of the 2,000-seed wave a Glitch voided, before `voided` was an ending here.
         assert_eq!(failure_lines(&[fuzz_duos_seed(1427)]), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_duos_channel_game_concedes_as_a_team_and_one_reaches_the_ceiling_and_each_folds_back() {
+        // #1572: each seed's game is folded and checkpointed by `fuzz_duos_seed`, so an empty
+        // failure list means a concede and a ceiling ending both fold back to the live hash.
+        let mut seen: Vec<String> = Vec::new();
+        let mut first: Option<u32> = None;
+        for seed in (1..=200).filter(|seed| duos_takes_endings(*seed)) {
+            first.get_or_insert(seed);
+            let outcome = fuzz_duos_seed(seed);
+            assert_eq!(
+                failure_lines(std::slice::from_ref(&outcome)),
+                Vec::<String>::new()
+            );
+            seen.extend(outcome.reason);
+            if DUOS_ENDINGS_REASONS
+                .iter()
+                .all(|reason| seen.iter().any(|seen| seen == reason))
+            {
+                break;
+            }
+        }
+        for reason in DUOS_ENDINGS_REASONS {
+            assert!(
+                seen.iter().any(|seen| seen == reason),
+                "no channel game of seeds 1..=200 ended by \"{reason}\"; endings seen: {seen:?}"
+            );
+        }
+        let first = first.expect("some seed of 1..=200 takes the channel");
+        let text = summary(first, 1, &[fuzz_duos_seed(first)]);
+        assert!(text.contains("\n  endings channel: 1 seed(s)\n"), "{text}");
+        let json = wave_json(first, 1, &[fuzz_duos_seed(first)]);
+        assert_eq!(json["endingsChannel"], serde_json::json!(1));
     }
 
     #[test]
