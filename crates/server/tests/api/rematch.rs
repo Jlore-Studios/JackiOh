@@ -15,6 +15,8 @@
 //!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
 //!    status names the mode the rematch plays.
 //!  - **R924000**: each seat's latest offer picks the set its deck leans on.
+//!  - **R1638000**: a match played on an earlier catalog offers no rematch: every offer, a ladder
+//!    bot's too, is 409 `update_required`, and nothing is kept or made.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
 //! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
@@ -1278,5 +1280,134 @@ mod r890000_a_seat_taken_mid_start {
         assert!(live_ids(&app).await.is_empty());
         assert_eq!(in_match_of(&app, &b).await, json!("r89-elsewhere"));
         assert_eq!(in_match_of(&app, &a).await, Value::Null);
+    }
+}
+
+// R1638000 — a rematch across a card patch (§9.4, §9.5)
+
+/// R1638000: a match played on a catalog version other than the server's offers no rematch.
+mod r1638000_a_rematch_across_a_patch {
+    use indexmap::IndexMap;
+    use jackioh_engine::ShippedCatalog;
+    use jackioh_engine::testkit::{clear_overrides, register_shipped};
+    use jackioh_server::api::http::ApiErrorCode;
+    use jackioh_server::api::rematch::offer_for_bot;
+
+    use crate::support::deps::{TestAppOptions, test_app_with};
+
+    use super::*;
+
+    /// The catalog version the finished matches below were played on: an earlier one this
+    /// thread's build carries (`carry_played_on`), not its own.
+    const PLAYED_ON: &str = "v-before-the-patch";
+
+    /// Carries `PLAYED_ON` as this build carries a shipped version (R767000), so the registry
+    /// would still start a rematch on it: only the refusal stops one.
+    fn carry_played_on() {
+        jackioh_cards::register_all();
+        register_shipped(vec![ShippedCatalog::new(
+            PLAYED_ON,
+            jackioh_cards::CATALOG.clone(),
+            IndexMap::new(),
+        )]);
+    }
+
+    /// The refusal a person's offer gets: 409 `update_required`, the co-op join's details.
+    fn assert_cards_changed(app: &App, code: u16, body: &Value) {
+        assert_eq!(code, 409, "{body}");
+        assert_eq!(body["error"]["code"], "update_required", "{body}");
+        assert_eq!(
+            body["error"]["message"], "The cards changed since this game. Start a new one.",
+            "{body}"
+        );
+        assert_eq!(
+            body["error"]["details"],
+            json!({ "expected": app.catalog.version, "received": PLAYED_ON }),
+            "{body}"
+        );
+    }
+
+    /// Nothing is kept and nothing is made: no offer, no live match, no seat taken.
+    async fn assert_nothing_made(app: &App, a: &str, b: &str) {
+        assert_eq!(rematch_offer_count(app), 0);
+        assert!(live_ids(app).await.is_empty());
+        assert_eq!(in_match_of(app, a).await, Value::Null);
+        assert_eq!(in_match_of(app, b).await, Value::Null);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1638000_a_ranked_rematch_of_a_match_on_an_earlier_catalog_is_409_update_required_and_creates_nothing()
+     {
+        let app = test_app().await;
+        carry_played_on();
+        let (a, b, finished) = names("patched-bo1");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({ "catalogVersion": PLAYED_ON })).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+
+        let (code, body) = offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        assert_cards_changed(&app, code, &body);
+        let (code, body) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_cards_changed(&app, code, &body);
+
+        assert_nothing_made(&app, &a, &b).await;
+        clear_overrides();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1638000_an_all_random_rematch_of_a_match_on_an_earlier_catalog_is_refused_too() {
+        let app = test_app().await;
+        carry_played_on();
+        let (a, b, finished) = names("patched-random");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({ "catalogVersion": PLAYED_ON })).await;
+        paired_tickets(&app, &finished, [&a, &b], "random").await;
+
+        let (code, body) = offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        assert_cards_changed(&app, code, &body);
+        let (code, body) = pick_offer(&app, &token_b, &finished, "Core").await;
+        assert_cards_changed(&app, code, &body);
+
+        assert_nothing_made(&app, &a, &b).await;
+        clear_overrides();
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1638000_a_ladder_bots_offer_on_a_match_on_an_earlier_catalog_is_refused_too() {
+        let app = test_app_with(TestAppOptions {
+            env: vec![("LADDER_BOTS".to_string(), "on".to_string())],
+            skip_fixtures: true,
+            ..TestAppOptions::default()
+        })
+        .await;
+        assert!(
+            app.env.ladder_bots,
+            "premise: a bot offers only while LADDER_BOTS is on"
+        );
+        carry_played_on();
+        let (a, b, finished) = names("patched-bot");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({ "catalogVersion": PLAYED_ON })).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+
+        let (code, body) = offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        assert_cards_changed(&app, code, &body);
+
+        // The seat opposite offers through the bot's door.
+        let error = match offer_for_bot(&app, &finished, PlayerId::P2, STAKE_NORMAL).await {
+            Err(error) => error,
+            Ok(made) => panic!("a bot's offer across a patch was taken: {made:?}"),
+        };
+        assert_eq!(error.code, ApiErrorCode::UpdateRequired);
+        assert_eq!(
+            error.details,
+            Some(json!({ "expected": app.catalog.version, "received": PLAYED_ON }))
+        );
+
+        assert_nothing_made(&app, &a, &b).await;
+        clear_overrides();
     }
 }
