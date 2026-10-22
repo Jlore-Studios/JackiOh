@@ -11717,9 +11717,7 @@
       "started_at": "2026-10-22T17:25:50Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6343944722"
-      ]
+      "taken_asks": []
     },
     "1645": {
       "action": "build",
