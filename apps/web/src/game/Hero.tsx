@@ -24,8 +24,9 @@
 // once when there is one, or waiting for its target on the board (and draggable to it, game/drag)
 // when there are several. The first keeps the `power` testid the e2e specs press; any further one
 // is `power-<instanceId>`. The opponent's powers are tags. Whether a button is live is
-// `props.highlight.legal`; `usedThisTurn` is drawn, never obeyed. A power flashes on the
-// `activated` row, which plays on its card (`card-<instanceId>`).
+// `props.highlight.legal`; `usedThisTurn` is drawn (R1639000: a "Used" mark first in the chip, a
+// greyed chip and a title that says so), never obeyed. A power flashes on the `activated` row,
+// which plays on its card (`card-<instanceId>`).
 //
 // The portrait has two presses (R1449). A click on the hero when it is not a legal target, or Enter
 // or Space on the portrait's own button (a control named for the hero, laid over the art and given
@@ -228,7 +229,13 @@ export default function Hero(props: HeroProps): ReactElement {
           // The one `power` testid in the DOM.
           <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
-          <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
+          <span
+            className="power-tag"
+            data-used={hero.power.usedThisTurn ? "true" : "false"}
+            data-x={hero.power.x}
+            title={hero.power.usedThisTurn ? usedTitle(hero.power) : undefined}
+          >
+            <UsedMark power={hero.power} />
             {t(hero.power.title)}
             <span className="power-x">{hero.power.x}</span>
           </span>
@@ -247,7 +254,9 @@ export default function Hero(props: HeroProps): ReactElement {
               data-instance-id={power.instanceId}
               data-used={power.usedThisTurn ? "true" : "false"}
               data-x={power.x}
+              title={power.usedThisTurn ? usedTitle(power) : undefined}
             >
+              <UsedMark power={power} />
               {t(power.title)}
               <span className="power-x">{power.x}</span>
             </span>
@@ -328,6 +337,25 @@ export default function Hero(props: HeroProps): ReactElement {
 }
 
 /**
+ * R1639000: the mark a Heroic Power used this turn wears, first in its chip on either seat, so the
+ * chip's clip (a flex box draws no ellipsis) never takes it. The space keeps the name "Used
+ * Ranching", where a flex box draws none (Board.tsx's Pile). Drawn from the view, never obeyed.
+ */
+function UsedMark({ power }: { power: HeroPowerView }): ReactElement | null {
+  if (!power.usedThisTurn) return null;
+  return (
+    <>
+      <span className="power-used">{t("Used")}</span>{" "}
+    </>
+  );
+}
+
+/** R1639000: a used power's title, the same on the viewer's button and the opponent's tag. */
+function usedTitle(power: HeroPowerView): string {
+  return t("{power}: used this turn", { power: t(power.title) });
+}
+
+/**
  * One of the viewer's Heroic Powers. A press reports the power's instance as an activation
  * (`{ on: "activate" }`), never the `power` board control, so a power with targets is built like any
  * activation; `data-instance-id` is also what a drag from it reads (game/drag/targets.ts).
@@ -360,13 +388,14 @@ function PowerButton({
       data-flash={flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={live ? undefined : "true"}
       disabled={!live}
-      title={t("{power}: Activate, spend ({x})", { power: t(power.title), x: power.x })}
+      title={power.usedThisTurn ? usedTitle(power) : t("{power}: Activate, spend ({x})", { power: t(power.title), x: power.x })}
       onClick={(event) => {
         event.stopPropagation();
         if (!live) return;
         props.onClick?.({ on: "activate", instanceId: power.instanceId });
       }}
     >
+      <UsedMark power={power} />
       {t(power.title)}
       <span className="power-x">{power.x}</span>
     </button>
