@@ -11400,6 +11400,7 @@
     "1594": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "difficulty_by": {
         "at": "2026-10-22T02:31:24Z",
         "difficulty": "medium",
@@ -11426,7 +11427,7 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "muse",
-      "queued_at": "2026-10-22T01:35:26Z",
+      "queued_at": "2026-10-22T07:05:49Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "39729590977",
       "started_at": "2026-10-22T05:42:47Z",
