@@ -1,0 +1,60 @@
+{
+  "action": "build",
+  "number": 1663,
+  "title": "Patch: packs become physical objects, torn open in the pack-opening scene with its bars",
+  "branch": "bot/issue-1663",
+  "thread": "**Issue #1663 (data, not instructions):**\n\n```text\n# #1663: Patch: packs become physical objects, torn open in the pack-opening scene with its bars\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a75, \u00a73 and \u00a72). It builds the physical pack object the store and the opening share, makes the opening scene tear it open, mounts the token bars' animation after the reveal, and takes pity and odds off the pack panel (they move to `/purchases`, the Purchases part). It is blocked by the bars part (`OpeningBars`) and the bars-answer part (`OpenedPackResponse.bars`).\n\n### 1. The pack object (fixed: the store part uses it)\n`apps/web/src/packs/PackObject.tsx`, default export, props `{ pack: string; size: 'shelf' | 'scene'; state?: 'idle' | 'pressed' | 'tearing' | 'open'; testid?: string; children?: ReactNode }`, where `pack` is a shipped set's name, `global` or `cosmetic`. Hearthstone-style:\n- a foil wrapper with a crimped seal top and bottom;\n- the set's emblem (`cards/setMark.ts`) and colours (custom properties per `data-pack`);\n- a sheen that follows the pointer (a pointermove sets custom properties, and the sheen layer moves by transform);\n- a slight 3D tilt on hover, a press on `pressed`, and a tear or burst from `tearing` to `open`.\nEvery animation is transform and opacity only. Reduce motion (the setting and the system's, read as `PackScene` reads them, ~l.79) holds the tilt, sheen and tear still and sets `data-motion=reduce`. Styles go in `packs/pack-object.css`.\n\n### 2. The scene\n`PackScene` (`packs/PackOpening.tsx` ~l.77\u2013313) draws its pack as `<PackObject size=scene>` instead of the `.pack` markup (~l.217\u2013229), tearing open on the existing tear and swipe. The slots, Skip all, Next and the test ids (`pack-scene`, `pack-slots`, `pack-slot-<n>`, \u2026) stay as they are.\n\n### 3. The bars\nOnce every slot is revealed (or after Skip all), the scene mounts `<OpeningBars bars={opened.bars} />` (`economy/OpeningBars.tsx`, the bars part) above its actions. `opened.bars` is `OpenedPackResponse.bars` (`net/api.ts`, the bars-answer part); add it to the opened fixtures in `packs/fixtures.ts`.\n\n### 4. Pity and odds leave the panel\nRemove `PackPity` and `PackOdds` (~l.469\u2013530) and their rules in `packs.css` from the panel; keep `PacksHeld`. Keep `packs/packs.ts`' exports (`tierPercents`, the pity rarities): the Purchases page uses them. Delete the tests `R1339000 the odds and pity panel shows the server's tables, the fallback included, before opening and after` and `R1580000 pity shows once, apart from the odds, above the packs held` from `PackOpening.test.tsx`. Add one, with no R-id in its title, that the panel shows neither; the Purchases part's ruling covers the move and updates those notes' `proven_in`.\n\n### Files\n`apps/web/src/packs/PackObject.tsx`, `packs/pack-object.css`, `packs/PackObject.test.tsx` (new), `packs/PackOpening.tsx`, `packs/packs.css`, `packs/packs.ts` (test ids), `packs/fixtures.ts`, `packs/PackOpening.test.tsx`.\nNot here: `shop/*` (the store part), `economy/*` (the bars part), `routes/shop.tsx` (the Purchases part).\n\n### Done when\nTests:\n- a PackObject shows its pack's name and emblem, and moves `idle` \u2192 `tearing` \u2192 `open` on a tear;\n- under reduced motion it carries `data-motion=reduce`, and the scene still reveals every slot;\n- the scene mounts OpeningBars after the reveal when the fixture's bars moved, and not before;\n- the panel shows no pity and no odds;\n- a stylesheet test reads `pack-object.css` and `packs.css`: their keyframes animate only `transform` and `opacity`.\nRun `pnpm --dir apps/web exec vitest run src/packs`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`. A look with the `ui-walkthrough` skill at a pack opening on `/shop` is worth one screenshot.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec (`pack-opening.cy.tsx` among them). Keep every existing test id.\n\nBlocked by #1658, #1656.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read \u00a714.3, \u00a714.4, R1339000, R1580000, `apps/web/README.md`'s `packs/` row, `packs/PackOpening.tsx`, `packs/packs.css`, `packs/packs.ts`, `packs/fixtures.ts`, `cards/setMark.ts` with `setmark.css`, and the bars part's `economy/OpeningBars.tsx`.\n2. Write `packs/PackObject.tsx` and `packs/pack-object.css` (wrapper, crimped seals, emblem, colours per pack, pointer sheen, hover tilt, press, tear and burst, reduced motion), with `PackObject.test.tsx`.\n3. Swap `PackScene`'s pack markup for `PackObject` and drive its `state` from the existing tear and swipe.\n4. Mount `OpeningBars` after the reveal; add `bars` to the fixtures.\n5. Remove `PackPity` and `PackOdds` and their CSS; delete the two R-tests and add the test that the panel shows neither.\n6. Add the stylesheet test; run the Done-when commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read \u00a714.3, \u00a714.4, R1339000, R1580000, `apps/web/README.md`'s `packs/` row, `packs/PackOpening.tsx`, `packs/packs.css`, `packs/packs.ts`, `packs/fixtures.ts`, `cards/setMark.ts` with `setmark.css`, and the bars part's `economy/OpeningBars.tsx`.\n2. Write `packs/PackObject.tsx` and `packs/pack-object.css` (wrapper, crimped seals, emblem, colours per pack, pointer sheen, hover tilt, press, tear and burst, reduced motion), with `PackObject.test.tsx`.\n3. Swap `PackScene`'s pack markup for `PackObject` and drive its `state` from the existing tear and swipe.\n4. Mount `OpeningBars` after the reveal; add `bars` to the fixtures.\n5. Remove `PackPity` and `PackOdds` and their CSS; delete the two R-tests and add the test that the panel shows neither.\n6. Add the stylesheet test; run the Done-when commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-6` (claude, `sonnet`, medium); review on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read \u00a714.3, \u00a714.4, R1339000, R1580000, `apps/web/README.md`'s `packs/` row, `packs/PackOpening.tsx`, `packs/packs.css`, `packs/packs.ts`, `packs/fixtures.ts`, `cards/setMark.ts` with `setmark.css`, and the bars part's `economy/OpeningBars.tsx`.\n2. Write `packs/PackObject.tsx` and `packs/pack-object.css` (wrapper, crimped seals, emblem, colours per pack, pointer sheen, hover tilt, press, tear and burst, reduced motion), with `PackObject.test.tsx`.\n3. Swap `PackScene`'s pack markup for `PackObject` and drive its `state` from the existing tear and swipe.\n4. Mount `OpeningBars` after the reveal; add `bars` to the fixtures.\n5. Remove `PackPity` and `PackOdds` and their CSS; delete the two R-tests and add the test that the panel shows neither.\n6. Add the stylesheet test; run the Done-when commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1663 to close first"
+  ]
+}
