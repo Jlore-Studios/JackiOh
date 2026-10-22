@@ -11,7 +11,10 @@
 //!     cast's are (R70) — modes first when a target declaration hangs on them (R90's `forModes`). A
 //!     declaration the board cannot satisfy is skipped (§8's conventions), and a Tribute declaration is
 //!     a play's price, which a triggered Cry never pays: its slots are left empty (`{ pick: "none" }`)
-//!     so the declarations after it still read their own (R90, R123).
+//!     so the declarations after it still read their own (R90, R123). A random cast's caster is never
+//!     asked (R452): while one of the controller's is being driven, each declaration is drawn from the
+//!     match rng instead, a target pick aimed by its declaration when the cast targets enemies (R656), as
+//!     `play_steps` draws a cast's own.
 //!   - "This". On the field the Unit is the Cry's `self`. Out of a graveyard the Cry runs with no card
 //!     at all (`self` null, its definition named as R127 names a ceased card's), so an effect aimed at
 //!     "this" finds nothing, a pool still excludes the definition (§5.1), and the Cry reads X as 0.
@@ -42,11 +45,12 @@ use crate::prompts::{
     close_prompt, hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable,
     run_resume, why_answer_refused,
 };
+use crate::random_cast::{prefer_enemies, prefer_friends, random_cast_of, random_picks};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, WorkItem, find_instance};
 use crate::state_check::state_check;
 use crate::stays::{exit_mark, left_field_after};
-use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, Zone};
+use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection, TargetAim, Zone};
 use crate::work::{RUN_MARKS_KEY, begin_work_cascade, drain_work, paused, push_work};
 
 /// `resume.hook` of a prompt this sequence opened for itself: no card script holds the name.
@@ -250,6 +254,13 @@ fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bo
         if decl.options.is_empty() {
             continue;
         }
+        // R452: a random cast's caster is never asked; the mode is drawn at random.
+        if random_cast_of(sink.state, run.controller).is_some() {
+            if let Some(option) = sink.rng.pick(&decl.options).cloned() {
+                run.modes.push(option);
+            }
+            continue;
+        }
         run.awaiting = Some(CryAwaiting::Mode);
         let options: Vec<PromptOption> = decl
             .options
@@ -321,6 +332,23 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
                 decl.max,
                 crate::targeting::target_aim(decl),
             ));
+            continue;
+        }
+        // R452: a random cast's caster is never asked; its picks are drawn at random, each aimed by its
+        // declaration when the cast targets enemies (R656), as `play_steps::cast_target_options` aims them.
+        if let Some(cast) = random_cast_of(sink.state, run.controller) {
+            let pool = if cast.target_enemies {
+                let required = decl.min.min(options.len() as i32);
+                if crate::targeting::target_aim(decl) == TargetAim::Help {
+                    prefer_friends(sink.state, run.controller, &options, Selection::clone, required)
+                } else {
+                    prefer_enemies(sink.state, run.controller, &options, Selection::clone, required)
+                }
+            } else {
+                options
+            };
+            run.targets
+                .extend(random_picks(sink.rng, &pool, decl.min, decl.max));
             continue;
         }
         run.awaiting = Some(CryAwaiting::Target);
