@@ -49,6 +49,13 @@ export const ODDS_RARITIES = [
   { key: "mythic", rarity: "Mythic" },
 ] as const;
 
+/** R1580000: the rarities pity counts (§14.4), lowest first, keyed as the server's counters are. */
+export const PITY_RARITIES = [
+  { key: "epic", rarity: "Epic" },
+  { key: "legendary", rarity: "Legendary" },
+  { key: "mythic", rarity: "Mythic" },
+] as const;
+
 /** A reveal's burst, by rarity: the particle count at intensity "normal" and the power it is thrown with. */
 export const PACK_BURSTS: Readonly<Record<"Rare" | "Epic" | "Legendary" | "Mythic", BurstTuning>> = {
   Rare: { count: 18, power: 0.9 },
@@ -66,6 +73,7 @@ export const packTestid = {
   oddsRow: (key: string) => `packs-odds-${key}`,
   pity: (key: string) => `packs-pity-${key}`,
   pityLine: "packs-pity-line",
+  pityPanel: "packs-pity-panel",
   duplicate: "packs-duplicate",
   held: "packs-held",
   none: "packs-none",

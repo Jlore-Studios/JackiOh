@@ -31,13 +31,13 @@ export const routes = {
   practice: () => env("practiceRoute", "/practice"),
   /** R768000: the recent games and their replays. */
   replays: () => env("replaysRoute", "/replays"),
-  /** §14: the account page, whose Card packs and Dev tools toggles spec 45 opens. */
+  /** §14: the account page, whose Dev tools toggle spec 45 opens. */
   account: () => env("accountRoute", "/account"),
   /** #1307: the collection, wallet, set tracks and quests. */
   collection: () => env("collectionRoute", "/collection"),
   /** R1579000: the Cards section. */
   collectionCards: () => `${env("collectionRoute", "/collection")}?section=cards`,
-  /** #1577: the shop. */
+  /** #1577, R1580000: where spec 45 buys, opens and redeems. */
   shop: () => env("shopRoute", "/shop"),
 };
 
