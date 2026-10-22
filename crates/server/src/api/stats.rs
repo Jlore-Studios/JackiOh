@@ -9,6 +9,9 @@
 //! (`KeptReports`), and both card routes read the kept reports. R1044000: the totals are the records
 //! folded as they were written (`db::store::Tx::stats_totals_load`), and read the same figures the
 //! records did.
+//!
+//! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every
+//! live game, read off every patch's totals and kept for `PLAY_RATES_REFRESH_SECONDS`.
 
 use std::cmp::Ordering;
 use std::sync::{Arc, Mutex};
@@ -28,7 +31,7 @@ use jackioh_engine::wire::stats::{
     WindowedReport, add_stats, card_drills_of, card_family, card_stats_of, card_window, played_delta,
     sources_of, win_rate, windowed_card_stats,
 };
-use jackioh_engine::{CardCost, CardDef, Pilot};
+use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
@@ -36,8 +39,8 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
-    CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
-    PUBLIC_STATS_MIN_LIVE_GAMES,
+    CARD_STATS_MIN_SAMPLE, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX,
+    PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
 use crate::db::store::{PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
@@ -495,6 +498,8 @@ pub struct KeptReports {
     entries: Kept<Arc<PatchReport>>,
     /// R1367000: the windowed reports `GET /api/stats/cards` reads, kept as the per-patch ones are.
     windows: Kept<Arc<KeptWindow>>,
+    /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
+    play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
 }
 
 /// Kept cells by what they were computed from, each with when it was first asked for.
@@ -523,6 +528,20 @@ impl KeptReports {
 
     fn window_cell(&self, key: ReportKey, now: i64) -> KeptWindowCell {
         kept_cell(&self.windows, key, now)
+    }
+
+    /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
+    /// new empty one in its place.
+    fn play_rates_cell(&self, now: i64) -> PlayRatesCell {
+        let mut kept = lock(&self.play_rates);
+        if let Some((made_at, cell)) = kept.as_ref()
+            && now - *made_at < PLAY_RATES_REFRESH_SECONDS * MS_PER_SECOND
+        {
+            return Arc::clone(cell);
+        }
+        let cell: PlayRatesCell = Arc::new(OnceCell::new());
+        *kept = Some((now, Arc::clone(&cell)));
+        cell
     }
 }
 
@@ -993,6 +1012,77 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         co_played,
     };
     Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
+}
+
+/// R1583000: one card's play rate: the share of the counted seats that played it from hand.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayRate {
+    pub id: String,
+    pub rate: f64,
+}
+
+/// R1583000: `GET /api/stats/play-rates`'s body: counts and rates only, naming no game and no player.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayRatesResponse {
+    /// The human seats of every live game, on every patch and in every mode.
+    pub decks: i64,
+    /// Each non-token card at least `PLAY_RATES_MIN_GAMES` of those seats held, in catalog-id order.
+    pub cards: Vec<PlayRate>,
+}
+
+/// The kept play rates, filled by the first request that asks; the others wait on it.
+type PlayRatesCell = Arc<OnceCell<Arc<PlayRatesResponse>>>;
+
+/// R1583000: the play rates over `totals`. A ladder bot's seat (R1451) and a development game (R378)
+/// never count; a card's rate is R377's `played` over every seat counted. `defs` holds only the
+/// shipped sets, so a card the server does not serve is left out with the tokens.
+fn play_rates_of(totals: &StatsTotals, defs: &CardDefs) -> PlayRatesResponse {
+    let report = card_stats_of(
+        totals,
+        &CardStatsFilter {
+            source: SourceFilter::Live,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Human,
+        },
+    );
+    let decks = i64::from(report.decks);
+    // A listed card's seats are among `decks`, so `decks` is at least `PLAY_RATES_MIN_GAMES` here.
+    let cards = report
+        .cards
+        .iter()
+        .filter(|stat| defs.get(&stat.card).is_some_and(|def| !def.is_token()))
+        .filter(|stat| tally_of(&stat.in_deck).0 >= PLAY_RATES_MIN_GAMES)
+        .map(|stat| PlayRate {
+            id: stat.card.clone(),
+            rate: tally_of(&stat.played).0 as f64 / decks as f64,
+        })
+        .collect();
+    PlayRatesResponse { decks, cards }
+}
+
+/// GET /api/stats/play-rates (R1583000): read off every patch's live totals once per
+/// `PLAY_RATES_REFRESH_SECONDS` however many ask (a failed load is kept for no one), cacheable as long.
+pub async fn get_play_rates(app: &Arc<App>, _req: Req) -> ApiResult {
+    let cell = app.card_stats.play_rates_cell(now_ms());
+    let rates = cell
+        .get_or_try_init(|| async {
+            let mut tx = app.db.begin(None).await?;
+            let totals = tx
+                .stats_totals_load(&StatsTotalsQuery {
+                    source: SourceFilter::Live,
+                    mode: None,
+                    patch: None,
+                    drills: false,
+                })
+                .await?;
+            tx.commit().await?;
+            Ok::<_, ApiError>(Arc::new(play_rates_of(&totals, &app.catalog.defs)))
+        })
+        .await?;
+    Ok(cached_ok(to_json(rates.as_ref())?, PLAY_RATES_REFRESH_SECONDS))
 }
 
 /// GET /api/stats/player: the caller's tracked statistics and privacy setting.

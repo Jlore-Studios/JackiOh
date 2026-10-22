@@ -990,7 +990,7 @@
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
-/* --- keywordGranted: keyword icon pops in (200 ms) ------------------------------------ */
+/* --- keywordGranted: keyword icon pops in, or out on a loss (200 ms) --------------------- */
 
 @keyframes jk-icon-pop {
   0% {
@@ -1011,6 +1011,29 @@
 [data-animating="keywordGranted"] {
   animation-name: jk-icon-pop;
   animation-duration: calc(200ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
+/* #1598: a keyword the unit loses (R46's Taunt, `lost` on the event) pops out instead: jk-icon-pop
+   played backwards. The board marks that card `data-lost` while it animates (game/keywordLoss.ts),
+   as `positionSwitched` reads the card's own `data-position`. The duration is the grant's. */
+@keyframes jk-icon-pop-out {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+[data-animating="keywordGranted"][data-lost] .keyword-icon:last-child,
+[data-animating="keywordGranted"][data-lost] {
+  animation-name: jk-icon-pop-out;
 }
 
 /* --- counterChanged: counter badge ticks (200 ms) ------------------------------------- */

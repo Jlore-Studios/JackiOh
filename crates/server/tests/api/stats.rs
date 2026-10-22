@@ -1485,3 +1485,179 @@ mod r377_public_stats_match_type {
         assert!(find(&bo3["byTurn"], "turn", &json!(1)).is_none());
     }
 }
+
+mod r1583000_play_rates {
+    use super::*;
+    use std::time::Duration;
+
+    use jackioh_server::config::{PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS};
+
+    const PATH: &str = "/api/stats/play-rates";
+
+    /// How long the server keeps the play rates, in milliseconds.
+    fn refresh_ms() -> u64 {
+        u64::try_from(PLAY_RATES_REFRESH_SECONDS).expect("the refresh is not negative") * 1000
+    }
+
+    /// A live game on the current patch, p1 holding core-001 and core-002, p2 core-003 and core-004,
+    /// each seat playing the cards given.
+    fn game(id: &str, p1_played: Vec<&'static str>, p2_played: Vec<&'static str>) -> Value {
+        make_game_record(
+            id,
+            RecordOptions {
+                source: Some("live"),
+                p1_played: Some(p1_played),
+                p2_played: Some(p2_played),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// The rate the response lists for `card`, if it lists it.
+    fn rate_of(data: &Value, card: &str) -> Option<f64> {
+        find(&data["cards"], "id", &json!(card)).and_then(|stat| stat["rate"].as_f64())
+    }
+
+    /// `PLAY_RATES_MIN_GAMES` games, so each of the four cards is held by just enough seats: p1 plays
+    /// core-001 in every other one, and p2 plays both its cards in each.
+    async fn base(app: &App) -> usize {
+        let n = count(PLAY_RATES_MIN_GAMES);
+        let records = (0..n)
+            .map(|i| {
+                let p1_played = if i % 2 == 0 { vec!["core-001"] } else { vec![] };
+                game(&format!("pr-{i}"), p1_played, vec!["core-003", "core-004"])
+            })
+            .collect();
+        insert_records(app, records).await;
+        n
+    }
+
+    #[tokio::test]
+    async fn r1583000_a_cards_rate_is_the_share_of_human_live_seats_that_played_it() {
+        let app = test_app().await;
+        let n = base(&app).await;
+
+        let (status, headers, data) = get_public(&app, PATH).await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            cache_control(&headers),
+            Some(format!("public, max-age={PLAY_RATES_REFRESH_SECONDS}").as_str())
+        );
+        assert_eq!(data["decks"], json!(2 * n));
+        let listed: Vec<(&str, f64)> = data["cards"]
+            .as_array()
+            .expect("cards is a list")
+            .iter()
+            .map(|card| {
+                (
+                    card["id"].as_str().expect("a card id"),
+                    card["rate"].as_f64().expect("a rate"),
+                )
+            })
+            .collect();
+        // In catalog-id order; a card held but never played is listed at 0.
+        assert_eq!(
+            listed,
+            vec![
+                ("core-001", 0.25),
+                ("core-002", 0.0),
+                ("core-003", 0.5),
+                ("core-004", 0.5),
+            ]
+        );
+
+        // Counts and rates only: nothing names a game or a player.
+        let keys = |value: &Value| {
+            let mut keys: Vec<String> = value.as_object().expect("an object").keys().cloned().collect();
+            keys.sort();
+            keys
+        };
+        assert_eq!(keys(&data), vec!["cards", "decks"]);
+        for card in data["cards"].as_array().expect("cards is a list") {
+            assert_eq!(keys(card), vec!["id", "rate"]);
+        }
+    }
+
+    #[tokio::test]
+    async fn r1583000_only_human_seats_of_live_games_count_on_every_patch_and_mode() {
+        let app = test_app().await;
+        base(&app).await;
+        let dev = make_game_record(
+            "pr-dev",
+            RecordOptions {
+                source: Some("dev"),
+                p1_played: Some(vec!["core-001"]),
+                p2_played: Some(vec![]),
+                ..RecordOptions::default()
+            },
+        );
+        let mut bot = game("pr-bot", vec!["core-001"], vec!["core-003"]);
+        bot["pilots"]["p2"] = json!("ai");
+        let older = make_game_record(
+            "pr-older",
+            RecordOptions {
+                source: Some("live"),
+                mode: Some("bo3"),
+                patch: Some("v0.0.0-older".to_string()),
+                p1_played: Some(vec!["core-001"]),
+                p2_played: Some(vec![]),
+                ..RecordOptions::default()
+            },
+        );
+        insert_records(&app, vec![dev, bot, older]).await;
+
+        let (_, _, data) = get_public(&app, PATH).await;
+        // The base's 40 seats, the bot game's human seat and both seats of the older Conquest game;
+        // neither development seat, nor the bot's.
+        assert_eq!(data["decks"], json!(43));
+        assert_eq!(rate_of(&data, "core-001"), Some(12.0 / 43.0));
+        assert_eq!(rate_of(&data, "core-003"), Some(20.0 / 43.0));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1583000_a_card_is_listed_once_play_rates_min_games_seats_held_it() {
+        let app = test_app().await;
+        let n = count(PLAY_RATES_MIN_GAMES);
+
+        let (status, _, empty) = get_public(&app, PATH).await;
+        assert_eq!(status, 200);
+        assert_eq!(empty, json!({ "decks": 0, "cards": [] }));
+
+        tokio::time::advance(Duration::from_millis(refresh_ms())).await;
+        let records = (0..n - 1)
+            .map(|i| game(&format!("pr-short-{i}"), vec!["core-001"], vec![]))
+            .collect();
+        insert_records(&app, records).await;
+        let (_, _, short) = get_public(&app, PATH).await;
+        assert_eq!(short["decks"], json!(2 * (n - 1)));
+        assert_eq!(short["cards"], json!([]));
+
+        tokio::time::advance(Duration::from_millis(refresh_ms())).await;
+        insert_records(&app, vec![game("pr-short-last", vec!["core-001"], vec![])]).await;
+        let (_, _, held) = get_public(&app, PATH).await;
+        assert_eq!(
+            ids_of(&held),
+            vec!["core-001", "core-002", "core-003", "core-004"]
+        );
+        assert_eq!(rate_of(&held, "core-001"), Some(0.5));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1583000_rates_are_kept_for_the_refresh_interval_then_computed_again() {
+        let app = test_app().await;
+        let n = base(&app).await;
+
+        let (_, _, first) = get_public(&app, PATH).await;
+        insert_records(&app, vec![game("pr-late", vec!["core-001"], vec![])]).await;
+        let (_, _, again) = get_public(&app, PATH).await;
+        assert_eq!(again, first);
+
+        tokio::time::advance(Duration::from_millis(refresh_ms() - 1)).await;
+        let (_, _, within) = get_public(&app, PATH).await;
+        assert_eq!(within, first);
+
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (_, _, after) = get_public(&app, PATH).await;
+        assert_eq!(after["decks"], json!(2 * n + 2));
+    }
+}
