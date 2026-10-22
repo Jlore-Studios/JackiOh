@@ -249,10 +249,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Can't attack or switch position until it thaws: it loses its next chance to do either, and thaws at the end of the turn it could have done it",
   ),
   // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords"); patch
-  // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it.
+  // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it, and issue #1615 (R1615000) Charge
+  // and Indestructible.
   "Combat keyword": status(
     "Combat keyword",
-    "One of the keywords Units fight with: Taunt, Rush, Charge, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Indestructible, Deft, Lifesteal, Pierce, Trample",
+    "One of the keywords Units fight with: Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample",
     { aliases: ["combat keywords", "combat keyword"] },
   ),
 

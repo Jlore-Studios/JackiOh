@@ -9,7 +9,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::combat::{plain, shielded, spikey_pillow, taunter, zero_attack};
+use crate::rules::fixtures::combat::{indestructible, plain, shielded, spikey_pillow, taunter, zero_attack};
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
 /// A unit holding every keyword in R21's pool, so the pool can run dry.
@@ -605,7 +605,7 @@ mod r21_random_keywords_m3_t1 {
             .position = Some(Position::Def);
         let mut b = Bench::new(state);
 
-        // Every draw the 16-entry pool has room for but Taunt, and nothing it has (R781005, R1025000).
+        // Every draw the 14-entry pool has room for but Taunt, and nothing it has (R781005, R1025000, R1615000).
         let me = Some(b.card(&unit.id));
         let count = RANDOM_KEYWORD_POOL.len() - 1;
         run(
@@ -648,7 +648,7 @@ mod r21_random_keywords_m3_t1 {
         assert!(!kinds.contains(&"Armor".to_string()));
         assert!(!kinds.contains(&"Spell Damage".to_string()));
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
-        // Only Taunt may be left out, when Indestructible came first (R347, R781004).
+        // Taunt is no longer held down, since the pool draws no Indestructible (R1615000).
         assert!(kinds.len() >= RANDOM_KEYWORD_POOL.len() - 1);
         for keyword in &b.card(&unit.id).granted_keywords {
             assert!(!matches!(
@@ -656,6 +656,64 @@ mod r21_random_keywords_m3_t1 {
                 KeywordKind::Armor | KeywordKind::SpellDamage
             ));
         }
+    }
+
+    #[test]
+    fn r21_r1615000_a_grant_of_the_whole_pool_never_gives_charge_or_indestructible() {
+        let mut state = game("random-kw-no-charge");
+        let unit = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut b = Bench::new(state);
+
+        // Drawing the pool dry on a unit with no keyword hands out all fourteen entries, Taunt
+        // among them, and Charge and Indestructible are not among them.
+        run(
+            &mut b,
+            grant_random_keywords(json_as(
+                json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
+            )),
+            None,
+            on_instance(&unit),
+        );
+
+        let kinds = granted_kinds(&b.events);
+        assert_eq!(kinds.len(), 14);
+        assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len());
+        assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len());
+        assert!(kinds.contains(&"Taunt".to_string()));
+        assert!(!kinds.contains(&"Charge".to_string()));
+        assert!(!kinds.contains(&"Indestructible".to_string()));
+    }
+
+    #[test]
+    fn r781004_r1615000_an_indestructible_unit_is_offered_every_pool_keyword_but_taunt() {
+        let mut state = game("random-kw-indestructible");
+        let unit = put(
+            &mut state,
+            &indestructible.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mut b = Bench::new(state);
+
+        // Its printed Indestructible is no pool entry now, and still keeps Taunt out (R347).
+        run(
+            &mut b,
+            grant_random_keywords(json_as(
+                json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
+            )),
+            None,
+            on_instance(&unit),
+        );
+
+        let kinds = granted_kinds(&b.events);
+        assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len() - 1);
+        assert!(!kinds.contains(&"Taunt".to_string()));
+        assert!(!kinds.contains(&"Indestructible".to_string()));
     }
 
     #[test]

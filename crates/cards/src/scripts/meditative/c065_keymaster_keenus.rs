@@ -76,6 +76,8 @@ mod tests {
     const SILENCE: &str = "classicplus-009";
     /// (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
     const WEAPONS: &str = "core-014";
+    /// (1) 3/3 Unit with Indestructible: an Equip host that keeps Taunt out (R347).
+    const STATE_OF_THE_GAME: &str = "classic-041";
     const FILLER: &str = "core-005";
 
     fn played(seed: &str, radiant: bool, p1: Value) -> Scenario {
@@ -184,17 +186,23 @@ mod tests {
             }
 
             #[test]
-            fn r781004_never_taunt_beside_indestructible() {
+            fn r781004_r1615000_never_taunt_beside_indestructible() {
+                crate::register_all();
+                let _guard = preview_sets(&[SetName::Meditative]);
                 for n in 0..24 {
-                    let s = played(&format!("keenus-r347-{n}"), true, json!({}));
-                    let id = s.card(KEENUS).id.clone();
-                    let drawn = drawn(&s, &id);
-                    if drawn.contains(&KeywordKind::Indestructible) {
-                        let at = drawn.iter().position(|kind| *kind == KeywordKind::Indestructible);
-                        let taunt = drawn.iter().position(|kind| *kind == KeywordKind::Taunt);
-                        // Taunt drawn first is held down by the later Indestructible (R347), never after.
-                        assert!(taunt.is_none_or(|taunt| Some(taunt) < at), "{drawn:?}");
-                    }
+                    let mut s = scenario(json!({
+                        "seed": format!("keenus-r347-{n}"),
+                        "p1": { "mana": 10, "hand": [STATE_OF_THE_GAME, KEENUS, FILLER], "library": filler(4) },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(STATE_OF_THE_GAME, json!({}));
+                    s.play(KEENUS, json!({ "zone": 1, "equip": true }));
+                    let host = s.unit(P1, 1).expect("the fused host");
+                    let drawn = drawn(&s, &host.id);
+                    // The pool holds no Indestructible (R1615000), and the host's own keeps Taunt out (R347).
+                    assert_eq!(drawn.len(), 5, "{drawn:?}");
+                    assert!(!drawn.contains(&KeywordKind::Indestructible), "{drawn:?}");
+                    assert!(!drawn.contains(&KeywordKind::Taunt), "{drawn:?}");
                 }
             }
 

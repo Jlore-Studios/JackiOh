@@ -1819,10 +1819,14 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
 });
 
 describe("R765 the practice menu offers the way back into a live online game", () => {
-  function inGame(currentMatchId: string | null, currentSeriesId: string | null = null): Account {
+  function inGame(
+    currentMatchId: string | null,
+    currentSeriesId: string | null = null,
+    currentDuosMatchId: string | null = null,
+  ): Account {
     const base = signedIn("active");
     if (base.kind !== "ready") throw new Error("signedIn is ready");
-    return { ...base, me: { ...base.me, currentMatchId, currentSeriesId } };
+    return { ...base, me: { ...base.me, currentMatchId, currentSeriesId, currentDuosMatchId } };
   }
 
   it("R765 an account in a match sees the live banner atop the menu, and Rejoin links the board", async () => {
@@ -1831,6 +1835,16 @@ describe("R765 the practice menu offers the way back into a live online game", (
     expect(banner).toHaveAttribute("data-kind", "match");
     expect(screen.getByTestId(T.rejoin)).toHaveAttribute("href", "/match/m-5");
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
+  });
+
+  it("R1566000 an account in a live co-op game sees the live banner, and Rejoin links /duos/<id>", async () => {
+    renderRoute(routeHost(), {
+      account: inGame(null, null, "d-5"),
+      loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
+    });
+    const banner = await screen.findByTestId(T.liveBanner);
+    expect(banner).toHaveAttribute("data-kind", "duos");
+    expect(screen.getByTestId(T.rejoin)).toHaveAttribute("href", "/duos/d-5");
   });
 
   it("R765 between the games of a series it rejoins the series screen; with no game there is no banner", async () => {

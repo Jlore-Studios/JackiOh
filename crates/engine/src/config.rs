@@ -223,13 +223,13 @@ pub const RANDOM_ATTACK_TARGET: &str = "random";
 /// v0.1.1 added Pierce, R636 Windfury and R49 (patch v0.2.4) Deft. Patch v0.3.7 (R781005) made it the
 /// designer's combat keyword pool, in the designer's order, adding Flying, Ranged, Indestructible and
 /// Spell Damage +1; the order picks which keyword a seeded draw returns. Patch v0.3.Y (R1025000)
-/// took Armor 1 and Spell Damage +1 out again, leaving sixteen entries in the same relative order.
+/// took Armor 1 and Spell Damage +1 out again, and issue #1615 (R1615000) Charge and Indestructible,
+/// as too swingy a random grant, leaving fourteen entries in the same relative order.
 /// Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
 /// (Keyword keys, as `keyword_key` writes them.)
 pub const RANDOM_KEYWORD_POOL: &[&str] = &[
     "Taunt",
     "Rush",
-    "Charge",
     "First Strike",
     "Flying",
     "Ranged",
@@ -238,7 +238,6 @@ pub const RANDOM_KEYWORD_POOL: &[&str] = &[
     "Divine Shield",
     "Windfury",
     "Cleave",
-    "Indestructible",
     "Deft",
     "Lifesteal",
     "Pierce",

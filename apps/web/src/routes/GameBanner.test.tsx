@@ -64,6 +64,19 @@ describe("R765 the menus' game banner", () => {
     expect(screen.getByTestId(gameBannerTestid.rejoin)).toHaveAttribute("href", "/series/s-1");
   });
 
+  it("R1566000 a live co-op game names the co-op game and the grace, and Rejoin links /duos/<id>", () => {
+    render(<LiveGameBanner game={{ kind: "duos", id: "d-1", path: paths.duos("d-1") }} />);
+    const banner = screen.getByTestId(gameBannerTestid.live);
+    expect(banner).toHaveAttribute("data-kind", "duos");
+    expect(banner).toHaveTextContent("You're in a co-op game");
+    expect(banner).toHaveTextContent(`${String(DISCONNECT_GRACE_SECONDS)} seconds`);
+    const rejoin = screen.getByTestId(gameBannerTestid.rejoin);
+    expect(rejoin.tagName).toBe("A");
+    expect(rejoin).toHaveAttribute("href", "/duos/d-1");
+    fireEvent.click(rejoin);
+    expect(navigate).toHaveBeenCalledWith("/duos/d-1");
+  });
+
   it("R765 no live game, no banner; no pairing, no notice", () => {
     const { container } = render(
       <>

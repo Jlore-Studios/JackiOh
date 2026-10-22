@@ -92,6 +92,8 @@ export const playTestid = {
   recentGames: "play-recent-games",
   decksLink: "play-decks-link",
   seriesLink: "play-series-link",
+  /** R1566000: a refusal naming the player's live co-op match links to it. */
+  duosLink: "play-duos-link",
   copyRoomCode: "play-copy-room-code",
   copyRoomLink: "play-copy-room-link",
   /** R1075000: the room ticket's Cancel. */
@@ -341,6 +343,8 @@ type LobbyError = {
   message: string;
   issues: readonly string[];
   seriesId: string | null;
+  /** R1566000: the live co-op match an `already_in_match` refusal names (R1065000). */
+  duosMatchId: string | null;
   /** R264: the room's mode, worded at render (`roomModeMessage`) so a language switch rewords it. */
   roomMode: QueueMode | null;
 };
@@ -358,12 +362,13 @@ export function issueMessagesOf(details: unknown): string[] {
   return messages;
 }
 
-function seriesIdOfError(cause: unknown): string | null {
+/** The id a refusal's `details` names under `key` (R264's series, R1065000's co-op match), or null. */
+function detailIdOfError(cause: unknown, key: "seriesId" | "duosMatchId"): string | null {
   if (!(cause instanceof ApiRequestError)) return null;
   const details = cause.details;
   if (typeof details !== "object" || details === null) return null;
-  const seriesId = (details as { seriesId?: unknown }).seriesId;
-  return typeof seriesId === "string" && seriesId.length > 0 ? seriesId : null;
+  const id = (details as Record<string, unknown>)[key];
+  return typeof id === "string" && id.length > 0 ? id : null;
 }
 
 function errorOf(cause: unknown): LobbyError {
@@ -371,7 +376,8 @@ function errorOf(cause: unknown): LobbyError {
     message: messageOf(cause),
     issues:
       cause instanceof ApiRequestError && cause.code === LOADOUT_INVALID ? issueMessagesOf(cause.details) : [],
-    seriesId: seriesIdOfError(cause),
+    seriesId: detailIdOfError(cause, "seriesId"),
+    duosMatchId: detailIdOfError(cause, "duosMatchId"),
     roomMode: null,
   };
 }
@@ -410,7 +416,10 @@ type Status =
 
 // Pairing watch
 
-/** Uses `liveGameOf` so pairing navigation matches the rest of the client. */
+/**
+ * Uses `liveGameOf` so pairing navigation matches the rest of the client. R1566000: a co-op game is
+ * no pairing; the hub's refusal links it.
+ */
 export function pairTargetOf(me: {
   currentMatchId: string | null;
   currentSeriesId?: string | null;
@@ -1047,7 +1056,7 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
         if (roomMode === null) throw cause;
         setMode(roomMode);
         dropLinkStatus(chosen.mode);
-        setError({ message: "", issues: [], seriesId: null, roomMode });
+        setError({ message: "", issues: [], seriesId: null, duosMatchId: null, roomMode });
       }
     });
   }
@@ -1097,6 +1106,15 @@ function OnlinePlay({ token }: { token: string }): ReactElement {
               onClick={followInApp(paths.series(error.seriesId))}
             >
               {t("Go to your series →")}
+            </a>
+          )}
+          {error.duosMatchId === null ? null : (
+            <a
+              href={paths.duos(error.duosMatchId)}
+              data-testid={playTestid.duosLink}
+              onClick={followInApp(paths.duos(error.duosMatchId))}
+            >
+              {t("Go to your co-op game →")}
             </a>
           )}
         </div>
