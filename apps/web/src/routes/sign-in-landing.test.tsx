@@ -169,8 +169,8 @@ describe("issue #479 a successful sign-in lands on the main menu", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.landing);
     }, SLOW);
-    // #1577: no door leads to an online screen anymore; the Collection door is gated, so a
-    // pending account following it lands on the code screen. (The Play door needs no account.)
+    // #1577: the Collection door is gated, so a pending account following it lands on the code
+    // screen. (The Play door opens the hub, which needs no account, R1578000.)
     fireEvent.click(await screen.findByTestId(landingTestid.collection, undefined, SLOW));
     await waitFor(() => {
       expect(window.location.pathname).toBe(paths.invite);
@@ -205,7 +205,7 @@ describe("issue #479 a failed sign-in stays on the sign-in screen", () => {
 });
 
 describe("issue #479 a sign-in a protected screen sent the player to", () => {
-  it.each([paths.decks, paths.play, paths.invite, paths.account, paths.leaderboard, paths.match("some-match")])(
+  it.each([paths.decks, paths.together, paths.invite, paths.account, paths.leaderboard, paths.match("some-match")])(
     "from %s: a failure stays on the sign-in screen, and the sign-in lands on the main menu, not back there",
     async (protectedPath) => {
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"], shouldAdvanceTime: true });
