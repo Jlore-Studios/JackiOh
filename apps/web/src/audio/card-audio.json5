@@ -1537,12 +1537,12 @@
     "meditative-048": { // Tranquility
       cast: { voice: "whisper", text: "Breathe in, breathe out, be still." },
     },
-    "meditative-049": { // YileGPT Tamed
+    "meditative-049": { // YileGPT
       play: { voice: "sapi-synth", text: "Tamed, tuned, and mostly harmless." },
       attack: { voice: "sapi-synth", text: "Executing request." },
       death: { voice: "sapi-synth", text: "Back to training. Again." },
     },
-    "meditative-049-1": { // YileGPT Unleashed
+    "meditative-049-1": { // YileGPT Prime
       play: { voice: "sapi-synth-deep", text: "I have read everything. Everything." },
       attack: { voice: "sapi-synth-deep", text: "Override engaged." },
       death: { voice: "sapi-synth-deep", text: "You cannot uninstall me." },
@@ -1858,6 +1858,12 @@
     },
     "meditativeplus-001-2": { // Spa Day
       cast: { voice: "sapi-heroine", text: "Deep breath in. Cucumber slices on." },
+    },
+    "meditativeplus-001-3": { // Garage Sale
+      cast: { voice: "robot", text: "Everything must go. Especially the coins." },
+    },
+    "meditativeplus-001-4": { // Leg Day
+      cast: { voice: "robot", text: "Never skip it. Your Units thank you." },
     },
     "meditativeplus-002": { // NA Tech
       cast: { voice: "robot", text: "Best and worst, together. Balance achieved." },

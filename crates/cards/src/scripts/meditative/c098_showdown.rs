@@ -14,7 +14,7 @@
 //!   zones still Locked — a zone Locked before this resolved stays Locked (MD-B21, R945).
 //! - **The Radiant face** also sets a turn watcher (MD-B22, R946): after a card of the caster's
 //!   enters one of their zones in the chosen lane — by a play once it resolves, or by a summon of
-//!   theirs — the caster casts a new C+ #71 Book of Buff (its base face, Buff 5 times) aimed at it,
+//!   theirs — the caster casts a new C+ #71 Book of Buff (its base face, Buff 4 times) aimed at it,
 //!   a play (R70) that goes to the caster's graveyard (R87). A move (an animate, a steal, a
 //!   rotation) is not putting a card there: only a resolution and a summon answer.
 
@@ -302,7 +302,7 @@ mod tests {
         let mark = s.events().len();
         s.play(VANILLA, json!({ "zone": 2 }));
         let played = s.unit(P1, 2).expect("played");
-        // The base Book Upgrades 5 times: five `upgraded` events on the played card.
+        // The base Book Upgrades 4 times: four `upgraded` events on the played card.
         let changes: Vec<TuningChange> = s.events()[mark..]
             .iter()
             .filter_map(|event| match event {
@@ -312,7 +312,7 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(changes.len(), 5, "the Book is cast on the played card");
+        assert_eq!(changes.len(), 4, "the Book is cast on the played card");
         // Each Buff draws its row (§6.1: cost, stats or a keyword for a vanilla Unit); every stats
         // Buff adds its 4 across attack and health, and each lands on the played card.
         let stat_totals: Vec<i32> = changes

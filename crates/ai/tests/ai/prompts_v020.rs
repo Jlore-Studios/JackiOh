@@ -375,15 +375,16 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
                     .collect()
             })
             .unwrap_or_default();
-        assert_eq!(options.len(), 4);
+        // R1563007: as many as the prompt's offer builds, the Unit always among them.
+        assert!(!options.is_empty() && options.len() <= 4);
         let picked = selection_of(&answered(&state, "r881-craft"));
         assert!(picked.first().is_some_and(|first| options.contains(first)));
     }
 
-    /// R1182000, R1182001: a potion prompt (Jazakus's, Jazakus Prime's) is answered with one of its
-    /// Potion presets, in the frame the prompt names.
+    /// R1182000, R1182001, R1563008: a potion prompt (Jazakus's, Jazakus Prime's) is answered with one
+    /// of its Potion presets, a Spell in the frame the prompt names.
     #[test]
-    fn r1182000_r1182001_the_ai_answers_a_potion_prompt_with_one_of_its_potions() {
+    fn r1182000_r1182001_r1563008_the_ai_answers_a_potion_prompt_with_one_of_its_potions() {
         install();
         for (mode, frame) in [
             ("potion", CraftFrame::Potion),
@@ -403,11 +404,15 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
                         .collect()
                 })
                 .unwrap_or_default();
-            assert_eq!(options.len(), 4);
+            // R1563007: one per verb the offer holds that fits the frame.
+            assert!(!options.is_empty() && options.len() <= CRAFT_OFFER_VERBS);
             let picked = selection_of(&answered(&state, &seed));
             assert!(picked.first().is_some_and(|first| options.contains(first)));
             match picked.first() {
-                Some(Selection::Craft { recipe }) => assert_eq!(recipe.frame, Some(frame)),
+                Some(Selection::Craft { recipe }) => {
+                    assert_eq!(recipe.frame, Some(frame));
+                    assert_eq!(recipe.type_, CardType::Spell, "a Potion is a Spell (R1563008)");
+                }
                 other => panic!("a Potion, not {other:?}"),
             }
         }

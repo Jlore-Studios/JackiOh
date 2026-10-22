@@ -1,16 +1,18 @@
 //! Meditative+ #20 KY's Competition (SPEC §8.9 row 20, R1184000, R1184001, R420, R465). (2) Spell,
 //! KY, Rare.
 //!
-//!   Base:    "Answer three-digit sums one after another until you stop or miss one. Then summon a
-//!             Lil' Kenny with X/X, X your correct answers."
-//!   Radiant: "Answer one- and two-digit sums one after another until you stop or miss one. Then
-//!             summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
+//!   Base:    "Answer three-digit sums one after another until you stop, miss one or 60 seconds pass.
+//!             Then summon a Lil' Kenny with X/X, X your correct answers."
+//!   Radiant: "Answer one- and two-digit sums one after another until you stop, miss one or 60 seconds
+//!             pass. Then summon a Radiant Lil' Kenny with 2X/2X, X your correct answers."
 //!
 //! The whole card is the engine's question sequence (`subsystems/ky_competition.rs`): C+ #42's
 //! `answer` prompt asked again after each right answer, with Stop, the streak in the prompt's resume
 //! data, each question rolled from the match rng (three-digit addition or subtraction; the Radiant
 //! face one- and two-digit), the key never leaving the engine (R465); a wrong answer, Stop or a timeout
-//! (R1184001) ends it, and so does the `KY_COMPETITION_MAX`th right answer. Then M+ #20.1 Lil' Kenny is
+//! (R1184001) ends it, and so does the `KY_COMPETITION_MAX`th right answer. The 60 seconds are its
+//! host's to keep (R1563006): the server's match clock and the practice controller answer Stop when
+//! they pass, as a timeout does; the engine names the open question for them. Then M+ #20.1 Lil' Kenny is
 //! summoned with X the right answers (R1184003), Radiant on the Radiant face, whose own face makes it
 //! 2X/2X; none at X = 0. Both faces run the same script: the steps read the face that cast it.
 //! Declares no numbers.

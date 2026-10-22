@@ -1,14 +1,16 @@
-//! M #49 YileGPT Tamed (SPEC §8.8 row 49): (2) Unit, CN, Acclaimed, Catalyst, Mythic, 2/6 → 4/12.
+//! M #49 YileGPT (SPEC §8.8 row 49): (2) Unit, CN, Acclaimed, Catalyst, Mythic, 2/6 → 4/12. YileGPT
+//! Tamed until #1563.
 //!
 //! Base:    "Cry: Summon a Yile's Virus for your opponent across from this.
-//!           Death: Put a YileGPT Unleashed on the bottom of your deck."
+//!           Death: Shuffle a YileGPT Prime into your deck."
 //! Radiant: "Cry: Summon a Radiant Yile's Virus for your opponent across from this.
-//!           Death: Put a Radiant YileGPT Unleashed on the bottom of your deck."
+//!           Death: Shuffle a Radiant YileGPT Prime into your deck."
 //! Engine: the Cry is an aimed summon of M #49.2 for the opponent into the unit zone across from
 //! this (§3.2, R47): they own and control it (R12), and it fails if that zone is occupied. The
-//! Death puts a fresh M #49.1 on the bottom of the deck of the player who controlled this as it
-//! died (ME-DECK-BOTTOM, never shuffled): R80's cap applies, and its owner's own-library list
-//! shows it (R310).
+//! Death shuffles a fresh M #49.1 into the deck of the player who controlled this as it died, at a
+//! uniformly random position (§6.3 Shuffle into): R80's cap applies, and its owner's own-library list
+//! shows it (R310). Until #1563 it went on the bottom of the deck (`script_v0_4_0f`, kept for the
+//! replays of v0.4.0f and before, R767000).
 
 use jackioh_engine::effects::{shuffle_into, summon};
 use jackioh_engine::prelude::*;
@@ -17,8 +19,8 @@ pub const ID: &str = "meditative-049";
 
 /// M #49.2 Yile's Virus, summoned for the opponent.
 const VIRUS: &str = "meditative-049-2";
-/// M #49.1 YileGPT Unleashed, put on the bottom of the deck.
-const UNLEASHED: &str = "meditative-049-1";
+/// M #49.1 YileGPT Prime, shuffled into the deck.
+const PRIME: &str = "meditative-049-1";
 
 /// The unit zone across from this: its lane, read as the Cry resolves.
 fn across(ctx: &EffectContext) -> Option<i32> {
@@ -28,7 +30,8 @@ fn across(ctx: &EffectContext) -> Option<i32> {
     }
 }
 
-fn tamed(radiant: bool) -> Script {
+/// `bottom`: the Death puts the Prime on the bottom of the deck, as it did through v0.4.0f.
+fn yilegpt(radiant: bool, bottom: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let Some(lane) = across(ctx) else {
@@ -42,13 +45,16 @@ fn tamed(radiant: bool) -> Script {
             })))]
         })),
         death: Some(hook(move |_ctx| {
-            vec![shuffle_into(json_as(json!({
-                "defId": UNLEASHED,
+            let mut args = json!({
+                "defId": PRIME,
                 "count": 1,
                 "player": "self",
                 "radiant": radiant,
-                "position": "bottom",
-            })))]
+            });
+            if bottom {
+                args["position"] = json!("bottom");
+            }
+            vec![shuffle_into(json_as(args))]
         })),
         ..Script::default()
     }
@@ -56,16 +62,25 @@ fn tamed(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: tamed(false),
-        radiant: tamed(true),
+        base: yilegpt(false, false),
+        radiant: yilegpt(true, false),
     }
 }
 
-// M #49 YileGPT Tamed — SPEC §8.8 row 49, BUILD M10 row M 49: "Cry (played or cast): a base Yile's
-// Virus summoned for the opponent, owned by them, into the unit zone across from it; with that zone
-// occupied, none; Death: a fresh base YileGPT Unleashed put on the bottom of its controller's deck,
-// never shuffled, refused by a full deck (R80), shown in its owner's list (R310); radiant 4/12,
-// both tokens Radiant".
+/// R767000: YileGPT Tamed through v0.4.0f, whose Death put the Prime (then YileGPT Unleashed) on the
+/// bottom of the deck.
+pub fn script_v0_4_0f() -> CardScripts {
+    CardScripts {
+        base: yilegpt(false, true),
+        radiant: yilegpt(true, true),
+    }
+}
+
+// M #49 YileGPT — SPEC §8.8 row 49, BUILD M10 row M 49: "Cry (played or cast): a base Yile's Virus
+// summoned for the opponent, owned by them, into the unit zone across from it; with that zone
+// occupied, none; Death: a fresh base YileGPT Prime shuffled into its controller's deck at a random
+// position, refused by a full deck (R80), shown in its owner's list (R310); radiant 4/12, both
+// tokens Radiant".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -77,7 +92,7 @@ mod tests {
 
     const TAMED: &str = "meditative-049";
     const VIRUS: &str = "meditative-049-2";
-    const UNLEASHED: &str = "meditative-049-1";
+    const PRIME: &str = "meditative-049-1";
     const BIGOT: &str = "core-002"; // 6/1, the killer.
     const OCCUPIER: &str = "core-012"; // 3/4, holding the zone across.
     const FILLER: &str = "core-005";
@@ -146,12 +161,12 @@ mod tests {
             }
 
             #[test]
-            fn r80_death_puts_an_unleashed_on_the_bottom_of_its_controllers_deck() {
+            fn r80_death_shuffles_a_prime_into_its_controllers_deck() {
                 let mut s = scenario(json!({
                     "seed": "tamed-death",
                     "p1": {
                         "field": [{ "def": TAMED, "lane": 1 }],
-                        "library": [FILLER, FILLER],
+                        "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
                     },
                     "p2": {
                         // Bigot at its old 6/1 (it prints 4/1 since patch v0.3.10).
@@ -165,16 +180,42 @@ mod tests {
 
                 kill_tamed(&mut s);
 
-                // A fresh Unleashed, last in the deck, never shuffled — the rest untouched.
+                // One fresh Prime among the deck, the rest in their order around it.
                 let after = s.pile(P1, "library");
                 assert_eq!(after.len(), before.len() + 1);
-                assert_eq!(
-                    after[..before.len()].iter().map(|card| &card.id).collect::<Vec<_>>(),
-                    before.iter().collect::<Vec<_>>()
-                );
-                let last = after.last().expect("a last card");
-                assert_eq!(last.def_id, UNLEASHED);
-                assert!(!last.radiant);
+                let primes: Vec<_> = after.iter().filter(|card| card.def_id == PRIME).collect();
+                assert_eq!(primes.len(), 1);
+                assert!(!primes[0].radiant);
+                let rest: Vec<String> = after
+                    .iter()
+                    .filter(|card| card.def_id != PRIME)
+                    .map(|card| card.id.clone())
+                    .collect();
+                assert_eq!(rest, before);
+            }
+
+            #[test]
+            fn r80_the_prime_lands_anywhere_in_the_deck_not_only_at_the_bottom() {
+                // Over a few seeds the shuffle puts the Prime somewhere other than last.
+                let mut positions = Vec::new();
+                for n in 0..12 {
+                    let mut s = scenario(json!({
+                        "seed": format!("tamed-shuffle-{n}"),
+                        "p1": {
+                            "field": [{ "def": TAMED, "lane": 1 }],
+                            "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER],
+                        },
+                        "p2": {
+                            "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
+                            "hand": [FILLER],
+                            "library": [FILLER, FILLER],
+                        },
+                    }));
+                    kill_tamed(&mut s);
+                    let after = s.pile(P1, "library");
+                    positions.extend(after.iter().position(|card| card.def_id == PRIME));
+                }
+                assert!(positions.iter().any(|at| *at != 6), "{positions:?}");
             }
         }
 
@@ -182,7 +223,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r310_radiant_a_radiant_virus_and_a_radiant_unleashed() {
+            fn r310_radiant_a_radiant_virus_and_a_radiant_prime() {
                 let s = played("tamed-radiant", true, 2);
                 let virus = s.unit(P2, 2).expect("the virus");
                 assert_eq!(virus.def_id, VIRUS);
@@ -204,9 +245,8 @@ mod tests {
                 }));
                 kill_tamed(&mut s);
                 let after = s.pile(P1, "library");
-                let last = after.last().expect("a last card");
-                assert_eq!(last.def_id, UNLEASHED);
-                assert!(last.radiant);
+                let prime = after.iter().find(|card| card.def_id == PRIME).expect("the Prime");
+                assert!(prime.radiant);
             }
         }
     }

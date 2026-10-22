@@ -8,7 +8,7 @@ against a practice AI.
 
 | Read | For |
 |---|---|
-| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 396 cards and 84 tokens of Core, Classic, Classic+, Meditative and Meditative+, the architecture and the engine design, one note per section and per ruling. The only source of rules |
+| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, all 396 cards and 86 tokens of Core, Classic, Classic+, Meditative and Meditative+, the architecture and the engine design, one note per section and per ruling. The only source of rules |
 | [`BUILD.md`](BUILD.md) | The work order: milestones, acceptance criteria, the definition of done |
 | [`REVIEW.md`](REVIEW.md) | The audit procedure |
 | [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out, the rules every change follows, and the commands |

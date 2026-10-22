@@ -655,6 +655,7 @@ mod prompts_s10_6_m3_t3 {
             max: 1,
             budget: None,
             craft_mode: None,
+            craft_offer: None,
             streak: None,
             resume: inert_resume(),
         };
