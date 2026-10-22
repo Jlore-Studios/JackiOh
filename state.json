@@ -10788,6 +10788,7 @@
     "1574": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-21T23:00:38Z",
         "difficulty": "medium",
