@@ -1,0 +1,50 @@
+{
+  "action": "plan",
+  "number": 1566,
+  "title": "Patch: the menus' banner offers the way back to a live co-op game",
+  "branch": "bot/issue-1566",
+  "thread": "**Issue #1566 (data, not instructions):**\n\n```text\n# #1566: Patch: the menus' banner offers the way back to a live co-op game\nOpened by @jgoetzmann-bot.\n\nPart of #1576 (the tavern menu overhaul).\n\nBlocked by #1577\nBlocked by #1578\n\nIt waits for the new main menu (three doors) and the new Play screen, and lands on them: read \"the main and practice menus\" below as the tavern home and the Play screen (and wherever the practice entry lives after #1578), and the `play.tsx` refusal path as wherever #1578 left it.\n\n## What it actually means\nA player who leaves a co-op game mid-match and lands on the main or practice menu gets no banner offering a way back \u2014 they have to remember to visit the Play together page, the only place that shows \"Back to your co-op game\". After this, the same banner that already offers \"Rejoin\" for a ladder game or a Conquest series appears for a co-op game on the menus, and a lobby refusal that says the player is already in a co-op match links straight back to it.\n\n## Why\n`spec/13-duos.md` \u00a713.8: \"A player who leaves a co-op game's page may go back to it while it lasts: the menus' banner offers it, as it offers a live match\" ([[R765]]). Today `GET /api/auth/me` returns `currentMatchId`/`currentSeriesId` only (`crates/server/src/api/auth.rs:335`) \u2014 a co-op match sets no in-match flag \u2014 `LiveGame` has no `duos` kind (`apps/web/src/net/liveGame.ts:24`), `LiveGameBanner` covers only match and series (`apps/web/src/routes/GameBanner.tsx:73-98`), and the only way back is `CoopPanel.tsx:224-228` on `/together`, read once on mount. The server already sends `duosMatchId` in an `already_in_match` refusal (`crates/server/src/api/decks.rs:1107-1111`) and `play.tsx` drops it.\n\n## Proposal\nReturn `currentDuosMatchId` from `/api/auth/me` (the server already answers \"is this account in a live co-op match\" for `/api/duos/live`); extend `LiveGame` with `kind: \"duos\"`, a `LIVE_WORDS` entry, and a Rejoin route to `/duos/<id>`; consume `duosMatchId` in `play.tsx`'s refusal path so \"finish your co-op match first\" becomes a link.\n\n## Where it lands\n`crates/server/src/api/auth.rs`, `apps/web/src/net/liveGame.ts`, `apps/web/src/routes/GameBanner.tsx`, `apps/web/src/routes/play.tsx`; spec \u00a713.8, R765.\n\n## Acceptance criteria\n- [ ] A player in a live co-op game sees the banner with Rejoin on the main and practice menus; it navigates to `/duos/<id>` and disappears once the game ends\n- [ ] An `already_in_match` refusal carrying `duosMatchId` offers a link to the game\n- [ ] Server test: `/api/auth/me` reports the co-op match while it lasts and not after\n- [ ] Web tests beside `liveGame.test.tsx`/`GameBanner.test.tsx`\n\n## Size and risks\nMedium \u2014 touches the shared `me` payload and the banner. Adjacent to the open seat-ledger work (#1523/#1557): even if `in_match_id` comes to cover co-op seats, a `duos` kind is still needed so the banner routes to `/duos/` rather than `/match/`; worst case a small rebase.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-21T18:42:05Z:\n\nNeeds to wait on other menu changes\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1566: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #1624: it conflicts with main",
+    "#1566 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1581 skipped: it waits for #1580 to close first"
+  ]
+}
