@@ -19,7 +19,7 @@
   },
   "providers": {
     "claude-squishy": {
-      "note": "Squishy's own Claude Max 20x account (#60), on GitHub's runners: Opus for every role. Nothing else spends it, and Squishy spends nothing else. Two lanes, so it works two items at once. Its week has no start headroom (`start_headroom`): a build or a plan may start right up to its 95% weekly cap.",
+      "note": "Squishy's own Claude Max 20x account (#60), on GitHub's runners: Opus for every role. Nothing else spends it, and Squishy spends nothing else. Two lanes, so it works two items at once. Its week has no start headroom (`start_headroom`): a build or a plan may start right up to its 100% weekly cap (#682).",
       "enabled": true,
       "cli": "claude",
       "family": "claude",
@@ -44,7 +44,7 @@
       "limits": {
         "mode": "caps",
         "five_hour": 0.95,
-        "seven_day": 0.95
+        "seven_day": 1.0
       },
       "start_headroom": {
         "seven_day": 0

@@ -586,7 +586,7 @@ class MatchingTests(unittest.TestCase):
     def test_muse_and_squishy_may_start_right_up_to_their_weekly_caps(self):
         """#682: a subscription's own `start_headroom` takes the place of the pool's, window by
         window. Muse's week and Squishy's have none, so a build or a plan starts right up to the
-        weekly cap; their 5-hour windows, and every other subscription's two, keep the pool's
+        weekly cap, 100% for both; their 5-hour windows, and every other subscription's two, keep the pool's
         5 points."""
         pool = providers.load(ROOT)
         self.assertEqual(dict(pool.get("muse").limits.headroom),
@@ -596,7 +596,8 @@ class MatchingTests(unittest.TestCase):
                              {"five_hour": 0.05, "seven_day": 0.05})
         squishy = providers.parse(json.loads((ROOT / ".squishy" / "providers.json")
                                              .read_text(encoding="utf-8"))).get("claude-squishy")
-        self.assertEqual(providers.start_under(squishy, "seven_day", 0.95), 0.95)
+        self.assertEqual(dict(squishy.limits.stops), {"five_hour": 0.95, "seven_day": 1.0})
+        self.assertEqual(providers.start_under(squishy, "seven_day", 1.0), 1.0)
         self.assertAlmostEqual(providers.start_under(squishy, "five_hour", 0.95), 0.9)
 
         # The tests' day comes before Muse's `usage_since`, which would set its reading aside.
