@@ -13,8 +13,9 @@
 //! bare id as a target (R177) and a `stolen` event naming a card its viewer could read where it was
 //! taken (R466).
 //!
-//! I8 (#1192) is proved by handing the oracle `legal_actions` with one attack or one switch taken out,
-//! which `reduce` still accepts; the whole list gives nothing.
+//! I8 (#1192, #1574) is proved by handing the oracle `legal_actions` with one attack, switch or
+//! activation taken out, which `reduce` still accepts; the whole list gives nothing. `malformed_answers`
+//! is proved by `reduce` refusing each variant.
 //!
 //! Port of `packages/cards/test/invariants.test.ts` (SURFACE §4.1, §8).
 
@@ -1089,5 +1090,127 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
         assert!(found[0].contains(&prey.id), "{}", found[0]);
         assert!(found[0].contains(VANILLA), "{}", found[0]);
         assert!(found[0].contains("§4.2"), "{}", found[0]);
+    }
+}
+
+/// I8 (#1574): an activation `reduce` accepts that the list leaves out, and a malformed answer.
+mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
+    use super::*;
+
+    const PING: &str = "classicplus-076-1"; // C+ #76.1 Brother Ping: Activate (once a turn), deal 1 to any target
+    const SCARAB: &str = "core-007"; // #7 Jewelosco Scarab: Cry: Discover, a prompt of one pick
+
+    fn board() -> (Scenario, CardInstance) {
+        let g = scenario(json!({
+            "p1": { "hand": [VANILLA], "field": [PING], "library": [VANILLA, VANILLA] },
+            "p2": { "hand": [VANILLA], "field": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+        let ping = g.card(PING).clone();
+        (g, ping)
+    }
+
+    fn at_enemy_hero(ping: &CardInstance) -> ActionBody {
+        ActionBody::Activate {
+            instance_id: ping.id.clone(),
+            ability: Some("ping".to_string()),
+            targets: Some(vec![Selection::Hero { player: PlayerId::P2 }]),
+            modes: None,
+            tributes: None,
+        }
+    }
+
+    #[test]
+    fn i8_is_clean_before_and_after_an_ability_s_one_use_and_on_the_other_turn() {
+        let (mut g, ping) = board();
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        assert!(
+            legal.contains(&at_enemy_hero(&ping)),
+            "the list should hold the ping"
+        );
+        assert_eq!(
+            unlisted_accepted(g.state(), PlayerId::P1, &legal),
+            no_violations()
+        );
+
+        g.act(at_enemy_hero(&ping), PlayerId::P1, "activate Ping");
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        assert!(
+            !legal.contains(&at_enemy_hero(&ping)),
+            "a once-a-turn ability is spent"
+        );
+        assert_eq!(
+            unlisted_accepted(g.state(), PlayerId::P1, &legal),
+            no_violations()
+        );
+
+        g.end_turn();
+        assert_eq!(
+            create_invariant_monitor(g.state()).unlisted(g.state()),
+            no_violations()
+        );
+    }
+
+    #[test]
+    fn i8_fires_on_an_activation_and_its_alias_reduce_accepts_that_the_list_leaves_out() {
+        let (g, ping) = board();
+        let left_out = at_enemy_hero(&ping);
+        let legal: Vec<ActionBody> = legal_actions(g.state(), PlayerId::P1)
+            .into_iter()
+            .filter(|body| *body != left_out)
+            .collect();
+        let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
+        assert_eq!(found.len(), 2, "{found:?}");
+        for message in &found {
+            assert!(
+                message.starts_with("I8 unlisted activation accepted"),
+                "{message}"
+            );
+            assert!(message.contains(&ping.id), "{message}");
+            assert!(message.contains(PING), "{message}");
+            assert!(message.contains("§10.2"), "{message}");
+        }
+        assert!(
+            found
+                .iter()
+                .any(|message| message.contains("\"type\":\"activate\"")),
+            "{found:?}"
+        );
+        assert!(
+            found
+                .iter()
+                .any(|message| message.contains("\"type\":\"activatePower\"")),
+            "{found:?}"
+        );
+    }
+
+    #[test]
+    fn every_malformed_variant_of_an_open_prompt_s_answer_is_refused() {
+        let mut g = scenario(json!({
+            "seed": "core-007-offer",
+            "p1": { "hand": [SCARAB], "mana": 4, "library": [VANILLA] },
+            "p2": { "field": [VANILLA] },
+        }));
+        g.play(SCARAB, json!({}));
+        let answer = legal_actions(g.state(), PlayerId::P1)
+            .into_iter()
+            .find(|body| matches!(body, ActionBody::Answer { .. }))
+            .expect("the Cry's prompt should list an answer");
+
+        let malformed = malformed_answers(g.state(), &answer);
+        assert_eq!(
+            malformed.iter().map(|(name, _, _)| *name).collect::<Vec<_>>(),
+            [
+                STALE_CHOICE_ANSWER,
+                OTHER_SEAT_ANSWER,
+                DROPPED_PICK_ANSWER,
+                DOUBLED_PICK_ANSWER,
+                UNOFFERED_PICK_ANSWER
+            ]
+        );
+        for (name, seat, body) in malformed {
+            let result = reduce(g.state(), &Action::new(body, seat, "malformed".to_string()));
+            assert!(result.error.is_some(), "{name} was accepted");
+        }
+        assert!(malformed_answers(g.state(), &ActionBody::EndTurn).is_empty());
     }
 }
