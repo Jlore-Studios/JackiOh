@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 1640,
+  "title": "Patch: the rules constants nothing reads are read where their rules are played, and a check keeps it so",
+  "branch": "bot/issue-1640",
+  "thread": "**Issue #1640 (data, not instructions):**\n\n```text\n# #1640: Patch: the rules constants nothing reads are read where their rules are played, and a check keeps it so\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe rules file keeps a setting for each design call the spec left marked \"decide\", so the designer can flip one and the game follows. Six of those settings are read by nothing; the code writes the same value out by hand. Today, flipping Genn's Greed from odd to even, or allowing two draw offers a turn, silently changes nothing. Once this is built, each setting is either read by the code that plays its rule, or stops the build when set to a value the code can't play. A repository check then fails whenever a new rules setting has no reader. The maintainer and the designer notice; players don't.\n\n## Why\n- BUILD.md \u00a72 (`BUILD.md:115`): \"Every number below is a named constant \u2026 Nothing in the engine hard-codes them.\"\n- Of the `pub const`s in `crates/engine/src/config.rs`, exactly six are named nowhere outside that file except tests and comments: `CRY_ON_PLAY_ONLY` (`:122`, R1), `ROTATION_RING` (`:124`, R14), `GENN_GREED_EXILES` (`:126`, R26), `FIENDER_STATS_MODE` (`:128`, R39), `DRAW_OFFERS_PER_TURN` (`:134`, R36) and `MULLIGAN_ORDER` (`:275`, R9). The scan covered `crates/*/src`, `crates/cards/build.rs` and the config exports. Every other constant is read by a source file, by `build.rs` (`CODE_BLOCK_MAX_LINES`), by another constant in `config.rs`, or by the generated `engineConfig.ts`.\n- The code writes these values itself:\n  - `crates/cards/src/scripts/core/c094_genns_greed.rs:54` passes `\"parity\": \"odd\"`, though `CostFilter.parity` takes \"even\" too (`crates/engine/src/effects/move_.rs:238-290`).\n  - `can_offer_draw` (`crates/engine/src/turn.rs:990-1000`) allows one offer a turn by `offer.offered_turn == Some(state.turn)`, while SPEC \u00a72.5 says of the draw-offer numbers: \"both numbers are config values\".\n- The tests compare the constants with themselves. `crates/engine/tests/rules/rulings_a.rs:1667` (`let wanted = if GENN_GREED_EXILES == \"odd\" { 1 } else { 0 };`) would break when the constant flips, while the game would not change.\n- BUILD.md:143's `RANDOM_KEYWORD_POOL` row still lists Armor 1 and Charge. The pool (`config.rs:230-245`) no longer holds either (R1025000, #1615).\n\n## Proposal\n- `c094_genns_greed.rs` reads `GENN_GREED_EXILES` for its parity.\n- `can_offer_draw` names `DRAW_OFFERS_PER_TURN`, with a compile-time assertion beside it that it is 1, since more than one offer a turn needs a counter the state does not hold.\n- The code that plays R1, R14, R39 and R9 gets a compile-time assertion that its constant holds the one value it implements (`const _: () = assert!(\u2026)`, with a small `const fn` for the string ones), naming the ruling. A designer who flips one then gets a build error at the code to change.\n- The self-comparing test asserts become behaviour tests named after their rulings, which they mostly already are.\n- `crates/tools/tests/acceptance.rs` gets a check: every `pub const` in the engine's `config.rs` is named, outside comments, by a source file under `crates/*/src`, a `build.rs`, the engine's `tests/export_config.rs`, or another constant in `config.rs`. The check fails today on exactly these six, and an injected unread constant shows it catches one.\n- The BUILD.md table is corrected.\n\n## Where it lands\n- `crates/engine/src/config.rs`, `crates/engine/src/turn.rs`, the files that play R1, R14, R39 and R9\n- `crates/cards/src/scripts/core/c094_genns_greed.rs`\n- `crates/engine/tests/rules/{config,rulings_config,rulings_a,rulings_b,triggers,combat_validation}.rs`, where they compare a constant with itself\n- `crates/tools/tests/acceptance.rs`\n- `BUILD.md` \u00a72\n\n## Acceptance criteria\n- [ ] The new acceptance check fails on the tree before the change, naming the six constants, and passes after it. A unit test of its scanner shows an unread constant is caught and one read only in a comment is not counted.\n- [ ] Setting `GENN_GREED_EXILES` to \"even\" makes R26's behaviour test exile even-cost cards; the pull request shows this was checked and reverted.\n- [ ] The R1, R9, R14, R26, R36 and R39 tests still pass, and `cargo jackioh spec check` passes, with every `proven_in` file keeping its named test.\n- [ ] `cargo test -p jackioh-engine --features testkit --test rules`, `cargo test -p jackioh-cards c094`, `cargo test -p jackioh-tools --test acceptance`, `cargo clippy --workspace --all-targets -- -D warnings` and the golden replay pass.\n\n## Size and risks\nAbout 10 files with small edits and no behaviour change at today's values: medium. The scanner must not count comments or `config.rs`'s own definition line, or it passes vacuously. Keep it a token scan with its own test, like the other scans in `acceptance.rs`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-22T15:00:57Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1640: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1640 left the Needs plan stage"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
