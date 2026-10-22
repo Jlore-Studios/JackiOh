@@ -583,6 +583,45 @@ class MatchingTests(unittest.TestCase):
                           for pid in ("gpt", "agy", "muse")},
                          {"gpt": 1.0, "agy": 1.0, "muse": 1.0})
 
+    def test_muse_and_squishy_may_start_right_up_to_their_weekly_caps(self):
+        """#682: a subscription's own `start_headroom` takes the place of the pool's, window by
+        window. Muse's week and Squishy's have none, so a build or a plan starts right up to the
+        weekly cap; their 5-hour windows, and every other subscription's two, keep the pool's
+        5 points."""
+        pool = providers.load(ROOT)
+        self.assertEqual(dict(pool.get("muse").limits.headroom),
+                         {"five_hour": 0.05, "seven_day": 0.0})
+        for pid in ("agy", "gpt", "claude-2", "claude-5"):
+            self.assertEqual(dict(pool.get(pid).limits.headroom),
+                             {"five_hour": 0.05, "seven_day": 0.05})
+        squishy = providers.parse(json.loads((ROOT / ".squishy" / "providers.json")
+                                             .read_text(encoding="utf-8"))).get("claude-squishy")
+        self.assertEqual(providers.start_under(squishy, "seven_day", 0.95), 0.95)
+        self.assertAlmostEqual(providers.start_under(squishy, "five_hour", 0.95), 0.9)
+
+        # The tests' day comes before Muse's `usage_since`, which would set its reading aside.
+        muse = dataclasses.replace(pool.get("muse"), usage_since=None)
+        later = clock.iso(DAY + timedelta(days=1))
+
+        def why(seven_day, starting=True):
+            entry = {"usage": {"observed_at": clock.iso(DAY),
+                               "five_hour": {"utilization": 0.1, "resets_at": later},
+                               "seven_day": {"utilization": seven_day, "resets_at": later}}}
+            return providers.refusal(muse, entry, DAY, "America/Chicago", starting=starting)
+
+        self.assertIsNone(why(0.99))
+        self.assertIn("7-day usage is 100%", why(1.0))
+        self.assertIn("7-day usage is 100%", why(1.0, starting=False))
+
+    def test_a_subscriptions_start_headroom_is_checked(self):
+        for bad, message in (({"day": 0.1}, r"unknown windows day"),
+                             ({"seven_day": 1.0}, r"outside \[0, 1\)"),
+                             ({"seven_day": -0.1}, r"outside \[0, 1\)")):
+            raw = raw_providers()
+            raw["providers"]["agy"]["start_headroom"] = bad
+            with self.assertRaisesRegex(ConfigError, message):
+                providers.parse(raw)
+
     def test_claude_2_and_3_work_any_hour(self):
         """The committed hours: claude-1, claude-2 and claude-3 run all day, claude-1 under its
         100% cap with no weekly cap, claude-2 under 90% and claude-3 with none; claude-4 and

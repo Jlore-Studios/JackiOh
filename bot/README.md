@@ -506,7 +506,10 @@ them at any hour.
     during a call (`POLL_SECONDS`) and once after it.
   - **Headroom to start.** A build, a revision or a plan starts only `start_headroom` under
     each cap (top level: 5 points of the 5-hour window, 5 of the week); a review, which is
-    short, goes up to the cap. A plan went up to the cap too until #37, whose planner on
+    short, goes up to the cap. A subscription's own `start_headroom` replaces the top level's
+    for the windows it names: Muse's week has none, and neither has Squishy's (#682), so their
+    builds and plans start right up to the weekly cap. A run the cap cuts off keeps its work,
+    and the subscription waits for its reset. A plan went up to the cap too until #37, whose planner on
     `claude-4` started just under its 70% cap and was stopped four minutes in. A subscription
     under a cap but within its headroom takes reviews only, and the status issue, `status` and
     the planner's summary say so (⏸️, "starts under 45%; reviews only") with the time it can
