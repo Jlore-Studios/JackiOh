@@ -14657,10 +14657,10 @@
     "what": "suggestions on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-22T10:14:27Z",
+    "at": "2026-10-22T10:21:52Z",
     "notes": [
-      "delivered build #1594 on claude-7 (run 39744830173): approved",
-      "started revise #1632 on muse (run 39761775428)",
+      "delivered suggest on claude-6 (run 39760023518): interrupted",
+      "started suggest on claude-7 (run 39762648592)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -15360,7 +15360,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-22T10:14:27Z",
+  "loop_tick": "2026-10-22T10:21:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
