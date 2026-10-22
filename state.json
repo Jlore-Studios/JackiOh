@@ -12179,6 +12179,7 @@
     "1667": {
       "action": "build",
       "asks": [],
+      "interruptions": 0,
       "kind": "build",
       "onto": "bot/issue-1651",
       "part_of": 1651,
