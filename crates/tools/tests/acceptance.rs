@@ -26,6 +26,13 @@
 //!    `daily tests` job runs each one (`cargo test -- --ignored`), and the reason names what holds
 //!    the same rule per pull request, so an ignore moves a test to the daily run and never switches
 //!    one off.
+//!
+//! And one for BUILD §2 (#1640):
+//!
+//!  - Config: every `pub const` of the engine's `config.rs` is named, outside comments, by a source
+//!    file under `crates/*/src`, a crate's `build.rs`, the engine's `tests/export_config.rs` or
+//!    another constant in `config.rs`, so flipping one changes the game, or stops the build where
+//!    the code that plays it asserts the one value it plays.
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -796,4 +803,135 @@ fn daily_every_ignored_test_says_it_runs_daily() {
 fn daily_the_scan_finds_each_bare_ignore() {
     let text = "#[test]\n#[ignore]\nfn a() {}\n    #[ignore = \"slow\"]\nfn b() {}\n#[ignore = \"daily: a sweep\"]\nfn c() {}\n";
     assert_eq!(ignored_without_a_daily_reason(text), [2, 4]);
+}
+
+/// `text` with each line's `//` comment cut off (`///` and `//!` among them), so a name only a
+/// comment gives is no read. A `//` inside a string literal cuts its line too, which can only hide a
+/// read and fail the check, never pass it.
+fn without_line_comments(text: &str) -> String {
+    text.lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// How many times `code` names `name` whole, not as part of a longer identifier.
+fn token_count(code: &str, name: &str) -> usize {
+    let is_ident = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    code.match_indices(name)
+        .filter(|(at, _)| {
+            !code[..*at].chars().next_back().is_some_and(is_ident)
+                && !code[at + name.len()..].chars().next().is_some_and(is_ident)
+        })
+        .count()
+}
+
+/// The engine's `config.rs` above its `#[cfg(test)]` module: a test there plays no rule.
+fn config_code(config: &str) -> &str {
+    config.split("\n#[cfg(test)]").next().unwrap_or(config)
+}
+
+/// The names of the `pub const`s `config` defines at its top level, a `pub const fn` aside.
+fn config_constants(config: &str) -> Vec<String> {
+    config_code(config)
+        .lines()
+        .filter_map(|line| line.strip_prefix("pub const "))
+        .map(|rest| {
+            rest.chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                .collect::<String>()
+        })
+        .filter(|name| !name.is_empty() && name.as_str() != "fn")
+        .collect()
+}
+
+/// #1640: the constants of `config` that no code reads: no reader names one outside a comment, and
+/// `config` names it nowhere but its own definition (a constant built from another reads that one).
+fn unread_constants(config: &str, readers: &[String]) -> Vec<String> {
+    let own = without_line_comments(config_code(config));
+    let readers: Vec<String> = readers.iter().map(|text| without_line_comments(text)).collect();
+    config_constants(config)
+        .into_iter()
+        .filter(|name| {
+            token_count(&own, name) <= 1 && readers.iter().all(|code| token_count(code, name) == 0)
+        })
+        .collect()
+}
+
+#[test]
+fn config_every_engine_constant_is_read_where_its_rule_is_played() {
+    let root = repo();
+    let config =
+        fs::read_to_string(root.join("crates/engine/src/config.rs")).expect("the engine's config.rs");
+    let mut files = vec![root.join("crates/engine/tests/export_config.rs")];
+    for entry in fs::read_dir(root.join("crates"))
+        .expect("crates/ lists")
+        .flatten()
+    {
+        rust_sources(&entry.path().join("src"), &mut files);
+        files.push(entry.path().join("build.rs"));
+    }
+    let readers: Vec<String> = files
+        .iter()
+        .filter(|file| !file.ends_with("crates/engine/src/config.rs"))
+        .filter_map(|file| fs::read_to_string(file).ok())
+        .collect();
+    assert!(
+        readers.len() > 500,
+        "only {} files read under crates/",
+        readers.len()
+    );
+    assert!(
+        config_constants(&config).len() > 200,
+        "only {} constants found in crates/engine/src/config.rs",
+        config_constants(&config).len()
+    );
+    let unread = unread_constants(&config, &readers);
+    assert!(
+        unread.is_empty(),
+        "constants in crates/engine/src/config.rs that no code reads (BUILD §2, #1640): read each where its rule is played, or assert there at compile time the one value that code plays: {unread:?}"
+    );
+}
+
+#[test]
+fn config_the_scan_finds_each_unread_constant() {
+    let config = "\
+/// READ_IN_CODE, and ONLY_IN_A_COMMENT, which nothing else names.
+pub const READ_IN_CODE: i32 = 1;
+pub const READ_BY_A_CONSTANT: i32 = 2;
+pub const BUILT: i32 = READ_BY_A_CONSTANT * 2; // and READ_IN_A_STRING
+pub const READ_IN_A_STRING: &str = \"x\";
+pub const ONLY_IN_A_COMMENT: i32 = 3;
+pub const SHORT: i32 = 4;
+pub const ONLY_IN_TESTS: i32 = 5;
+pub const fn helper() -> i32 {
+    0
+}
+
+#[cfg(test)]
+mod tests {
+    const _: i32 = super::ONLY_IN_TESTS;
+}
+";
+    let readers = [
+        "let x = READ_IN_CODE + BUILT; // ONLY_IN_A_COMMENT\n/// SHORT\nlet y = SHORT_BUT_LONGER;\n"
+            .to_string(),
+        "line.strip_prefix(\"pub const READ_IN_A_STRING: &str =\")\n".to_string(),
+    ];
+    assert_eq!(
+        config_constants(config),
+        [
+            "READ_IN_CODE",
+            "READ_BY_A_CONSTANT",
+            "BUILT",
+            "READ_IN_A_STRING",
+            "ONLY_IN_A_COMMENT",
+            "SHORT",
+            "ONLY_IN_TESTS"
+        ]
+    );
+    assert_eq!(
+        unread_constants(config, &readers),
+        ["ONLY_IN_A_COMMENT", "SHORT", "ONLY_IN_TESTS"]
+    );
 }

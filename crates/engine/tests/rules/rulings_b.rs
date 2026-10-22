@@ -1796,8 +1796,6 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
     #[test]
     fn r66_reads_genn_s_greed_costs_per_r65_at_resolution_and_exempts_x_cost_cards_from_both_halves() {
-        assert_eq!(GENN_GREED_EXILES, "odd");
-
         let mut state = game("r66");
         let card = hand_card(&mut state, PRICEY, P1); // printed 3
         edit(&mut state, &card, |live| live.cost_mod = -1);

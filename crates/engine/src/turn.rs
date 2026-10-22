@@ -29,7 +29,7 @@
 use indexmap::{IndexMap, IndexSet};
 use serde_json::Value;
 
-use crate::config::{DRAW_OFFER_BLOCK_TURNS, DRAWS_PER_TURN, TURN_CAP_PLAYER_TURNS};
+use crate::config::{DRAW_OFFER_BLOCK_TURNS, DRAW_OFFERS_PER_TURN, DRAWS_PER_TURN, TURN_CAP_PLAYER_TURNS};
 use crate::game_over::end_game;
 use crate::resolve::HookName;
 use crate::script::EngineSink;
@@ -987,13 +987,21 @@ pub fn concede(sink: &mut EngineSink, player: PlayerId) {
     end_game(sink, opponent_of(player), GameOverReason::Concede);
 }
 
+// R36: `DrawOfferState` keeps the turn of a player's last offer and no count, so `can_offer_draw`
+// plays one offer a turn; more needs a count on the state.
+const _: () = assert!(
+    DRAW_OFFERS_PER_TURN == 1,
+    "R36: turn.rs's can_offer_draw plays one draw offer a turn"
+);
+
 /// R36: only the active player offers, once per turn, and a declined offer blocks 3 of their turns.
 pub fn can_offer_draw(state: &GameState, player: PlayerId) -> bool {
     if state.active != player || state.phase != Phase::Main {
         return false;
     }
     let offer = &state.players[player].draw_offer;
-    if offer.offered_turn == Some(state.turn) {
+    let offered_this_turn = offer.offered_turn == Some(state.turn);
+    if i32::from(offered_this_turn) >= DRAW_OFFERS_PER_TURN {
         return false;
     }
     let blocked_until = offer.blocked_until.unwrap_or(0);

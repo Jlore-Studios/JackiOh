@@ -734,10 +734,7 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     }
 
     #[test]
-    #[allow(clippy::assertions_on_constants)]
     fn r1_cry_on_play_only_makes_summon_never_fire_cry_while_playing_the_same_card_from_hand_does() {
-        assert!(CRY_ON_PLAY_ONLY);
-
         let mut state = playing("r1-summon-vs-play");
         let mut sink = sink_for(&state);
         {
