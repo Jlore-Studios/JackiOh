@@ -1,0 +1,48 @@
+{
+  "action": "plan",
+  "number": 1581,
+  "title": "Patch: every menu fits one screen, desktop and phone, with a guard that keeps it so",
+  "branch": "bot/issue-1581",
+  "thread": "**Issue #1581 (data, not instructions):**\n\n```text\n# #1581: Patch: every menu fits one screen, desktop and phone, with a guard that keeps it so\nOpened by @MaxGoetzmann.\n\nPart of #1576 (the tavern menu overhaul). Read the tracker's Goals first.\n\nBlocked by #1578\nBlocked by #1579\nBlocked by #1580\n\n## What\n\nAfter Play, Collection and Shop are reshaped, sweep **every remaining menu screen** (account, settings, leaderboard, stats, patch notes, replays, series/lobby pickers, invite, almanac and whatever else the planner finds; not the board, not the static legal pages) so each fits a single viewport with **no page scrolling** at a desktop size and a phone size.\n\nAllowed to scroll (the tracker's exceptions):\n- a big list of cards (collection, deck builder, almanac lists), inside its own region;\n- the tavern home, which is its main screen plus exactly one screen below the floor.\n\nFix by layout (denser grids, tabs, collapsing secondary text), not by shrinking type below what is readable on a phone.\n\n## Done when\n\n- A check that fails when a menu scrolls: e.g. a Cypress spec (component or full) that visits each menu route at a desktop and a phone viewport and asserts the document does not scroll vertically (`scrollHeight <= innerHeight`), with the exceptions above listed explicitly in the spec. The planner picks where it runs (the `e2e smoke` job if it fits its budget, else `super.yml`).\n- Every menu passes it.\n- The viewport sizes are named constants, not literals scattered through the spec.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1581: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #1627: it conflicts with main",
+    "queued #1557: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
