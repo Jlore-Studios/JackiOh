@@ -38,14 +38,13 @@ pub struct BuffAmount {
 }
 
 /// R21's pool is written as text in config; every entry is an unnumbered keyword since patch v0.3.Y
-/// took Armor 1 and Spell Damage +1 out (R1025000).
+/// took Armor 1 and Spell Damage +1 out (R1025000), and issue #1615 took Charge and Indestructible out
+/// too (R1615000).
 const POOL_KEYWORDS: &[(&str, Keyword)] = &[
     ("Taunt", Keyword::Taunt),
     ("Flying", Keyword::Flying),
     ("Ranged", Keyword::Ranged),
-    ("Indestructible", Keyword::Indestructible),
     ("Rush", Keyword::Rush),
-    ("Charge", Keyword::Charge),
     ("First Strike", Keyword::FirstStrike),
     ("Poisonous", Keyword::Poisonous),
     ("Lifesteal", Keyword::Lifesteal),

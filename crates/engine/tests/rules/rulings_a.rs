@@ -1446,14 +1446,13 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r21_r781005_r1025000_draws_random_keywords_from_the_sixteen_entry_pool_and_never_repeats_one_on_a_unit()
+    fn r21_r781005_r1025000_r1615000_draws_random_keywords_from_the_fourteen_entry_pool_and_never_repeats_one_on_a_unit()
      {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
                 "Taunt",
                 "Rush",
-                "Charge",
                 "First Strike",
                 "Flying",
                 "Ranged",
@@ -1462,7 +1461,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 "Divine Shield",
                 "Windfury",
                 "Cleave",
-                "Indestructible",
                 "Deft",
                 "Lifesteal",
                 "Pierce",
@@ -1486,15 +1484,13 @@ mod spec_11_rulings_r1_r42_m3_gate {
             .iter()
             .map(Keyword::kind)
             .collect();
-        // Every pool keyword, but no Taunt once Indestructible came first (R347, R781004).
-        let expected = if kinds.contains(&KeywordKind::Taunt) {
-            RANDOM_KEYWORD_POOL.len()
-        } else {
-            RANDOM_KEYWORD_POOL.len() - 1
-        };
+        // Every pool keyword, Taunt among them: no Indestructible is drawn to hold it down (R1615000).
+        let expected = RANDOM_KEYWORD_POOL.len();
         assert_eq!(kinds.len(), expected);
         assert_eq!(kinds.iter().collect::<BTreeSet<_>>().len(), kinds.len());
-        assert!(kinds.contains(&KeywordKind::Indestructible));
+        assert!(kinds.contains(&KeywordKind::Taunt));
+        assert!(!kinds.contains(&KeywordKind::Charge));
+        assert!(!kinds.contains(&KeywordKind::Indestructible));
         assert!(!kinds.contains(&KeywordKind::Immutable));
         assert!(!kinds.contains(&KeywordKind::Stack));
         assert!(!kinds.contains(&KeywordKind::Lucky));
