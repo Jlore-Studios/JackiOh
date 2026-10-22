@@ -11788,7 +11788,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-22T00:28:16Z",
+      "feedback_since": "2026-10-22T02:23:27Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1571,
@@ -11801,11 +11801,11 @@
       "round_tier": "medium",
       "run_id": "39711117651",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-22T02:23:27Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
