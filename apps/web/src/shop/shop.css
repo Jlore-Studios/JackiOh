@@ -1,7 +1,8 @@
-/* The Jlore shop, the token picker and the cosmetic packs (#1309): three panels in the account
-   page's tavern frame, wearing its brass and parchment. The rows stack for a phone screen; the
-   reveal reuses the pack scene's slot hooks (`packs.css` draws the rarity glow), and the
-   cosmetic previews draw `CardFace` at a hand size. */
+/* The Jlore shop, the token picker and the cosmetic packs (#1309): the Shop screen's four panels
+   (the pack opening's, in `packs.css`, is the fourth) in the account page's tavern frame, wearing
+   its brass and parchment. The rows stack for a phone screen; the reveal reuses the pack scene's
+   slot hooks (`packs.css` draws the rarity glow), and the cosmetic previews draw `CardFace` at a
+   hand size. */
 
 .shop-panel,
 .token-panel,
@@ -76,4 +77,31 @@
 
 .pack-slot__card {
   margin: 4px 0 0;
+}
+
+/* R1580000: the page never scrolls; the board shrinks and the body scrolls inside it (as R1579000). */
+.tavern.app-shell.shop-screen {
+  height: 100vh;
+  height: 100dvh;
+  padding-bottom: 14px;
+}
+
+.tavern.app-shell.shop-screen .panel--auth {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+.tavern.app-shell .shop-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tavern.app-shell .shop-body > * {
+  flex-shrink: 0;
+  margin-top: 0;
 }

@@ -1,6 +1,6 @@
 // The wallet panel (#1307, SPEC §14.1, §14.3): the Jlore balance and the unopened packs, card and
 // cosmetic, as `GET /api/wallet`, `/api/packs` and `/api/cosmetic-packs` answer them (CLAUDE.md
-// rule 7). Tokens stay in the token picker on `/account`.
+// rule 7). Tokens stay in the token picker on `/shop`.
 
 import type { ReactElement } from "react";
 
