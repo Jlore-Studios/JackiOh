@@ -207,6 +207,11 @@ export type MeResponse = {
    * Optional because a server from before R259 does not send it.
    */
   currentSeriesId?: string | null;
+  /**
+   * R1566000: the live co-op match this profile holds a seat in, or null; a co-op match sets no
+   * `currentMatchId`. Optional because a server from before R1566000 (or a test stub) omits it.
+   */
+  currentDuosMatchId?: string | null;
   /** The address this account is tied to, so a player can see who they are signed in as. */
   email: string | null;
   /**

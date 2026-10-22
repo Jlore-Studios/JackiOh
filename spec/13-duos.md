@@ -129,7 +129,7 @@ The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh 
 
 - **A disconnect.** A human seat whose socket has been gone past the disconnect grace (`DISCONNECT_GRACE_SECONDS`, 60 s, [[§9.5]]) is played by the AI, as [[§13.7]] plays team B's seats, until its player reconnects, and its teammate is told that the AI is playing it. A team never loses to a disconnect. A move the AI decided while it held a person's seat one way (played outright past the grace, or only to answer for a clock that ran out, [[§13.3]]) is dropped if that hold changed before the move applied, and the seat is decided for again: a player who is back is never played for, whatever clock ran out meanwhile.
 - **Concede.** Conceding takes both humans. A seat's concede opens its team's concede offer, which both teammates see, and the teammate's concede while the offer stands ends the game, the other team winning. Each team has an offer of its own: the other team's concede neither takes nor clears it. An offer lapses when its round ends.
-- **The way back.** A player who leaves a co-op game's page may go back to it while it lasts: the menus' banner offers it, as it offers a live match ([[R765]]).
+- **The way back.** A player who leaves a co-op game's page may go back to it while it lasts: the menus' banner offers it, as it offers a live match ([[R765]], [[R1566000]]).
 
 ### 13.9 Co-op rooms
 
