@@ -1,7 +1,8 @@
 // Lists display public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller
 // order, using inspect's sole slot (B23). Entries are faces/counts or unopened backs (R312).
 // B5 E11: the board supplies `play` only for `legalActions`; this client reports it and closes the
-// sheet (CLAUDE.md rule 7).
+// sheet (CLAUDE.md rule 7). R1571000: where "Play" would be, a face the view says cannot be played
+// now (`FaceModel.playReason`) says why instead, in the grid and opened large; nothing is clickable.
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -53,6 +54,19 @@ export type CardListEntry = {
 export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void };
 
 const PLAY_WORD = "Play";
+
+/** R1571000: the glyph of a pile card's reason for not playing, the StateNotes glyph's sibling. */
+const PLAY_REASON_GLYPH = "⊘";
+
+/** R1571000: where "Play" would be, why the card cannot be played now (`CardView.playReason`). */
+function PlayReason({ reason }: { reason: string }): ReactElement {
+  return (
+    <span className="inspect-list-play-reason" data-state="playReason">
+      <span aria-hidden="true">{PLAY_REASON_GLYPH}</span>
+      <span>{t(reason)}</span>
+    </span>
+  );
+}
 
 export type CardListProps = {
   /** What the list is, in words: "Your graveyard". */
@@ -236,7 +250,15 @@ function FaceTile({
       <EntryFace entry={entry} />
     </button>
   );
-  if (entry.play === undefined) return button;
+  if (entry.play === undefined) {
+    if (face.playReason === undefined) return button;
+    return (
+      <span className="inspect-list-playable" data-playable="false">
+        {button}
+        <PlayReason reason={face.playReason} />
+      </span>
+    );
+  }
   return (
     <span className="inspect-list-playable" data-playable="true">
       {button}
@@ -262,6 +284,8 @@ export function CardListSheet({
   const opened: FaceModel | undefined = openedEntry?.face ?? undefined;
   // B5 E11: the face opened large keeps its "Play" while it is listed.
   const openedPlay = opened === undefined ? undefined : openedEntry?.play;
+  // R1571000: where "Play" would be, the face opened large says why it cannot be played now.
+  const openedReason = openedPlay === undefined ? opened?.playReason : undefined;
   const total = totalOf(entries);
   /** The face last opened, so Back refocuses it rather than dropping focus on <body>. */
   const returnTo = useRef<string | null>(null);
@@ -329,6 +353,7 @@ export function CardListSheet({
           {openedPlay !== undefined && openedEntry !== undefined ? (
             <PlayButton entry={openedEntry} play={openedPlay} onClose={onClose} />
           ) : null}
+          {openedReason === undefined ? null : <PlayReason reason={openedReason} />}
           {opened !== undefined ? (
             <button
               ref={backButton}

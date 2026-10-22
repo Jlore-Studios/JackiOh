@@ -13,6 +13,7 @@ import "./workshop.css";
 import { deckCosmeticPatch } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
+import { paths } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
@@ -578,7 +579,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   return (
     <div className="app-shell app-shell--wide tavern deckbuilder workshop" data-testid={WORKSHOP} data-view={view}>
       <header className="db-header">
-        <BackLink />
+        <BackLink to={paths.collection} />
         <h1 className="db-title">{t("Decks")}</h1>
         {openDeck === null ? null : (
           <DeckCosmeticsPicker

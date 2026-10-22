@@ -189,7 +189,7 @@ decides a rule: every verdict they show comes from `@jackioh/validator` (the Rus
 WASM), the module the server runs at queue, and the server's refusal, when it comes, is shown in its own words (rule 7).
 
 ```
-routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop
+routes/decks.tsx        /decks: loads GET /api/decks and the collection, hands them and the shipped catalog to the workshop; Back leads to the Collection hub (R1579000)
 game/deckbuilder/       the deck workshop: up to ten named decks and five trios (R250, R252), the pool
                         browser (CardBrowser.tsx, which the Card Almanac renders read-only too, R630),
                         the trio editor that marks every card two of its decks share (R251),
@@ -197,7 +197,10 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         parts, R339) with Copy trio code in the trio editor and Import trio
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
-routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
+routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
+                        largest, Practice, Card creator, Play together and Replays as four smaller links
+                        beside it, and for a visitor with no account (`token` null) a Sign in in the online
+                        panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
                         waits on /api/auth/me's currentMatchId and currentSeriesId; it shows the player's
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
@@ -224,11 +227,18 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
                         a visible rank in a player's words for this screen, the account and the board
-routes/collection.tsx   /collection (#1307): the account's cards per shipped set, wallet, set tracks and
-                        quests, each panel reading for itself and saying why when its read fails;
-                        collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel) and their
-                        model; every one renders the server's answers and decides nothing (rule 7)
-routes/QuestsPanel.tsx  /collection's quests (§14.9) from GET /api/quests: each held quest's progress and
+routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
+                        Card builder (/creator) as links, Cards and Cosmetics opened in place by
+                        `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
+                        between them and the hub; the page never scrolls, a section's body does. Cards is
+                        the account's cards per shipped set, wallet, set tracks and quests, each panel
+                        reading for itself and saying why when its read fails; Cosmetics is the only place
+                        to equip one (the six selects, collection/CosmeticsPanel.tsx, on the same store and
+                        `cosmetics` settings group as before, R633) beside the owned list from GET
+                        /api/cosmetics; collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel,
+                        CosmeticsPanel) and their model; every one renders the server's answers and
+                        decides nothing (rule 7)
+routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
@@ -307,7 +317,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
                          file, and `parseDuosReplayJson` opening one again from `/replays`
 ```
 
-The landing page offers three doors — Play (to `/practice`), Collection and Shop (#1577) — and no door to Play together, which lives at `/together` behind the gate. The replays list and the replay player offer
+The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
 snapshot's `watchers`). A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. On the Duos board:

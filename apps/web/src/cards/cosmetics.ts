@@ -1,8 +1,8 @@
 // R1295000: the card cosmetics a player's own cards wear — a foil over the art, a finish on the
-// print and a border round the frame — picked in the settings (`settings/controls.tsx`), kept per
-// browser under `COSMETICS_SETTINGS_KEY` and on the account as the `cosmetics` group (R633,
-// `settings/groups.ts`). The ids are the registry's (`crates/server/cosmetics.json`, generated into
-// `wire/generated/cosmetics.ts`), every one unlocked.
+// print and a border round the frame — picked in the collection's Cosmetics section
+// (`collection/CosmeticsPanel.tsx`, R1579000), kept per browser under `COSMETICS_SETTINGS_KEY` and
+// on the account as the `cosmetics` group (R633, `settings/groups.ts`). The ids are the registry's
+// (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`), every one unlocked.
 //
 // R1297000: the same store holds three deck slots beside them: the playmat (`table`), the ambient
 // backdrop (`field`) and the back of the viewer's face-down cards and deck (`cardBack`). Each saved

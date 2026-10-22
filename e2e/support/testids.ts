@@ -592,6 +592,14 @@ export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
 /** R1372: All Random's “More cards from the newest set” option. */
 export const PLAY_LEAN_NEWEST = "play-lean-newest";
+/** R1578000: the Play hub, its primary online panel, the nav of the other ways to play and their tiles. */
+export const PLAY_SCREEN = "play-screen";
+export const PLAY_ONLINE = "play-online";
+export const PLAY_WAYS = "play-ways";
+export const PLAY_CREATOR = "play-creator";
+export const PLAY_TOGETHER = "play-together";
+/** R1578000: a visitor with no account is offered sign-in where the online controls would be. */
+export const PLAY_SIGN_IN = "play-sign-in";
 
 export function playModeId(mode: QueueMode): string {
   return `play-mode-${mode}`;
