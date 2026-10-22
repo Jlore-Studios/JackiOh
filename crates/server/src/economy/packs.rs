@@ -7,9 +7,10 @@
 //! - [`open_pack`]: under the account's lock, one unopened pack spent, its slots rolled from a
 //!   fresh seed and every grant written, its cards, cosmetics, pity counters and bars, a full bar
 //!   paying its tokens with the overflow kept (`economy::tokens::settle_bar`, R1305000, R1305001),
-//!   with the opening's log (its catalog, cosmetics, seed and result) in the `ref` of every
-//!   economy row it writes (R1301003). It answers what each bar did, its points before and after
-//!   and what it paid ([`BarsSettled`]). The whole opening or nothing: every refusal returns
+//!   a duplicate's account cosmetic of the global roll owned for the account (R1661001), with the
+//!   opening's log (its catalog, cosmetics, seed and result) in the `ref` of every economy row it
+//!   writes (R1301003). It answers what each bar did, its points before and after and what it
+//!   paid ([`BarsSettled`]). The whole opening or nothing: every refusal returns
 //!   before the commit, and the dropped `Tx` rolls it all back.
 //! - The routes, all `AuthLevel::Active`: `GET /api/packs` (the pity counters, the odds and the
 //!   unopened packs held), `POST /api/packs/buy` and `POST /api/packs/open`, each with `{ pack }`, a shipped set's name
@@ -29,8 +30,9 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok, 
 use crate::app::App;
 use crate::config::{
     CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-    COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, PACK_FLOOR_RARITY, PACK_PRICE_JLORE,
-    PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, GLOBAL_COSMETIC_FLOOR_RARITY,
+    GLOBAL_COSMETIC_ROLL_WEIGHT, PACK_FLOOR_RARITY, PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS,
+    PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, TIER_WEIGHT_TOTAL,
 };
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant, Tx};
@@ -438,10 +440,11 @@ pub(crate) async fn settle_bars(
 }
 
 /// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock
-/// (R1301003) it reads the pack held, the collection, the per-card cosmetics and the counters
-/// (the pity counters and both bars with the cycle's position), rolls the opening from `seed`
-/// (`roll::roll_opening`) and writes every grant: the pack spent, the new cards (the collection
-/// and its ledger, reason `pack`), the cosmetics, each pity counter that moved, both bars'
+/// (R1301003) it reads the pack held, the collection, the per-card and account cosmetics and the
+/// counters (the pity counters and both bars with the cycle's position), rolls the opening from
+/// `seed` (`roll::roll_opening`) and writes every grant: the pack spent, the new cards (the
+/// collection and its ledger, reason `pack`), the cosmetics, a per-card one on its slot's card and
+/// an account one on none (R1661001), each pity counter that moved, both bars'
 /// points for the spent duplicates, and each bar that reached its size paying its tokens with
 /// the overflow kept (R1305000, R1305001). Every economy row's `ref` is the opening's log; the
 /// collection's rows have no `ref` and share the opening's `at`. No pack held is 409. Every
@@ -466,9 +469,11 @@ pub async fn open_pack(
         return Err(no_pack_held());
     }
     let counters = tx.economy_counters_get(profile_id).await?;
+    let owned_cosmetics = tx.economy_cosmetics_get(profile_id).await?;
     let holdings = Holdings {
         owned: owned_in(&mut tx, profile_id).await?,
-        cosmetics: tx.economy_cosmetics_get(profile_id).await?.cards,
+        cosmetics: owned_cosmetics.cards,
+        account_cosmetics: owned_cosmetics.account,
         pity: pity_from(&counters),
     };
     let opening = roll_opening(&pack_pool(&app.catalog.defs, pack), &holdings, registry, seed)
@@ -507,10 +512,15 @@ pub async fn open_pack(
 
     for slot in &opening.slots {
         if let SlotGrant::Cosmetic { cosmetic_id, .. } = &slot.grant {
+            // The global roll's account cosmetic is owned for the account, on no card (R1661001).
+            let for_account = registry
+                .iter()
+                .any(|cosmetic| cosmetic.id == *cosmetic_id && !cosmetic.kind.is_per_card());
+            let card_id = (!for_account).then(|| slot.card_id.clone());
             let owned = tx
                 .economy_cosmetics_grant(&CosmeticGrant {
                     profile_id: profile_id.to_string(),
-                    card_id: Some(slot.card_id.clone()),
+                    card_id: card_id.clone(),
                     cosmetic_id: cosmetic_id.clone(),
                     delta: 1,
                     reason: EconomyReason::PackOpen,
@@ -521,8 +531,7 @@ pub async fn open_pack(
                 .await?;
             if !owned {
                 return Err(ApiError::internal(format!(
-                    "{cosmetic_id} was already owned on {}",
-                    slot.card_id
+                    "{cosmetic_id} was already owned on {card_id:?}"
                 )));
             }
         }
@@ -580,7 +589,9 @@ pub async fn open_pack(
 /// `GET /api/packs` (`AuthLevel::Active`): the caller's pity counters and the odds, for the pack
 /// screen to show (§14.4): the price and slots, each counter's threshold, and one roll's odds on
 /// the tier tables, the fallback included (R1339000): a slot's, the floored slot's and a
-/// duplicate's cosmetic. It also lists the unopened packs the caller holds (`unopened`,
+/// duplicate's cosmetic, and a duplicate's global roll (R1661001), its `chance`,
+/// `GLOBAL_COSMETIC_ROLL_WEIGHT` over `TIER_WEIGHT_TOTAL`, and its `tiers`, the table floored at
+/// `GLOBAL_COSMETIC_FLOOR_RARITY`. It also lists the unopened packs the caller holds (`unopened`,
 /// [`unopened_from`]).
 pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
@@ -601,6 +612,10 @@ pub async fn get_packs(app: &Arc<App>, req: Req) -> ApiResult {
             "slot": card_odds(None),
             "flooredSlot": card_odds(Some(PACK_FLOOR_RARITY)),
             "duplicateCosmetic": cosmetic_odds(None),
+            "globalCosmetic": {
+                "chance": f64::from(GLOBAL_COSMETIC_ROLL_WEIGHT) / f64::from(TIER_WEIGHT_TOTAL),
+                "tiers": cosmetic_odds(Some(GLOBAL_COSMETIC_FLOOR_RARITY)),
+            },
         },
         "unopened": unopened_from(&inventory),
     })))
