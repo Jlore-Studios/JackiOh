@@ -12,6 +12,7 @@
 import { useEffect, useId, useState, type ReactElement } from "react";
 
 import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
+import { announceWallet } from "../economy/wallet.ts";
 import { t } from "../i18n/i18n.ts";
 import {
   devClear,
@@ -76,6 +77,11 @@ function barButton(bar: DevBar): { testid: string; label: string } {
       return { testid: devToolsTestid.fillCosmeticBar, label: t("Fill the cosmetic token bar") };
   }
 }
+
+/** After a tool that may have paid Jlore (a level, a quest) or cleared it: the pill reads the wallet again. */
+const announce = (): void => {
+  announceWallet();
+};
 
 /** Where the last request stands: none sent, one out, answered, or refused with the server's words. */
 type Status = { kind: "idle" } | { kind: "working" } | { kind: "done" } | { kind: "failed"; message: string };
@@ -158,7 +164,7 @@ export default function DevTools({ token }: { token: string }): ReactElement {
           data-testid={devToolsTestid.giveXp}
           disabled={working}
           onClick={() => {
-            run(() => devGiveXp(token, set, Number(xp)));
+            run(() => devGiveXp(token, set, Number(xp)).then(announce));
           }}
         >
           {t("Give XP")}
@@ -183,7 +189,11 @@ export default function DevTools({ token }: { token: string }): ReactElement {
           data-testid={devToolsTestid.giveJlore}
           disabled={working}
           onClick={() => {
-            run(() => devGiveJlore(token, Number(jlore)));
+            run(() =>
+              devGiveJlore(token, Number(jlore)).then((answer) => {
+                announceWallet(answer.jlore);
+              }),
+            );
           }}
         >
           {t("Give Jlore")}
@@ -228,7 +238,7 @@ export default function DevTools({ token }: { token: string }): ReactElement {
           data-testid={devToolsTestid.giveQuest}
           disabled={working}
           onClick={() => {
-            run(() => devGiveQuest(token));
+            run(() => devGiveQuest(token).then(announce));
           }}
         >
           {t("Give a quest")}
@@ -256,7 +266,7 @@ export default function DevTools({ token }: { token: string }): ReactElement {
           data-testid={devToolsTestid.completeQuest}
           disabled={working || chosen === ""}
           onClick={() => {
-            run(() => devCompleteQuest(token, chosen));
+            run(() => devCompleteQuest(token, chosen).then(announce));
           }}
         >
           {t("Complete quest")}
@@ -271,7 +281,7 @@ export default function DevTools({ token }: { token: string }): ReactElement {
             data-testid={`dev-tools-clear-${part}`}
             disabled={working}
             onClick={() => {
-              run(() => devClear(token, part));
+              run(() => devClear(token, part).then(announce));
             }}
           >
             {clearLabel(part)}
