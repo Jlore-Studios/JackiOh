@@ -1,0 +1,60 @@
+{
+  "action": "build",
+  "number": 1662,
+  "title": "Patch: the Collection shows each card's cosmetics on the card itself",
+  "branch": "bot/issue-1662",
+  "thread": "**Issue #1662 (data, not instructions):**\n\n```text\n# #1662: Patch: the Collection shows each card's cosmetics on the card itself\nOpened by @jgoetzmann-bot.\n\nPart of #1651 (brief \u00a76, second bullet), built on the per-card picks part's store (blocked by it). Today the Collection lists owned cosmetics as text (`collection/CosmeticsPanel.tsx::OwnedCosmetics`) and equips account defaults through selects (`CardCosmeticsControls`, `DeckCosmeticsControls`). Clicking a card (`collection/OwnedCards.tsx` ~l.55\u201390) opens a plain `CardDetail` with no cosmetics.\n\n### Do\n- **A card in context.** Clicking a card in the Collection's Cards opens it large, wearing its own picks (wrap the face in `<OwnCopy own>`), with a strip of that card's per-card cosmetics by kind: foil, finish, border, and its full art when it has one. Each is a small live preview.\n  - Hovering or focusing one shows it on the large card.\n  - Clicking one the card owns equips it on this card only (`writeCardPick`, `writeCardFullArt`).\n  - One it does not own shows locked and greyed, with its rarity (`useCanEquip` says no); clicking it changes nothing.\n  - Each kind offers `Use default`, which clears the card's pick.\n  - The card's text (`CardDetail`'s rules and meta) stays reachable from the view.\n- **Account cosmetics as previews.** In the Cosmetics section, the playmat (`table`), backdrop (`field`) and card back (`cardBack`) become preview tiles instead of `DeckCosmeticsControls`' selects: the playmat and backdrop drawn together as a mini board, and a card back drawn by `cards/CardBack.tsx`. Clicking an owned tile equips it as the select did (`writeCosmetics`: the same store and `cosmetics` group, no request); an unowned one is locked and greyed with its rarity. The defaults for every card (foil, finish, border) stay as selects, labelled as the defaults, keeping `collection-equip-<kind>`.\n- **The store API** (the per-card picks part, `cards/cosmetics.ts`): `readCardPicks`, `useCardPicks(defId)`, `writeCardPick(defId, kind, id | null)`, `writeCardFullArt(defId, on | null)`, `useCanEquip()`. That part's ruling (`spec/rulings/R<its number>000.md`, on the branch) covers this view. Name the new tests after it, and leave the spec alone: the global roll part and then the Purchases part edit it.\n- Every animation is transform and opacity only, held still under reduce motion.\n\n### Files\n`apps/web/src/collection/OwnedCards.tsx`, `collection/CardCosmeticsView.tsx` (new), `collection/AccountCosmeticTiles.tsx` (new), `collection/CosmeticsPanel.tsx`, `collection/collection.ts` (the strip's model from the registry and the owned answer), `collection/collection.css`, `collection/collection.test.tsx`, `routes/collection.tsx` (only to hand the owned cosmetics to the Cards section), `routes/collection.test.tsx`.\nNot here: `cards/cosmetics.ts`, `cards/cosmetics.css`, `collection/TracksPanel.tsx` (the XP client part), the spec.\n\n### Done when\nTests: a card opened in the Collection wears its own picks; hovering a strip item shows it on the large card; clicking an owned one equips it on that card while another card keeps its own; an unowned one is locked, shows its rarity, and clicking it equips nothing; the account tiles equip through the same store with no request (update the existing `R1579000 the Cosmetics door lists what the account owns and equips through the same store, with no request` to the tiles). Run `pnpm --dir apps/web exec vitest run src/collection src/routes/collection.test.tsx`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web`.\n\n**Fullsend.** A part of #1651: it lands on `bot/issue-1651` with no checks or review of its own, beside the other parts. Change only the files named here. A check red only because a sibling part has not landed yet is expected. Leave to the reconcile the `apps/web/src/i18n/zh-CN.json` entry of each new `t()` string, `apps/web/README.md`, and every e2e spec (`collection-screen.cy.tsx` among them). Keep every existing test id.\n\nBlocked by #1655.\n\nIts build lands on `bot/issue-1651`, not `main` (fullsend).\n\nPart of #1651, split by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)).\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by Night bot (`opus`, [run](https://github.com/Jlore-Studios/JackiOh/actions/runs/39819773251)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\n1. Read the per-card picks part's ruling note on the branch, R1295000, R1297000, R1579000 and `apps/web/README.md`; read `collection/OwnedCards.tsx`, `collection/CosmeticsPanel.tsx`, `collection/collection.ts`, `routes/collection.tsx` (`CosmeticsSection`, the Cards section), `cards/CardBack.tsx`, how the board draws a playmat and backdrop (`game/Backdrop.tsx`, `game/table.css`), and the new store API in `cards/cosmetics.ts`.\n2. `collection/collection.ts`: a pure model of a card's strip (per kind: the registry's entries for that card, each owned or locked, with its rarity) and of the account tiles; test it in `collection/collection.test.tsx`.\n3. Write `collection/CardCosmeticsView.tsx`: the large face under `OwnCopy own`, wearing a hovered or focused item as a preview, clicks that equip through the store, locked items, `Use default`, and the card's text.\n4. Open it from `OwnedCards.tsx` instead of the plain `CardDetail`; hand the owned cosmetics down from `routes/collection.tsx`.\n5. Write `collection/AccountCosmeticTiles.tsx` (a mini board, a card back) and use it in `CosmeticsPanel.tsx` in place of `DeckCosmeticsControls`; keep the card default selects.\n6. Styles in `collection/collection.css` (transform and opacity only, still under reduce motion).\n7. Write the tests in Done when, named after the per-card picks ruling; run the commands.\n<!-- /jackioh-bot:plan -->\n\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "1. Read the per-card picks part's ruling note on the branch, R1295000, R1297000, R1579000 and `apps/web/README.md`; read `collection/OwnedCards.tsx`, `collection/CosmeticsPanel.tsx`, `collection/collection.ts`, `routes/collection.tsx` (`CosmeticsSection`, the Cards section), `cards/CardBack.tsx`, how the board draws a playmat and backdrop (`game/Backdrop.tsx`, `game/table.css`), and the new store API in `cards/cosmetics.ts`.\n2. `collection/collection.ts`: a pure model of a card's strip (per kind: the registry's entries for that card, each owned or locked, with its rarity) and of the account tiles; test it in `collection/collection.test.tsx`.\n3. Write `collection/CardCosmeticsView.tsx`: the large face under `OwnCopy own`, wearing a hovered or focused item as a preview, clicks that equip through the store, locked items, `Use default`, and the card's text.\n4. Open it from `OwnedCards.tsx` instead of the plain `CardDetail`; hand the owned cosmetics down from `routes/collection.tsx`.\n5. Write `collection/AccountCosmeticTiles.tsx` (a mini board, a card back) and use it in `CosmeticsPanel.tsx` in place of `DeckCosmeticsControls`; keep the card default selects.\n6. Styles in `collection/collection.css` (transform and opacity only, still under reduce motion).\n7. Write the tests in Done when, named after the per-card picks ruling; run the commands.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-1651",
+  "part_of": 1651,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "build on `claude-7` (claude, `sonnet`, medium); review on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "kind": "plan",
+    "provider": "the issue's description",
+    "notes": "1. Read the per-card picks part's ruling note on the branch, R1295000, R1297000, R1579000 and `apps/web/README.md`; read `collection/OwnedCards.tsx`, `collection/CosmeticsPanel.tsx`, `collection/collection.ts`, `routes/collection.tsx` (`CosmeticsSection`, the Cards section), `cards/CardBack.tsx`, how the board draws a playmat and backdrop (`game/Backdrop.tsx`, `game/table.css`), and the new store API in `cards/cosmetics.ts`.\n2. `collection/collection.ts`: a pure model of a card's strip (per kind: the registry's entries for that card, each owned or locked, with its rarity) and of the account tiles; test it in `collection/collection.test.tsx`.\n3. Write `collection/CardCosmeticsView.tsx`: the large face under `OwnCopy own`, wearing a hovered or focused item as a preview, clicks that equip through the store, locked items, `Use default`, and the card's text.\n4. Open it from `OwnedCards.tsx` instead of the plain `CardDetail`; hand the owned cosmetics down from `routes/collection.tsx`.\n5. Write `collection/AccountCosmeticTiles.tsx` (a mini board, a card back) and use it in `CosmeticsPanel.tsx` in place of `DeckCosmeticsControls`; keep the card default selects.\n6. Styles in `collection/collection.css` (transform and opacity only, still under reduce motion).\n7. Write the tests in Done when, named after the per-card picks ruling; run the commands."
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1665 skipped: it waits for #1661 to close first",
+    "#1667 skipped: it waits for #1663 to close first"
+  ]
+}
