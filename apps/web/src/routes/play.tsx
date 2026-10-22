@@ -51,7 +51,8 @@ import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.t
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
-import { rankWords } from "../rank/rank.ts";
+import { rankCaption } from "../rank/rank.ts";
+import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import "../auth/tavern.css";
@@ -689,7 +690,8 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
       </h2>
       {rank === null ? null : (
         <p data-testid={playTestid.rank}>
-          {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
+          <RankCrest rank={rank.rank} size="large" />{" "}
+          {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
         </p>
       )}
       <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
