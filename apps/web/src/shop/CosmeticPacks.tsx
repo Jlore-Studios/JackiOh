@@ -6,7 +6,7 @@
 // THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, every slot, both bars and the shard bar come
 // from the answers; the reveal only reads them out, slot by slot in order. The shard bar plays from the
 // points the panel read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
-// The odds are not here: they are on `/purchases` (R1339000). A refused open or chase shows the
+// The odds are not here: they are on `/purchases` (R1665000). A refused open or chase shows the
 // server's words verbatim with nothing changed on screen.
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";

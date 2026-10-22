@@ -97,6 +97,10 @@ export const shopTestid = {
   packsRetry: "cosmetic-packs-retry",
   packsError: "cosmetic-packs-error",
   unopened: "cosmetic-packs-unopened",
+  // The panel draws no odds (R1665000 moved them to /purchases); the ids stay so the Shop route's
+  // test can assert nothing wears them.
+  odds: "cosmetic-packs-odds",
+  flooredOdds: "cosmetic-packs-floored-odds",
   open: "cosmetic-packs-open",
   cosmeticPackObject: "cosmetic-packs-object",
   openingBars: "cosmetic-opening-bars",
