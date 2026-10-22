@@ -12423,18 +12423,29 @@
     "1622": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-22T04:51:06Z",
       "issue": 1593,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The issue requires that the `cargo jackioh gate` smoke stays green. Nobody ran it, and the PR's reason for skipping it is wrong: CI does not run the AI gates on a pull request.",
+          "evidence": "The PR says the gate was 'not run here: this run's rules leave it to CI, which runs it before merge'. But `.github/workflows/ci.yml:36` says 'Not run per pull request (README \u00a77): \u2026 the AI gates \u2026'. They run only daily in `super.yml` (`gate-shard`, `jackioh gate --full`). The change alters what the AI decides wherever a prompt offers an enemy face-down card, and that is what the gate measures. So the PR would merge with this criterion never checked.",
+          "severity": "blocking",
+          "where": "task"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-10-22T05:41:59Z",
+      "queued_at": "2026-10-22T06:11:00Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "39731530394",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-22T06:02:47Z",
       "stop_requested": false,
       "taken_asks": [],
