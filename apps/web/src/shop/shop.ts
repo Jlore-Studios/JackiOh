@@ -68,6 +68,8 @@ export const shopTestid = {
   error: "shop-error",
   held: (pack: string) => `shop-held-${pack}`,
   buy: (pack: string) => `shop-buy-${pack}`,
+  packObject: (pack: string) => `shop-pack-${pack}`,
+  fly: (pack: string) => `shop-fly-${pack}`,
   shortfall: (pack: string) => `shop-shortfall-${pack}`,
   tokenPanel: "token-panel",
   tokenLoading: "token-loading",
@@ -95,18 +97,23 @@ export const shopTestid = {
   packsRetry: "cosmetic-packs-retry",
   packsError: "cosmetic-packs-error",
   unopened: "cosmetic-packs-unopened",
-  odds: "cosmetic-packs-odds",
-  flooredOdds: "cosmetic-packs-floored-odds",
   open: "cosmetic-packs-open",
+  cosmeticPackObject: "cosmetic-packs-object",
+  openingBars: "cosmetic-opening-bars",
   reveal: "cosmetic-reveal",
   equipLink: "cosmetic-packs-equip",
   slot: (index: number) => `cosmetic-slot-${String(index)}`,
   shardBar: "shard-bar",
+  shardBurst: "shard-burst",
+  shardReveal: "shard-reveal",
   shardChoice: "shard-choice",
   shardEmpty: "shard-empty",
   chasePick: (id: string) => `shard-pick-${id}`,
   chaseCards: (id: string) => `shard-cards-${id}`,
 } as const;
+
+/** How long a bought pack's copy takes to fly into its kind's unopened count; `shop.css` reads it as `--shop-fly-ms`. */
+export const SHOP_FLY_MS = 600;
 
 /** The packs the shop sells: the global pack first, then each set that ships. */
 export function shopPacks(): string[] {

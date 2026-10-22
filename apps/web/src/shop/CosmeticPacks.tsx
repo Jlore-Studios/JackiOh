@@ -1,16 +1,23 @@
-// The cosmetic packs (#1309, SPEC §14.6): the unopened packs and their odds, a simple reveal of an
-// opening's slots, and the Chase Shard bar with its Legendary-or-Mythic choice when full.
+// The cosmetic packs (#1309, #1667, SPEC §14.6): the unopened pack as a `PackObject` above Open, a
+// simple reveal of an opening's slots with the token bars it moved (`OpeningBars`), and the Chase
+// Shard bar, a `FillBar` that fills across an opening and, when it reaches full, bursts and reveals
+// its Legendary-or-Mythic choice as a moment of its own (`RewardReveal`).
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, the odds (R1339000), every slot and the
-// shard bar come from the answers; the reveal only reads them out, slot by slot in order. A refused open or
-// chase shows the server's words verbatim with nothing changed on screen.
+// THE SERVER DECIDES (CLAUDE.md rule 7). The packs held, every slot, both bars and the shard bar come
+// from the answers; the reveal only reads them out, slot by slot in order. The shard bar plays from the
+// points the panel read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
+// The odds are not here: they are on `/purchases` (R1339000). A refused open or chase shows the
+// server's words verbatim with nothing changed on screen.
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
+import { BURST_MS, type RevealItem } from "../economy/bars.ts";
+import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
+import OpeningBars from "../economy/OpeningBars.tsx";
+import RewardReveal from "../economy/RewardReveal.tsx";
 import { t } from "../i18n/i18n.ts";
-import { tierPercents } from "../packs/packs.ts";
 import {
   buyChase,
   getCollection,
@@ -23,8 +30,11 @@ import {
   type OwnedCosmeticsResponse,
 } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
+import PackObject from "../packs/PackObject.tsx";
+import { COSMETIC_PACK } from "../packs/packs.ts";
 import { followInApp } from "../routes/nav.tsx";
 import {
+  REGISTRY,
   chaseCandidates,
   cosmeticSlotOutcome,
   fittingCards,
@@ -47,16 +57,20 @@ function cardName(cardId: string): string {
 
 /**
  * The panel. `revision` is how many times the page has asked it to read again (another panel
- * changed the account); `onChanged` tells the page an opening or a chase changed it.
+ * changed the account); `onChanged` tells the page an opening or a chase changed it. `registry` is
+ * the cosmetics the chase choice reads, the shipped one unless a test passes its own (no shipped
+ * Legendary or Mythic is buyable yet).
  */
 export default function CosmeticPacks({
   token,
   revision = 0,
   onChanged,
+  registry = REGISTRY,
 }: {
   token: string;
   revision?: number;
   onChanged?: () => void;
+  registry?: readonly RegistryCosmetic[];
 }): ReactElement {
   const [info, setInfo] = useState<CosmeticPacksResponse | null>(null);
   const [collection, setCollection] = useState<CollectionResponse | null>(null);
@@ -66,6 +80,9 @@ export default function CosmeticPacks({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [cardFor, setCardFor] = useState<Record<string, string>>({});
+  // The shard points the panel read before the last opening: where the bar plays from; none when the
+  // bar was just read, or emptied by a chase, and it rests.
+  const [shardFrom, setShardFrom] = useState<number | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(true);
 
@@ -76,6 +93,7 @@ export default function CosmeticPacks({
       ([packs, collectionAnswer, ownedAnswer]) => {
         if (!cancelled) {
           setInfo(packs);
+          setShardFrom(undefined);
           setCollection(collectionAnswer);
           setOwned(ownedAnswer);
           setLoadError(null);
@@ -95,12 +113,14 @@ export default function CosmeticPacks({
   }, [token, revision, attempt]);
 
   const open = (): void => {
-    if (busy !== null) return;
+    if (busy !== null || info === null) return;
+    const before = info.shardBar.points;
     setBusy("open");
     setError(null);
     openCosmeticPack(token).then(
       (next) => {
         setOpened(next);
+        setShardFrom(before);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
         onChanged?.();
         // The collection and the owned cosmetics moved too: read them back, so the chase
@@ -131,6 +151,7 @@ export default function CosmeticPacks({
       (next) => {
         // The bar emptied: the choice leaves with it.
         setInfo(next);
+        setShardFrom(undefined);
         onChanged?.();
       },
       (cause: unknown) => {
@@ -174,24 +195,20 @@ export default function CosmeticPacks({
           <p className="cosmetic-packs-held" data-testid={shopTestid.unopened}>
             {t("{pack}: {count} unopened", { pack: t("Cosmetic pack"), count: info.unopened })}
           </p>
-          <p data-testid={shopTestid.odds}>
-            {t(
-              "Each slot: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
-              tierPercents(info.odds.slot),
-            )}
-          </p>
-          <p data-testid={shopTestid.flooredOdds}>
-            {t(
-              "Guaranteed slot: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}.",
-              tierPercents(info.odds.flooredSlot),
-            )}
-          </p>
           {info.unopened > 0 ? (
-            <div className="account-actions">
-              <button type="button" data-testid={shopTestid.open} disabled={busy !== null} onClick={open}>
-                {busy === "open" ? t("Opening…") : t("Open")}
-              </button>
-            </div>
+            <>
+              <PackObject
+                pack={COSMETIC_PACK}
+                size="shelf"
+                state={busy === "open" ? "pressed" : "idle"}
+                testid={shopTestid.cosmeticPackObject}
+              />
+              <div className="account-actions">
+                <button type="button" data-testid={shopTestid.open} disabled={busy !== null} onClick={open}>
+                  {busy === "open" ? t("Opening…") : t("Open")}
+                </button>
+              </div>
+            </>
           ) : (
             <p>{t("No unopened packs.")}</p>
           )}
@@ -217,6 +234,7 @@ export default function CosmeticPacks({
               ))}
             </div>
           )}
+          {opened === null ? null : <OpeningBars bars={opened.bars} testid={shopTestid.openingBars} />}
           {opened === null ? null : (
             <p>
               <a
@@ -229,7 +247,10 @@ export default function CosmeticPacks({
             </p>
           )}
           <ShardBar
+            key={`${String(shardFrom ?? "-")}:${String(info.shardBar.points)}:${String(info.shardBar.size)}`}
             info={info}
+            from={shardFrom}
+            registry={registry}
             collection={collection}
             owned={owned}
             busy={busy}
@@ -248,9 +269,22 @@ export default function CosmeticPacks({
   );
 }
 
-/** The Chase Shard bar, and the Legendary-or-Mythic choice only when full. */
+/** The moment a full bar reveals: the chase choice, as a reward flies out of the bar (`kind` and `rarity` set its sting and look). */
+function chaseReveal(): RevealItem[] {
+  return [
+    { key: "chase", kind: "cosmeticToken", label: t("The bar is full — pick a chase:"), rarity: "Legendary" },
+  ];
+}
+
+/**
+ * The Chase Shard bar, and the Legendary-or-Mythic choice only when full. An opening that took the
+ * bar from short of full to full plays the sweep, then the bar bursts and the choice is revealed as a
+ * moment of its own; a bar read full, or one a further opening only held full, shows its choice at once.
+ */
 function ShardBar({
   info,
+  from,
+  registry,
   collection,
   owned,
   busy,
@@ -259,6 +293,9 @@ function ShardBar({
   onChase,
 }: {
   info: CosmeticPacksResponse;
+  /** The points before the opening this answer follows, when it follows one. */
+  from: number | undefined;
+  registry: readonly RegistryCosmetic[];
   collection: CollectionResponse;
   owned: OwnedCosmeticsResponse;
   busy: string | null;
@@ -266,20 +303,41 @@ function ShardBar({
   onCardFor: (next: Record<string, string>) => void;
   onChase: (cosmetic: RegistryCosmetic, cardId: string | undefined) => void;
 }): ReactElement {
-  const full = info.shardBar.points >= info.shardBar.size;
+  const { points, size } = info.shardBar;
+  const full = points >= size;
+  const filled = from !== undefined && from < size && full;
+  const [reached, setReached] = useState(!filled);
+  const reduced = useReducedMotion();
+  const reveal = useMemo(chaseReveal, []);
   const quantities = quantitiesOf(collection);
-  const candidates = full ? chaseCandidates(owned, quantities) : [];
+  const candidates = full && reached ? chaseCandidates(owned, quantities, registry) : [];
   return (
     <>
-      <h4 className="shop-subheading">{t("Chase Shard")}</h4>
-      <p className="shard-bar" data-testid={shopTestid.shardBar}>
-        {info.shardBar.points} / {info.shardBar.size}
-      </p>
-      {!full ? null : candidates.length === 0 ? (
+      <div className="shard-bar">
+        <FillBar
+          label={t("Chase Shard")}
+          size={size}
+          value={points}
+          from={from}
+          onDone={() => {
+            setReached(true);
+          }}
+          testid={shopTestid.shardBar}
+        />
+        {filled && reached && !reduced ? (
+          <span
+            className="fill-bar__burst shard-bar__burst"
+            aria-hidden="true"
+            data-testid={shopTestid.shardBurst}
+            style={{ "--burst-ms": `${String(BURST_MS)}ms` } as CSSProperties}
+          />
+        ) : null}
+      </div>
+      {!full || !reached ? null : candidates.length === 0 ? (
         <p data-testid={shopTestid.shardEmpty}>{t("Nothing to buy yet")}</p>
       ) : (
         <div data-testid={shopTestid.shardChoice}>
-          <p>{t("The bar is full — pick a chase:")}</p>
+          <RewardReveal items={reveal} testid={shopTestid.shardReveal} />
           {candidates.map((cosmetic) => {
             const fits = fittingCards(cosmetic, quantities);
             const open = fits === null ? [] : fits.filter((cardId) => CATALOG[cardId] !== undefined);

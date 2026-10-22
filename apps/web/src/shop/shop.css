@@ -2,7 +2,14 @@
    (the pack opening's, in `packs.css`, is the fourth) in the account page's tavern frame, wearing
    its brass and parchment. The rows stack for a phone screen; the reveal reuses the pack scene's
    slot hooks (`packs.css` draws the rarity glow), and the cosmetic previews draw `CardFace` at a
-   hand size. */
+   hand size.
+
+   The shelf (#1667) stands each pack kind as a `PackObject` beside its count, price and Buy; a bought
+   pack's copy flies from the pack toward the count. The only keyframes here move transform and
+   opacity, and they sit in the one gate below: with the system's reduced motion or the settings'
+   Reduce motion on <html> (`data-reduce-motion`) nothing flies (economy.css's gate), and the
+   component draws no copy then. The flight's length comes from `SHOP_FLY_MS` in shop.ts through
+   `--shop-fly-ms`. The Chase Shard bar's burst is economy.css's `fill-bar__burst`, placed here. */
 
 .shop-panel,
 .token-panel,
@@ -38,22 +45,68 @@
   background: rgba(239, 224, 191, 0.05);
 }
 
-.shop-row > span:first-child,
 .token-row > span:first-child {
   flex: 1 1 12rem;
+}
+
+/* A shelf row: the pack, then its count, price and Buy stacked from the count's line, which is the
+   pack's top, so the flying copy's way to the count is a slide along the row. */
+.shop-row {
+  --shop-row-gap: 12px;
+  align-items: flex-start;
+  gap: var(--shop-row-gap);
+}
+
+.shop-row__pack {
+  position: relative;
+  flex: none;
+}
+
+.shop-row__info {
+  display: flex;
+  flex: 1 1 8rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shop-row__info > p {
+  margin: 0;
+}
+
+/* The copy of a bought pack, over the pack it was bought from, invisible until it flies. */
+.shop-fly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 0 0;
 }
 
 .token-bar,
 .token-next,
 .token-held,
-.cosmetic-packs-held,
-.shard-bar {
+.cosmetic-packs-held {
   margin: 0;
 }
 
-.token-bar,
-.shard-bar {
+.token-bar {
   font-size: 17px;
+}
+
+/* The Chase Shard bar: the burst of a bar that just filled rides on its right end. The track is the
+   bar's last row, 14px high, so the burst is centred 7px up from the bottom. */
+.shard-bar {
+  position: relative;
+  margin: 0;
+}
+
+.shard-bar .shard-bar__burst {
+  top: auto;
+  bottom: -7px;
 }
 
 .token-preview {
@@ -104,4 +157,23 @@
 .tavern.app-shell .shop-body > * {
   flex-shrink: 0;
   margin-top: 0;
+}
+
+@keyframes shop-pack-fly {
+  from {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: translate(calc(100% + var(--shop-row-gap)), 0) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .shop-fly {
+    will-change: transform, opacity;
+    animation: shop-pack-fly var(--shop-fly-ms) ease-in both;
+  }
 }
