@@ -13048,6 +13048,14 @@
         }
       }
     },
+    "1701": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-23T03:21:19Z",
+      "issue": 1688,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "831": {
       "action": "build",
       "failures": 0,
