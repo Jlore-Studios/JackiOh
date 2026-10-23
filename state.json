@@ -12394,6 +12394,13 @@
     "1722": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T13:43:57Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "hard's 'the AI's search (crates/ai/src/)': the change only adds terms and weights to the static evaluation (evaluate.rs, config.rs) and touches nothing in the search, 3 files and about 300 lines, so medium rather than hard; it is AI work in crates/ai/src, so it cannot be easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
