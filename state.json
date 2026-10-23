@@ -12509,6 +12509,13 @@
     "1728": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T15:53:11Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the fix changes an engine rule in crates/engine/src/animated.rs and adds ruling R1728000, which the rule rates hard (engine rules) on top of three crates, the spec and the web app"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-10-23T14:24:41Z",
