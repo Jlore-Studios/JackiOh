@@ -13305,11 +13305,13 @@
         "by": "`claude` (strong)",
         "sha": "109d9a1d8d5b2a84aee45da45dcacb0b982a61a0"
       },
+      "closed_at": "2026-10-23T05:34:23Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-23T04:44:59Z",
       "issue": 1700,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
