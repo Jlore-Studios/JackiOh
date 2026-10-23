@@ -14226,14 +14226,9 @@
     "what": "plan #1705 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-23T05:11:41Z",
+    "at": "2026-10-23T05:18:58Z",
     "notes": [
-      "#1704 needs a plan",
-      "#1705 needs a plan",
-      "delivered build #1691 on claude-1 (run 39898144642): approved",
-      "started plan #1704 on claude-3 (run 39904508207)",
-      "started plan #1705 on claude-1 (run 39904539249)",
-      "nothing more to start: nothing is queued"
+      "delivered build #1700 on claude-4 (run 39901980885): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14939,7 +14934,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T05:11:41Z",
+  "loop_tick": "2026-10-23T05:18:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
