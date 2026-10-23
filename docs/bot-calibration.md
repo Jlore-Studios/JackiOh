@@ -50,9 +50,10 @@ The offsets say how far apart the strengths are, not where they stand among peop
 rating the reference holds, and a seed is the anchor plus the strength's offset, rounded.
 
 - **Provisional.** Until the reference has played people, the anchor is the seed of record,
-  `SKILL_ELO_ANCHOR` (1200): the value the strongest strength was given by hand, and the one the skill
-  curve is held at (R747000). `bot-calibrate` prints it as its anchor, shifted by the
-  AI promotions since the seeds were measured (below).
+  `SKILL_ELO_ANCHOR`: 1200, the value the strongest strength was given by hand, until generation 13's
+  calibration moved it to 1832 (Results), and the one the skill curve is held at (R747000).
+  `bot-calibrate` prints it as its anchor, shifted by the AI promotions since the seeds were measured
+  (below).
 - **Measured.** With `LADDER_BOTS=on` the reference plays rated games against people. Once it has
   `BOT_CALIBRATION_MIN_GAMES` of them, a person runs, against production's `DATABASE_URL`,
 
@@ -139,6 +140,79 @@ to the new AI's strength.
   and `bot-calibrate-live` replaces the anchor as soon as people have played the reference.
 
 ## Results
+
+### Generation 13 (issue #1680)
+
+Run on 2026-10-22 on `main` at `d6c10399a` (generation 13, the learned evaluation, #1477), from the repo root:
+
+```sh
+cargo run --release -p jackioh-server -- bot-calibrate
+```
+
+(100 games per pair, the default), on 4 threads, in about 23 minutes. `bot-calibrate-live` has
+still not been run, so the anchor is the seed of record, 1200, shifted by the four promotions after
+generation 9 in `training/history`: generations 10, 11 and 12 of the unban lane (72, 80 and 76 of
+100) and 13 of the learn lane (220 of 400). The report is the command's output, unedited but for its
+heading, one level down.
+
+#### Ladder bot calibration (R748000)
+
+Generation 13, seed `bot-calibration:gen13`, 100 games per pair, anchor 1832.4 (the seed of record 1200.0 +632.4 for the 4 promotion(s) of generations 10 to 13).
+
+Wins, draws and losses are the lower strength's.
+
+| Pair | Wins | Draws | Losses | Unfinished |
+| --- | ---: | ---: | ---: | ---: |
+| 0 v 1 | 29 | 1 | 70 | 0 |
+| 0 v 2 | 12 | 0 | 87 | 1 |
+| 0 v 3 | 6 | 0 | 94 | 0 |
+| 0 v 4 | 1 | 0 | 99 | 0 |
+| 1 v 2 | 27 | 0 | 73 | 0 |
+| 1 v 3 | 16 | 0 | 84 | 0 |
+| 1 v 4 | 9 | 0 | 91 | 0 |
+| 2 v 3 | 28 | 0 | 72 | 0 |
+| 2 v 4 | 12 | 1 | 87 | 0 |
+| 3 v 4 | 32 | 0 | 68 | 0 |
+
+| Strength | Offset | ± | Seed |
+| --- | ---: | ---: | ---: |
+| 0 | -616.6 | 27.3 | 1216.0 |
+| 1 | -449.0 | 22.4 | 1383.0 |
+| 2 | -296.4 | 21.3 | 1536.0 |
+| 3 | -140.9 | 22.3 | 1692.0 |
+| 4 (reference) | +0.0 | 0.0 | 1832.0 |
+
+// jackioh-server bot-calibrate: paste over the rows of these names, crates/server/src/config.rs
+pub const BOT_SEED_RATINGS: [f64; 5] = [1216.0, 1383.0, 1536.0, 1692.0, 1832.0];
+pub const BOT_CALIBRATION_GENERATION: i64 = 13;
+
+### Reading generation 13 against the curve
+
+| Strength | Curve | Calibration | Difference | Difference in its ±'s |
+| --- | ---: | ---: | ---: | ---: |
+| 0 (skill 0) | 570 | 1216 | +646 | 23.7 |
+| 1 (skill 0.25) | 740 | 1383 | +643 | 28.7 |
+| 2 (skill 0.5) | 900 | 1536 | +636 | 29.9 |
+| 3 (skill 0.75) | 1080 | 1692 | +612 | 27.4 |
+| 4 (skill 1) | 1200 | 1832 | +632 | |
+
+- **The offsets agree with the curve.** Measured from the reference, the curve's rows stand 630, 460, 300
+  and 120 below it, and the calibration's offsets are 616.6, 449.0, 296.4 and 140.9. Every strength is
+  within one standard error of the curve's gap (13, 11, 4 and 21 Elo, against ±'s of 27.3, 22.4, 21.3 and
+  22.3), and well within the curve's own 50 Elo error. One game of 1000 was unfinished.
+- **The anchor moved 632.4 Elo.** Every seed is 612 to 646 above the curve, and the offsets agree with
+  it, so the promotions' `vsParent` account for the difference. That is far past both measurements'
+  error, so the seeds move: the printed row goes over `BOT_SEED_RATINGS` and the same readings over
+  `SKILL_ELO_TABLE`, the reference's 1832 becomes `SKILL_ELO_ANCHOR`, and `BOT_CALIBRATION_GENERATION`
+  becomes 13. No `--games=300` run was needed: more games narrow the ±'s, not a 612 Elo gap.
+- **What it does not tell.** A promotion's `vsParent` overstates its gain against people (How
+  calibration differs from live play). The random policy, strength 0, plays as it did at generation
+  9, yet its seed is 646 above the curve's, since a seed is the anchor plus an offset and the anchor
+  carries the promotions' `vsParent`. Only new bots start from these seeds. Bots already in the pool
+  keep their ratings and re-settle on generation 13 through their own games (R1560000), and
+  `bot-calibrate-live` replaces the anchor once the reference has played people.
+
+### Generation 9 (issue #748)
 
 Run on 2026-10-13 on `main` at `a4b29f814` (R747000's skills, R750000's decks and the gather lane in) with
 the code of this change, from the repo root:

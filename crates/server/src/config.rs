@@ -1116,7 +1116,8 @@ pub struct BotStrength {
 /// chance and skill together, which the curve, measured at the arena's budget, does not) against each
 /// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
 /// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-pub const BOT_SEED_RATINGS: [f64; 5] = [570.0, 740.0, 900.0, 1080.0, SKILL_ELO_ANCHOR];
+/// The row is generation 13's calibration, pasted over the curve's too (docs/bot-calibration.md, Results).
+pub const BOT_SEED_RATINGS: [f64; 5] = [1216.0, 1383.0, 1536.0, 1692.0, SKILL_ELO_ANCHOR];
 
 /// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
@@ -1187,7 +1188,7 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
 
 /// R748000: the AI generation (`crates/ai/generation.json`) `BOT_SEED_RATINGS` were measured on.
 /// `bot-calibrate` shifts its anchor by the promotions after it.
-pub const BOT_CALIBRATION_GENERATION: i64 = 9;
+pub const BOT_CALIBRATION_GENERATION: i64 = 13;
 /// R748000: games each pair of strengths plays in a calibration. At 40 the five strengths' offsets
 /// carried errors of about 28 Elo, wider than the gaps between three of them.
 pub const BOT_CALIBRATION_GAMES_PER_PAIR: usize = 100;
@@ -1217,11 +1218,12 @@ pub const BOT_CALIBRATION_MAX_TURN_ACTIONS: usize = 30;
 /// gain over its parent (generations 10 to 13 gained 35 to 241 Elo), and the season reset's own.
 pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
 
-/// R747000: the Elo the arena's reference, this build's AI at full skill, is held at in
-/// `SKILL_ELO_TABLE`: the 1200 the strongest bot has been seeded at since R1454, not a new player's
-/// `RATING_START`, because the pairing seats no bot for a player rated above every bot (R1453) and a
-/// player past the middle of the ladder would otherwise have none.
-pub const SKILL_ELO_ANCHOR: f64 = 1200.0;
+/// R747000, R748000: the Elo the reference, this build's AI at full skill, is held at in
+/// `SKILL_ELO_TABLE`, and the strongest bot's seed: 1200 from R1454 until generation 13's calibration
+/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results). Not a
+/// new player's `RATING_START`, because the pairing seats no bot for a player rated above every bot
+/// (R1453) and a player past the middle of the ladder would otherwise have none.
+pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 
 /// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
 /// skill from `AI_SKILL_MIN` to `AI_SKILL_MAX`: the Elo a seat at that skill is expected to hold, the
@@ -1229,12 +1231,14 @@ pub const SKILL_ELO_ANCHOR: f64 = 1200.0;
 /// games of each skill against the reference and against the random policy, scored as Elo gaps and
 /// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
 /// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
-/// rows pasted over; the live Glicko ratings (R603) are the ongoing calibration.
+/// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
+/// rows since generation 13 (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the
+/// ongoing calibration.
 pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
-    (0.0, 570.0),
-    (0.25, 740.0),
-    (0.5, 900.0),
-    (0.75, 1080.0),
+    (0.0, 1216.0),
+    (0.25, 1383.0),
+    (0.5, 1536.0),
+    (0.75, 1692.0),
     (1.0, SKILL_ELO_ANCHOR),
 ];
 
