@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1750,
+  "title": "Patch: Trample only works on attack",
+  "branch": "bot/issue-1750",
+  "thread": "**Issue #1750 (data, not instructions):**\n\n```text\n# #1750: Patch: Trample only works on attack\nOpened by @MaxGoetzmann.\n\n### What happens\n\nTrample should only damage your hero when an enemy is the one attacking. This brings it in line with its MTG origins. Otherwise, it\u2019s too easy to accidentally kill yourself when just trying to make a value trade.\n\n### What should happen\n\nTrample only happens when a Unit is attacking, not the one being attacked. So if I attack an enemy Unit with Trample, I don\u2019t take Trample damage. If an enemy Unit attack my Unit, I would take Trample damage. If my Unit attacks my own Unit through the effects of Traitorous Blood for instance, I would take Trample damage.\n\n### How to reproduce\n\nSee above\n\n### Where\n\nThe rules engine or a card\n\n### Version or commit\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nNo priority\n\n### Who does it\n\nDecide later\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1750: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
