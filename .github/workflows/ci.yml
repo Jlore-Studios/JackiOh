@@ -14,8 +14,9 @@
 #              module (#442 L10); the release build of jackioh and jackioh-server, made once for the
 #              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; on a pull
 #              request, the classifier (#1360, R1365000, R1370000): its kind and tier as labels, and
-#              its pending fragments held to what it does to the cards; and, on a pull request from a
-#              training lane's ai/* branch, the training gate (README §8).
+#              its pending fragments held to what it does to the cards; on a pull request from a
+#              training lane's ai/* branch, the training gate (README §8); and, when infra/ changed,
+#              its Terraform's fmt and validate (#1708), in the checks job.
 #   web        the two WASM modules, side by side, and the e2e client on them, each built once for
 #              the run; typecheck and eslint; the web's unit tests in thirds, without the audio, fx
 #              and asset tests, and promote-production.test.ts only when what it tests changed.
@@ -54,10 +55,11 @@
 # `changes` job exports them all. fmt and clippy run on `clippy`; each `rust (test …)` group on its
 # own `rust_<scope>` line, which follows the crate graph (a server-only change runs `rust (test
 # server)` alone); the WASM modules and the client build on `web` or `e2e`; the web's typecheck,
-# lint and unit tests on `web`; e2e smoke on `e2e`; each db suite on its own `db_<suite>` line. The
-# release build, the checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary
-# accepts a skip only where the skipped piece's own line is exactly `false`, and the lines are held
-# by apps/web/src/net/ci-scope.test.ts and crates/tools/tests/acceptance.rs. A scoping mistake
+# lint and unit tests on `web`; e2e smoke on `e2e`; each db suite on its own `db_<suite>` line;
+# infra/'s terraform steps, inside `rust (checks, fuzz 200)`, on `infra`. The release build, the
+# checks, fuzz 200 and the classifier run on `full`, whatever changed. A summary accepts a skip only
+# where the skipped piece's own line is exactly `false`, and the lines are held by
+# apps/web/src/net/ci-scope.test.ts and crates/tools/tests/acceptance.rs. A scoping mistake
 # still meets the push to main, which runs everything, and the next morning's super run.
 #
 # `workflow_dispatch` lets a person run all of it on any branch (`gh workflow run ci.yml --ref
@@ -104,10 +106,11 @@ jobs:
   # `full` is `false` only for a pull request whose every changed file is on scripts/ci-scope.sh's
   # skip list. Every other line is one job's or one matrix entry's (the script's header names each),
   # `true` only when something that job reads changed: `clippy`, each `rust_<scope>` of
-  # `rust-test`, `web`, `e2e`, and `db` with its three suites. A push to main and a dispatch run the
-  # script with no arguments, which prints every line `true`. A failed `changes` job leaves every
-  # line empty and skips every job below it, which fails each summary job (it accepts a skip only
-  # where the skipped piece's own line is exactly `false`).
+  # `rust-test`, `web`, `e2e`, `db` with its three suites, and `infra`, the terraform steps of
+  # `rust-checks`. A push to main and a dispatch run the script with no arguments, which prints
+  # every line `true`. A failed `changes` job leaves every line empty and skips every job below it,
+  # which fails each summary job (it accepts a skip only where the skipped piece's own line is
+  # exactly `false`).
   #
   # `bot` is `false` only for a pull request that changes none of the paths bot selftest's tests and
   # lints read. Those are the bot's code and switches, all of .github/ and .claude/ (the tests read
@@ -139,6 +142,7 @@ jobs:
       web: ${{ steps.scope.outputs.web }}
       web_promote: ${{ steps.scope.outputs.web_promote }}
       e2e: ${{ steps.scope.outputs.e2e }}
+      infra: ${{ steps.scope.outputs.infra }}
       bot: ${{ steps.scope.outputs.bot }}
     steps:
       - uses: actions/checkout@v4
@@ -447,6 +451,31 @@ jobs:
         run: target/release/jackioh spec check
       - name: fuzz, seeds 1-200
         run: target/release/jackioh fuzz --seeds 200
+      # #1708: infra/'s Terraform (infra/README.md), when the pull request touches it, also after a
+      # failure above. `init -backend=false` reads no state and needs no token; plan and apply need
+      # the hosts' tokens and stay manual. The lock file `init` ends with must be the committed one,
+      # and no state or variables file is ever tracked (.gitignore).
+      - if: ${{ !cancelled() && needs.changes.outputs.infra == 'true' }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.7
+          terraform_wrapper: false
+      - name: infra (terraform fmt)
+        if: ${{ !cancelled() && needs.changes.outputs.infra == 'true' }}
+        run: terraform -chdir=infra fmt -check -recursive -diff
+      - name: infra (terraform validate)
+        if: ${{ !cancelled() && needs.changes.outputs.infra == 'true' }}
+        run: |
+          terraform -chdir=infra init -backend=false -input=false
+          terraform -chdir=infra validate
+          if [ -n "$(git status --porcelain -- infra/.terraform.lock.hcl)" ]; then
+            echo "::error file=infra/.terraform.lock.hcl::not the lock file of the pinned providers: run terraform providers lock (infra/README.md, The first import) and commit it"
+            exit 1
+          fi
+          if git ls-files infra | grep -E '\.tfstate|\.tfvars$|(^|/)\.terraform/'; then
+            echo "::error::infra/ tracks a state, variables or provider file (above); none may be committed"
+            exit 1
+          fi
 
   # The base's jackioh, for the classifier's stage 2 (below), beside rust-build so the two builds run
   # at once: main's own run cached it per commit (`rust-build`), or, when that run has not finished
