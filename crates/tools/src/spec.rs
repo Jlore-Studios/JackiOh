@@ -19,11 +19,14 @@
 //! `check` holds seven rules:
 //!
 //! 1. every ruling note's `id` matches its file name (`R195` is `R0195.md`), and ids are unique;
-//! 2. every note lists at least one `proven_in` path, and each exists and holds a proof of the id: a
-//!    Rust `fn` or `mod` whose name has the `_`-delimited token `r<n>`, a TypeScript `it(`, `test(`
-//!    or `describe(` whose title has `R<n>` as a word, or an SQL evidence script's
-//!    `\echo '### R<n>: … ###'` heading (the heading form `rulings.test.ts` credited; a mention in
-//!    prose is not a proof);
+//! 2. every note lists at least one `proven_in` path, and each exists and holds a proof of the id, a
+//!    test that runs (#1718): a Rust `fn` whose name has the `_`-delimited token `r<n>`, marked
+//!    `#[test]` or `#[tokio::test]` and not `#[ignore]`d but for a `daily:` reason (super.yml runs
+//!    those), or listed in a call of a macro the same file defines to make tests (`both_stores!`), or
+//!    a `mod` so named whose body holds such a test; a TypeScript `it(`, `test(` or `describe(` whose
+//!    title has `R<n>` as a word, with no `.skip`, `.todo`, `.fixme` or `.only` on it or on a call
+//!    around it; or an SQL evidence script's `\echo '### R<n>: … ###'` heading (the heading form
+//!    `rulings.test.ts` credited; a mention in prose is not a proof);
 //! 3. every `r<n>` token of a Rust `fn` or `mod` name, and every `R<n>` cited in `crates/`,
 //!    `apps/web/src/` and `e2e/` (comments included, recursively), has a note;
 //! 4. every `[[…]]` link in `spec/` resolves: `[[R113]]` to a ruling note, `[[§10.3]]` to a section
@@ -100,6 +103,11 @@ const CODE_EXTENSIONS: &[&str] = &[
 
 /// The file extensions a TypeScript proof may have.
 const TS_EXTENSIONS: &[&str] = &["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"];
+
+/// The modifiers that keep a TypeScript test from running (`it.skip(…)`, `test.todo(…)`, Playwright's
+/// `.fixme`, and `.only`, which turns off the rest of its file and which vitest refuses under CI):
+/// no title under one proves a ruling (#1718).
+const SKIPPED_TS_MODIFIERS: &[&str] = &["skip", "todo", "fixme", "only"];
 
 /// The phrases rule 7 refuses: each says the point it annotates still waits for its ruling (#1243).
 /// Written with `concat!`, because this file is itself in what `check` reads.
@@ -338,7 +346,8 @@ fn unresolved_markers(path: &str, text: &str) -> Vec<String> {
 }
 
 /// Rust source with its comments, string literals and char literals blanked out, so a name in a
-/// comment or a string is not a test. Line breaks are kept, so line numbers still hold.
+/// comment or a string is not a test. Each blanked character reads as a space and line breaks are
+/// kept, so a character's index here is its index in the source and line numbers still hold.
 fn rust_code_only(src: &str) -> String {
     let chars: Vec<char> = src.chars().collect();
     let mut out = String::with_capacity(src.len());
@@ -364,10 +373,10 @@ fn rust_code_only(src: &str) -> String {
             i += 1;
             continue;
         };
-        // What was skipped reads as one space, plus the line breaks it held.
-        out.push(' ');
-        out.extend(chars[i..end].iter().filter(|c| **c == '\n'));
-        i = end.max(i + 1);
+        // What was skipped reads as one space per character, its line breaks kept.
+        let end = end.max(i + 1);
+        out.extend(chars[i..end].iter().map(|c| if *c == '\n' { '\n' } else { ' ' }));
+        i = end;
     }
     out
 }
@@ -451,32 +460,233 @@ fn char_literal_end(chars: &[char], i: usize) -> Option<usize> {
     }
 }
 
-/// The name of every `fn` and `mod` in Rust source (comments and strings excluded), with its line.
-fn rust_item_names(src: &str) -> Vec<(usize, String)> {
-    let code = rust_code_only(src);
-    let mut names = Vec::new();
+/// A `fn` or `mod` in Rust source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RustItem {
+    line: usize,
+    name: String,
+    /// Whether it is a test that runs (#1718): a `fn` marked `#[test]` or `#[<path>::test]`
+    /// (`#[tokio::test]`) and not `#[ignore]`d but for a `daily:` reason, which super.yml runs; a
+    /// `fn` a call of a test macro of the same file lists (one whose `macro_rules!` marks a
+    /// `fn $…` as a test, as `both_stores!` does); or a `mod` whose body holds either.
+    runs: bool,
+}
+
+/// Every `fn` and `mod` in Rust source (comments and strings excluded), with its line and whether
+/// it is a test that runs.
+fn rust_item_names(src: &str) -> Vec<RustItem> {
+    let source: Vec<char> = src.chars().collect();
+    let code: Vec<char> = rust_code_only(src).chars().collect();
+    let mut items: Vec<RustItem> = Vec::new();
+    // The outer attributes read since the last item, `;`, `{` or `}`, as written between `#[` and `]`.
+    let mut attributes: Vec<String> = Vec::new();
+    // The `mod` just named, until its `{` or `;`.
+    let mut pending_mod: Option<usize> = None;
+    // Each open `mod` body: the mod's index in `items` and the brace depth inside it.
+    let mut open_mods: Vec<(usize, usize)> = Vec::new();
+    // The macros this file defines whose body marks a `fn $…` as a test, the `macro_rules!` just
+    // named until its `{`, the one being read with the brace depth inside it, and the names its
+    // calls list.
+    let mut test_macros: Vec<String> = Vec::new();
+    let mut pending_macro: Option<String> = None;
+    let mut current_macro: Option<(String, usize)> = None;
+    let mut macro_tests: Vec<String> = Vec::new();
+    let mut depth = 0usize;
     let mut previous: Option<String> = None;
     let mut line = 1;
+    let mut i = 0;
+    while i < code.len() {
+        let c = code[i];
+        if is_ident_char(c) {
+            let start = i;
+            while i < code.len() && is_ident_char(code[i]) {
+                i += 1;
+            }
+            let word: String = code[start..i].iter().collect();
+            match previous.as_deref() {
+                Some("fn") => {
+                    let runs = attributes.iter().any(|a| is_test_attribute(a))
+                        && !attributes.iter().any(|a| ignored_but_not_daily(a));
+                    if runs {
+                        for (index, _) in &open_mods {
+                            items[*index].runs = true;
+                        }
+                    }
+                    items.push(RustItem {
+                        line,
+                        name: word.clone(),
+                        runs,
+                    });
+                    attributes.clear();
+                }
+                Some("mod") => {
+                    pending_mod = Some(items.len());
+                    items.push(RustItem {
+                        line,
+                        name: word.clone(),
+                        runs: false,
+                    });
+                    attributes.clear();
+                }
+                _ => {}
+            }
+            if word == "macro_rules" {
+                pending_macro = ident_after_bang(&code, i);
+            } else if test_macros.contains(&word)
+                && let Some(names) = macro_arguments(&code, i)
+            {
+                for (index, _) in &open_mods {
+                    items[*index].runs = true;
+                }
+                macro_tests.extend(names);
+            }
+            previous = Some(word);
+            continue;
+        }
+        if c == '#'
+            && let Some((inner, start, end)) = attribute_at(&code, i)
+        {
+            if !inner {
+                attributes.push(source[start..end].iter().collect());
+            }
+            line += code[i..end].iter().filter(|c| **c == '\n').count();
+            previous = None;
+            i = end + 1;
+            continue;
+        }
+        match c {
+            '$' if previous.as_deref() == Some("fn") && attributes.iter().any(|a| is_test_attribute(a)) => {
+                if let Some((name, _)) = &current_macro {
+                    test_macros.push(name.clone());
+                }
+            }
+            '{' => {
+                depth += 1;
+                if let Some(index) = pending_mod.take() {
+                    open_mods.push((index, depth));
+                }
+                if let Some(name) = pending_macro.take() {
+                    current_macro = Some((name, depth));
+                }
+                attributes.clear();
+            }
+            '}' => {
+                if open_mods.last().is_some_and(|(_, inside)| *inside == depth) {
+                    open_mods.pop();
+                }
+                if current_macro.as_ref().is_some_and(|(_, inside)| *inside == depth) {
+                    current_macro = None;
+                }
+                depth = depth.saturating_sub(1);
+                attributes.clear();
+            }
+            ';' => {
+                pending_mod = None;
+                attributes.clear();
+            }
+            '\n' => line += 1,
+            _ => {}
+        }
+        if !c.is_whitespace() {
+            previous = None;
+        }
+        i += 1;
+    }
+    for item in &mut items {
+        item.runs |= macro_tests.contains(&item.name);
+    }
+    items
+}
+
+fn skip_whitespace(code: &[char], i: usize) -> usize {
+    i + code[i..].iter().take_while(|c| c.is_whitespace()).count()
+}
+
+/// The name after the `!` that follows index `i`, whitespace aside: `macro_rules! both_stores`.
+fn ident_after_bang(code: &[char], i: usize) -> Option<String> {
+    let at = skip_whitespace(code, i);
+    if code.get(at) != Some(&'!') {
+        return None;
+    }
+    let start = skip_whitespace(code, at + 1);
+    let name: String = code[start..].iter().take_while(|c| is_ident_char(**c)).collect();
+    (!name.is_empty()).then_some(name)
+}
+
+/// The identifiers inside the macro call whose `!` follows index `i`, whitespace aside:
+/// `both_stores!(a, b)` gives `a` and `b`. `None` when no `!(…)`, `![…]` or `!{…}` follows.
+fn macro_arguments(code: &[char], i: usize) -> Option<Vec<String>> {
+    let at = skip_whitespace(code, i);
+    if code.get(at) != Some(&'!') {
+        return None;
+    }
+    let open_at = skip_whitespace(code, at + 1);
+    let open = *code.get(open_at)?;
+    let close = match open {
+        '(' => ')',
+        '[' => ']',
+        '{' => '}',
+        _ => return None,
+    };
+    let mut depth = 0usize;
+    let mut names = Vec::new();
     let mut word = String::new();
-    for c in code.chars().chain(std::iter::once(' ')) {
+    for &c in &code[open_at..] {
         if is_ident_char(c) {
             word.push(c);
             continue;
         }
         if !word.is_empty() {
-            if matches!(previous.as_deref(), Some("fn" | "mod")) {
-                names.push((line, word.clone()));
+            names.push(std::mem::take(&mut word));
+        }
+        if c == open {
+            depth += 1;
+        } else if c == close {
+            depth -= 1;
+            if depth == 0 {
+                return Some(names);
             }
-            previous = Some(std::mem::take(&mut word));
-        }
-        if !c.is_whitespace() {
-            previous = None;
-        }
-        if c == '\n' {
-            line += 1;
         }
     }
-    names
+    None
+}
+
+/// The attribute `#[…]` or `#![…]` that starts at `i`: whether it is an inner one (`#!`), and the
+/// indices its contents start and end at, between its brackets. `None` when `#` opens none.
+fn attribute_at(code: &[char], i: usize) -> Option<(bool, usize, usize)> {
+    let inner = code.get(i + 1) == Some(&'!');
+    let open = if inner { i + 2 } else { i + 1 };
+    if code.get(open) != Some(&'[') {
+        return None;
+    }
+    let mut depth = 0usize;
+    for (at, c) in code.iter().enumerate().skip(open) {
+        match c {
+            '[' => depth += 1,
+            ']' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some((inner, open + 1, at));
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Whether an attribute, as written between its brackets, marks a test: `test`, or a path ending
+/// in `::test` (`tokio::test(flavor = "multi_thread")`).
+fn is_test_attribute(attribute: &str) -> bool {
+    let path = attribute.split(['(', '=']).next().unwrap_or("").trim();
+    path == "test" || path.ends_with("::test")
+}
+
+/// Whether an attribute, as written between its brackets, ignores a test for any reason but a
+/// daily run: `ignore`, or `ignore = "…"` whose reason does not start with `daily:`.
+fn ignored_but_not_daily(attribute: &str) -> bool {
+    let (path, reason) = attribute.split_once('=').unwrap_or((attribute, ""));
+    path.trim() == "ignore" && !reason.trim().trim_start_matches('"').starts_with("daily:")
 }
 
 /// The ruling numbers a Rust item name carries as `_`-delimited `r<n>` tokens: `r90_r81_x` → 90, 81.
@@ -492,8 +702,10 @@ fn name_tokens(name: &str) -> Vec<u64> {
         .collect()
 }
 
-/// The title of every `it(…)`, `test(…)` and `describe(…)` in TypeScript source (`.only`, `.skip`
-/// and the like allowed between the name and the parenthesis), as written between its quotes.
+/// The title of every `it(…)`, `test(…)` and `describe(…)` in TypeScript source that runs, as
+/// written between its quotes: `.concurrent` and the like may stand between the name and the
+/// parenthesis, but a call marked with one of `SKIPPED_TS_MODIFIERS` is left out, along with every
+/// call inside it (#1718).
 fn ts_test_titles(src: &str) -> Vec<String> {
     let bytes = src.as_bytes();
     let mut titles = Vec::new();
@@ -517,7 +729,8 @@ fn ts_test_titles(src: &str) -> Vec<String> {
             i += 1;
             continue;
         }
-        // `.only`, `.skip`, `.concurrent`, …
+        // `.concurrent`, `.each`, …, or one of SKIPPED_TS_MODIFIERS.
+        let mut skipped = false;
         while j < bytes.len() && bytes[j] == b'.' {
             let mut k = j + 1;
             while k < bytes.len() && is_word_byte(bytes[k]) {
@@ -526,10 +739,16 @@ fn ts_test_titles(src: &str) -> Vec<String> {
             if k == j + 1 {
                 break;
             }
+            skipped |= SKIPPED_TS_MODIFIERS.contains(&&src[j + 1..k]);
             j = k;
         }
         if j >= bytes.len() || bytes[j] != b'(' {
             i += 1;
+            continue;
+        }
+        if skipped {
+            // Nothing inside a skipped call runs either: a `describe.skip(…)`'s tests among it.
+            i = ts_call_end(bytes, j);
             continue;
         }
         j += 1;
@@ -554,6 +773,48 @@ fn ts_test_titles(src: &str) -> Vec<String> {
         i = end + 1;
     }
     titles
+}
+
+/// The index just past the `)` that closes the call whose `(` is at `open`, string literals and
+/// comments skipped (the end of the source if none closes it).
+fn ts_call_end(bytes: &[u8], open: usize) -> usize {
+    let mut depth = 0usize;
+    let mut i = open;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'(' => depth += 1,
+            b')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return i + 1;
+                }
+            }
+            quote @ (b'"' | b'\'' | b'`') => {
+                i += 1;
+                while i < bytes.len() && bytes[i] != quote {
+                    if bytes[i] == b'\\' {
+                        i += 1;
+                    }
+                    i += 1;
+                }
+            }
+            b'/' if bytes.get(i + 1) == Some(&b'/') => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    i += 1;
+                }
+            }
+            b'/' if bytes.get(i + 1) == Some(&b'*') => {
+                i += 2;
+                while i < bytes.len() && !bytes[i..].starts_with(b"*/") {
+                    i += 1;
+                }
+                i += 1;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    bytes.len()
 }
 
 /// The headings an SQL evidence script announces its checks with: `\echo '### … ###'` or
@@ -603,7 +864,7 @@ fn proves(path: &str, src: &str, number: u64) -> Result<bool, String> {
     if extension == "rs" {
         return Ok(rust_item_names(src)
             .iter()
-            .any(|(_, name)| name_tokens(name).contains(&number)));
+            .any(|item| item.runs && name_tokens(&item.name).contains(&number)));
     }
     if extension == "sql" {
         return Ok(sql_headings(src)
@@ -786,7 +1047,7 @@ fn check(root: &Path) -> Result<()> {
             match proves(proof, src, number) {
                 Ok(true) => proofs += 1,
                 Ok(false) => problems.push(format!(
-                    "{}: `proven_in` {proof} has no test named after R{number} (a fn or mod with the token r{number}, an it/describe title with R{number}, or an SQL `### R{number}: …` heading)",
+                    "{}: `proven_in` {proof} has no test that runs named after R{number} (a #[test] fn, a fn a test macro lists or a mod holding one, with the token r{number}; an it/test/describe title with R{number} and no .skip, .todo, .fixme or .only; or an SQL `### R{number}: …` heading)",
                     note.path
                 )),
                 Err(why) => problems.push(format!("{}: `proven_in` {proof} {why}", note.path)),
@@ -829,11 +1090,12 @@ fn check(root: &Path) -> Result<()> {
             }
         }
         if extension == "rs" {
-            for (line, name) in rust_item_names(&text) {
-                for number in name_tokens(&name) {
+            for item in rust_item_names(&text) {
+                for number in name_tokens(&item.name) {
                     if !ids.contains_key(&number) {
                         problems.push(format!(
-                            "{path}:{line}: `{name}` names r{number}, which has no note in spec/rulings/"
+                            "{path}:{}: `{}` names r{number}, which has no note in spec/rulings/",
+                            item.line, item.name
                         ));
                     }
                 }
@@ -1102,7 +1364,7 @@ mod tests {
     #[test]
     fn reads_ruling_tokens_from_rust_item_names() {
         let src = "#[test]\nfn r90_r81_no_legal_target() {}\nmod r195_glow {\n    fn plain() {}\n}\n// fn r999_commented() {}\nfn arr195_not() {}\nlet s = \"fn r998_in_a_string\";\n";
-        let names: Vec<String> = rust_item_names(src).into_iter().map(|(_, name)| name).collect();
+        let names: Vec<String> = rust_item_names(src).into_iter().map(|item| item.name).collect();
         assert_eq!(
             names,
             vec!["r90_r81_no_legal_target", "r195_glow", "plain", "arr195_not"]
@@ -1110,7 +1372,10 @@ mod tests {
         assert_eq!(name_tokens("r90_r81_no_legal_target"), vec![90, 81]);
         assert_eq!(name_tokens("arr195_not"), Vec::<u64>::new());
         assert_eq!(name_tokens("glows_r195"), vec![195]);
-        assert!(proves("x.rs", src, 195).unwrap());
+        // A `mod` holding only a plain `fn` is no proof (#1718).
+        assert!(!proves("x.rs", src, 195).unwrap());
+        assert!(proves("x.rs", src, 90).unwrap());
+        assert!(proves("x.rs", src, 81).unwrap());
         assert!(!proves("x.rs", src, 999).unwrap());
         assert!(!proves("x.rs", src, 998).unwrap());
     }
@@ -1118,13 +1383,86 @@ mod tests {
     #[test]
     fn keeps_line_numbers_through_comments() {
         let src = "/* a\nblock */\nfn r7_x() {}\n";
-        assert_eq!(rust_item_names(src), vec![(3, "r7_x".to_string())]);
+        assert_eq!(
+            rust_item_names(src),
+            vec![RustItem {
+                line: 3,
+                name: "r7_x".to_string(),
+                runs: false
+            }]
+        );
         let lifetimes = "fn r8_y<'a>(x: &'a str) -> char { '\"' }\nfn r9_z() {}\n";
         let names: Vec<String> = rust_item_names(lifetimes)
             .into_iter()
-            .map(|(_, name)| name)
+            .map(|item| item.name)
             .collect();
         assert_eq!(names, vec!["r8_y", "r9_z"]);
+        let attributed = "#[tokio::test(\n    flavor = \"multi_thread\"\n)]\nasync fn r8_y() {}\n";
+        assert_eq!(
+            rust_item_names(attributed),
+            vec![RustItem {
+                line: 4,
+                name: "r8_y".to_string(),
+                runs: true
+            }]
+        );
+    }
+
+    #[test]
+    fn credits_only_a_rust_test_that_runs() {
+        let src = "fn r58_helper() {}\n#[test]\n#[ignore = \"daily: a sweep\"]\nfn r90_daily() {}\n#[test]\n#[ignore]\nfn r81_bare_ignore() {}\n#[ignore = \"slow\"]\n#[test]\nfn r112_slow() {}\n#[tokio::test(flavor = \"multi_thread\")]\npub async fn r143_async() {}\n#[cfg(test)]\nmod r195_tests {\n    #[test]\n    fn plain() {}\n}\nmod r191_helpers {\n    fn plain() {}\n}\n";
+        let items: Vec<(String, bool)> = rust_item_names(src)
+            .into_iter()
+            .map(|item| (item.name, item.runs))
+            .collect();
+        let expected = [
+            ("r58_helper", false),
+            ("r90_daily", true),
+            ("r81_bare_ignore", false),
+            ("r112_slow", false),
+            ("r143_async", true),
+            ("r195_tests", true),
+            ("plain", true),
+            ("r191_helpers", false),
+            ("plain", false),
+        ];
+        assert_eq!(
+            items,
+            expected
+                .iter()
+                .map(|(name, runs)| (name.to_string(), *runs))
+                .collect::<Vec<_>>()
+        );
+        for number in [90, 143, 195] {
+            assert!(proves("x.rs", src, number).unwrap(), "{number}");
+        }
+        for number in [58, 81, 112, 191] {
+            assert!(!proves("x.rs", src, number).unwrap(), "{number}");
+        }
+    }
+
+    #[test]
+    fn credits_the_cases_a_test_macro_lists() {
+        let src = "macro_rules! both_stores {\n    ($($case:ident),+) => {\n        mod memory {\n            $(\n                #[tokio::test]\n                async fn $case() {}\n            )+\n        }\n    };\n}\nmacro_rules! helpers {\n    ($($case:ident),+) => { $(fn $case() {})+ };\n}\nmod decks {\n    async fn r256_case(harness: &Harness) {}\n    async fn r250_case(harness: &Harness) {}\n    both_stores!(r256_case);\n    helpers!(r250_case);\n}\n";
+        let items: Vec<(String, bool)> = rust_item_names(src)
+            .into_iter()
+            .map(|item| (item.name, item.runs))
+            .collect();
+        let expected = [
+            ("memory", false),
+            ("decks", true),
+            ("r256_case", true),
+            ("r250_case", false),
+        ];
+        assert_eq!(
+            items,
+            expected
+                .iter()
+                .map(|(name, runs)| (name.to_string(), *runs))
+                .collect::<Vec<_>>()
+        );
+        assert!(proves("x.rs", src, 256).unwrap());
+        assert!(!proves("x.rs", src, 250).unwrap());
     }
 
     #[test]
@@ -1132,17 +1470,26 @@ mod tests {
         let src = "describe(\"R143 — the optional seed\", () => {\n  it(\"plays (R112)\", () => {});\n  it.skip('R5 skipped', () => {});\n  test(`R191 B5 ${row.name}`, () => {});\n  submit(\"R7 not a test\");\n});\n";
         assert_eq!(
             ts_test_titles(src),
-            vec![
-                "R143 — the optional seed",
-                "plays (R112)",
-                "R5 skipped",
-                "R191 B5 ${row.name}"
-            ]
+            vec!["R143 — the optional seed", "plays (R112)", "R191 B5 ${row.name}"]
         );
         assert!(proves("a.test.ts", src, 112).unwrap());
         assert!(proves("a.test.tsx", src, 191).unwrap());
+        assert!(!proves("a.test.ts", src, 5).unwrap());
         assert!(!proves("a.test.ts", src, 7).unwrap());
         assert!(!proves("a.test.ts", src, 11).unwrap());
+    }
+
+    #[test]
+    fn refuses_a_typescript_title_that_does_not_run() {
+        // Only ids with a note here: this file is itself in what `check` reads (rule 3).
+        let src = "describe.skip(\"R143 group (a paren: ')')\", () => {\n  // a stray ) in a comment\n  it(\"R112 inside a skipped group\", () => {});\n});\nit.todo(\"R191 later\");\ntest.only(\"R195 focused\", () => {});\ntest.fixme(\"R58 broken\", () => {});\nit.concurrent(\"R7 runs\", () => {});\ndescribe(\"R1 after\", () => {});\n";
+        assert_eq!(ts_test_titles(src), vec!["R7 runs", "R1 after"]);
+        for number in [143, 112, 191, 195, 58] {
+            assert!(!proves("a.test.ts", src, number).unwrap(), "{number}");
+        }
+        for number in [7, 1] {
+            assert!(proves("a.test.ts", src, number).unwrap(), "{number}");
+        }
     }
 
     #[test]
