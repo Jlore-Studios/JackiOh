@@ -12808,6 +12808,13 @@
     "1691": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T03:09:34Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "fails 'small' (\u224834 files, one app) outright; all web presentation, no engine/AI/spec work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
