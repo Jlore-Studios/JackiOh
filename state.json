@@ -12733,7 +12733,7 @@
       "provider": "claude-1",
       "queued_at": "2026-10-23T02:40:17Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:a1cf7285-1792723439",
+      "run_id": "39891190457",
       "started_at": "2026-10-23T02:44:06Z",
       "stop_requested": false,
       "suggestion": true,
