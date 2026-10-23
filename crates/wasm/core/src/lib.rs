@@ -454,7 +454,7 @@ pub fn choose_action(
 /// the tutorial harness, the "More cards from the newest set" toggle (`AI_DECK.leanMinShare`,
 /// R1370) and their tests. `SHADOW_BAN_IDS` is TypeScript's `Object.keys(SHADOW_BAN).sort()`
 /// (`jackioh_ai::SHADOW_BAN_IDS`); `FIXTURE_BANNED_IDS` is the frozen fixture pool (issue #1113),
-/// the same ids in the same order.
+/// `SHADOW_BAN_IDS` as it stood when the fixtures were dealt.
 pub fn constants() -> Result<String, String> {
     to_json(&json!({
         "AI_BUDGET": jackioh_ai::AI_BUDGET,

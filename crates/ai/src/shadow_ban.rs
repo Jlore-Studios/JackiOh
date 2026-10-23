@@ -60,6 +60,16 @@
 //! 2), so the AI deals itself the whole set, generation 12 unchanged. training/history/sweep-2026-10-18.md
 //! has the report.
 //!
+//! Sweep of record for generation 13 (#1675): 2026-10-22 (UTC), `cargo jackioh sweep` on `71b594b`
+//! (`main`, the learned evaluation of #1477), pass 1 over the 17 Meditative card(s) `SHADOW_BAN` held
+//! at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over the same 17 at risk, 24 seeds
+//! each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
+//! with no build or test beside them. It swept the 17 banned Meditative cards alone, so every other
+//! card keeps the row the earlier reports gave it. It banned 1 of the 17 (`meditative-069`, one
+//! decision still over 2 s timed again, R977000), watches 5 and cleared 11 (R1675000), so `SHADOW_BAN`
+//! holds one row and `SHADOW_WATCH` gains the 5. training/history/sweep-2026-10-22.md has the report
+//! and the slow state.
+//!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
 
@@ -70,6 +80,8 @@
 // Sweep of record: 2026-10-12 (UTC), `cargo jackioh sweep`, pass 1 over 102 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 22 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-18.md
 // Sweep of record: 2026-10-18 (UTC), `cargo jackioh sweep`, pass 1 over 26 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 11 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-22.md
+// Sweep of record: 2026-10-22 (UTC), `cargo jackioh sweep`, pass 1 over 17 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 17 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -254,76 +266,21 @@
 /// #1186's sweep of the Meditative+ set (R1186000) banned none of its 26
 /// cards, so the seventeen stand as generation 12 left them, and the set's
 /// 11 at-risk cards are watched.
-pub const SHADOW_BAN: &[(&str, &str)] = &[
-    (
-        "meditative-011",
-        "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-012",
-        "timeout: easy: 11 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-017",
-        "timeout: hard: 13 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-025",
-        "timeout: hard: 7 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-029",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-030",
-        "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-031",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-049",
-        "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-058",
-        "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-069",
-        "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-075",
-        "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-078",
-        "timeout: easy: 4 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-085",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-087",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-091",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-096",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-099",
-        "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-];
+///
+/// #1675's sweep of the seventeen on generation 13 banned one of them,
+/// 069, at hard: one decision of a pass-2 game still over 2 s timed again
+/// (R977000), its state wide with a fused card of nine ingredients. Eleven
+/// came off as cleared, the report's `Cleared ids:`, which by R1675000 keep
+/// no row in either table: 012, 017, 029, 030, 031, 049, 058, 085, 087, 091
+/// and 096. Five came off as watched, a watch row lifting a ban (R1186000):
+/// 011, 025, 075, 078 and 099, each at risk by its own numbers at half
+/// strength (R600) and meeting no flag in full. The sixteen are dealt at
+/// stock weight and not in `UNBANNED_PREFER`, on the generations 4–7
+/// precedent.
+pub const SHADOW_BAN: &[(&str, &str)] = &[(
+    "meditative-069",
+    "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+)];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -658,8 +615,16 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: easy: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change -2.7; hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -2.2",
     ),
     (
+        "meditative-011",
+        "at risk: hard: pass 2 affordable on 33 turns over 24 games, played 1 time(s), mean evaluate change 2.8",
+    ),
+    (
         "meditative-022",
         "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -4.8; hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -4.8",
+    ),
+    (
+        "meditative-025",
+        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 0.9; hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 22.3",
     ),
     (
         "meditative-026",
@@ -686,8 +651,16 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 28 turns over 8 games, never played",
     ),
     (
+        "meditative-075",
+        "at risk: easy: pass 1 affordable on 8 turns over 8 games, never played",
+    ),
+    (
         "meditative-077",
         "at risk: hard: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change 3.3",
+    ),
+    (
+        "meditative-078",
+        "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 12.1; hard: pass 1 affordable on 12 turns over 8 games, never played",
     ),
     (
         "meditative-088",
@@ -696,6 +669,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "meditative-098",
         "at risk: easy: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
+    ),
+    (
+        "meditative-099",
+        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 3.0",
     ),
     (
         "meditativeplus-002",

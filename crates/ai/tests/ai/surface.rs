@@ -461,6 +461,7 @@ mod surface_sweep_cards_clock {
                 now: Some(&slow),
                 retime: None,
                 tier: None,
+                banned: None,
             },
         );
         let result = js(&result);
