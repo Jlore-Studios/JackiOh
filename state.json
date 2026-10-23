@@ -13180,11 +13180,13 @@
     "what": "plan #1750 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-23T22:25:32Z",
+    "at": "2026-10-23T22:32:07Z",
     "notes": [
-      "#1748 needs a plan",
-      "started plan #1748 on claude-6 (run 40033598162)",
-      "nothing more to start: nothing is queued"
+      "#1750 needs a plan",
+      "#1751 needs a plan",
+      "delivered suggest on claude-8 (run 40032871351): interrupted",
+      "started plan #1750 on agy (run 40034323118)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-23T22:50:00Z; `claude-7` 5-hour usage is 51%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-23T22:50:00Z; it can start a build or a plan again in 16m; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-10-24T03:20:00Z; it can start a build or a plan again in 4h 46m; `claude-1` 5-hour usage is 41%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-23T23:00:00Z; it can start a build or a plan again in 26m; `claude-4` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-23T23:00:00Z; it can start a build or a plan again in 26m; `claude-6` is busy; `claude-5` 7-day usage is 61%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 58h 26m; `muse` it refused a call; its limit resets at 2026-10-26T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-10-27T18:45:27Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-24T05:00:00Z; it can start a build or a plan again in 6h 26m; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13890,7 +13892,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T22:25:32Z",
+  "loop_tick": "2026-10-23T22:32:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
