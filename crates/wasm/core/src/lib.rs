@@ -28,8 +28,8 @@ use std::str::FromStr;
 
 use jackioh_engine::prelude::IndexMap;
 use jackioh_engine::{
-    self as engine, Action, CardDef, CardDefs, CraftRecipe, CreateGameArgs, DECK_SIZE, FoldArgs, GameState,
-    PLAYER_IDS, PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
+    self as engine, Action, CardDef, CardDefs, CraftRecipe, CreateGameArgs, FoldArgs, GameState, PlayerId,
+    ReduceResult, ReplayCheckpoints, ReplayRecord, Rng, SetupKind,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -162,38 +162,26 @@ fn reduce_result_json(result: ReduceResult) -> Result<String, String> {
 
 /// Each module's own setup check, which `create_game`, `fold` and `replay_open` run before the
 /// engine sees the setup: the normal module refuses a game with custom cards (R915009), the Luau
-/// module judges them (R915005, R915006) and hands their definitions to `check_decks`.
-pub type CheckSetup = fn(&CreateGameArgs) -> Result<(), String>;
+/// module judges them (R915005, R915006) and hands their definitions to `check_decks`. The kind is
+/// `create_game`'s `New` or a fold's `Recorded` (R1705003).
+pub type CheckSetup = fn(&CreateGameArgs, SetupKind) -> Result<(), String>;
 
 /// The checks TypeScript's `createGame` threw on, in its order (R180's handicaps first, so a bad
 /// deck size is named as the handicap's fault, then each deck against its seat's size, R184), run
 /// before the engine is called: Rust's `create_game` panics where TypeScript threw (SURFACE §6.1),
 /// and a panic in WebAssembly is a trap the page cannot catch as the error TypeScript gave it. The
-/// functions are the engine's own (`state.rs`), so the messages are the engine's verbatim.
-pub fn check_decks(args: &CreateGameArgs, customs: &IndexMap<String, CardDef>) -> Result<(), String> {
+/// function is the engine's own (`state.rs`'s `validate_setup`), so the messages are the engine's
+/// verbatim, and a recorded game's decks are held to the size it was made under (R1705003).
+pub fn check_decks(
+    args: &CreateGameArgs,
+    customs: &IndexMap<String, CardDef>,
+    kind: SetupKind,
+) -> Result<(), String> {
     let catalog: &CardDefs = match &args.catalog {
         Some(catalog) => catalog,
         None => engine::registered_catalog(),
     };
-    let no_handicaps = PerPlayerOpt::default();
-    let handicaps = args.handicaps.as_ref().unwrap_or(&no_handicaps);
-    for seat in PLAYER_IDS {
-        if let Some(handicap) = handicaps.get(seat) {
-            engine::validate_handicap(handicap, seat.as_str()).map_err(|error| error.to_string())?;
-        }
-    }
-    for seat in PLAYER_IDS {
-        let size = handicaps
-            .get(seat)
-            .map_or(DECK_SIZE, |handicap| handicap.deck_size);
-        let deck = match seat {
-            PlayerId::P1 => &args.decks.0,
-            PlayerId::P2 => &args.decks.1,
-        };
-        engine::validate_deck_with(deck, catalog, customs, seat.as_str(), size)
-            .map_err(|error| error.to_string())?;
-    }
-    Ok(())
+    engine::validate_setup(args, catalog, customs, kind).map_err(|error| error.to_string())
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -223,7 +211,7 @@ pub fn carried_versions() -> Result<String, String> {
 /// `GameState` (TS `createGame({ seed, decks, catalog?, handicaps?, lastBoards?, glitchBoards?, dealt? })`).
 pub fn create_game(args_json: &str, check_setup: CheckSetup) -> Result<String, String> {
     let args: CreateGameArgs = parse("createGame", args_json)?;
-    check_setup(&args)?;
+    check_setup(&args, SetupKind::New)?;
     returned_state(engine::create_game(&args))
 }
 
@@ -269,7 +257,7 @@ pub fn hash_state(state_json: &str) -> Result<String, String> {
 pub fn fold(args_json: &str, check_setup: CheckSetup) -> Result<String, String> {
     // The fold's input is `createGame`'s plus `log`, so the same JSON reads as both.
     let setup: CreateGameArgs = parse("fold", args_json)?;
-    check_setup(&setup)?;
+    check_setup(&setup, SetupKind::Recorded)?;
     let args: FoldArgs = parse("fold", args_json)?;
     to_json(&engine::fold(&args))
 }
@@ -282,7 +270,7 @@ pub fn replay_open(args_json: &str, record_json: &str, check_setup: CheckSetup) 
     let build = jackioh_cards::catalog_version();
     if let Ok(shipped) = engine::catalog_for(&record.catalog_version, build) {
         let setup: CreateGameArgs = parse("replayOpen", args_json)?;
-        engine::with_shipped(shipped, || check_setup(&setup))?;
+        engine::with_shipped(shipped, || check_setup(&setup, SetupKind::Recorded))?;
     }
     let args: FoldArgs = parse("replayOpen", args_json)?;
     to_json(&engine::replay_open(&args, &record, build))

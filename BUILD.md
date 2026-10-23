@@ -112,11 +112,13 @@ jackioh/
 
 ## 2. Constants (`crates/engine/src/config.rs`)
 
-Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 20;`; an object becomes a struct constant). Nothing in the engine hard-codes them: `crates/tools/tests/acceptance.rs` fails on a constant no code reads, and one the engine plays at a single value (`CRY_ON_PLAY_ONLY`, `ROTATION_RING`, `FIENDER_STATS_MODE`, `DRAW_OFFERS_PER_TURN`, `MULLIGAN_ORDER`) is asserted at compile time where its rule is played (#1640). The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
+Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 25;`; an object becomes a struct constant). Nothing in the engine hard-codes them: `crates/tools/tests/acceptance.rs` fails on a constant no code reads, and one the engine plays at a single value (`CRY_ON_PLAY_ONLY`, `ROTATION_RING`, `FIENDER_STATS_MODE`, `DRAW_OFFERS_PER_TURN`, `MULLIGAN_ORDER`) is asserted at compile time where its rule is played (#1640). The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
 
 | Constant | Value | Spec |
 | --- | --- | --- |
-| `DECK_SIZE` | 20 | §2.6 |
+| `DECK_SIZE` | 25 | §2.6, R1705000 |
+| `EARLIER_DECK_SIZE` | 20: the deck size before #1705, which a recorded game made then is held to | §2.6, R1705003 |
+| `MEDIUM_EXTRA_DECK_CARDS` / `HARD_EXTRA_DECK_CARDS` | 5 / 10: the cards a Medium and a Hard AI seat's deck holds past `DECK_SIZE` | §9.9, R1705000 |
 | `MAX_COPIES` | 1 | §2.6, §9.4 |
 | `MAX_MANA` | 4 | §2.3 |
 | `HERO_HEALTH` | 30 | §2 |
@@ -147,7 +149,8 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `AI_END_TURN_PROBABILITY` | 0.1 | §10.7 |
 | `DRAWS_PER_TURN` | 1 | §2.4, R183 |
 | `HUMAN_HANDICAP` | `{ deckSize: DECK_SIZE, manaBonus: 0, manaCap: MAX_MANA, extraOpeningCards: 0, extraDrawsPerTurn: 0 }` | §9.9, R180 |
-| `AI_DIFFICULTY` | easy = `HUMAN_HANDICAP`; medium `{ 25, +1, cap 5, +1 opening, +0 draws }`; hard `{ 30, +1, cap 7, +1 opening, +1 draw }` (fields in `Handicap` order) | §9.9, R180–R184 |
+| `AI_DIFFICULTY` | easy = `HUMAN_HANDICAP`; medium `{ DECK_SIZE + MEDIUM_EXTRA_DECK_CARDS (30), +1, cap 5, +1 opening, +0 draws }`; hard `{ DECK_SIZE + HARD_EXTRA_DECK_CARDS (35), +1, cap 7, +1 opening, +1 draw }` (fields in `Handicap` order) | §9.9, R180–R184, R1705000 |
+| `TUTORIAL_HUMAN` | `{ ...HUMAN_HANDICAP, deckSize: EARLIER_DECK_SIZE }`: a lesson's human seat, whose fixed deck holds 20 | §9.10, R1705005 |
 | `ACTIVATE_UNLIMITED_CAP` | 100: uses of one card's "Activate ♾️" in one turn | §6.2, R384 |
 | `BRITTLE_FIRST_TICK_TURNS` | 2: a Brittle count started on turn t first ticks at its controller's first start of turn numbered t + 2 or later | §6.1, R385 |
 | `TUNE_STAT_TOTAL` | 4: the stats a Nerf takes or a Buff gives, split between attack and health | §6.3, R386 |
@@ -205,7 +208,7 @@ The AI's sweep constants (`AI_SWEEP` in `crates/ai/src/sweep.rs`, R186, R390): `
 Implement `GameState`, `PlayerState`, `CardInstance`, `PendingChoice`, `DelayedEffect`, `PlayerModifier` exactly as §10.1. `createGame({ seed, decks: [defId[], defId[]] })` returns a state in phase `setup`.
 Acceptance:
 - `state.ts` type-checks against `shared/src/catalog-types.ts`; no `any`.
-- `createGame` with two 20-card decks yields 2 players, 30 health each, empty zones, `turn = 0`, `pending = null`.
+- `createGame` with two `DECK_SIZE`-card decks yields 2 players, 30 health each, empty zones, `turn = 0`, `pending = null`.
 - `createGame` rejects a deck that is not exactly `DECK_SIZE`, contains duplicates, or contains a Token-tagged def (throws with a message naming the rule).
 
 **M1-T2 RNG.** Files: `engine/src/rng.ts`.
@@ -604,7 +607,7 @@ Every mutation writes `collection` and `collection_grants` in one transaction; n
 Acceptance: a direct insert attempt through the public API is impossible (no endpoint); a grant with `reason` writes both tables or neither (fault-injection test); a stale `catalogVersion` gets "update required".
 
 **M6-T3 Loadout validator.** Files: `validator/src/index.ts`, `server/src/api/loadouts.ts`, migrations `loadouts`, `loadout_decks`, `loadout_deck_cards` with the unique index on `(profile_id, card_id)`.
-Rules L1–L6 (§9.4) with `DECK_SIZE = 20`, `MAX_COPIES = 1`, no Token-tagged cards, every card in the catalog and not banned; one module imported by both `apps/web` and `apps/server`; `saveLoadout(profileId, catalogVersion, decks[3])` all-or-nothing.
+Rules L1–L6 (§9.4) with `DECK_SIZE = 25` (20 until #1705, R1705000), `MAX_COPIES = 1`, no Token-tagged cards, every card in the catalog and not banned; one module imported by both `apps/web` and `apps/server`; `saveLoadout(profileId, catalogVersion, decks[3])` all-or-nothing.
 Acceptance: unit test per rule with the specific error message; the unique index rejects a duplicate across decks even when the application check is bypassed (raw SQL test); `apps/web` and `apps/server` both import from `@jackioh/validator` (grep test).
 
 **M6-T4 Match actor.** Files: `server/src/match/actor.ts`, `protocol.ts`, migrations `matches`, `match_actions`, `results`.

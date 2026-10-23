@@ -5,7 +5,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{DUOS_HUMAN_TEAM, Handicap, SETUP_TURN};
-use crate::state::{CreateGameOptions, DuosLife, EngineError, GameState, PlayerState, create_game};
+use crate::state::{
+    CreateGameOptions, DuosLife, EngineError, GameState, PlayerState, SetupKind, create_game,
+    create_recorded_game,
+};
 use crate::wire::{
     DUOS_DUELS, DuosCreateOptions, DuosEvent, DuosResult, DuosSeat, DuosTeamRules, PLAYER_IDS, PerPlayerOpt,
     PerTeam, PlayerId,
@@ -135,12 +138,22 @@ pub fn duos_duel_seed(seed: &str, duel: usize) -> String {
 /// next step (`reduce::sync_pools`, `duos_seat`). Panics as `create_game` does on a deck or handicap
 /// it refuses.
 pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
+    duos_create_as(options, SetupKind::New)
+}
+
+/// R1705003: `duos_create` for a co-op game already made, whose duels are built by
+/// `create_recorded_game`, so one dealt EARLIER_DECK_SIZE-card decks before #1705 folds as it was made.
+pub fn duos_create_recorded(options: &DuosCreateOptions) -> DuosState {
+    duos_create_as(options, SetupKind::Recorded)
+}
+
+fn duos_create_as(options: &DuosCreateOptions, kind: SetupKind) -> DuosState {
     let rules = options
         .teams
         .clone()
         .unwrap_or_else(|| PerTeam::new(DUOS_HUMAN_TEAM, DUOS_HUMAN_TEAM));
     let duels: Vec<GameState> = (0..DUOS_DUELS)
-        .map(|duel| create_duel(options, &rules, duel))
+        .map(|duel| create_duel(options, &rules, duel, kind))
         .collect();
     DuosState {
         seed: options.seed.clone(),
@@ -170,7 +183,12 @@ pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
 }
 
 /// One duel at setup: team A's seat as `p1`, team B's as `p2`.
-fn create_duel(options: &DuosCreateOptions, rules: &PerTeam<DuosTeamRules>, duel: usize) -> GameState {
+fn create_duel(
+    options: &DuosCreateOptions,
+    rules: &PerTeam<DuosTeamRules>,
+    duel: usize,
+    kind: SetupKind,
+) -> GameState {
     let seats = PLAYER_IDS.map(|player| DuosSeat::of(duel, player));
     let mut handicaps: PerPlayerOpt<Handicap> = PerPlayerOpt::default();
     for seat in seats {
@@ -188,7 +206,7 @@ fn create_duel(options: &DuosCreateOptions, rules: &PerTeam<DuosTeamRules>, duel
             .collect();
         (!here.is_empty()).then_some(here)
     });
-    let mut game = create_game(&CreateGameOptions {
+    let duel_options = CreateGameOptions {
         seed: duos_duel_seed(&options.seed, duel),
         decks: (
             options.decks.of(seats[0]).clone(),
@@ -202,7 +220,11 @@ fn create_duel(options: &DuosCreateOptions, rules: &PerTeam<DuosTeamRules>, duel
         // A co-op game is never a sandbox (R923000) and holds no custom card (R915005).
         sandbox: None,
         custom_cards: None,
-    });
+    };
+    let mut game = match kind {
+        SetupKind::New => create_game(&duel_options),
+        SetupKind::Recorded => create_recorded_game(&duel_options),
+    };
     for seat in seats {
         let team = rules[seat.team()];
         duos_seat(&mut game.players[seat.player()], &team, team.pool_health);

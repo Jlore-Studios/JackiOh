@@ -17,7 +17,7 @@ from tests.support import make_config, make_ctx
 #: 06:00 in Chicago on a CDT day (11:00 UTC) and on a CST day (12:00 UTC).
 CDT_SIX = datetime(2026, 10, 22, 11, 0, tzinfo=timezone.utc)
 CST_SIX = datetime(2026, 12, 22, 12, 0, tzinfo=timezone.utc)
-SET = " ".join(f"CLAUDE_CODE_OAUTH_TOKEN{n}" for n in ("", "_2", "_3", "_4", "_5", "_6", "_7"))
+SET = " ".join(f"CLAUDE_CODE_OAUTH_TOKEN{n}" for n in ("", "_2", "_3", "_4", "_5", "_6", "_7", "_8"))
 
 
 class WindowTests(unittest.TestCase):
@@ -56,7 +56,7 @@ class AccountTests(unittest.TestCase):
 
     def test_every_claude_subscription_with_its_secret_is_woken(self):
         found, notes = wake.accounts(self.cfg(), {"providers": {}}, CDT_SIX, ".harness")
-        self.assertEqual({a["id"] for a in found}, {f"claude-{n}" for n in range(1, 8)})
+        self.assertEqual({a["id"] for a in found}, {f"claude-{n}" for n in range(1, 9)})
         self.assertEqual({a["secret"] for a in found}, set(SET.split()))
         self.assertEqual({a["home"] for a in found}, {".harness"})
         self.assertEqual(notes, [])
@@ -81,7 +81,7 @@ class AccountTests(unittest.TestCase):
     def test_a_halted_bot_wakes_nothing(self):
         gh = FakeGitHub()
         ctx = make_ctx(gh, at=CDT_SIX, cfg=self.cfg())
-        self.assertEqual(len(wake.to_wake(ctx, ".harness")[0]), 7)
+        self.assertEqual(len(wake.to_wake(ctx, ".harness")[0]), 8)
         ctx.store.update(lambda s: s.update(halted=True), "halt")
         self.assertEqual(wake.to_wake(ctx, ".harness"), ([], ["halted: a wake is a model call"]))
 

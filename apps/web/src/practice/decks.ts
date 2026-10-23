@@ -27,6 +27,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-011", // Tempo Timmy
       "core-015", // Me and Mr Token
       "core-081", // Radiant Saintess
+      "core-003", // Right-house defender
       "core-001", // Big D-fender
       "core-016", // Hit Job
       "core-020", // Pointmaster
@@ -35,9 +36,13 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-069", // Call to Arms
       "core-077", // Professor Curvature
       "core-030", // Archivist
+      "core-002", // Bigot
+      "core-091", // Fed Fauci
+      "core-073", // Anti-oneshot Armor
       "core-013", // Jlockeed Shredder-10
       "core-019", // Midrange Menace
       "core-053", // Reno
+      "core-047", // Fig of Life
       "core-025", // 4-mana 7/7
       "core-054", // Straaza
       "core-066", // The Rock
@@ -48,6 +53,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
     name: "Blitz",
     identity: "Rush, Charge and burn: hit hard early and finish the job with spells.",
     cards: [
+      "core-010", // Rapid Replenish
       "core-004", // Gary the Gambler
       "core-008", // Mr. Vanilla
       "core-011", // Tempo Timmy
@@ -55,6 +61,7 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-035", // Lunar Eclipse
       "core-044", // True Strike
       "core-063", // Plastic Surgery
+      "core-031", // KY's Math Equation
       "core-074", // Adaptive UI
       "core-012", // Duplicating Felinors
       "core-020", // Pointmaster
@@ -63,8 +70,11 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-056", // Jilliax
       "core-058", // Rush Token Farm
       "core-068", // Twisted Sorcerer
+      "core-080", // Zao Gao
+      "core-002", // Bigot
       "core-013", // Jlockeed Shredder-10
       "core-070", // Spiteful Stab
+      "core-089", // Corpse Eater
       "core-014", // Jlockeed's Weapons
       "core-025", // 4-mana 7/7
       "core-054", // Straaza
@@ -81,6 +91,8 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-041", // Sheepish
       "core-044", // True Strike
       "core-067", // Zoomerbin Oomen
+      "core-003", // Right-house defender
+      "core-072", // Reminisce
       "core-009", // Moths to the Flame
       "core-016", // Hit Job
       "core-030", // Archivist
@@ -89,9 +101,12 @@ export const PRACTICE_PRESETS: readonly PracticePreset[] = [
       "core-073", // Anti-oneshot Armor
       "core-013", // Jlockeed Shredder-10
       "core-019", // Midrange Menace
+      "core-047", // Fig of Life
       "core-049", // Snom Bunny Mind Control
       "core-053", // Reno
       "core-088", // Twisting Nether
+      "core-034", // Collateral Damage
+      "core-043", // Big Felinor
       "core-025", // 4-mana 7/7
       "core-054", // Straaza
       "core-066", // The Rock
@@ -104,7 +119,7 @@ export function presetById(id: string): PracticePreset | undefined {
 }
 
 export const RANDOM_DECK_IDENTITY =
-  "A fresh twenty-card deck every game, dealt with a sensible mana curve. You meet it in your opening hand.";
+  "A fresh twenty-five-card deck every game, dealt with a sensible mana curve. You meet it in your opening hand.";
 
 /** Oldest-first, named `GET /api/decks` result; it may be an incomplete draft (R250). */
 export type PracticeSavedDeck = {

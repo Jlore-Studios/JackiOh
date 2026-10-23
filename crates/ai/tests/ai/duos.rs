@@ -37,13 +37,14 @@ const A2: DuosSeat = DuosSeat::A2;
 const B1: DuosSeat = DuosSeat::B1;
 const B2: DuosSeat = DuosSeat::B2;
 
-/// Twenty Core cards, each playable on turn 1 onto an empty board (one-cost Units, cheap Traps and
-/// Field cards, cheap Spells), so a dealt hand always holds a play and no seat is ended by B9's rule
-/// before a test has set it up.
-const CHEAP: [&str; 20] = [
+/// `DECK_SIZE` Core cards, each playable on turn 1 onto an empty board (one-cost Units, cheap Traps
+/// and Field cards, cheap Spells), so a dealt hand always holds a play and no seat is ended by B9's
+/// rule before a test has set it up.
+const CHEAP: [&str; DECK_SIZE as usize] = [
     "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
-    "core-018", "core-023", "core-039", "core-041", "core-048", "core-060", "core-067", "core-071",
-    "core-075", "core-081", "core-086", "core-096",
+    "core-018", "core-023", "core-031", "core-035", "core-039", "core-041", "core-044", "core-048",
+    "core-051", "core-060", "core-062", "core-067", "core-071", "core-075", "core-081", "core-086",
+    "core-096",
 ];
 /// Mr. Vanilla, a 1-cost vanilla Unit.
 const ONE_DROP: &str = "core-008";

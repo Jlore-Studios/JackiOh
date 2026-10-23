@@ -18,9 +18,9 @@ use jackioh_ai::{
     game_config, greedy_action, play_match, random_action,
 };
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, Action, ActionBody, ActionType, FoldArgs, GameState, PerPlayer, PerPlayerOpt, PlayerId,
-    Rng, Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce, seat_to_act,
-    subsystems,
+    AI_DIFFICULTY, Action, ActionBody, ActionType, DECK_SIZE, FoldArgs, GameState, PerPlayer, PerPlayerOpt,
+    PlayerId, Rng, Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce,
+    seat_to_act, subsystems,
 };
 
 use super::support::{
@@ -90,7 +90,7 @@ mod play_match_b26 {
     fn b26_a_handicapped_match_folds_only_with_its_handicaps() {
         let seed = "match-rr-medium";
         let mut config = random_vs_random(seed);
-        config.decks = random_decks_sized(seed, (20, AI_DIFFICULTY.medium.deck_size));
+        config.decks = random_decks_sized(seed, (DECK_SIZE, AI_DIFFICULTY.medium.deck_size));
         config.handicaps = Some(PerPlayerOpt {
             p1: None,
             p2: Some(AI_DIFFICULTY.medium),

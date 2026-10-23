@@ -6,7 +6,7 @@ import type { Mock } from "vitest";
 
 import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { CATALOG_VERSION } from "@jackioh/cards";
-import { dealEmoteHand } from "@jackioh/engine";
+import { DECK_SIZE, dealEmoteHand } from "@jackioh/engine";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { ActionBody, CardDefs, GameEvent, PlayerId } from "@jackioh/shared";
 
@@ -104,11 +104,10 @@ const T = {
 
 const PRESET_VALUES = PRACTICE_PRESETS.map((preset) => `preset:${preset.id}`);
 
-const SAVED_DECKS: string[][] = [
-  Array.from({ length: 20 }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`),
-  Array.from({ length: 20 }, (_, i) => `core-${String(i + 21).padStart(3, "0")}`),
-  Array.from({ length: 20 }, (_, i) => `core-${String(i + 41).padStart(3, "0")}`),
-];
+/** Three complete saved decks of distinct Core cards: #1 to #DECK_SIZE, then the next DECK_SIZE, and so on. */
+const SAVED_DECKS: string[][] = [0, 1, 2].map((deck) =>
+  Array.from({ length: DECK_SIZE }, (_, i) => `core-${String(deck * DECK_SIZE + i + 1).padStart(3, "0")}`),
+);
 
 const SAVED_NAMES = ["Humans Rising", "Burn Pile", "Big Guys"] as const;
 
@@ -562,7 +561,7 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(deckChoiceFromValue("saved:1", [short])).toBeNull();
   });
 
-  it("lists 20-card saved decks the engine refuses, disabled, says why under the picker with a link to Decks, and starts none of them", async () => {
+  it("lists DECK_SIZE-card saved decks the engine refuses, disabled, says why under the picker with a link to Decks, and starts none of them", async () => {
     const cards = SAVED_DECKS[0] ?? [];
     const repeated = { name: "Twice Over", cards: [...cards.slice(0, -1), cards[0] ?? ""] };
     const unknown = { name: "Lost Card", cards: [...cards.slice(0, -1), "core-999"] };

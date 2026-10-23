@@ -9,6 +9,7 @@
 
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::setup_catalog;
 use crate::rules::fixtures::play_pipeline_b::{
     RANDOM_POOL, cast_trap, discover_spell, forever, grave_spell, grave_unit, jogg_box, mode_spell, monkey,
@@ -16,8 +17,9 @@ use crate::rules::fixtures::play_pipeline_b::{
     titan, toe_cracker, trickster, tyrant, x_target,
 };
 
+/// Pipeline B's fixtures, then vanilla units from `fx-1` to make a legal deck of `DECK_SIZE` (§2.6).
 fn deck() -> Vec<String> {
-    [
+    let mut deck: Vec<String> = [
         second_wind(),
         plantation(),
         jogg_box(),
@@ -41,7 +43,9 @@ fn deck() -> Vec<String> {
     ]
     .into_iter()
     .map(|card| card.id)
-    .collect()
+    .collect();
+    deck.extend(vanilla_deck(DECK_SIZE - deck.len() as i32, 1));
+    deck
 }
 
 fn seeds() -> Vec<String> {

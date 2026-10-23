@@ -337,6 +337,18 @@ pub struct EvalWeights {
     pub marked_share: f64,
     /// R846: per extra turn owed.
     pub extra_turn: f64,
+    /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
+    /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
+    /// its holder's turn starts. Every shipped one pays its holder.
+    pub start_of_turn_effect: f64,
+    /// R848, R849: what a side's closest held alternative win (`ModifierKind::AltWin`) is worth at its
+    /// threshold. It counts the square of the progress toward it (`alt_win_progress`), so the last
+    /// steps weigh most: for its holder a plan, for the holder's enemy a danger.
+    pub alt_win: f64,
+    /// B5 E27 (Classic #37 Last Hurrah): the share of its worth a hand card loses while a delayed
+    /// discard of its owner's hand waits (`DELAYED_DISCARD_HAND_HOOK`), unless it is played first. A
+    /// Temporary card (R637) keeps the smaller of the two shares, not their product.
+    pub doomed_hand_discount: f64,
     /// §3.2, R13: the share of its `unit_worth` a card dormant under one of the seat's own unit piles
     /// counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
@@ -455,6 +467,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     jade_step: 1.5,
     marked_share: 0.5,
     extra_turn: 5.0,
+    // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
+    // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
+    // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
+    // hand at Temporary's half.
+    start_of_turn_effect: 3.0,
+    alt_win: 60.0,
+    doomed_hand_discount: 0.5,
     // #1506: off. At 0.5 and 1.0 its screen, 400 games of improve-dev against the parent (8a366430a),
     // read 200-200, edge 0.0 (-0.024 to 0.024), which keeps nothing (training/improve.md, A screen);
     // the training lanes may move them.
@@ -626,6 +645,11 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
+    // #1722's modifier terms and doomed hand came after the gates were fixed too: nothing, as it gave
+    // them.
+    start_of_turn_effect: 0.0,
+    alt_win: 0.0,
+    doomed_hand_discount: 0.0,
     // #1506's dormant cards came after the gates were fixed too: nothing, as it gave them.
     dormant_share: 0.0,
     dormant_card: 0.0,

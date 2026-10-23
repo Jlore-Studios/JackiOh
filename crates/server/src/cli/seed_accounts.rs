@@ -267,7 +267,7 @@ fn text_at(row: &PgRow, column: &str) -> Result<Option<String>> {
 
 /// Three legal decks and a trio of them, so a seeded account can queue immediately in any mode —
 /// Best of 1 with any of the decks, Conquest with the trio (SPEC §9.5, R257) — instead of building
-/// 60 cards by hand before it can play once.
+/// 75 cards by hand before it can play once.
 ///
 /// Saved through `app.upsert_deck` and `app.upsert_trio` (migration 0007) rather than by writing
 /// `public.decks` and `public.trios` directly, because those functions are the one write path the
@@ -275,9 +275,10 @@ fn text_at(row: &PgRow, column: &str) -> Result<Option<String>> {
 /// not have produced. A saved deck is only a draft (R250), so the legality that matters here is the
 /// queue's (R253): `DECK_SIZE` cards each, and — for the trio — no card in two decks.
 ///
-/// `MAX_COPIES` is 1, so the format is singleton and the three decks need 60 DISTINCT non-token
-/// cards. The launch grant gives every active profile all 100 of them, so ordering by id and slicing
-/// is enough; no deck here is trying to be good, only legal.
+/// `MAX_COPIES` is 1, so the format is singleton and the three decks need `TRIO_DECKS` ×
+/// `DECK_SIZE`, 75 DISTINCT non-token cards (R1705000). `grant_every_card` gives the account every
+/// one of them, so ordering by id and slicing is enough; no deck here is trying to be good, only
+/// legal.
 ///
 /// Re-runnable: a profile that already holds a deck or a trio is left alone, so a second run neither
 /// piles up starters nor touches decks a tester has built since.
@@ -331,9 +332,9 @@ async fn save_starter_decks(
         ids.push(row.try_get::<String, _>("id")?);
     }
 
-    // The database's own copy of `DECK_SIZE` (migration 0003), which `app.upsert_deck` checks a deck
-    // against: read rather than taken from the engine, so the seed fills exactly what the database
-    // will accept.
+    // The database's own copy of `DECK_SIZE` (migration 0003, moved by 0055), which
+    // `app.upsert_deck` checks a deck against: read rather than taken from the engine, so the seed
+    // fills exactly what the database will accept.
     let sizes = sqlx::query("select (app.setting('deck_size'))::text::int as deck_size")
         .fetch_all(&mut *client)
         .await?;

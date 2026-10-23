@@ -9,7 +9,7 @@ mod config_constants_build_s2 {
 
     #[test]
     fn matches_the_build_s2_table() {
-        assert_eq!(DECK_SIZE, 20);
+        assert_eq!(DECK_SIZE, 25);
         assert_eq!(MAX_COPIES, 1);
         assert_eq!(MAX_MANA, 4);
         assert_eq!(HERO_HEALTH, 30);

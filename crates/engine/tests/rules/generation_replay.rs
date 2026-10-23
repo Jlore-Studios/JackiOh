@@ -7,14 +7,16 @@
 
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::generation::{
     big_body, body, charger, crawler, deck_fusion, dusting, fuse_a, fuse_b, fuser, juhan, lab, mutate,
     outbreak, pile_on, plague_book, quiet_trap, register_generation, scatter, slime, slop, toxins,
 };
 use crate::rules::fixtures::harness::{round_trip, setup_catalog};
 
+/// The generation fixtures, then vanilla units from `fx-1` to make a legal deck of `DECK_SIZE` (§2.6).
 fn deck() -> Vec<String> {
-    [
+    let mut deck: Vec<String> = [
         plague_book.clone(),
         slime.clone(),
         crawler.clone(),
@@ -38,7 +40,9 @@ fn deck() -> Vec<String> {
     ]
     .into_iter()
     .map(|entry| entry.id)
-    .collect()
+    .collect();
+    deck.extend(vanilla_deck(DECK_SIZE - deck.len() as i32, 1));
+    deck
 }
 
 /// What a game reached, so the run can assert it exercised the systems it claims to replay.

@@ -229,12 +229,12 @@ mod tests {
             assert_eq!(s.state().active, P2);
         }
 
-        /// Twenty legal Core cards with no other cast-on-draw card among them, Cognitive Offloading
+        /// DECK_SIZE legal Core cards with no other cast-on-draw card among them, Cognitive Offloading
         /// first.
-        const DECK: [&str; 20] = [
+        const DECK: [&str; DECK_SIZE as usize] = [
             ID, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
             "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
-            "core-044", "core-053", "core-055",
+            "core-044", "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
         ];
 
         #[test]

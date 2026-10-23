@@ -72,6 +72,7 @@ SECRETS: tuple[str, ...] = (
     "CLAUDE_CODE_OAUTH_TOKEN_5",
     "CLAUDE_CODE_OAUTH_TOKEN_6",
     "CLAUDE_CODE_OAUTH_TOKEN_7",
+    "CLAUDE_CODE_OAUTH_TOKEN_8",
     "CODEX_AUTH_JSON",
     "MUSE_AUTH",
     # Squishy's own Claude account (#60), in `.squishy/providers.json`.

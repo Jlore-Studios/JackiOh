@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { beginGame, createGame, hashState, registeredCatalog } from "@jackioh/engine";
-import { AI_TUTORIAL, DECK_SIZE, HERO_HEALTH } from "@jackioh/engine/config";
+import { AI_TUTORIAL, HERO_HEALTH, TUTORIAL_HUMAN } from "@jackioh/engine/config";
 import { SHADOW_BAN_IDS } from "@jackioh/ai";
 import { opponentOf, type CardDef, type PlayerId } from "@jackioh/shared";
 
@@ -57,7 +57,9 @@ function decksOf(lesson: TutorialLesson): [string[], string[]] {
 
 function dealOf(lesson: TutorialLesson, seed = lesson.seed) {
   const aiSeat = opponentOf(lesson.humanSeat);
-  return beginGame(createGame({ seed, decks: decksOf(lesson), handicaps: { [aiSeat]: AI_TUTORIAL } })).state;
+  return beginGame(
+    createGame({ seed, decks: decksOf(lesson), handicaps: { [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: TUTORIAL_HUMAN } }),
+  ).state;
 }
 
 describe("R291 the tutorial's lessons", () => {
@@ -91,10 +93,10 @@ describe("R291 the tutorial's lessons", () => {
     expect(nextLessonOf(TUTORIAL_LESSONS.at(-1)?.id ?? "")).toBeUndefined();
   });
 
-  it("R291 give the human a legal twenty-card deck, mostly Commons, Rares and Epics", () => {
+  it("R291 give the human a legal deck of TUTORIAL_HUMAN's size, mostly Commons, Rares and Epics", () => {
     for (const lesson of TUTORIAL_LESSONS) {
-      expect(lesson.humanDeck.length, lesson.id).toBe(DECK_SIZE);
-      expect(new Set(lesson.humanDeck).size, `${lesson.id}: no duplicates (§2.6)`).toBe(DECK_SIZE);
+      expect(lesson.humanDeck.length, lesson.id).toBe(TUTORIAL_HUMAN.deckSize);
+      expect(new Set(lesson.humanDeck).size, `${lesson.id}: no duplicates (§2.6)`).toBe(TUTORIAL_HUMAN.deckSize);
       for (const id of lesson.humanDeck) expect(def(id).token, `${lesson.id}: ${id} is no Token`).toBe(false);
       const showpieces = lesson.humanDeck.filter((id) => SHOWPIECE_RARITIES.includes(def(id).rarity));
       expect(showpieces.length, `${lesson.id}: ${showpieces.join(", ")}`).toBeLessThanOrEqual(HUMAN_SHOWPIECES_MAX);
@@ -167,7 +169,7 @@ describe("R291 the tutorial's lessons", () => {
       expect(debug.debug.lesson).toBe(lesson.id);
       expect(debug.debug.seed).toBe(lesson.seed);
       expect(debug.debug.decks).toEqual(decksOf(lesson));
-      expect(debug.debug.handicaps).toEqual({ [aiSeat]: AI_TUTORIAL });
+      expect(debug.debug.handicaps).toEqual({ [aiSeat]: AI_TUTORIAL, [lesson.humanSeat]: TUTORIAL_HUMAN });
     }
   });
 

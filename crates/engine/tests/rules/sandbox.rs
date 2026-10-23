@@ -18,7 +18,7 @@ const TOKEN: &str = "fx-token-rush";
 /// The vanilla units and the Rush token, plus a unit whose Cry draws, one whose Death draws, a Trap,
 /// a Spell and a unit of a set that does not ship.
 fn setup() {
-    let mut defs = vanilla_catalog(40, 1);
+    let mut defs = vanilla_catalog(2 * DECK_SIZE, 1);
     for def in [
         unit_def(901, json!({ "id": CRY_UNIT, "name": "Cry Drawer" })),
         unit_def(902, json!({ "id": DEATH_UNIT, "name": "Death Drawer" })),

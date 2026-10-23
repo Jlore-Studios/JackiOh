@@ -24,7 +24,7 @@ fn stack_unit() -> CardDef {
 }
 
 fn catalog() -> CardDefs {
-    let mut catalog = vanilla_catalog(40, 1);
+    let mut catalog = vanilla_catalog(2 * DECK_SIZE, 1);
     for def in [rush_token(), spell_token(), stack_unit()] {
         catalog.insert(def.id.clone(), def);
     }

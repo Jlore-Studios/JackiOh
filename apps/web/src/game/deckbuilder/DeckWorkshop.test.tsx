@@ -8,6 +8,7 @@ import { checkImportRoom, validateDeck, validateTrio, type Collection } from "@j
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
@@ -171,6 +172,19 @@ describe("the rail", () => {
     expect(part).toHaveTextContent(`7/${String(DECK_SIZE)}`);
     expect(screen.getByTestId(trioRowId("t"))).toHaveAttribute("data-ready", "false");
     expect(syncState()).toBe("saved");
+  });
+
+  it("R1705001 shows a saved EARLIER_DECK_SIZE-card deck as incomplete", () => {
+    // A deck saved complete before #1705 is a draft now: it keeps its cards and counts toward DECK_SIZE.
+    const earlier = ONE.slice(0, EARLIER_DECK_SIZE);
+    expect(earlier).toHaveLength(EARLIER_DECK_SIZE);
+    mount({ decks: [savedDeck("earlier", "Old Aggro", earlier, 1)] });
+    const row = screen.getByTestId(deckRowId("earlier"));
+    expect(row).toHaveAttribute("data-count", String(EARLIER_DECK_SIZE));
+    expect(row).toHaveAttribute("data-status", "incomplete");
+    expect(row).toHaveTextContent(`${String(EARLIER_DECK_SIZE)}/${String(DECK_SIZE)}`);
+    expect(row).not.toHaveTextContent("Ready");
+    expect(screen.getByRole("button", { name: new RegExp(`^Old Aggro, ${String(EARLIER_DECK_SIZE)} of ${String(DECK_SIZE)} cards`) })).toBe(row);
   });
 
   it("each row is named in words, with no aria-label to hide its drawn count from voice control", () => {
