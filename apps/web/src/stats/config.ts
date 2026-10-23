@@ -49,6 +49,9 @@ export const SHOWCASE_LEAD_MS = 1200;
 /** R1584000: how long the card waits after each animation before the next one, and before it rests, in ms. */
 export const SHOWCASE_BEAT_GAP_MS = 900;
 
+/** R1743000: the plays (games, times faced) a card needs before a per-play stat can name it, so one game does not win it. */
+export const SHOWCASE_MIN_PLAYS = 5;
+
 /** R1583000: the games the device must have logged before it names a Pocket Pick. */
 export const POCKET_PICK_MIN_GAMES = 10;
 
