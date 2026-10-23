@@ -13037,7 +13037,7 @@
       "failures": 0,
       "feedback_since": "2026-10-23T17:17:13Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 1728,
       "kind": "revise",
       "pending_request": false,
