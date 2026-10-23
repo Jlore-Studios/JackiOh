@@ -2745,7 +2745,7 @@ pub(crate) fn handicap_decks_for_seed_from(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use jackioh_engine::{GameOverReason, GameResult, Winner};
 
@@ -4049,7 +4049,7 @@ mod tests {
         }
     }
 
-    mod fuzz_endings_channel {
+    pub(crate) mod fuzz_endings_channel {
         use super::*;
         use jackioh_engine::testkit::{
             CardScripts, Script, clear_overrides, json_as, register_catalog_as, register_scripts,
@@ -4073,7 +4073,7 @@ mod tests {
 
         /// A fixture Unit whose owner's opponent's emotes reach the board (Radiant M#71's flag), the
         /// only card that makes an emote legal (R1127).
-        const LISTENER: &str = "fuzz-listener";
+        pub(crate) const LISTENER: &str = "fuzz-listener";
 
         /// `failure` as a panic that names its seed and stage, the report's own order.
         fn fail(seed: u32, failure: FuzzFailure) -> ! {
@@ -4093,7 +4093,7 @@ mod tests {
         }
 
         /// Puts the listener in this thread's catalog and scripts; `clear_overrides` takes it out.
-        fn install_listener() {
+        pub(crate) fn install_listener() {
             register_all();
             let face = json!({ "attack": 1, "health": 1, "keywords": [],
                 "text": "Your opponent's emotes reach the board (fuzz fixture)." });
