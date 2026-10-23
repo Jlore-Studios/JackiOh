@@ -206,10 +206,14 @@ fn face_uplift(state: &GameState, card: &CardInstance, def: &CardDef, w: &EvalWe
 
 /// An own hand card, a Temporary one (R637) at `temporary_discount` off, a Radiant one with
 /// `radiant_in_hand` for its Radiant text, and one with two Unit faces with `radiant_face_share` of
-/// what the face it will enter with adds to its printed one (`face_uplift`, #1143). While a delayed
-/// discard of the hand waits (`doomed`, `discards_hand`), it keeps the smaller of Temporary's share and
-/// `doomed_hand_discount`'s.
-fn hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, w: &EvalWeights) -> f64 {
+/// what the face it will enter with adds to its printed one (`face_uplift`, #1143).
+pub(crate) fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    doomed_hand_card_value(state, card, false, w)
+}
+
+/// `hand_card_value`, #1722: while a delayed discard of the hand waits (`doomed`, `discards_hand`), the
+/// card keeps the smaller of Temporary's share and `doomed_hand_discount`'s.
+fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {
         None => w.opponent_hand_cost,
@@ -481,7 +485,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     let doomed = discards_hand(state, player);
     if player == seat {
         for card in &side.hand {
-            value += hand_card_value(state, card, doomed, w);
+            value += doomed_hand_card_value(state, card, doomed, w);
         }
     } else {
         let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
