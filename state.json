@@ -12201,21 +12201,26 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:44:45Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
+      "pr": 1734,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-23T12:59:24Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "39965195376",
       "started_at": "2026-10-23T13:55:02Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:6365435449"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "1715": {
       "action": "build",
