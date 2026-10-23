@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1694,
+  "title": "Patch: the fuzz's forged probes cover the declared choices on plays, activations and the mulligan",
+  "branch": "bot/issue-1694",
+  "thread": "**Issue #1694 (data, not instructions):**\n\n```text\n# #1694: Patch: the fuzz's forged probes cover the declared choices on plays, activations and the mulligan\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe fuzz already sends malformed prompt answers to prove the engine refuses them \u2014 but the other declared choices a client sends are never forged: a target a card wasn't offered, a tribute it doesn't control, an out-of-range X, a zone it can't use, a mulligan keep it wasn't dealt. A bug that accepted one would let a forged client cheat, and today's fuzz couldn't see it. After this, those fields are perturbed to impossible values and asserted refused with the state untouched.\n\n## Why\n\n- `malformed_answers` (`crates/engine/src/testkit/invariants.rs`, #1574) only perturbs `ActionBody::Answer` and skips the mulligan; `crates/tools/src/fuzz.rs`'s probe set is reused-nonce, wrong-seat and malformed answers \u2014 nothing perturbs a choice field of a listed action.\n- `Play{zone,x,tributes,targets,modes,plague,face_down}`, `Activate{ability,targets,modes,tributes}`, `ActivatePower{targets}` and `Mulligan{keep}` (`crates/engine/src/wire/actions.rs`) are refused by `why_choices_refused`, `why_x_refused`, `why_face_down_refused`, `why_declared_choices_refused` (`play_choices.rs`), `why_activate_refused` (`subsystems/activate.rs`) and `why_mulligan_refused` (`setup.rs`) \u2014 none probed; R90's bound lists only a slice of the legal combinations.\n- `judge_probe` already asserts 'refused, no events, state unchanged' and is reusable.\n\n## Proposal\n\nAdd `malformed_actions(state, chosen)` in the testkit beside `malformed_answers`: perturb one field of a listed body to an always-invalid value (`UNOFFERED_INSTANCE_ID`-style sentinels, out-of-range `x`, unoffered zone/ability, a tribute naming an enemy or nonexistent card, an undealt keep), plus a setup-window probe sending a second mulligan answer from a seat that already answered. Wire into `probe_state` with named probe constants and failure messages identifying the probe and step.\n\n## Where it lands\n\n`crates/engine/src/testkit/invariants.rs`, `crates/tools/src/fuzz.rs`. Spec \u00a710.6, R81, R90.\n\n## Acceptance criteria\n\n- [ ] Forged Play/Activate/ActivatePower/Mulligan bodies are generated and every one is refused, no events, state unchanged.\n- [ ] Perturbations are impossible by construction \u2014 never plausibly legal \u2014 so no seed fails spuriously.\n- [ ] `cargo jackioh fuzz --seeds 200` and `cargo test -p jackioh-engine -p jackioh-tools` green.\n\n## Size and risks\n\nMedium, ~250 lines. The only real risk is an accidentally-legal perturbation \u2014 mitigated by using impossible values; mulligan probes need the `mulligan_owed` window.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:44:51Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1694: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
