@@ -288,7 +288,8 @@ Every change to card data is a patch, and every patch is kept.
   shipped X when it was logged, `commit` its key, `kind` `app`, `ai` or `internal`, and `player` the
   line the Patch notes page shows under that X (App and AI only). `cargo jackioh patches log
   <base>..<head> [--bodies <path>]` appends to it (`crates/tools/src/technical.rs`'s header has the
-  rest); nothing else writes it.
+  rest); nothing else writes it, and `cargo jackioh patches check` holds the whole file to that
+  shape on every run.
 - A branch that changes a card claims it with a pending fragment:
   `cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>"` writes
   `patches/pending/<slug>.json`, named after the title, with no version (R1366000; `--cards` names
