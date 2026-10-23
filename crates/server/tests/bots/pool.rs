@@ -488,6 +488,43 @@ async fn r1705001_a_bot_holding_a_twenty_card_deck_is_dealt_again() {
     }
 }
 
+#[tokio::test]
+async fn r1705001_twenty_card_lists_never_crowd_out_a_bots_decks() {
+    // Until the catalog version moves, the patch's totals still hold every list played at the earlier
+    // size: more of them than `draw_decks` has attempts, each failing L2.
+    let app = empty_test_app().await;
+    let pool = playable();
+    let earlier = usize::try_from(EARLIER_DECK_SIZE).expect("a deck size");
+    let patch = app.catalog.version.clone();
+    let current: Vec<String> = pool[..deck_size()].to_vec();
+    let mut records: Vec<GameRecord> = (0..=BOT_DECK_DRAW_ATTEMPTS)
+        .map(|index| {
+            let id = format!("earlier-{index}");
+            record(&id, "live", "bo1", "human", &pool[index..index + earlier], &patch)
+        })
+        .collect();
+    records.push(record("current", "live", "bo1", "human", &current, &patch));
+
+    for k in 0..10 {
+        let decks = draw_decks(
+            &format!("earlier-lists-{k}"),
+            &lists_of(&records, &patch),
+            &app.catalog,
+            0.0,
+        );
+        assert!(
+            (BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()),
+            "{} decks",
+            decks.len()
+        );
+        assert_eq!(
+            decks[0].cards, current,
+            "the one list of today's size comes first"
+        );
+        assert!(decks.iter().all(|deck| queueable(&app.catalog, &deck.cards)));
+    }
+}
+
 #[tokio::test(start_paused = true)]
 async fn r1454_a_bot_whose_start_was_cut_off_is_let_go() {
     let app = empty_test_app().await;

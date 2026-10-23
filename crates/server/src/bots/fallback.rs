@@ -83,7 +83,7 @@ pub fn scheduled_hours(bot: &BotRow) -> i32 {
 
 /// R1705001: whether a deck holds `DECK_SIZE` cards, the size L2 asks of every deck a player
 /// queues. A bot's deck dealt before the size changed holds the earlier size.
-fn holds_deck_size(cards: &[String]) -> bool {
+pub(crate) fn holds_deck_size(cards: &[String]) -> bool {
     usize::try_from(DECK_SIZE).is_ok_and(|size| cards.len() == size)
 }
 

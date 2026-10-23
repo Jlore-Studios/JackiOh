@@ -46,7 +46,7 @@ use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::api::ranked::{SeasonDeps, build_season_id};
 use crate::app::{App, now_ms};
-use crate::bots::fallback::{holds_decks, holds_trio};
+use crate::bots::fallback::{holds_deck_size, holds_decks, holds_trio};
 use crate::bots::names::draw_username;
 use crate::bots::persona::pick_bot_persona;
 use crate::config::{
@@ -272,10 +272,14 @@ pub fn bot_target_strength(strength: usize) -> f64 {
 /// `wins_b × games_a`, so no float decides it, as `win_rate_leader` does), then more games, then the
 /// ids joined, ascending; `unranked` holds the rest in the records' order. A draw is a game not won, as
 /// `card_stats` counts it, and a list needs its 20 games before it is ranked at all, so a list that
-/// won its one game never goes ahead of one that won 90 of 200.
+/// won its one game never goes ahead of one that won 90 of 200. A list not of `DECK_SIZE` cards, played
+/// before the size changed and still in the patch's totals, is left out of both (R1705001): it fails L2,
+/// and left in, such lists would take every one of `draw_decks`' attempts.
 fn ranked_human_bo1_decklists(lists: &[ListTotal]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-    let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) =
-        lists.iter().partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
+    let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) = lists
+        .iter()
+        .filter(|list| holds_deck_size(&list.deck))
+        .partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
     ranked.sort_by(|a, b| {
         (b.wins * a.games)
             .cmp(&(a.wins * b.games))
