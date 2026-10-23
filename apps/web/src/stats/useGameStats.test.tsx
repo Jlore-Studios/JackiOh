@@ -5,7 +5,7 @@ import { renderHook } from "@testing-library/react";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { baseView, card, emptySide, resetIds } from "../test/fixtures.ts";
+import { baseView, card, emptySide, resetIds, unit } from "../test/fixtures.ts";
 import { PLAYER_STATS_KEY } from "./config.ts";
 import { dropPlayerStatsCache, readPlayerStats } from "./store.ts";
 import { useGameStats } from "./useGameStats.ts";
@@ -62,6 +62,22 @@ describe("R639 useGameStats", () => {
     expect(stats.losses).toBe(1);
     expect(stats.cards["core-003"]?.played).toBe(1);
     expect(stats.cards["core-001"]?.played ?? 0).toBe(0);
+  });
+
+  it("R1743000 the view before reaches the count: a hit's overkill, the turns and the streak land in the totals", () => {
+    const board = (health: number): Partial<PlayerView> => ({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "mine", defId: "core-004" }), null, null, null, null] }),
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "enemy", health }), null, null, null, null] }),
+    });
+    const turn: GameEvent = { type: "turnStarted", player: "p1", turn: 4 };
+    const attack: GameEvent = { type: "attackDeclared", attackerId: "mine", targetId: "enemy", forced: false };
+    const hit: GameEvent = { type: "damage", sourceId: "mine", targetId: "enemy", amount: 5, combat: true };
+    const { rerender } = renderHook(({ view }) => useGameStats(view, true), { initialProps: { view: viewWith([], board(2)) } });
+    rerender({ view: viewWith([turn, attack, hit], board(0)) });
+    rerender({ view: viewWith([turn, attack, hit], { ...board(0), result: { winner: "p1", reason: "hero-death" } }) });
+    const stats = readPlayerStats();
+    expect(stats).toMatchObject({ games: 1, wins: 1, streak: 1, bestStreak: 1, longestGame: 4 });
+    expect(stats.cards["core-004"]).toMatchObject({ attacks: 1, damageDealt: 5, biggestHit: 5, overkill: 3 });
   });
 
   it("R639 a board the route does not track logs nothing", () => {

@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { paths } from "../net/navigate.ts";
 import { SESSION_STORAGE_KEY } from "../net/session.ts";
 import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
+import { EMPTY_LOG } from "../stats/model.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -668,17 +669,7 @@ describe("R654 public statistics route", () => {
     );
     // Record game with core-001 played
     recordGame(
-      {
-        seen: ["core-001"],
-        played: { "core-001": 5 },
-        playedAgainst: {},
-        destroyed: {},
-        defeated: {},
-        allured: {},
-        lethal: {},
-        sprung: {},
-        survived: {},
-      },
+      { ...EMPTY_LOG, seen: ["core-001"], played: { "core-001": 5 } },
       "win",
     );
 

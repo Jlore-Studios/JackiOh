@@ -3,13 +3,78 @@
 
 import type { PlayerId } from "@jackioh/shared";
 
-export const CARD_COUNTERS = ["seen", "played", "playedAgainst", "destroyed", "defeated", "allured", "lethal", "sprung", "survived"] as const;
+export const CARD_COUNTERS = [
+  "seen",
+  "played",
+  "playedAgainst",
+  "destroyed",
+  "defeated",
+  "allured",
+  "lethal",
+  "sprung",
+  "survived",
+  "damageDealt",
+  "biggestHit",
+  "overkill",
+  "attacks",
+  "healing",
+  "drawn",
+  "radiant",
+  "playedInWin",
+  "playedInLoss",
+] as const;
 export type CardCounter = (typeof CARD_COUNTERS)[number];
 
-/** Per-card viewer counts: seen, player/opponent plays, player/opponent destroyed cards, and (R1582000) the player's cards the opponent's Allure took, lethal blows, Traps fired and survivors. */
+/** R1743000: the counters a game's log adds to a card's total. */
+export const SUMMED_COUNTERS = [
+  "played",
+  "playedAgainst",
+  "destroyed",
+  "defeated",
+  "allured",
+  "lethal",
+  "sprung",
+  "survived",
+  "damageDealt",
+  "attacks",
+  "healing",
+  "drawn",
+  "radiant",
+] as const;
+export type SummedCounter = (typeof SUMMED_COUNTERS)[number];
+
+/** R1743000: the counters that keep the largest value of any game, not a sum. */
+export const MAX_COUNTERS = ["biggestHit", "overkill"] as const;
+export type MaxCounter = (typeof MAX_COUNTERS)[number];
+
+/**
+ * Per-card viewer counts: seen, player/opponent plays, player/opponent destroyed cards, (R1582000) the
+ * player's cards the opponent's Allure took, lethal blows, Traps fired and survivors, and (R1743000)
+ * damage dealt, the biggest hit and the most overkill (each a maximum), attacks, healing, draws, Radiant
+ * changes and the games won and lost with the card played.
+ */
 export type CardCounters = Readonly<Record<CardCounter, number>>;
 
-export const NO_COUNTS: CardCounters = Object.freeze({ seen: 0, played: 0, playedAgainst: 0, destroyed: 0, defeated: 0, allured: 0, lethal: 0, sprung: 0, survived: 0 });
+export const NO_COUNTS: CardCounters = Object.freeze({
+  seen: 0,
+  played: 0,
+  playedAgainst: 0,
+  destroyed: 0,
+  defeated: 0,
+  allured: 0,
+  lethal: 0,
+  sprung: 0,
+  survived: 0,
+  damageDealt: 0,
+  biggestHit: 0,
+  overkill: 0,
+  attacks: 0,
+  healing: 0,
+  drawn: 0,
+  radiant: 0,
+  playedInWin: 0,
+  playedInLoss: 0,
+});
 
 export type PlayerStats = {
   readonly games: number;
@@ -18,6 +83,14 @@ export type PlayerStats = {
   readonly draws: number;
   /** By catalog definition id. */
   readonly cards: Readonly<Record<string, CardCounters>>;
+  /** R1743000: the games won in a row now; a loss or a draw resets it. */
+  readonly streak: number;
+  /** R1743000: the most games won in a row. */
+  readonly bestStreak: number;
+  /** R1743000: the most turns any finished game ran. */
+  readonly longestGame: number;
+  /** R1743000: the player's plays, by card, in that longest game. */
+  readonly longestGamePlayed: Readonly<Record<string, number>>;
 };
 
 export const EMPTY_STATS: PlayerStats = Object.freeze({
@@ -26,6 +99,10 @@ export const EMPTY_STATS: PlayerStats = Object.freeze({
   losses: 0,
   draws: 0,
   cards: Object.freeze({}),
+  streak: 0,
+  bestStreak: 0,
+  longestGame: 0,
+  longestGamePlayed: Object.freeze({}),
 });
 
 export type GameLog = {
@@ -43,6 +120,22 @@ export type GameLog = {
   readonly sprung: Readonly<Record<string, number>>;
   /** R1582000: the player's Units standing when a game they won ended. */
   readonly survived: Readonly<Record<string, number>>;
+  /** R1743000: the damage the player's cards dealt. */
+  readonly damageDealt: Readonly<Record<string, number>>;
+  /** R1743000: the largest single hit of each of the player's cards. */
+  readonly biggestHit: Readonly<Record<string, number>>;
+  /** R1743000: the most by which one hit of each of the player's cards went past its target's health. */
+  readonly overkill: Readonly<Record<string, number>>;
+  /** R1743000: the attacks the player's cards declared. */
+  readonly attacks: Readonly<Record<string, number>>;
+  /** R1743000: the healing the player's cards caused. */
+  readonly healing: Readonly<Record<string, number>>;
+  /** R1743000: the player's draws that showed the card. */
+  readonly drawn: Readonly<Record<string, number>>;
+  /** R1743000: the player's cards made Radiant. */
+  readonly radiant: Readonly<Record<string, number>>;
+  /** R1743000: the highest turn a `turnStarted` named in this game. */
+  readonly turns: number;
 };
 
 export const EMPTY_LOG: GameLog = Object.freeze({
@@ -55,6 +148,14 @@ export const EMPTY_LOG: GameLog = Object.freeze({
   lethal: Object.freeze({}),
   sprung: Object.freeze({}),
   survived: Object.freeze({}),
+  damageDealt: Object.freeze({}),
+  biggestHit: Object.freeze({}),
+  overkill: Object.freeze({}),
+  attacks: Object.freeze({}),
+  healing: Object.freeze({}),
+  drawn: Object.freeze({}),
+  radiant: Object.freeze({}),
+  turns: 0,
 });
 
 export type GameOutcome = "win" | "loss" | "draw";
@@ -68,8 +169,14 @@ function bump(counts: Readonly<Record<string, number>>, id: string, by = 1): Rec
   return { ...counts, [id]: (counts[id] ?? 0) + by };
 }
 
-export function logWith(log: GameLog, counter: Exclude<CardCounter, "seen">, id: string): GameLog {
-  return { ...log, [counter]: bump(log[counter], id) };
+export function logWith(log: GameLog, counter: SummedCounter, id: string, by = 1): GameLog {
+  return { ...log, [counter]: bump(log[counter], id, by) };
+}
+
+/** R1743000: raises a card's `counter` to `value` when that is more than it holds; else the log itself. */
+export function logMax(log: GameLog, counter: MaxCounter, id: string, value: number): GameLog {
+  if (value <= (log[counter][id] ?? 0)) return log;
+  return { ...log, [counter]: { ...log[counter], [id]: value } };
 }
 
 export function logSeen(log: GameLog, ids: Iterable<string>): GameLog {
@@ -86,33 +193,43 @@ export function logSeen(log: GameLog, ids: Iterable<string>): GameLog {
 export function logIsEmpty(log: GameLog): boolean {
   return (
     log.seen.length === 0 &&
-    Object.keys(log.played).length === 0 &&
-    Object.keys(log.playedAgainst).length === 0 &&
-    Object.keys(log.destroyed).length === 0 &&
-    Object.keys(log.defeated).length === 0 &&
-    Object.keys(log.allured).length === 0 &&
-    Object.keys(log.lethal).length === 0 &&
-    Object.keys(log.sprung).length === 0 &&
-    Object.keys(log.survived).length === 0
+    log.turns === 0 &&
+    [...SUMMED_COUNTERS, ...MAX_COUNTERS].every((counter) => Object.keys(log[counter]).length === 0)
   );
 }
 
 export function addGame(stats: PlayerStats, log: GameLog, outcome: GameOutcome): PlayerStats {
   const cards: Record<string, CardCounters> = { ...stats.cards };
-  const add = (id: string, counter: CardCounter, by: number): void => {
+  const change = (id: string, counter: CardCounter, to: (held: number) => number): void => {
     const current = cards[id] ?? NO_COUNTS;
-    cards[id] = { ...current, [counter]: current[counter] + by };
+    cards[id] = { ...current, [counter]: to(current[counter]) };
+  };
+  const add = (id: string, counter: CardCounter, by: number): void => {
+    change(id, counter, (held) => held + by);
   };
   for (const id of log.seen) add(id, "seen", 1);
-  for (const counter of ["played", "playedAgainst", "destroyed", "defeated", "allured", "lethal", "sprung", "survived"] as const) {
+  for (const counter of SUMMED_COUNTERS) {
     for (const [id, n] of Object.entries(log[counter])) add(id, counter, n);
   }
+  for (const counter of MAX_COUNTERS) {
+    for (const [id, n] of Object.entries(log[counter])) change(id, counter, (held) => Math.max(held, n));
+  }
+  // R1743000: a game won or lost counts once for each card the player played in it; a draw for neither.
+  if (outcome !== "draw") {
+    for (const id of Object.keys(log.played)) add(id, outcome === "win" ? "playedInWin" : "playedInLoss", 1);
+  }
+  const streak = outcome === "win" ? stats.streak + 1 : 0;
+  const longer = log.turns > stats.longestGame;
   return {
     games: stats.games + 1,
     wins: stats.wins + (outcome === "win" ? 1 : 0),
     losses: stats.losses + (outcome === "loss" ? 1 : 0),
     draws: stats.draws + (outcome === "draw" ? 1 : 0),
     cards,
+    streak,
+    bestStreak: Math.max(stats.bestStreak, streak),
+    longestGame: longer ? log.turns : stats.longestGame,
+    longestGamePlayed: longer ? log.played : stats.longestGamePlayed,
   };
 }
 

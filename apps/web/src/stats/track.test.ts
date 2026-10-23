@@ -7,7 +7,7 @@ import { ALLURE_MARK } from "../cards/marks.ts";
 import { HIDDEN_ID } from "../game/animations.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, resetIds, unit } from "../test/fixtures.ts";
 import { EMPTY_LOG, logWith } from "./model.ts";
-import { countAllured, countEvent, countWin, observe, outcomeOfView, seenIn } from "./track.ts";
+import { countAllured, countEvent, countHealing, countHits, countWin, observe, outcomeOfView, seenIn } from "./track.ts";
 
 beforeEach(() => {
   resetIds();
@@ -102,7 +102,7 @@ describe("R639 what the events count", () => {
   });
 
   it("R639 other events change nothing", () => {
-    const event: GameEvent = { type: "turnStarted", player: "p1", turn: 3 };
+    const event: GameEvent = { type: "healthLost", player: "p1", amount: 3 };
     expect(countEvent(EMPTY_LOG, event, "p1")).toBe(EMPTY_LOG);
   });
 });
@@ -254,6 +254,184 @@ describe("R1582000 the new counters", () => {
     expect(log.allured).toEqual({ "core-050": 1 });
     expect(log.lethal).toEqual({ "core-004": 1 });
     expect(log.survived).toEqual({ "core-004": 1 });
+  });
+});
+
+describe("R1743000 the damage, attacks, healing, draws, Radiant changes and turns", () => {
+  const hit = (sourceId: string | null, targetId: string, amount = 3): GameEvent => ({
+    type: "damage",
+    sourceId,
+    targetId,
+    amount,
+    combat: true,
+  });
+  const attack = (attackerId: string, targetId = "hero-p2"): GameEvent => ({
+    type: "attackDeclared",
+    attackerId,
+    targetId,
+    forced: false,
+  });
+  const healed = (amount: number): GameEvent => ({ type: "healed", targetId: "hero-p1", amount });
+  const activated = (player: "p1" | "p2", defId: string): GameEvent => ({
+    type: "activated",
+    player,
+    instanceId: "i1",
+    defId,
+    ability: "a",
+  });
+  const sprung = (controller: "p1" | "p2", defId: string): GameEvent => ({
+    type: "trapFired",
+    instanceId: "t1",
+    defId,
+    controller,
+    row: "backrow",
+    lane: 0,
+  });
+  const drew = (player: "p1" | "p2", defId: string): GameEvent => ({ type: "drawn", player, instanceId: "d1", defId });
+  const shone = (player: "p1" | "p2", defId: string): GameEvent => ({
+    type: "radiantSet",
+    instanceId: "r1",
+    defId,
+    zone: { z: "hand", player },
+  });
+  /** The viewer's Unit "mine" and a spell in their graveyard; the opponent's Unit "enemy". */
+  const view = baseView({
+    you: emptySide("p1", {
+      units: [unit("p1", { instanceId: "mine", defId: "core-004" }), null, null, null, null],
+      graveyard: [card({ instanceId: "bolt", defId: "core-030" })],
+    }),
+    opponent: emptySide("p2", {
+      units: [unit("p2", { instanceId: "enemy", defId: "core-006", health: 4 }), null, null, null, null],
+    }),
+  });
+
+  it("R1743000 the viewer's hits add their damage and keep the biggest; a hidden, null, zero or opposing source counts nothing", () => {
+    const fresh = [
+      hit("mine", "hero-p2", 3),
+      hit("mine", "enemy", 5),
+      hit("bolt", "u99", 2),
+      hit(null, "hero-p2", 9),
+      hit(HIDDEN_ID, "hero-p2", 9),
+      hit("enemy", "hero-p1", 7),
+      hit("mine", "hero-p2", 0),
+      hit("nobody", "hero-p2", 8),
+    ];
+    const log = countHits(EMPTY_LOG, view, fresh, null);
+    expect(log.damageDealt).toEqual({ "core-004": 8, "core-030": 2 });
+    expect(log.biggestHit).toEqual({ "core-004": 5, "core-030": 2 });
+    expect(countHits(EMPTY_LOG, view, [hit(null, "hero-p2"), hit("enemy", "hero-p1")], null)).toBe(EMPTY_LOG);
+  });
+
+  it("R1743000 overkill reads the target's health in the previous view less the hits before it in the batch, and none without one", () => {
+    const before = baseView({
+      opponent: emptySide("p2", {
+        hero: { health: 5, armor: 0, powers: [], power: null },
+        units: [unit("p2", { instanceId: "enemy", health: 4 }), null, null, null, null],
+        carried: [unit("p2", { instanceId: "tucked", health: 1 })],
+      }),
+      you: emptySide("p1", { hero: { health: 2, armor: 0, powers: [], power: null } }),
+    });
+    const fresh = [
+      hit("mine", "enemy", 3), // 4 left: not past it, 1 left
+      hit("mine", "enemy", 4), // 1 left: 3 past it
+      hit("mine", "hero-p2", 9), // 5 left: 4 past it
+      hit("mine", "tucked", 7), // 1 left: 6 past it, a carried unit counts
+      hit("mine", "u99", 50), // a target the view does not show: no overkill
+      hit("mine", HIDDEN_ID, 50),
+      hit("mine", "hero-p1", 2), // exactly its health: not past it
+    ];
+    expect(countHits(EMPTY_LOG, view, fresh, before).overkill).toEqual({ "core-004": 6 });
+    expect(countHits(EMPTY_LOG, view, fresh.slice(0, 3), before).overkill).toEqual({ "core-004": 4 });
+    // The same hits with no view before count their damage and their biggest, and no overkill.
+    const blind = countHits(EMPTY_LOG, view, fresh, null);
+    expect(blind.overkill).toEqual({});
+    expect(blind.biggestHit).toEqual({ "core-004": 50 });
+    // A hit that did nothing (zero) leaves what its target had.
+    expect(countHits(EMPTY_LOG, view, [hit("mine", "enemy", 0), hit("mine", "enemy", 5)], before).overkill).toEqual({ "core-004": 1 });
+    // A hit of the opponent's takes health off a target too, but counts for no card of the viewer's.
+    expect(countHits(EMPTY_LOG, view, [hit("enemy", "hero-p2", 4), hit("mine", "hero-p2", 4)], before).overkill).toEqual({ "core-004": 3 });
+  });
+
+  it("R1743000 only the viewer's readable attacks count", () => {
+    const log = countHits(EMPTY_LOG, view, [attack("mine"), attack("mine", "enemy"), attack("enemy", "hero-p1"), attack(HIDDEN_ID), attack("gone")], null);
+    expect(log.attacks).toEqual({ "core-004": 2 });
+    expect(countHits(EMPTY_LOG, view, [attack("enemy", "hero-p1")], null)).toBe(EMPTY_LOG);
+  });
+
+  it("R1743000 a heal counts toward the viewer's last play, activation or trap before it; none, or the opponent's, counts nothing", () => {
+    const count = (fresh: GameEvent[]): Record<string, number> => ({ ...countHealing(EMPTY_LOG, view, fresh).healing });
+    expect(count([played("p1", "core-040"), healed(3), healed(2)])).toEqual({ "core-040": 5 });
+    expect(count([played("p1", "core-040"), healed(3), activated("p1", "core-041"), healed(2)])).toEqual({ "core-040": 3, "core-041": 2 });
+    expect(count([activated("p1", "core-041"), healed(1), sprung("p1", "core-020"), healed(4)])).toEqual({ "core-041": 1, "core-020": 4 });
+    // No card before it in the batch, or a zero heal: nothing. A play after it is not its source.
+    expect(count([healed(3)])).toEqual({});
+    expect(count([healed(9), played("p1", "core-040")])).toEqual({});
+    expect(count([played("p1", "core-040"), healed(0)])).toEqual({});
+    // The opponent's (or a hidden) card is the source: the viewer's earlier one no longer is.
+    expect(count([played("p1", "core-040"), played("p2", "core-050"), healed(3)])).toEqual({});
+    expect(count([played("p1", "core-040"), activated("p2", "core-050"), healed(3)])).toEqual({});
+    expect(count([played("p1", "core-040"), sprung("p2", HIDDEN_ID), healed(3)])).toEqual({});
+    expect(count([played("p2", HIDDEN_ID), healed(3)])).toEqual({});
+    expect(countHealing(EMPTY_LOG, view, [healed(3)])).toBe(EMPTY_LOG);
+  });
+
+  it("R1743000 only the viewer's draws that show the card and the viewer's Radiant changes count", () => {
+    let log = countEvent(EMPTY_LOG, drew("p1", "core-001"), "p1");
+    log = countEvent(log, drew("p1", "core-001"), "p1");
+    log = countEvent(log, drew("p2", HIDDEN_ID), "p1");
+    log = countEvent(log, drew("p2", "core-002"), "p1");
+    expect(log.drawn).toEqual({ "core-001": 2 });
+    expect(countEvent(EMPTY_LOG, drew("p1", HIDDEN_ID), "p1")).toBe(EMPTY_LOG);
+    expect(countEvent(EMPTY_LOG, drew("p1", "core-001"), "p2")).toBe(EMPTY_LOG);
+
+    let shining = countEvent(EMPTY_LOG, shone("p1", "core-003"), "p1");
+    shining = countEvent(shining, shone("p2", "core-004"), "p1");
+    shining = countEvent(shining, shone("p1", HIDDEN_ID), "p1");
+    expect(shining.radiant).toEqual({ "core-003": 1 });
+    expect(countEvent(EMPTY_LOG, shone("p2", HIDDEN_ID), "p1")).toBe(EMPTY_LOG);
+    expect(countEvent(EMPTY_LOG, shone("p1", "core-003"), "p2")).toBe(EMPTY_LOG);
+  });
+
+  it("R1743000 a game's turns are the highest turn a turnStarted named", () => {
+    const started = (turn: number): GameEvent => ({ type: "turnStarted", player: "p1", turn });
+    const seven = countEvent(EMPTY_LOG, started(7), "p1");
+    expect(seven.turns).toBe(7);
+    // An older or equal turn is the very same log; a later one raises it.
+    expect(countEvent(seven, started(5), "p1")).toBe(seven);
+    expect(countEvent(seven, started(7), "p1")).toBe(seven);
+    expect(countEvent(seven, started(8), "p2").turns).toBe(8);
+  });
+
+  it("R1743000 observe counts them all from a view, its new events and the view before", () => {
+    const before = baseView({
+      opponent: emptySide("p2", { units: [unit("p2", { instanceId: "enemy", health: 2 }), null, null, null, null] }),
+    });
+    const log = observe(
+      EMPTY_LOG,
+      view,
+      [
+        { type: "turnStarted", player: "p1", turn: 9 },
+        drew("p1", "core-001"),
+        played("p1", "core-030"),
+        attack("mine", "enemy"),
+        hit("mine", "enemy", 5),
+        healed(2),
+        shone("p1", "core-004"),
+      ],
+      before,
+    );
+    expect(log).toMatchObject({
+      turns: 9,
+      drawn: { "core-001": 1 },
+      attacks: { "core-004": 1 },
+      damageDealt: { "core-004": 5 },
+      biggestHit: { "core-004": 5 },
+      overkill: { "core-004": 3 },
+      healing: { "core-030": 2 },
+      radiant: { "core-004": 1 },
+    });
+    // Without the view before, as for a seat's first view, the rest still counts.
+    expect(observe(EMPTY_LOG, view, [hit("mine", "enemy", 5)]).overkill).toEqual({});
   });
 });
 
