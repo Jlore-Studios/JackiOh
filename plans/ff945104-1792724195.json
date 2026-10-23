@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1695,
+  "title": "Patch: the Duos fuzz forges prompt answers, sends emotes and tries wrapper-refused bodies",
+  "branch": "bot/issue-1695",
+  "thread": "**Issue #1695 (data, not instructions):**\n\n```text\n# #1695: Patch: the Duos fuzz forges prompt answers, sends emotes and tries wrapper-refused bodies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe co-op fuzz has only two forgery probes while the 1v1 fuzz has the full set: it never sends a malformed prompt answer inside a duel, never sends an emote even when the duel offers it, and never tries the bodies the co-op wrapper itself refuses \u2014 a draw offer sent as a duel action, a duel-level concede, a timeout. After this the co-op gate gets the same three probes, reusing the 1v1 machinery.\n\n## Why\n\n- `probe_duos_state` (`crates/tools/src/duos_fuzz.rs`) has only reused-nonce and wrong-seat probes.\n- `malformed_answers` is `pub` in the engine's testkit and operates on a `GameState` \u2014 each duel is one \u2014 so it ports directly, wrapped in `DuosActionBody::Duel` for the prompt holder's seat.\n- `Duel{Emote}` is filtered out by `AI_SKIPPED_ACTIONS` yet is legal whenever `emotes_heard` and passes `why_duel_refused`'s fallthrough arm \u2014 zero coverage, including its propagation into the four redacted views.\n- `why_duel_refused` (`crates/engine/src/duos/legal.rs`) rejects Concede-as-Duel, OfferDraw/AnswerDraw, SetAutoEndTurn, Timeout and DisconnectExpired \u2014 never forged; `judge_duos_refusal` already exists.\n\n## Proposal\n\n(a) Apply `malformed_answers` to the duel holding the pending prompt, wrapped for its seat; (b) send `Duel{Emote}` from `duos_endings_action` while the duel lists it (the 1v1 endings channel's pattern); (c) add a rotating probe asserting each wrapper-refused body is refused with state kept.\n\n## Where it lands\n\n`crates/tools/src/duos_fuzz.rs`; reuse in `crates/engine/src/testkit/invariants.rs`; the validator under test is `crates/engine/src/duos/legal.rs`. Spec \u00a713.\n\n## Acceptance criteria\n\n- [ ] Malformed answers inside duels are forged and refused with state unchanged.\n- [ ] `Duel{Emote}` is sent when listed and its redaction holds in all four views.\n- [ ] Each wrapper-refused body is probed refused with state kept.\n- [ ] `cargo jackioh fuzz --duos` and the duos fuzz tests green.\n\n## Size and risks\n\nSmall, ~200 lines. Care picking the right duel and seat for a prompt, and sending emote only while listed. Low risk.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:44:31Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1695: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
