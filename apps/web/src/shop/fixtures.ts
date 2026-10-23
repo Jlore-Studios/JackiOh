@@ -107,6 +107,7 @@ export function openedCosmeticPack(): OpenedCosmeticPackResponse {
       },
       { rarity: "Rare", grant: { kind: "bars" } },
     ],
+    shardBefore: 19,
     shardBar: { points: 20, size: 20 },
     unopened: 1,
     bars: {

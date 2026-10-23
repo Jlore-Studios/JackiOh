@@ -734,6 +734,8 @@ async fn r1306002_the_shard_bar_counts_one_per_pack_pays_when_full_and_empties()
     let pack = open_cosmetic_pack(&app, PROFILE, &[], "r1306002-full")
         .await
         .expect("the opening");
+    // The answer names the points it found, for the client to fill the bar from (#1667).
+    assert_eq!(pack.shard_before, CHASE_SHARD_PACKS - 1);
     assert_eq!(pack.shard_bar.points, CHASE_SHARD_PACKS);
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, CHASE_SHARD_PACKS);
 
@@ -777,6 +779,7 @@ async fn r1306002_the_shard_bar_counts_one_per_pack_pays_when_full_and_empties()
     let pack = open_cosmetic_pack(&app, PROFILE, &[], "r1306002-again")
         .await
         .expect("the opening");
+    assert_eq!(pack.shard_before, 0);
     assert_eq!(pack.shard_bar.points, 1);
 
     // An account Mythic cosmetic, with no card, is bought the same way.

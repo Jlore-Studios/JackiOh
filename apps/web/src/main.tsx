@@ -746,7 +746,7 @@ export function App(): ReactElement {
     }
     if (path === paths.privacy) return <PrivacyRoute />;
     if (path === paths.terms) return <TermsRoute />;
-    // R1665000: the odds are published to anyone; the page reads the account's counters itself, with a session.
+    // R1665000: the page is public, its disclaimer anyone's; with a session it reads the odds and the account's counters itself.
     if (path === paths.purchases) return <PurchasesRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;

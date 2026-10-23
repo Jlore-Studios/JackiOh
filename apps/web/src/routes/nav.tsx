@@ -18,7 +18,10 @@ export type BackLinkProps = {
   label?: string;
   /** Releases screen-owned state before navigation. */
   onLeave?: () => void;
-  /** Overrides the default release-and-navigate sequence for confirmation flows. */
+  /**
+   * Overrides the default release-and-navigate sequence for confirmation flows. Such a screen guards
+   * its way out, so its top bar has no Jlore pill, a link that would leave past the guard (R1651000).
+   */
   onPress?: () => void;
   /** Extra top-bar content; settings remains the top-right control. */
   children?: ReactNode;
@@ -60,7 +63,7 @@ export function BackLink({
         {label === undefined ? t("← Back") : t(label)}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
-      {showSettings && showWallet ? <JlorePill /> : null}
+      {showSettings && showWallet && onPress === undefined ? <JlorePill /> : null}
       {showSettings ? <LanguageButton placement="nav" /> : null}
       {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>

@@ -352,6 +352,20 @@ describe("where the pill sits", () => {
     expect(server.to("GET", "/api/wallet")).toHaveLength(0);
   });
 
+  it("R1651000 BackLink with onPress, a screen that guards its way out (the card creator's), has no pill to leave by", async () => {
+    signIn();
+    const server = serve();
+    const onPress = vi.fn<() => void>();
+    render(<BackLink onPress={onPress} />);
+    act(() => {
+      announceWallet();
+    });
+
+    expect(screen.getByTestId("settings-open-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId(jlorePillTestid)).toBeNull();
+    expect(server.to("GET", "/api/wallet")).toHaveLength(0);
+  });
+
   it("BackLink with showWallet={false}, a signed-out screen's, keeps its buttons, has no pill and reads no wallet", async () => {
     signIn();
     const server = serve();

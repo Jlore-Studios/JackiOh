@@ -70,6 +70,7 @@ import { GameResult, theirHandOf, type ResultForm } from "./Result.tsx";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import FxLayer from "../fx/FxLayer.tsx";
 import CardShowcase from "./showcase/CardShowcase.tsx";
+import { WearerProvider } from "./wearer.ts";
 import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
@@ -693,6 +694,8 @@ export default function Game({
       {/* R502: the effects read the newest view for a number no event carries, and the showcase holds a
           cast on draw up as the runner reaches it. */}
       <FxLayer queue={runner} view={shown} latest={view} paused={hitStop} />
+      {/* R1655000: the showcase of the viewer's own play and their mulligan wear their cards' picks, as the board does. */}
+      <WearerProvider seat={wearCosmetics && !replay ? shown.viewer : null}>
       <CardShowcase view={view} queue={runner} />
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
@@ -711,6 +714,7 @@ export default function Game({
           onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}
         />
       )}
+      </WearerProvider>
       {replay ? null : (
         <DragLayer
           view={shown}

@@ -199,28 +199,37 @@ function resolveCardPicks(stored: StoredCardPicks): CardPicks {
 /** The stored picks by card id, and what each reads as: one object per card, kept while the card's picks stand. */
 type CardPicksState = { stored: Map<string, StoredCardPicks>; resolved: Map<string, CardPicks> };
 
-/** Absent, throwing or unparsable storage gives no picks. */
-function loadCardPicks(): CardPicksState {
-  const state: CardPicksState = { stored: new Map(), resolved: new Map() };
+/** What storage holds of every card's picks, as written: absent, throwing or unparsable storage holds none. */
+function readStoredCardPicks(): Record<string, unknown> {
   try {
     const text = defaultStorage()?.getItem(CARD_PICKS_SETTINGS_KEY) ?? null;
     const parsed: unknown = text === null ? null : JSON.parse(text);
-    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
-      for (const [defId, raw] of Object.entries(parsed)) {
-        const picks = normalizeStoredPicks(raw);
-        if (Object.keys(picks).length > 0) {
-          state.stored.set(defId, picks);
-          state.resolved.set(defId, resolveCardPicks(picks));
-        }
-      }
-    }
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
   } catch {
     // Unparsable or blocked storage: no card has a pick of its own.
+  }
+  return {};
+}
+
+function cardPicksFrom(stored: Record<string, unknown>): CardPicksState {
+  const state: CardPicksState = { stored: new Map(), resolved: new Map() };
+  for (const [defId, raw] of Object.entries(stored)) {
+    const picks = normalizeStoredPicks(raw);
+    if (Object.keys(picks).length > 0) {
+      state.stored.set(defId, picks);
+      state.resolved.set(defId, resolveCardPicks(picks));
+    }
   }
   return state;
 }
 
+function loadCardPicks(): CardPicksState {
+  return cardPicksFrom(readStoredCardPicks());
+}
+
 let cardPicksState: CardPicksState | null = null;
+/** Whether a write failed, so the picks in memory are newer than storage's. */
+let cardPicksUnsaved = false;
 const cardPicksListeners = new Set<() => void>();
 
 function cardPicks(): CardPicksState {
@@ -244,9 +253,19 @@ export function useCardPicks(defId: string): CardPicks {
   return useSyncExternalStore(subscribeCardPicks, () => readCardPicks(defId), () => readCardPicks(defId));
 }
 
-/** Changes `defId`'s stored picks by `change`, persists in try/catch and notifies synchronously, unless nothing changed. */
+/**
+ * Changes `defId`'s stored picks by `change`, persists in try/catch and notifies synchronously, unless
+ * nothing changed. It starts from what storage holds now, so a pick another tab wrote since this page
+ * read stands, and it rewrites only the fields this client knows of `defId`'s entry, so a newer
+ * client's kinds are kept, as `normalizeCosmetics` keeps its ids.
+ */
 function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void): void {
-  const state = cardPicks();
+  const storage = defaultStorage();
+  // After a failed write the picks live in memory alone, and what storage holds would forget them.
+  const fromStorage = storage !== null && !cardPicksUnsaved;
+  const written = fromStorage ? readStoredCardPicks() : (Object.fromEntries(cardPicks().stored) as Record<string, unknown>);
+  const state = fromStorage ? cardPicksFrom(written) : cardPicks();
+  cardPicksState = state;
   const before = state.stored.get(defId) ?? {};
   const picks: StoredCardPicks = { ...before };
   change(picks);
@@ -258,10 +277,20 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
     state.stored.set(defId, picks);
     state.resolved.set(defId, resolveCardPicks(picks));
   }
+  const raw = written[defId];
+  const entry: Record<string, unknown> = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? { ...raw } : {};
+  for (const field of CARD_PICK_FIELDS) {
+    if (picks[field] === undefined) delete entry[field];
+    else entry[field] = picks[field];
+  }
+  if (Object.keys(entry).length === 0) delete written[defId];
+  else written[defId] = entry;
   try {
-    defaultStorage()?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(Object.fromEntries(state.stored)));
+    storage?.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify(written));
+    cardPicksUnsaved = storage === null;
   } catch {
     // Quota, private mode or blocked storage: the picks still hold in memory for this page.
+    cardPicksUnsaved = true;
   }
   for (const listener of [...cardPicksListeners]) listener();
 }
@@ -504,6 +533,7 @@ export function resetCosmeticsForTests(): void {
   current = null;
   listeners.clear();
   cardPicksState = null;
+  cardPicksUnsaved = false;
   cardPicksListeners.clear();
   moving.clear();
   queued.length = 0;

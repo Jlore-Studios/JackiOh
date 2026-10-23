@@ -30,6 +30,7 @@ import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
+import { OnceRevealed } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
@@ -452,8 +453,13 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               {t("Daily Jlore reached")}
             </p>
           ) : null}
-          {/* #1664: the tracks the game moved, level by level with their rewards, and the quests it completed. */}
-          {view.result !== null && match.economy !== null ? <XpReveal economy={match.economy} /> : null}
+          {/* #1664: the tracks the game moved, level by level with their rewards, and the quests it completed,
+              played once the panel has come in. */}
+          {view.result !== null && match.economy !== null ? (
+            <OnceRevealed>
+              <XpReveal economy={match.economy} />
+            </OnceRevealed>
+          ) : null}
         </>
       }
       turnClock={

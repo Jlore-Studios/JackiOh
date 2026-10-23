@@ -502,6 +502,26 @@ describe("R1655000 a card in context", () => {
     expect(large().getAttribute("data-full-art")).toBe("true");
   });
 
+  it("R1655000 a full art shown, not chosen, is not marked as worn: the strip says what the card wears", () => {
+    open(BIG_D, OWNS_BIG_D_ART);
+    const useDefault = screen.getByTestId(T.stripDefault("fullArt"));
+    expect(useDefault).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.focus(item(BIG_D_ART));
+    expect(large().getAttribute("data-full-art"), "the large card shows it").toBe("true");
+    expect(item(BIG_D_ART)).toHaveAttribute("aria-pressed", "false");
+    expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "false");
+    expect(useDefault).toHaveAttribute("aria-pressed", "true");
+
+    // Chosen, it is.
+    fireEvent.click(item(BIG_D_ART));
+    expect(item(BIG_D_ART)).toHaveAttribute("aria-pressed", "true");
+    expect(useDefault).toHaveAttribute("aria-pressed", "false");
+    fireEvent.blur(item(BIG_D_ART));
+    expect(item(BIG_D_ART)).toHaveAttribute("aria-pressed", "true");
+    expect(readCardPicks(BIG_D)).toEqual({ fullArt: true });
+  });
+
   it("R1655000 a shown full art is given back when the view closes or the page is left", () => {
     writeCardSettings({ fullArt: false });
     writeCardPick(BIG_D, "border", "border-bone");

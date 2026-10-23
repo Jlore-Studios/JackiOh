@@ -539,7 +539,7 @@ describe("#1667 the Chase Shard bar", () => {
   });
 
   /** The panel read (19 of 20), then the opening pressed: the answer is in and the bar is at its start. */
-  async function opened(over: { packs?: Reply } = {}): Promise<void> {
+  async function opened(over: { packs?: Reply; open?: Reply } = {}): Promise<void> {
     cosmeticServer(over);
     render(<CosmeticPacks token={TOKEN} registry={[AURORA]} />);
     await flush();
@@ -595,7 +595,7 @@ describe("#1667 the Chase Shard bar", () => {
   it("an opening that leaves the bar short of full fills it and bursts nothing", async () => {
     cosmeticServer({
       packs: { status: 200, body: { ...cosmeticPacksInfo(), shardBar: { points: 5, size: 20 } } },
-      open: { status: 200, body: { ...openedCosmeticPack(), shardBar: { points: 6, size: 20 } } },
+      open: { status: 200, body: { ...openedCosmeticPack(), shardBefore: 5, shardBar: { points: 6, size: 20 } } },
     });
     render(<CosmeticPacks token={TOKEN} registry={[AURORA]} />);
     await flush();
@@ -613,8 +613,25 @@ describe("#1667 the Chase Shard bar", () => {
     expect(shardBar()).toHaveAttribute("data-bursts", "0");
   });
 
+  it("fills from the points the server says the opening found, not from the panel's earlier read", async () => {
+    // The panel read 5, but another tab opened packs since: the server found 12 and left 13.
+    await opened({
+      packs: { status: 200, body: { ...cosmeticPacksInfo(), shardBar: { points: 5, size: 20 } } },
+      open: { status: 200, body: { ...openedCosmeticPack(), shardBefore: 12, shardBar: { points: 13, size: 20 } } },
+    });
+    expect(shardFill()).toBe("scaleX(0.6)");
+
+    advance(segmentMs({ from: 12, to: 13, burst: false }, 20));
+
+    expect(shardFill()).toBe("scaleX(0.65)");
+    expect(shardBar()).toHaveTextContent("13 / 20");
+  });
+
   it("a full bar holds: another opening leaves it full with no burst, and its choice stays", async () => {
-    cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
+    cosmeticServer({
+      packs: { status: 200, body: cosmeticPacksFull() },
+      open: { status: 200, body: { ...openedCosmeticPack(), shardBefore: 20 } },
+    });
     render(<CosmeticPacks token={TOKEN} registry={[AURORA]} />);
     await flush();
     expect(shardBar()).toHaveTextContent("20 / 20");

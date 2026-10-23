@@ -10,6 +10,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
+import { readOwnedFullArt, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
 import { jlorePillTestid } from "../economy/JlorePill.tsx";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
@@ -100,6 +101,7 @@ function at(path: string): void {
 beforeEach(() => {
   window.localStorage.clear();
   resetUsernamePromptForTests();
+  resetOwnedFullArtForTests();
   at("/");
 });
 
@@ -212,6 +214,26 @@ describe("#1577 the shop screen", () => {
       );
     }, SLOW);
     expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("0 Jlore");
+  });
+
+  it("an opening on the Shop has the next screen read what the account owns again", async () => {
+    stubServer((call) =>
+      call.method === "POST" && call.path === "/api/cosmetic-packs/open"
+        ? { status: 200, body: openedCosmeticPack() }
+        : shopRead(call),
+    );
+    const fetchOwned = vi.fn(() => Promise.resolve(ownedCosmeticsOf()));
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned, "the session's answer is kept").toHaveBeenCalledTimes(1);
+
+    render(<ShopRoute token={TOKEN} />);
+    fireEvent.click(await screen.findByTestId(shopTestid.open, undefined, SLOW));
+    await screen.findByTestId(shopTestid.reveal, undefined, SLOW);
+
+    // The opening may have granted a per-card cosmetic: the Collection's strip and the board read again.
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned).toHaveBeenCalledTimes(2);
   });
 
   it("R1665000 renders no pity counters and no odds table, and links /purchases", async () => {

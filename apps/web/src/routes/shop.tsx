@@ -15,6 +15,7 @@
 
 import { useState, type ReactElement } from "react";
 
+import { forgetOwnedCosmetics } from "../cards/ownedFullArt.ts";
 import PackOpening from "../packs/PackOpening.tsx";
 import CosmeticPacks from "../shop/CosmeticPacks.tsx";
 import Shop from "../shop/Shop.tsx";
@@ -56,6 +57,8 @@ function readAgain(reads: PanelReads, by: ShopPanel): PanelReads {
 export default function ShopRoute({ token }: { token: string }): ReactElement {
   const [reads, setReads] = useState<PanelReads>({ opening: 0, shop: 0, tokens: 0, cosmetics: 0 });
   const changedBy = (by: ShopPanel) => (): void => {
+    // A change may have granted a per-card cosmetic: the next screen reads what the account owns again.
+    forgetOwnedCosmetics();
     setReads((before) => readAgain(before, by));
   };
   return (

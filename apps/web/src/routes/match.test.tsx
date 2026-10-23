@@ -20,6 +20,7 @@ import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
+import { resultRevealMs } from "../game/Result.tsx";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate } from "../net/navigate.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
@@ -768,17 +769,29 @@ describe("the XP reveal on a finished match (#1664)", () => {
     return () => count;
   }
 
-  it("#1664 plays the tracks and lists the quests under the result once the server's economy arrives", async () => {
+  it("#1664 plays the tracks and lists the quests under the result once the server's economy arrives and the panel is in", () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const announced = watchWallet();
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach();
     // The result lands first; the economy comes with the view that follows its write.
     push(finished);
-    expect(await screen.findByTestId("result-back")).toBeInTheDocument();
+    expect(screen.getByTestId("result-back")).toBeInTheDocument();
     expect(screen.queryByTestId("xp-reveal")).toBeNull();
     expect(announced()).toBe(0);
 
     push(finished, { economy });
+    expect(announced()).toBe(1);
+    // The panel waits out the effects layer's Victory, and the bars wait for it: they play where they are seen.
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "false");
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(resultRevealMs());
+    });
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "true");
     expect(screen.getByTestId("xp-reveal-bar-Core")).toHaveTextContent("Core track");
     expect(screen.getByTestId("xp-reveal-level-Core")).toHaveAttribute("data-level", "1");
     expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("Win 3 games");

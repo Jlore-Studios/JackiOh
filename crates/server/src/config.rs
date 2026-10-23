@@ -2290,7 +2290,7 @@ pub struct PackUnownedWeights {
 
 /// One step of `COSMETIC_TOKEN_CYCLE` (SPEC §14.5): a cosmetic token of that rarity, or a
 /// cosmetic pack. Serialised lower-camel for the client (`cosmeticPack`).
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum CosmeticTokenStep {
     Rare,

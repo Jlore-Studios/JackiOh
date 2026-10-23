@@ -21,7 +21,7 @@
 // The card's text and meta stay one click away: `Card text` opens the detail view over this one.
 // Every animation here is a transform or opacity (collection.css) and holds still under reduced motion.
 
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
 
 import type { CardDef } from "@jackioh/shared";
 
@@ -127,17 +127,24 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
 /**
  * While `preview` is a full art the card owns, the card holds that pick so its face prints as it
  * would, and gives its own back when the item stops being shown, the view closes or the page is
- * left. The returned `settle` says the pick now stands (the item was clicked), so it is not given back.
+ * left. It returns `settle`, which says the pick now stands (the item was clicked), so it is not
+ * given back, and `held`, the card's own full-art pick while a preview holds the store's (null for
+ * none), so the strip says what the card wears and not what it is shown in.
  */
-function useFullArtPreview(defId: string, preview: StripItem | null): () => void {
+function useFullArtPreview(defId: string, preview: StripItem | null): { settle: () => void; held: { fullArt: boolean | null } | null } {
   const settled = useRef(false);
+  const held = useRef<{ fullArt: boolean | null } | null>(null);
+  // Settling changes what the strip reads, where the store may not change: the preview held the same pick.
+  const [, rerender] = useReducer((count: number) => count + 1, 0);
   const shown = preview !== null && preview.kind === "fullArt" && preview.owned ? preview.id !== NO_FULL_ART_ID : null;
   useEffect(() => {
     if (shown === null) return undefined;
     const before = readCardPicks(defId).fullArt ?? null;
     settled.current = false;
+    held.current = { fullArt: before };
     writeCardFullArt(defId, shown);
     const giveBack = (): void => {
+      held.current = null;
       if (!settled.current) writeCardFullArt(defId, before);
       settled.current = true;
     };
@@ -147,9 +154,22 @@ function useFullArtPreview(defId: string, preview: StripItem | null): () => void
       giveBack();
     };
   }, [defId, shown]);
-  return () => {
-    settled.current = true;
+  return {
+    settle: () => {
+      settled.current = true;
+      held.current = null;
+      rerender();
+    },
+    held: held.current,
   };
+}
+
+/** `picks` with the full-art pick `held` in place of the one a preview holds. */
+function withFullArt(picks: CardPicks, held: boolean | null): CardPicks {
+  const out: CardPicks = { ...picks };
+  if (held === null) delete out.fullArt;
+  else out.fullArt = held;
+  return out;
 }
 
 /** Whether `item` is the card's own pick of its kind. */
@@ -295,7 +315,8 @@ export default function CardCosmeticsView({
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
-  const settle = useFullArtPreview(def.id, preview);
+  const { settle, held } = useFullArtPreview(def.id, preview);
+  const worn = held === null ? picks : withFullArt(picks, held.fullArt);
 
   // Focus moves in and goes back to the card that opened the view; Escape closes it, unless the card's text is over it.
   useLayoutEffect(() => {
@@ -354,7 +375,7 @@ export default function CardCosmeticsView({
                 group={group}
                 def={def}
                 face={face}
-                picks={picks}
+                picks={worn}
                 show={(item) => {
                   setPreview(item);
                 }}

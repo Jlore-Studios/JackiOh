@@ -698,6 +698,8 @@ export type CosmeticSlot = { rarity: CosmeticRarity; grant: CosmeticSlotGrant };
  */
 export type OpenedCosmeticPackResponse = {
   slots: CosmeticSlot[];
+  /** The Chase Shard bar's points the opening found, for the bar to fill from to `shardBar`. */
+  shardBefore: number;
   shardBar: TokenBarState;
   unopened: number;
   bars: OpeningBarsAnswer;

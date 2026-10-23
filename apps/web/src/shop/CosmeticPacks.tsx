@@ -114,13 +114,12 @@ export default function CosmeticPacks({
 
   const open = (): void => {
     if (busy !== null || info === null) return;
-    const before = info.shardBar.points;
     setBusy("open");
     setError(null);
     openCosmeticPack(token).then(
       (next) => {
         setOpened(next);
-        setShardFrom(before);
+        setShardFrom(next.shardBefore);
         setInfo((before) => (before === null ? before : { ...before, unopened: next.unopened, shardBar: next.shardBar }));
         onChanged?.();
         // The collection and the owned cosmetics moved too: read them back, so the chase

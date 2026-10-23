@@ -17,7 +17,6 @@ import {
   useCosmetics,
   writeCosmetics,
   type CardSlotKind,
-  type DeckSlotKind,
 } from "../cards/cosmetics.ts";
 import { t } from "../i18n/i18n.ts";
 import type { OwnedCosmeticsResponse } from "../net/api.ts";
@@ -43,40 +42,6 @@ export function CardCosmeticsControls(): ReactElement {
   return (
     <>
       {COSMETIC_ROWS.map((row) => (
-        <SelectRow
-          key={row.kind}
-          label={t(row.label)}
-          hint={t(row.hint)}
-          testId={collectionTestid.equip(row.kind)}
-          value={resolveCosmetic(row.kind, picks[row.kind])}
-          options={cosmeticsOf(row.kind).map((cosmetic) => ({ value: cosmetic.id, label: cosmetic.name }))}
-          onChange={(value) => {
-            writeCosmetics({ [row.kind]: value });
-          }}
-        />
-      ))}
-    </>
-  );
-}
-
-/** R1297000: a row per deck slot, in the registry's order. */
-const DECK_COSMETIC_ROWS: readonly { kind: DeckSlotKind; label: string; hint: string }[] = [
-  { kind: "table", label: "Playmat", hint: "The playmat on your side. A deck can pick its own." },
-  { kind: "field", label: "Backdrop", hint: "The backdrop behind your side. Reduce motion holds it still." },
-  { kind: "cardBack", label: "Card back", hint: "The back of your own face-down cards and your deck." },
-];
-
-/**
- * R1297000: the playmat, backdrop and card back your own side wears in a game, every one unlocked,
- * as selects. R1655000: the Collection draws them as preview tiles instead (AccountCosmeticTiles.tsx);
- * this stays, with the test that holds its store (cards/cosmetics.test.tsx), until the reconcile
- * of #1651 retires both.
- */
-export function DeckCosmeticsControls(): ReactElement {
-  const picks = useCosmetics();
-  return (
-    <>
-      {DECK_COSMETIC_ROWS.map((row) => (
         <SelectRow
           key={row.kind}
           label={t(row.label)}

@@ -3251,5 +3251,8 @@
   "While an account cosmetic is left to own, a duplicate becomes one {chance} of the time: Epic {epic}, Legendary {legendary}, Mythic {mythic}.": "只要还有未拥有的账号外观，重复的卡有 {chance} 的概率变成其中一个：史诗 {epic}，传说 {legendary}，神话 {mythic}。",
   "Jlore is earned by playing and never sold: nothing here is bought with money. What a pack holds is the server’s seeded, logged roll, and every figure on this page is the server’s.": "Jlore 只能通过游玩获得，从不出售：这里的一切都不用真钱购买。卡包里的内容是服务器带种子并记录在案的抽取结果，本页的每个数字都来自服务器。",
   "{signIn} to see the odds and your pity counters.": "{signIn}以查看概率和你的保底计数。",
-  "Odds & pity": "概率与保底"
+  "Odds & pity": "概率与保底",
+  "Default foil": "默认闪卡",
+  "Default finish": "默认卡面工艺",
+  "Default border": "默认卡边"
 }

@@ -8,9 +8,11 @@
 // picks beat the account's; the opponent's side and a board that wears none draw as they always did.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PlayerView } from "@jackioh/shared";
+import { CATALOG } from "@jackioh/cards";
+import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import {
   DEFAULT_CARD_COSMETICS,
@@ -24,9 +26,14 @@ import {
 } from "../cards/cosmetics.ts";
 import { closeInspect } from "../cards/inspect/store.ts";
 import { INSPECT_HOVER, INSPECT_SHEET } from "../cards/inspect/testids.ts";
-import { baseView, card, emptySide, faceUpBackrow, fullBoardView, resetIds, unit } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceUpBackrow, fullBoardView, pendingFor, resetIds, unit, withEvents } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
+import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { BACKDROP_PARTICLE_MAX } from "./config.ts";
+import Prompt from "./Prompt.tsx";
+import CardShowcase from "./showcase/CardShowcase.tsx";
+import { showcaseTestid } from "./showcase/constants.ts";
+import { WearerProvider } from "./wearer.ts";
 
 /** The registry's first entry of `kind` that is not its default. */
 function item(kind: CosmeticKind): CosmeticId {
@@ -288,5 +295,61 @@ describe("R1655000 the board's cards and the picks of each card", () => {
       vi.advanceTimersByTime(PAST_ANY_INSPECT_DELAY_MS);
     });
     expect(screen.getByTestId(INSPECT_HOVER).querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
+  });
+
+  it("R1655000 the viewer's mulligan wears its cards' picks on a board that wears them; a Discover's options do not", () => {
+    writeCardPick(OWN, "border", CARD_BORDER);
+    const hand = { you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: OWN })] }) };
+    const mulligan = baseView({ ...hand, pending: pendingFor("mulligan", [{ key: "h1", label: "One", instanceId: "h1" }], { min: 0, max: 1 }) });
+    const optionFrame = (): string | null =>
+      document.querySelector<HTMLElement>('[data-testid^="prompt-option-"] .cf')?.getAttribute("data-frame") ?? null;
+
+    render(
+      <WearerProvider seat="p1">
+        <Prompt view={mulligan} onAction={vi.fn()} />
+      </WearerProvider>,
+    );
+    expect(optionFrame()).toBe(CARD_BORDER);
+    cleanup();
+
+    // A board that wears none (a replay, a watched game) draws the defaults.
+    render(<Prompt view={mulligan} onAction={vi.fn()} />);
+    expect(optionFrame()).toBeNull();
+    cleanup();
+
+    // A Discover's cards are offered, not the viewer's copies yet.
+    const discover = baseView({ ...hand, pending: pendingFor("discover", [{ key: `mode:${OWN}`, label: "Own", defId: OWN }]) });
+    render(
+      <WearerProvider seat="p1">
+        <Prompt view={discover} onAction={vi.fn()} />
+      </WearerProvider>,
+    );
+    expect(optionFrame()).toBeNull();
+  });
+
+  it("R1655000 the showcase of the viewer's own cast on draw wears its card's picks; the opponent's wears the defaults", () => {
+    writeCardPick(OWN, "border", CARD_BORDER);
+    const turn: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
+    const lookup = lookupFromDefs(CATALOG);
+    const showcaseFrame = (player: "p1" | "p2"): string | null => {
+      const castOnDraw: GameEvent[] = [
+        { type: "drawn", player, instanceId: "c9", defId: OWN },
+        { type: "cardPlayed", player, instanceId: "c9", defId: OWN, costPaid: 0 },
+      ];
+      const tree = (shown: PlayerView): ReactElement => (
+        <CatalogContext.Provider value={lookup}>
+          <WearerProvider seat="p1">
+            <CardShowcase view={shown} />
+          </WearerProvider>
+        </CatalogContext.Provider>
+      );
+      const { rerender } = render(tree(withEvents(baseView(), [turn])));
+      rerender(tree(withEvents(baseView(), [turn, ...castOnDraw])));
+      return screen.getByTestId(showcaseTestid.face).querySelector<HTMLElement>(".cf")?.getAttribute("data-frame") ?? null;
+    };
+
+    expect(showcaseFrame("p1")).toBe(CARD_BORDER);
+    cleanup();
+    expect(showcaseFrame("p2")).toBeNull();
   });
 });

@@ -20,8 +20,7 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 use jackioh_engine::wire::SHIPPED_SETS;
-use serde::de::Error as _;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::api::collection::{caller_profile, owned_in};
@@ -90,24 +89,7 @@ pub struct BarSettle {
 pub struct BarsSettled {
     pub card: BarSettle,
     pub cosmetic: BarSettle,
-    #[serde(deserialize_with = "paid_from")]
     pub cosmetic_paid: Vec<CosmeticTokenStep>,
-}
-
-/// Reads the steps `cosmetic_paid` holds back by the names `CosmeticTokenStep` serialises to.
-/// `config.rs` derives only `Serialize` for the step, so a test decoding an answer whole reads it
-/// here.
-fn paid_from<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<CosmeticTokenStep>, D::Error> {
-    const NAMES: [&str; 3] = ["rare", "epic", "cosmeticPack"];
-    Vec::<String>::deserialize(deserializer)?
-        .into_iter()
-        .map(|name| match name.as_str() {
-            "rare" => Ok(CosmeticTokenStep::Rare),
-            "epic" => Ok(CosmeticTokenStep::Epic),
-            "cosmeticPack" => Ok(CosmeticTokenStep::CosmeticPack),
-            other => Err(D::Error::unknown_variant(other, &NAMES)),
-        })
-        .collect()
 }
 
 /// The inventory row a pack is counted in (§14.3): a set's under its set's name, the global
