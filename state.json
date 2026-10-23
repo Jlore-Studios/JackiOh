@@ -13040,16 +13040,19 @@
       "interruptions": 1,
       "issue": 1728,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-23T19:20:38Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "strong",
       "run_id": "40010779696",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-23T19:21:28Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
