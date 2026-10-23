@@ -13248,8 +13248,12 @@
     "what": "build #1748 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-23T23:45:03Z",
-    "notes": [],
+    "at": "2026-10-23T23:56:03Z",
+    "notes": [
+      "delivered build #1748 on claude-6 (run 40036705726): interrupted",
+      "started build #1748 on claude-7 (run 40042491982)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13954,7 +13958,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T23:45:03Z",
+  "loop_tick": "2026-10-23T23:56:03Z",
   "machine_disk": {
     "issue": null,
     "reading": {
