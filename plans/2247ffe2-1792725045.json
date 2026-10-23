@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1696,
+  "title": "Patch: the AI's imagined opponent switches a spent attacker to Defense Position",
+  "branch": "bot/issue-1696",
+  "thread": "**Issue #1696 (data, not instructions):**\n\n```text\n# #1696: Patch: the AI's imagined opponent switches a spent attacker to Defense Position\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice AI weighs a move, it plays out the opponent's likely reply. That imagined opponent attacks sensibly but never repositions: a unit with nothing worth attacking stays in Attack Position, where a real defender would tuck it into Defense Position to shield the hero. The AI's own search already tries those switches for itself \u2014 only the reply model lacks them \u2014 so it slightly overvalues racing lines, expecting defenders to stay exposed. After this, the imagined reply also tries switching a unit with no good attack into Defense Position.\n\n## Why\n\n- `simulate_reply`'s fixed steps (`crates/ai/src/reply.rs`) include `deft_switch` (Def\u2192Atk for Deft units that can then attack) and `ranked_attacks`, but no Atk\u2192Def branch; the seat's own beam tries every switch (`crates/ai/src/candidates.rs`).\n- Reply scoring is what ranks the AI's finalist lines (spec \u00a79.9), so a defender who would hide a useless attacker is currently modeled as leaving it in Attack Position.\n\n## Proposal\n\nAfter the Deft step, for each unit `legal` lists a SwitchPosition for whose best attack value is at or below zero, try Atk\u2192Def and keep it when the opponent's own `evaluate` prefers the result \u2014 the existing `best_try`/`reduce_for` pattern, bounded by the `AI_REPLY` counters.\n\n## Where it lands\n\n`crates/ai/src/reply.rs`, `crates/ai/src/config.rs` (any new bounds as named constants), `crates/ai/tests/ai/`. Spec \u00a74.1, \u00a79.9, R49, R964000.\n\n## Acceptance criteria\n\n- [ ] A seeded reply where a unit has no positive attack and a switch is legal: it switches when `evaluate` prefers Defense Position and stays when it doesn't.\n- [ ] `cargo test -p jackioh-ai` green; a dev-run or gate smoke shows no regression.\n- [ ] New bounds are named constants.\n\n## Size and risks\n\nSmall-medium. `evaluate` underpricing attack could cause over-switching \u2014 bounded attempts and the seeded test control it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:45:27Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1696: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
