@@ -13147,7 +13147,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-6",
-      "run_id": "pending:d7ee8a92-1792794358",
+      "run_id": "40033598162",
       "started_at": "2026-10-23T22:26:09Z",
       "stop_requested": false,
       "taken_asks": []
