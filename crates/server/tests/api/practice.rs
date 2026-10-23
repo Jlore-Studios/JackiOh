@@ -7,13 +7,15 @@
 //! proving tests live here). A claim past `PRACTICE_VERIFY_CONCURRENCY` waits and still pays, and
 //! so does one whose caller stops waiting. A paid game moves the account's quests by what it did,
 //! as a ladder game does (R1304001). The day's Jlore cap holds a game's Jlore back and says so,
-//! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000).
+//! and an account holds only `PRACTICE_SEEDS_OPEN_MAX` open seeds (R1483000). A pay the store fails is
+//! tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and pays once or not at all (R1688000).
 //!
 //! The games are played for real, on the shipped catalog (no `install_test_cards`), through
 //! `economy::practice`'s own `opening` and `ai_action`, so each AI move in a log is the one the
 //! server re-runs; the fixture test plays one the browser's worker recorded instead. Every amount
 //! is read through its constant and the hook's own math, so the tests hold whatever #1333 sets.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -25,12 +27,12 @@ use jackioh_engine::{Action, ActionBody, Difficulty, GameState, LastBoardEntry, 
 use jackioh_server::actor::engine::{self, Pinned};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_SEED_TTL_SECONDS,
-    PRACTICE_SEEDS_OPEN_MAX, PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS,
-    STARTER_CARDS,
+    JLORE_GAMES_DAILY_CAP, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, PRACTICE_PAY_ATTEMPTS,
+    PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX, PRACTICE_VERIFY_CONCURRENCY, SET_TRACK_FIRST_LEVEL,
+    SET_TRACK_LEVELS, STARTER_CARDS,
 };
 use jackioh_server::db::fake::{E2eStoreOptions, FakeCatalog, create_e2e_store};
-use jackioh_server::db::store::{LastBoardKind, ProfileStatus};
+use jackioh_server::db::store::{LastBoardKind, ProfileStatus, StoreError};
 use jackioh_server::economy::math::{level_span_xp, xp_to_next_level};
 use jackioh_server::economy::practice::{self, ClaimedResult};
 use jackioh_server::economy::quests::{QuestDef, QuestGoal, pool, quest_interval_ms};
@@ -41,7 +43,7 @@ use jackioh_server::economy::store::{
 };
 use jackioh_server::economy::track_rewards::reward_for_level;
 
-use crate::support::deps::{add_user, call, test_app as built_app};
+use crate::support::deps::{add_user, call, record_logs, test_app as built_app};
 use crate::support::store::{fake_ref, store};
 
 const A: &str = "profile-a";
@@ -1166,6 +1168,121 @@ async fn r1483000_concurrent_seed_requests_never_exceed_the_open_limit() {
         fake_ref(&app).lock().await.tables.economy.practice_seeds.len(),
         PRACTICE_SEEDS_OPEN_MAX as usize
     );
+}
+
+// ---------------------------------------------------------------------------
+// A pay the store fails (R1688000).
+// ---------------------------------------------------------------------------
+
+/// From here on, counts the store's `lastBoards.put` calls, the last write of a claim's pay, and
+/// fails the first `failing` of them, which rolls that try back whole (R1688000).
+async fn fail_board_writes(app: &Arc<App>, failing: usize) -> Arc<AtomicUsize> {
+    let writes = Arc::new(AtomicUsize::new(0));
+    let seen = Arc::clone(&writes);
+    fake_ref(app).lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+        if method == "lastBoards.put" && seen.fetch_add(1, Ordering::SeqCst) < failing {
+            return Err(StoreError::Other("the store is away".to_string()));
+        }
+        Ok(())
+    }));
+    writes
+}
+
+#[tokio::test]
+async fn r1688000_a_pay_the_store_fails_once_is_tried_again_and_pays_once() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, setup, log, state) = honest_win();
+    insert(&app, seed, setup, now_ms()).await;
+    let (p1, p2) = engine::last_boards(state);
+    let board = match engine::seat_played_by(state, setup.human_seat) {
+        PlayerId::P1 => p1,
+        PlayerId::P2 => p2,
+    };
+    let writes = fail_board_writes(&app, 1).await;
+    let xp = game_xp(GameMode::Practice, human_actions(log), true);
+    assert_eq!(
+        claim(&app, &token, seed, "win", log).await,
+        first_paid(JLORE_PRACTICE_WIN, xp, false)
+    );
+    assert_eq!(writes.load(Ordering::SeqCst), 2);
+    assert_eq!(logs.named("practice.claim.payFailed").len(), 1);
+
+    fake_ref(&app).lock().await.on_call = None;
+    assert_paid(&app, seed, JLORE_PRACTICE_WIN, xp).await;
+    assert_eq!(
+        store!(app, |t| t.last_boards_get(A, LastBoardKind::Practice)),
+        Some(board)
+    );
+    assert_eq!(
+        claim(&app, &token, seed, "win", log).await,
+        refusal("already_claimed")
+    );
+    assert_paid(&app, seed, JLORE_PRACTICE_WIN, xp).await;
+}
+
+#[tokio::test]
+async fn r1688000_a_pay_the_store_never_takes_pays_nothing_and_leaves_the_seed_claimed() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let writes = fail_board_writes(&app, usize::MAX).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/practice/claims",
+        Some(&token),
+        json!({ "seed": seed, "result": "loss", "log": log }),
+    )
+    .await;
+    assert_eq!(status, 500, "{body}");
+    assert_eq!(writes.load(Ordering::SeqCst), PRACTICE_PAY_ATTEMPTS);
+    assert_eq!(
+        logs.named("practice.claim.payFailed").len(),
+        PRACTICE_PAY_ATTEMPTS
+    );
+
+    fake_ref(&app).lock().await.on_call = None;
+    assert_unpaid(&app).await;
+    assert_eq!(
+        store!(app, |t| t.last_boards_get(A, LastBoardKind::Practice)),
+        None
+    );
+    let held = store!(app, |t| t.economy_practice_seed_get(A, &seed)).expect("the seed is held");
+    assert!(held.claimed_at.is_some(), "the seed stays burned");
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        refusal("already_claimed")
+    );
+    assert_unpaid(&app).await;
+}
+
+#[tokio::test]
+async fn r1688000_a_refused_claim_is_not_tried_again() {
+    let logs = record_logs();
+    let (app, token) = authed().await;
+    let (seed, _) = issue(&app, &token).await;
+    let (log, _, _) = play(&seed, &kept_setup(&app, &seed).await, Human::Concede);
+    let writes = fail_board_writes(&app, usize::MAX).await;
+    assert_eq!(
+        claim(&app, &token, &seed, "win", &log).await,
+        refusal("result_mismatch")
+    );
+    assert_eq!(writes.load(Ordering::SeqCst), 0, "no pay began");
+    assert_eq!(
+        logs.named("practice.claim.verified").len(),
+        1,
+        "the check ran once"
+    );
+    assert!(logs.named("practice.claim.payFailed").is_empty());
+
+    fake_ref(&app).lock().await.on_call = None;
+    assert_eq!(
+        claim(&app, &token, &seed, "loss", &log).await,
+        refusal("already_claimed")
+    );
+    assert_unpaid(&app).await;
 }
 
 /// The browser's worker's game (`apps/web/src/practice/claim.test.ts` records it).
