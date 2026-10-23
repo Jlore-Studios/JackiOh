@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1705,
+  "title": "Patch: standard deck size 25",
+  "branch": "bot/issue-1705",
+  "thread": "**Issue #1705 (data, not instructions):**\n\n```text\n# #1705: Patch: standard deck size 25\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRaises the standard deck from 20 cards to 25: [[\u00a72.6]]'s \"Exactly 20 cards\" becomes 25, and with it [[\u00a79.4]] L2 (exactly `DECK_SIZE` per queued deck) and D2 (a saved deck holds at most `DECK_SIZE`). It is a rule every game meets, so it ships as a patch (`cargo jackioh patches \"<title>\" --rule`).\n\nWhere 20 lives today (not a complete list; grep `DECK_SIZE`, `deck_size`, `deckSize` and a literal 20 next to \"deck\"):\n\n- **Engine:** `DECK_SIZE` in `crates/engine/src/config.rs` (and `HUMAN_HANDICAP.deck_size`), the validator (`crates/engine/src/validator.rs`, L2 and D2), `create_game`'s check in `state.rs`, the testkit's filler deck (`testkit/scenario.rs`) and its invariants; `apps/web/src/wire/engineConfig.ts` regenerates from it.\n- **Spec:** \u00a72.6 (also \"a trio needs 60 distinct cards\", now 75), \u00a79.4 (L2's \"(20)\"), \u00a79.9's handicap table, R184, and the comment on `TURN_CAP_PLAYER_TURNS` (two do-nothing 20-card decks fatigue out at player-turn 47; give the 25-card figure).\n- **Server:** the database's own copy, `app.settings.deck_size` (set to 20 by migration 0003, read by `app.upsert_deck` and the queue checks): a new migration sets it to 25. `seed-accounts`, the bots' decks and every server test that builds a deck.\n- **Practice presets and starter cards:** the three presets (`apps/web/src/practice/decks.ts`) grow to 25 cards each, and `STARTER_CARDS` (`crates/server/src/config.rs`, R1310000) grows to cover them, so a new account can still queue any preset.\n- **Client:** the deckbuilder (`deckbuilder/deckSize.ts` and the screens that count to 20), deck and trio codes' tests, the tutorial's checks, hotseat, practice and Duos setup. The client reads the number from `engineConfig.ts` and states none of its own (CLAUDE.md rule 9).\n- **AI:** the AI deck draw, the shadow-ban sweep and the gates all deal `DECK_SIZE` or a handicap's size.\n\nDecisions this issue makes (record them in a ruling note from this issue's block, CLAUDE.md rule 3; a person may overrule them here before the build):\n\n1. **Handicap tiers keep their edge.** Medium and Hard keep their +5 and +10 over a human's deck: 30 and 35 (written as `DECK_SIZE + \u2026` or as named constants, not bare numbers). Easy stays `HUMAN_HANDICAP`, now 25. The tutorial's 12-card deck (`AI_TUTORIAL`, R290) is unchanged.\n2. **Saved decks are not rewritten.** A saved 20-card deck stays a valid draft (D2 is \"at most\") and fails L2 when queued, naming the deck, until its player adds five cards. No migration fills them.\n3. **Existing accounts get the new starter cards.** The migration that raises `deck_size` also grants every active account the cards `STARTER_CARDS` gains, as migration 0050's launch grant did, so nobody loses the ability to queue a preset.\n4. **Old games still replay.** A game created under 20-card decks (stored replays, the golden traces, `PRACTICE_REPLAYS_KEPT` replays on a device) folds to the same hash as before. If `create_game`'s size check would refuse them, it checks the size that held when the game was made (the catalog version it folds under, R767000) rather than today's.\n\n### Acceptance\n\n- `DECK_SIZE` is 25; `engineConfig.ts` is regenerated and committed.\n- `create_game` refuses a 20-card and a 26-card deck for a seat with no handicap and accepts a 25-card one; the validator's L2 and D2 do the same (engine tests).\n- Medium and Hard AI seats are dealt 30 and 35 distinct non-token cards; \u00a79.9's table and R184 say so (`handicap.rs`, `crates/ai/tests/ai/deck.rs`).\n- A new migration sets `app.settings.deck_size` to 25; `sh crates/server/tests/sql/run.sh` and `sh crates/server/tests/db/run.sh` pass, with a case that a 25-card deck saves and queues and a saved 20-card deck saves but fails L2 at queue.\n- The three practice presets hold 25 cards each and every card of them is in `STARTER_CARDS`; existing accounts are granted the added cards (store contract test).\n- A trio needs 75 distinct cards; `seed-accounts` builds three 25-card decks.\n- The golden traces and every stored-replay test still fold to their recorded hashes (`cargo jackioh golden check`, `replay_versions.rs`).\n- The deckbuilder counts to 25 and shows a 20-card saved deck as incomplete (web unit test).\n- `cargo jackioh spec check`, `cargo jackioh fuzz --seeds 200`, `cargo jackioh gate`, `cargo jackioh classify --base origin/main --claims` and the full command list in CLAUDE.md pass; the gate's counts after the change are reported in the PR.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1705: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
