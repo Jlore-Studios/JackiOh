@@ -13156,9 +13156,12 @@
         "resolved_by": "`claude` (strong)",
         "sha": "15347774d7cbe8226d5a0f31a922b6478662cdfe"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-23T04:09:25Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1689,
       "kind": "revise",
       "last_findings": [],
