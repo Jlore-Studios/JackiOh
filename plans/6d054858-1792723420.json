@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1688,
+  "title": "Patch: a practice game's claim retries a failed pay instead of staying spent and unpaid",
+  "branch": "bot/issue-1688",
+  "thread": "**Issue #1688 (data, not instructions):**\n\n```text\n# #1688: Patch: a practice game's claim retries a failed pay instead of staying spent and unpaid\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen you finish a practice game, the server marks the game's one-time payment proof as spent and then writes your rewards \u2014 Jlore, XP, quest progress and your last board. If the database hiccups during that write, you get a generic error and the proof stays spent forever: trying the claim again just says 'already claimed', and the rewards are gone for good. After this change the payment step retries itself a few times before giving up, the way a finished match's record already does.\n\n## Why\n\n- The claim burns the seed first and commits it (intended, so a claim pays once whatever happens after), then `settle` runs the check and the pay in a second step (`crates/server/src/api/practice.rs`). The check is a pure fold of the frozen setup \u2014 it can refuse but can't fail transiently. The pay transaction (`pay_game_rewards`, `last_boards_put`, `commit`) can \u2014 and then `claimed_at` stays set while every later claim answers `AlreadyClaimed`.\n- The daily Jlore cap makes the loss doubly unrecoverable: tomorrow is a different day.\n- The spec's own rule is that a write the store fails is tried again; the match actor already retries `record_result` with doubling backoff (`crates/server/src/duos/actor.rs`).\n\n## Proposal\n\nWrap `settle`'s pay transaction in a bounded retry with doubling backoff, mirroring `record_result`; the burn-first order and the check stay unchanged, and a second `post_claim` for the same seed still answers `AlreadyClaimed`. The attempts and backoff become named constants in `crates/server/src/config.rs`. A follow-up sweeper over claimed-but-unpaid seeds would need a `settled_at` marker (a migration) \u2014 noted in the PR, out of scope.\n\n## Where it lands\n\n`crates/server/src/api/practice.rs` (`settle`), `crates/server/src/config.rs`, tests through the fake store's `on_call`/`before_call` fault injection. Spec \u00a79.5 (the retry rule), \u00a714.8, R1303001, R1304001, R1483000.\n\n## Acceptance criteria\n\n- [ ] With the fake failing the first pay attempt, the claim returns `paid: true` after a retry and every write lands exactly once.\n- [ ] A second claim for the same seed still answers `AlreadyClaimed`, whichever way the first ended.\n- [ ] A `check` refusal still refuses without retrying.\n- [ ] Attempts/backoff are named constants; `cargo test -p jackioh-server` green.\n\n## Size and risks\n\nSmall \u2014 one function plus tests. The retry is safe because the pay is one transaction: a failed commit rolls back wholesale, so retrying cannot double-pay. A store down longer than the retries still loses the pay \u2014 the sweeper follow-up is deliberately out of scope.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `data` \u2192 `priority:high`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:40:23Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1688: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
