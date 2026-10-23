@@ -97,7 +97,9 @@ describe("R388 the patch source", () => {
       }
     }
     expect(Object.keys((await realPatchSource.snapshot("v0.2.0b")) ?? {})).toHaveLength(317);
-  });
+    // Every shipped snapshot loads in turn, so the time grows with the history: the limit of the other
+    // tests here that read all of it (diff.test.ts, PatchNotes.test.tsx), not vitest's 5 s default.
+  }, 30_000);
 
   it("R388 the index lists, for every card, exactly the versions whose snapshot differs from the one before", async () => {
     const patches = await realPatchSource.patches();
