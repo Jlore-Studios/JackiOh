@@ -12181,6 +12181,13 @@
     "1714": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T13:44:42Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Engine work in crates/engine/src (scorer.rs's concealed copy) with a new ruling, so it cannot be easy. It is not hard: no combat, resolution-loop or AI-search change, one source file plus tests and spec notes, and every step is spelled out."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
