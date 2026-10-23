@@ -3,11 +3,15 @@
 //! Test-only cards for Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422; B5 E32).
 //! The fixture Spell runs the engine half of the card exactly as the real script does — `papayaBegin`
 //! on resolve, `papayaAnswered` on each answer — so the subsystem is proved without `packages/cards`
-//! (CLAUDE.md: the engine never imports it); the card's own test repeats the key cases.
+//! (CLAUDE.md: the engine never imports it); the card's own test repeats the key cases. `curve` runs
+//! the rules through v0.4.0f (`PAPAYA_RULES_V0_4_0F`: "done", the exiles), which most of the suite
+//! proves, and `curve_now` today's (R1704000: four Discovers, the destroys).
 
 use std::sync::LazyLock;
 
-use jackioh_engine::subsystems::papaya::{PAPAYA_STEP, papaya_answered, papaya_begin};
+use jackioh_engine::subsystems::papaya::{
+    PAPAYA_RULES_V0_4_0F, PAPAYA_STEP, papaya_answered, papaya_answered_with, papaya_begin, papaya_begin_with,
+};
 use jackioh_engine::testkit::*;
 
 /// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
@@ -39,9 +43,14 @@ fn def(id: &str, type_: &str, extra: Value) -> CardDef {
     ))
 }
 
-/// The curve Spell: both faces run one script, the running face deciding the rows (R422).
+/// The curve Spell through v0.4.0f: both faces run one script, the running face deciding the rows (R422).
 pub fn curve() -> CardDef {
     def("curve", "Spell", json!({}))
+}
+
+/// R1704000: the curve Spell as the card runs it now.
+pub fn curve_now() -> CardDef {
+    def("curve-now", "Spell", json!({}))
 }
 
 /// A plain 2/2 to stand on cells.
@@ -88,6 +97,17 @@ pub fn curve_quickdraw() -> CardDef {
 
 fn curve_script() -> Script {
     Script {
+        cry: Some(hook(|_ctx| papaya_begin_with(PAPAYA_RULES_V0_4_0F))),
+        resume: IndexMap::from([(
+            PAPAYA_STEP,
+            hook(|ctx| papaya_answered_with(PAPAYA_RULES_V0_4_0F, ctx)),
+        )]),
+        ..Script::default()
+    }
+}
+
+fn curve_now_script() -> Script {
+    Script {
         cry: Some(hook(|_ctx| papaya_begin())),
         resume: IndexMap::from([(PAPAYA_STEP, hook(papaya_answered))]),
         ..Script::default()
@@ -101,13 +121,23 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-pub static PAPAYA_DEFS: LazyLock<Vec<CardDef>> =
-    LazyLock::new(|| vec![curve(), body(), snare(), field(), token(), curve_quickdraw()]);
+pub static PAPAYA_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    vec![
+        curve(),
+        body(),
+        snare(),
+        field(),
+        token(),
+        curve_quickdraw(),
+        curve_now(),
+    ]
+});
 
 /// TS `PAPAYA_SCRIPTS` (module-private there), as a call.
 pub fn papaya_scripts() -> IndexMap<String, CardScripts> {
     let mut table = IndexMap::new();
     table.insert(curve().id, both(curve_script()));
+    table.insert(curve_now().id, both(curve_now_script()));
     table.insert(
         curve_quickdraw().id,
         both(Script {

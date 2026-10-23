@@ -368,6 +368,8 @@ pub static pawn: LazyLock<CardDef> = LazyLock::new(|| def("pawn", 4743, "Trap", 
 pub static defender: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender", 4744, 1, 6));
 /// R1026: the same, whose hook asks its controller before it finishes.
 pub static defender_asker: LazyLock<CardDef> = LazyLock::new(|| plain_unit("defender-asker", 4745, 1, 6));
+/// R1704001: Classic #52's shape since #1704: cancel a lethal hit on its hero, then heal 10 and draw 3.
+pub static cancel_gambit: LazyLock<CardDef> = LazyLock::new(|| def("cancel-gambit", 4746, "Trap", json!({})));
 
 pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     vec![
@@ -416,6 +418,7 @@ pub static DC_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         pawn.clone(),
         defender.clone(),
         defender_asker.clone(),
+        cancel_gambit.clone(),
     ]
 });
 
@@ -473,6 +476,32 @@ fn gambit_script(amount: i32) -> Script {
     }
 }
 
+/// R1704001: `gambit_script`, cancelling the hit.
+fn cancel_gambit_script(amount: i32) -> Script {
+    Script {
+        replacements: vec![ReplacementDef {
+            then: Some("after".to_string()),
+            ..replacement("cancel", ReplacementMoment::LethalHit, json!({ "cancel": true }))
+        }],
+        resume: IndexMap::from([(
+            "after",
+            hook(move |ctx| {
+                let redirected = replacement_of(&*ctx)
+                    .and_then(|record| record.redirected_to)
+                    .map_or("none".to_string(), |player| player.to_string());
+                vec![
+                    note(format!("cancel:after:{redirected}")),
+                    heal(json_as(
+                        json!({ "target": { "of": "selfHero" }, "amount": amount }),
+                    )),
+                    draw(json_as(json!({ "count": 3 }))),
+                ]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
 fn hero_guard(guard: HeroGuard) -> Script {
     Script {
         hero_guard: Some(read_hook(move |_a| vec![guard])),
@@ -490,6 +519,10 @@ fn after_attack_noter() -> Script {
 pub static DC_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     IndexMap::from([
         (gambit.id.clone(), both_of(gambit_script(10), gambit_script(20))),
+        (
+            cancel_gambit.id.clone(),
+            both_of(cancel_gambit_script(10), cancel_gambit_script(20)),
+        ),
         (
             echo_gambit.id.clone(),
             both(Script {

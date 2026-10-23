@@ -9,7 +9,9 @@
 //! L graveyard play (§6.3), M Indestructible aura (§10.4 layer 5, R347); L and M hold while it stays on
 //! the field, and leaving it resets the quest line (R78). Indestructible (R46).
 //! Quests (R404): 1 draws (R541); 2 kills; 3 board; 4 float; 5 damage (R542); 6 totals; 7 float;
-//! 8 exiles; 9 empty deck; 10 grave units.
+//! 8 exiles; 9 empty deck; 10 grave units. #1704 raised quest 3 to 4 permanents, quest 5 to 15 damage
+//! and quest 6 to totals of 13 (from 3, 12 and 10); `script_v0_4_0f` keeps the old goals for the
+//! replays of v0.4.0f and before (R767000).
 
 use jackioh_engine::effects::{
     bounce, buff_random_unit, choose_from_hand, choose_reward, choose_target, chosen_options, damage,
@@ -23,10 +25,7 @@ pub const ID: &str = "classic-090";
 // The tree's numbers (SPEC §8.6 row 90; no declared params).
 const QUEST_DRAWS: i32 = 2;
 const QUEST_KILLS: i32 = 2;
-const QUEST_PERMANENTS: i32 = 3;
 const QUEST_FLOAT: i32 = 3;
-const QUEST_DAMAGE: i32 = 12;
-const QUEST_STATS: i32 = 10;
 const QUEST_BIG_FLOAT: i32 = 5;
 const QUEST_EXILES: i32 = 3;
 const QUEST_GRAVE_UNITS: i32 = 6;
@@ -38,6 +37,26 @@ const REWARD_BUFF: i32 = 3;
 const REWARD_DISCARD: i32 = 2;
 const REWARD_DRAW: i32 = 2;
 const REWARD_MANA: i32 = 100;
+
+/// The goals #1704 raised: quest 3's permanents, quest 5's damage and quest 6's totals.
+#[derive(Clone, Copy)]
+struct QuestNumbers {
+    permanents: i32,
+    damage: i32,
+    stats: i32,
+}
+
+const QUESTS: QuestNumbers = QuestNumbers {
+    permanents: 4,
+    damage: 15,
+    stats: 13,
+};
+/// R767000: the goals through v0.4.0f.
+const QUESTS_V0_4_0F: QuestNumbers = QuestNumbers {
+    permanents: 3,
+    damage: 12,
+    stats: 10,
+};
 
 /// One quest of the tree.
 fn quest(id: &str, text: &str, goal: QuestGoal, rewards: &[&str]) -> QuestDef {
@@ -59,7 +78,7 @@ fn reward(id: &str, text: &str, next: Option<&str>) -> QuestRewardDef {
 }
 
 /// The quest tree (SPEC §8.6 row 90, R404): what completes each quest, and where each reward leads.
-fn in_too_deep_quests() -> QuestBook {
+fn in_too_deep_quests(numbers: QuestNumbers) -> QuestBook {
     QuestBook {
         first: "1".to_string(),
         quests: vec![
@@ -72,9 +91,9 @@ fn in_too_deep_quests() -> QuestBook {
             ),
             quest(
                 "3",
-                "Control 3 or more permanents at once",
+                &format!("Control {} or more permanents at once", numbers.permanents),
                 QuestGoal::PermanentsControlled {
-                    count: QUEST_PERMANENTS,
+                    count: numbers.permanents,
                 },
                 &["D", "E"],
             ),
@@ -86,16 +105,19 @@ fn in_too_deep_quests() -> QuestBook {
             ),
             quest(
                 "5",
-                "Your cards deal 12 damage to enemies",
+                &format!("Your cards deal {} damage to enemies", numbers.damage),
                 QuestGoal::DamageToEnemies {
-                    amount: QUEST_DAMAGE,
+                    amount: numbers.damage,
                 },
                 &["G", "H"],
             ),
             quest(
                 "6",
-                "Your Units have 10 or more total Attack and 10 or more total health at once",
-                QuestGoal::UnitTotals { total: QUEST_STATS },
+                &format!(
+                    "Your Units have {0} or more total Attack and {0} or more total health at once",
+                    numbers.stats
+                ),
+                QuestGoal::UnitTotals { total: numbers.stats },
                 &["H", "I"],
             ),
             quest(
@@ -232,9 +254,10 @@ fn reward_effects(ctx: &EffectContext<'_>, id: &str, defer_g: bool) -> Vec<Effec
     }
 }
 
-/// The quest a reward leads to, opened once (`openQuest` passes over a quest ever opened).
+/// The quest a reward leads to, opened once (`openQuest` passes over a quest ever opened). The paths
+/// are the same on every version's tree.
 fn path_of(id: &str) -> Vec<Effect> {
-    let book = in_too_deep_quests();
+    let book = in_too_deep_quests(QUESTS);
     let next = subsystems::quest_reward_of(&book, id).and_then(|reward| reward.next.clone());
     match next {
         None => vec![],
@@ -243,7 +266,7 @@ fn path_of(id: &str) -> Vec<Effect> {
 }
 
 /// The quest this card's own `questCompleted` names, or `None` for another card's report.
-fn completed_here(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<QuestDef> {
+fn completed_here(ctx: &EffectContext<'_>, event: &GameEvent, numbers: QuestNumbers) -> Option<QuestDef> {
     let GameEvent::QuestCompleted {
         instance_id, quest, ..
     } = event
@@ -253,13 +276,13 @@ fn completed_here(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<QuestDef
     if ctx.self_.as_ref().map(|card| card.id.as_str()) != Some(instance_id.as_str()) {
         return None;
     }
-    let book = in_too_deep_quests();
+    let book = in_too_deep_quests(numbers);
     subsystems::quest_def_of(&book, quest).cloned()
 }
 
-/// The reward prompt's options: each reward's id under its caption.
+/// The reward prompt's options: each reward's id under its caption, the same on every version's tree.
 fn reward_options(quest: &QuestDef) -> Vec<Value> {
-    let book = in_too_deep_quests();
+    let book = in_too_deep_quests(QUESTS);
     quest
         .rewards
         .iter()
@@ -272,12 +295,12 @@ fn reward_options(quest: &QuestDef) -> Vec<Value> {
         .collect()
 }
 
-fn quest_completed(radiant: bool, defer_g: bool) -> TriggerDef {
+fn quest_completed(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> TriggerDef {
     TriggerDef::new(
         "quest-completed",
         &[GameEventType::QuestCompleted],
         move |ctx, event| {
-            let Some(quest) = completed_here(ctx, event) else {
+            let Some(quest) = completed_here(ctx, event, numbers) else {
                 return vec![];
             };
             // R543: every reward, in the tree's order, then every path they lead to.
@@ -304,14 +327,14 @@ fn quest_completed(radiant: bool, defer_g: bool) -> TriggerDef {
     )
 }
 
-fn in_too_deep(radiant: bool, defer_g: bool) -> Script {
+fn in_too_deep(radiant: bool, defer_g: bool, numbers: QuestNumbers) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
             ..StaticFlags::default()
         }),
-        quests: Some(in_too_deep_quests()),
-        triggers: vec![quest_completed(radiant, defer_g)],
+        quests: Some(in_too_deep_quests(numbers)),
+        triggers: vec![quest_completed(radiant, defer_g, numbers)],
         resume: IndexMap::from([
             // The base face's chosen reward, then its path.
             (
@@ -380,17 +403,26 @@ fn in_too_deep(radiant: bool, defer_g: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: in_too_deep(false, true),
-        radiant: in_too_deep(true, true),
+        base: in_too_deep(false, true, QUESTS),
+        radiant: in_too_deep(true, true, QUESTS),
+    }
+}
+
+/// R767000: the scripts v0.4.0f and the versions before it back to `script_v0_3_16`'s ran, kept for
+/// their replays: quest 3 at 3 permanents, quest 5 at 12 damage and quest 6 at totals of 10.
+pub fn script_v0_4_0f() -> CardScripts {
+    CardScripts {
+        base: in_too_deep(false, true, QUESTS_V0_4_0F),
+        radiant: in_too_deep(true, true, QUESTS_V0_4_0F),
     }
 }
 
 /// R767000: the scripts v0.3.16 and every version before it ran, kept for their replays: reward G
-/// asked at once on any turn, and its quest opened beside the prompt.
+/// asked at once on any turn, and its quest opened beside the prompt, at the goals through v0.4.0f.
 pub fn script_v0_3_16() -> CardScripts {
     CardScripts {
-        base: in_too_deep(false, false),
-        radiant: in_too_deep(true, false),
+        base: in_too_deep(false, false, QUESTS_V0_4_0F),
+        radiant: in_too_deep(true, false, QUESTS_V0_4_0F),
     }
 }
 
@@ -398,7 +430,7 @@ pub fn script_v0_3_16() -> CardScripts {
 // each quest and reward, both faces, and test helpers (line) set up deep quest states directly.
 #[cfg(test)]
 mod tests {
-    use super::script;
+    use super::{QUESTS, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeMap;
 
@@ -1026,16 +1058,16 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_3_3_or_more_permanents_of_yours_at_once_this_card_included_the_opponents_do_not_count() {
+            fn r404_quest_3_4_or_more_permanents_of_yours_at_once_this_card_included_the_opponents_do_not_count() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "backrow": [ITD], "field": [TIMMY], "hand": [VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
+                    "p1": { "backrow": [ITD], "field": [TIMMY, VANILLA], "hand": [VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
                     "p2": spare(json!({ "field": [MENACE, VANILLA] })),
                 }));
                 on_quest(&mut s, "3", 0, json!({}));
                 assert!(matches_object(
                     &first_open(&s, P1),
-                    &json!({ "id": "3", "progress": 2, "goal": 3 })
+                    &json!({ "id": "3", "progress": 3, "goal": 4 })
                 ));
                 s.play(VANILLA, json!({}));
                 assert_eq!(completed_in(s.last_events()), vec!["3"]);
@@ -1045,9 +1077,10 @@ mod tests {
             #[test]
             fn r60_reward_e_a_random_unit_of_yours_gets_3_3_then_quest_6_with_none_nothing_and_quest_6_still_opens() {
                 crate::register_all();
-                // Two small Units (their totals stay under quest 6's 10 after the +3/+3) and In Too Deep.
+                // Two small Units (their totals stay under quest 6's 13 after the +3/+3), a Mana Well and
+                // In Too Deep.
                 let mut s = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD], "field": [TIMMY, TOKEN_MAKER] })),
+                    "p1": spare(json!({ "backrow": [ITD, MANA_WELL], "field": [TIMMY, TOKEN_MAKER] })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
                 on_quest(&mut s, "3", 0, json!({}));
@@ -1069,9 +1102,9 @@ mod tests {
                 assert!(ours.contains(&buffed_id));
                 expect_line_matches(&s, json!({ "active": ["6"], "done": ["3"] }));
 
-                // No Unit of yours: three backrow permanents complete quest 3, and E buffs nothing.
+                // No Unit of yours: four backrow permanents complete quest 3, and E buffs nothing.
                 let mut none = scenario(json!({
-                    "p1": spare(json!({ "backrow": [ITD, MANA_WELL, GIFTED] })),
+                    "p1": spare(json!({ "backrow": [ITD, MANA_WELL, GIFTED, LOCKDOWN] })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
                 on_quest(&mut none, "3", 0, json!({}));
@@ -1256,7 +1289,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD] })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
                 }));
-                on_quest(&mut s, "5", 12, json!({}));
+                on_quest(&mut s, "5", QUESTS.damage, json!({}));
                 any_action(&mut s);
                 // The reward choice is the controller's own prompt, so it opens at once. G's
                 // discard is the opponent's choice while p1 is active, so answering G opens
@@ -1296,7 +1329,7 @@ mod tests {
                         "library": SPARE_LIBRARY,
                     },
                 }));
-                on_quest(&mut s, "5", 11, json!({}));
+                on_quest(&mut s, "5", QUESTS.damage - 1, json!({}));
                 // p2 attacks into p1's unit on their own turn: the strike back is p1's cards
                 // dealing the completing damage, so the opponent is active throughout.
                 let timmy = must(s.unit(P2, 1), "Timmy").clone();
@@ -1322,7 +1355,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [ITD], "mana": 10 })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
                 }));
-                on_quest(&mut s, "5", 12, json!({}));
+                on_quest(&mut s, "5", QUESTS.damage, json!({}));
                 any_action(&mut s);
                 s.answer(json!("G"));
                 assert!(s.state().pending.is_none());
@@ -1351,13 +1384,13 @@ mod tests {
             }
 
             #[test]
-            fn r542_quest_5_damage_your_cards_deal_to_the_enemy_hero_and_enemy_units_12_in_all_your_own_side_and_the_opponents_hits_count_for_nothing() {
+            fn r542_quest_5_damage_your_cards_deal_to_the_enemy_hero_and_enemy_units_15_in_all_your_own_side_and_the_opponents_hits_count_for_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
                         "field": [MENACE],
-                        "hand": [LUNAR, LUNAR, STOCKPILE],
+                        "hand": [LUNAR, LUNAR, LUNAR, STOCKPILE],
                         "library": SPARE_LIBRARY,
                         "mana": 10,
                     },
@@ -1370,6 +1403,8 @@ mod tests {
                 s.play(LUNAR, json!({ "targets": [instance_pick(&vanilla.id)] }));
                 assert_eq!(progress_of(&s), json!({ "5": 3 }));
                 s.attack(MENACE, "hero");
+                assert_eq!(progress_of(&s), json!({ "5": 12 }));
+                s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
                 assert_eq!(completed_in(s.last_events()), vec!["5"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:G", "mode:H"]);
                 assert_eq!(json!(must(shown(&s, P2).quest, "the quest view").open), json!([]));
@@ -1379,7 +1414,7 @@ mod tests {
             fn r404_reward_h_draw_2_then_quest_9_whose_count_starts_after_those_draws() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": spare(json!({ "backrow": [ITD] })), "p2": spare(json!({})) }));
-                on_quest(&mut s, "5", 12, json!({}));
+                on_quest(&mut s, "5", QUESTS.damage, json!({}));
                 any_action(&mut s);
                 s.answer(json!("H"));
                 assert_eq!(
@@ -1399,7 +1434,7 @@ mod tests {
                     "p1": { "backrow": [ITD], "hand": [NOTEBOOK, TIMMY], "library": [VANILLA, VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
-                on_quest(&mut s, "5", 12, json!({}));
+                on_quest(&mut s, "5", QUESTS.damage, json!({}));
                 s.play(NOTEBOOK, json!({}));
                 s.answer(json!("H"));
                 assert!(s.pile(P1, "library").is_empty());
@@ -1408,18 +1443,21 @@ mod tests {
             }
 
             #[test]
-            fn r404_quest_6_your_units_total_attack_and_total_health_both_10_or_more_at_once() {
+            fn r404_quest_6_your_units_total_attack_and_total_health_both_13_or_more_at_once() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "backrow": [ITD], "field": [MENACE], "hand": [TIMMY, STOCKPILE], "library": SPARE_LIBRARY },
+                    "p1": { "backrow": [ITD], "field": [MENACE], "hand": [TIMMY, VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
                 on_quest(&mut s, "6", 0, json!({}));
                 assert!(matches_object(
                     &first_open(&s, P1),
-                    &json!({ "id": "6", "progress": 9, "goal": 10 })
+                    &json!({ "id": "6", "progress": 9, "goal": 13 })
                 ));
+                // 9 and a 3/3 is 12, a total short of 13.
                 s.play(TIMMY, json!({}));
+                assert!(completed_in(s.last_events()).is_empty());
+                s.play(VANILLA, json!({}));
                 assert_eq!(completed_in(s.last_events()), vec!["6"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:H", "mode:I"]);
             }
@@ -1430,7 +1468,7 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": {
                         "backrow": [ITD],
-                        "field": [MENACE, TIMMY],
+                        "field": [MENACE, VANILLA],
                         "hand": [NOTEBOOK, TIMMY],
                         "library": [STOCKPILE, STOCKPILE, VANILLA, MENACE],
                     },
@@ -1943,14 +1981,14 @@ mod tests {
                 let mut s = scenario(json!({
                     // Small Units, so the +3/+3 does not complete quest 6 as well.
                     "p1": spare(json!({
-                        "backrow": [radiant_itd()],
+                        "backrow": [radiant_itd(), MANA_WELL],
                         "field": [TIMMY, TOKEN_MAKER],
                         "graveyard": [MENACE, STOCKPILE],
                     })),
                     "p2": spare(json!({ "field": [MENACE] })),
                 }));
                 // Quests 2 and 3 open, as quest 1's Radiant rewards leave them; quest 2 at its goal, and quest 3
-                // met by the board (In Too Deep and two Units).
+                // met by the board (In Too Deep, a Mana Well and two Units).
                 set_line(&mut s, json!({ "active": ["2", "3"], "progress": { "2": 2 }, "done": ["1"] }));
                 any_action(&mut s);
                 // Quest 2: C (two graveyard cards), D (three placements on one pick); quest 3: D again, E.
@@ -1984,7 +2022,7 @@ mod tests {
                     "p1": spare(json!({ "backrow": [radiant_itd()] })),
                     "p2": { "hand": [VANILLA, TIMMY, MENACE], "library": SPARE_LIBRARY },
                 }));
-                on_quest(&mut s, "5", 12, json!({ "done": ["1", "2"] }));
+                on_quest(&mut s, "5", QUESTS.damage, json!({ "done": ["1", "2"] }));
                 any_action(&mut s);
                 // No opponent-held prompt opens while its holder is not active (R1279000): G waits, while H's
                 // draw landed and its quest opened at once.
@@ -2048,6 +2086,35 @@ mod tests {
                 assert_eq!(s.state().players.p1.mana.next_turn_mod, 100);
                 expect_line_matches(&s, json!({ "active": [], "done": ["7"] }));
             }
+        }
+    }
+
+    /// R767000: the scripts kept for the replays of v0.4.0f and before, at the old goals.
+    mod v0_4_0f {
+        use super::*;
+
+        #[test]
+        fn r404_r767000_the_kept_tree_asks_3_permanents_12_damage_and_totals_of_10() {
+            crate::register_all();
+            let kept = super::super::script_v0_4_0f();
+            for face in [&kept.base, &kept.radiant] {
+                let book = must(face.quests.clone(), "the tree");
+                let goal = |id: &str| -> QuestGoal {
+                    must(book.quests.iter().find(|quest| quest.id == id).cloned(), "the quest").goal
+                };
+                assert_eq!(goal("3"), QuestGoal::PermanentsControlled { count: 3 });
+                assert_eq!(goal("5"), QuestGoal::DamageToEnemies { amount: 12 });
+                assert_eq!(goal("6"), QuestGoal::UnitTotals { total: 10 });
+            }
+            crate::under_kept(ITD, kept.clone(), || {
+                let mut s = scenario(json!({
+                    "p1": { "backrow": [ITD], "field": [TIMMY], "hand": [VANILLA, STOCKPILE], "library": SPARE_LIBRARY },
+                    "p2": spare(json!({ "field": [MENACE, VANILLA] })),
+                }));
+                on_quest(&mut s, "3", 0, json!({}));
+                s.play(VANILLA, json!({}));
+                assert_eq!(completed_in(s.last_events()), vec!["3"]);
+            });
         }
     }
 }

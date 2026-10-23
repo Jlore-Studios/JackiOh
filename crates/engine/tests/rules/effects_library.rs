@@ -506,6 +506,29 @@ mod add_random_from_catalog_54_57_59 {
     }
 
     #[test]
+    fn r1704003_cost_mod_up_to_caps_the_raise() {
+        // (costOverride, costMod) -> the costMod the card keeps with the raise capped at (4).
+        for (cost, raise, kept) in [(3, 1, 1), (4, 1, 0), (2, 3, 2)] {
+            let mut state = game(&format!("pool-capped-{cost}-{raise}"));
+            let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);
+            run(
+                &mut state,
+                vec![add_random_from_catalog(json_as(json!({
+                    "query": { "set": "Boss-X" }, "costOverride": cost, "costMod": raise, "costModUpTo": 4,
+                })))],
+                Some(PlayerId::P1),
+                Some(&self_),
+            );
+            let card = must(state.players[PlayerId::P1].hand.first(), "the card added");
+            assert_eq!(card.cost_mod, kept, "({cost}) raised by {raise}");
+            assert_eq!(
+                effective_cost(&state, card, Default::default()),
+                (cost + raise).min(4).max(cost)
+            );
+        }
+    }
+
+    #[test]
     fn an_empty_pool_fizzles_and_the_card_still_resolves() {
         let mut state = game("pool-empty");
         let self_ = resolving_self(&mut state, &generator().id, PlayerId::P1);

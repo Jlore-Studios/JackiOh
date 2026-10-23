@@ -1784,13 +1784,13 @@
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: Add 2 random (3) or (4) Cost Units to your hand. They cost ({setCost})."
+      "text": "Cry: Add 2 random (3) Cost Units to your hand. They cost ({setCost})."
     },
     "radiant": {
       "attack": 16,
       "health": 16,
       "keywords": [],
-      "text": "Cry: Add 2 random Radiant (3) or (4) Cost Units to your hand. They cost ({setCost})."
+      "text": "Cry: Add 2 random Radiant (3) Cost Units to your hand. They cost ({setCost})."
     }
   },
   "core-055": {
@@ -5072,18 +5072,18 @@
     "rarity": "Rare",
     "flavor": "Beast",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "refs": [
       "core-t-felinor"
     ],
     "loc": 34,
     "base": {
       "keywords": [],
-      "text": "Steal an enemy permanent in a lane where you control a (1) Cost Unit."
+      "text": "Steal an enemy Unit in a lane where you control a (1) Cost Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Summon a Felinor Token. Then steal an enemy permanent in a lane where you control a (1) Cost Unit."
+      "text": "Summon a Felinor Token. Then steal an enemy Unit in a lane where you control a (1) Cost Unit."
     }
   },
   "classic-033": {
@@ -5792,11 +5792,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
+      "text": "Reveals when a hit would bring your hero to 0 or less: Cancel the hit. Then heal your hero {heal} and draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
+      "text": "Reveals when a hit would bring your hero to 0 or less: Cancel the hit. Then heal your hero {heal} and draw your deck."
     }
   },
   "classic-053": {
@@ -7270,14 +7270,22 @@
     "base": {
       "attack": 1,
       "health": 6,
-      "keywords": [],
-      "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nEnd of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
     },
     "radiant": {
       "attack": 2,
       "health": 12,
-      "keywords": [],
-      "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nEnd of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
     }
   },
   "classicplus-004": {
@@ -7401,23 +7409,35 @@
     "name": "The House",
     "set": "Classic+",
     "type": "Field Spell",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Rare",
     "flavor": "Physical",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "refs": [
       "core-003",
       "classicplus-006"
     ],
+    "params": [
+      {
+        "key": "tokens",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Cry and start of turn: Summon a Right-house defender or a Wrong-House Attacker at random."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Spend a Plague Counter from this to summon a Right-house defender or a Wrong-House Attacker."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry and start of turn: Summon a Right-house defender and a Wrong-House Attacker."
+      "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Spend a Plague Counter from this to summon a Radiant Right-house defender or a Radiant Wrong-House Attacker."
     }
   },
   "classicplus-008": {
@@ -9314,7 +9334,7 @@
     "rarity": "Legendary",
     "flavor": "Tech",
     "token": false,
-    "cost": 4,
+    "cost": 3,
     "params": [
       {
         "key": "cards",
@@ -10048,15 +10068,15 @@
     "rarity": "Epic",
     "flavor": "Snack",
     "token": false,
-    "cost": 1,
+    "cost": 2,
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Discover 1 to 4 cells, each from 3 random cells in different lanes. Exile every card on the cubic curve through them (x = lane, y = row)."
+      "text": "Discover 4 cells, each from 2 random cells in different lanes. Destroy every card on the cubic curve through them (x = lane, y = row)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover 1 to 4 cells, each from 3 random cells in different lanes. Exile every enemy card on the cubic curve through them (x = lane, y = row)."
+      "text": "Discover 4 cells, each from 3 random cells in different lanes. Destroy every enemy card on the cubic curve through them (x = lane, y = row)."
     }
   },
   "classicplus-063": {
@@ -12613,13 +12633,13 @@
       "attack": 3,
       "health": 4,
       "keywords": [],
-      "text": "Start of turn: If your opponent has a pricier permanent, they gain control of this. Otherwise, shuffle a Love Bomb into your deck."
+      "text": "End of turn: If your opponent has a pricier permanent, they gain control of this. Otherwise, shuffle a Love Bomb into your deck."
     },
     "radiant": {
       "attack": 6,
       "health": 8,
       "keywords": [],
-      "text": "Start of turn: If your opponent has a pricier permanent and a bigger deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
+      "text": "End of turn: If your opponent has a pricier permanent and a bigger deck, they gain control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
     }
   },
   "meditative-030-1": {
@@ -12894,7 +12914,7 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Add a random Radiant card to your hand."
+      "text": "Cast on draw: Add a random Radiant card to your hand. It costs (1) more (up to (4))."
     },
     "radiant": {
       "keywords": [],
@@ -13919,7 +13939,7 @@
     "rarity": "Common",
     "flavor": "Physical",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "core-003"
     ],
@@ -14256,10 +14276,13 @@
           "kind": "Animated on your turn"
         },
         {
+          "kind": "Rush"
+        },
+        {
           "kind": "First Strike"
         }
       ],
-      "text": "Animated on your turn, First Strike"
+      "text": "Animated on your turn, Rush, First Strike"
     },
     "radiant": {
       "attack": 6,
@@ -14269,13 +14292,16 @@
           "kind": "Animated on your turn"
         },
         {
+          "kind": "Rush"
+        },
+        {
           "kind": "Pierce"
         },
         {
           "kind": "First Strike"
         }
       ],
-      "text": "Animated on your turn, Pierce, First Strike"
+      "text": "Animated on your turn, Rush, Pierce, First Strike"
     }
   },
   "meditative-067": {
@@ -16471,7 +16497,7 @@
     "rarity": "Token",
     "flavor": "Tech",
     "token": true,
-    "cost": 2,
+    "cost": 3,
     "refs": [
       "meditative-030-1"
     ],
@@ -16554,7 +16580,7 @@
     "rarity": "Token",
     "flavor": "Physical",
     "token": true,
-    "cost": 2,
+    "cost": 3,
     "params": [
       {
         "key": "buff",
@@ -16849,7 +16875,7 @@
     "loc": 6,
     "base": {
       "attack": 4,
-      "health": 7,
+      "health": 8,
       "keywords": [
         {
           "kind": "Spell Damage",
@@ -16860,7 +16886,7 @@
     },
     "radiant": {
       "attack": 8,
-      "health": 14,
+      "health": 16,
       "keywords": [
         {
           "kind": "Spell Damage",

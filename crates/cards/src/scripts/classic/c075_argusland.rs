@@ -38,7 +38,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const ARGUSLAND: &str = "classic-075";
-    const GAMBIT: &str = "classic-052"; // C #52 Final Gambit: redirects a lethal hit on your hero.
+    const GAMBIT: &str = "classic-052"; // C #52 Final Gambit: cancels a lethal hit on your hero.
     const GARY: &str = "core-004"; // 1/1
     const VANILLA: &str = "core-008"; // 4/4
     const PANTHER: &str = "core-032"; // 5/4 Rush
@@ -213,7 +213,7 @@ mod tests {
         #[test]
         fn s4_4_step_4a_the_lethal_window_reads_the_halved_amount_a_7_halved_to_4_is_lethal_at_4_and_final_gambit_fires() {
             let mut s = attack_on_guarded(POINTMASTER, vec![json!(ARGUSLAND), json!(GAMBIT)], 4);
-            s.expect_events(json!(["trapFired", "redirected"]));
+            s.expect_events(json!(["trapFired", "healed"]));
             s.expect_in_zone(GAMBIT, "graveyard");
             s.expect_health(P1, 14);
         }

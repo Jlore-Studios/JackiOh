@@ -892,7 +892,8 @@ pub enum GameEvent {
         message: String,
     },
     /// R831003: C+ #62 KY's Papaya drew its curve for `player`: the zones it passes through, one per
-    /// lane at most, in lane order, before the cards there are exiled. Public: board positions only.
+    /// lane at most, in lane order, before the cards there are destroyed (exiled through v0.4.0f,
+    /// R1704000). Public: board positions only.
     CurveDrawn {
         player: PlayerId,
         cells: Vec<ZoneRef>,

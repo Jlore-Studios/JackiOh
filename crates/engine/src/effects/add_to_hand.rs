@@ -34,6 +34,8 @@ struct HandRiders {
     /// R1181003: the Embiggened version's own price (Meditative+ #23's "its Embiggened version costs (0)").
     embiggen_cost_override: Option<i32>,
     cost_mod: Option<i32>,
+    /// R1704003: a raise by `cost_mod` stops at this cost, and leaves an X-cost card as it is.
+    cost_mod_up_to: Option<i32>,
     /// R637: the card is Temporary (a granted keyword) while it is in a hand.
     temporary: Option<bool>,
     /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
@@ -116,6 +118,20 @@ fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders:
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
     }
+    // R1704003: "it costs (1) more (up to (4))" — the raise is taken back as far as it went past the
+    // cap, and whole from an X-cost card, whose X is no cost a number may move (R65).
+    if reaches_hand
+        && let (Some(cap), Some(raise)) = (riders.cost_mod_up_to, riders.cost_mod)
+        && let Some(live) = find_instance(&*ctx.state, &card.id)
+    {
+        let back = match crate::numbers::own_cost(&*ctx.state, live) {
+            None => raise,
+            Some(after) => (after - cap).clamp(0, raise.max(0)),
+        };
+        if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
+            live.cost_mod -= back;
+        }
+    }
 }
 
 /// The one creation path: a fresh card of `defId` with these riders, into that player's hand through
@@ -186,6 +202,7 @@ impl AddToHandArgs {
             cost_override: self.cost_override,
             embiggen_cost_override: self.embiggen_cost_override,
             cost_mod: self.cost_mod,
+            cost_mod_up_to: None,
             temporary: self.temporary,
             chinese: self.chinese,
             lucky: self.lucky,
@@ -275,6 +292,10 @@ pub struct AddRandomFromCatalogArgs {
     pub embiggen_cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
+    /// R1704003: a `costMod` raise stops at this cost (M #37's "(up to (4))"), and an X-cost card
+    /// takes none of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_mod_up_to: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
     /// ME-CN, R921: the cards added are shown in Chinese (Meditative #33).
@@ -293,6 +314,7 @@ impl AddRandomFromCatalogArgs {
             cost_override: self.cost_override,
             embiggen_cost_override: self.embiggen_cost_override,
             cost_mod: self.cost_mod,
+            cost_mod_up_to: self.cost_mod_up_to,
             temporary: self.temporary,
             chinese: self.chinese,
             lucky: self.lucky,

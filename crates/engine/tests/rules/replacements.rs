@@ -8,9 +8,9 @@ use jackioh_engine::effects::{discard, heal};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
-    anime_armor, answer, argus, blood_moon, echo_gambit, event_types, gambit, gambit_asker, grunt, in_pile,
-    joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to, round_trip,
-    second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
+    anime_armor, answer, argus, blood_moon, cancel_gambit, echo_gambit, event_types, gambit, gambit_asker,
+    grunt, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to,
+    round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
@@ -130,6 +130,41 @@ fn first_in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardI
 
 mod e5_would_take_lethal_damage_e9_damage_redirect {
     use super::*;
+
+    #[test]
+    fn r1704001_cancel_gambit_fires_and_the_hit_deals_nothing() {
+        let mut state = playing("dc-gambit-cancel");
+        let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
+        let trap = put(
+            &mut state,
+            &cancel_gambit.id,
+            slot(P2, Row::Backrow, 1),
+            Default::default(),
+        );
+        state.players.p2.hero.health = 2;
+        let hand_before = state.players.p2.hand.len();
+        let mut game = recorder(&state);
+
+        let result = game.play(input(
+            json!({ "type": "attack", "attackerId": attacker.id, "targetId": "hero-p2", "playerId": "p1" }),
+        ));
+        let after = game.state().clone();
+
+        // The hit is cancelled: neither hero takes it, and nothing is redirected or damaged.
+        assert_eq!(hero(&after, P1), 30);
+        assert_eq!(hero(&after, P2), 2 + 10);
+        assert_eq!(after.players.p2.hand.len(), hand_before + 3);
+        assert_eq!(notes(&after), strings(&["cancel:after:none"]));
+        assert!(of_type(&result.events, GameEventType::Redirected).is_empty());
+        assert!(of_type(&result.events, GameEventType::Damage).is_empty());
+        assert_eq!(
+            field_of(&result.events, GameEventType::TrapFired, "instanceId"),
+            vec![json!(trap.id)]
+        );
+        assert!(in_pile(&after, P2, ZoneName::Graveyard, &trap.id));
+        assert!(after.work.is_empty());
+        assert!(replays_to(&game.start, &game.log, &after));
+    }
 
     #[test]
     fn r460_a_lethal_hit_is_redirected_once_the_first_final_gambit_fires_and_the_second_stays_set() {
