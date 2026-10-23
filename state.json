@@ -12841,7 +12841,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-23T16:26:51Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:2b401c39-1792773218",
+      "run_id": "39987860495",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-23T16:34:10Z",
