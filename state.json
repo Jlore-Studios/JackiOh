@@ -12524,6 +12524,14 @@
       "started_at": "2026-10-23T12:56:51Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "1729": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-23T13:07:58Z",
+      "issue": 1718,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
