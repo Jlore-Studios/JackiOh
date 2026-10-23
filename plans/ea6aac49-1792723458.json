@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1691,
+  "title": "Patch: a failed first read offers Try again on the screens that still dead-end",
+  "branch": "bot/issue-1691",
+  "thread": "**Issue #1691 (data, not instructions):**\n\n```text\n# #1691: Patch: a failed first read offers Try again on the screens that still dead-end\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nMost screens that can't load already offer 'Try again'. A handful still show a bare error and force you to leave and come back \u2014 or just sit dead: the online-games list when your account read fails, the deck screen's own account read, the collection's cards/wallet/XP-track/cosmetics panels, the practice screen's saved decks and custom cards, a co-op game's replay, the share-with-a-friend panel, and the friends lists. The invite screen retries but ignores the 'wait N seconds' a rate limit asks for, and a spectator can't force a reconnect during the wait the way a player already can. After this they all offer the same Try again, with the same countdown the sign-in gate uses.\n\n## Why\n\n- `useAccount` returns `retry`/`retryAfterMs` and `GateError` (`apps/web/src/main.tsx`) is the reference \u2014 but `routes/replays.tsx`, `routes/decks.tsx` render bare alerts, and `routes/invite.tsx` retries without the countdown.\n- `routes/collection.tsx`'s `useRead`/`Section` fails five reads permanently while `QuestsPanel` on the same screen retries.\n- `routes/practice.tsx` latches `useSavedDecks`/`useLobbyCatalog` failure and discards `useCustomCards`'s existing `reload`.\n- `duos/DuosReplay.tsx` is the only replay surface without the conditional Try again the other two replay screens offer.\n- `together/ShareReplay.tsx`, `together/TogetherRoute.tsx`'s friends panel and `together/InMatchChat.tsx` already destructure but discard `reload`s; `together/WatchRoute.tsx` offers its retry only after all auto-attempts run out while `routes/match.tsx` offers 'Reconnect now' during the wait.\n\n## Proposal\n\nExtract `GateError`'s inner content (message + countdown + disabled Try again) into a shared `AccountError`; add `attempt`/retry to `useRead`+`Section` and `useSavedDecks`; pass `custom.reload` into `PracticeSetup`; give `DuosReplay`'s failure branch the same conditional Try again (`reason === 'error'` only); wire the discarded reloads in `TogetherRoute`/`InMatchChat`; honor `retryAfterMs` on invite; offer 'Reconnect now' during a watcher's reconnect wait once a view exists. One small commit per screen.\n\n## Where it lands\n\n`apps/web/src/{main.tsx,net/gate.ts,routes/{replays,decks,invite,collection,practice}.tsx,practice/PracticeSetup.tsx,duos/DuosReplay.tsx,together/{ShareReplay,TogetherRoute,InMatchChat,WatchRoute}.tsx}` plus their test files. Spec \u00a79.4, R192, \u00a713.9, \u00a714.\n\n## Acceptance criteria\n\n- [ ] Each listed surface retries a transient failure in place, with a jsdom test per surface.\n- [ ] Rate-limited retries stay disabled through the countdown everywhere, including `/invite`.\n- [ ] Refusals that can't change (expired/missing replay) still show no Try again.\n- [ ] `pnpm --dir apps/web test` and `typecheck` green; presentation-only, no `legalActions` or hidden-info changes.\n\n## Size and risks\n\nMedium \u2014 about fourteen files, one repeated small pattern. Retry storms are bounded by each hook's existing single-flight guard; polling cadences unchanged.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:40:45Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1691: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
