@@ -13634,6 +13634,13 @@
     "1720": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T13:24:47Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Rule line 1 is the one I was least sure of: about 290 added lines against a 400 cap is close to the limit, and parsing clap's help pages is easy to get subtly wrong. Every other line holds: one crate (tools), no spec work, no shared surface."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
