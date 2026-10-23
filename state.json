@@ -12379,7 +12379,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-23T13:02:28Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:61881d85-1792764213",
+      "run_id": "39966464997",
       "started_at": "2026-10-23T14:03:55Z",
       "stop_requested": false,
       "suggestion": true,
