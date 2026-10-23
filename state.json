@@ -13694,7 +13694,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-23T13:04:49Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:a783ac0b-1792761422",
+      "run_id": "39959971250",
       "started_at": "2026-10-23T13:17:21Z",
       "stop_requested": false,
       "suggestion": true,
