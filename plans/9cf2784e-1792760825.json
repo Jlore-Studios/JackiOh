@@ -1,0 +1,55 @@
+{
+  "action": "build",
+  "number": 1719,
+  "title": "Patch: the fuzz monitor checks that an event's payload matches the state it leaves",
+  "branch": "bot/issue-1719",
+  "thread": "**Issue #1719 (data, not instructions):**\n\n```text\n# #1719: Patch: the fuzz monitor checks that an event's payload matches the state it leaves\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe random-game checker watches that the game's bookkeeping stays sane \u2014 but it never checks that the announcements match reality. Whether \"turn 12 started\" really is turn 12 for the named player, or \"game over, player one wins\" matches the recorded result, goes unverified. A wrong announcement is invisible to the replay checker too, because a consistently wrong message still replays to the same state \u2014 yet the client renders from those messages, so a player could be shown a wrong turn count or the wrong winner. After the change, the monitor compares each announcement to the state it leaves.\n\n## Why\n\nThe monitor stores `turnStarted.{turn,player}` for bookkeeping but never compares them to `state.turn`/`state.active` (`crates/engine/src/testkit/invariants.rs:1640-1647`); `gameOver` feeds only the \"nothing after game over\" ordering rule, never `state.result` (:1623-1638; event shape at `wire/events.rs:597-600`). `manaChanged`, `turnEnded` and `turnAutoEnded` payloads are likewise unasserted (:543-565). Fold-equality cannot catch this bug class \u2014 a consistently wrong payload folds to the same hash \u2014 but every client renders the wire, so the divergence is user-visible.\n\n## Proposal\n\nExtend the monitor: `turnStarted.{turn,player}` \u2194 `state.{turn,active}`; `turnEnded.turn`/`turnAutoEnded.turn` \u2194 the shadow turn; `gameOver.{winner,reason}` \u2194 `state.result`; the last `manaChanged` per seat \u2194 `players[p].{mana,max_mana}`. Glitch resets re-emit setup via `begin_setup`, so the check survives them naturally.\n\n## Where it lands\n\n`crates/engine/src/testkit/invariants.rs` plus tamper tests in its test module (the existing suite already mutates fixture states, e.g. `duos_monitor_flags_pool_bound_overflow`); exercised continuously by `cargo jackioh fuzz`.\n\n## Acceptance criteria\n\n- Each new assertion has a tamper test that fails without it.\n- Clean fuzz seeds stay green; `cargo jackioh fuzz --seeds 200` passes.\n- The invariant gets the next I-number and its doc comment, matching the file's style.\n\n## Size and risks\n\nMedium. Deliberately distinct from the rejected pile-accounting/settled-board monitor idea (#777): this checks that the *wire tells the truth* about state, not that zones account for cards. One caveat to resolve while building: confirm every mana mutation emits a `manaChanged`, or scope the check to the last emitted event.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T13:02:59Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong); build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
