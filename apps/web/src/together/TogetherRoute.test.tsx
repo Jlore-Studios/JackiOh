@@ -39,6 +39,8 @@ const TESTID = {
   coopCreate: "coop-create",
   sharedRetry: "together-shared-retry",
   sharedRow: "together-shared-row",
+  friendsError: "together-friends-error",
+  friendsRetry: "together-friends-retry",
 } as const;
 
 // ---------------------------------------------------------------------------------------------
@@ -373,6 +375,43 @@ describe("B55 the friends list", () => {
     expect(rows()).toHaveLength(0);
     expect(screen.queryAllByTestId(TESTID.requestAccept)).toHaveLength(0);
     expect(screen.queryAllByTestId(TESTID.challenge)).toHaveLength(0);
+  });
+
+  it("#1691 a friends list that could not be read offers Try again, which lists the friends", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    signedIn();
+    let refused = true;
+    const server = serve(world(), (call) =>
+      refused && call.method === "GET" && call.path === "/api/friends" ? refusal(500, "internal", "Something went wrong.") : undefined,
+    );
+    render(<TogetherRoute />);
+    expect(await screen.findByTestId(TESTID.friendsError, undefined, SLOW)).toHaveTextContent("Something went wrong.");
+    expect(screen.getByTestId(TESTID.friendsRetry)).toBeEnabled();
+    expect(rows()).toHaveLength(0);
+
+    refused = false;
+    fireEvent.click(screen.getByTestId(TESTID.friendsRetry));
+    await waitFor(() => {
+      expect(rows()).toHaveLength(4);
+    }, SLOW);
+    expect(screen.queryByTestId(TESTID.friendsError)).toBeNull();
+    expect(screen.queryByTestId(TESTID.friendsRetry)).toBeNull();
+    expect(server.to("GET", "/api/friends")).toHaveLength(2);
+  });
+
+  it("#1691 a rate-limited friends list holds Try again", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    signedIn();
+    serve(world(), (call) =>
+      call.method === "GET" && call.path === "/api/friends"
+        ? { status: 429, body: { error: { code: "rate_limited", message: "Slow down.", details: { retryAfterMs: 60_000 } } } }
+        : undefined,
+    );
+    render(<TogetherRoute />);
+    expect(await screen.findByTestId(TESTID.friendsError, undefined, SLOW)).toHaveTextContent(/Slow down\. You can try again in \d+ s\./);
+    const retry = screen.getByTestId(TESTID.friendsRetry);
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent(/Try again in \d+ s/);
   });
 
   it("B55 with no friends the page shows no friend row and still offers the add form", async () => {

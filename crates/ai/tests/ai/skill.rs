@@ -3,7 +3,7 @@
 //! stream, in between each decision rolls the seat's own seeded stream, and every run reproduces.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_SKILL_MAX, AI_SKILL_MIN, MatchConfig, MatchHooks, SearchBudget, SeatController,
+    AI_BUDGET, AI_SKILL_MAX, AI_SKILL_MIN, MatchConfig, MatchHooks, MatchSetup, SearchBudget, SeatController,
     clamp_skill, play_match, plays_best,
 };
 use jackioh_engine::testkit::{PerPlayer, create_rng, json};
@@ -34,6 +34,7 @@ fn config(seed: &str, p1: SeatController, p2: SeatController, max_actions: Optio
         handicaps: None,
         controllers: PerPlayer::new(p1, p2),
         max_actions,
+        setup: MatchSetup::default(),
     }
 }
 

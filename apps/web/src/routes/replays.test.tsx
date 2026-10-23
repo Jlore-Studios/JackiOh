@@ -639,3 +639,35 @@ describe("#1568 Try again on /replays", () => {
     expect(screen.queryByTestId(replaysTestid.onlineRetry)).toBeNull();
   });
 });
+
+describe("#1691 Try again on /replays' account read", () => {
+  it("#1691 an account that could not be read offers Try again, which lists the online games", async () => {
+    signIn();
+    vi.mocked(getMe).mockRejectedValueOnce(new ApiUnreachableError(new TypeError("Failed to fetch")));
+    vi.mocked(getReplays).mockResolvedValue({ replays: [listing()], nextOffset: null });
+    renderRoute(memorySaveStore());
+
+    expect(await screen.findByTestId(replaysTestid.accountError)).toHaveTextContent(API_UNREACHABLE_MESSAGE);
+    expect(screen.getByTestId(replaysTestid.accountRetry)).toBeEnabled();
+    expect(getReplays).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(replaysTestid.accountRetry));
+    expect(await screen.findByTestId(replaysTestid.online("m-1"))).toBeInTheDocument();
+    expect(getMe).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId(replaysTestid.accountError)).toBeNull();
+    expect(screen.queryByTestId(replaysTestid.accountRetry)).toBeNull();
+  });
+
+  it("#1691 a rate-limited account read holds Try again", async () => {
+    signIn();
+    vi.mocked(getMe).mockRejectedValue(
+      new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } }),
+    );
+    renderRoute(memorySaveStore());
+
+    expect(await screen.findByTestId(replaysTestid.accountError)).toHaveTextContent(/You can try again in \d+ s\./);
+    const retry = screen.getByTestId(replaysTestid.accountRetry);
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent(/Try again in \d+ s/);
+  });
+});

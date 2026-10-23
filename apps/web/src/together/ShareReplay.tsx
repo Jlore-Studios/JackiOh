@@ -9,8 +9,10 @@
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
+import { readFailureOf } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { getFriends, getReplayShares, shareReplay, unshareReplay, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
@@ -27,6 +29,9 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
   const [shared, setShared] = useState<ReadonlySet<string>>(() => new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** #1691: how many times Try again has asked for the first read, and the wait its failure stated (R192). */
+  const [reads, setReads] = useState(0);
+  const [readWaitMs, setReadWaitMs] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!open || friends !== null) return;
@@ -36,15 +41,19 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
         if (cancelled) return;
         setShared(new Set(shares.friendIds));
         setFriends(answer.friends);
+        setError(null);
       },
       (cause: unknown) => {
-        if (!cancelled) setError(messageOf(cause));
+        if (cancelled) return;
+        const failure = readFailureOf(cause);
+        setError(failure.message);
+        setReadWaitMs(failure.retryAfterMs);
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [open, friends, matchId]);
+  }, [open, friends, matchId, reads]);
 
   const toggle = (friend: Friend): void => {
     if (busy !== null) return;
@@ -118,7 +127,18 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
               })}
             </ul>
           ) : null}
-          {error === null ? null : (
+          {error === null ? null : friends === null ? (
+            <AccountError
+              message={error}
+              retryAfterMs={readWaitMs}
+              onRetry={() => {
+                setError(null);
+                setReads((count) => count + 1);
+              }}
+              testId={shareTestid.error}
+              retryTestId={shareTestid.retry}
+            />
+          ) : (
             <p className="notice" data-testid={shareTestid.error} role="alert">
               {t(error)}
             </p>

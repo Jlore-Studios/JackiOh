@@ -16,6 +16,7 @@ import { mirrorKey } from "../game/deckbuilder/sync.ts";
 import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
 import { ApiRequestError, getCollection, getDecks, getMe, putDeck, type DecksResponse } from "../net/api.ts";
+import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
 import { navTestid } from "./nav.tsx";
@@ -164,6 +165,36 @@ describe("the gate (§9.4)", () => {
       expect(screen.getByTestId("deckbuilder-error")).toBeInTheDocument();
     });
     expect(screen.getByTestId(navTestid.back)).toBeInTheDocument();
+  });
+
+  it("#1691 an account read that failed offers Try again, which opens the workshop", async () => {
+    vi.mocked(getMe).mockRejectedValueOnce(new Error("the server could not be reached"));
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent("the server could not be reached");
+    });
+    expect(screen.getByTestId(DECKBUILDER_RETRY)).toBeEnabled();
+    expect(getDecks).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(DECKBUILDER_RETRY));
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    expect(getMe).toHaveBeenCalledTimes(2);
+  });
+
+  it("#1691 a rate-limited account read holds Try again", async () => {
+    vi.mocked(getMe).mockRejectedValue(
+      new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } }),
+    );
+    render(<DecksRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent(GATE_RATE_LIMITED_MESSAGE);
+    });
+    expect(screen.getByTestId("deckbuilder-error")).toHaveTextContent(/You can try again in \d+ s\./);
+    const retry = screen.getByTestId(DECKBUILDER_RETRY);
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent(/Try again in \d+ s/);
   });
 });
 

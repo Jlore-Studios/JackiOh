@@ -18,6 +18,7 @@ import {
 import { collectionTestid as T } from "../collection/collection.ts";
 import { fullCollection, questsHeld, tracksOf } from "../collection/fixtures.ts";
 import {
+  ApiRequestError,
   getCollection,
   getCosmeticPacks,
   getOwnedCosmetics,
@@ -152,6 +153,37 @@ describe("#1307 the collection route", () => {
     }
     expect(await screen.findByTestId(questsTestid.error)).toHaveTextContent("the server refused");
     expect(screen.getByRole("heading", { name: "Cards", level: 2 })).toBeInTheDocument();
+  });
+
+  it("#1691 a panel whose read failed offers Try again, which reads it again", async () => {
+    answerAll();
+    vi.mocked(getPacks).mockRejectedValueOnce(new Error("the packs are unavailable"));
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(T.error("wallet"))).toHaveTextContent("the packs are unavailable");
+    expect(screen.getByTestId(T.retry("wallet"))).toBeEnabled();
+    expect(screen.queryByTestId(T.retry("cards"))).toBeNull();
+    expect(screen.queryByTestId(T.retry("tracks"))).toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.retry("wallet")));
+    expect(await screen.findByTestId(T.jlore)).toHaveTextContent("37 Jlore");
+    expect(screen.queryByTestId(T.error("wallet"))).toBeNull();
+    expect(screen.queryByTestId(T.retry("wallet"))).toBeNull();
+    expect(getPacks).toHaveBeenCalledTimes(2);
+    expect(getCollection).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1691 a rate-limited panel holds Try again", async () => {
+    answerAll();
+    vi.mocked(getTracks).mockRejectedValue(
+      new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } }),
+    );
+    render(<CollectionRoute token={TOKEN} />);
+
+    expect(await screen.findByTestId(T.error("tracks"))).toHaveTextContent(/You can try again in \d+ s\./);
+    const retry = screen.getByTestId(T.retry("tracks"));
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent(/Try again in \d+ s/);
   });
 
   it("names the screen Collection", () => {

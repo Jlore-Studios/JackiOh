@@ -13,9 +13,9 @@ use std::panic::catch_unwind;
 
 use indexmap::IndexMap;
 use jackioh_ai::{
-    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, MatchConfig, MatchHooks, MatchRecord, Matchup,
-    NextSwing, SeatController, action_key, candidate_actions, decide, evaluate, game_config, greedy_action,
-    play_match, random_action,
+    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, MatchConfig, MatchHooks, MatchRecord,
+    MatchSetup, Matchup, NextSwing, SeatController, action_key, candidate_actions, decide, evaluate,
+    game_config, greedy_action, play_match, random_action,
 };
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, Action, ActionBody, ActionType, FoldArgs, GameState, PerPlayer, PerPlayerOpt, PlayerId,
@@ -35,6 +35,7 @@ fn random_vs_random(seed: &str) -> MatchConfig {
         handicaps: None,
         controllers: PerPlayer::new(SeatController::Random, SeatController::Random),
         max_actions: None,
+        setup: MatchSetup::default(),
     }
 }
 
