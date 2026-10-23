@@ -23,6 +23,8 @@
 #   web_promote        `web (unit 1/3)`'s own run of apps/web/src/net/promote-production.test.ts, which
 #                      the shards leave out (the daily super run runs it whatever changed)
 #   e2e                `e2e smoke`
+#   infra              `rust (checks, fuzz 200)`'s terraform steps over infra/ (#1708): fmt, init
+#                      without the backend, validate, and the lock file
 #
 # ci.yml's `changes` job exports every line and each job runs on its own (#751): a job-level `if:`
 # for a job of its own, and for a matrix entry (`rust-test`'s groups, `db-suite`'s suites), whose
@@ -51,7 +53,9 @@
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
 #
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
-#    .cargo/, anything under .github/ that is not on the skip list, and this script.
+#    .cargo/, anything under .github/ that is not on the skip list, and this script. Of these, only
+#    .github/ and this script run infra too: the terraform steps read no cargo file.
+#  - infra: infra/, which nothing else reads (no web or e2e line turns on for it).
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
 #    all three; tests/sql/ the sql invariants; the store (src/db/), the Supabase bootstrap
 #    (tests/db/bootstrap.sql), the server's manifest and Cargo.lock the store contract and the deploy
@@ -92,7 +96,8 @@
 #    tests/fixtures/practice-claim.json, which the worker's claim test plays, and the quest pool,
 #    quests.json, whose titles the quests panel's test holds to zh-CN), every crate's README, the
 #    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
-#    which two web tests read), docs/, training/, reviews/, analysis/ and the top-level Markdown.
+#    which two web tests read), docs/, training/, reviews/, analysis/, infra/ and the top-level
+#    Markdown.
 #  - web_promote runs for what promote-production.test.ts runs and reads: scripts/promote-production.sh,
 #    scripts/vercel-ignore.sh, the workflow (under .github/, so every job runs) and the test itself,
 #    and for what any web test runs on (the root and the web's package.json, the lockfile, the pnpm
@@ -101,7 +106,7 @@
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
 #    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's golden
 #    traces, which tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
-#    training/, reviews/, analysis/, the top-level Markdown, the deploy files (render.yaml, the
+#    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (render.yaml, the
 #    Dockerfile, vercel.json, wrangler.jsonc), the lint and unit-test configs, and the scripts no
 #    build runs.
 #
@@ -122,7 +127,7 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm web web_promote e2e"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm web web_promote e2e infra"
 RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow rust_luau rust_tools_wasm"
 
 # Every line, set to $1.
@@ -198,6 +203,10 @@ for file in $files; do
   esac
 
   case "$file" in
+    infra/* | .github/* | scripts/ci-scope.sh) on infra ;;
+  esac
+
+  case "$file" in
     crates/server/migrations/*) on db_sql db_store db_deploy ;;
     crates/server/tests/sql/*) on db_sql ;;
     crates/server/tests/db/bootstrap.sql | crates/server/src/db/* | crates/server/Cargo.toml | Cargo.lock) on db_store db_deploy ;;
@@ -240,7 +249,7 @@ for file in $files; do
     crates/ai/tests/fixtures/learned-parity.json | crates/server/tests/fixtures/practice-claim.json | crates/server/quests.json) on web ;;
     crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
-    docs/* | training/* | reviews/* | analysis/*) ;;
+    docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;
   esac
@@ -254,7 +263,7 @@ for file in $files; do
   case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
     crates/*/tests/* | crates/*/README.md | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
-    docs/* | spec/* | training/* | reviews/* | analysis/*) ;;
+    docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     render.yaml | crates/server/Dockerfile | vercel.json | wrangler.jsonc | eslint.config.js | vitest.config.ts) ;;
     scripts/browse.sh | scripts/promote-production.sh | scripts/vercel-ignore.sh | scripts/vercel-install.sh | scripts/worktree.sh) ;;

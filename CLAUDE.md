@@ -12,8 +12,9 @@ trap backrow. This file binds every agent, not only Claude.
 - `BUILD.md` is the work order (milestones, acceptance criteria, the per-card must-pass table); `REVIEW.md` is
   the audit, its reports in `reviews/`.
 - Each crate's and app's `README.md` (`crates/*`, `apps/web`, `e2e`) is its contract: read it before you
-  change that code. Also: `docs/ADDING_CARDS.md`, `docs/issues-and-patches.md` (titles, labels, patch and
-  ruling numbers), `docs/architecture.md`, `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`,
+  change that code. So is `infra/README.md`, for the hosts' dashboard settings as Terraform (#1708). Also:
+  `docs/ADDING_CARDS.md`, `docs/issues-and-patches.md` (titles, labels, patch and ruling numbers),
+  `docs/architecture.md`, `docs/deploy-cloudflare.md` (what runs where), `bot/README.md`,
   `training/README.md`, `docs/v0.3.0/SURFACE.md` (every boundary between the crates and the client) and
   `docs/v0.4.0/` (the Luau card scripts, #442, and their return to Rust, #902).
 - The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md` and the design briefs

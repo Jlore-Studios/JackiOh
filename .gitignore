@@ -40,6 +40,14 @@ target/
 .cache/
 apps/web/src/wasm/pkg/
 
+# Terraform (infra/README.md): the providers `init` downloads, the state (it holds whatever the
+# providers read, and lives in the remote backend) and variable files. .terraform.lock.hcl is
+# committed.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
 # The notebooks' project (analysis/README.md): its virtual environment, the record files it is pointed at
 # and Jupyter's autosaves.
 analysis/.venv/
