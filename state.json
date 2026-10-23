@@ -12401,12 +12401,12 @@
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-10-22T20:30:47Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
-      "run_id": "39871306812",
-      "started_at": "2026-10-22T23:22:03Z",
+      "run_id": "pending:f1a24562-1792719859",
+      "started_at": "2026-10-23T01:44:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -13643,9 +13643,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T00:02:18Z",
+    "at": "2026-10-23T01:44:30Z",
     "url": "",
-    "what": "suggestions on devin"
+    "what": "build #1675 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-23T01:37:44Z",
