@@ -12769,6 +12769,13 @@
     "1689": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T03:02:53Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 3 fails: the decision is not in \u00a79.4/\u00a79.5, so it adds ruling R1689000 and edits spec/; the server change itself is small"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
