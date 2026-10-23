@@ -13557,6 +13557,13 @@
     "1717": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T13:15:09Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Rule line 3 fails: the decision the spec leaves open (what counts, the threshold, once a window) needs a new ruling R1717000, with edits to spec/09-architecture.md, spec/11-rulings.md and spec/INDEX.md. The code itself is small and stays in crates/server."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
