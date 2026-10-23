@@ -13267,11 +13267,11 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-7",
       "queued_at": "2026-10-23T05:06:58Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "39904539249",
-      "started_at": "2026-10-23T05:13:06Z",
+      "run_id": "pending:b890dd6f-1792734118",
+      "started_at": "2026-10-23T05:42:08Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14289,9 +14289,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T05:32:36Z",
+    "at": "2026-10-23T05:42:08Z",
     "url": "",
-    "what": "revise #1710 on claude-6"
+    "what": "plan #1705 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-23T05:31:06Z",
