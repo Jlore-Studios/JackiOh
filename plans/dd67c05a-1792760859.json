@@ -1,0 +1,55 @@
+{
+  "action": "build",
+  "number": 1718,
+  "title": "Patch: a ruling's proof must be a test that can run",
+  "branch": "bot/issue-1718",
+  "thread": "**Issue #1718 (data, not instructions):**\n\n```text\n# #1718: Patch: a ruling's proof must be a test that can run\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery game ruling names the tests that prove it, and a repository check enforces that pairing. Today the check only asks whether a matching *name* appears in the file \u2014 a skipped test, or a helper function that is never registered as a test, counts as proof all the same. A ruling can therefore claim evidence nobody runs, and nobody notices. After the change, only a test that can actually execute counts; skipping or demoting a proof fails the check.\n\n## Why\n\n`spec check`'s `proves()` (`crates/tools/src/spec.rs:739-793`) collects a Rust `fn`/`mod` name or a TypeScript `it(`/`test(`/`describe(` title and never records attributes: its own fixture credits `it.skip('R5 skipped', \u2026)` as a proof of R5 (:1131-1146), and a plain `fn r58_helper` never marked `#[test]` would pass the same way (:1103-1116). CLAUDE.md rule 3 ties every ruling to its proving test; the current check verifies a name exists, not that a test runs \u2014 a skipped or refactored-away proof keeps the index green while coverage quietly disappears.\n\n## Proposal\n\nTighten both collectors: a Rust item must carry `#[test]`/`#[tokio::test]` or a `daily:`-reasoned `#[ignore]`, or be a `mod` inside `#[cfg(test)]`; a TypeScript title under `.skip`, `.todo`, `.fixme` or `.only` does not count. SQL `\\echo` evidence headings are unchanged.\n\n## Where it lands\n\n`crates/tools/src/spec.rs` (attribute and modifier tracking in `rust_item_names`/`ts_test_titles`) plus its unit tests; any current `proven_in` entries that turn out non-executable get fixed in the same change.\n\n## Acceptance criteria\n\n- The fixture cases above flip: skipped tests and plain functions no longer satisfy `proven_in`.\n- `cargo jackioh spec check` passes on the real tree \u2014 or the change fixes the few proofs it exposes.\n- `daily:`-ignored tests still count (they run in `super.yml`, so they are executable proof).\n\n## Size and risks\n\nMedium: attribute/modifier tracking in two small parsers plus the policy for `mod` and SQL cases. Risk is surfacing a handful of currently-accepted weak proofs \u2014 which is the point.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T13:03:47Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong); build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
