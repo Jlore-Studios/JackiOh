@@ -350,6 +350,27 @@ mod r676_glitchs_outcome_and_the_reset {
         let b = reduce(&round_trip(&start), &action).state;
         assert_eq!(hash_state(&a), hash_state(&b));
     }
+
+    #[test]
+    fn r676_i9_reads_no_turn_or_mana_an_action_announced_in_the_game_its_reset_took() {
+        // The play pays p1's mana (0 of 2) and R82 ends the turn into p2's (2 of 2) before the reset
+        // deals a new game at turn 0 with no mana: those announcements named the game the reset took.
+        let mut start = game(&seed_for(GlitchOutcome::Reset));
+        let result = play_glitch(&mut start);
+        assert_eq!(result.state.resets, Some(1));
+        assert!(
+            result
+                .events
+                .iter()
+                .any(|event| matches!(event, GameEvent::ManaChanged { player: P1, .. }))
+        );
+        let found: Vec<String> = create_invariant_monitor(&start)
+            .after(&result.events, &result.state)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I9"))
+            .collect();
+        assert_eq!(found, Vec::<String>::new());
+    }
 }
 
 mod r677_the_seat_swap {
