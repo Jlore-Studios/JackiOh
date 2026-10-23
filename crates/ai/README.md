@@ -63,13 +63,14 @@ one redaction (R1184002).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks) on every determinization, and plays the first action of the
-best mean. It re-plans after every action. Its root tries a play in every distinct placement; deeper
-levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). An action the
-true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
-first action of the next finalist the true state accepts, best mean first, with the search's reason,
-and only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn,
-answer or other legal action (#1575).
+it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
+its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
+re-plans after every action. Its root tries a play in every distinct placement; deeper levels, the
+lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). An action the true state
+refuses (a cost no determinization could see) is never submitted: `submitted` sends the first action of
+the next finalist the true state accepts, best mean first, with the search's reason, and only when none
+is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other
+legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
