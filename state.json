@@ -12298,6 +12298,13 @@
     "1718": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T14:02:24Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 3 (hot spots) fails: spec/README.md states the proof rule and must change; also ~420 lines of parser work with policy choices (mods, test macros)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
