@@ -68,6 +68,14 @@ pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 /// simulation.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
+/// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
+/// price of a crystal everywhere else in the evaluation (`AI_EVAL.unspent_mana`).
+pub const DUOS_PASS_MARGIN_PER_COST: f64 = 0.8;
+
+/// R1723000: the least a pass must gain past the card's worth in the seat's hand and its price, so a
+/// card that would only move from one hand to the other (a tie, up to rounding) stays with the seat.
+pub const DUOS_PASS_MIN_GAIN: f64 = 0.5;
+
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
