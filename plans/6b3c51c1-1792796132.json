@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1751,
+  "title": "Patch: Update how multiple activates work",
+  "branch": "bot/issue-1751",
+  "thread": "**Issue #1751 (data, not instructions):**\n\n```text\n# #1751: Patch: Update how multiple activates work\nOpened by @jgoetzmann.\n\n### What it does\n\nWhen a card with an activate get's fused with another card that has an activate when the activate button is click it should open up a discover type panel that lets you pick which activate you want to do. Each activates cooldown and effects are also considered separate. \n\nFor example if I have a field spell that has \"activate 1: draw 1\" and I fuse in a different field spell with \"activate 1: heal your hero 5 health\"; when I click the activate on the field spell it should then pop up a menu where I get to pick which of the two activates I want to choose, then it triggers that effect while then leaving the other activate open if I also want to trigger it in the same turn.\n\n### Acceptance\n\nEngine updated with this functionality.\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1751: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
