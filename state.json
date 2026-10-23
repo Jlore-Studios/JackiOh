@@ -12935,8 +12935,12 @@
     "what": "revise #1736 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-23T17:00:12Z",
-    "notes": [],
+    "at": "2026-10-23T16:59:58Z",
+    "notes": [
+      "delivered revise #1736 on claude-6 (run 39983509904): approved",
+      "started revise #1736 on claude-7 (run 39991716972)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13641,7 +13645,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T16:47:38Z",
+  "loop_tick": "2026-10-23T16:59:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
