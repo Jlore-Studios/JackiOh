@@ -11,15 +11,16 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use jackioh_server::app::App;
+use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{CHALLENGE_TTL_MS, CHALLENGES_PER_HOUR, ROOM_CODE_LENGTH};
-use jackioh_server::db::store::StartMatchInput;
+use jackioh_server::db::fake::{CallOutcome, FakeTables};
+use jackioh_server::db::store::{ChallengeState, StartMatchInput};
 
 use jackioh_server::social::challenges::sweep;
 
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
-use crate::support::store::{advance, fake, uuid};
+use crate::support::store::{advance, fake, q, uuid};
 
 // ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
@@ -550,5 +551,158 @@ mod b49_accept_decline_cancel_and_expiry {
 
         assert_eq!(again.chars().count(), ROOM_CODE_LENGTH);
         assert_eq!(len(&listed(&p.app, &p.friend).await["incoming"]), 1);
+    }
+
+    #[tokio::test]
+    async fn b46_b49_a_block_cancels_an_open_challenge_and_frees_its_room() {
+        let p = pair().await;
+        let (_, code) = p.challenged().await;
+        let (_, unknown) = join_room(&p.app, &p.friend, "ZZZZZZ", random_room()).await;
+
+        let (status, body) = api(
+            &p.app,
+            "POST",
+            "/api/blocks",
+            &p.friend.token,
+            json!({ "profileId": p.challenger.id }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+
+        assert!(p.none_listed().await);
+        assert!(
+            fake(&p.app)
+                .lock()
+                .await
+                .tables
+                .social
+                .challenges
+                .iter()
+                .all(|row| row.state == ChallengeState::Cancelled)
+        );
+        let (status, body) = join_room(&p.app, &p.friend, &code, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1689000 — a challenge lives only as long as its friendship
+// ---------------------------------------------------------------------------------------------
+
+mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
+    use super::*;
+
+    /// What a join of a code no room holds answers `who`.
+    async fn unknown_code(app: &Arc<App>, who: &Account) -> Value {
+        let (status, body) = join_room(app, who, "ZZZZZZ", random_room()).await;
+        assert_eq!(status, 404, "{body}");
+        body
+    }
+
+    /// Whether the store still holds the unjoined room `code`.
+    async fn room_open(app: &App, code: &str) -> bool {
+        fake(app)
+            .lock()
+            .await
+            .tables
+            .rooms
+            .iter()
+            .any(|room| room.code == code && room.guest_profile_id.is_none())
+    }
+
+    #[tokio::test]
+    async fn r1689000_removing_a_friend_cancels_the_open_challenges_either_way_and_frees_their_rooms() {
+        let p = pair().await;
+        let (_, sent) = p.challenged().await;
+        let (status, body) = challenge(&p.app, &p.friend, with_friend(random_room(), &p.challenger)).await;
+        assert_eq!(status, 201, "{body}");
+        let received = body["roomCode"].as_str().expect("a room code").to_string();
+
+        let (status, body) = api(
+            &p.app,
+            "DELETE",
+            &format!("/api/friends/{}", p.friend.id),
+            &p.challenger.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+
+        assert!(p.none_listed().await);
+        assert!(
+            fake(&p.app)
+                .lock()
+                .await
+                .tables
+                .social
+                .challenges
+                .iter()
+                .all(|row| row.state == ChallengeState::Cancelled)
+        );
+        assert!(!room_open(&p.app, &sent).await);
+        assert!(!room_open(&p.app, &received).await);
+        let unknown = unknown_code(&p.app, &p.friend).await;
+        let (status, body) = join_room(&p.app, &p.friend, &sent, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+        let (status, body) = join_room(&p.app, &p.challenger, &received, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+    }
+
+    #[tokio::test]
+    async fn r1689000_a_join_by_anyone_but_a_friend_answers_what_an_unknown_code_does() {
+        let p = pair().await;
+        let outsider = account(&p.app, 3, "Otto").await;
+        let (_, code) = p.challenged().await;
+        let unknown = unknown_code(&p.app, &outsider).await;
+
+        // Not the challenged friend: the `to_profile` mismatch.
+        let (status, body) = join_room(&p.app, &outsider, &code, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+
+        // The friendship ends behind the routes' backs, leaving the challenge and its room open the
+        // way a missed cleanup would: the join itself checks it.
+        assert!(q!(p.app, friends_remove(&p.challenger.id, &p.friend.id)));
+        let (status, body) = join_room(&p.app, &p.friend, &code, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+        assert!(room_open(&p.app, &code).await);
+    }
+
+    #[tokio::test]
+    async fn r1689000_a_join_by_a_friend_either_of_whom_blocks_the_other_answers_what_an_unknown_code_does() {
+        let p = pair().await;
+        let (_, code) = p.challenged().await;
+        let unknown = unknown_code(&p.app, &p.friend).await;
+
+        // A block written around the route leaves the friendship standing, so the check's second
+        // read, of the block, is what refuses.
+        q!(p.app, blocks_add(&p.friend.id, &p.challenger.id, now_ms()));
+        let (status, body) = join_room(&p.app, &p.friend, &code, random_room()).await;
+
+        assert_eq!((status, &body), (404, &unknown));
+        assert!(room_open(&p.app, &code).await);
+    }
+
+    #[tokio::test]
+    async fn r1689000_a_friendship_ending_while_the_challenge_is_made_opens_no_challenge_and_frees_its_room()
+    {
+        let p = pair().await;
+
+        // The unfriend lands after the friendship was read and before the challenge is written: hooked
+        // on the room's insert, whose transaction commits.
+        fake(&p.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "rooms.create" {
+                tables.social.friendships.clear();
+            }
+            CallOutcome::Proceed
+        }));
+        let (status, body) = challenge(&p.app, &p.challenger, with_friend(random_room(), &p.friend)).await;
+        fake(&p.app).lock().await.before_call = None;
+
+        assert_eq!(status, 404, "{body}");
+        assert!(p.none_listed().await);
+        let store = fake(&p.app);
+        let data = store.lock().await;
+        assert!(data.tables.social.challenges.is_empty());
+        assert!(data.tables.rooms.is_empty());
     }
 }
