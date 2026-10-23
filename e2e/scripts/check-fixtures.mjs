@@ -1,6 +1,7 @@
 // Pre-flight for e2e/fixtures/decks/*.json: the checks the engine's `validateDeck` would make
-// (SPEC §9.4 L2/L3/L6, DECK_SIZE = 20, MAX_COPIES = 1, no Token cards), run without a browser or
-// a built client so a bad fixture is caught before the suite ever starts.
+// (SPEC §9.4 L2/L3/L6, DECK_SIZE read off the engine's generated config, MAX_COPIES = 1, no Token
+// cards), run without a browser or a built client so a bad fixture is caught before the suite ever
+// starts.
 //
 // A fixture may carry a `handicap` (R180), the seat's resources when a scenario needs other than
 // SPEC's own (spec 25: a 5-card library, a 9-card opening hand, a 60-card library). It is checked as
@@ -16,8 +17,17 @@ import process from "node:process";
 const here = path.dirname(new URL(import.meta.url).pathname);
 const decksDir = path.join(here, "..", "fixtures", "decks");
 const catalogPath = path.join(here, "..", "..", "crates", "cards", "catalog.json");
+const engineConfigPath = path.join(here, "..", "..", "apps", "web", "src", "wire", "engineConfig.ts");
 
-const DECK_SIZE = 20;
+/**
+ * §2.6 L2, read off the constants `crates/engine/tests/export_config.rs` generates (CLAUDE.md rule 9)
+ * rather than restated: this script is plain Node and cannot import TypeScript, so it reads the line.
+ */
+const DECK_SIZE = Number(/^export const DECK_SIZE = (\d+);$/m.exec(readFileSync(engineConfigPath, "utf8"))?.[1]);
+if (!Number.isInteger(DECK_SIZE)) {
+  console.error(`no "export const DECK_SIZE = <n>;" line in ${engineConfigPath}`);
+  process.exit(1);
+}
 /** R80: a library holds at most this many cards, so no handicap deck is larger (R184). */
 const LIBRARY_CAP = 60;
 const HANDICAP_FIELDS = ["deckSize", "manaBonus", "manaCap", "extraOpeningCards", "extraDrawsPerTurn"];

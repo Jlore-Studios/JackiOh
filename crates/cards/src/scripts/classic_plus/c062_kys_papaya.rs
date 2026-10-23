@@ -568,7 +568,10 @@ mod tests {
             ];
             let mut deck: Vec<String> = units.iter().chain(more.iter()).map(|id| id.to_string()).collect();
             deck.extend(
-                ["core-037", "core-043", "core-045", PAPAYA]
+                [
+                    "core-037", "core-043", "core-045", "core-003", "core-053", "core-055", "core-066", "core-068",
+                    PAPAYA,
+                ]
                     .iter()
                     .map(|id| id.to_string()),
             );

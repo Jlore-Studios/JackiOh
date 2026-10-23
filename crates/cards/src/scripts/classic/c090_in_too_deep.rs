@@ -1837,7 +1837,8 @@ mod tests {
                 let deck: Vec<&str> = vec![
                     ITD, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013",
                     "core-015", "core-016", "core-019", "core-020", "core-025", "core-026", "core-032",
-                    "core-036", "core-043", "core-044", "core-053", "core-055",
+                    "core-036", "core-043", "core-044", "core-053", "core-055", "core-001", "core-004", "core-009",
+                    "core-010", "core-047",
                 ];
                 let other: Vec<&str> = deck.iter().map(|id| if *id == ITD { "core-003" } else { *id }).collect();
                 let seed = "itd-replay";

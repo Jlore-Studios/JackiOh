@@ -147,9 +147,10 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
-    CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, FoldArgs,
-    GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS, PerPlayerOpt, Phase, PlayerId,
-    ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, find_instance, fold,
+    CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, EARLIER_DECK_SIZE,
+    FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS, PerPlayerOpt, Phase,
+    PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, create_recorded_game,
+    find_instance, fold,
     has_standing_draw_offer, hash_state, legal_actions, mulligan_owed, opponent_of, reduce, seat_to_act,
     subsystems, validate_deck,
 };
@@ -371,8 +372,9 @@ fn describe_card(id: &str) -> String {
     )
 }
 
-/// The seed drives the deck draw (§9.3): one seeded shuffle of the whole pool, the first 20 cards to
-/// p1 and the next 20 to p2. One shuffle rather than two draws means the 40 cards are distinct, so
+/// The seed drives the deck draw (§9.3): one seeded shuffle of the whole pool, the first `DECK_SIZE`
+/// cards to p1 and the next `DECK_SIZE` to p2. One shuffle rather than two draws means the two decks'
+/// cards are distinct, so
 /// `validate_deck`'s "no duplicate card ids" (§2.6 L3) holds by construction for both decks, and a
 /// reported seed rebuilds its exact deck pair with no other input.
 pub fn decks_for_seed(seed: u32) -> (Vec<String>, Vec<String>) {
@@ -654,6 +656,9 @@ struct GameSetup {
     start: StartKind,
     /// Whether the game also takes the endings channel's actions (#1572), drawn from seed alone.
     endings: bool,
+    /// Whether the game is a corpus record's, made under the deck size it was found with and so
+    /// created as a recorded game (`create_recorded_game`, R1705003).
+    recorded: bool,
 }
 
 impl GameSetup {
@@ -670,6 +675,7 @@ impl GameSetup {
             rotation: None,
             start: StartKind::Plain,
             endings: false,
+            recorded: false,
         }
     }
 
@@ -680,6 +686,7 @@ impl GameSetup {
             rotation: Some(handicap_for_seed(seed)),
             start: StartKind::Plain,
             endings: false,
+            recorded: false,
         }
         .with_drawn_start()
         .with_drawn_endings()
@@ -784,7 +791,14 @@ fn play_game(
 ) -> Result<GameRun, FuzzFailure> {
     register_all();
 
-    let begun = begin_game(&create_game(&setup.create_options(decks.clone())));
+    let options = setup.create_options(decks.clone());
+    // R1705003: a corpus record's game is one already made, under the deck size it was found with.
+    let start = if setup.recorded {
+        create_recorded_game(&options)
+    } else {
+        create_game(&options)
+    };
+    let begun = begin_game(&start);
     let mut state = begun.state;
     let mut policy = Rng::new(&setup.stream("policy-"), 0);
     // R265: while both mulligans are open either seat may answer first; a stream of its own picks
@@ -2529,10 +2543,20 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
         problems.push("found is empty: say which run failed, how, and the issue".to_string());
     }
     let decks = [("p1", &record.decks.0), ("p2", &record.decks.1)];
-    let deck_size = usize::try_from(DECK_SIZE).unwrap_or(0);
+    // R1705003: a record found before #1705 holds EARLIER_DECK_SIZE-card decks and replays as made.
+    let sizes = [DECK_SIZE, EARLIER_DECK_SIZE].map(|size| usize::try_from(size).unwrap_or(0));
+    let deck_size = if sizes.contains(&record.decks.0.len()) {
+        record.decks.0.len()
+    } else {
+        sizes[0]
+    };
     for (label, deck) in decks {
         if deck.len() != deck_size {
-            problems.push(format!("{label} deck holds {} ids, not {DECK_SIZE}", deck.len()));
+            problems.push(format!(
+                "{label} deck holds {} ids, not {deck_size} (DECK_SIZE {DECK_SIZE} or, for a record found \
+                 before #1705, EARLIER_DECK_SIZE {EARLIER_DECK_SIZE}, both decks alike)",
+                deck.len()
+            ));
         }
     }
     let ids: Vec<&str> = decks
@@ -2559,7 +2583,8 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
                 // R1420: the live catalog with every set previewed, the way `fuzz_deal` deals.
                 let _preview = preview_every_set();
                 for (label, deck) in decks {
-                    if let Err(error) = validate_deck(deck, &CATALOG, label, DECK_SIZE) {
+                    let size = i32::try_from(deck_size).unwrap_or(DECK_SIZE);
+                    if let Err(error) = validate_deck(deck, &CATALOG, label, size) {
                         problems.push(error.message);
                     }
                 }
@@ -2606,8 +2631,13 @@ fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
 
 /// `record` through the gate's four assertions with its pinned decks, never a deal from the live pool.
 fn replay_record(record: &CorpusRecord) -> Result<Passed, Failure> {
-    // #1503: from the plain start, the one every kept failure was found from.
-    run_seed(&GameSetup::plain(record.seed), record.decks.clone(), reduce)
+    // #1503: from the plain start, the one every kept failure was found from, and (R1705003) as the
+    // game it was, dealt the decks of the size it was found with.
+    let setup = GameSetup {
+        recorded: true,
+        ..GameSetup::plain(record.seed)
+    };
+    run_seed(&setup, record.decks.clone(), reduce)
 }
 
 /// What `--regress` found: a line per record that passed or is retired, and every problem.
@@ -2738,7 +2768,7 @@ pub fn handicap_for_seed(seed: u32) -> SeedHandicap {
     }
 }
 
-/// One shuffle of the pool: the handicapped seat takes its deckSize cards, the other seat the next 20
+/// One shuffle of the pool: the handicapped seat takes its deckSize cards, the other seat the next `DECK_SIZE`
 /// (TS `decksForSeed` of fuzz-handicap.test.ts, renamed beside the gate's own).
 pub(crate) fn handicap_decks_for_seed(
     seed: u32,
@@ -3621,6 +3651,7 @@ pub(crate) mod tests {
                 .find(|(_, def)| def.is_token())
                 .map(|(id, _)| id.clone())
                 .unwrap_or_default();
+            let short = format!("p1 deck holds {}", DECK_SIZE - 1);
             let cases: Vec<(CorpusRecord, &str)> = vec![
                 (CorpusRecord { seed: 0, ..sound(1) }, "seed must be"),
                 (
@@ -3643,7 +3674,7 @@ pub(crate) mod tests {
                         record.decks.0.pop();
                         record
                     },
-                    "p1 deck holds 19",
+                    &short,
                 ),
                 (
                     {

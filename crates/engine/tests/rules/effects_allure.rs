@@ -42,7 +42,7 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
 
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(&format!("allure-{seed}"), None)).state;
-    register_catalog(jade_catalog(fixture_catalog(vanilla_catalog(40, 1))));
+    register_catalog(jade_catalog(fixture_catalog(vanilla_catalog(2 * DECK_SIZE, 1))));
     let mut scripts = FIXTURE_SCRIPTS.clone();
     scripts.extend(JADE_SCRIPTS.clone());
     register_scripts(scripts);

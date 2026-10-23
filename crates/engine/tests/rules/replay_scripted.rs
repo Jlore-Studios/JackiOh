@@ -13,6 +13,7 @@ use jackioh_engine::effects::{choose_mode, damage, draw};
 use jackioh_engine::subsystems::ai_policy::choose_action;
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::setup_catalog;
 
 fn spread(into: &mut Value, from: &Value) {
@@ -398,8 +399,11 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
+/// These cards, then vanilla units from `fx-1` to make the legal deck of `DECK_SIZE` (§2.6).
 fn deck() -> Vec<String> {
-    defs().into_iter().map(|entry| entry.id).collect()
+    let mut deck: Vec<String> = defs().into_iter().map(|entry| entry.id).collect();
+    deck.extend(vanilla_deck(DECK_SIZE - deck.len() as i32, 1));
+    deck
 }
 
 fn decks() -> (Vec<String>, Vec<String>) {
