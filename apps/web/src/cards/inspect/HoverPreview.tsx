@@ -19,7 +19,7 @@ import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { CardFace, faceText } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
-import { useFullArt } from "../fullArt.ts";
+import { useFullArt, useOwnCopy } from "../fullArt.ts";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import {
@@ -66,6 +66,8 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
   const entries = glossaryFor(face);
   const resolve = useDefResolver();
   const fullArtOn = useFullArt(face.defId);
+  // R1655000: the viewer's own card's preview wears its cosmetics, as it prints its full art.
+  const own = useOwnCopy();
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
   const notes = hasStateNotes(face);
   const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
@@ -100,7 +102,7 @@ export function HoverPreview({ face, anchor, prefer = "beside", note }: HoverPre
       <div className="inspect-facegroup">
         <Extended face={face} ascentLevel={ascentLevel} />
         <div className="inspect-face" data-testid={INSPECT_FACE} style={{ height: PREVIEW_HEIGHT_PX }}>
-          <CardFace face={face} layout="full" ascentLevel={ascentLevel} />
+          <CardFace face={face} layout="full" ascentLevel={ascentLevel} worn={own} />
           <InspectNote note={note} />
         </div>
       </div>

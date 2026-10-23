@@ -36,6 +36,7 @@ use jackioh_engine::{
 };
 
 use crate::db::store::MatchClocks;
+use crate::economy::rewards::GameEconomy;
 
 // ---------------------------------------------------------------------------
 // Client -> server
@@ -181,11 +182,21 @@ pub enum ServerMessage {
     /// cap (`JLORE_GAMES_DAILY_CAP`) held back some or all of that account's Jlore for it
     /// (R1483000). It is the account's economy, so a seat never gets the other seat's, and a
     /// watcher's frame never says it; false is left off the frame.
+    ///
+    /// `economy` is what the result's write paid the receiving account (#1657): the game's Jlore
+    /// and XP, each set track it moved from before to after with every level it reached, and each
+    /// quest it completed, so the client fills the bar without knowing the level curve. It is set
+    /// once the result is written, as `jlore_capped` is, and every view of that seat carries it from
+    /// then on; the other seat, a watcher and a bot's side never get it. A write that finds the
+    /// result already recorded pays nothing, and an actor rebuilt on a finished match has nothing to
+    /// send, so their frames leave it off and the client shows no fill.
     View {
         view: Box<PlayerView>,
         legal: Vec<ActionBody>,
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         jlore_capped: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        economy: Option<GameEconomy>,
     },
     /// §9.3: the nonce that was accepted and the append-only log seq it was written at.
     Ack { nonce: String, seq: i64 },
@@ -235,12 +246,19 @@ pub enum ServerMessage {
 // ---------------------------------------------------------------------------
 
 /// `legal` must be `legal_actions(state, view.viewer)`; the actor is the only caller (`push_view`).
-/// `jlore_capped` is the viewer's own account's flag, false for a watcher (R1483000).
-pub fn view_message(view: PlayerView, legal: &[ActionBody], jlore_capped: bool) -> ServerMessage {
+/// `jlore_capped` is the viewer's own account's flag, false for a watcher (R1483000), and
+/// `economy` what the result paid the viewer's own account, `None` for a watcher (#1657).
+pub fn view_message(
+    view: PlayerView,
+    legal: &[ActionBody],
+    jlore_capped: bool,
+    economy: Option<GameEconomy>,
+) -> ServerMessage {
     ServerMessage::View {
         view: Box::new(view),
         legal: legal.to_vec(),
         jlore_capped,
+        economy,
     }
 }
 

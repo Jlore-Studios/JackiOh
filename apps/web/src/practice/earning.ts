@@ -7,6 +7,7 @@
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 
+import type { QuestPaid, TrackGain } from "../economy/xp.ts";
 import { t } from "../i18n/i18n.ts";
 import type { PracticeSeedRequest } from "../net/practice.ts";
 import { presetById } from "./decks.ts";
@@ -36,10 +37,14 @@ export function seedRequestOf(config: PracticeStartConfig): PracticeSeedRequest 
   }
 }
 
-/** What the result dialog says about a game on a server seed: checking, paid, refused (and why), or no answer. */
+/**
+ * What the result dialog says about a game on a server seed: checking, paid, refused (and why), or no
+ * answer. #1664: a paid game's `tracks` and `quests` are the answer's, played by the dialog's XP
+ * reveal; a paid one without either shows no bar.
+ */
 export type PracticeEarning =
   | { kind: "pending" }
-  | { kind: "paid"; jlore: number; xp: number; jloreCapped: boolean }
+  | { kind: "paid"; jlore: number; xp: number; jloreCapped: boolean; tracks?: readonly TrackGain[]; quests?: readonly QuestPaid[] }
   | { kind: "refused"; reason: string }
   | { kind: "unreachable" };
 

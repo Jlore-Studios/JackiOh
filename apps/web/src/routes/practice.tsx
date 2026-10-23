@@ -67,6 +67,8 @@ import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } 
 import { deckCosmeticsOf } from "../cards/cosmetics.ts";
 import { FullArtAllowed } from "../cards/fullArt.ts";
 import { customDefsOf, gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
+import { announceWallet } from "../economy/wallet.ts";
+import { parseGameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
 import { getFxSettings } from "../fx/settings.ts";
@@ -1037,11 +1039,20 @@ function PracticeScreen({
       .then((claim) => api.claim(token, claim))
       .then(
         (answer) => {
-          settleTo(
-            answer.paid
-              ? { kind: "paid", jlore: answer.jlore, xp: answer.xp, jloreCapped: answer.jloreCapped }
-              : { kind: "refused", reason: answer.reason },
-          );
+          if (!answer.paid) {
+            settleTo({ kind: "refused", reason: answer.reason });
+            return;
+          }
+          // #1664: the game's Jlore is in the wallet now, and its tracks and quests are for the dialog to play.
+          announceWallet();
+          const economy = parseGameEconomy(answer);
+          settleTo({
+            kind: "paid",
+            jlore: answer.jlore,
+            xp: answer.xp,
+            jloreCapped: answer.jloreCapped,
+            ...(economy === null ? {} : { tracks: economy.tracks, quests: economy.quests }),
+          });
         },
         () => {
           settleTo({ kind: "unreachable" });

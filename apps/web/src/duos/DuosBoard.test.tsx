@@ -11,7 +11,7 @@
 // The client renders them and decides nothing (CLAUDE.md rule 7).
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi, type Mock } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
@@ -711,6 +711,54 @@ describe("R1483000 the result panel names the daily cap only for a capped seat",
     renderBoard({ view: OVER, jloreCapped: false });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.queryByTestId("duos-result-jlore")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// #1664: the result panel plays the seat's economy
+// ---------------------------------------------------------------------------------------------
+
+describe("#1664 the result panel plays what the game paid the seat's person", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+  const economy = {
+    jlore: 30,
+    xp: 540,
+    jloreCapped: false,
+    tracks: [
+      {
+        setId: "Core" as const,
+        before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+        after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+        levels: [{ level: 2, rewards: { jlore: 25, setPacks: 2, cardTokens: 3 } }],
+      },
+    ],
+    quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+  };
+
+  it("#1664 lists the tracks and quests and tells the pill once, only for an economy", () => {
+    let announced = 0;
+    const onChanged = (): void => {
+      announced += 1;
+    };
+    window.addEventListener("jackioh:wallet-changed", onChanged);
+    onTestFinished(() => {
+      window.removeEventListener("jackioh:wallet-changed", onChanged);
+    });
+
+    const board = renderBoard({ view: OVER });
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+    expect(announced).toBe(0);
+
+    board.rerender({ economy });
+    expect(screen.getByTestId("xp-reveal-bar-Core")).toHaveTextContent("Core track");
+    expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("Win 3 games");
+    expect(announced).toBe(1);
+
+    // Each view of the seat carries it again: the bars play on, the pill is told once.
+    board.rerender({ economy: { ...economy } });
+    expect(screen.getAllByTestId("xp-reveal")).toHaveLength(1);
+    expect(announced).toBe(1);
   });
 });
 

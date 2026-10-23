@@ -8,6 +8,7 @@ import type { ActionBody, Aim, EmoteId, PlayerId, PlayerView, PortraitId, Prompt
 import { isEmoteId, isPortraitId, parseAim } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
+import { economyField, type GameEconomy } from "../economy/xp.ts";
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
 import { socketProtocols } from "../net/socketProtocols.ts";
@@ -294,8 +295,16 @@ export type ServerFrame =
   /**
    * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
    * all of this account's Jlore for it; the server leaves it off a frame that has nothing to say.
+   * #1664: `economy` is what the result's write paid this account (`economy/xp.ts`), on every view of
+   * its seat from then on; absent when the frame carries none (or not a whole one).
    */
-  | { type: "view"; view: PlayerView; legal: readonly ActionBody[] | null; jloreCapped: boolean }
+  | {
+      type: "view";
+      view: PlayerView;
+      legal: readonly ActionBody[] | null;
+      jloreCapped: boolean;
+      economy?: GameEconomy;
+    }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
   | { type: "prompt"; prompt: PromptFrame }
@@ -333,6 +342,7 @@ export function parseServerFrame(text: string): ServerFrame | null {
         // `legal` riding alongside the view, which is what the actor sends (see the header).
         legal: parsed.legal === undefined ? null : parseLegal(parsed.legal),
         jloreCapped: parsed.jloreCapped === true,
+        ...economyField(parsed.economy),
       };
     }
     case "ack": {
@@ -443,6 +453,12 @@ export type MatchSnapshot = {
    * finished match, as the server read it off its ledger; the page never works it out.
    */
   jloreCapped: boolean;
+  /**
+   * #1664: what the finished match paid this account, from the last view that carried it: the
+   * tracks it moved with their levels and rewards, and the quests it completed. Null before the
+   * result is written, for a seat the server paid nothing and after a view without it.
+   */
+  economy: GameEconomy | null;
   /** The last `error` frame's message, relayed verbatim (§9.3), or null. */
   error: string | null;
   /** The last `error` frame's code, for a caller that wants to branch without parsing prose. */
@@ -512,6 +528,7 @@ const INITIAL: MatchSnapshot = {
   legal: EMPTY_LEGAL,
   legalSource: "none",
   jloreCapped: false,
+  economy: null,
   error: null,
   errorCode: null,
   clock: null,
@@ -610,6 +627,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         patch({
           view: frame.view,
           jloreCapped: frame.jloreCapped,
+          economy: frame.economy ?? null,
           // A view without `legal` does not blank an earlier legal-action array.
           ...(frame.legal === null ? {} : { legal: frame.legal, legalSource: "view" as const }),
           ...(fresh ? { error: null, errorCode: null } : {}),

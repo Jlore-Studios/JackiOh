@@ -1,7 +1,7 @@
 // `/practice`: B32 and B33 (docs/polish/3-ai.md).
 
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { Mock } from "vitest";
 
 import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS } from "@jackioh/ai";
@@ -1954,7 +1954,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       issued += 1;
       return answers.seed?.() ?? Promise.resolve({ ...ISSUED, seed: `server-seed-${String(issued)}` });
     });
-    const claim = vi.fn<PracticeEarningApi["claim"]>(() => answers.claim?.() ?? Promise.resolve({ paid: true, jlore: 5, xp: 7, jloreCapped: false }));
+    const claim = vi.fn<PracticeEarningApi["claim"]>(() => answers.claim?.() ?? Promise.resolve({ paid: true, jlore: 5, xp: 7, jloreCapped: false, tracks: [], quests: [] }));
     return { api: { requestSeed, claim }, requestSeed, claim };
   }
 
@@ -2011,7 +2011,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
 
   it("R1483000 shows a capped claim in the practice result", async () => {
     const host = routeHost();
-    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: true, jlore: 0, xp: 7, jloreCapped: true }) });
+    const earning = fakeEarning({ claim: () => Promise.resolve({ paid: true, jlore: 0, xp: 7, jloreCapped: true, tracks: [], quests: [] }) });
     renderEarning(host, earning);
     await startFromSetup();
     concedeOnBoard();
@@ -2021,6 +2021,82 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
       expect(line).toHaveAttribute("data-earning", "paid");
     });
     expect(line).toHaveTextContent("+0 Jlore, +7 XP · Daily Jlore reached");
+  });
+
+  it("#1664 the paid answer's tracks and quests reach the result, and the pill is told to read the wallet", async () => {
+    let announced = 0;
+    const onChanged = (): void => {
+      announced += 1;
+    };
+    window.addEventListener("jackioh:wallet-changed", onChanged);
+    onTestFinished(() => {
+      window.removeEventListener("jackioh:wallet-changed", onChanged);
+    });
+    const host = routeHost();
+    const earning = fakeEarning({
+      claim: () =>
+        Promise.resolve({
+          paid: true,
+          jlore: 5,
+          xp: 700,
+          jloreCapped: false,
+          tracks: [
+            {
+              setId: "Core",
+              before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+              after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+              levels: [{ level: 2, rewards: { jlore: 25, setPacks: 0, cardTokens: 1 } }],
+            },
+          ],
+          quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+        }),
+    });
+    renderEarning(host, earning);
+    await startFromSetup();
+    expect(announced).toBe(0);
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+
+    const bar = await screen.findByTestId("xp-reveal-bar-Core");
+    expect(bar).toHaveTextContent("Core track");
+    expect(bar.querySelector("progress")).toHaveAttribute("max", "100");
+    expect(screen.getByTestId("xp-reveal-level-Core")).toHaveAttribute("data-level", "1");
+    expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("Win 3 games");
+    expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveTextContent("+5 Jlore, +700 XP");
+    expect(announced).toBe(1);
+  });
+
+  it("#1664 a paid answer that names no track or quest shows no bars", async () => {
+    const host = routeHost();
+    renderEarning(host, fakeEarning());
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "paid");
+    });
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+  });
+
+  it("#1664 a refused claim shows no bars and tells the pill nothing", async () => {
+    let announced = 0;
+    const onChanged = (): void => {
+      announced += 1;
+    };
+    window.addEventListener("jackioh:wallet-changed", onChanged);
+    onTestFinished(() => {
+      window.removeEventListener("jackioh:wallet-changed", onChanged);
+    });
+    const host = routeHost();
+    renderEarning(host, fakeEarning({ claim: () => Promise.resolve({ paid: false, reason: "ai_mismatch" }) }));
+    await startFromSetup();
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    await waitFor(() => {
+      expect(screen.getByTestId(practiceTestid.resultEarning)).toHaveAttribute("data-earning", "refused");
+    });
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+    expect(announced).toBe(0);
   });
 
   it("R1303001 a game on a server seed picked up after a reload is still claimed at its end, on its own seed", async () => {

@@ -1,8 +1,9 @@
-/* The pack-opening scene's look (#1308). `PackScene` draws a sealed pack, then five cards face down
-   that turn over one at a time. Every @keyframes moves only transform and opacity (fx/css.test.ts
-   holds the sheets to that), each taking its duration from the constants in packs.ts through
-   `--pack-tear-ms`, `--pack-hold-ms` and `--pack-flip-ms`. z-index 39 sits with the showcase, above
-   the effects layer's 38 outside the scene; inside it the scene's own `.pack-fx` rides on top. */
+/* The pack-opening scene's look (#1308). `PackScene` draws a sealed pack (a PackObject, #1663), then
+   five cards face down that turn over one at a time. Every @keyframes moves only transform and opacity
+   (PackObject.test.tsx holds this sheet and pack-object.css to that), each taking its duration from
+   the constants in packs.ts through `--pack-tear-ms`, `--pack-hold-ms` and `--pack-flip-ms`. z-index
+   39 sits with the showcase, above the effects layer's 38 outside the scene; inside it the scene's
+   own `.pack-fx` rides on top. */
 
 .pack-scene {
   position: fixed;
@@ -40,68 +41,41 @@
 
 /* ------------------------------------------------------------------------------ the pack --- */
 
-.pack {
-  --pack-glow: var(--line-bright);
+/* The sealed pack is a button around a PackObject (pack-object.css draws the pack, its press and its
+   tear): it takes the tap and the swipe, and tints the object's glow with the best rarity once the
+   server has answered. */
 
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.25rem;
-  width: min(40vw, 12rem);
-  aspect-ratio: 5 / 7;
-  padding: 0.75rem;
-  border: 2px solid var(--pack-glow);
+.pack-hit {
+  display: block;
+  padding: 0;
+  border: 0;
   border-radius: 0.6rem;
-  background: linear-gradient(160deg, #2a2f4a, #141726);
-  box-shadow: 0 0 1.5rem var(--pack-glow);
+  background: transparent;
   color: inherit;
   cursor: pointer;
   touch-action: none;
 }
 
-.pack[data-best="Rare"] {
+.pack-hit[data-best="Rare"] {
   --pack-glow: var(--rarity-rare);
 }
 
-.pack[data-best="Epic"] {
+.pack-hit[data-best="Epic"] {
   --pack-glow: var(--rarity-epic);
 }
 
-.pack[data-best="Legendary"] {
+.pack-hit[data-best="Legendary"] {
   --pack-glow: var(--rarity-legendary);
 }
 
-.pack[data-best="Mythic"] {
+.pack-hit[data-best="Mythic"] {
   --pack-glow: var(--rarity-mythic);
-}
-
-.pack__top {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 14%;
-  border-radius: 0.5rem 0.5rem 0 0;
-  background: repeating-linear-gradient(90deg, #d4af37 0 6px, #8c7220 6px 12px);
-}
-
-.pack__name {
-  font-weight: 700;
-  text-align: center;
 }
 
 .pack__hint {
   font-size: 0.8rem;
   opacity: 0.8;
   text-align: center;
-}
-
-.pack[data-state="tearing"] .pack__top {
-  animation: pack-tear calc(var(--pack-tear-ms) * 1ms) ease-in both;
-}
-
-.pack[data-state="tearing"] {
-  animation: pack-glow calc(var(--pack-tear-ms) * 1ms) ease-in-out both;
 }
 
 /* ------------------------------------------------------------------------------ the cards --- */
@@ -179,17 +153,6 @@
 
 /* ------------------------------------------------------------------------------- the panel --- */
 
-.packs-odds {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.packs-odds th,
-.packs-odds td {
-  padding: 0.25rem 0.5rem;
-  text-align: left;
-}
-
 .packs-held {
   display: flex;
   flex-wrap: wrap;
@@ -198,54 +161,7 @@
   gap: 0.5rem;
 }
 
-.packs-pity {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.packs-pity__list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.packs-pity__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
 /* ---------------------------------------------------------------------------------- motion --- */
-
-@keyframes pack-tear {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-
-  to {
-    transform: translateY(-140%);
-    opacity: 0;
-  }
-}
-
-@keyframes pack-glow {
-  from {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.06);
-  }
-
-  to {
-    transform: scale(1);
-  }
-}
 
 @keyframes pack-hold {
   from {

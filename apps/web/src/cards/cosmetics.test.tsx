@@ -7,12 +7,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { CardCosmeticsControls, DeckCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
+import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
+import { CardCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
 import { collectionTestid } from "../collection/collection.ts";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
 import { resetSettings } from "../settings/store.ts";
@@ -27,6 +29,7 @@ import {
   RADIANT_GOLD_SATURATION_MIN,
 } from "./constants.ts";
 import {
+  CARD_PICKS_SETTINGS_KEY,
   CARD_SLOT_KINDS,
   COSMETICS_SETTINGS_KEY,
   DECK_SLOT_KINDS,
@@ -36,14 +39,25 @@ import {
   deckCosmeticsOf,
   normalizeCosmetics,
   pickedDeckCosmetics,
+  readCardPicks,
   readCosmetics,
   resetCosmeticsForTests,
   resolveCosmetic,
   resolveDeckCosmetic,
+  wornCosmetics,
   wornDeckCosmetics,
+  writeCardFullArt,
+  writeCardPick,
   writeCosmetics,
+  type CosmeticId,
   type CosmeticKind,
 } from "./cosmetics.ts";
+import { OwnCopy } from "./fullArt.ts";
+import { CardDetail } from "./inspect/CardDetail.tsx";
+import { HoverPreview } from "./inspect/HoverPreview.tsx";
+import { InspectSheet } from "./inspect/InspectSheet.tsx";
+import { closeInspect } from "./inspect/store.ts";
+import { INSPECT_FACE, INSPECT_FACE_BASE, INSPECT_FACE_RADIANT } from "./inspect/testids.ts";
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
@@ -129,9 +143,16 @@ function face(defId: string, radiant = false): FaceModel {
 }
 
 /** Every pick other than its kind's default: the registry's first non-default entry. */
-function firstItem(kind: CosmeticKind): string {
+function firstItem(kind: CosmeticKind): CosmeticId {
   const item = cosmeticsOf(kind).find((cosmetic) => !cosmetic.default);
   if (item === undefined) throw new Error(`no ${kind} item`);
+  return item.id;
+}
+
+/** The registry's second entry of `kind` that is not its default. */
+function secondItem(kind: CosmeticKind): CosmeticId {
+  const item = cosmeticsOf(kind).filter((cosmetic) => !cosmetic.default)[1];
+  if (item === undefined) throw new Error(`no second ${kind} item`);
   return item.id;
 }
 
@@ -438,24 +459,25 @@ describe("R1297000 the deck slots", () => {
     expect(deckCosmeticPatch("cardBack", BACK)).toEqual({ cardBackCosmetic: BACK });
   });
 
-  it("R1297000 the collection's rows write the account's playmat, backdrop and card back", () => {
-    render(<DeckCosmeticsControls />);
+  it("R1297000 the collection's tiles write the account's playmat, backdrop and card back", () => {
+    render(<AccountCosmeticTiles owned={null} />);
+    const tile = (id: string): HTMLElement => screen.getByTestId(collectionTestid.tile(id));
     for (const kind of DECK_SLOT_KINDS) {
-      const select = screen.getByTestId<HTMLSelectElement>(collectionTestid.equip(kind));
-      expect(select.value).toBe(DEFAULT_CARD_COSMETICS[kind]);
-      expect([...select.options].map((option) => option.value)).toEqual(cosmeticsOf(kind).map((cosmetic) => cosmetic.id));
+      const row = within(screen.getByTestId(collectionTestid.tiles(kind)));
+      expect(row.getAllByRole("button").map((button) => button.getAttribute("aria-label"))).toEqual(
+        cosmeticsOf(kind).map((cosmetic) => cosmetic.name),
+      );
+      expect(tile(DEFAULT_CARD_COSMETICS[kind])).toHaveAttribute("data-equipped", "true");
     }
-    fireEvent.change(screen.getByTestId(collectionTestid.equip("table")), { target: { value: TABLE } });
-    fireEvent.change(screen.getByTestId(collectionTestid.equip("field")), { target: { value: FIELD } });
-    fireEvent.change(screen.getByTestId(collectionTestid.equip("cardBack")), { target: { value: BACK } });
+    for (const id of [TABLE, FIELD, BACK]) fireEvent.click(within(tile(id)).getByRole("button"));
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: TABLE, field: FIELD, cardBack: BACK });
-    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("cardBack")).value).toBe(BACK);
+    expect(tile(BACK)).toHaveAttribute("data-equipped", "true");
 
     // An id this client does not know shows as the default, which is what the board draws.
     act(() => {
       writeCosmetics({ table: "table-marble" });
     });
-    expect(screen.getByTestId<HTMLSelectElement>(collectionTestid.equip("table")).value).toBe(DEFAULT_CARD_COSMETICS.table);
+    expect(tile(DEFAULT_CARD_COSMETICS.table)).toHaveAttribute("data-equipped", "true");
   });
 
   it("R1579000 no settings reset touches the equipped cosmetics", () => {
@@ -538,5 +560,232 @@ describe("R1297000 the deck slots", () => {
     const backs = cosmeticsCss.indexOf('.cf-back[data-card-back="');
     expect(backs).toBeGreaterThan(0);
     expect(cosmeticsCss.slice(backs)).not.toMatch(/content\s*:/);
+  });
+});
+
+describe("R1655000 the picks of each card", () => {
+  const ANCHOR = { left: 600, top: 200, width: 100, height: 140 };
+  /** Two cards, the one with picks of its own and the one without. */
+  const OWN = "core-004";
+  const OTHER = "core-005";
+  /** A second border, apart from the account's `PICKS.border`. */
+  const CARD_BORDER = secondItem("border");
+
+  afterEach(() => {
+    closeInspect();
+  });
+
+  it("R1655000 the picks are stored per card on the device, in a store of their own", () => {
+    expect(CARD_BORDER).not.toBe(PICKS.border);
+    expect(readCardPicks(OWN)).toEqual({});
+    writeCardPick(OWN, "foil", PICKS.foil);
+    writeCardPick(OWN, "border", CARD_BORDER);
+    writeCardFullArt(OWN, true);
+    expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil, border: CARD_BORDER, fullArt: true });
+    expect(readCardPicks(OTHER)).toEqual({});
+    expect(JSON.parse(localStorage.getItem(CARD_PICKS_SETTINGS_KEY) ?? "null")).toEqual({
+      [OWN]: { foil: PICKS.foil, border: CARD_BORDER, fullArt: true },
+    });
+    // The account's store, which syncs as the `cosmetics` group, is not touched.
+    expect(localStorage.getItem(COSMETICS_SETTINGS_KEY)).toBeNull();
+    expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
+
+    // A new page reads them back; null clears a kind to the account's pick, and a card with none leaves the store.
+    resetCosmeticsForTests();
+    expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil, border: CARD_BORDER, fullArt: true });
+    writeCardPick(OWN, "foil", null);
+    writeCardPick(OWN, "border", null);
+    expect(readCardPicks(OWN)).toEqual({ fullArt: true });
+    writeCardFullArt(OWN, null);
+    expect(readCardPicks(OWN)).toEqual({});
+    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe("{}");
+    // Off is a pick of its own, which beats a Full-art cards setting that is on.
+    writeCardFullArt(OWN, false);
+    expect(readCardPicks(OWN)).toEqual({ fullArt: false });
+  });
+
+  it("R1655000 the store keeps an id it does not know, which reads as its kind's default, and drops what is no pick", () => {
+    localStorage.setItem(
+      CARD_PICKS_SETTINGS_KEY,
+      `{"${OWN}":{"foil":"foil-aurora","finish":7,"border":"${"b".repeat(41)}","fullArt":"yes"},"${OTHER}":"junk","__proto__":{"foil":"${PICKS.foil}"}}`,
+    );
+    expect(readCardPicks(OWN)).toEqual({ foil: DEFAULT_CARD_COSMETICS.foil });
+    expect(readCardPicks(OTHER)).toEqual({});
+    expect(({} as Record<string, unknown>)["foil"]).toBeUndefined();
+
+    // A write of another kind never overwrites the id a newer client wrote.
+    writeCardPick(OWN, "border", CARD_BORDER);
+    expect(JSON.parse(localStorage.getItem(CARD_PICKS_SETTINGS_KEY) ?? "{}")[OWN]).toEqual({ foil: "foil-aurora", border: CARD_BORDER });
+    resetCosmeticsForTests();
+    expect(readCardPicks(OWN)).toEqual({ foil: DEFAULT_CARD_COSMETICS.foil, border: CARD_BORDER });
+
+    // Unparsable storage is no picks.
+    localStorage.setItem(CARD_PICKS_SETTINGS_KEY, "{not json");
+    resetCosmeticsForTests();
+    expect(readCardPicks(OWN)).toEqual({});
+  });
+
+  it("R1655000 a write starts from what storage holds now: another tab's picks and a newer client's kinds stand", () => {
+    expect(readCardPicks(OWN)).toEqual({});
+    // Another tab, maybe a newer client's, wrote after this page read.
+    localStorage.setItem(CARD_PICKS_SETTINGS_KEY, JSON.stringify({ [OTHER]: { border: CARD_BORDER }, [OWN]: { sleeve: "sleeve-x" } }));
+
+    writeCardPick(OWN, "foil", PICKS.foil);
+
+    expect(JSON.parse(localStorage.getItem(CARD_PICKS_SETTINGS_KEY) ?? "{}")).toEqual({
+      [OTHER]: { border: CARD_BORDER },
+      [OWN]: { sleeve: "sleeve-x", foil: PICKS.foil },
+    });
+    expect(readCardPicks(OTHER)).toEqual({ border: CARD_BORDER });
+    expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil });
+  });
+
+  it("R1655000 a pick storage cannot keep holds in memory for the page, past the next write", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    writeCardPick(OWN, "foil", PICKS.foil);
+    writeCardPick(OTHER, "border", CARD_BORDER);
+    expect(readCardPicks(OWN)).toEqual({ foil: PICKS.foil });
+    expect(readCardPicks(OTHER)).toEqual({ border: CARD_BORDER });
+    setItem.mockRestore();
+
+    // Storage takes the next write, and it holds both.
+    writeCardFullArt(OWN, true);
+    expect(JSON.parse(localStorage.getItem(CARD_PICKS_SETTINGS_KEY) ?? "{}")).toEqual({
+      [OWN]: { foil: PICKS.foil, fullArt: true },
+      [OTHER]: { border: CARD_BORDER },
+    });
+  });
+
+  it("R1655000 a card wears its own picks on the board's faces while another card keeps the account's", () => {
+    writeCosmetics({ border: PICKS.border });
+    writeCardPick(OWN, "foil", PICKS.foil);
+    writeCardPick(OWN, "border", CARD_BORDER);
+    const { container } = render(
+      <>
+        <CardFace face={face(OWN)} worn />
+        <MinionFace face={face(OWN)} unit={unit("p1")} worn />
+        <CardFace face={face(OTHER)} worn />
+        <MinionFace face={face(OTHER)} unit={unit("p1", { defId: OTHER })} worn />
+      </>,
+    );
+    const [own, ownMinion, other, otherMinion] = [...container.querySelectorAll<HTMLElement>(".cf")];
+    for (const element of [own, ownMinion]) {
+      expect(element?.getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
+      expect(element?.getAttribute("data-frame")).toBe(CARD_BORDER);
+      expect(element?.getAttribute("data-finish")).toBeNull();
+    }
+    for (const element of [other, otherMinion]) {
+      expect(element?.getAttribute("data-cosmetic-foil")).toBeNull();
+      expect(element?.getAttribute("data-frame")).toBe(PICKS.border);
+    }
+  });
+
+  it("R1655000 a pick of a kind's default is a pick, and clearing it leaves the kind to the account, live", () => {
+    writeCosmetics({ border: PICKS.border });
+    writeCardPick(OWN, "border", DEFAULT_CARD_COSMETICS.border);
+    const { container } = render(
+      <>
+        <CardFace face={face(OWN)} worn />
+        <CardFace face={face(OTHER)} worn />
+      </>,
+    );
+    const [own, other] = [...container.querySelectorAll<HTMLElement>(".cf")];
+    expect(own?.getAttribute("data-frame")).toBeNull();
+    expect(other?.getAttribute("data-frame")).toBe(PICKS.border);
+    // A write re-renders the faces that wear it.
+    act(() => {
+      writeCardPick(OWN, "border", null);
+    });
+    expect(own?.getAttribute("data-frame")).toBe(PICKS.border);
+    act(() => {
+      writeCardPick(OWN, "border", CARD_BORDER);
+    });
+    expect(own?.getAttribute("data-frame")).toBe(CARD_BORDER);
+    expect(other?.getAttribute("data-frame")).toBe(PICKS.border);
+  });
+
+  it("R1655000 a face that is not the viewer's own draws the defaults, whatever its card's picks", () => {
+    writeCosmetics(PICKS);
+    writeCardPick(OWN, "foil", PICKS.foil);
+    writeCardPick(OWN, "border", CARD_BORDER);
+    const { container } = render(
+      <>
+        <CardFace face={face(OWN)} />
+        <MinionFace face={face(OWN)} unit={unit("p2")} />
+      </>,
+    );
+    const faces = [...container.querySelectorAll<HTMLElement>(".cf")];
+    expect(faces).toHaveLength(2);
+    for (const element of faces) {
+      for (const attribute of ATTRIBUTES) expect(element.getAttribute(attribute), attribute).toBeNull();
+    }
+  });
+
+  it("R1655000 a Mythic face wears no cosmetic foil and a Radiant face nothing, whatever its card's picks", () => {
+    for (const defId of ["core-096", OWN]) {
+      writeCardPick(defId, "foil", PICKS.foil);
+      writeCardPick(defId, "finish", PICKS.finish);
+      writeCardPick(defId, "border", CARD_BORDER);
+    }
+    const { container } = render(
+      <>
+        <CardFace face={face("core-096")} worn />
+        <CardFace face={face(OWN, true)} worn />
+      </>,
+    );
+    const [mythic, radiant] = [...container.querySelectorAll<HTMLElement>(".cf")];
+    expect(mythic?.getAttribute("data-cosmetic-foil")).toBeNull();
+    expect(mythic?.getAttribute("data-finish")).toBe(PICKS.finish);
+    expect(mythic?.getAttribute("data-frame")).toBe(CARD_BORDER);
+    for (const attribute of ATTRIBUTES) expect(radiant?.getAttribute(attribute), attribute).toBeNull();
+  });
+
+  it("R1655000 a pick the viewer does not own on its card is not worn: the account's pick shows", () => {
+    const account = { ...DEFAULT_CARD_COSMETICS, border: PICKS.border };
+    const card = { border: CARD_BORDER };
+    expect(wornCosmetics(face(OWN), account, card).border).toBe(CARD_BORDER);
+    expect(wornCosmetics(face(OWN), account, card, (id) => id === CARD_BORDER).border).toBe(CARD_BORDER);
+    expect(wornCosmetics(face(OWN), account, card, () => false).border).toBe(PICKS.border);
+    // Not the viewer's own: the defaults, picks owned or not.
+    expect(wornCosmetics(face(OWN), null, card).border).toBe(DEFAULT_CARD_COSMETICS.border);
+  });
+
+  it("R1655000 the viewer's own card's hover preview, touch sheet and detail view wear its picks; another's draws the defaults", () => {
+    writeCosmetics({ finish: PICKS.finish });
+    writeCardPick(OWN, "border", CARD_BORDER);
+    const def = CATALOG[OWN];
+    if (def === undefined) throw new Error("no card");
+    const frames = (own: boolean): (string | null)[] => {
+      const found: (string | null)[] = [];
+      const wrap = (child: ReactElement) => <OwnCopy own={own}>{child}</OwnCopy>;
+      render(wrap(<HoverPreview face={face(OWN)} anchor={ANCHOR} />));
+      found.push(screen.getByTestId(INSPECT_FACE).querySelector(".cf")?.getAttribute("data-frame") ?? null);
+      cleanup();
+      render(wrap(<InspectSheet face={face(OWN)} onClose={() => {}} />));
+      found.push(screen.getByTestId(INSPECT_FACE).querySelector(".cf")?.getAttribute("data-frame") ?? null);
+      cleanup();
+      closeInspect();
+      render(wrap(<CardDetail def={def} onClose={() => {}} />));
+      found.push(screen.getByTestId(INSPECT_FACE_BASE).querySelector(".cf")?.getAttribute("data-frame") ?? null);
+      // The Radiant face's gold is its own.
+      found.push(screen.getByTestId(INSPECT_FACE_RADIANT).querySelector(".cf")?.getAttribute("data-frame") ?? null);
+      cleanup();
+      closeInspect();
+      return found;
+    };
+    expect(frames(true)).toEqual([CARD_BORDER, CARD_BORDER, CARD_BORDER, null]);
+    expect(frames(false)).toEqual([null, null, null, null]);
+
+    // Another card in the same preview wears the account's picks and none of the first card's.
+    render(
+      <OwnCopy own>
+        <HoverPreview face={face(OTHER)} anchor={ANCHOR} />
+      </OwnCopy>,
+    );
+    const preview = screen.getByTestId(INSPECT_FACE).querySelector(".cf");
+    expect(preview?.getAttribute("data-frame")).toBeNull();
+    expect(preview?.getAttribute("data-finish")).toBe(PICKS.finish);
   });
 });

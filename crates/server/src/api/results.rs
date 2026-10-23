@@ -59,7 +59,7 @@ use crate::db::store::{
 };
 use crate::economy::quests::tally_seat;
 use crate::economy::rewards::{
-    GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
+    GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
 };
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
@@ -125,6 +125,10 @@ impl RatingPolicy {
 struct Written {
     row: ResultRow,
     series: Option<SeriesRow>,
+    /// What the reward hook paid each seat, keyed by the engine seat `RecordResultInput.seats`
+    /// credits it in: `None` for a seat it did not pay (a bot's side, a match with no row, the
+    /// economy off) and for both on a repeated write, which pays nothing (#1657).
+    economy: PerPlayer<Option<GameEconomy>>,
 }
 
 /// Why one attempt of the write did not land: the duplicate the retry below exists for, or a real
@@ -216,6 +220,7 @@ async fn write_once(
         return Ok(Written {
             row: already,
             series: None,
+            economy: PerPlayer::new(None, None),
         });
     }
 
@@ -330,7 +335,8 @@ async fn write_once(
     // off (§14.12, [[R1302006]]): the economy is built behind it, and a ledger row is never
     // deleted. The same hook moves each seat's quests (§14.9, [[R1304001]]) by what the game did:
     // its plays and fired Traps, read off the log by the engine's fold (`quests_game`), and its
-    // attacks, counted from the log.
+    // attacks, counted from the log. What it paid each person is answered to the actor (#1657).
+    let mut economy = PerPlayer::new(None, None);
     if app.economy_live
         && let Some(mode) = match_row
             .as_ref()
@@ -365,7 +371,7 @@ async fn write_once(
                 by_id.get(&seat.profile_id).map(|profile| profile.kind),
                 Some(ProfileKind::Bot)
             );
-            pay_game_rewards(
+            let paid = pay_game_rewards(
                 tx,
                 &GameSummary {
                     mode,
@@ -385,6 +391,7 @@ async fn write_once(
             )
             .await
             .map_err(failed)?;
+            economy[seat.player] = (!bot).then_some(paid);
         }
     }
 
@@ -467,6 +474,7 @@ async fn write_once(
     Ok(Written {
         row,
         series: advanced,
+        economy,
     })
 }
 
@@ -510,6 +518,24 @@ async fn quests_game(
 /// the ordinary Glicko-2 rating move (R603, R112's "live match actor" half). Once the result is in,
 /// the game is filed for the card statistics (R376, `game_records.rs`).
 pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<ResultRow, ApiError> {
+    Ok(record_result_with_economy(app, input).await?.row)
+}
+
+/// What [`record_result_with_economy`] answers: the result's row, and what its write paid each
+/// seat, keyed by the engine seat `RecordResultInput.seats` credits it in (#1657). A seat the
+/// write paid nothing (a bot's side, the economy off) has `None`, and so has every seat when the
+/// match's result was already written: a repeat pays nothing, so it has nothing to tell.
+pub struct Recorded {
+    pub row: ResultRow,
+    pub economy: PerPlayer<Option<GameEconomy>>,
+}
+
+/// [`record_result`], answering what the write paid each seat as well, for the actor to push in
+/// that seat's views (#1657).
+pub async fn record_result_with_economy(
+    app: &Arc<App>,
+    input: RecordResultInput,
+) -> Result<Recorded, ApiError> {
     let written = write_result(app, &input, RatingPolicy::Rated).await?;
     // After the commit: a series whose next game began already (R332) gets its match. A
     // failure to start it is the sweeper's to heal (R263), never this result's.
@@ -517,7 +543,10 @@ pub async fn record_result(app: &Arc<App>, input: RecordResultInput) -> Result<R
     // R376: after the commit too, and never at the result's expense — it logs and swallows its
     // own failures, and a second write of the same match files nothing, and one that failed is filed again by the retention loop while the match's log is held (R1596000).
     record_live_game(app, &input.match_id).await;
-    Ok(written.row)
+    Ok(Recorded {
+        row: written.row,
+        economy: written.economy,
+    })
 }
 
 /// R1253000: `ceiling_draw_input`'s draw, written as the reaper writes it (both ratings unchanged,

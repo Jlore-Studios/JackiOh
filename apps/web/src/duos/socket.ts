@@ -20,6 +20,7 @@ import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import { PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/server-config";
 
+import { economyField, type GameEconomy } from "../economy/xp.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -76,8 +77,16 @@ export type DuosServerFrame =
   /**
    * R1483000: `jloreCapped` is true once the match is over and the daily Jlore cap held back some or
    * all of this seat's Jlore for it; the server leaves it off a frame that has nothing to say.
+   * #1664: `economy` is what the result's write paid this seat's person (`economy/xp.ts`), on every
+   * view of the seat from then on; absent when the frame carries none (or not a whole one).
    */
-  | { type: "view"; view: DuosView; legal: readonly DuosActionBody[]; jloreCapped: boolean }
+  | {
+      type: "view";
+      view: DuosView;
+      legal: readonly DuosActionBody[];
+      jloreCapped: boolean;
+      economy?: GameEconomy;
+    }
   | { type: "ack"; nonce: string; seq: number }
   | { type: "error"; code: string; message: string; nonce?: string }
   | ({ type: "clock" } & DuosClockFrame)
@@ -113,6 +122,7 @@ export function parseDuosFrame(text: string): DuosServerFrame | null {
         view: parsed.view as unknown as DuosView,
         legal: parseLegal(parsed.legal),
         jloreCapped: parsed.jloreCapped === true,
+        ...economyField(parsed.economy),
       };
     case "ack":
       if (typeof parsed.nonce !== "string" || typeof parsed.seq !== "number") return null;
@@ -164,6 +174,12 @@ export type DuosSnapshot = {
    * finished match, as the server read it off its ledger; the page never works it out.
    */
   jloreCapped: boolean;
+  /**
+   * #1664: what the finished match paid this seat's person, from the last view that carried it: the
+   * tracks it moved with their levels and rewards, and the quests it completed. Null before the
+   * result is written and after a view without it.
+   */
+  economy: GameEconomy | null;
   /** The last `error` frame's message, relayed verbatim, or null. */
   error: string | null;
   errorCode: string | null;
@@ -217,6 +233,7 @@ const INITIAL: DuosSnapshot = {
   view: null,
   legal: [],
   jloreCapped: false,
+  economy: null,
   error: null,
   errorCode: null,
   clock: null,
@@ -328,6 +345,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
           view: frame.view,
           legal: frame.legal,
           jloreCapped: frame.jloreCapped,
+          economy: frame.economy ?? null,
           ...(fresh ? { error: null, errorCode: null } : {}),
         });
         return;

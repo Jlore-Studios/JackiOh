@@ -44,7 +44,9 @@
 //
 // R1295000: on a board that wears cosmetics (game/wearer.ts) the viewer's own card, by its owner,
 // wears the device's card cosmetics: its face is `worn`. A stolen unit keeps its owner's look; a
-// card in the resolving strip, which names no owner, wears the defaults.
+// card in the resolving strip, which names no owner, wears the defaults. R1655000: it wears the
+// picks of its own card (cards/cosmetics.ts) over the account's, and so does its hover preview and
+// inspect overlay, which sit below an `OwnCopy` of its `worn`.
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
@@ -581,7 +583,7 @@ export default function Card(props: CardProps): ReactElement {
   // handlers never see an event from inside a preview or a sheet.
   // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
   // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
-  // R1313000: the viewer's own card's overlay prints the full art the card does.
+  // R1313000, R1655000: the viewer's own card's overlay prints the full art the card does and wears its cosmetics.
   return (
     <>
       {root}

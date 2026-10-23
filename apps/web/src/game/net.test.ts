@@ -19,6 +19,22 @@ import {
   type Timers,
 } from "./net.ts";
 
+/** #1664: what a result's write paid the account: the track moved one level, and one quest completed. */
+const ECONOMY = {
+  jlore: 30,
+  xp: 540,
+  jloreCapped: false,
+  tracks: [
+    {
+      setId: "Core",
+      before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+      after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+      levels: [{ level: 2, rewards: { jlore: 25, setPacks: 2, cardTokens: 3 } }],
+    },
+  ],
+  quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+};
+
 // Fakes
 
 class FakeSocket implements SocketLike {
@@ -258,6 +274,33 @@ describe("server frames", () => {
       type: "view",
       jloreCapped: false,
     });
+  });
+
+  it("#1664 keeps the seat's economy from view frames, none for a frame without it", () => {
+    const h = connected();
+    expect(h.client.snapshot().economy).toBeNull();
+    h.socket().deliver({ type: "view", view: baseView() });
+    expect(h.client.snapshot().economy).toBeNull();
+
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }), economy: ECONOMY });
+    expect(h.client.snapshot().economy).toEqual(ECONOMY);
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }), economy: ECONOMY });
+    expect(h.client.snapshot().economy).toEqual(ECONOMY);
+    // A view without it, as the server sends to a watcher or after a restart, leaves the seat none.
+    h.socket().deliver({ type: "view", view: baseView({ turn: 4 }) });
+    expect(h.client.snapshot().economy).toBeNull();
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView() }))).not.toHaveProperty("economy");
+    expect(parseServerFrame(JSON.stringify({ type: "view", view: baseView(), economy: ECONOMY }))).toMatchObject({
+      type: "view",
+      economy: ECONOMY,
+    });
+  });
+
+  it("#1664 an economy that is not whole is no economy, and never costs the board its view", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }), economy: { ...ECONOMY, tracks: "no" } });
+    expect(h.client.snapshot().view?.turn).toBe(2);
+    expect(h.client.snapshot().economy).toBeNull();
   });
 
   it("relays an `error` verbatim (§9.3: the reducer's reason, never reworded)", () => {

@@ -1636,6 +1636,13 @@
 }
 
 /* The chip: one line at the foot of the screen, over the hand rather than the field. */
+/* The panel scrolls rather than run past the screen: the XP reveal (#1664) can make it taller than a
+   landscape phone, and its ways on must stay in reach. */
+[data-testid="result-overlay"][data-form="panel"] {
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
 [data-testid="result-overlay"][data-form="chip"] {
   top: auto;
   bottom: max(12px, env(safe-area-inset-bottom));

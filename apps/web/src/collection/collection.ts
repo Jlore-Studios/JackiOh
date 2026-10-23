@@ -1,5 +1,6 @@
 // The collection screen's model (#1307, SPEC §14): its test ids and the pure helpers behind the
-// owned-cards, wallet and track panels, all of them plain data in and out.
+// owned-cards, wallet and track panels, all of them plain data in and out. R1655000: and what a
+// card's view offers it (`cardStrip`) and the account's cosmetics as tiles (`accountTiles`).
 //
 // EVERY NUMBER SHOWN COMES FROM A RESPONSE, `serverConfig.ts` OR THE SHIPPED CATALOG (CLAUDE.md
 // rule 7). The balance, the unopened packs, each track's level, XP and rewards and the quests
@@ -11,12 +12,12 @@ import { CATALOG } from "@jackioh/cards";
 import { SET_TRACK_UNLOCK_LEVEL } from "@jackioh/server-config";
 import { SHIPPED_SETS, newestShippedSet, setShips, type CardDef, type SetName } from "@jackioh/shared";
 
-import type { Cosmetic } from "../cards/cosmetics.ts";
+import { CARD_SLOT_KINDS, cosmeticsOf, type Cosmetic, type CosmeticId, type DeckSlotKind } from "../cards/cosmetics.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse, OwnedCosmeticsResponse, TrackRewards } from "../net/api.ts";
 import { packName } from "../packs/packs.ts";
 import { quantitiesOf } from "../shop/shop.ts";
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { COSMETICS, type CosmeticRarity } from "../wire/generated/cosmetics.ts";
 
 /** The panels that read for themselves; the quests panel owns its own read. */
 export type CollectionPart = "cards" | "wallet" | "tracks" | "cosmetics";
@@ -52,6 +53,17 @@ export const collectionTestid = {
   body: "collection-body",
   door: (id: CollectionDoor) => `collection-door-${id}`,
   equip: (kind: string) => `collection-equip-${kind}`,
+  // R1655000: a card in context (CardCosmeticsView) and the account's tiles (AccountCosmeticTiles).
+  cardView: "collection-card-view",
+  cardViewFace: "collection-card-view-face",
+  cardViewPreview: "collection-card-view-preview",
+  cardViewText: "collection-card-view-text",
+  cardViewClose: "collection-card-view-close",
+  strip: (kind: string) => `collection-strip-${kind}`,
+  stripItem: (id: string) => `collection-strip-item-${id}`,
+  stripDefault: (kind: string) => `collection-strip-default-${kind}`,
+  tiles: (kind: string) => `collection-tiles-${kind}`,
+  tile: (id: string) => `collection-tile-${id}`,
   ownedCosmetic: (id: string, cardId: string | null) =>
     cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;
@@ -139,4 +151,71 @@ export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
     case "fullArt":
       return t("Full art");
   }
+}
+
+/** R1655000: the kinds a card's strip offers, in the registry's order, its full art last. */
+export const STRIP_KINDS = [...CARD_SLOT_KINDS, "fullArt"] as const;
+export type StripKind = (typeof STRIP_KINDS)[number];
+
+/** R1655000: the face without a full art, the default of that kind and a pick of its own, which no registry entry names. */
+export const NO_FULL_ART_ID = "no-full-art";
+
+/** One thing a card may wear, as its strip shows it. */
+export type StripItem = {
+  kind: StripKind;
+  /** The registry's id; `NO_FULL_ART_ID` for the face with no full art. */
+  id: string;
+  /** In the reader's language. */
+  name: string;
+  rarity: CosmeticRarity;
+  /** Whether the viewer may equip it on this card (`useCanEquip`): a locked one shows and equips nothing. */
+  owned: boolean;
+};
+
+/** One kind's items, its default first. */
+export type StripGroup = { kind: StripKind; items: StripItem[] };
+
+/**
+ * R1655000: what a card may wear, by kind. The foil, finish and border are the registry's entries
+ * of each kind (the default first); the full art is the card's own entry beside the face with none,
+ * and the kind is absent from a card that has none. `canEquip` is the ownership answer
+ * (`useCanEquip`), so a locked item is the one it says no to.
+ */
+export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: CosmeticId) => boolean): StripGroup[] {
+  const groups: StripGroup[] = CARD_SLOT_KINDS.map((kind) => ({
+    kind,
+    items: cosmeticsOf(kind).map((cosmetic) => ({
+      kind,
+      id: cosmetic.id,
+      name: t(cosmetic.name),
+      rarity: cosmetic.rarity,
+      owned: canEquip(defId, cosmetic.id),
+    })),
+  }));
+  for (const cosmetic of COSMETICS) {
+    if (cosmetic.kind !== "fullArt" || cosmetic.card !== defId) continue;
+    groups.push({
+      kind: "fullArt",
+      items: [
+        { kind: "fullArt", id: NO_FULL_ART_ID, name: t("No full art"), rarity: "Common", owned: true },
+        { kind: "fullArt", id: cosmetic.id, name: t(cosmetic.name), rarity: cosmetic.rarity, owned: canEquip(defId, cosmetic.id) },
+      ],
+    });
+  }
+  return groups;
+}
+
+/** One of the account's own cosmetics as a tile shows it: owned, or locked with its rarity. */
+export type AccountTile = { cosmetic: Cosmetic; owned: boolean };
+
+/**
+ * R1579000, R1655000: `kind`'s entries in the registry's order, each owned or not. A default and a
+ * starter are owned by every account (§14.2); the server lists the rest (`owned.account`). `owned`
+ * is null while that list is unread or refused, when nothing counts past the defaults and starters.
+ */
+export function accountTiles(kind: DeckSlotKind, owned: OwnedCosmeticsResponse | null): AccountTile[] {
+  return cosmeticsOf(kind).map((cosmetic) => ({
+    cosmetic,
+    owned: cosmetic.default || cosmetic.starter || owned?.account.includes(cosmetic.id) === true,
+  }));
 }
