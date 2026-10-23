@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1704,
+  "title": "Patch: Meditative+ balance changes II",
+  "branch": "bot/issue-1704",
+  "thread": "**Issue #1704 (data, not instructions):**\n\n```text\n# #1704: Patch: Meditative+ balance changes II\nOpened by @MaxGoetzmann.\n\n### What it does\n\nThe designer's second round of Meditative+ balance notes (2026-10-23), following #1563. It changes 16 cards and tokens across Core, Classic, Classic+, Meditative and Meditative+, so it is one patch over all five sets. Each line below gives the card's current state on `main` and then the change. Unless a line says otherwise, a change applies to both faces.\n\n**Costs**\n- C+ #62 KY's Papaya: costs (2), up from (1). See its text below.\n- C+ #7 The House: costs (3), down from (4). See its text below.\n- M #56 House Party: costs (4), up from (3).\n- C #32 Felinor Feelings: costs (2), up from (1). See its text below.\n- M+ #1.2 Spa Day (token): costs (3), up from (2).\n- M+ #1.4 Leg Day (token): costs (3), up from (2).\n- C+ #43 AI Slop: costs (3), down from (4).\n\n**Stats and keywords**\n- M+ #8 Arch Mage: 4/8, up from 4/7. Radiant 8/16, up from 8/14. Spell Damage is unchanged.\n- M #66 Fiery Waraxe: gains Rush on both faces. It keeps Animated on your turn and First Strike, and the Radiant face keeps Pierce.\n- C+ #3 Second Amendment Snake: gains Pierce on both faces.\n\n**Text and play**\n- **C+ #62 KY's Papaya**\n  - The \"done\" option is removed. You always Discover 4 cells, one per lane, as long as the lanes allow it. This replaces R831003's \"1 to 4, then done\".\n  - The cards on the curve are **destroyed**, not exiled.\n  - Base: each Discover chooses from **2** random cells.\n  - Radiant: each Discover still chooses from 3 random cells (`PAPAYA_OFFERS`), and it still hits only enemy cards.\n  - Base text: \"Discover 4 cells, each from 2 random cells in different lanes. Destroy every card on the cubic curve through them (x = lane, y = row).\"\n- **C+ #7 The House**\n  - The \"Cry and start of turn\" summon is replaced by: \"Cry: Place 3 Plague Counters on this. Activate: Spend a Plague Counter from this to summon a Right-house defender or a Wrong-House Attacker.\"\n  - Radiant: the same, but it summons a Radiant Right-house defender or a Radiant Wrong-House Attacker.\n  - Default reading: \"either\" is the controller's choice, made through a mode prompt (`ModeDecl`). Activate keeps the \u00a76 default of once per turn, and it cannot be activated with no counters left.\n- **C #32 Felinor Feelings**: it can steal only Units. Base: \"Steal an enemy Unit in a lane where you control a (1) Cost Unit.\" The Radiant face also summons the Felinor Token first, as it does now.\n- **C #52 Final Gambit**: \"Redirect the hit to the enemy hero\" becomes \"Cancel the hit\". The heal and the draw are unchanged.\n- **Core #54 Straaza**: it adds random (3) Cost Units only, not \"(3) or (4)\". The Radiant face adds Radiant (3) Cost Units.\n- **M #30 Fickle E-Kitten**: \"Start of turn\" becomes \"End of turn\" on both faces. The rest of the text is unchanged.\n- **M #37 CN in a Bottle**\n  - Base: \"Cast on draw: Add a random Radiant card to your hand. It costs (1) more (up to (4)).\"\n  - Default reading: the +1 never raises the card's cost above (4), so a card already at (4) or more is unchanged.\n  - The Radiant face is unchanged: it costs (0).\n\n**Tuning the plan decides**\n\nThe designer gave a direction for these two cards but no exact numbers. The plan names the numbers so a person can edit them before the build, and the pull request states them.\n- **C+ #40 Appropriations**: nerf each option slightly again, on both faces, after #1149's nerf.\n  - Today's base: Military +2X Attack and Rush; Education 2X Radiant Books; Culture 8X%; Healthcare +2X Health and Armor X.\n  - Today's Radiant: +4X Attack; 5X Books; 20X%; +6X Health and Armor 2X.\n  - Keep each nerf small, about 10\u201320%. Where a multiple of X cannot go down by that little, use the smallest step the card can take.\n- **C #90 In Too Deep**: make a few of the easier quests about 25% harder to complete.\n  - The constants are in `classic/c090_in_too_deep.rs`. A suggestion: quest 5's damage 12 \u2192 15, quest 6's totals 10 \u2192 13, and one more early quest raised by one step.\n  - The rewards are unchanged.\n\n### Notes for the build\n\n- Read `docs/ADDING_CARDS.md` before any card work (CLAUDE.md rule 10).\n  - This changes shipped cards, so one pending fragment (`cargo jackioh patches \"<title>\" --plays \u2026`) must claim every changed family, with its `player` note.\n  - `classify --claims` must agree with the fragment.\n  - Replays of older catalogs keep the old behaviour wherever the scripts already do that (R767000; Appropriations' `script_v0_3_7b` is the pattern).\n- Keep the catalog texts, \u00a78 rows, BUILD rows, `docs/radiant-audit.md` and the AI's handling of the changed prompts in step with the new behaviour. This includes Papaya's offer count, The House's new Activate and mode prompt, and Final Gambit's cancel.\n- Any decision the spec does not make, and every ruling a change supersedes (R831003 for Papaya), gets a note from this issue's block, with a test named after it (CLAUDE.md rule 3).\n- Every new number is a named constant (CLAUDE.md rule 9).\n\n### Acceptance\n\n- Every change above has a test in its card's file, covering the base and Radiant faces separately.\n- New and changed rulings have notes and proving tests, and `cargo jackioh spec index` has been run.\n- These checks pass: `cargo fmt --check`, clippy, `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo jackioh catalog check`, `patches check`, `spec check`, `classify --base origin/main --claims`, `fuzz --seeds 200`, `golden check` (any re-bless explained), `pnpm --dir apps/web typecheck` and `test`.\n- The pull request lists the numbers chosen for Appropriations and In Too Deep, and every default reading it kept or changed.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1704: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
