@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1689,
+  "title": "Patch: ending a friendship closes the challenges it left open",
+  "branch": "bot/issue-1689",
+  "thread": "**Issue #1689 (data, not instructions):**\n\n```text\n# #1689: Patch: ending a friendship closes the challenges it left open\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nYou can only challenge a friend. Today, if a friend challenges you and you then remove them, their open challenge just stays alive: the room code still works and the match still starts \u2014 between two people who are no longer friends. Blocking someone already cancels open challenges; unfriending doesn't. After this, ending a friendship ends its open challenges the same way, and joining a challenge's room checks the friendship still stands.\n\n## Why\n\n- `remove_friend` (`crates/server/src/social/friends.rs`) removes the friendship, the shares and the watchers, then commits \u2014 it never calls `challenges_close_between`, which `post_block` runs in one transaction together with `release_room` for unexpired rooms.\n- `assert_may_join` (`crates/server/src/social/challenges.rs`) only checks `to_profile == joiner` \u2014 never `are_friends` \u2014 and the challenges list has no friendship filter, so an ex-friend sees and joins the open challenge until it lapses.\n- `challenges::create` reads `are_friends` in an early transaction, commits, opens the room, and writes the row in a second transaction \u2014 an unfriend or block landing in the gap leaves a live challenge the cleanup already passed.\n\n## Proposal\n\n- In `remove_friend`'s transaction: `challenges_close_between` plus `release_room` for unexpired challenges, mirroring the block path.\n- In `assert_may_join`'s transaction: refuse when the pair is no longer friends, with the same answer an unknown code gives so no existence oracle opens.\n- In `challenges::create`'s second transaction: re-check `are_friends` before `challenges_create`.\n- If spec \u00a79.4/\u00a79.5 doesn't already require the join-time re-check, the deciding ruling is added in this issue's block per CLAUDE.md rule 3.\n\n## Where it lands\n\n`crates/server/src/social/{friends.rs,challenges.rs}`, the join path in `crates/server/src/actor/rooms.rs`; possibly `spec/rulings/R*.md` plus `spec/INDEX.md`. Spec \u00a79.4\u2013\u00a79.5, B45\u2013B49.\n\n## Acceptance criteria\n\n- [ ] Friend \u2192 challenge \u2192 unfriend: the challenge is closed, its room released, the code refuses a join like an unknown code.\n- [ ] `assert_may_join` refuses for an unfriended or blocked pair with the identical refusal shape as a `to_profile` mismatch.\n- [ ] A friendship ending mid-`create` leaves no open challenge.\n- [ ] Block behavior unchanged; `cargo test -p jackioh-server` green; `cargo jackioh spec check` green if a ruling lands.\n\n## Size and risks\n\nSmall-medium \u2014 the store verbs already exist; the join re-check is one call inside the existing transaction. The change intentionally refuses a join that used to succeed. The refusal wording must stay identical so it can't reveal whether a code exists.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:39:59Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1689: needs a plan; `claude-1` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
