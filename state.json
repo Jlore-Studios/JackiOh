@@ -13161,10 +13161,10 @@
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
-      "provider": "claude-6",
+      "provider": "claude-7",
       "round_tier": "strong",
-      "run_id": "40036705726",
-      "started_at": "2026-10-23T22:56:05Z",
+      "run_id": "pending:2b146e47-1792799824",
+      "started_at": "2026-10-23T23:57:20Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -13243,9 +13243,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T23:19:06Z",
+    "at": "2026-10-23T23:57:20Z",
     "url": "",
-    "what": "build #1751 on agy"
+    "what": "build #1748 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-23T23:45:03Z",
