@@ -13030,6 +13030,14 @@
       "started_at": "2026-10-23T18:43:42Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "1745": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-23T17:17:13Z",
+      "issue": 1728,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
