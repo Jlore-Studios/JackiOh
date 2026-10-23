@@ -12355,6 +12355,13 @@
     "1721": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T13:43:14Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "'One place' fails: the change is in crates/tools, but crates/cards/README.md documents technical.json and has to say the check now holds it. Wiring into check_patches also adds a refusal to `patches ship`."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
