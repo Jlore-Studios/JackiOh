@@ -60,11 +60,13 @@ cargo test -p jackioh-tools                    # the tools' own tests
 ```
 
 `spec check` holds seven rules: every ruling note's `id` matches its file name and is unique; every
-`proven_in` path exists and holds a proof (a Rust `fn` or `mod` whose name has the `_`-delimited token
-`r<n>`, a TypeScript `it(`, `test(` or `describe(` whose title has `R<n>` as a word, or an SQL
-script's `\echo '### R<n>: … ###'` heading); every `r<n>` test token and every `R<n>` cited in
-`crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in `spec/` resolves; every note's
-`title` and `cards` are filled in; `spec/INDEX.md` is what `spec index` writes from the notes; and no
-code file under those three roots still says its ruling is to be written (`proposed ruling` or
-`no R-row yet`, in any case; #1243). It reads ids, file names and test names, and of the wording only
-those two phrases.
+`proven_in` path exists and holds a proof that runs (#1718): a Rust `#[test]` or `#[tokio::test]`
+`fn`, not `#[ignore]`d but for a `daily:` reason, or a `fn` a test macro of the same file lists, or a
+`mod` holding one, whose name has the `_`-delimited token `r<n>`; a TypeScript `it(`, `test(` or
+`describe(` whose title has `R<n>` as a word, with no `.skip`, `.todo`, `.fixme` or `.only` on it or on
+a call around it; or an SQL script's `\echo '### R<n>: … ###'` heading; every `r<n>` test token and
+every `R<n>` cited in `crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in
+`spec/` resolves; every note's `title` and `cards` are filled in; `spec/INDEX.md` is what
+`spec index` writes from the notes; and no code file under those three roots still says its ruling
+is to be written (`proposed ruling` or `no R-row yet`, in any case; #1243). It reads ids, file
+names and test names, and of the wording only those two phrases.
