@@ -7,13 +7,18 @@
 //!      bounded number of actions. The policy never concedes (R84), so `concede` and the server's
 //!      `ceiling` occur only in a game that takes the endings channel (#1572, below).
 //!   3. REPLAY EQUALITY: `duos_fold` of `(options, log)` refuses nothing and reaches the live hash.
-//!   4. PROBES (#1386): every `probe_stride()`-th state, two forged actions that are never logged, each
+//!   4. PROBES (#1386): every `probe_stride()`-th state, forged actions that are never logged, each
 //!      owed a refusal with no events and the state exactly as it was. A reused-nonce probe sends the
 //!      action under a nonce of the round's own (`DUOS_NONCE_PREFIX`) that a duel has applied (§13.3),
 //!      so it can only come once a round has closed; a wrong-seat probe sends the body from a seat the
-//!      game is not waiting on. A seat's own nonces are the server's to dedupe in Duos (§9.3, §13.9), so
-//!      no probe reuses one. A failure is an error beginning `wrong-seat probe` or `reused-nonce probe`
-//!      and names the step. The probes skip a step the endings channel sent.
+//!      game is not waiting on; a malformed-answer probe, while the policy answers its duel's open
+//!      prompt, sends that answer made malformed as #1574's 1v1 probe makes it, each variant from its
+//!      seat in that duel; a wrapper-refused probe sends one of six duel bodies the wrapper refuses
+//!      whoever sends them (`why_duel_refused`: a concede, a draw offer, a draw answer, the R82 setting,
+//!      a timeout, an expired disconnect), in turn, from the seat that acted (#1695). A seat's own
+//!      nonces are the server's to dedupe in Duos (§9.3, §13.9), so no probe reuses one. A failure is an
+//!      error beginning `wrong-seat probe`, `reused-nonce probe`, `malformed-answer probe` or
+//!      `wrapper-refused probe` and names the step. The probes skip a step the endings channel sent.
 //!
 //! A seed fixes the game. Its setup rotates by seed the way a co-op match is made (§13.7, #1573,
 //! `duos_setup_for_seed`): team A plays `DUOS_HUMAN_TEAM` with no handicap, team B is the AI team at
@@ -25,17 +30,19 @@
 //! says why that is what replay equality proves). The policy is §10.7's over a
 //! Duos seat's legal actions: a seat that may act is drawn uniformly, it ends its turn when nothing
 //! else is on offer or with AI_END_TURN_PROBABILITY, and otherwise takes one of the rest, a pass
-//! included, uniformly; it never emotes (`AI_SKIPPED_ACTIONS`).
+//! included, uniformly; it never emotes (`AI_SKIPPED_ACTIONS`); the endings channel does (below).
 //!
 //! # The endings channel (#1572)
 //!
 //! On `ENDINGS_SHARE` of seeds, drawn from the seed's own stream as the 1v1 waves do (`fuzz.rs`), a game
 //! also takes an endings channel: at each step, from a stream of its own, it may send a seat's concede
 //! (B11, the teammate answering a standing offer at `ENDINGS_ANSWER_CHANCE`) or the server's ceiling
-//! (R79) in the policy's place, logged like any action so the fold reaches the live hash. Duos refuses
-//! a draw, a timeout, an expired disconnect and the R82 setting (B9, B10, B37, B38), so the channel
-//! sends none of them. A game that took it may end by `DUOS_ENDINGS_REASONS`; the summary and `--json`
-//! count the seeds that took it.
+//! (R79) in the policy's place, logged like any action so the fold reaches the live hash. While a
+//! seat's duel lists an emote (a card there hears it, R1127), the channel may send it too, at
+//! `ENDINGS_ACT_CHANCE` (#1695); the stream is drawn only then. Duos refuses a draw, a timeout, an
+//! expired disconnect and the R82 setting (B9, B10, B37, B38), so the channel sends none of them; the
+//! wrapper-refused probe does. A game that took the channel may end by `DUOS_ENDINGS_REASONS`; the
+//! summary and `--json` count the seeds that took it.
 
 use std::panic::{self, AssertUnwindSafe};
 use std::time::Instant;
@@ -45,7 +52,7 @@ use indexmap::IndexMap;
 use jackioh_cards::register_all;
 use jackioh_engine::subsystems::AI_SKIPPED_ACTIONS;
 use jackioh_engine::testkit::{
-    DuosInvariantMonitor, I6_GATE_STRIDE, create_duos_invariant_monitor, preview_every_set,
+    DuosInvariantMonitor, I6_GATE_STRIDE, create_duos_invariant_monitor, malformed_answers, preview_every_set,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_END_TURN_PROBABILITY, AI_PLAYOUT_STEP_CAP, ActionBody, DECK_SIZE, DUOS_DUELS,
@@ -60,9 +67,10 @@ use rayon::prelude::*;
 use crate::agent::panic_message;
 use crate::fuzz::{
     CHECKPOINT_TIME_BOUND_MS, DUOS_GROWTH_EVENTS_BOUND, DUOS_GROWTH_INSTANCES_BOUND,
-    DUOS_GROWTH_NUMBER_BOUND, ENDINGS_ANSWER_CHANCE, ENDINGS_SHARE, FUZZ_POOL, Heaviest, Heavy, MEASURES,
-    REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, checkpoint_step, duos_acting_card, duos_growth_breach,
-    duos_heaviest_lines, probe_stride, round_trip, state_paused, verify_round_trip, weigh_duos,
+    DUOS_GROWTH_NUMBER_BOUND, ENDINGS_ACT_CHANCE, ENDINGS_ANSWER_CHANCE, ENDINGS_SHARE, FUZZ_POOL, Heaviest,
+    Heavy, MALFORMED_ANSWER_PROBE, MEASURES, REUSED_NONCE_PROBE, WRONG_SEAT_PROBE, checkpoint_step,
+    duos_acting_card, duos_growth_breach, duos_heaviest_lines, probe_stride, round_trip, state_paused,
+    verify_round_trip, weigh_duos,
 };
 
 /// B25: the seeds `cargo jackioh fuzz --duos` plays when `--seeds` is not given.
@@ -305,8 +313,14 @@ fn duos_takes_endings(seed: u32) -> bool {
 
 /// What the endings channel sends at `state` in the policy's place, and from which seat, or `None`
 /// when the policy acts (#1572). Duos refuses draws, timeouts, expired disconnects and the R82
-/// setting (B9, B10, B37, B38), so it sends only the server's ceiling and a seat's concede.
-fn duos_endings_action(state: &DuosState, rng: &mut Rng) -> Option<(DuosSeat, DuosActionBody)> {
+/// setting (B9, B10, B37, B38), so it sends only the server's ceiling and a seat's concede, and,
+/// while a seat of `seats` (who the game waits on) has its duel list an emote, that emote (R1127,
+/// #1695).
+fn duos_endings_action(
+    state: &DuosState,
+    seats: &[DuosSeat],
+    rng: &mut Rng,
+) -> Option<(DuosSeat, DuosActionBody)> {
     if rng.chance(DUOS_ENDINGS_CEILING_CHANCE) {
         let seat = *rng.pick(&DUOS_SEATS)?;
         return Some((
@@ -324,6 +338,27 @@ fn duos_endings_action(state: &DuosState, rng: &mut Rng) -> Option<(DuosSeat, Du
         && rng.chance(ENDINGS_ANSWER_CHANCE)
     {
         return Some((seat, DuosActionBody::Concede));
+    }
+    // R1127: a seat emotes only while its duel lists an emote, and the stream is drawn only then, so
+    // a game no card hears plays as before.
+    let emotes: Vec<(DuosSeat, DuosActionBody)> = seats
+        .iter()
+        .flat_map(|&seat| {
+            duos_legal_actions(state, seat)
+                .into_iter()
+                .filter(|action| {
+                    matches!(
+                        action,
+                        DuosActionBody::Duel {
+                            body: ActionBody::Emote { .. }
+                        }
+                    )
+                })
+                .map(move |action| (seat, action))
+        })
+        .collect();
+    if !emotes.is_empty() && rng.chance(ENDINGS_ACT_CHANCE) {
+        return rng.pick(&emotes).cloned();
     }
     if !rng.chance(DUOS_ENDINGS_CONCEDE_CHANCE) {
         return None;
@@ -357,9 +392,37 @@ fn judge_duos_refusal(state: &DuosState, result: &DuosReduceResult) -> Option<St
     (!wrong.is_empty()).then(|| wrong.join(" and "))
 }
 
-/// The probes on one Duos state (#1386), never logged: `action` under a nonce of the round's own that
-/// a duel has applied (§13.3), then its body sent by a seat not in `seats` (who the game waits on),
-/// rotating by probe. Both are owed a refusal.
+/// A probe failure's name: a duel body the Duos wrapper refuses whoever sends it (#1695).
+const WRAPPER_REFUSED_PROBE: &str = "wrapper-refused";
+
+/// The duel bodies Duos refuses before any duel sees them (`why_duel_refused`; B9, B10, B11, B37,
+/// B38), as `seat` would send them: the duel's own concede, a draw offer, a draw answer, R82's
+/// setting turned on, a timeout and an expired disconnect.
+fn wrapper_refused_bodies(seat: DuosSeat) -> Vec<ActionBody> {
+    vec![
+        ActionBody::Concede,
+        ActionBody::OfferDraw,
+        ActionBody::AnswerDraw { accept: true },
+        ActionBody::SetAutoEndTurn { enabled: true },
+        ActionBody::Timeout,
+        ActionBody::DisconnectExpired {
+            player: seat.player(),
+        },
+    ]
+}
+
+/// The wrapper-refused body the probe after step `step` sends: `wrapper_refused_bodies` in turn,
+/// one per probe, as the wrong-seat probe rotates its seat.
+fn wrapper_refused_body(seat: DuosSeat, step: usize) -> ActionBody {
+    let bodies = wrapper_refused_bodies(seat);
+    bodies[(step / probe_stride()) % bodies.len()].clone()
+}
+
+/// The probes on one Duos state (#1386), never logged, each owed a refusal: `action` under a nonce
+/// of the round's own that a duel has applied (§13.3); its body sent by a seat not in `seats` (who
+/// the game waits on), rotating by probe; when it is a duel's answer to an open prompt, that answer
+/// made malformed (`malformed_answers`), each variant from its seat in that duel (#1574); and one of
+/// the duel bodies the wrapper refuses whoever sends it, from the seat that acted, in turn (#1695).
 fn probe_duos_state(
     state: &DuosState,
     action: &DuosAction,
@@ -390,16 +453,49 @@ fn probe_duos_state(
         .into_iter()
         .filter(|seat| !seats.contains(seat))
         .collect();
-    let other = *idle.get((step / probe_stride()) % idle.len().max(1))?;
+    if let Some(&other) = idle.get((step / probe_stride()) % idle.len().max(1)) {
+        let forged = DuosAction {
+            seat: other,
+            nonce: format!("duos-fuzz-probe-{step}"),
+            body: action.body.clone(),
+        };
+        if let Some(wrong) = judge_duos_refusal(state, &probe(state, &forged)) {
+            return Some(format!(
+                "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent {} while it may not act, and it {wrong}",
+                duos_action_name(&action.body)
+            ));
+        }
+    }
+    // #1574: the policy's answer to its duel's open prompt, made malformed, each variant from its seat
+    // in that duel.
+    if let DuosActionBody::Duel { body } = &action.body {
+        let duel = action.seat.duel();
+        for (variant, player, malformed) in malformed_answers(&state.duels[duel], body) {
+            let seat = DuosSeat::of(duel, player);
+            let forged = DuosAction {
+                seat,
+                nonce: format!("duos-fuzz-probe-{step}"),
+                body: DuosActionBody::Duel { body: malformed },
+            };
+            if let Some(wrong) = judge_duos_refusal(state, &probe(state, &forged)) {
+                return Some(format!(
+                    "{MALFORMED_ANSWER_PROBE} probe after step {step}: {seat} sent the {variant} answer to duel {duel}'s open prompt, and it {wrong}"
+                ));
+            }
+        }
+    }
+    // #1695: a duel body the wrapper refuses whoever sends it, from the seat that acted.
+    let body = wrapper_refused_body(action.seat, step);
     let forged = DuosAction {
-        seat: other,
+        seat: action.seat,
         nonce: format!("duos-fuzz-probe-{step}"),
-        body: action.body.clone(),
+        body: DuosActionBody::Duel { body: body.clone() },
     };
     judge_duos_refusal(state, &probe(state, &forged)).map(|wrong| {
         format!(
-            "{WRONG_SEAT_PROBE} probe after step {step}: {other} sent {} while it may not act, and it {wrong}",
-            duos_action_name(&action.body)
+            "{WRAPPER_REFUSED_PROBE} probe after step {step}: {} sent {} inside its duel, and it {wrong}",
+            action.seat,
+            body.action_type().as_str()
         )
     })
 }
@@ -409,12 +505,24 @@ fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
     play_duos_game_inner(seed, duos_reduce, |_, _, _, _| {})
 }
 
-fn play_duos_game_inner<F>(seed: u32, probe: DuosReducer, mut tamper: F) -> Result<DuosRun, String>
+fn play_duos_game_inner<F>(seed: u32, probe: DuosReducer, tamper: F) -> Result<DuosRun, String>
+where
+    F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
+{
+    play_duos_game_from(seed, duos_options_for_seed(seed), probe, tamper)
+}
+
+/// `play_duos_game_inner` from `options` rather than the seed's own: a test plants a card in its decks.
+fn play_duos_game_from<F>(
+    seed: u32,
+    options: DuosCreateOptions,
+    probe: DuosReducer,
+    mut tamper: F,
+) -> Result<DuosRun, String>
 where
     F: FnMut(usize, &mut DuosState, &mut DuosAction, &mut DuosInvariantMonitor),
 {
     register_all();
-    let options = duos_options_for_seed(seed);
     let begun = duos_begin(&duos_create(&options));
     let mut state = begun.state;
     let mut monitor = create_duos_invariant_monitor(&state);
@@ -455,7 +563,9 @@ where
             ));
         };
         // #1572: in a game that takes the endings channel, the channel may send this step's action.
-        let sent = endings.as_mut().and_then(|rng| duos_endings_action(&state, rng));
+        let sent = endings
+            .as_mut()
+            .and_then(|rng| duos_endings_action(&state, &seats, rng));
         let from_channel = sent.is_some();
         let (seat, body) = if let Some(sent) = sent {
             sent
@@ -1372,6 +1482,178 @@ mod tests {
         fn a_reducer_that_lets_the_round_s_nonces_through_fails_the_reused_nonce_probe_naming_seed_and_step()
         {
             assert_caught(unguarded, REUSED_NONCE_PROBE);
+        }
+
+        /// A reducer that takes any answer from the prompt's holder as the prompt's first listed answer.
+        fn lenient(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            if let DuosActionBody::Duel {
+                body: ActionBody::Answer { .. },
+            } = &action.body
+                && let Some(pending) = &state.duels[action.seat.duel()].pending
+                && pending.player_id == action.seat.player()
+                && let Some(first) = jackioh_engine::prompt_answers(pending).into_iter().next()
+            {
+                return duos_reduce(
+                    state,
+                    &DuosAction {
+                        body: DuosActionBody::Duel { body: first },
+                        ..action.clone()
+                    },
+                );
+            }
+            duos_reduce(state, action)
+        }
+
+        /// A reducer that takes the bodies the wrapper refuses, changing nothing and refusing nothing.
+        fn wrapperless(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+            if let DuosActionBody::Duel { body } = &action.body
+                && wrapper_refused_bodies(action.seat).contains(body)
+            {
+                return DuosReduceResult {
+                    state: state.clone(),
+                    events: Vec::new(),
+                    error: None,
+                };
+            }
+            duos_reduce(state, action)
+        }
+
+        /// The seeds `assert_caught_in_some_seed` searches: a prompt opens in some game among them.
+        const PROMPT_SEEDS: u32 = 12;
+
+        /// `probe` fails the first seed of 1..=PROMPT_SEEDS that fails at all, naming the probe called
+        /// `name`, the seed and a step: a prompt has to open for the probe to have an answer to forge.
+        fn assert_caught_in_some_seed(probe: DuosReducer, name: &str) {
+            for seed in 1..=PROMPT_SEEDS {
+                let lines = failure_lines(&[fuzz_duos_seed_with(seed, probe, |_, _, _, _| {})]);
+                if let Some(line) = lines.first() {
+                    assert!(
+                        line.starts_with(&format!("seed {seed}: {name} probe after step ")),
+                        "{line}"
+                    );
+                    return;
+                }
+            }
+            panic!("no seed of 1..={PROMPT_SEEDS} failed the {name} probe");
+        }
+
+        #[test]
+        fn a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe_naming_seed_and_step() {
+            assert_caught_in_some_seed(lenient, MALFORMED_ANSWER_PROBE);
+        }
+
+        #[test]
+        fn a_reducer_that_takes_a_wrapper_refused_body_fails_the_wrapper_refused_probe_naming_seed_and_step()
+        {
+            assert_caught(wrapperless, WRAPPER_REFUSED_PROBE);
+        }
+
+        #[test]
+        fn every_wrapper_refused_body_is_refused_from_every_seat_with_the_state_kept() {
+            register_all();
+            let _preview = preview_every_set();
+            let mulligans = duos_begin(&duos_create(&duos_options_for_seed(1))).state;
+            let round_one =
+                jackioh_engine::testkit::duos_scenario("wrapper-refused", duos_decks_for_seed(1), None);
+            for state in [mulligans, round_one] {
+                for seat in DUOS_SEATS {
+                    for body in wrapper_refused_bodies(seat) {
+                        let forged = DuosAction {
+                            seat,
+                            nonce: "wrapper-refused-test".to_string(),
+                            body: DuosActionBody::Duel { body: body.clone() },
+                        };
+                        assert_eq!(
+                            judge_duos_refusal(&state, &duos_reduce(&state, &forged)),
+                            None,
+                            "{seat} sent {body:?} in round {}",
+                            state.round
+                        );
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn the_wrapper_refused_probe_sends_every_body_in_turn() {
+            let bodies = wrapper_refused_bodies(DuosSeat::B2);
+            let sent: Vec<ActionBody> = (0..bodies.len())
+                .map(|probe| wrapper_refused_body(DuosSeat::B2, probe * probe_stride()))
+                .collect();
+            assert_eq!(sent, bodies);
+        }
+    }
+
+    mod duos_endings_emote {
+        use jackioh_engine::duos_view_for;
+        use jackioh_engine::testkit::{check_duos_view_redaction, clear_overrides};
+
+        use super::*;
+        use crate::fuzz::tests::fuzz_endings_channel::{LISTENER, install_listener};
+
+        /// The seeds the search plays: the 1v1 channel tests' width.
+        const EMOTE_SEEDS: u32 = 400;
+
+        #[test]
+        fn a_planted_listener_s_opponent_emotes_through_the_duos_channel_and_all_four_views_hold() {
+            install_listener();
+            let _preview = preview_every_set();
+            // The overrides are this thread's, so the seeds run here and not under rayon. Under
+            // `cargo test` the monitor's stride is 1: I6 already held on every state of each run.
+            let emoted = (1..=EMOTE_SEEDS)
+                .filter(|seed| duos_takes_endings(*seed))
+                .find(|&seed| {
+                    let mut options = duos_options_for_seed(seed);
+                    // Decks hold no duplicates (§2.6 L3): one listener to a deck.
+                    for deck in [
+                        &mut options.decks.a1,
+                        &mut options.decks.a2,
+                        &mut options.decks.b1,
+                        &mut options.decks.b2,
+                    ] {
+                        deck[0] = LISTENER.to_string();
+                    }
+                    let run = play_duos_game_from(seed, options, duos_reduce, |_, _, _, _| {})
+                        .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
+                    check_duos_run(&run).unwrap_or_else(|e| panic!("seed {seed}: {e}"));
+                    check_seed_checkpoint(seed, &run).unwrap_or_else(|e| panic!("seed {seed}: {e}"));
+                    let Some(at) = run.log.iter().position(|action| {
+                        matches!(
+                            action.body,
+                            DuosActionBody::Duel {
+                                body: ActionBody::Emote { .. }
+                            }
+                        )
+                    }) else {
+                        return false;
+                    };
+                    let folded = duos_fold(&DuosReplayInput {
+                        options: run.options.clone(),
+                        log: run.log[..=at].to_vec(),
+                    });
+                    assert_eq!(folded.refused_at, None, "seed {seed}");
+                    let after = folded.state;
+                    for seat in DUOS_SEATS {
+                        assert_eq!(
+                            check_duos_view_redaction(&duos_view_for(&after, seat)),
+                            Vec::<String>::new(),
+                            "seed {seed}: {seat}'s view after the emote at step {at}"
+                        );
+                    }
+                    // R1127: the sender's duel hears emotes, and its teammate's view says so too.
+                    let sender = run.log[at].seat;
+                    assert_eq!(duos_view_for(&after, sender).own.emotes_heard, Some(true));
+                    assert_eq!(
+                        duos_view_for(&after, sender.teammate()).teammate.emotes_heard,
+                        Some(true)
+                    );
+                    true
+                });
+            clear_overrides();
+            assert!(
+                emoted.is_some(),
+                "no planted channel game of seeds 1..={EMOTE_SEEDS} logged an emote"
+            );
         }
     }
 }

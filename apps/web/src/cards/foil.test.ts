@@ -2,6 +2,9 @@
 // without a jump or a hard line, moving by `transform` only. The test reads the sheet's text
 // rather than trusting the comments: Vitest stubs CSS imports, hence `node:fs`
 // (game/animations.test.ts does the same for its sheet).
+// #1700: the sweep composites with no blend mode, which on a rotated face (the home screen's
+// fan) drew a dark wedge past the rounded corner, and its band is lit at a share of the still
+// band's alpha instead.
 //
 // Presentation only: no ruling, so these tests carry no R number.
 
@@ -60,6 +63,14 @@ function gradients(): string[] {
   }
   return out;
 }
+
+/** The alpha of every `rgb(… / a)` stop in `gradient`, in order. */
+function alphas(gradient: string): number[] {
+  return [...gradient.matchAll(/\/\s*([\d.]+)\)/g)].map((match) => Number(match[1]));
+}
+
+/** The swept band's alpha as a share of the still band's at the same stop (#1700). */
+const SWEPT_ALPHA_SHARE = 0.4;
 
 describe("the animated foil sweep", () => {
   it("is a horizontal band, clear at both ends, in gold and in Mythic", () => {
@@ -136,5 +147,37 @@ describe("the animated foil sweep", () => {
     const ungated = cardsCss.replace(/@media \(prefers-reduced-motion: no-preference\)[\s\S]*$/, "");
     expect(ungated).toMatch(/\.cf\[data-foil="animated"\]::after/);
     expect(ungated, "no animation outside the motion gate").not.toMatch(/animation\s*:/);
+  });
+
+  it("composites the sweep with no blend mode, so a rotated face keeps its rounded corners (#1700)", () => {
+    const animated = ruleBody(
+      /:root:not\(\[data-reduce-motion="true"\]\) \.cf\[data-foil="animated"\]::after/,
+    );
+    expect(animated).toMatch(/mix-blend-mode:\s*normal;/);
+    const gated = ruleBody(/@media \(prefers-reduced-motion: no-preference\)/);
+    const blends = [...gated.matchAll(/mix-blend-mode:\s*([a-z-]+)/g)].map((match) => match[1]);
+    expect(blends, "the motion gate blends nothing").toEqual(["normal"]);
+  });
+
+  it("keeps the still foil's overlay, which never moves (#1700)", () => {
+    const still = ruleBody(/\.cf\[data-foil="static"\]::after,\s*\.cf\[data-foil="animated"\]::after/);
+    expect(still).toMatch(/mix-blend-mode:\s*overlay/);
+  });
+
+  it("lights the swept band at SWEPT_ALPHA_SHARE of the still band's alpha, stop for stop (#1700)", () => {
+    const still = gradients()
+      .filter((gradient) => /\(\s*115deg,/.test(gradient))
+      .map(alphas);
+    const swept = gradients()
+      .filter((gradient) => /\(\s*90deg,/.test(gradient))
+      .map(alphas);
+    expect(swept, "a swept band per still band").toHaveLength(still.length);
+    for (const [band, stops] of still.entries()) {
+      const sweptStops = swept[band] ?? [];
+      expect(sweptStops, `band ${String(band)}'s stops`).toHaveLength(stops.length);
+      for (const [at, alpha] of stops.entries()) {
+        expect(sweptStops[at], `band ${String(band)} stop ${String(at)}`).toBeCloseTo(alpha * SWEPT_ALPHA_SHARE, 5);
+      }
+    }
   });
 });

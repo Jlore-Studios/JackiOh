@@ -71,7 +71,7 @@ import {
 import { createRoot } from "react-dom/client";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
-import { useSecondsUntil } from "./auth/cooldown.ts";
+import { AccountError } from "./auth/AccountError.tsx";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { dropStaleSignUpConsent } from "./auth/consent.ts";
 import ConsentPrompt from "./auth/ConsentPrompt.tsx";
@@ -273,46 +273,23 @@ export function Loading({ what, slow = false, testId, children }: LoadingProps):
   );
 }
 
-/**
- * Seconds left of a stated wait, from when it was stated: counted on the clock, so a tab the
- * browser put to sleep does not come back still waiting (`auth/cooldown.ts`). 0 when there is none.
- */
-function useCountdown(totalMs: number | undefined): number {
-  const [deadline, setDeadline] = useState(() => (totalMs === undefined ? null : Date.now() + totalMs));
-  const [stated, setStated] = useState(totalMs);
-  if (stated !== totalMs) {
-    // A new wait was stated: counted from now.
-    setStated(totalMs);
-    setDeadline(totalMs === undefined ? null : Date.now() + totalMs);
-  }
-  return useSecondsUntil(deadline);
-}
-
 /** The gate's error panel: the sentence, and the three ways on. A stated wait holds the retry. */
 function GateError({ account }: { account: Extract<Account, { kind: "error" }> }): ReactElement {
-  const wait = useCountdown(account.retryAfterMs);
   return (
     <ShellPanel>
-      <p className="notice" data-testid={shellTestid.error} role="alert">
-        {t(account.message)}
-        {wait > 0 ? ` ${t("You can try again in {seconds} s.", { seconds: String(wait) })}` : null}
-      </p>
-      <div className="row">
-        <button
-          type="button"
-          className="button-primary"
-          data-testid={shellTestid.retry}
-          disabled={wait > 0}
-          onClick={() => {
-            // Re-reads /api/auth/me in place, without a page load.
-            account.retry?.();
-          }}
-        >
-          {wait > 0 ? t("Try again in {seconds} s", { seconds: String(wait) }) : t("Try again")}
-        </button>
+      <AccountError
+        message={account.message}
+        retryAfterMs={account.retryAfterMs}
+        onRetry={() => {
+          // Re-reads /api/auth/me in place, without a page load.
+          account.retry?.();
+        }}
+        testId={shellTestid.error}
+        retryTestId={shellTestid.retry}
+      >
         <HomeLink testId={shellTestid.home} />
         <SignOutButton />
-      </div>
+      </AccountError>
     </ShellPanel>
   );
 }

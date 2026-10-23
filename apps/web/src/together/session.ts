@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiRequestError } from "../net/api.ts";
+import { readFailureOf } from "../net/gate.ts";
 
 /** A refusal's sentence: the server's own for `ApiRequestError`, the transport's plain one otherwise. */
 export function messageOf(cause: unknown): string {
@@ -39,12 +40,13 @@ export function attempt<T>(call: () => Promise<T>): Promise<T> {
 export type Polled<T> =
   | { kind: "loading" }
   | { kind: "ready"; value: T }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; message: string; retryAfterMs?: number };
 
 /**
  * `read` now, and again every `everyMs` while mounted (never, for null), and whenever `reload` is
  * called. A failed read after a good one keeps the good one on screen; an answer older than one
- * already shown is dropped.
+ * already shown is dropped. After a failure, a later failed poll keeps the failure first shown, so
+ * the wait it stated (R192) is counted once; `reload` after a failure shows loading (#1691).
  */
 export function usePolled<T>(read: () => Promise<T>, everyMs: number | null): [Polled<T>, () => void] {
   const [state, setState] = useState<Polled<T>>({ kind: "loading" });
@@ -67,7 +69,7 @@ export function usePolled<T>(read: () => Promise<T>, everyMs: number | null): [P
         },
         (cause: unknown) => {
           if (cancelled || ticket < shown.current) return;
-          setState((previous) => (previous.kind === "ready" ? previous : { kind: "failed", message: messageOf(cause) }));
+          setState((previous) => (previous.kind === "loading" ? { kind: "failed", ...readFailureOf(cause) } : previous));
         },
       );
     };
@@ -85,6 +87,7 @@ export function usePolled<T>(read: () => Promise<T>, everyMs: number | null): [P
   }, [everyMs, round]);
 
   const reload = useCallback((): void => {
+    setState((previous) => (previous.kind === "failed" ? { kind: "loading" } : previous));
     setRound((count) => count + 1);
   }, []);
   return [state, reload];

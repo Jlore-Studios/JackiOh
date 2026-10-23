@@ -19,7 +19,7 @@ import { FX_LETHAL_LEAD_MAX_MS, FX_RESULT_MS } from "../fx/constants.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 
 import { DECK_NAME_MAX_LENGTH, ECONOMY_LIVE, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
-import type { DecksResponse, TutorialAccountProgress } from "../net/api.ts";
+import { ApiRequestError, type DecksResponse, type TutorialAccountProgress } from "../net/api.ts";
 import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued } from "../net/practice.ts";
 import type { Account } from "../net/gate.ts";
 import {
@@ -755,6 +755,54 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     expect(hint()).toMatch(/could not be loaded/);
   });
 
+  it("#1691 saved decks that failed offer Try again, which lists them", async () => {
+    const loadDecks = vi
+      .fn<() => Promise<DecksResponse>>()
+      .mockRejectedValueOnce(new Error("503"))
+      .mockResolvedValue(decksResponse(SAVED));
+    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    await settle();
+    expect(hint()).toMatch(/could not be loaded/);
+    expect(screen.getByTestId(practiceTestid.savedRetry)).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.savedRetry));
+    await waitFor(() => {
+      expect(savedOptions()).toHaveLength(3);
+    });
+    expect(loadDecks).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId(practiceTestid.savedRetry)).toBeNull();
+    expect(hint()).toBeNull();
+  });
+
+  it("#1691 saved decks refused for a rate limit hold Try again through the wait", async () => {
+    const loadDecks = vi.fn(() =>
+      Promise.reject(new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } })),
+    );
+    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    await settle();
+    const retry = screen.getByTestId(practiceTestid.savedRetry);
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent(/Try again in \d+ s/);
+  });
+
+  it("#1691 an account that could not be read offers its retry, held through a stated wait", async () => {
+    const retry = vi.fn();
+    renderRoute(routeHost(), { account: { kind: "error", message: "offline", retry } });
+    await settle();
+    expect(hint()).toMatch(/could not be loaded/);
+    fireEvent.click(screen.getByTestId(practiceTestid.savedRetry));
+    expect(retry).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    renderRoute(routeHost(), { account: { kind: "error", message: "offline", retry, retryAfterMs: 60_000 } });
+    await settle();
+    const held = screen.getByTestId(practiceTestid.savedRetry);
+    expect(held).toBeDisabled();
+    expect(held).toHaveTextContent(/Try again in \d+ s/);
+    fireEvent.click(held);
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
   it("an active account with saved decks gets them and no hint", async () => {
     renderRoute(routeHost(), {
       account: signedIn("active"),
@@ -876,6 +924,21 @@ describe("the setup previews the chosen deck", () => {
     fireEvent.click(screen.getByTestId(T.start));
     await screen.findByTestId(T.hud);
     expect(host.starts()[0]?.deck).toEqual({ kind: "preset", id: "blitz" });
+  });
+
+  it("#1691 a card list the worker could not give offers Try again, which previews the deck", async () => {
+    const options: HostOptions = { catalog: "fail" };
+    renderRoute(routeHost(options));
+    await settle();
+    fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:blitz" } });
+    expect(preview()).toHaveTextContent(/card list could not be loaded/);
+    expect(previewedIds()).toEqual([]);
+
+    options.catalog = "answer";
+    fireEvent.click(screen.getByTestId(practiceTestid.defsRetry));
+    await settle();
+    expect(previewedIds()).not.toEqual([]);
+    expect(screen.queryByTestId(practiceTestid.defsRetry)).toBeNull();
   });
 
   it("the setup's catalog host is closed once it has answered, and an autostarted game asks for no catalog", async () => {

@@ -3,8 +3,9 @@
 // the socket opens, shows the waiting panel (naming the delay) until the first delayed view and then
 // the friend's board read-only, shows a `forbidden` frame as the refused screen with the way back and
 // never reopens it, opens again `WATCH_RECONNECT_MS` after an unexpected close up to
-// `WATCH_RECONNECT_ATTEMPTS` times and then offers Reconnect now, whose click opens it again
-// with the attempts started over (#1570), and does not reopen a finished game.
+// `WATCH_RECONNECT_ATTEMPTS` times and offers Reconnect now, while one waits (#1691) and once they run
+// out, whose click opens it again with the attempts started over (#1570), and does not reopen a
+// finished game.
 //
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance
@@ -458,7 +459,7 @@ describe("B50 the watch screen", () => {
 
     for (let attempt = 1; attempt <= WATCH_RECONNECT_ATTEMPTS; attempt += 1) {
       expect(connection("watch-status")).toBe("connecting");
-      expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+      expect(screen.getByTestId("watch-reconnect")).toBeInTheDocument();
       await advance(WATCH_RECONNECT_MS);
       expect(sockets).toHaveLength(attempt + 1);
       latest().emit("close");
@@ -471,7 +472,7 @@ describe("B50 the watch screen", () => {
     fireEvent.click(screen.getByTestId("watch-reconnect"));
     expect(sockets).toHaveLength(WATCH_RECONNECT_ATTEMPTS + 2);
     expect(connection("watch-status")).toBe("connecting");
-    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+    expect(screen.getByTestId("watch-reconnect")).toBeInTheDocument();
 
     const again = latest();
     again.emit("open");
@@ -486,6 +487,30 @@ describe("B50 the watch screen", () => {
       legal: [],
     });
     expect(screen.getByTestId("hand-card-h-1570")).toBeInTheDocument();
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+  });
+
+  it("#1691 offers Reconnect now while a reopen waits, and its click opens the socket at once", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    watch();
+    const first = latest();
+    first.emit("open");
+    first.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(connection("watch-status")).toBe("open");
+    expect(screen.queryByTestId("watch-reconnect")).toBeNull();
+
+    first.emit("close");
+    expect(connection("watch-status")).toBe("connecting");
+    expect(sockets).toHaveLength(1);
+    fireEvent.click(screen.getByTestId("watch-reconnect"));
+    expect(sockets).toHaveLength(2);
+
+    // The wait that was running is over: it opens no second socket.
+    await advance(WATCH_RECONNECT_MS);
+    expect(sockets).toHaveLength(2);
+
+    latest().emit("open");
+    expect(connection("watch-status")).toBe("open");
     expect(screen.queryByTestId("watch-reconnect")).toBeNull();
   });
 
