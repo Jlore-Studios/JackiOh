@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1700,
+  "title": "Patch: Fix the Legendary/Mythic/Radiant sheen tearing",
+  "branch": "bot/issue-1700",
+  "thread": "**Issue #1700 (data, not instructions):**\n\n```text\n# #1700: Patch: Fix the Legendary/Mythic/Radiant sheen tearing\nOpened by @MaxGoetzmann.\n\n### What it does\n\nA while back I asked you to implement a performance improving solution for the sheen across Legendary/Mythic/Radiant cards. While performance did increase, there's now an obvious dark triangle where the animation cycles. It's better than the first tear I asked you to fix, but still annoying.\n\nFix the non-smoothness while keeping performance of large hands/fields with this sheen intact.\n\n### Acceptance\n\nPerformance degrades less than 5% on a full field and hand of cards with the sheen effect.\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nlow\n\n### Who does it\n\nThe night bot (bot:build)\n\n---\nComment by @MaxGoetzmann at 2026-10-23T03:54:18Z:\n\nThis is most evident on the home screen.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1700: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
