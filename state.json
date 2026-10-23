@@ -16923,6 +16923,11 @@
       }
     },
     "claude-3": {
+      "infra": {
+        "at": "2026-10-23T15:31:32Z",
+        "reason": "dependency install failed on untouched main (exit 1): 90a8ec31d5575f31a3130869719e0a2e59a2dfd15be7c3c920a29eca24ba8faaa79438dde794b6377c8fb0d46fdc4dda67f367d059b2bd1531410c446\n.../cypress@16.1.0/node_modules/cypress postinstall: \u001b[31m[FAILED]\u001b[39m \u001b[2m[15:29:18]\u001b[22m\n.../cypress@16.1.0/node_modules/cypress postinstall: \u001b[31m[FAILED]\u001b[39m \u001b[2m[15:29:18]\u001b[22m Expected downloaded file to have size: 250897206\n.../cypress@16.1.0/node_modules/cypress postinstall: \u001b[31m[FAILED]\u001b[39m \u001b[2m[15:29:18]\u001b[22m",
+        "streak": 1
+      },
       "refused_until": "2026-10-23T09:20:00Z",
       "spent": [
         {
