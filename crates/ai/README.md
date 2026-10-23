@@ -314,6 +314,10 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
   rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
   on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
+  An immediate pass is named only when it is worth it (R1723000): the teammate's best follow-up with
+  the card, also tried after the teammate's own best play, beats its best without it by more than the
+  card's `hand_card_value` in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost`
+  and `DUOS_PASS_MIN_GAIN`.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.

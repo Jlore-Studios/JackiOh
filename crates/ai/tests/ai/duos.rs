@@ -658,6 +658,8 @@ fn b28_off_its_own_turn_a_seat_passes_nothing() {
 
 #[test]
 fn b28_passes_stop_at_the_teams_pass_cap() {
+    // `cost` reads the catalog before `passing` registers it.
+    register_cards();
     let rules = DuosTeamRules {
         pass_cap: SMALL_PASS_CAP,
         ..DUOS_HUMAN_TEAM
@@ -670,7 +672,14 @@ fn b28_passes_stop_at_the_teams_pass_cap() {
     // A1 can afford its one-drop (so it always has a play left) and every pass, but none of the
     // four 4-costs, all of which A2 can afford.
     let seed = "duos-ai-pass-cap";
-    let (state, ids) = passing(seed, team_a(rules), &hand, cost(BIG) - 1, cost(BIG));
+    // R1723000: A2 can pay for two of them, so the second pass is worth making too.
+    let (state, ids) = passing(
+        seed,
+        team_a(rules),
+        &hand,
+        cost(BIG) - 1,
+        SMALL_PASS_CAP * cost(BIG),
+    );
     let passable = &ids[1..];
 
     let first = duos_passes(&state, A1);
@@ -1137,4 +1146,62 @@ fn r1127000_a_passed_fused_card_is_scored_with_its_match_made_definitions_along(
     // Scored without its definition, the fusion would break the scoring and every candidate would
     // fall back to cost order, BIG first.
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1723000: the Duos AI passes a card only when the trade is worth it
+// ---------------------------------------------------------------------------------------------
+
+/// Round 1 with A1 holding only BIG at pass mana, so it can play nothing, and A2 at BIG's mana
+/// holding `a2_hand` alone.
+fn trade_state(seed: &str, teams: Option<PerTeam<DuosTeamRules>>, a2_hand: &[&str]) -> (DuosState, String) {
+    let mut state = round_one(seed, teams);
+    let big = set_hand(&mut state, A1, &[BIG]).remove(0);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_hand(&mut state, A2, a2_hand);
+    set_mana(&mut state, A2, cost(BIG));
+    (state, big)
+}
+
+#[test]
+fn r1723000_a_card_the_teammate_cannot_use_better_than_its_own_play_is_kept() {
+    let seed = "duos-ai-trade-keep";
+    let (state, big) = trade_state(seed, None, &[BIG]);
+    assert!(!can_play(&state.duels[0], PlayerId::P1, &big));
+    assert_eq!(decided_alone(&state, A1, seed), ActionBody::EndTurn);
+    assert!(duos_passes(&state, A1).is_empty());
+    assert_eq!(
+        json_of(&duos_decide(&state, A1, &mut opts(seed))),
+        json_of(&Some(end_turn()))
+    );
+}
+
+#[test]
+fn r1723000_a_free_pass_that_only_moves_a_card_between_hands_is_kept_too() {
+    let seed = "duos-ai-trade-keep-free";
+    let free = DuosTeamRules {
+        pass_cost: 0,
+        ..DUOS_HUMAN_TEAM
+    };
+    let (state, _) = trade_state(seed, team_a(free), &[BIG]);
+    assert!(duos_passes(&state, A1).is_empty());
+}
+
+#[test]
+fn r1723000_a_profitable_pass_still_fires() {
+    let seed = "duos-ai-trade-pass";
+    let (state, big) = trade_state(seed, None, &[]);
+    assert_eq!(duos_passes(&state, A1), vec![big.clone()]);
+    assert_eq!(
+        json_of(&duos_decide(&state, A1, &mut opts(seed))),
+        json_of(&Some(pass(&big)))
+    );
+}
+
+#[test]
+fn r1723000_a_card_the_teammate_can_play_after_its_own_best_play_is_passed() {
+    let seed = "duos-ai-trade-both";
+    let (mut state, big) = trade_state(seed, None, &[BIG]);
+    set_mana(&mut state, A2, cost(BIG) + cost(BIG));
+    assert_eq!(duos_passes(&state, A1), vec![big]);
 }

@@ -46,12 +46,13 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
-    AI_EVAL, AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_WIN_FLOOR, DUOS_PASS_MAX_FOLLOWUPS, DUOS_PASS_PROBE_SEED,
+    AI_EVAL, AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_WIN_FLOOR, DUOS_PASS_MARGIN_PER_COST,
+    DUOS_PASS_MAX_FOLLOWUPS, DUOS_PASS_MIN_GAIN, DUOS_PASS_PROBE_SEED,
 };
 use crate::decide::decide;
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::determinize::{DeterminizeOptions, determinize};
-use crate::evaluate::{NextSwing, evaluate};
+use crate::evaluate::{NextSwing, evaluate, hand_card_value};
 use crate::observe::redact;
 use crate::types::{AiOptions, DecisionReason, SearchBudget};
 
@@ -190,10 +191,11 @@ fn fallback(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> Opti
 /// is a round seat that has not ended, can afford the card and has a zone for it. With the team's
 /// `pass_cost` 0 a card also qualifies when the teammate can afford it next turn and the seat cannot.
 /// The cards the teammate can play now come first, ranked by the teammate's best bounded follow-up
-/// with each (R1127000), ties by costliest first and then in hand order; the cards it can only pay
-/// for next turn keep costliest-first and hand order. The list never holds more than the passes left
-/// this round, the teammate's free hand slots, or the passes the seat's mana pays for. Empty unless
-/// `seat` is a round seat that has not ended.
+/// with each (R1127000), ties by costliest first and then in hand order; of those, only the ones whose
+/// pass is worth making (R1723000, `pass_gain`) are named; the cards it can only pay for next turn
+/// keep costliest-first and hand order. The list never holds more than the passes left this round,
+/// the teammate's free hand slots, or the passes the seat's mana pays for. Empty unless `seat` is a
+/// round seat that has not ended.
 ///
 /// B29: the seat's own hand, its plays and its next refresh are read off the redacted probe `decide`
 /// lists its own actions on; of the teammate only its own side (hand size, mana, open zones), plus
@@ -265,7 +267,14 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
             later.push((mate_cost, index, card.id.clone()));
         }
     }
-    rank_now(&mut now, &probe, player, &mate_probe, mate.player());
+    rank_now(
+        &mut now,
+        &probe,
+        player,
+        &mate_probe,
+        mate.player(),
+        rules.pass_cost,
+    );
     best_first(&mut later);
     now.into_iter()
         .chain(later)
@@ -329,24 +338,27 @@ fn best_first(cards: &mut [(i32, usize, String)]) {
 }
 
 /// R1127000: order the cards the teammate can play now by the teammate's best bounded follow-up
-/// with each, highest first; ties by costliest first, then hand order. Scoring can never empty or
-/// crash the pass list: a scoring panic falls back to the cost order.
+/// with each, highest first; ties by costliest first, then hand order. R1723000: then drop every card
+/// whose pass is not worth making (`pass_gain` at or under 0). Scoring can never crash the pass list:
+/// a scoring panic falls back to the cost order, every card kept.
 fn rank_now(
-    now: &mut [(i32, usize, String)],
+    now: &mut Vec<(i32, usize, String)>,
     own_probe: &GameState,
     seat_player: PlayerId,
     mate_probe: &GameState,
     mate: PlayerId,
+    pass_cost: i32,
 ) {
+    if now.is_empty() {
+        return;
+    }
     let scored = catch_unwind(AssertUnwindSafe(|| {
+        let baseline = mate_baseline(mate_probe, mate);
         now.iter()
             .map(|(cost, index, id)| {
-                (
-                    pass_score(own_probe, seat_player, id, mate_probe, mate),
-                    *cost,
-                    *index,
-                    id.clone(),
-                )
+                let score = pass_score(own_probe, seat_player, id, mate_probe, mate);
+                let gain = pass_gain(own_probe, seat_player, id, score, &baseline, mate, pass_cost);
+                (score, gain, *cost, *index, id.clone())
             })
             .collect::<Vec<_>>()
     }));
@@ -357,12 +369,14 @@ fn rank_now(
     scored.sort_by(|a, b| {
         b.0.partial_cmp(&a.0)
             .unwrap_or(Ordering::Equal)
-            .then(b.1.cmp(&a.1))
-            .then(a.2.cmp(&b.2))
+            .then(b.2.cmp(&a.2))
+            .then(a.3.cmp(&b.3))
     });
-    for (at, (_, cost, index, id)) in scored.into_iter().enumerate() {
-        now[at] = (cost, index, id);
-    }
+    *now = scored
+        .into_iter()
+        .filter(|(_, gain, ..)| *gain > 0.0)
+        .map(|(_, _, cost, index, id)| (cost, index, id))
+        .collect();
 }
 
 /// R1127000: the teammate's best bounded follow-up with the passed card in hand: the maximum of
@@ -387,7 +401,6 @@ fn pass_score(
         return f64::NEG_INFINITY;
     };
     let (receiving, given) = received(own_probe, passed, mate_probe, mate);
-    let mut best: Option<f64> = None;
     // The passed card's own plays first, then the teammate's other plays in `legal_actions`
     // order: the card sits at the hand's end, so a plain prefix would cut its plays off behind a
     // full hand's and score every candidate alike. Still at most `DUOS_PASS_MAX_FOLLOWUPS` steps.
@@ -406,21 +419,88 @@ fn pass_score(
         .into_iter()
         .chain(other_plays)
         .take(DUOS_PASS_MAX_FOLLOWUPS);
-    for (at, body) in plays.enumerate() {
+    best_step(&receiving, mate, plays)
+        .map(|(value, _)| value)
+        .unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+}
+
+/// The best of `evaluate` from `mate`'s seat over `plays`, each applied by one engine step to `from`,
+/// with the state it left; None when none applies. A refused or panicking step is skipped
+/// (R1127000).
+fn best_step(
+    from: &GameState,
+    mate: PlayerId,
+    plays: impl IntoIterator<Item = ActionBody>,
+) -> Option<(f64, GameState)> {
+    let mut best: Option<(f64, GameState)> = None;
+    for (at, body) in plays.into_iter().enumerate() {
         let applied = catch_unwind(AssertUnwindSafe(|| {
-            reduce_unpiloted(
-                &receiving,
-                &Action::new(body, mate, format!("duos-pass-score:{at}")),
-            )
+            reduce_unpiloted(from, &Action::new(body, mate, format!("duos-pass-score:{at}")))
         }));
         let Ok(applied) = applied else { continue };
         if applied.error.is_some() {
             continue;
         }
         let value = evaluate(&applied.state, mate, NextSwing::Enemy, &AI_EVAL);
-        best = Some(best.map_or(value, |held: f64| held.max(value)));
+        if best.as_ref().is_none_or(|(held, _)| value > *held) {
+            best = Some((value, applied.state));
+        }
     }
-    best.unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+    best
+}
+
+/// R1723000: the teammate's own best bounded follow-up, with no pass: the best of `evaluate` over the
+/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards, in
+/// `legal_actions` order, each applied by one engine step to its probe and scored as `pass_score`
+/// scores, with the state that play left; the probe's own value, and the probe, when none applies.
+fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
+    let mut cards: IndexSet<String> = IndexSet::new();
+    let plays: Vec<ActionBody> = legal_actions(mate_probe, mate)
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if cards.insert(instance_id.clone())))
+        .take(DUOS_PASS_MAX_FOLLOWUPS)
+        .collect();
+    best_step(mate_probe, mate, plays).unwrap_or_else(|| {
+        (
+            evaluate(mate_probe, mate, NextSwing::Enemy, &AI_EVAL),
+            mate_probe.clone(),
+        )
+    })
+}
+
+/// R1723000: what passing the card gains the team, in `evaluate`'s points: the teammate's best bounded
+/// follow-up with it (`score`, R1127000's) or, when higher, the best of the card's own plays made after
+/// the teammate's own best play (`baseline`, `mate_baseline`'s), since the mana that play leaves may
+/// pay for the card too; less the baseline's value, the card's worth in the seat's own hand
+/// (`hand_card_value`), `DUOS_PASS_MARGIN_PER_COST` per crystal of the pass cost and
+/// `DUOS_PASS_MIN_GAIN`. The pass is worth making when this is above 0.
+fn pass_gain(
+    own_probe: &GameState,
+    seat_player: PlayerId,
+    card_id: &str,
+    score: f64,
+    baseline: &(f64, GameState),
+    mate: PlayerId,
+    pass_cost: i32,
+) -> f64 {
+    let Some(passed) = own_probe.players[seat_player]
+        .hand
+        .iter()
+        .find(|card| card.id == card_id)
+    else {
+        return f64::NEG_INFINITY;
+    };
+    let (baseline_value, after_baseline) = baseline;
+    let (receiving, given) = received(own_probe, passed, after_baseline, mate);
+    let card_plays: Vec<ActionBody> = legal_actions(&receiving, mate)
+        .into_iter()
+        .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == given.id))
+        .take(DUOS_PASS_MAX_FOLLOWUPS)
+        .collect();
+    let after = best_step(&receiving, mate, card_plays).map_or(f64::NEG_INFINITY, |(value, _)| value);
+    let keep = hand_card_value(own_probe, passed, &AI_EVAL);
+    let price = DUOS_PASS_MARGIN_PER_COST * f64::from(pass_cost);
+    score.max(after) - baseline_value - keep - price - DUOS_PASS_MIN_GAIN
 }
 
 /// The teammate's duel as the seat may read it: one determinization of `redact` from the teammate's
