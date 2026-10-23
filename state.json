@@ -13019,6 +13019,9 @@
       "taken_asks": []
     },
     "1745": {
+      "ci_reruns": {
+        "317c74209fde7eeb5c1ade65950b3c79532a9ca1": 1
+      },
       "cleared": {
         "at": "2026-10-23T19:07:06Z",
         "by": "`claude` (strong)",
