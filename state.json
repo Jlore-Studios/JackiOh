@@ -26987,6 +26987,12 @@
         "number": 1693,
         "title": "Patch: the fuzz starts games with dealt seats, last boards and Glitch boards in combination, as a live match does",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-23T02:44:19Z",
+        "number": 1692,
+        "title": "Patch: the phone's game-log toggle shows when new lines landed while it was closed",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
