@@ -13244,8 +13244,12 @@
     "what": "build #1751 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-23T23:10:15Z",
-    "notes": [],
+    "at": "2026-10-23T23:17:53Z",
+    "notes": [
+      "delivered plan #1751 on agy (run 40036668612): planned",
+      "started build #1751 on agy (run 40038987864)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13950,7 +13954,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T23:08:20Z",
+  "loop_tick": "2026-10-23T23:17:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
