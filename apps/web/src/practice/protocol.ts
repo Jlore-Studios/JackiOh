@@ -57,8 +57,9 @@ export type PracticeStartConfig = {
   /**
    * SPEC §9.10, R291: a tutorial lesson, by id (`tutorial/lessons.ts`). When set, the lesson's own
    * two decks and the tutorial handicap (`AI_TUTORIAL`, R290) replace `deck`, the AI's dealt deck
-   * and `difficulty`'s handicap. The seed and the seat are still this config's: the tutorial passes
-   * the lesson's own, and a test may pass others.
+   * and `difficulty`'s handicap, and the human's seat plays under `TUTORIAL_HUMAN` (R1705005). The
+   * seed and the seat are still this config's: the tutorial passes the lesson's own, and a test
+   * may pass others.
    */
   lesson?: string;
   /**

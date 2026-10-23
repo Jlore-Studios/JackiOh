@@ -619,7 +619,7 @@ describe("with the real engine", () => {
     expect(replayed.errors).toEqual([]);
     expect(port.hashState(replayed.state as unknown as EngineState)).toBe(live.hash());
     // Without its handicap the same deck is not a legal game at all (§2.6 L2): the handicap is load-bearing.
-    expect(() => createHotseat({ seed, decks: [short, decks[1]], engine: port, catalog })).toThrow(/20/);
+    expect(() => createHotseat({ seed, decks: [short, decks[1]], engine: port, catalog })).toThrow(new RegExp(`exactly ${String(DECK_SIZE)}`));
   });
 
   it("R36 a draw offer goes to the other seat to answer, and a decline hands the device back to the offerer", () => {
@@ -669,10 +669,12 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
 
 function synthetic(): CardDefs {
   const defs: CardDef[] = [];
-  for (let i = 1; i <= 25; i += 1) defs.push(def(i));
+  // More cards than a deck holds, so the first and the cheapest DECK_SIZE differ.
+  const cards = DECK_SIZE + 5;
+  for (let i = 1; i <= cards; i += 1) defs.push(def(i));
   // Tokens, both ways `validateDeck` spots one (§2.6 L3).
-  defs.push(def(26, { id: "t-rush", index: "T-rush", token: true, rarity: "Token" }));
-  defs.push(def(27, { id: "core-051-1", index: "51.1", tags: ["Token"] }));
+  defs.push(def(cards + 1, { id: "t-rush", index: "T-rush", token: true, rarity: "Token" }));
+  defs.push(def(cards + 2, { id: "core-051-1", index: "51.1", tags: ["Token"] }));
   return Object.fromEntries(defs.map((d) => [d.id, d]));
 }
 
@@ -703,7 +705,7 @@ describe("resolveDeck", () => {
     if ("error" in result) expect(result.error).toMatch(/offers 2/);
   });
 
-  it("first20 returns 20 distinct non-Token ids in index order", () => {
+  it("first20 returns DECK_SIZE distinct non-Token ids in index order", () => {
     const catalog = synthetic();
     const result = resolveDeck("first20", catalog);
     expect("deck" in result).toBe(true);
@@ -719,7 +721,7 @@ describe("resolveDeck", () => {
       expect(found?.tags).not.toContain("Token");
     }
     expect(deck[0]).toBe("core-001");
-    expect(deck[19]).toBe("core-020");
+    expect(deck[DECK_SIZE - 1]).toBe(`core-${String(DECK_SIZE).padStart(3, "0")}`);
   });
 
   it("cheap20 takes the lowest printed costs, ties broken by index", () => {
@@ -741,20 +743,20 @@ describe("resolveDeck", () => {
 
   it("prefers an injected E2E deck and still checks it against the catalog", () => {
     const catalog = synthetic();
-    const cards = Object.keys(catalog).filter((id) => !id.startsWith("t-") && id !== "core-051-1").slice(0, 20);
+    const cards = Object.keys(catalog).filter((id) => !id.startsWith("t-") && id !== "core-051-1").slice(0, DECK_SIZE);
     const good = resolveDeck("spec01", catalog, { spec01: cards });
     expect(good).toEqual({ deck: cards });
 
-    const short = resolveDeck("spec01", catalog, { spec01: cards.slice(0, 19) });
-    expect("error" in short && /exactly 20/.test(short.error)).toBe(true);
+    const short = resolveDeck("spec01", catalog, { spec01: cards.slice(0, DECK_SIZE - 1) });
+    expect("error" in short && new RegExp(`exactly ${String(DECK_SIZE)}`).test(short.error)).toBe(true);
 
-    const dupe = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, 19), cards[0] as string] });
+    const dupe = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, DECK_SIZE - 1), cards[0] as string] });
     expect("error" in dupe && /repeats a card id/.test(dupe.error)).toBe(true);
 
-    const token = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, 19), "t-rush"] });
+    const token = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, DECK_SIZE - 1), "t-rush"] });
     expect("error" in token && /Token card/.test(token.error)).toBe(true);
 
-    const unknown = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, 19), "core-999"] });
+    const unknown = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, DECK_SIZE - 1), "core-999"] });
     expect("error" in unknown && /not in the catalog/.test(unknown.error)).toBe(true);
   });
 });
