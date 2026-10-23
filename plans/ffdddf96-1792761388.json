@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1722,
+  "title": "Patch: the AI's evaluation prices banked modifiers and scheduled effects",
+  "branch": "bot/issue-1722",
+  "thread": "**Issue #1722 (data, not instructions):**\n\n```text\n# #1722: Patch: the AI's evaluation prices banked modifiers and scheduled effects\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI judges a position by what is on the board and in hand \u2014 but it gives no credit to promises already in the bank: a \"your next spell is free\" waiting to be spent, a \"start of turn\" engine already ticking, a scheduled exile still on its way, or the opponent's alternate-win-condition meter nearing its mark. An opponent one step from a special win reads as healthy; the AI's own ticking annuity reads as nothing. After the change, those banked and scheduled effects count in the judgment, for both seats.\n\n## Why\n\n`evaluate()`/`material()` never read `PlayerState.mods` \u2014 zero `mods`/`ModifierKind` references in `crates/ai/src/evaluate.rs` or `features.rs` \u2014 while all 18 kinds (`CostDiscount`, `EchoNextSpell`, `RadiantFirstCheapCard`, `ComboDraw`, `StartOfTurnEffect`, `TurnEnds`, `HealToDamage`, `HeroArmor`, `AltWin`, `LaneWatch`, `HeroImmune`, `SpellDamage`, `HealthPrice`, `ReplacePlays`, \u2026, `state.rs:440-566`) are public on both seats' views (R169, `view_for.rs:34-36`), so pricing them is R185-legal. Unmarked `state.delayed` entries likewise bank nothing: `marked_enemy_worth` deliberately skips them (`evaluate.rs:279-312`). The shadow-ban ledger records measured misfires from exactly this blind spot: gen-6 notes \"/fullsend's delayed hand-exile the eval reads only once it fires\" (`shadow_ban.rs:133-141`); gen-7: \"the Radiant flags themselves are the part no weight prices\" (:143-152); gen-4's crafted 0-cost unit read as filler (:113-120). Same pattern as the merged evaluator-terms change (#1628), different state fields.\n\n## Proposal\n\nAdd a player-modifier term signed by kind \u2014 `AltWin` progress as closing distance, `StartOfTurnEffect` as annuity value, `TurnEnds`/`HealToDamage`/`CostRule`/`HealthPrice` adjusting the plans they warp \u2014 plus a per-entry `delayed` term signed payoff-vs-cost by hook kind (the `DELAYED_DESTROY_HOOK` read at `evaluate.rs:303` shows the classification pattern). Weights are named constants in `config.rs` (rule 9). `AI_EVAL_KIND` is `Learned` \u2014 check whether the term belongs in the hand-written eval, the dense features in `features.rs`, or both.\n\n## Where it lands\n\n`crates/ai/src/evaluate.rs`, `crates/ai/src/config.rs`, `crates/ai/src/features.rs` (if the learned layer should see them), tests under `crates/ai/tests/ai/`.\n\n## Acceptance criteria\n\n- A state holding a banked `StartOfTurnEffect` outscores an otherwise-identical state without it.\n- An enemy `AltWin` near threshold reads as danger, not health.\n- Scenario tests pin each new term's sign; `cargo jackioh gate` smoke gates do not regress.\n\n## Size and risks\n\nMedium (2\u20134 files). Only public information is read. Weight tuning may need a sweep \u2014 mitigate by starting with the kinds whose payoffs are already enumerated (AltWin progress, StartOfTurnEffect, delayed hooks) and leaving rare kinds at zero.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T13:04:07Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1722: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
