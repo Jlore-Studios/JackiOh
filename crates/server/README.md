@@ -741,8 +741,10 @@ Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `ca
 `game_records.folded`. A record's `record` may now be null, and only once it is folded. The retention
 loop first folds any record not yet folded (`api::game_records::fold_pending`), then
 `app.purge_expired_rows`' fourth cutoff empties the detail of each folded record written more than
-`GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). The store folds under a transaction-level advisory
-lock per patch and source, so two folds into the same rows never interleave.
+`GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). A record the fold cannot read is marked folded with no
+counts and its detail emptied, and alerted as `game_records.fold_poison` with its id (R1715000). The
+store folds under a transaction-level advisory lock per patch and source, so two folds into the same
+rows never interleave.
 
 Migration 0042 adds `match_checkpoints` (#1169): at most one row per live match, the state, play
 telemetry and bot turns its actor held after one log row, written by the restart drain and read by

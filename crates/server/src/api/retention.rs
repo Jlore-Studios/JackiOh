@@ -98,8 +98,8 @@ pub async fn run_purge(app: Arc<App>) {
         // R1044000: the records written before the totals are folded first, in transactions of their
         // own, so their detail can go on the purge's cutoff like any other's.
         match fold_pending(&app.db).await {
-            Ok(0) => {}
-            Ok(folded) => log_info("game_records.folded", json!({ "records": folded })),
+            Ok(done) if done.folded == 0 => {}
+            Ok(done) => log_info("game_records.folded", json!({ "records": done.folded })),
             Err(error) => log_warn(
                 "game_records.fold_failed",
                 json!({ "message": error.to_string() }),
