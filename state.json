@@ -13085,6 +13085,13 @@
     "1700": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T04:15:56Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 7 fails: an animation's look (the sweep's blend and brightness) is visual polish judged by eye; a unit test can hold only the CSS's structure"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-7",
