@@ -1,19 +1,23 @@
 //! M #30 Fickle E-Kitten (SPEC §8.8 row 30): (1) Unit, Felinor, Epic, 3/4 → 6/8.
 //!
-//! Base:    "Start of turn: If your opponent has a pricier permanent, they gain control of this.
+//! Base:    "End of turn: If your opponent has a pricier permanent, they gain control of this.
 //! Otherwise, shuffle a Love Bomb into your deck."
-//! Radiant: "Start of turn: If your opponent has a pricier permanent and a bigger deck, they gain
+//! Radiant: "End of turn: If your opponent has a pricier permanent and a bigger deck, they gain
 //! control of this. Otherwise, shuffle a Radiant Love Bomb into your deck."
-//! Engine: at the start of its controller's turn (§2.2, R62's queue).
+//! Engine: at the end of its controller's turn (§2.2, R62's queue).
 //! - **The condition** compares each side's most expensive permanent with NEW read helper
 //!   `highest_permanent_cost(state, player)` (R901, MD-B5), this card counting for its controller.
 //!   The Radiant face also needs the opponent's library to be larger than its controller's.
 //! - **When it holds**, `give_control({ instanceId: self })` (R1423): R15's placement, R171's entry.
-//!   With no free unit zone the card stays, and the "Otherwise" clause does not run.
+//!   With no free unit zone the card stays, and the "Otherwise" clause does not run. Given at your
+//!   end of turn, it has been theirs since their turn began, so it may attack on it.
 //! - **Otherwise**, `shuffle_into({ defId: "meditative-030-1", count: 1, radiant: face })` into its
 //!   controller's deck.
 //!
 //! Its new controller asks again from their side, so it settles with the cheaper board.
+//!
+//! Through v0.4.0f it asked at the start of its controller's turn; `script_v0_4_0f` keeps that for
+//! those versions' replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -43,9 +47,10 @@ fn opponent_outbids(state: &GameState, controller: PlayerId, needs_larger_deck: 
     true
 }
 
-fn kitten(radiant: bool) -> Script {
-    Script {
-        start_of_turn: Some(hook(move |ctx| {
+/// The card's question, asked at its controller's end of turn, or at their start of turn through
+/// v0.4.0f.
+fn kitten(radiant: bool, at_end: bool) -> Script {
+    let ask = hook(move |ctx| {
             let Some(me) = ctx.live_self() else {
                 return vec![];
             };
@@ -59,25 +64,44 @@ fn kitten(radiant: bool) -> Script {
                 "player": "self",
                 "radiant": radiant,
             })))]
-        })),
-        ..Script::default()
+    });
+    if at_end {
+        Script {
+            end_of_turn: Some(ask),
+            ..Script::default()
+        }
+    } else {
+        Script {
+            start_of_turn: Some(ask),
+            ..Script::default()
+        }
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: kitten(false),
-        radiant: kitten(true),
+        base: kitten(false, true),
+        radiant: kitten(true, true),
     }
 }
 
-// M #30 Fickle E-Kitten — SPEC §8.8 row 30, BUILD M10 row M 30: "At its controller's start of
+/// R767000: the scripts v0.4.0f and every version before it ran, asking at the start of the turn;
+/// `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
+    CardScripts {
+        base: kitten(false, false),
+        radiant: kitten(true, false),
+    }
+}
+
+// M #30 Fickle E-Kitten — SPEC §8.8 row 30, BUILD M10 row M 30: "At its controller's end of
 // turn: with the opponent's highest field cost strictly above yours (tops of piles and backrow, X
 // cards at their X, face-down cards at their public cost; MD-B5) it moves to their side by R15,
 // summoning sick (R171), `controlChanged` public; equal or lower, or with no enemy permanent, a
 // base Love Bomb is shuffled into its controller's deck; with their side full it stays and nothing
 // is shuffled; under its new controller the comparison runs from their side; radiant 6/8, it moves
-// only when their deck is also larger, and the Love Bomb is Radiant".
+// only when their deck is also larger, and the Love Bomb is Radiant". `mod v0_4_0f` keeps the start
+// of turn, the kept script's (R767000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,7 +171,7 @@ mod tests {
             .collect()
     }
 
-    /// Past p2's turn and back to p1's start of turn, where the Kitten asks its question.
+    /// Past p2's turn and back to p1's start of turn, where the kept Kitten asks its question.
     fn to_p1_start(s: &mut Scenario) {
         s.end_turn();
         s.end_turn();
@@ -163,17 +187,18 @@ mod tests {
             fn r901_a_strictly_higher_enemy_permanent_takes_it_by_r15_summoning_sick() {
                 let mut s = kittened("kitten-taken", false, json!([]), json!([{ "def": MENACE, "lane": 2 }]));
                 let id = s.card(KITTEN).id.clone();
+                let turn = s.state().turn;
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 // R15: the same lane on the receiver's side, which is free.
                 assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(id.clone()));
                 assert!(s.unit(P1, 1).is_none());
                 assert_eq!(s.card(&id).controller, P2);
                 assert_eq!(s.card(&id).owner, P1);
-                // R171: it entered its new side this turn, summoning sick with a fresh exertion.
+                // R171: it entered its new side on p1's turn, with a fresh exertion.
                 let now = s.card(&id).clone();
-                assert_eq!(now.summoned_turn, Some(s.state().turn));
+                assert_eq!(now.summoned_turn, Some(turn));
                 assert_eq!(
                     now.exertion,
                     Exertion {
@@ -189,10 +214,23 @@ mod tests {
             }
 
             #[test]
+            fn r171_given_at_your_end_of_turn_it_attacks_on_theirs() {
+                let mut s = kittened("kitten-attacks", false, json!([]), json!([{ "def": MENACE, "lane": 2 }]));
+                let id = s.card(KITTEN).id.clone();
+
+                s.end_turn();
+
+                assert_eq!(s.state().active, P2);
+                assert_eq!(s.card(&id).controller, P2);
+                s.attack(&id, "hero");
+                s.expect_health(P1, 30 - 3);
+            }
+
+            #[test]
             fn r901_equal_or_lower_shuffles_a_base_love_bomb() {
                 let mut s = kittened("kitten-equal", false, json!([]), json!([{ "def": VANILLA, "lane": 2 }]));
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 assert_eq!(s.card(KITTEN).controller, P1);
                 assert!(control_changed(s.events()).is_empty());
@@ -206,7 +244,7 @@ mod tests {
             fn r901_with_no_enemy_permanent_it_shuffles() {
                 let mut s = kittened("kitten-none", false, json!([]), json!([]));
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 assert_eq!(s.card(KITTEN).controller, P1);
                 assert_eq!(bombs_in(&s, P1).len(), 1);
@@ -225,7 +263,7 @@ mod tests {
                 );
                 s.card_mut(MOON).cost_override = Some(5);
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 assert_eq!(s.card(KITTEN).controller, P2);
                 assert_eq!(control_changed(s.events()).len(), 1);
@@ -244,7 +282,7 @@ mod tests {
                 );
                 s.card_mut(CHALICE).x = Some(4);
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 assert_eq!(s.card(KITTEN).controller, P2);
                 assert_eq!(control_changed(s.events()).len(), 1);
@@ -255,7 +293,7 @@ mod tests {
                 let full: Vec<Value> = (1..=5).map(|lane| json!({ "def": MENACE, "lane": lane })).collect();
                 let mut s = kittened("kitten-full", false, json!([]), json!(full));
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 // R1423's no-room no-op: still p1's, in its lane, and no bomb for anyone.
                 assert_eq!(s.card(KITTEN).controller, P1);
@@ -274,12 +312,11 @@ mod tests {
                     json!([{ "def": SEVEN_SEVEN, "lane": 2 }]),
                 );
 
-                to_p1_start(&mut s);
+                s.end_turn();
                 assert_eq!(s.card(KITTEN).controller, P2);
 
-                // p2's next start of turn: p2 holds 4 (the 7/7) against p1's 3, so no move —
-                // instead p2, the new controller, is fed the bomb.
-                s.end_turn();
+                // p2's end of turn: p2 holds 4 (the 7/7) against p1's 3, so no move — instead p2,
+                // the new controller, is fed the bomb.
                 s.end_turn();
 
                 assert_eq!(s.card(KITTEN).controller, P2);
@@ -317,7 +354,7 @@ mod tests {
                     4,
                     2,
                 );
-                to_p1_start(&mut smaller);
+                smaller.end_turn();
                 assert_eq!(smaller.card(KITTEN).controller, P1);
                 assert_eq!(bombs_in(&smaller, P1).len(), 1);
 
@@ -331,7 +368,7 @@ mod tests {
                     2,
                     4,
                 );
-                to_p1_start(&mut larger);
+                larger.end_turn();
                 assert_eq!(larger.card(KITTEN).controller, P2);
             }
 
@@ -339,13 +376,37 @@ mod tests {
             fn shuffles_a_radiant_love_bomb_and_is_6_8() {
                 let mut s = kittened("kitten-radiant", true, json!([]), json!([{ "def": VANILLA, "lane": 2 }]));
 
-                to_p1_start(&mut s);
+                s.end_turn();
 
                 let bombs = bombs_in(&s, P1);
                 assert_eq!(bombs.len(), 1);
                 assert!(bombs[0].radiant);
                 let me = s.unit(P1, 1).expect("the Kitten on the field");
                 s.expect_stats(&me, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
+            }
+        }
+
+        /// R767000: the scripts kept for the replays of v0.4.0f and before, which asked at the start
+        /// of the turn.
+        mod v0_4_0f {
+            use super::*;
+
+            #[test]
+            fn r901_r767000_it_asks_at_its_controllers_start_of_turn_not_their_end() {
+                crate::under_kept(KITTEN, super::super::super::script_v0_4_0f(), || {
+                    let mut s = kittened("kitten-kept", false, json!([]), json!([{ "def": MENACE, "lane": 2 }]));
+                    let id = s.card(KITTEN).id.clone();
+                    s.end_turn();
+                    assert_eq!(s.card(&id).controller, P1);
+                    s.end_turn();
+                    assert_eq!(s.card(&id).controller, P2);
+
+                    let mut radiant = kittened("kitten-kept-radiant", true, json!([]), json!([]));
+                    to_p1_start(&mut radiant);
+                    let bombs = bombs_in(&radiant, P1);
+                    assert_eq!(bombs.len(), 1);
+                    assert!(bombs[0].radiant);
+                });
             }
         }
     }

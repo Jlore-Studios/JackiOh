@@ -160,7 +160,7 @@ mod tests {
     const TWINSPELL: &str = "core-079"; // (2) Field Spell.
     const CALL: &str = "core-069"; // (2) Spell: Recruit 3.
     const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's Spell.
-    const GAMBIT: &str = "classic-052"; // Trap: reveals at a lethal hit on your hero; redirects it, heals 10, draws 3.
+    const GAMBIT: &str = "classic-052"; // Trap: reveals at a lethal hit on your hero; cancels it, heals 10, draws 3.
 
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 

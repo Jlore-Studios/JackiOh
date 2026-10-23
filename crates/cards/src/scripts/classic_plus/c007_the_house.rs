@@ -1,7 +1,18 @@
-//! C+ #7 The House (SPEC §8.7 row 7, R406). (4) Field Spell, Rare.
-//! Cry and each start of its controller's turn: summon a Right-house defender (Core #3) with chance
-//! 2 in 3, else a Wrong-House Attacker (C+ #6); Radiant: one of each. Fresh base-face cards, yours, no
-//! Cry (R1), R64's placement; a full board summons nothing and rolls nothing (R129).
+//! C+ #7 The House (SPEC §8.7 row 7, R406, R1704002). (3) Field Spell, Plague, Rare.
+//!   Base:    "Cry: Place {tokens|Plague Counter|Plague Counters} on this.
+//!             Activate: Spend a Plague Counter from this to summon a Right-house defender or a
+//!             Wrong-House Attacker."
+//!   Radiant: "… to summon a Radiant Right-house defender or a Radiant Wrong-House Attacker."
+//!
+//! The Cry is one placement of 3 on itself (§6.3 Plague Counter, R689; R471's multiplier applies). The
+//! Activate is once per turn (§6.2, R384), its twin the controller's choice, a mode declared in the
+//! `activate` action (R81): "defender" summons a Right-house defender (Core #3, R406), "attacker" a
+//! Wrong-House Attacker (C+ #6), fresh cards, yours, no Cry (R1), R64's placement, on their Radiant faces
+//! on the Radiant face. With no counter on it, or no unit zone free, it cannot be activated (R1704002).
+//!
+//! Through v0.4.0f its Cry and each start of its controller's turn summoned a Right-house defender with
+//! chance 2 in 3, else a Wrong-House Attacker, and the Radiant face one of each (R406);
+//! `script_v0_4_0f` keeps that for those versions' replays (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -10,8 +21,60 @@ pub const ID: &str = "classicplus-007";
 /// R406: "Right-House Protector" is Core #3, the Wrong-House Attacker's twin.
 const RIGHT_HOUSE: &str = "core-003";
 const WRONG_HOUSE: &str = "classicplus-006";
-/// R406: "(2 in 3)" — the odds of the Right-house defender.
+/// R406: "(2 in 3)" — the odds of the Right-house defender, through v0.4.0f.
 const RIGHT_HOUSE_ODDS: f64 = 2.0 / 3.0;
+/// R1704002: the Activate's modes, the Right-house defender's and the Wrong-House Attacker's.
+const DEFENDER: &str = "defender";
+const ATTACKER: &str = "attacker";
+
+/// R1704002: "Activate: Spend a Plague Counter from this to summon a Right-house defender or a
+/// Wrong-House Attacker", the twin named by the mode the action declares.
+fn house(radiant: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: "house".to_string(),
+        label: "Spend a Plague Counter: summon a Right-house defender or a Wrong-House Attacker".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: vec![DEFENDER.to_string(), ATTACKER.to_string()],
+        }],
+        can_activate: Some(condition_hook(|c| {
+            plague_on(c.self_) >= 1 && first_free_zone(c.state, c.controller, Row::Units).is_some()
+        })),
+        has: None,
+        run: hook(move |ctx| {
+            let def_id = match ctx.modes.first().map(String::as_str) {
+                Some(DEFENDER) => RIGHT_HOUSE,
+                Some(ATTACKER) => WRONG_HOUSE,
+                _ => return vec![],
+            };
+            let mut args = json!({ "defId": def_id });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![consume_plague(json_as(json!({ "amount": 1 }))), summon(json_as(args))]
+        }),
+    }
+}
+
+fn the_house(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![place_plague(json_as(json!({ "amount": param(&*ctx, "tokens") })))]
+        })),
+        activations: vec![house(radiant)],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: the_house(false),
+        radiant: the_house(true),
+    }
+}
 
 fn summon_one() -> Hook {
     hook(|ctx| {
@@ -30,7 +93,9 @@ fn summon_both() -> Hook {
     })
 }
 
-pub fn script() -> CardScripts {
+/// R767000: the scripts v0.4.0f and every version before it ran, the Cry and start-of-turn summons
+/// (R406); `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
     let one = summon_one();
     let both = summon_both();
     CardScripts {
@@ -47,12 +112,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #7 The House — SPEC §8.7 row 7, BUILD M9 Classic+ row C+ 7: "Field Spell: its Cry and each start of
-// your turn summon a Right-house defender (Core #3) with chance 2 in 3, else a Wrong-House Attacker (C+
-// #6), generated from the catalog (cards, not tokens, so they go to your graveyard when they die),
-// yours, no Cry (R1); 'Right-House Protector' is Core #3 (R406); a seeded roll gives a fixed unit;
-// nothing at the opponent's start of turn; a full board summons nothing and rolls nothing (R129);
-// radiant summons one of each, the second skipped when only one zone is open".
+// C+ #7 The House — SPEC §8.7 row 7, BUILD M9 Classic+ row C+ 7: "Field Spell: its Cry places 3 Plague
+// Counters on itself; Activate, once per turn (R384), the twin a mode declared in the action (R81): spend
+// a counter to summon a Right-house defender (Core #3, R406) or a Wrong-House Attacker (C+ #6), generated
+// from the catalog (cards, not tokens), yours, no Cry (R1), R64's placement; refused with no counter or
+// no free unit zone (R1704002); radiant the twin is Radiant". `mod v0_4_0f` keeps the summons on its Cry
+// and each start of your turn, the kept script's (R767000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -98,69 +163,98 @@ mod tests {
             .collect()
     }
 
-    /// The defs The House summoned with its Cry, under a seed.
-    fn cry_roll(seed: &str) -> Vec<String> {
-        let mut s = setup(json!({}), false, Some(seed));
-        s.play(HOUSE, json!({ "zone": 1 }));
-        summoned(&s)
+    fn counters(s: &Scenario) -> i32 {
+        plague_on(&s.card(HOUSE))
+    }
+
+    /// The House played into backrow zone 1, then a turn each, so its controller may activate it again.
+    fn next_turn(s: &mut Scenario) {
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(s.state().active, P1);
     }
 
     mod base {
         use super::*;
 
         #[test]
-        fn r406_its_cry_summons_one_of_the_twins_yours_with_no_cry_a_seeded_roll_gives_a_fixed_unit() {
-            crate::register_all();
+        fn costs_3_refused_with_2_mana() {
             let mut s = setup(json!({}), false, None);
-            s.play(HOUSE, json!({ "zone": 1 }));
-
-            let defs = summoned(&s);
-            assert_eq!(defs.len(), 1);
-            assert!([RIGHT, WRONG].contains(&defs[0].as_str()));
-            let unit = s.unit(P1, 1).expect("a twin in lane 1");
-            assert_eq!(
-                (unit.def_id.clone(), unit.owner, unit.controller, unit.radiant),
-                (defs[0].clone(), P1, P1, false)
-            );
-            let played: Vec<String> = s
-                .events()
-                .iter()
-                .filter_map(|event| match event {
-                    GameEvent::CardPlayed { instance_id, .. } => Some(instance_id.clone()),
-                    _ => None,
-                })
-                .collect();
-            assert_eq!(played, vec![s.card(HOUSE).id.clone()]);
-            assert_eq!(cry_roll("jackioh-harness"), defs);
+            crate::expect_costs(&mut s, HOUSE, 3, json!({ "zone": 1 }));
         }
 
         #[test]
-        fn r406_2_in_3_is_the_right_house_defender_s_chance_both_come_up_the_defender_about_twice_as_often() {
-            crate::register_all();
-            let mut right = 0;
-            let mut wrong = 0;
-            for seed in 1..=90 {
-                let made = cry_roll(&format!("house-{seed}"));
-                match made.first().map(String::as_str) {
-                    Some(RIGHT) => right += 1,
-                    Some(WRONG) => wrong += 1,
-                    _ => {}
-                }
+        fn r1704002_cry_places_3_counters() {
+            let mut s = setup(json!({}), false, None);
+            s.play(HOUSE, json!({ "zone": 1 }));
+            assert_eq!(counters(&s), 3);
+            assert_eq!(summoned(&s), Vec::<String>::new());
+            // Nothing at the start of a turn any more.
+            next_turn(&mut s);
+            assert_eq!(summoned(&s), Vec::<String>::new());
+            assert_eq!(counters(&s), 3);
+        }
+
+        #[test]
+        fn r1704002_activate_spends_one_summons_the_named_twin_once_a_turn() {
+            let mut s = setup(json!({}), false, None);
+            s.play(HOUSE, json!({ "zone": 1 }));
+            let cursor = s.state().rng_cursor;
+            s.activate(HOUSE, json!({ "modes": ["defender"] }));
+            assert_eq!(summoned(&s), vec![RIGHT]);
+            assert_eq!(counters(&s), 2);
+            // The controller's choice, no roll.
+            assert_eq!(s.state().rng_cursor, cursor);
+            let unit = s.unit(P1, 1).expect("a twin in lane 1");
+            assert_eq!(
+                (unit.def_id.clone(), unit.owner, unit.controller, unit.radiant),
+                (RIGHT.to_string(), P1, P1, false)
+            );
+            s.expect_refused_with(
+                |s| s.activate(HOUSE, json!({ "modes": ["attacker"] })),
+                "already been used",
+            );
+            next_turn(&mut s);
+            s.activate(HOUSE, json!({ "modes": ["attacker"] }));
+            assert_eq!(summoned(&s), vec![RIGHT, WRONG]);
+            assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(WRONG.to_string()));
+            assert_eq!(counters(&s), 1);
+            s.expect_refused(|s| s.activate(HOUSE, json!({ "modes": [] })));
+        }
+
+        #[test]
+        fn r1704002_refused_with_no_counter_or_full_board() {
+            let mut s = setup(json!({}), false, None);
+            s.play(HOUSE, json!({ "zone": 1 }));
+            for mode in ["defender", "attacker", "defender"] {
+                s.activate(HOUSE, json!({ "modes": [mode] }));
+                next_turn(&mut s);
             }
-            assert_eq!(right + wrong, 90);
-            assert!(right > 45);
-            assert!(right < 75);
+            assert_eq!(counters(&s), 0);
+            s.expect_refused_with(
+                |s| s.activate(HOUSE, json!({ "modes": ["attacker"] })),
+                "can't be activated now",
+            );
+
+            let mut full = setup(json!({ "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] }), false, None);
+            full.play(HOUSE, json!({ "zone": 1 }));
+            assert_eq!(counters(&full), 3);
+            full.expect_refused_with(
+                |s| s.activate(HOUSE, json!({ "modes": ["defender"] })),
+                "can't be activated now",
+            );
+            assert!(
+                !legal_actions(full.state(), P1)
+                    .iter()
+                    .any(|action| matches!(action, ActionBody::Activate { .. }))
+            );
         }
 
         #[test]
         fn r11_the_twins_are_cards_not_tokens_a_wrong_house_attacker_it_made_goes_to_your_graveyard_when_it_dies() {
-            crate::register_all();
-            let seed = (1..=30)
-                .map(|i| format!("house-{i}"))
-                .find(|each| cry_roll(each).first().map(String::as_str) == Some(WRONG))
-                .expect("no seed rolled the Wrong-House Attacker");
-            let mut s = setup(json!({ "hand": [{ "def": HOUSE }, HIT_JOB, FILLER] }), false, Some(&seed));
+            let mut s = setup(json!({ "hand": [{ "def": HOUSE }, HIT_JOB, FILLER] }), false, None);
             s.play(HOUSE, json!({ "zone": 1 }));
+            s.activate(HOUSE, json!({ "modes": ["attacker"] }));
             let made = s.unit(P1, 1).expect("a twin in lane 1");
             assert_eq!(made.def_id, WRONG);
 
@@ -171,44 +265,11 @@ mod tests {
         }
 
         #[test]
-        fn s2_2_summons_again_at_the_start_of_your_turn_and_nothing_at_the_opponent_s() {
-            crate::register_all();
-            let mut s = setup(json!({}), false, None);
-            s.play(HOUSE, json!({ "zone": 1 }));
-            assert_eq!(summoned(&s).len(), 1);
-
-            s.end_turn();
-            assert_eq!(s.state().active, P2);
-            assert_eq!(summoned(&s).len(), 1);
-
-            s.end_turn();
-            assert_eq!(s.state().active, P1);
-            assert_eq!(summoned(&s).len(), 2);
-            let second = s.unit(P1, 2).map(|unit| unit.def_id).unwrap_or_default();
-            assert!(second == "core-003" || second == "classicplus-006");
-        }
-
-        #[test]
-        fn r129_a_full_board_summons_nothing_and_rolls_nothing() {
-            crate::register_all();
-            let mut s = setup(json!({ "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] }), false, None);
-            let cursor = s.state().rng_cursor;
-
-            s.play(HOUSE, json!({ "zone": 1 }));
-
-            assert_eq!(summoned(&s), Vec::<String>::new());
-            assert_eq!(s.state().rng_cursor, cursor);
-        }
-
-        #[test]
         fn r64_lands_in_the_leftmost_open_unit_zone() {
-            crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA, { "def": VANILLA, "lane": 3 }] }), false, None);
-
             s.play(HOUSE, json!({ "zone": 1 }));
-
-            let lane_2 = s.unit(P1, 2).map(|unit| unit.def_id).unwrap_or_default();
-            assert!([RIGHT, WRONG].contains(&lane_2.as_str()));
+            s.activate(HOUSE, json!({ "modes": ["defender"] }));
+            assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id), Some(RIGHT.to_string()));
         }
     }
 
@@ -216,49 +277,138 @@ mod tests {
         use super::*;
 
         #[test]
-        fn its_cry_summons_a_right_house_defender_and_then_a_wrong_house_attacker_rolling_nothing() {
-            crate::register_all();
+        fn costs_3_refused_with_2_mana() {
             let mut s = setup(json!({}), true, None);
-            let cursor = s.state().rng_cursor;
+            crate::expect_costs(&mut s, HOUSE, 3, json!({ "zone": 1 }));
+        }
 
+        #[test]
+        fn r1704002_cry_places_3_counters() {
+            let mut s = setup(json!({}), true, None);
             s.play(HOUSE, json!({ "zone": 1 }));
+            assert_eq!(counters(&s), 3);
+            assert_eq!(summoned(&s), Vec::<String>::new());
+        }
 
+        #[test]
+        fn r1704002_summons_a_radiant_twin() {
+            let mut s = setup(json!({}), true, None);
+            s.play(HOUSE, json!({ "zone": 1 }));
+            s.activate(HOUSE, json!({ "modes": ["defender"] }));
+            next_turn(&mut s);
+            s.activate(HOUSE, json!({ "modes": ["attacker"] }));
             assert_eq!(summoned(&s), vec![RIGHT, WRONG]);
-            assert_eq!(
-                [s.unit(P1, 1).map(|unit| unit.def_id), s.unit(P1, 2).map(|unit| unit.def_id)],
-                [Some(RIGHT.to_string()), Some(WRONG.to_string())]
-            );
-            // Generated on their base faces, yours.
             assert_eq!(
                 [1, 2]
                     .iter()
-                    .map(|&lane| s.unit(P1, lane).map(|unit| (unit.radiant, unit.owner)))
+                    .map(|&lane| s.unit(P1, lane).map(|unit| (unit.def_id, unit.radiant, unit.owner)))
                     .collect::<Vec<_>>(),
-                vec![Some((false, P1)), Some((false, P1))]
+                vec![
+                    Some((RIGHT.to_string(), true, P1)),
+                    Some((WRONG.to_string(), true, P1))
+                ]
             );
-            assert_eq!(s.state().rng_cursor, cursor);
+            assert_eq!(counters(&s), 1);
+        }
+    }
+
+    /// R767000: the scripts kept for the replays of v0.4.0f and before: the Cry and start-of-turn summons.
+    mod v0_4_0f {
+        use super::*;
+
+        fn kept(run: impl FnOnce()) {
+            crate::under_kept(HOUSE, super::super::script_v0_4_0f(), run);
+        }
+
+        /// The defs The House summoned with its Cry, under a seed.
+        fn cry_roll(seed: &str) -> Vec<String> {
+            let mut s = setup(json!({}), false, Some(seed));
+            s.play(HOUSE, json!({ "zone": 1 }));
+            summoned(&s)
         }
 
         #[test]
-        fn with_one_zone_open_the_second_is_skipped() {
-            crate::register_all();
-            let mut s = setup(json!({ "field": [VANILLA, VANILLA, VANILLA, VANILLA] }), true, None);
+        fn r406_its_cry_summons_one_of_the_twins_yours_with_no_cry_a_seeded_roll_gives_a_fixed_unit() {
+            kept(|| {
+                let mut s = setup(json!({}), false, None);
+                s.play(HOUSE, json!({ "zone": 1 }));
 
-            s.play(HOUSE, json!({ "zone": 1 }));
-
-            assert_eq!(summoned(&s), vec![RIGHT]);
-            assert_eq!(s.unit(P1, 5).map(|unit| unit.def_id), Some(RIGHT.to_string()));
+                let defs = summoned(&s);
+                assert_eq!(defs.len(), 1);
+                assert!([RIGHT, WRONG].contains(&defs[0].as_str()));
+                let unit = s.unit(P1, 1).expect("a twin in lane 1");
+                assert_eq!(
+                    (unit.def_id.clone(), unit.owner, unit.controller, unit.radiant),
+                    (defs[0].clone(), P1, P1, false)
+                );
+                assert_eq!(cry_roll("jackioh-harness"), defs);
+            });
         }
 
         #[test]
-        fn summons_both_again_at_the_start_of_your_turn() {
-            crate::register_all();
-            let mut s = setup(json!({}), true, None);
-            s.play(HOUSE, json!({ "zone": 1 }));
-            s.end_turn();
-            s.end_turn();
+        fn r406_2_in_3_is_the_right_house_defender_s_chance_both_come_up_the_defender_about_twice_as_often() {
+            kept(|| {
+                let mut right = 0;
+                let mut wrong = 0;
+                for seed in 1..=90 {
+                    let made = cry_roll(&format!("house-{seed}"));
+                    match made.first().map(String::as_str) {
+                        Some(RIGHT) => right += 1,
+                        Some(WRONG) => wrong += 1,
+                        _ => {}
+                    }
+                }
+                assert_eq!(right + wrong, 90);
+                assert!(right > 45);
+                assert!(right < 75);
+            });
+        }
 
-            assert_eq!(summoned(&s), vec![RIGHT, WRONG, RIGHT, WRONG]);
+        #[test]
+        fn s2_2_summons_again_at_the_start_of_your_turn_and_nothing_at_the_opponent_s() {
+            kept(|| {
+                let mut s = setup(json!({}), false, None);
+                s.play(HOUSE, json!({ "zone": 1 }));
+                assert_eq!(summoned(&s).len(), 1);
+
+                s.end_turn();
+                assert_eq!(s.state().active, P2);
+                assert_eq!(summoned(&s).len(), 1);
+
+                s.end_turn();
+                assert_eq!(s.state().active, P1);
+                assert_eq!(summoned(&s).len(), 2);
+            });
+        }
+
+        #[test]
+        fn r129_a_full_board_summons_nothing_and_rolls_nothing() {
+            kept(|| {
+                let mut s = setup(json!({ "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA] }), false, None);
+                let cursor = s.state().rng_cursor;
+                s.play(HOUSE, json!({ "zone": 1 }));
+                assert_eq!(summoned(&s), Vec::<String>::new());
+                assert_eq!(s.state().rng_cursor, cursor);
+            });
+        }
+
+        #[test]
+        fn r406_radiant_its_cry_and_each_start_of_your_turn_summon_one_of_each_on_their_base_faces() {
+            kept(|| {
+                let mut s = setup(json!({}), true, None);
+                s.play(HOUSE, json!({ "zone": 1 }));
+                assert_eq!(summoned(&s), vec![RIGHT, WRONG]);
+                assert_eq!(
+                    [1, 2]
+                        .iter()
+                        .map(|&lane| s.unit(P1, lane).map(|unit| (unit.radiant, unit.owner)))
+                        .collect::<Vec<_>>(),
+                    vec![Some((false, P1)), Some((false, P1))]
+                );
+                s.end_turn();
+                s.end_turn();
+                assert_eq!(summoned(&s), vec![RIGHT, WRONG, RIGHT, WRONG]);
+            });
         }
     }
 }

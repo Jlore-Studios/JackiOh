@@ -32,6 +32,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
+use crate::replacements::LethalHitTo;
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::wire::{GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword};
@@ -471,7 +472,8 @@ fn land_hit(
 
     // E5, E9: after the caps and before step 5, a hit that would bring its hero to 0 or less — this
     // hit alone, as R44 judges it — meets the "would take lethal damage" replacements, which may send
-    // it to the other hero as a new instance from the same source, through that hero's Armor and caps.
+    // it to the other hero as a new instance from the same source, through that hero's Armor and caps,
+    // or cancel it (R1704001).
     // #936 B17: in a Duos duel the hit is judged against own HP and the team's pool together.
     if let DamageTarget::Hero { player } = target
         && amount > 0
@@ -480,7 +482,11 @@ fn land_hit(
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(to) = to {
+        if let Some(LethalHitTo::Cancelled) = to {
+            // R1704001: a cancelled hit deals nothing, and emits no damage event.
+            return 0;
+        }
+        if let Some(LethalHitTo::Target(to)) = to {
             // R1204: the hit the guard catches is never caught again by the same guard — and a
             // hero-to-hero redirect changes controllers, so the old side's catchers can never answer
             // the new walk anyway. Only a Unit destination names its catcher.
@@ -538,7 +544,10 @@ fn land_hit(
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
-        if let Some(to) = to {
+        if let Some(LethalHitTo::Cancelled) = to {
+            return 0;
+        }
+        if let Some(LethalHitTo::Target(to)) = to {
             let mut next_caught: Vec<String> = caught.to_vec();
             if let DamageTarget::Unit { instance } = &to {
                 next_caught.push(instance.id.clone());

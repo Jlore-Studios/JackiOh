@@ -1,4 +1,4 @@
-//! Meditative+ #1.4 Leg Day (SPEC §8.9 row 1.4, §7, R1178002, R1563003). (2) Spell, AI, Token: an AI
+//! Meditative+ #1.4 Leg Day (SPEC §8.9 row 1.4, §7, R1178002, R1563003). (3) Spell, AI, Token: an AI
 //! generated card M+ #1 Bob's Plan offers after M #20 Aestheticize the Game (#1563).
 //!   Both faces: "Give your Units +{buff}/+{buff}." — buff 5, Radiant 10
 //!
@@ -43,6 +43,26 @@ mod tests {
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": [VANILLA, TIMMY] },
             "p2": { "hand": [FILLER], "field": [VANILLA] },
         }))
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn costs_3_refused_with_2_mana() {
+            let mut s = leg_day(false);
+            crate::expect_costs(&mut s, ID, 3, json!({}));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn costs_3_refused_with_2_mana() {
+            let mut s = leg_day(true);
+            crate::expect_costs(&mut s, ID, 3, json!({}));
+        }
     }
 
     #[test]

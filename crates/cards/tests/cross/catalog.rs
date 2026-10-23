@@ -1474,7 +1474,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "32",
         "Felinor Feelings",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Felinor],
         R::Rare,
@@ -2084,9 +2084,9 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "7",
         "The House",
-        c(4),
+        c(3),
         T::FieldSpell,
-        &[],
+        &[G::Plague],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -2616,7 +2616,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "43",
         "AI Slop",
-        c(4),
+        c(3),
         T::Spell,
         &[],
         R::Legendary,
@@ -2816,7 +2816,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "62",
         "KY's Papaya",
-        c(1),
+        c(2),
         T::Spell,
         &[G::Fruit, G::Ky],
         R::Epic,
@@ -3853,7 +3853,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "56",
         "House Party",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Common,
@@ -4503,7 +4503,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "1.2",
         "Spa Day",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Ai, G::Token],
         R::Token,
@@ -4523,7 +4523,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     row(
         "1.4",
         "Leg Day",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Ai, G::Token],
         R::Token,
@@ -4588,8 +4588,8 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(4, 7),
-        st(8, 14),
+        st(4, 8),
+        st(8, 16),
     ),
     row(
         "9",

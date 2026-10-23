@@ -1,4 +1,4 @@
-//! Meditative+ #1.2 Spa Day (SPEC §8.9 row 1.2, §7, R1178002, R311, R80). (2) Spell, AI, Token: an AI
+//! Meditative+ #1.2 Spa Day (SPEC §8.9 row 1.2, §7, R1178002, R311, R80). (3) Spell, AI, Token: an AI
 //! generated card M+ #1 Bob's Plan adds after M #20 Aestheticize the Game.
 //!   Base:    "Heal your hero {heal}. Shuffle {bombs|Love Bomb|Love Bombs} into your deck."
 //!   Radiant: "Heal your hero {heal}. Shuffle {bombs|Radiant Love Bomb|Radiant Love Bombs} into your deck."
@@ -90,6 +90,12 @@ mod tests {
         use super::*;
 
         #[test]
+        fn costs_3_refused_with_2_mana() {
+            let mut s = spa("spa-cost", false, json!([FILLER]));
+            crate::expect_costs(&mut s, ID, 3, json!({}));
+        }
+
+        #[test]
         fn heals_your_hero_25_past_30_with_no_cap() {
             let mut s = spa("spa-day", false, json!([FILLER, FILLER]));
             let before = health(&s);
@@ -132,6 +138,12 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn costs_3_refused_with_2_mana() {
+            let mut s = spa("spa-cost", true, json!([FILLER]));
+            crate::expect_costs(&mut s, ID, 3, json!({}));
+        }
 
         #[test]
         fn heals_50_and_shuffles_2_radiant_love_bombs_healing_14_each() {

@@ -818,7 +818,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
         // they were never in any pile. A Book is no token, so R11's rule above does not cover them.
         let library: Vec<&str> = (0..LIBRARY_CAP).map(|_| VANILLA).collect();
         let mut g = scenario(json!({ "p1": { "hand": [APPROPRIATIONS], "library": library } }));
-        g.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Education"] }));
+        g.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Education"] }));
         let refused: Vec<String> = g
             .last_events()
             .iter()
@@ -832,7 +832,8 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 _ => None,
             })
             .collect();
-        assert_eq!(refused.len(), 2);
+        // 2X − 1 Books at X = 2 (#1704).
+        assert_eq!(refused.len(), 3);
         for seat in [PlayerId::P1, PlayerId::P2] {
             let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialise");
             for id in &refused {

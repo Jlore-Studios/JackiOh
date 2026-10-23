@@ -171,6 +171,27 @@ pub(crate) fn scenario(opts: serde_json::Value) -> jackioh_engine::testkit::Scen
     jackioh_engine::testkit::scenario(opts)
 }
 
+/// The price a play of p1's `id` reads: with one mana less than `cost`, the play is refused for it.
+#[cfg(test)]
+pub(crate) fn expect_costs(s: &mut jackioh_engine::testkit::Scenario, id: &str, cost: i32, play: serde_json::Value) {
+    s.state_mut().players.p1.mana.current = cost - 1;
+    let refusal = format!("{} costs {cost}, more than your mana", card_def(id).name);
+    s.expect_refused_with(|s| s.play(id, play), &refusal);
+}
+
+/// R767000: `run` folding under the build's catalog with `scripts` kept for `id`, as a replay of the
+/// version a `KEPT_SCRIPTS` row names folds once a later patch ships: a kept script's test before then.
+#[cfg(test)]
+pub(crate) fn under_kept<T>(id: &str, scripts: CardScripts, run: impl FnOnce() -> T) -> T {
+    register_all();
+    let shipped: &'static jackioh_engine::ShippedCatalog = Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+        "kept",
+        CATALOG.clone(),
+        IndexMap::from([(id.to_string(), scripts)]),
+    )));
+    jackioh_engine::with_shipped(Some(shipped), run)
+}
+
 /// R1081000: move the Unit `id`, set up in a unit zone, to stand in its controller's backrow zone `lane`,
 /// as a Flying Unit played there stands. No catalog card prints Flying (a random keyword's), and a Unit
 /// standing there stays standing whatever its text says, so a card test sets one up so.

@@ -1,4 +1,5 @@
-//! C+ #3 Second Amendment Snake (SPEC §8.7 row 3). (2) Unit, Rare, 1/6 → 2/12.
+//! C+ #3 Second Amendment Snake (SPEC §8.7 row 3). (2) Unit, Rare, 1/6 → 2/12, Pierce (since #1704,
+//! catalog data: its damage ignores Armor, §6.1).
 //! End of turn: one placement of {tokens} Plague Counters on itself (E19). Death: its last-known tokens
 //! (R78) become that many hits of {damage}, each on a random enemy still standing (E37, R59). Both faces
 //! run this script; the numbers are the face's declared `params` (R386). Preview: the hits (R280).
@@ -52,6 +53,7 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
+    const ARMORED: &str = "core-025"; // (4) 7/7 Armor 7.
     const HITS_LABEL: &str = "for each Plague Counter on this";
 
     /// One of the Snake's `damage` events: where it sits in the event list, what it hit, how hard.
@@ -121,8 +123,21 @@ mod tests {
         serde_json::to_value(shown).unwrap()
     }
 
+    /// The Snake attacks a 7/7 with Armor 7; the 7/7's health after it.
+    fn into_armor(radiant: bool) -> i32 {
+        let mut s = with_snake(0, json!({ "field": [ARMORED] }), Extra { radiant, ..Extra::default() });
+        let armored = s.unit(P2, 1).expect("the 7/7").id;
+        s.attack(SNAKE, &armored);
+        s.stats(armored.as_str()).health
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn pierce_attack_ignores_armor() {
+            assert_eq!(into_armor(false), 7 - 1);
+        }
 
         #[test]
         fn e19_at_its_controller_s_end_of_turn_places_2_plague_counters_on_itself_in_one_placement_not_at_the_opponent_s()
@@ -279,6 +294,11 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn pierce_attack_ignores_armor() {
+            assert_eq!(into_armor(true), 7 - 2);
+        }
 
         #[test]
         fn places_3_plague_counters_at_its_controller_s_end_of_turn_and_its_death_deals_3_hits() {

@@ -1,4 +1,4 @@
-//! C+ #43 AI Slop (SPEC §8.7 row 43, E23, R60, R77, R102, R179, R468, R469, R582). (4) Spell, Legendary.
+//! C+ #43 AI Slop (SPEC §8.7 row 43, E23, R60, R77, R102, R179, R468, R469, R582). (3) Spell, Legendary.
 //!   Fuse {cards} random AI generated cards and add the result to your hand. It costs (0).
 //!   Radiant: the AI generated cards are Radiant.
 //!
@@ -99,6 +99,12 @@ mod tests {
 
     mod base {
         use super::*;
+
+        #[test]
+        fn costs_3_refused_with_2_mana() {
+            let mut s = slop("slop-cost", false, None);
+            crate::expect_costs(&mut s, SLOP, 3, json!({}));
+        }
 
         #[test]
         fn r77_r179_fuses_three_random_ai_generated_cards_into_your_hand_at_0_its_id_names_the_three() {
@@ -225,6 +231,12 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn costs_3_refused_with_2_mana() {
+            let mut s = slop("slop-cost", true, None);
+            crate::expect_costs(&mut s, SLOP, 3, json!({}));
+        }
 
         #[test]
         fn r469_the_three_go_in_on_their_radiant_faces_and_the_result_is_radiant() {
