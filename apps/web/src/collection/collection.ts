@@ -40,6 +40,8 @@ export const collectionTestid = {
   noPacks: "collection-no-packs",
   loading: (part: CollectionPart) => `collection-loading-${part}`,
   error: (part: CollectionPart) => `collection-error-${part}`,
+  /** #1691: Try again beside a panel's failed read. */
+  retry: (part: CollectionPart) => `collection-retry-${part}`,
   set: (set: string) => `collection-set-${set}`,
   setToggle: (set: string) => `collection-set-toggle-${set}`,
   completion: (set: string) => `collection-completion-${set}`,

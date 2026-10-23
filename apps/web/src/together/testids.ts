@@ -48,6 +48,9 @@ export const togetherTestid = {
   noShared: "together-no-shared",
   /** #1568: a failed shared list offers Try again beside the alert. */
   sharedRetry: "together-shared-retry",
+  /** #1691: a failed friends list says why, and Try again reads it again. */
+  friendsError: "together-friends-error",
+  friendsRetry: "together-friends-retry",
 } as const;
 
 /** A mode's radio in the challenge form: `together-challenge-mode-bo1|bo3|random`. */
@@ -74,6 +77,8 @@ export const chatTestid = {
   inMatchList: "in-match-chat-list",
   inMatchFriend: "in-match-chat-friend",
   inMatchUnread: "in-match-chat-unread",
+  /** #1691: beside the list's failed read, Try again reads the friends again. */
+  inMatchRetry: "in-match-chat-retry",
 } as const;
 
 export const challengeToastTestid = {
@@ -105,6 +110,8 @@ export const shareTestid = {
   unshare: "share-friend-unshare",
   none: "share-friend-none",
   error: "share-friend-error",
+  /** #1691: after the first read of the friends failed, Try again reads them again. */
+  retry: "share-friend-retry",
 } as const;
 
 /** "Let friends watch my games" (`allowSpectators`), in the settings panel and on Play together. */

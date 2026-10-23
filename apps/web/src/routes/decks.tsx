@@ -11,6 +11,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import type { CardDefs, CustomCard } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
+import { AccountError } from "../auth/AccountError.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
 import { CardDefsProvider } from "../cards/index.ts";
 import { customDefsOf, useCustomCards } from "../creator/useCustomCards.ts";
@@ -158,9 +159,15 @@ export default function DecksRoute() {
   if (account.kind === "error") {
     return (
       <Shell>
-        <p className="notice" data-testid={DECKBUILDER_ERROR}>
-          {t(account.message)}
-        </p>
+        <AccountError
+          message={account.message}
+          retryAfterMs={account.retryAfterMs}
+          onRetry={() => {
+            account.retry?.();
+          }}
+          testId={DECKBUILDER_ERROR}
+          retryTestId={DECKBUILDER_RETRY}
+        />
       </Shell>
     );
   }

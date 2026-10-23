@@ -13,9 +13,9 @@
 // `WATCH_RECONNECT_MS` apart; a finished game is not reopened. A tab that wakes probes a quiet socket
 // with the hello again, which the server answers with the view it last sent, and replaces one that
 // does not answer (R1441, R1103000), within the same attempts. Once they run out on a game still
-// running, "Reconnect now" (the match bar's, `routes/match.tsx`) opens it again and starts the attempts
-// over (#1570). Run out before the first view, the screen says the game can no longer be reached
-// rather than waiting on (#1599).
+// running, and while a reopen waits (#1691), "Reconnect now" (the match bar's, `routes/match.tsx`)
+// opens it again and starts the attempts over (#1570). Run out before the first view, the screen says
+// the game can no longer be reached rather than waiting on (#1599).
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
@@ -204,7 +204,7 @@ function BackToTogether(): ReactElement {
   );
 }
 
-/** #1570: the match bar's "Reconnect now", offered once the screen's own reopens have run out. */
+/** #1570: the match bar's "Reconnect now", offered once the screen's own reopens have run out and, #1691, while one waits. */
 function ReconnectNow({ className, onReconnect }: { className: string; onReconnect: () => void }): ReactElement {
   return (
     <button type="button" className={className} data-testid={watchTestid.reconnect} onClick={onReconnect}>
@@ -222,6 +222,8 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
   const seconds = String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND));
   // #1570: the reopens ran out on a game still running (a finished game's socket closes as "closed" too).
   const exhausted = connection === "closed" && view?.result == null;
+  // #1691: and while a reopen waits, as the match bar offers it; a click opens the socket at once.
+  const offerReconnect = exhausted || (connection === "connecting" && view?.result == null);
 
   let screen: ReactElement;
   if (connection === "refused") {
@@ -273,7 +275,7 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
                   {name === undefined ? t("Watching your friend") : <Named text={t("Watching {name}")} name={name} />} ·{" "}
                   {t("{seconds} s behind", { seconds })} · {connectionWords(connection)}
                 </span>
-                {exhausted ? (
+                {offerReconnect ? (
                   <>
                     {" "}
                     <ReconnectNow className="link-button" onReconnect={reconnect} />

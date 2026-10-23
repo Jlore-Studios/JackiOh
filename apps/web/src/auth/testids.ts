@@ -134,6 +134,9 @@ export const inviteTestid = {
   resendNotice: "invite-resend-notice",
   checkAgain: "invite-check-again",
   checkResult: "invite-check-result",
+  /** #1691: the account read behind the screen failed, and Try again reads it again. */
+  accountError: "invite-account-error",
+  accountRetry: "invite-account-retry",
 } as const;
 
 export const codeFieldTestid = {

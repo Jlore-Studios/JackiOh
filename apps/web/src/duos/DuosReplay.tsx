@@ -1,6 +1,8 @@
 // A finished co-op game, a step at a time (#965, SPEC §13.9, B41): the result panel's "Watch the
 // replay". `GET /api/duos/matches/:matchId/replay` answers every step at once, the seat's own view
-// after each, so it is read once (`openDuosReplay`) and the steps are held here.
+// after each, so it is read once (`openDuosReplay`) and the steps are held here. A read that failed
+// for a reason that can pass (`reason: "error"`) offers Try again (#1691); an expired or refused
+// replay offers none.
 //
 // The controls are the replay player's (`replay/ReplayPlayer.tsx`), a round standing for a turn
 // (§13.3: a `DuosView` carries no turn). CLAUDE.md rule 7: only the server's views are drawn, on
@@ -272,6 +274,7 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
   useLocale();
   const [steps, setSteps] = useState<DuosReplaySteps | null>(null);
   const [failure, setFailure] = useState<ReplayFailure | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -286,7 +289,8 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
     return () => {
       cancelled = true;
     };
-  }, [matchId]);
+    // One load per mount and per Try again (#1691).
+  }, [matchId, attempt]);
 
   const back = <DuosReplayBack onLeave={onLeave} />;
   if (steps !== null) {
@@ -316,9 +320,26 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
           {t("Loading the replay…")}
         </p>
       ) : (
-        <p className="notice" role="alert" data-testid={replayTestid.failure}>
-          {replayFailureText(failure)}
-        </p>
+        <>
+          <p className="notice" role="alert" data-testid={replayTestid.failure}>
+            {replayFailureText(failure)}
+          </p>
+          {failure.reason === "error" ? (
+            <div className="row">
+              <button
+                type="button"
+                className="button-primary"
+                data-testid={replayTestid.retry}
+                onClick={() => {
+                  setFailure(null);
+                  setAttempt((before) => before + 1);
+                }}
+              >
+                {t("Try again")}
+              </button>
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

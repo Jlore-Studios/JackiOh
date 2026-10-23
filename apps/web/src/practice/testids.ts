@@ -24,6 +24,12 @@ export const practiceTestid = {
    * or they are still loading or could not be read); Start is off while it shows. role="status".
    */
   customBlocked: "practice-custom-blocked",
+  /** #1691: beside `customBlocked`, after the custom cards could not be read: Try again reads them again. */
+  customRetry: "practice-custom-retry",
+  /** #1691: beside the deck hint, after the saved decks could not be read: Try again reads them again. */
+  savedRetry: "practice-saved-retry",
+  /** #1691: in the preview, after the card list could not be loaded: Try again asks the worker again. */
+  defsRetry: "practice-defs-retry",
   /** #921: `?try=<custom id>` while the account's custom cards are read, before the game starts. */
   tryLoading: "practice-try-loading",
   /** #921: on the setup, after `?try=` named no custom card of the account's; role="status". */

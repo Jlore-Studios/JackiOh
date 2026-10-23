@@ -6,6 +6,7 @@
 
 import { useId, useRef, useState, type ReactElement } from "react";
 
+import { TryAgainButton } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getFriends, getUnread, type PlayerRef } from "../net/social.ts";
@@ -25,7 +26,7 @@ function OnlineFriends({
   unread: Readonly<Record<string, number>>;
   onPick: (friend: PlayerRef) => void;
 }): ReactElement {
-  const [friends] = usePolled(getFriends, FRIENDS_POLL_MS);
+  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
   if (friends.kind === "loading") {
     return (
       <p className="in-match-chat__note" role="status">
@@ -35,9 +36,17 @@ function OnlineFriends({
   }
   if (friends.kind === "failed") {
     return (
-      <p className="in-match-chat__note" role="alert">
-        {t(friends.message)}
-      </p>
+      <>
+        <p className="in-match-chat__note" role="alert">
+          {t(friends.message)}
+        </p>
+        <TryAgainButton
+          retryAfterMs={friends.retryAfterMs}
+          onRetry={reloadFriends}
+          testId={chatTestid.inMatchRetry}
+          className="link-button"
+        />
+      </>
     );
   }
   // A list whatever answered: the rail sits on every match screen.
