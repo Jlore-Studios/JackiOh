@@ -42,7 +42,7 @@ use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
     CardStatsFilter, GAME_SOURCES, GameMode, PilotFilter, SourceFilter, StatsTotals, card_stats,
-    card_stats_of, sources_of,
+    card_stats_of, parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
@@ -51,12 +51,13 @@ use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
-    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
     SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource,
-    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -438,6 +439,39 @@ impl StoreHarness {
         }
     }
 
+    /// R1715000: a record written before the totals, not folded, whose detail does not read.
+    pub async fn plant_unreadable_game_record(&self, id: &str) {
+        match &self.ends {
+            Ends::Memory { data, .. } => {
+                let message = parse_game_record(&unreadable_game_record_detail(id))
+                    .expect_err("an unreadable detail")
+                    .message;
+                let mut data = data.lock().await;
+                data.tables
+                    .unreadable_game_records
+                    .insert(id.to_string(), message);
+                data.tables.game_record_ledger.insert(
+                    id.to_string(),
+                    fake::GameRecordLedgerRow {
+                        recorded_at: self.now(),
+                        folded: false,
+                    },
+                );
+            }
+            Ends::Postgres { admin } => {
+                sqlx::query(
+                    "insert into public.game_records (id, source, mode, patch, record, folded)
+                     values ($1, 'live', 'bo1', 'v0.1.1', $2::jsonb, false)",
+                )
+                .bind(id)
+                .bind(unreadable_game_record_detail(id).to_string())
+                .execute(admin)
+                .await
+                .expect("plant an unreadable game record");
+            }
+        }
+    }
+
     /// §14.10: each of a profile's collection grants' `dev` mark, oldest first, which no port read
     /// returns: in Postgres `collection_grants.dev` (migration 0045), in memory the grant's own.
     pub async fn collection_dev_marks(&self, profile_id: &str) -> Vec<bool> {
@@ -471,6 +505,12 @@ impl StoreHarness {
     pub fn now(&self) -> i64 {
         now_ms()
     }
+}
+
+/// R1715000: a game record's detail that no `GameRecord` reads, as a row in an older format might
+/// hold: the copies `game_records_copies_check` asks for and nothing else.
+fn unreadable_game_record_detail(id: &str) -> Value {
+    json!({ "id": id, "source": "live", "mode": "bo1", "patch": "v0.1.1" })
 }
 
 /// Every table the migrations create, children first. `cards` is seeded once and kept. The loadout
@@ -4736,6 +4776,9 @@ mod game_records {
         from(value)
     }
 
+    /// R1715000: a live id that sorts before every id of `mixed_records`, so it heads the fold's queue.
+    const UNREADABLE_ID: &str = "a-unreadable";
+
     /// R376: the mode a record is filed under is read off what made the match.
     async fn r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
@@ -5191,16 +5234,16 @@ mod game_records {
 
         let mut sorted = records.clone();
         sorted.sort_by(|a, b| a.id.cmp(&b.id));
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(2)), 2);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(2)).folded, 2);
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&sorted[..2])
         );
         assert_eq!(
-            q!(harness, t => t.game_records_fold_pending(100)),
+            q!(harness, t => t.game_records_fold_pending(100)).folded,
             records.len() - 2
         );
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 0);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)).folded, 0);
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
@@ -5245,7 +5288,7 @@ mod game_records {
             q!(harness, t => t.game_records_insert_batch(&records)),
             vec![false; records.len()]
         );
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 0);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)).folded, 0);
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
@@ -5260,7 +5303,7 @@ mod game_records {
             j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
             json!(0)
         );
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 1);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)).folded, 1);
         assert_eq!(
             j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
             json!(1)
@@ -5268,6 +5311,69 @@ mod game_records {
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records[..1])
+        );
+    }
+
+    /// R1715000: a record whose detail does not read is set aside (marked folded with its detail
+    /// emptied, counted nowhere, answered) and the records behind it in the queue are folded.
+    async fn r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        harness.forget_game_record_folds().await;
+        harness.plant_unreadable_game_record(UNREADABLE_ID).await;
+        let message = parse_game_record(&unreadable_game_record_detail(UNREADABLE_ID))
+            .expect_err("an unreadable detail")
+            .message;
+        let mut sorted = records.clone();
+        sorted.sort_by(|a, b| a.id.cmp(&b.id));
+
+        // It heads the queue: the batch of two takes it and the first record behind it.
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(2)),
+            FoldedRecords {
+                folded: 1,
+                unreadable: vec![UnreadableGameRecord {
+                    id: UNREADABLE_ID.into(),
+                    message,
+                }],
+            }
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&sorted[..1])
+        );
+        // The rest fold, and nothing is taken again.
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(100)),
+            FoldedRecords {
+                folded: records.len() - 1,
+                unreadable: Vec::new(),
+            }
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(100)),
+            FoldedRecords::default()
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // Its detail is gone: the read of the records neither fails on it nor returns it.
+        let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
+        assert_eq!(ids_of(&held), ids_of(&sorted));
+        // Its id is kept: written again it is refused and counts nothing.
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&[game_record(UNREADABLE_ID, json!({}))])),
+            vec![false]
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
         );
     }
 
@@ -5281,6 +5387,7 @@ mod game_records {
         r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time,
         r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
         r1596000_lists_the_finished_matches_whose_record_was_never_filed,
+        r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
     );
 }
 
