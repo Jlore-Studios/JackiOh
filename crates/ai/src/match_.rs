@@ -3,7 +3,8 @@
 //! Both runners are deterministic: the game rng lives in the state (`reduce` takes none, so it
 //! resumes from `(seed, rngCursor)` exactly as `fold` does), every controller draws from its own
 //! stream seeded from the match seed and its seat, and every nonce is derived from the log. So a
-//! config is a game, and `fold({ seed, decks, handicaps, log })` of a record reproduces its hash.
+//! config is a game, and folding a record's log with `MatchConfig::fold_args` (its seed, decks,
+//! handicaps and setup inputs) reproduces its hash.
 //!
 //! Port of `packages/ai/src/match.ts` (`match` is a Rust keyword, hence `match_`). TS's `try`/`catch`
 //! around a controller call and around `reduce` is `catch_unwind`: a refusal comes back as `error`, and
@@ -12,9 +13,9 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CreateGameOptions, GameResult, GameState, Handicap, PerPlayer,
-    PerPlayerOpt, PlayerId, Rng, begin_game, create_game, hash_state, legal_actions, reduce, seat_to_act,
-    subsystems,
+    Action, ActionBody, ActionType, CreateGameOptions, FoldArgs, GameResult, GameState, Handicap,
+    LastBoardInput, PerPlayer, PerPlayerOpt, PlayerId, Rng, begin_game, create_game, hash_state,
+    legal_actions, reduce, seat_to_act, subsystems,
 };
 use serde::{Deserialize, Serialize};
 
@@ -63,6 +64,23 @@ impl SeatController {
     }
 }
 
+/// The setup inputs a match is created with beyond its decks and handicaps (§9.3), as `create_game`
+/// and `fold` take them (#1697). Each is `None` unless a caller sets it, and a config with none is
+/// created, played and folded exactly as before they existed.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchSetup {
+    /// R433: the seats whose deck their player was dealt rather than built.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dealt: Option<Vec<PlayerId>>,
+    /// R417, R564: each seat's last board, which C+ #29 Portal to the Past Discovers from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_boards: Option<LastBoardInput>,
+    /// R678: the boards a Glitch may lay down, one per seat.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub glitch_boards: Option<LastBoardInput>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct MatchConfig {
@@ -73,6 +91,27 @@ pub struct MatchConfig {
     pub controllers: PerPlayer<SeatController>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_actions: Option<usize>,
+    /// #1697: the setup inputs the game is created with beyond its decks and handicaps. Its keys
+    /// (`dealt`, `lastBoards`, `glitchBoards`) are written beside the others, and it is none by default.
+    #[serde(flatten)]
+    pub setup: MatchSetup,
+}
+
+impl MatchConfig {
+    /// What `fold` takes to replay `log` as the game `play_match` created from this config (§9.3): its
+    /// seed, decks, handicaps and setup inputs.
+    pub fn fold_args(&self, log: Vec<Action>) -> FoldArgs {
+        FoldArgs {
+            seed: self.seed.clone(),
+            decks: self.decks.clone(),
+            log,
+            handicaps: self.handicaps.clone(),
+            dealt: self.setup.dealt.clone(),
+            last_boards: self.setup.last_boards.clone(),
+            glitch_boards: self.setup.glitch_boards.clone(),
+            ..FoldArgs::default()
+        }
+    }
 }
 
 /// Called with the true state before and after every accepted action.
@@ -247,16 +286,19 @@ struct Accepted {
     next: GameState,
 }
 
-/// Deterministic: create_game+begin_game, then while no result: actor = seat_to_act(state) (R265);
-/// controller rng = Rng::new(`${seed}:ctl:${seat}`, 0); nonce `m${log.length}`. A refused action is
-/// recorded in `rejected` and replaced by endTurn (or the first legal answer); a panic is recorded
-/// and ends the match.
+/// Deterministic: create_game (with the config's setup inputs)+begin_game, then while no result:
+/// actor = seat_to_act(state) (R265); controller rng = Rng::new(`${seed}:ctl:${seat}`, 0); nonce
+/// `m${log.length}`. A refused action is recorded in `rejected` and replaced by endTurn (or the first
+/// legal answer); a panic is recorded and ends the match.
 pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
     let max_actions = config.max_actions.unwrap_or(AI_MATCH.max_actions);
     let created = create_game(&CreateGameOptions {
         seed: config.seed.clone(),
         decks: config.decks.clone(),
         handicaps: config.handicaps.clone(),
+        dealt: config.setup.dealt.clone(),
+        last_boards: config.setup.last_boards.clone(),
+        glitch_boards: config.setup.glitch_boards.clone(),
         ..CreateGameOptions::default()
     });
     let mut state = begin_game(&created).state;

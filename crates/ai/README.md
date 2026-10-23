@@ -177,6 +177,12 @@ knows nothing of cards or sets: it keeps meaning the same when the AI improves o
 arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
 the same way, and the skill-to-Elo curve is measured with the arena.
 
+`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, written beside the config's
+other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps (R433, R417,
+R564, R678), and `MatchConfig::fold_args` folds a record with all of them (#1697). Unset, a game is
+created, played and folded exactly as before. No gate sets it; `SweepOptions.setup` opts a sweep in,
+the same inputs in seat order in every game.
+
 ## Development runs for the card statistics (R378)
 
 `dev_game_config` and `dev_game_record` deal and play game n of a development run as All Random
@@ -186,6 +192,8 @@ record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`
 `forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
 seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
+`DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
+record stays a pure function of its number.
 
 ## The learned evaluation's features (#466, #1006)
 

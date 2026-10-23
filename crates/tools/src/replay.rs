@@ -113,7 +113,7 @@ const SHIPPED_GAME_ACTIONS: usize = 120;
 #[cfg(test)]
 pub(crate) fn game_on_a_shipped_catalog() -> (Value, String) {
     use indexmap::IndexMap;
-    use jackioh_ai::{MatchConfig, MatchHooks, SeatController, play_match};
+    use jackioh_ai::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
     use jackioh_engine::PerPlayer;
     use jackioh_engine::testkit::register_shipped;
     jackioh_cards::register_all();
@@ -137,6 +137,7 @@ pub(crate) fn game_on_a_shipped_catalog() -> (Value, String) {
             handicaps: None,
             controllers: PerPlayer::new(SeatController::Random, SeatController::Random),
             max_actions: Some(SHIPPED_GAME_ACTIONS),
+            setup: MatchSetup::default(),
         };
         let record = with_shipped(shipped, || play_match(&config, &mut MatchHooks::default()));
         let mut game = json!({ "seed": seed, "decks": [decks.0, decks.1], "log": record.log });

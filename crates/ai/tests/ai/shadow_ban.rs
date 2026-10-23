@@ -333,6 +333,7 @@ mod sweep_flags_b25 {
                 retime: None,
                 tier: None,
                 banned: None,
+                setup: None,
             },
         ));
         assert_eq!(result["defId"], json!("core-011"));
@@ -555,6 +556,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: Some(FIXTURE_BANNED_IDS),
+                setup: None,
             },
         ));
         assert_eq!(easy["tier"], json!("easy"));
@@ -575,6 +577,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                 retime: None,
                 tier: Some(Difficulty::Hard),
                 banned: Some(FIXTURE_BANNED_IDS),
+                setup: None,
             },
         ));
         assert_eq!(hard["tier"], json!("hard"));
@@ -1058,6 +1061,7 @@ mod the_two_pass_sweep_r390 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
             },
         ));
         assert_eq!(timed["forced"], json!("classic-013"));
@@ -1108,6 +1112,7 @@ mod the_two_pass_sweep_r390 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
             },
         ));
         assert_eq!(plain["suspects"], json!([]));
@@ -1158,6 +1163,7 @@ mod a_slow_decision_timed_again_r977000 {
             retime: Some(&retime),
             tier: Some(Difficulty::Easy),
             banned: None,
+            setup: None,
         });
         (out, handed.get(), budget.get())
     }
@@ -1229,6 +1235,7 @@ mod a_slow_decision_timed_again_r977000 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
             },
         );
         assert!(result.timeouts > 0);

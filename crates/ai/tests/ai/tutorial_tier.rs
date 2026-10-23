@@ -154,6 +154,7 @@ fn tier_game(tier: Tier, n: i32) -> MatchConfig {
             }
         },
         max_actions: None,
+        setup: MatchSetup::default(),
     }
 }
 
