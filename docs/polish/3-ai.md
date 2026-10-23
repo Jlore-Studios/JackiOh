@@ -713,7 +713,11 @@ The rule, one step at a time, each step one `reduce` (one node):
    less the attacker's own `unitWorth` if it dies. First, a Deft unit of its in Defense Position,
    its switch and its attack unspent, is switched to Attack on trial (one node, R49), and the switch
    is kept when the best attack afterwards, ranked one hit at a time, is its own.
-4. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
+4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
+   to Defense Position of its units in Attack Position whose switch is unspent (a unit that
+   attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own
+   `evaluate` likes best, if that beats standing still (#1696).
+5. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
 
 It never plays a card it held unseen: those are samples, and a guessed hand adds noise rather than
 information. At most `AI_REPLY.maxSteps` steps; the seat's own prompt at its next turn start ends

@@ -674,6 +674,9 @@ pub struct AiReply {
     /// on that hero is worth `AI_EVAL.win`, so the face goes first; false scores one hit at a time
     /// (`reply_face_value`), as before.
     pub open_lethal: bool,
+    /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
+    /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
+    pub defense_switches: i32,
 }
 
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
@@ -689,6 +692,10 @@ pub const AI_REPLY: AiReply = AiReply {
     // 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing (training/improve.md, A screen); the
     // training lanes may turn it on.
     open_lethal: false,
+    // #1696: on. Its screen, 400 games of improve-dev against the parent (20b20f9ad), read 199-199 with
+    // deal 136 aborted at the action cap in both seatings (the parent aborts it against itself too),
+    // edge 0.0 (-0.057 to 0.057), every other game clean (training/improve.md, A screen); 0 turns it off.
+    defense_switches: 4,
 };
 
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).
