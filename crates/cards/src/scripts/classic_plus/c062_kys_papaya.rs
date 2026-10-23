@@ -563,7 +563,10 @@ mod tests {
             ];
             let mut deck: Vec<String> = units.iter().chain(more.iter()).map(|id| id.to_string()).collect();
             deck.extend(
-                ["core-037", "core-043", "core-045", PAPAYA]
+                [
+                    "core-037", "core-043", "core-045", "core-003", "core-053", "core-055", "core-066", "core-068",
+                    PAPAYA,
+                ]
                     .iter()
                     .map(|id| id.to_string()),
             );
@@ -615,9 +618,12 @@ mod tests {
                     &mut log,
                 );
             }
-            // A turn each, so p1 has the Papaya's (2).
-            for player in [PlayerId::P1, PlayerId::P2] {
+            // Up to p1's second turn, so p1 has the Papaya's (2), whoever went first.
+            let mut p1_turns = u32::from(state.active == PlayerId::P1);
+            while p1_turns < 2 {
+                let player = state.active;
                 state = act(&state, ActionBody::EndTurn, player, &mut count, &mut log);
+                p1_turns += u32::from(state.active == PlayerId::P1);
             }
             let papaya = state
                 .players

@@ -862,7 +862,7 @@ pub fn instance_game(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> G
     })
 }
 
-/// A 20-card deck of these fixtures and vanilla fillers, for the played-out replay games.
+/// A DECK_SIZE-card deck of these fixtures and vanilla fillers, for the played-out replay games.
 pub fn instance_deck(player: PlayerId) -> Vec<String> {
     let mut own: Vec<String> = [
         &*brittle_unit,

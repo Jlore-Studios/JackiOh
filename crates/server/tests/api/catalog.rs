@@ -132,6 +132,9 @@ fn sorted_keys(object: &Value) -> Vec<String> {
     keys
 }
 
+/// §9.4 L2's `DECK_SIZE`, as a slice length.
+const DECK: usize = jackioh_engine::config::DECK_SIZE as usize;
+
 /// The first `count` ids of the catalog that are not tokens, in catalog order.
 fn legal(catalog: &Catalog, count: usize) -> Vec<String> {
     catalog
@@ -320,14 +323,14 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
     #[tokio::test]
     async fn adapts_the_shared_module_s_verdict_without_restating_a_rule() {
         let app = test_app().await;
-        let legal = legal(&app.catalog, 60);
+        let legal = legal(&app.catalog, 3 * DECK);
         let owned = one_of_each(&legal);
 
         let found = validate_trio(
             decks(&[
-                legal[0..20].to_vec(),
-                legal[20..40].to_vec(),
-                legal[40..60].to_vec(),
+                legal[..DECK].to_vec(),
+                legal[DECK..2 * DECK].to_vec(),
+                legal[2 * DECK..].to_vec(),
             ]),
             &app.catalog,
             owned.clone(),
@@ -337,9 +340,9 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
         // One deck short of DECK_SIZE: the shared module names the rule, the deck and the card.
         let short = validate_trio(
             decks(&[
-                legal[0..19].to_vec(),
-                legal[20..40].to_vec(),
-                legal[40..60].to_vec(),
+                legal[..DECK - 1].to_vec(),
+                legal[DECK..2 * DECK].to_vec(),
+                legal[2 * DECK..].to_vec(),
             ]),
             &app.catalog,
             owned,
@@ -351,7 +354,7 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
     #[tokio::test]
     async fn r253_checks_one_best_of_1_deck_on_the_one_deck_rules_when_the_port_asks_for_scope_deck() {
         let app = test_app().await;
-        let legal = legal(&app.catalog, 20);
+        let legal = legal(&app.catalog, DECK);
         let owned = one_of_each(&legal);
 
         // One legal deck: as a trio it fails L1 (one deck, not three); as a deck it passes.
@@ -370,7 +373,7 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
 
         // One card short: L2, naming the deck by the name the player gave it.
         let short = validate_one(
-            json!({ "name": "Midrange", "cards": legal[0..19] }),
+            json!({ "name": "Midrange", "cards": legal[..DECK - 1] }),
             &app.catalog,
             owned,
         );
@@ -387,16 +390,16 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
     #[tokio::test]
     async fn r253_names_a_trio_s_decks_in_its_messages_when_the_port_passes_their_names() {
         let app = test_app().await;
-        let legal = legal(&app.catalog, 60);
+        let legal = legal(&app.catalog, 3 * DECK);
         let owned = one_of_each(&legal);
         let shared = legal[0].clone();
         let mut second = vec![shared.clone()];
-        second.extend_from_slice(&legal[21..40]);
+        second.extend_from_slice(&legal[DECK + 1..2 * DECK]);
         let found = validate_trio(
             json!([
-                { "name": "Aggro", "cards": legal[0..20] },
+                { "name": "Aggro", "cards": legal[..DECK] },
                 { "name": "Control", "cards": second },
-                { "name": "Tempo", "cards": legal[40..60] },
+                { "name": "Tempo", "cards": legal[2 * DECK..] },
             ]),
             &app.catalog,
             owned,
@@ -415,12 +418,12 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
     #[tokio::test]
     async fn reports_a_card_the_profile_does_not_own_l5_rather_than_silently_allowing_it() {
         let app = test_app().await;
-        let legal = legal(&app.catalog, 60);
+        let legal = legal(&app.catalog, 3 * DECK);
         let found = validate_trio(
             decks(&[
-                legal[0..20].to_vec(),
-                legal[20..40].to_vec(),
-                legal[40..60].to_vec(),
+                legal[..DECK].to_vec(),
+                legal[DECK..2 * DECK].to_vec(),
+                legal[2 * DECK..].to_vec(),
             ]),
             &app.catalog,
             json!({}),
@@ -432,7 +435,7 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
     async fn r141_makes_l5_unreachable_on_its_own_given_r111_s_launch_grant_of_one_copy_of_each() {
         let app = test_app().await;
         let catalog = &app.catalog;
-        let legal = legal(catalog, 60);
+        let legal = legal(catalog, 3 * DECK);
         // R111's launch grant: one copy of every non-token card. The test above owns *nothing*,
         // which R111 makes impossible, so L5 on its own is reachable only there.
         let every: Vec<String> = catalog
@@ -448,26 +451,27 @@ mod loadout_validator_binding_section_9_4_one_module_shared {
             .find(|id| catalog.is_token(id))
             .cloned()
             .unwrap_or_default();
-        let with_first = |first: Vec<String>| decks(&[first, legal[20..40].to_vec(), legal[40..60].to_vec()]);
-        let nineteen_and = |last: &str| {
-            let mut first = legal[0..19].to_vec();
+        let with_first =
+            |first: Vec<String>| decks(&[first, legal[DECK..2 * DECK].to_vec(), legal[2 * DECK..].to_vec()]);
+        let short_one_and = |last: &str| {
+            let mut first = legal[..DECK - 1].to_vec();
             first.push(last.to_string());
             first
         };
         let mut in_two = vec![legal[0].clone()];
-        in_two.extend_from_slice(&legal[21..40]);
+        in_two.extend_from_slice(&legal[DECK + 1..2 * DECK]);
 
         let ways = [
             // A second copy of a card: L3 (MAX_COPIES) is broken before L5 can be.
-            ("a repeated card", with_first(nineteen_and(legal[0].as_str()))),
+            ("a repeated card", with_first(short_one_and(legal[0].as_str()))),
             // The same card in two decks: L4.
             (
                 "a card in two decks",
-                decks(&[legal[0..20].to_vec(), in_two, legal[40..60].to_vec()]),
+                decks(&[legal[..DECK].to_vec(), in_two, legal[2 * DECK..].to_vec()]),
             ),
             // A Token, and an id the catalog does not have: L3 and L6.
-            ("a token", with_first(nineteen_and(token.as_str()))),
-            ("an unknown id", with_first(nineteen_and("core-does-not-exist"))),
+            ("a token", with_first(short_one_and(token.as_str()))),
+            ("an unknown id", with_first(short_one_and("core-does-not-exist"))),
         ];
 
         let mut saw_l5 = false;
@@ -649,13 +653,13 @@ mod r164_where_l6_s_ban_list_lives_section_9_4_r105 {
     async fn r164_reads_bannedness_through_the_catalog_handle_never_off_a_card_definition() {
         let app = test_app().await;
         let catalog = &app.catalog;
-        let playable = legal(catalog, 60);
+        let playable = legal(catalog, 3 * DECK);
         let victim = playable[0].clone();
         let owned = one_of_each(&playable);
         let loadout = decks(&[
-            playable[0..20].to_vec(),
-            playable[20..40].to_vec(),
-            playable[40..60].to_vec(),
+            playable[..DECK].to_vec(),
+            playable[DECK..2 * DECK].to_vec(),
+            playable[2 * DECK..].to_vec(),
         ]);
 
         // PREMISE: the loadout is legal today, so the L6 below comes from the ban and nothing else.

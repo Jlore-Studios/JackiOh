@@ -267,7 +267,7 @@ fn playing(seed: &str) -> GameState {
         )
         .state;
     }
-    let mut catalog = vanilla_catalog(40, 1);
+    let mut catalog = vanilla_catalog(2 * DECK_SIZE, 1);
     for entry in defs() {
         catalog.insert(entry.id.clone(), entry);
     }

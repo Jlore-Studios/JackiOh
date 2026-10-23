@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 
 use crate::replay::{canonical, fnv1a32_utf16};
 use crate::{
-    Action, CreateGameArgs, FoldArgs, GameEvent, GameState, PlayerId, begin_game, create_game, fold,
+    Action, CreateGameArgs, FoldArgs, GameEvent, GameState, PlayerId, begin_game, create_recorded_game, fold,
     hash_state, legal_actions, reduce, view_for,
 };
 
@@ -187,7 +187,7 @@ fn check_snapshot(
     Ok(())
 }
 
-/// Replays one parsed line of `games.jsonl` (§13.3): `create_game(args)`, `begin_game`, check `begin`; then
+/// Replays one parsed line of `games.jsonl` (§13.3): `create_recorded_game(args)`, `begin_game`, check `begin`; then
 /// per step check `l` for the actor, apply `a` with `reduce`, check `s`, `v` and `e`; last, the ending and
 /// length must be `end`. `Ok` carries the number of steps replayed.
 pub fn replay_game(seed: &str, game: &Value) -> Result<usize, Box<Mismatch>> {
@@ -223,7 +223,7 @@ pub fn replay_game(seed: &str, game: &Value) -> Result<usize, Box<Mismatch>> {
         }
     };
 
-    let begun = begin_game(&create_game(&args));
+    let begun = begin_game(&create_recorded_game(&args));
     if let Some(error) = begun.error {
         return Err(fail(
             "begin",

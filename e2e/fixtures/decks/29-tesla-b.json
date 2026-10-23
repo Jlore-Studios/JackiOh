@@ -1,7 +1,7 @@
 {
   "id": "29-tesla-b",
   "spec": "29-animated-trap.cy.ts",
-  "description": "Player 2 deck for spec 29 (R383). This is spec 03 player 2 deck (03-sheepish-b) with #41 Sheepish swapped for C #5 Tesla. Tesla is then the only Trap or Field Trap in either deck, so the face-down card in player 2 backrow can only be Tesla. The deck already holds #62 Friend of Felinors, which fills player 2 unit row in the second test, so that Tesla has no unit zone to step into. Player 1 plays 03-plays-a. The other cards are spec 03 choice-free filler that player 2 never plays.",
+  "description": "Player 2 deck for spec 29 (R383). This is spec 03 player 2 deck (03-sheepish-b) with #41 Sheepish swapped for C #5 Tesla. Tesla is then the only Trap or Field Trap in either deck, so the face-down card in player 2 backrow can only be Tesla. The deck already holds #62 Friend of Felinors, which fills player 2 unit row in the second test, so that Tesla has no unit zone to step into. Player 1 plays 03-plays-a. The other cards are spec 03 choice-free filler that player 2 never plays. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-001",
     "core-003",
@@ -23,5 +23,12 @@
     "core-075",
     "core-077",
     "core-081"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

@@ -1,7 +1,7 @@
 {
   "id": "30-quiet-b",
   "spec": "30-activate.cy.ts",
-  "description": "Player 2 deck for specs 30, 31 (player 1 side is 31-spells-a) and 32: 08-do-nothing-b card list. Every card costs 3 or more and none has a Cast-on-draw, a Quickdraw, a hand trigger or a Trap, so player 2 does nothing on the turns these specs pass through and the board and both heroes move only through player 1 plays.",
+  "description": "Player 2 deck for specs 30, 31 (player 1 side is 31-spells-a) and 32: 08-do-nothing-b card list. Every card costs 3 or more and none has a Cast-on-draw, a Quickdraw, a hand trigger or a Trap, so player 2 does nothing on the turns these specs pass through and the board and both heroes move only through player 1 plays. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-006",
     "core-013",
@@ -23,5 +23,12 @@
     "core-095",
     "core-099",
     "core-100"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

@@ -13,6 +13,7 @@ What the other crates call:
 | Function | Answers |
 | --- | --- |
 | `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678), dealt seats (R433) and the practice sandbox flag (R923000) |
+| `create_recorded_game(&CreateGameOptions) -> GameState` | `create_game` for a game already made (a fold, a replay, a summary): a seat with no handicap holds the deck size the game was made under, so a game dealt 20-card decks before #1705 folds as it was played (R1705003) |
 | `begin_game(&GameState) -> ReduceResult` | setup run (§2.1): the opening draws and the mulligan prompts |
 | `reduce(&GameState, &Action) -> ReduceResult` | the next state and its events, or `error: Some(reason)` with the input state unchanged and no events |
 | `reduce_unpiloted(&GameState, &Action) -> ReduceResult` | `reduce` for a search's world (`crates/ai`): a turn the autopilot owes (R1183002) is left owed, not played; a game's turns never go through it |

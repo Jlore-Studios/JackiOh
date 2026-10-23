@@ -15,7 +15,8 @@
 //! them and the rest shuffled (R750000), then random decks dealt as a player's All Random deck is (no shadow ban, no soft gate,
 //! R1453) leaning on the cards that win as far as its strength says (`deal_random_deck_with_strength`,
 //! R750000), each kept only when it is legal (`validate_deck`, against a collection of its own cards:
-//! a bot owns nothing and needs nothing), and dealt again whenever the catalog version changes. Its
+//! a bot owns nothing and needs nothing), and dealt again whenever the catalog version changes or a
+//! deck it holds is not of `DECK_SIZE` cards (R1705001, `bots::fallback::holds_decks`). Its
 //! Conquest trio (R641000) is dealt after them, for the same catalog version: its own decks first, in order, each that shares no card with
 //! those taken before it, then decks dealt with every card already taken left out, until it holds
 //! three that pass the trio's rules (`validate_trio`, R253).
@@ -45,6 +46,7 @@ use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::api::ranked::{SeasonDeps, build_season_id};
 use crate::app::{App, now_ms};
+use crate::bots::fallback::{holds_deck_size, holds_decks, holds_trio};
 use crate::bots::names::draw_username;
 use crate::bots::persona::pick_bot_persona;
 use crate::config::{
@@ -270,10 +272,14 @@ pub fn bot_target_strength(strength: usize) -> f64 {
 /// `wins_b × games_a`, so no float decides it, as `win_rate_leader` does), then more games, then the
 /// ids joined, ascending; `unranked` holds the rest in the records' order. A draw is a game not won, as
 /// `card_stats` counts it, and a list needs its 20 games before it is ranked at all, so a list that
-/// won its one game never goes ahead of one that won 90 of 200.
+/// won its one game never goes ahead of one that won 90 of 200. A list not of `DECK_SIZE` cards, played
+/// before the size changed and still in the patch's totals, is left out of both (R1705001): it fails L2,
+/// and left in, such lists would take every one of `draw_decks`' attempts.
 fn ranked_human_bo1_decklists(lists: &[ListTotal]) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-    let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) =
-        lists.iter().partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
+    let (mut ranked, unranked): (Vec<&ListTotal>, Vec<&ListTotal>) = lists
+        .iter()
+        .filter(|list| holds_deck_size(&list.deck))
+        .partition(|list| list.games >= CARD_STATS_MIN_SAMPLE);
     ranked.sort_by(|a, b| {
         (b.wins * a.games)
             .cmp(&(a.wins * b.games))
@@ -428,10 +434,11 @@ pub struct PoolRefresh {
     pub retired: usize,
     pub reinstated: usize,
     pub created: usize,
-    /// Bots whose decks were dealt (new bots, and bots whose decks were for another catalog).
+    /// Bots whose decks were dealt (new bots, and bots whose decks were for another catalog or of
+    /// another size than `DECK_SIZE`, R1705001).
     pub dealt: usize,
     /// R641000: bots whose Conquest trio was dealt (bots that held none, and bots whose trio was for
-    /// another catalog).
+    /// another catalog or of another size, R1705001).
     pub trios: usize,
     /// R1555000: bots that grind after it.
     pub grinding: usize,
@@ -485,8 +492,9 @@ pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreErr
 }
 
 /// R1454: sizes the pool for the people active now, makes, retires and reinstates bots to fit, and
-/// deals decks to every active bot that holds none for this catalog, then (R641000) a trio to every
-/// active bot that holds none for it, then (R1555000) sets grinding the bots `plan_grind` names
+/// deals decks to every active bot that holds none for this catalog, or holds one not of `DECK_SIZE`
+/// cards (R1705001), then (R641000) a trio to every active bot that holds none for it on the same
+/// terms, then (R1555000) sets grinding the bots `plan_grind` names
 /// against this season's placed people, and every other bot, retired ones included, not. `seed`
 /// seeds the new bots.
 pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh, StoreError> {
@@ -524,9 +532,8 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     let stale: Vec<BotRow> = bots
         .into_iter()
         .filter(|bot| bot.retired_at.is_none())
-        .filter(|bot| {
-            bot.decks.is_empty() || bot.decks_catalog_version.as_deref() != Some(app.catalog.version.as_str())
-        })
+        // R1705001: a bot dealt decks of another size than `DECK_SIZE` is dealt again.
+        .filter(|bot| !holds_decks(bot, &app.catalog.version))
         .collect();
     let lists = if stale.is_empty() {
         Vec::new()
@@ -553,7 +560,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
     tx.commit().await?;
     let mut trios = 0;
     for bot in bots.iter().filter(|bot| bot.retired_at.is_none()) {
-        if bot.trio.is_some() && bot.trio_catalog_version.as_deref() == Some(app.catalog.version.as_str()) {
+        if holds_trio(bot, &app.catalog.version) {
             continue;
         }
         let Some(trio) = draw_trio(

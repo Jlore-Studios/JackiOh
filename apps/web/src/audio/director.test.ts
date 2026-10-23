@@ -4,6 +4,7 @@
 // come from the real `planEntries`, and views from the web fixtures, so an event is the very object
 // the view carries: the director matches events by identity, as the runner hands them out.
 
+import { DECK_SIZE } from "@jackioh/engine/config";
 import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -712,10 +713,10 @@ const SHEEPISH = "core-041";
 /** A real game where p1 sets #41 Sheepish and p2 then plays a unit into it. */
 function sheepishGame(): { set: Heard; fire: Heard } | null {
   const cheap = devDeck("cheap20");
-  const p1Deck = [SHEEPISH, ...cheap.filter((id) => id !== SHEEPISH)].slice(0, 20);
+  const p1Deck = [SHEEPISH, ...cheap.filter((id) => id !== SHEEPISH)].slice(0, DECK_SIZE);
   const p2Deck = cheap.filter((id) => id !== SHEEPISH);
   for (let seed = 1; seed <= 40; seed += 1) {
-    const game = realGame(`audio-sheepish-${String(seed)}`, [p1Deck, p2Deck.slice(0, 20)]);
+    const game = realGame(`audio-sheepish-${String(seed)}`, [p1Deck, p2Deck.slice(0, DECK_SIZE)]);
     let set: Heard | null = null;
     for (let step = 0; step < 16; step += 1) {
       answerPrompts(game);

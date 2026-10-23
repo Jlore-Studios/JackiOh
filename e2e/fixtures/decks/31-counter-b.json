@@ -1,7 +1,7 @@
 {
   "id": "31-counter-b",
   "spec": "31-counter-opponent-turn.cy.ts",
-  "description": "Player 2 deck for spec 31 (section 10.5, R17, R448). This is spec 03 player 2 deck (03-sheepish-b) with #41 Sheepish swapped for C #17 Counterspell and #1 Big D Fender swapped for #60 Bear Honeypot. These are the only two Traps in either deck. Bear Honeypot springs on any 1-cost card player 1 plays, so set beside Counterspell it is the trap a countered 1-cost Spell would have reached: R17 says a countered card reaches no other trap. Counterspell answers Spells only, so the Unit player 1 plays next is not countered and springs the Honeypot, which shows that the Honeypot was armed all along.",
+  "description": "Player 2 deck for spec 31 (section 10.5, R17, R448). This is spec 03 player 2 deck (03-sheepish-b) with #41 Sheepish swapped for C #17 Counterspell and #1 Big D Fender swapped for #60 Bear Honeypot. These are the only two Traps in either deck. Bear Honeypot springs on any 1-cost card player 1 plays, so set beside Counterspell it is the trap a countered 1-cost Spell would have reached: R17 says a countered card reaches no other trap. Counterspell answers Spells only, so the Unit player 1 plays next is not countered and springs the Honeypot, which shows that the Honeypot was armed all along. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-060",
     "core-003",
@@ -23,5 +23,12 @@
     "core-075",
     "core-077",
     "core-081"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

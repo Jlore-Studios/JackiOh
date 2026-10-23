@@ -17,7 +17,7 @@ Four seats in two teams, paired for the whole game; a Glitch's seat swap moves n
 | B1 | B, the AI | 0 | Player 2 | B2 | A1 |
 | B2 | B, the AI | 1 | Player 2 | B1 | A2 |
 
-So team A goes first and team B second in both duels. Each seat has its own 20-card deck, mana, hand, library, graveyard, exile, hero and zones, exactly as a 1v1 player has ([[§3]]).
+So team A goes first and team B second in both duels. Each seat has its own `DECK_SIZE`-card deck (an AI seat's its tier's, [[§9.9]]), mana, hand, library, graveyard, exile, hero and zones, exactly as a 1v1 player has ([[§3]]).
 
 Card words resolve inside your own duel. "Opponent", "enemy" and "the other player" are the player across from you; "each player", "both players", "all Units", "the field" and every other word for the game's players or cards mean your duel's two players and their cards; Silly Silas's rings ([[§3.1]]) are your duel's ten unit zones and ten backrow zones; a steal ([[§6.3]], [[R12]]) takes from the player across; and Pocket Chaos's swaps ([[R73]]) are with the player across, its health swap as [[§13.4]] says. Your teammate is not a player of your duel: no card targets, counts, damages, heals, reads or copies anything of theirs, and nothing in the catalog reaches the other duel.
 

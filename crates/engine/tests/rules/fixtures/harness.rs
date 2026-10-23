@@ -14,7 +14,7 @@ use super::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 /// The fixture catalog every engine test starts from: the vanilla units, the Rush token and the
 /// scripted and combat fixtures, with their scripts.
 pub fn setup_catalog() {
-    register_catalog(combat_catalog(fixture_catalog(vanilla_catalog(40, 1))));
+    register_catalog(combat_catalog(fixture_catalog(vanilla_catalog(2 * DECK_SIZE, 1))));
     let mut merged: IndexMap<String, CardScripts> = FIXTURE_SCRIPTS.clone();
     merged.extend(COMBAT_SCRIPTS.clone());
     register_scripts(merged);

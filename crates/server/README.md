@@ -827,6 +827,18 @@ Migration 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000): whether a 
 now, which the pool's refresh sets and clears, and its rated wins since it started grinding or last
 stepped up a strength.
 
+Migration 0055 follows the deck to 25 cards (§2.6, R1705000). `app.settings.deck_size`, 0003's
+copy of `DECK_SIZE`, which the deck save's D2 reads, becomes 25, and a deck saved at 20 stays as it
+is, a draft that saves and fails L2 at the queue until five cards are added (R1705001). The pool's
+refresh deals a ladder bot again when a deck it holds is not of `DECK_SIZE` cards
+(`bots::fallback::holds_decks`, `holds_trio`), which needs no migration. `app.settings.starter_cards`
+gains the eleven Core cards the practice presets took to reach 25 (`config::STARTER_CARDS`, now 50,
+R1705002), as a sorted union, so the grant reads them before `seed-catalog` next writes the list.
+And `app.grant_starter_cards_to_active()` runs the activation grant (`app.grant_launch_collection`,
+R111) for every active person's profile, a ladder bot's passed over (R1454), so an account made
+active under the 39-card list owns the eleven too; the migration runs it once, and a second run
+grants nothing.
+
 ## Tests
 
 ```

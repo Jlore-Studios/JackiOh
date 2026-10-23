@@ -13,7 +13,7 @@ One JSON file per record, named `seed-<seed>-<catalogVersion>.json` (one file ea
 | --- | --- |
 | `seed` | Names the game's and the policy's streams (`jackioh-fuzz-<seed>`); 1 or more. |
 | `catalogVersion` | What `cargo jackioh catalog-version` printed on the day it failed; a version in `crates/cards/patches/patches.json`. |
-| `decks` | p1's deck then p2's, 20 distinct ids each, as the report's `seed N p1 deck:` / `p2 deck:` lines print them. |
+| `decks` | p1's deck then p2's, `DECK_SIZE` (25) distinct ids each, as the report's `seed N p1 deck:` / `p2 deck:` lines print them; a record found before #1705 holds 20 each, and `--regress` plays it as a game made then (R1705003). |
 | `found` | Which run failed, how, and the issue that fixed or filed it. |
 | `retired` | Optional: which ids left the catalog, and in which patch. |
 

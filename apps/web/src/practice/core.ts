@@ -64,7 +64,14 @@ import {
   type ReplayRefusal,
   type Rng,
 } from "@jackioh/engine";
-import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap, VERSIONS_SCHEME } from "@jackioh/engine/config";
+import {
+  AI_DIFFICULTY,
+  AI_TUTORIAL,
+  DECK_SIZE,
+  type Handicap,
+  TUTORIAL_HUMAN,
+  VERSIONS_SCHEME,
+} from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
 import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
@@ -190,14 +197,25 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
 }
 
 /**
- * §9.10, R291: a lesson's two fixed decks and the tutorial handicap (R290), or the free game's: the
- * difficulty's handicap, the chosen deck and a dealt AI deck (§9.9).
+ * §9.10, R291: a lesson's two fixed decks, the tutorial handicap on the AI (R290) and `TUTORIAL_HUMAN` on the
+ * human, whose fixed deck is smaller than `DECK_SIZE` (R1705005); or the free game's: the difficulty's
+ * handicap, the chosen deck and a dealt AI deck (§9.9), with no handicap on the human.
  */
-function decksAndHandicap(config: PracticeStartConfig): { humanDeck: string[]; aiDeck: string[]; handicap: Handicap } {
+function decksAndHandicap(config: PracticeStartConfig): {
+  humanDeck: string[];
+  aiDeck: string[];
+  handicap: Handicap;
+  humanHandicap?: Handicap;
+} {
   if (config.lesson !== undefined) {
     const lesson = lessonById(config.lesson);
     if (lesson === undefined) throw new Error(`unknown tutorial lesson "${config.lesson}"`);
-    return { humanDeck: [...lesson.humanDeck], aiDeck: [...lesson.aiDeck], handicap: AI_TUTORIAL };
+    return {
+      humanDeck: [...lesson.humanDeck],
+      aiDeck: [...lesson.aiDeck],
+      handicap: AI_TUTORIAL,
+      humanHandicap: TUTORIAL_HUMAN,
+    };
   }
   const handicap = AI_DIFFICULTY[config.difficulty];
   return {
@@ -224,9 +242,12 @@ function dealtSeats(config: PracticeStartConfig): PlayerId[] {
 
 function startGame(config: PracticeStartConfig): PracticeGame {
   const aiSeat = opponentOf(config.humanSeat);
-  const { humanDeck, aiDeck, handicap } = decksAndHandicap(config);
+  const { humanDeck, aiDeck, handicap, humanHandicap } = decksAndHandicap(config);
   const decks: [string[], string[]] = config.humanSeat === "p1" ? [humanDeck, aiDeck] : [aiDeck, humanDeck];
-  const handicaps: Partial<Record<PlayerId, Handicap>> = { [aiSeat]: { ...handicap } };
+  const handicaps: Partial<Record<PlayerId, Handicap>> = {
+    [aiSeat]: { ...handicap },
+    ...(humanHandicap === undefined ? {} : { [config.humanSeat]: { ...humanHandicap } }),
+  };
   // R508: the human's last board, on a free game only; the AI's seat never has one. R923000: a sandbox
   // game brings none.
   const board = config.lesson === undefined && config.sandbox !== true ? (config.lastBoard ?? []) : [];

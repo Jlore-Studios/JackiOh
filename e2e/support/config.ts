@@ -1,5 +1,7 @@
 // A6: routes, endpoints, and fixtures are overridden through Cypress `expose`; BUILD M8 fixes hotseat only.
 
+import { DECK_SIZE } from "../../apps/web/src/wire/engineConfig.ts";
+
 function env(key: string, fallback: string): string {
   const value: unknown = Cypress.expose(key);
   return typeof value === "string" && value.length > 0 ? value : fallback;
@@ -115,7 +117,8 @@ export type MenuViewport = (typeof viewports)[keyof typeof viewports];
 
 /** SPEC §2 / BUILD §2 constants so specs do not hard-code them. */
 export const constants = {
-  DECK_SIZE: 20,
+  /** §2.6 L2, the engine's own (`crates/engine/src/config.rs`, generated into the web's wire layer). */
+  DECK_SIZE,
   MAX_COPIES: 1,
   MAX_MANA: 4,
   HERO_HEALTH: 30,

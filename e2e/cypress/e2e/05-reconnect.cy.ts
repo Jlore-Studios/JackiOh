@@ -209,7 +209,8 @@ function optionKeysOf(print: ViewFingerprint): string[] {
 
 describe("05 reconnect — a networked game reloaded mid-prompt", () => {
   it("rebuilds the same view and the same open prompt, with the clock still running", () => {
-    const seed = seedFor("05-reconnect-14");
+    // Re-pinned for #1705's 25-card decks: "05-reconnect-14" no longer draws seat 1 #77 by player-turn 5.
+    const seed = seedFor("05-reconnect-9");
     const seatOne = accounts.p1();
     const seatTwo = accounts.p2();
     let matchId = "";

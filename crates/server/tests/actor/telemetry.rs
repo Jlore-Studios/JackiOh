@@ -61,7 +61,8 @@ fn decks() -> (Vec<String>, Vec<String>) {
         .filter(|(_, def)| !def.token && to_json(&def.set) == "Core")
         .map(|(id, _)| id.clone())
         .collect();
-    (core[..20].to_vec(), core[20..40].to_vec())
+    let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+    (core[..size].to_vec(), core[size..2 * size].to_vec())
 }
 
 /// Starts the match on the real registry and attaches both accounts' sockets at once (R744: an

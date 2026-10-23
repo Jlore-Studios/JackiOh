@@ -280,7 +280,9 @@ describe("refusals", () => {
   });
 
   it("R255 a truncated code is incomplete", () => {
-    for (const cut of [1, 3, 4, 8, code.length - HEADER.length - 2]) {
+    // Each cut leaves a length base64url can carry: a lone trailing character is damage, not a
+    // truncation (`fromBase64Url`), and at DECK_SIZE cards a one-character cut leaves one.
+    for (const cut of [2, 3, 4, 8, code.length - HEADER.length - 2]) {
       expect(decodeDeckCode(code.slice(0, code.length - cut), catalog, collection)).toEqual({
         ok: false,
         message: DECK_CODE_MESSAGES.incomplete,

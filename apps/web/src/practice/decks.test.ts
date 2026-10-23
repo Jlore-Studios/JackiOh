@@ -3,9 +3,17 @@
 import { describe, expect, it } from "vitest";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
+import { STARTER_CARDS } from "@jackioh/server-config";
 
 import { practiceDeckIssues } from "../wire/validator.ts";
-import { deckChoiceFromValue, deckOptions, isPlayableSavedDeck, savedDeckRefusal, type PracticeSavedDeck } from "./decks.ts";
+import {
+  PRACTICE_PRESETS,
+  deckChoiceFromValue,
+  deckOptions,
+  isPlayableSavedDeck,
+  savedDeckRefusal,
+  type PracticeSavedDeck,
+} from "./decks.ts";
 
 const CORE = Array.from({ length: DECK_SIZE }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`);
 
@@ -26,7 +34,7 @@ describe("the saved decks practice offers", () => {
     });
   });
 
-  it("a 20-card deck that repeats a card is refused before Start with the validator's reason", () => {
+  it("a DECK_SIZE-card deck that repeats a card is refused before Start with the validator's reason", () => {
     const reason = savedDeckRefusal(REPEATED);
     expect(reason).toBe(practiceDeckIssues(REPEATED)[0]?.message);
     expect(reason).toContain("Twice Over");
@@ -39,7 +47,7 @@ describe("the saved decks practice offers", () => {
     });
   });
 
-  it("a 20-card deck naming a card the catalog does not have is refused before Start with the validator's reason", () => {
+  it("a DECK_SIZE-card deck naming a card the catalog does not have is refused before Start with the validator's reason", () => {
     const reason = savedDeckRefusal(UNKNOWN);
     expect(reason).toBe(practiceDeckIssues(UNKNOWN)[0]?.message);
     expect(reason).toContain("Lost Card");
@@ -75,5 +83,18 @@ describe("the saved decks practice offers", () => {
     const bare = deckChoiceFromValue("saved:1", [VALID]);
     expect(bare).toEqual({ kind: "saved", index: 1, cards: CORE, portrait: null });
     expect(bare !== null && "cosmetics" in bare).toBe(false);
+  });
+});
+
+describe("the practice presets", () => {
+  it("R1705002 every preset holds DECK_SIZE starter cards", () => {
+    // A new account owns every card of every preset (R1310000), so a preset is a deck the player could build.
+    const starter = new Set<string>(STARTER_CARDS);
+    for (const preset of PRACTICE_PRESETS) {
+      expect(preset.cards, preset.id).toHaveLength(DECK_SIZE);
+      expect(new Set(preset.cards).size, `${preset.id} repeats no card`).toBe(DECK_SIZE);
+      expect(practiceDeckIssues({ name: preset.name, cards: preset.cards }), preset.id).toEqual([]);
+      for (const id of preset.cards) expect(starter.has(id), `${preset.id}: ${id} is a starter card`).toBe(true);
+    }
   });
 });

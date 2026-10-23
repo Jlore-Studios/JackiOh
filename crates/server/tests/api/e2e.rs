@@ -54,7 +54,8 @@ use crate::support::store::{store, try_store, uuid};
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const PLAYABLE: [&str; 4] = ["core-001", "core-002", "core-003", "core-004"];
+// Two starter cards and two that are not (core-003 and core-004 became starters with #1705, R1705002).
+const PLAYABLE: [&str; 4] = ["core-001", "core-002", "core-006", "core-007"];
 const TOKEN: &str = "token-sheep";
 const BANNED: &str = "core-666";
 

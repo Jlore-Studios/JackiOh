@@ -164,14 +164,16 @@ export type FixtureDeck = {
   /** Why these cards: what the spec needs out of the deck. */
   description: string;
   /**
-   * Exactly DECK_SIZE (20) distinct non-Token catalog ids, or exactly `handicap.deckSize` when the
+   * Exactly DECK_SIZE distinct non-Token catalog ids, or exactly `handicap.deckSize` when the
    * fixture carries a handicap (R184); `validateDeck` throws otherwise.
    */
   cards: string[];
   /**
    * The seat's handicap (R180), for a scenario SPEC's own resources cannot reach in a few turns:
-   * spec 25's 5-card library that fatigues on turn 3, 9-card opening hand, 60-card library.
-   * `seedGame` gives fixture A's to p1 and fixture B's to p2. Absent for every other fixture.
+   * spec 25's 5-card library that fatigues on turn 3, 9-card opening hand, 60-card library. A
+   * hotseat fixture whose deal was tuned before #1705 carries `TUTORIAL_HUMAN`'s, a human's resources
+   * with the earlier deck size, so it keeps its cards (R1705005). `seedGame` gives fixture A's to p1
+   * and fixture B's to p2. A networked fixture carries none: the server refuses a handicap.
    */
   handicap?: FixtureHandicap;
 };
