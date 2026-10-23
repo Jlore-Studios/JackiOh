@@ -101,9 +101,12 @@ pub fn holds_decks(bot: &BotRow, catalog_version: &str) -> bool {
 /// refresh deals it again.
 pub fn holds_trio(bot: &BotRow, catalog_version: &str) -> bool {
     bot.trio_catalog_version.as_deref() == Some(catalog_version)
-        && bot.trio.as_ref().is_some_and(|FrozenTrio { decks: (a, b, c), .. }| {
-            [a, b, c].iter().all(|deck| holds_deck_size(&deck.cards))
-        })
+        && bot
+            .trio
+            .as_ref()
+            .is_some_and(|FrozenTrio { decks: (a, b, c), .. }| {
+                [a, b, c].iter().all(|deck| holds_deck_size(&deck.cards))
+            })
 }
 
 /// R1454: whether the bot is on at `hour` of the day (UTC): its schedule runs `scheduled_hours`
@@ -180,10 +183,10 @@ pub fn bot_match_gap_passed(games: &[RatedGameRow], now: i64) -> bool {
 
 /// R1555000: the two bots a match between two bots seats, or none. Both are ready: in the pool, on
 /// their schedule, in no match, not `busy` (a side of a series that is not over, R641000) and
-/// holding Best-of-1 decks dealt for `catalog_version` (R1454, `holds_decks`, R1705001). The first is the lowest-rated ready
-/// grinder (ties on id) that has an opponent: the ready bot, grinder or not, closest in rating to
-/// it (ties on id), never one of its `recent` opponents (`BOT_RECENT_OPPONENTS`, keyed by the
-/// grinder's id).
+/// holding Best-of-1 decks dealt for `catalog_version` at `DECK_SIZE` cards (R1454, R1705001,
+/// `holds_decks`). The first is the lowest-rated ready grinder (ties on id) that has an opponent: the
+/// ready bot, grinder or not, closest in rating to it (ties on id), never one of its `recent`
+/// opponents (`BOT_RECENT_OPPONENTS`, keyed by the grinder's id).
 pub fn choose_bot_pair<'a>(
     bots: &'a [BotRow],
     recent: &IndexMap<String, Vec<String>>,

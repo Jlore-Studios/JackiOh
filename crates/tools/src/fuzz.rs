@@ -147,12 +147,11 @@ use jackioh_engine::testkit::{
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
-    CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState, EARLIER_DECK_SIZE,
-    FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS, PerPlayerOpt, Phase,
-    PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game, create_game, create_recorded_game,
-    find_instance, fold,
-    has_standing_draw_offer, hash_state, legal_actions, mulligan_owed, opponent_of, reduce, seat_to_act,
-    subsystems, validate_deck,
+    CreateGameOptions, DECK_SIZE, Difficulty, DuosActionBody, DuosEvent, DuosSeat, DuosState,
+    EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS,
+    PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
+    create_game, create_recorded_game, find_instance, fold, has_standing_draw_offer, hash_state,
+    legal_actions, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems, validate_deck,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -3381,8 +3380,13 @@ pub(crate) mod tests {
 
         /// `probe` fails seed 1 in the probe stage, naming the probe called `name` and its step.
         fn assert_caught(probe: Reducer, name: &str) {
+            assert_caught_at(1, probe, name);
+        }
+
+        /// `assert_caught` on `seed`'s game.
+        fn assert_caught_at(seed: u32, probe: Reducer, name: &str) {
             register_all();
-            let failure = fuzz_deal_probed(1, decks_for_seed(1), probe)
+            let failure = fuzz_deal_probed(seed, decks_for_seed(seed), probe)
                 .err()
                 .expect("a reducer that breaks the probe must fail the seed");
             assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
@@ -3394,7 +3398,7 @@ pub(crate) mod tests {
                 failure.message
             );
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
-            assert!(text.contains("example: seed 1 ("), "{text}");
+            assert!(text.contains(&format!("example: seed {seed} (")), "{text}");
             assert!(text.contains("[probe]"), "{text}");
         }
 
@@ -3421,7 +3425,8 @@ pub(crate) mod tests {
 
         #[test]
         fn a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe() {
-            assert_caught(lenient, MALFORMED_ANSWER_PROBE);
+            // Re-pinned for #1705's 25-card decks: seed 1's game opens no prompt now, seed 2's does.
+            assert_caught_at(2, lenient, MALFORMED_ANSWER_PROBE);
         }
 
         /// A reducer that takes any play its seat is not listed as the seat's first listed play.

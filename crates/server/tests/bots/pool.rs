@@ -23,6 +23,7 @@ use std::time::Duration;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
+use jackioh_engine::config::EARLIER_DECK_SIZE;
 use jackioh_engine::validator::{
     CatalogSnapshot, DeckInput, LoadoutDeck, LoadoutInput, validate_deck, validate_trio,
 };
@@ -433,6 +434,56 @@ async fn r1454_new_catalog_redraws_decks() {
         assert_eq!(
             bot.decks_catalog_version.as_deref(),
             Some(app.catalog.version.as_str())
+        );
+    }
+}
+
+/// R1705001: a bot holding decks of `EARLIER_DECK_SIZE` cards for this very catalog, as every bot did
+/// before the deck grew, is dealt again, its Best-of-1 decks and its Conquest trio alike, so no bot
+/// queues a deck L2 refuses.
+#[tokio::test(start_paused = true)]
+async fn r1705001_a_bot_holding_a_twenty_card_deck_is_dealt_again() {
+    let app = empty_test_app().await;
+    let now = now_ms();
+    refresh_pool(&app, "earlier-size", now).await.expect("a refresh");
+    let bots = q!(app, bots_list());
+    let earlier = usize::try_from(EARLIER_DECK_SIZE).expect("a deck size");
+    let shrunk = &bots[0];
+    let decks: Vec<BotDeck> = shrunk
+        .decks
+        .iter()
+        .map(|deck| BotDeck {
+            cards: deck.cards[..earlier].to_vec(),
+            ..deck.clone()
+        })
+        .collect();
+    q!(
+        app,
+        bots_set_decks(&shrunk.profile_id, &decks, &app.catalog.version)
+    );
+    let mut trio = bots[1].trio.clone().expect("a trio");
+    trio.decks.1.cards.truncate(earlier);
+    q!(
+        app,
+        bots_set_trio(&bots[1].profile_id, &trio, &app.catalog.version)
+    );
+
+    let done = refresh_pool(&app, "earlier-size-2", now)
+        .await
+        .expect("a refresh");
+    assert_eq!((done.dealt, done.trios), (1, 1));
+    for bot in q!(app, bots_list()) {
+        assert!(
+            bot.decks.iter().all(|deck| deck.cards.len() == deck_size()),
+            "{}'s decks",
+            bot.profile_id
+        );
+        let trio = bot.trio.expect("a trio");
+        let (a, b, c) = &trio.decks;
+        assert!(
+            [a, b, c].iter().all(|deck| deck.cards.len() == deck_size()),
+            "{}'s trio",
+            bot.profile_id
         );
     }
 }
@@ -940,7 +991,7 @@ type Unready = fn(&mut BotRow);
 fn r1555000_the_bot_pair_is_the_lowest_grinder_and_its_closest_ready_bot() {
     let ready = |id: &str, rating: f64, grinding: bool| BotRow {
         decks: vec![BotDeck {
-            cards: Vec::new(),
+            cards: playable()[..deck_size()].to_vec(),
             portrait: "vanilla".to_string(),
         }],
         decks_catalog_version: Some("v".to_string()),

@@ -381,8 +381,7 @@ fn same_view(a: &PlayerView, b: &PlayerView) {
 const QD_P1_DECK: [&str; DECK_SIZE as usize] = [
     "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
     "core-018", "core-023", "core-031", "core-035", "core-036", "core-039", "core-041", "core-044",
-    "core-048", "core-050", "core-060", "core-001", "core-002", "core-006", "core-009", "core-012",
-    VOID,
+    "core-048", "core-050", "core-060", "core-001", "core-002", "core-006", "core-009", "core-012", VOID,
 ];
 /// p2's deck less one card: the last is #98 Heroic Power (Quickdraw) or #99 Craft a Card.
 const QD_P2_SHARED: [&str; DECK_SIZE as usize - 1] = [
@@ -424,10 +423,10 @@ fn keep_both(state: &GameState) -> GameState {
 mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
     use super::*;
 
-    /// "r8-l10-void-3" puts #100 in p1's opening hand.
+    /// "r8-l10-void-0" puts #100 in p1's opening hand (re-pinned for #1705's 25-card decks).
     fn void_game(p2_last: &str) -> GameState {
         let decks = (owned(&QD_P1_DECK), p2_qd_deck(p2_last));
-        keep_both(&begin_game(&create_game(&game_args("r8-l10-void-3", decks))).state)
+        keep_both(&begin_game(&create_game(&game_args("r8-l10-void-0", decks))).state)
     }
 
     #[test]

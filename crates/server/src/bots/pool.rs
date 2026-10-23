@@ -430,10 +430,11 @@ pub struct PoolRefresh {
     pub retired: usize,
     pub reinstated: usize,
     pub created: usize,
-    /// Bots whose decks were dealt (new bots, and bots whose decks were for another catalog).
+    /// Bots whose decks were dealt (new bots, and bots whose decks were for another catalog or of
+    /// another size than `DECK_SIZE`, R1705001).
     pub dealt: usize,
     /// R641000: bots whose Conquest trio was dealt (bots that held none, and bots whose trio was for
-    /// another catalog).
+    /// another catalog or of another size, R1705001).
     pub trios: usize,
     /// R1555000: bots that grind after it.
     pub grinding: usize,

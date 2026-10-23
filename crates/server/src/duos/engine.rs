@@ -17,8 +17,9 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::config::{AI_DIFFICULTY, DUOS_HUMAN_TEAM, Difficulty, HUMAN_HANDICAP, duos_ai_team};
 use jackioh_engine::duos::{
-    DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create, duos_create_recorded,
-    duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for,
+    DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create,
+    duos_create_recorded, duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    duos_view_for,
 };
 use jackioh_engine::wire::{
     DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,

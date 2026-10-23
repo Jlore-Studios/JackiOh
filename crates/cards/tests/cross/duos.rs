@@ -28,10 +28,10 @@ const TEMPO: &str = "classicplus-026"; // Tommy Tempo: cast on draw, ends its ca
 // The wrapper
 // ---------------------------------------------------------------------------------------------
 
-/// Twenty distinct Core cards with no cast on draw, no Trap and no Quickdraw.
+/// `DECK_SIZE` distinct Core cards with no cast on draw, no Trap and no Quickdraw.
 fn deck() -> Vec<String> {
     [
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 22,
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 22, 23, 24, 25, 26, 28,
     ]
     .iter()
     .map(|n| format!("core-{n:03}"))

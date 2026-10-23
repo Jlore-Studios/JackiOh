@@ -423,9 +423,9 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
   public.code_attempts, public.invite_codes, public.profiles, auth.users
   restart identity cascade";
 
-    /// The harness's fixture catalog: 64 playable ids and two tokens.
+    /// The harness's fixture catalog: 80 playable ids and two tokens.
     fn playable_ids() -> Vec<String> {
-        (1..=64).map(|i| format!("core-{i:03}")).collect()
+        (1..=80).map(|i| format!("core-{i:03}")).collect()
     }
 
     fn token_ids() -> Vec<String> {
@@ -760,7 +760,7 @@ mod r1310001_r1300001_db_a_new_version_grants_nobody {
     const FIXTURE_VERSION: &str = "core-1";
     /// The version the case seeds, holding one card no fixture uses.
     const NEW_VERSION: &str = "r1310001-v2";
-    /// A starter card past the fixture catalog's `core-064`, so a grant of the new version's
+    /// A starter card past the fixture catalog's `core-080`, so a grant of the new version's
     /// cards would have had it to give.
     const NEW_CARD: &str = "core-088";
     const DEV: &str = "d0000000-0000-4000-8000-000000001300";

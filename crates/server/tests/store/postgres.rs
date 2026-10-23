@@ -39,10 +39,10 @@ macro_rules! once {
 
 // The fixture catalog and the database setup
 
-/// SPEC §9.4 L2: `DECK_SIZE` is 20, and L1 says three decks, so 60 ids is the floor.
+/// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
 const CATALOG_VERSION: &str = "core-1";
-const PLAYABLE_COUNT: usize = 64;
-const DECK_SIZE: usize = 20;
+const PLAYABLE_COUNT: usize = 80;
+const DECK_SIZE: usize = jackioh_engine::config::DECK_SIZE as usize;
 
 fn playable_ids() -> Vec<String> {
     (1..=PLAYABLE_COUNT).map(|i| format!("core-{i:03}")).collect()

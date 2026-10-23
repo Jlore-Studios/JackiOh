@@ -760,7 +760,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
         assert_eq!(TURN_CAP_PLAYER_TURNS, 60);
 
         let mut state = playing("r2");
-        // R389: two 20-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so both
+        // R389: two DECK_SIZE-card decks that do nothing fatigue out before player-turn 60 (§2.4, R3), so both
         // seats hold #75 Infinite Reserves, whose empty-library draws never fatigue, and the cap is what
         // ends the game.
         let reserves = infinite_reserves().id;

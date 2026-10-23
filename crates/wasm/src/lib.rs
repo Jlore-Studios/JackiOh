@@ -22,8 +22,8 @@
 //! is this crate's: `ai_decide` hands the body `js_sys::Date::now` against the deadline the page
 //! computed, as TypeScript's `shouldStop` read `performance.now()`.
 
-use jackioh_engine::{CreateGameArgs, SetupKind};
 use jackioh_engine::prelude::IndexMap;
+use jackioh_engine::{CreateGameArgs, SetupKind};
 use jackioh_wasm_core as wasm_core;
 use wasm_bindgen::prelude::*;
 

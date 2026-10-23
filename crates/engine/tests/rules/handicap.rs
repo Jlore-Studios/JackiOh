@@ -1900,7 +1900,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         for hero_health in [0, -1] {
             let message = create_refusal(options(
                 "r290-bad-health",
-                // A 20-card p2 deck is wrong for AI_TUTORIAL too; the handicap is named first (R180).
+                // A DECK_SIZE-card p2 deck is wrong for AI_TUTORIAL too; the handicap is named first (R180).
                 (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 1)),
                 on_p2(Handicap {
                     hero_health: Some(hero_health),

@@ -952,7 +952,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             .map(|def| def.id.clone())
             .collect();
         of_newest.sort();
-        // Ban all but six of the set's cards, short of the ten a 20-card deck owes. A player's deck, so
+        // Ban all but six of the set's cards, short of the 13 a 25-card deck owes. A player's deck, so
         // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. Re-pinned for
         // v0.3.15 (Meditative+ ships, #1187): the newest set is Meditative+, whose first six ids are all
         // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
