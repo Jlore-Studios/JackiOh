@@ -681,5 +681,12 @@
     "pr": 1652,
     "title": "the queue and rematch routes pass store errors on with `?`, as every other route does",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "e9b88bdbcf345e0694cd9f536c4adb9c3b9d6834",
+    "pr": 1730,
+    "title": "an account flooding the API raises the unusual-rejections alert",
+    "kind": "app"
   }
 ]
