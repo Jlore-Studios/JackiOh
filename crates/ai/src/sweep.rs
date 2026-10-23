@@ -234,6 +234,9 @@ pub struct SweepOptions<'a> {
     /// (`cargo jackioh sweep`: against the perf gate's yardstick); absent, every one counts.
     pub retime: Option<&'a dyn Fn(&SlowDecision<'_>) -> bool>,
     pub tier: Option<Difficulty>,
+    /// Issue #1113: the ids `sweep_card` keeps out of the AI's deck; absent, `SHADOW_BAN`'s. A seeded
+    /// test passes `FIXTURE_BANNED_IDS`, so a shadow-ban change re-deals none of its games.
+    pub banned: Option<&'a [&'a str]>,
 }
 
 const FLAG_ORDER: &[SweepFlag] = &[
@@ -681,14 +684,18 @@ fn play_sweep_game(
 
 /// Pass 1: `seeds` games (default seedsPerCard) of an AI on `tier`'s handicap (default Easy) whose
 /// deck includes `defId` against greedy on Easy's, at AI_GATE_BUDGET, on seeds
-/// `sweep:<tier>:<id>:<n>`. Every other banned card stays out of the AI's deck, so its errors are not
-/// charged to this one.
+/// `sweep:<tier>:<id>:<n>`. Every other banned card (`banned`, default `SHADOW_BAN`) stays out of the
+/// AI's deck, so its errors are not charged to this one.
 pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
     let seeds = options.seeds.unwrap_or(AI_SWEEP.seeds_per_card);
     let tier = options.tier.unwrap_or(Difficulty::Easy);
     let mut stats = empty_stats(def_id);
+    let banned: Vec<&str> = options.banned.map_or_else(
+        || SHADOW_BAN.iter().map(|(id, _)| *id).collect(),
+        <[&str]>::to_vec,
+    );
     let filler = Filler {
-        banned: SHADOW_BAN.iter().map(|(id, _)| (*id).to_string()).collect(),
+        banned: banned.into_iter().map(str::to_string).collect(),
         boost: None,
     };
     let tracked = [def_id.to_string()];

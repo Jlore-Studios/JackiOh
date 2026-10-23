@@ -8,12 +8,13 @@
 //! AI_SWEEP.seedsPerCardAtRisk more games per tier, with every at-risk card dealt more often as
 //! filler. `sweepVerdict` joins a card's tiers and passes. This prints the flagged rows of both
 //! passes, the at-risk cards, the suspects, the unswept cards, then the SHADOW_BAN and SHADOW_WATCH
-//! entries and the header line for `crates/ai/src/shadow_ban.rs`. Those tables are never copied in by
-//! hand or edited to taste: `--write` rewrites the header block and both tables of that file from the
-//! reports of record (this output, committed under `training/history/`, oldest first), and `--check`
-//! (and the `shadow_ban_rs_is_what_its_reports_of_record_dictate` test) fails with a line diff when
-//! the file is anything else. Both read the one section of a report that `--report` prints for the
-//! file, through one parser (`parse_block`).
+//! entries, the ids it cleared (R1675000) and the header line for `crates/ai/src/shadow_ban.rs`.
+//! Those tables are never copied in by hand or edited to taste: `--write` rewrites the header block
+//! and both tables of that file from the reports of record (this output, committed under
+//! `training/history/`, oldest first), and `--check` (and the
+//! `shadow_ban_rs_is_what_its_reports_of_record_dictate` test) fails with a line diff when the file is
+//! anything else. Both read the one section of a report that `--report` prints for the file, through
+//! one parser (`parse_block`).
 //!
 //! ```text
 //! cargo jackioh sweep                              both passes over every card, then the report
@@ -52,6 +53,7 @@ use jackioh_ai::{
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::testkit::preview_every_set;
 use jackioh_engine::wire::SetName;
+use jackioh_engine::{CardInstance, PlayerId, legal_actions};
 
 use crate::arena::utc_date;
 use crate::gate::{MS_PER_SECOND, literal, time_decision, yardstick_ms};
@@ -71,6 +73,9 @@ const SHADOW_BAN_RS: &str = "crates/ai/src/shadow_ban.rs";
 /// The heading of a report's section for that file: `block_lines` prints it with `##`, the committed
 /// reports hold it with `###`.
 const BLOCK_HEADING: &str = "For crates/ai/src/shadow_ban.rs";
+
+/// R1675000: the label of the ids a report cleared; a report printed before the list has none.
+const CLEARED_LABEL: &str = "Cleared ids:";
 
 /// The line that opens `shadow_ban.rs`'s header block, the part of it `--write` owns.
 const HEADER_BEGIN: &str =
@@ -93,6 +98,9 @@ const WATCH_OPEN: &str = "pub const SHADOW_WATCH: &[(&str, &str)] = &[";
 
 /// The line that closes a table written over several lines.
 const TABLE_CLOSE: &str = "];";
+
+/// The line that closes a table of one row, whose tuple rustfmt opens on the table's own line.
+const LONE_ROW_CLOSE: &str = ")];";
 
 /// R732000, R1186000: the sets whose cards the shadow ban holds.
 const BAN_SETS: [SetName; 2] = [SetName::Meditative, SetName::MeditativePlus];
@@ -239,12 +247,51 @@ fn still_slow(slow: &SlowDecision<'_>, warmed: &Cell<bool>) -> bool {
         return true;
     }
     match time_decision(slow.state, slow.seat, slow.rng, slow.budget, limit) {
-        Ok(timing) => timing.ms > limit,
+        Ok(timing) => {
+            let still = timing.ms > limit;
+            let json = serde_json::to_string(&timing).unwrap_or_default();
+            eprintln!("[ai:sweep] {}", slow_line(slow, &json, still));
+            still
+        }
         Err(error) => {
             eprintln!("[ai:sweep] re-timing a slow decision: {error:#}");
             true
         }
     }
+}
+
+/// Issue #1675: a decision `still_slow` timed again, as the log shows it: its game, turn and seat,
+/// its legal actions, the seat's hand, each field's units then backrow, and the timing.
+fn slow_line(slow: &SlowDecision<'_>, timing_json: &str, still: bool) -> String {
+    let state = slow.state;
+    let ids = |cards: Vec<&CardInstance>| {
+        cards
+            .iter()
+            .map(|card| card.def_id.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let field = |seat: PlayerId| {
+        let side = &state.players[seat];
+        ids(side
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(side.backrow.iter().flatten())
+            .collect())
+    };
+    format!(
+        "slow decision: {}, turn {}, {}, {} legal, hand [{}], field p1 [{}] p2 [{}]: {timing_json} ({})",
+        state.seed,
+        state.turn,
+        literal(&slow.seat),
+        legal_actions(state, slow.seat).len(),
+        ids(state.players[slow.seat].hand.iter().collect()),
+        field(PlayerId::P1),
+        field(PlayerId::P2),
+        if still { "still slow" } else { "fast again" },
+    )
 }
 
 /// Each result is also handed to `emit` as it lands, so a slice cut short keeps what it finished.
@@ -265,6 +312,7 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
                             now: Some(&now),
                             retime: Some(&retime),
                             tier: Some(tier),
+                            banned: None,
                         },
                     )
                 },
@@ -309,6 +357,7 @@ fn pass2(
                             now: Some(&now),
                             retime: Some(&retime),
                             tier: Some(tier),
+                            banned: None,
                         },
                     )
                 },
@@ -335,12 +384,14 @@ fn sorted_unique(ids: impl IntoIterator<Item = String>) -> Vec<String> {
 }
 
 /// The section of a report that is for `shadow_ban.rs`: the header line and the rows of both tables, as
-/// (id, reason) pairs in the order the report lists them.
+/// (id, reason) pairs in the order the report lists them, and the ids it cleared.
 #[derive(Debug, Clone, PartialEq)]
 struct Block {
     header: String,
     ban: Vec<(String, String)>,
     watch: Vec<(String, String)>,
+    /// R1675000: the ids the report swept and cleared: not banned, not watched, not unswept.
+    cleared: Vec<String>,
 }
 
 /// `date` is the run's date for `shadow_ban.rs`'s header.
@@ -519,6 +570,11 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>, da
             .iter()
             .map(|verdict| (verdict.def_id.clone(), verdict.watch.clone().unwrap_or_default()))
             .collect(),
+        cleared: verdicts
+            .iter()
+            .filter(|verdict| verdict.reason.is_none() && verdict.watch.is_none() && !verdict.unswept)
+            .map(|verdict| verdict.def_id.clone())
+            .collect(),
     };
     out.extend(block_lines(&block));
     format!("{}\n", out.join("\n"))
@@ -553,12 +609,19 @@ fn block_lines(block: &Block) -> Vec<String> {
         );
         out.push("```".to_string());
     }
+    out.push(String::new());
+    out.push(CLEARED_LABEL.to_string());
+    out.push(String::new());
+    out.push("```rust".to_string());
+    out.extend(block.cleared.iter().map(|id| format!("    {},", json_string(id))));
+    out.push("```".to_string());
     out
 }
 
 /// Reads only the section `block_lines` writes, never the report's prose (V23): the first heading named
 /// `BLOCK_HEADING` at any depth (`##` as printed, `###` as committed), then, each after the last, the
-/// header line, the `SHADOW_BAN` rows and the `SHADOW_WATCH` rows.
+/// header line, the `SHADOW_BAN` rows, the `SHADOW_WATCH` rows and the cleared ids (none in a report
+/// printed before R1675000).
 fn parse_block(text: &str) -> Result<Block> {
     let lines: Vec<&str> = text.lines().collect();
     let heading = lines
@@ -579,16 +642,19 @@ fn parse_block(text: &str) -> Result<Block> {
         bail!("the header line does not start with `{SWEEP_PREFIX}`: {header}");
     }
     let (ban, used) = parse_table(lines, "SHADOW_BAN entries:")?;
-    let (watch, _) = parse_table(&lines[used..], "SHADOW_WATCH entries:")?;
+    let (watch, more) = parse_table(&lines[used..], "SHADOW_WATCH entries:")?;
+    let cleared = parse_cleared(&lines[used + more..])?;
     Ok(Block {
         header: (*header).to_string(),
         ban,
         watch,
+        cleared,
     })
 }
 
-/// The rows of the table `label` names in `lines`, and how many lines it took, its closing fence last.
-fn parse_table(lines: &[&str], label: &str) -> Result<(Vec<(String, String)>, usize)> {
+/// The lines inside the ```rust fence after the line `label`, and how many lines of `lines` that took,
+/// its closing fence last.
+fn fenced<'a>(lines: &[&'a str], label: &str) -> Result<(Vec<&'a str>, usize)> {
     let at = lines
         .iter()
         .position(|line| *line == label)
@@ -604,12 +670,38 @@ fn parse_table(lines: &[&str], label: &str) -> Result<(Vec<(String, String)>, us
         .position(|line| *line == "```")
         .with_context(|| format!("no closing fence after `{label}`"))?
         + open;
-    let rows = lines[open..close]
+    Ok((lines[open..close].to_vec(), close + 1))
+}
+
+/// The rows of the table `label` names in `lines`, and how many lines it took, its closing fence last.
+fn parse_table(lines: &[&str], label: &str) -> Result<(Vec<(String, String)>, usize)> {
+    let (fence, used) = fenced(lines, label)?;
+    let rows = fence
         .iter()
         .map(|line| parse_row(line))
         .collect::<Result<Vec<_>>>()
         .with_context(|| format!("reading the `{label}` rows"))?;
-    Ok((rows, close + 1))
+    Ok((rows, used))
+}
+
+/// R1675000: the ids under `CLEARED_LABEL` in `lines`, one `    "<id>",` row each, JSON-escaped; none
+/// when a report printed before the list has no such line.
+fn parse_cleared(lines: &[&str]) -> Result<Vec<String>> {
+    if !lines.contains(&CLEARED_LABEL) {
+        return Ok(Vec::new());
+    }
+    let (fence, _) = fenced(lines, CLEARED_LABEL)?;
+    fence
+        .iter()
+        .map(|line| {
+            let id = line
+                .strip_prefix("    ")
+                .and_then(|rest| rest.strip_suffix(','))
+                .with_context(|| format!("not a `    \"<id>\",` row: {line}"))?;
+            serde_json::from_str::<String>(id).with_context(|| format!("not an id: {line}"))
+        })
+        .collect::<Result<Vec<_>>>()
+        .with_context(|| format!("reading the `{CLEARED_LABEL}` rows"))
 }
 
 /// One `    ("<id>", "<reason>"),` row, its two strings JSON-escaped.
@@ -632,12 +724,14 @@ struct Record {
 
 /// The tables the reports of record (path and block, oldest first) dictate. A card takes the row of
 /// the latest report that lists it: a ban takes it off `SHADOW_WATCH` and a watch row off
-/// `SHADOW_BAN` (R600). Each sweep of record covered a set alone, so each keeps the earlier reports'
-/// rows for the other sets: the 2026-10-12 sweep the Meditative set (R732000), #1186's the
-/// Meditative+ set (R1186000). `SHADOW_BAN` holds `BAN_SETS`' cards only, an older sweep's bans of
-/// the earlier sets left out (R732000), less `unbanned`, the unban lane's removals (R732001). Refuses
-/// an unsorted list, a ban in the newest report outside `BAN_SETS`, more than half of a set banned
-/// (R732000, R1186000) and an `unbanned` id no report of record bans.
+/// `SHADOW_BAN` (R600), and a card a later report cleared has no row in either (R1675000). Each sweep
+/// of record covered some cards alone, so each keeps the earlier reports' rows for the rest: the
+/// 2026-10-12 sweep the Meditative set (R732000), #1186's the Meditative+ set (R1186000), #1675's the
+/// 17 Meditative cards banned then (R1675000). `SHADOW_BAN` holds `BAN_SETS`' cards only, an older
+/// sweep's bans of the earlier sets left out (R732000), less `unbanned`, the unban lane's removals
+/// (R732001). Refuses an unsorted list, a report that both clears and lists a card (R1675000), a ban
+/// in the newest report outside `BAN_SETS`, more than half of a set banned (R732000, R1186000) and an
+/// `unbanned` id no report of record bans.
 fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
     let Some((newest_path, newest)) = reports.last() else {
         bail!("no report of record");
@@ -651,6 +745,14 @@ fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
             block.watch.iter().map(|(id, _)| id.as_str()),
             &format!("{path}'s SHADOW_WATCH entries"),
         )?;
+        ascending(
+            block.cleared.iter().map(String::as_str),
+            &format!("{path}'s cleared ids"),
+        )?;
+        let listed = |id: &&String| block.ban.iter().chain(&block.watch).any(|(row, _)| row == *id);
+        if let Some(id) = block.cleared.iter().find(listed) {
+            bail!("{path} both clears {id} and lists it (R1675000)");
+        }
     }
     ascending(unbanned.iter().copied(), "SHADOW_UNBANNED")?;
     for (id, _) in &newest.ban {
@@ -659,6 +761,11 @@ fn compose(reports: &[(String, Block)], unbanned: &[&str]) -> Result<Record> {
     let mut ban: BTreeMap<String, String> = BTreeMap::new();
     let mut watch: BTreeMap<String, String> = BTreeMap::new();
     for (_, block) in reports {
+        // R1675000: a card the report cleared loses the rows an earlier report gave it.
+        for id in &block.cleared {
+            ban.remove(id);
+            watch.remove(id);
+        }
         for (id, why) in &block.ban {
             watch.remove(id);
             ban.insert(id.clone(), why.clone());
@@ -763,17 +870,27 @@ fn table_span(lines: &[String], open: &str) -> Result<(usize, usize)> {
     }
     let to = lines[from..]
         .iter()
-        .position(|line| line == TABLE_CLOSE)
+        .position(|line| line == TABLE_CLOSE || line == LONE_ROW_CLOSE)
         .map(|offset| offset + from)
         .with_context(|| format!("{SHADOW_BAN_RS}'s `{open}` table is never closed"))?;
     Ok((from, to))
 }
 
 /// A table as rustfmt writes it: one row over four lines (every row is wider than rustfmt's one-line
-/// limit), an empty table on its opening line.
+/// limit), an empty table on its opening line, and a table of one row as one tuple, opened on the
+/// table's line and closed on its last.
 fn table_lines(open: &str, rows: &[(String, String)]) -> Vec<String> {
-    if rows.is_empty() {
-        return vec![format!("{open}{TABLE_CLOSE}")];
+    match rows {
+        [] => return vec![format!("{open}{TABLE_CLOSE}")],
+        [(id, reason)] => {
+            return vec![
+                format!("{open}("),
+                format!("    {},", json_string(id)),
+                format!("    {},", json_string(reason)),
+                LONE_ROW_CLOSE.to_string(),
+            ];
+        }
+        _ => {}
     }
     let mut out = vec![open.to_string()];
     for (id, reason) in rows {
@@ -1079,6 +1196,33 @@ mod tests {
     }
 
     #[test]
+    fn a_slow_decision_line_names_its_turn_hand_field_and_timing() {
+        jackioh_cards::register_all();
+        let game = jackioh_engine::testkit::scenario(serde_json::json!({
+            "seed": "slow-line",
+            "active": "p1",
+            "turn": 5,
+            "p1": { "hand": ["core-055", "core-024"], "mana": 4, "field": ["core-020"] },
+            "p2": { "field": ["core-019", { "defId": "core-006", "row": "backrow" }] },
+        }));
+        let state = game.state();
+        let slow = SlowDecision {
+            state,
+            seat: PlayerId::P1,
+            budget: AI_GATE_BUDGET,
+            rng: &jackioh_engine::Rng::new("slow-line", 0),
+        };
+        let legal = legal_actions(state, PlayerId::P1).len();
+        assert_eq!(
+            slow_line(&slow, r#"{"ms":2400.0}"#, true),
+            format!(
+                "slow decision: slow-line, turn 5, p1, {legal} legal, hand [core-055, core-024], field p1 [core-020] p2 [core-019, core-006]: {{\"ms\":2400.0}} (still slow)"
+            )
+        );
+        assert!(slow_line(&slow, "{}", false).ends_with("(fast again)"));
+    }
+
+    #[test]
     fn a_line_is_pass_2_when_it_names_its_forced_card() {
         assert!(is_pass2(
             &serde_json::json!({ "forced": "core-011", "tier": "easy" })
@@ -1178,6 +1322,7 @@ mod tests {
                     "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -4.8",
                 ),
             ],
+            cleared: Vec::new(),
         }
     }
 
@@ -1219,6 +1364,7 @@ mod tests {
             header: format!("{SWEEP_PREFIX}{FIXTURE_DATE} (UTC), fixture."),
             ban: ban.iter().map(|id| pair(id, "timeout: easy: fixture")).collect(),
             watch: watch.iter().map(|id| pair(id, "at risk: fixture")).collect(),
+            cleared: Vec::new(),
         }
     }
 
@@ -1250,6 +1396,7 @@ mod tests {
         assert_eq!(lines[4], block.header);
         assert!(lines.iter().any(|line| line == "SHADOW_BAN entries:"));
         assert!(lines.iter().any(|line| line == "SHADOW_WATCH entries:"));
+        assert!(lines.iter().any(|line| line == CLEARED_LABEL));
         assert_eq!(lines.last().map(String::as_str), Some("```"));
         assert!(parse_block("# Report\n\nNo section.\n").is_err());
         assert!(parse_block("## For crates/ai/src/shadow_ban.rs\n\nHeader line:\n\n// nope\n").is_err());
@@ -1267,6 +1414,34 @@ mod tests {
         assert_eq!(render(&written, &record).unwrap(), written);
         check_file(&written, &record).unwrap();
         assert!(check_file(&fixture_file(), &record).is_err());
+    }
+
+    #[test]
+    fn a_table_of_one_row_is_written_as_rustfmt_writes_it() {
+        jackioh_cards::register_all();
+        // #1675's sweep left `SHADOW_BAN` one row, which rustfmt writes as one tuple.
+        let lone = compose_one(
+            block_of(&["meditative-011".to_string()], &["meditative-022"]),
+            &[],
+        )
+        .unwrap();
+        let written = render(&fixture_file(), &lone).unwrap();
+        for (open, id, reason) in [
+            (BAN_OPEN, "meditative-011", "timeout: easy: fixture"),
+            (WATCH_OPEN, "meditative-022", "at risk: fixture"),
+        ] {
+            let table = format!("{open}(\n    \"{id}\",\n    \"{reason}\",\n)];\n");
+            assert!(written.contains(&table), "{written}");
+        }
+        assert_eq!(render(&written, &lone).unwrap(), written);
+        check_file(&written, &lone).unwrap();
+        // Rewritten with two rows or none, each table takes its other shapes again.
+        let record = fixture_record();
+        assert_eq!(render(&written, &record).unwrap(), fixture_written());
+        let empty = compose_one(block_of(&[], &[]), &[]).unwrap();
+        let emptied = render(&written, &empty).unwrap();
+        assert!(emptied.contains(&format!("{BAN_OPEN}];\n")), "{emptied}");
+        assert!(emptied.contains(&format!("{WATCH_OPEN}];\n")), "{emptied}");
     }
 
     #[test]
@@ -1453,6 +1628,100 @@ mod tests {
         })
         .join("\n");
         assert!(parse_block(&printed).unwrap().ban.is_empty());
+    }
+
+    #[test]
+    fn r1675000_the_report_lists_the_cards_it_cleared_and_reads_them_back() {
+        jackioh_cards::register_all();
+        // meditative-013 is swept and clean at both tiers; meditative-014 is never affordable.
+        let more = [
+            r#"{"defId":"meditative-013","games":8,"drawnGames":6,"affordableTurns":4,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":6,"evalDeltaCount":3,"tier":"easy","flags":[],"unswept":false}"#,
+            r#"{"defId":"meditative-013","games":8,"drawnGames":5,"affordableTurns":4,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":6,"evalDeltaCount":3,"tier":"hard","flags":[],"unswept":false}"#,
+            r#"{"defId":"meditative-014","games":8,"drawnGames":3,"affordableTurns":0,"plays":0,"errors":0,"timeouts":0,"evalDeltaSum":0,"evalDeltaCount":0,"tier":"easy","flags":[],"unswept":true}"#,
+            r#"{"defId":"meditative-014","games":8,"drawnGames":2,"affordableTurns":0,"plays":0,"errors":0,"timeouts":0,"evalDeltaSum":0,"evalDeltaCount":0,"tier":"hard","flags":[],"unswept":true}"#,
+        ];
+        let lines: Vec<Value> = FIXTURE_LINES
+            .lines()
+            .chain(more)
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        let printed = report(
+            &pass1_lines(&lines).unwrap(),
+            &pass2_lines(&lines).unwrap(),
+            None,
+            FIXTURE_DATE,
+        );
+        assert!(
+            printed.ends_with("\nCleared ids:\n\n```rust\n    \"meditative-013\",\n```\n"),
+            "{printed}"
+        );
+        let block = parse_block(&printed).unwrap();
+        assert_eq!(block.cleared, ["meditative-013"]);
+        // The unswept card is neither cleared nor listed: no evidence either way (R186).
+        assert!(printed.contains("\n- meditative-014 "), "{printed}");
+        assert_eq!(
+            (block.ban, block.watch),
+            (fixture_block().ban, fixture_block().watch)
+        );
+        let malformed = printed.replace("    \"meditative-013\",", "    meditative-013");
+        let error = format!("{:#}", parse_block(&malformed).unwrap_err());
+        assert!(error.contains("not a `    \"<id>\",` row"), "{error}");
+    }
+
+    #[test]
+    fn r1675000_a_report_printed_before_the_list_clears_nothing() {
+        jackioh_cards::register_all();
+        let printed = fixture_report(FIXTURE_DATE);
+        let (before, _) = printed
+            .split_once("\nCleared ids:")
+            .expect("the report lists its cleared ids");
+        let older = format!("{before}\n");
+        assert!(!older.contains(CLEARED_LABEL));
+        assert_eq!(parse_block(&older).unwrap(), fixture_block());
+    }
+
+    #[test]
+    fn r1675000_a_later_report_that_cleared_a_card_takes_its_rows_off_both_tables() {
+        jackioh_cards::register_all();
+        let older = block_of(&meditative_ids(11, 13), &["meditative-022", "meditative-026"]);
+        let newer = Block {
+            cleared: vec!["meditative-012".into(), "meditative-022".into()],
+            ..block_of(&[], &[])
+        };
+        let ids = |rows: &[(String, String)]| rows.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>();
+        let mut reports = vec![("a.md".to_string(), older), ("b.md".to_string(), newer)];
+        let record = compose(&reports, &[]).unwrap();
+        assert_eq!(ids(&record.ban), ["meditative-011", "meditative-013"]);
+        assert_eq!(ids(&record.watch), ["meditative-026"]);
+        // No report bans a cleared card any more, so SHADOW_UNBANNED may not name it.
+        let error = compose(&reports, &["meditative-012"]).unwrap_err();
+        assert!(error.to_string().contains("no report of record bans"), "{error}");
+        // A later report that lists the card again gives it that row.
+        reports.push(("c.md".to_string(), block_of(&["meditative-012".to_string()], &[])));
+        assert_eq!(ids(&compose(&reports, &[]).unwrap().ban), meditative_ids(11, 13));
+    }
+
+    #[test]
+    fn r1675000_a_report_that_both_clears_and_lists_a_card_or_lists_them_unsorted_is_refused() {
+        jackioh_cards::register_all();
+        let banned = Block {
+            cleared: vec!["meditative-011".into()],
+            ..block_of(&meditative_ids(11, 11), &[])
+        };
+        let watched = Block {
+            cleared: vec!["meditative-022".into()],
+            ..block_of(&[], &["meditative-022"])
+        };
+        for block in [banned, watched] {
+            let error = compose_one(block, &[]).unwrap_err();
+            assert!(error.to_string().contains("R1675000"), "{error}");
+        }
+        let unsorted = Block {
+            cleared: vec!["meditative-013".into(), "meditative-012".into()],
+            ..block_of(&[], &[])
+        };
+        let error = compose_one(unsorted, &[]).unwrap_err();
+        assert!(error.to_string().contains("not sorted"), "{error}");
     }
 
     #[test]

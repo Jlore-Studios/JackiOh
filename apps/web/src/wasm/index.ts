@@ -537,7 +537,7 @@ export type AiConstants = {
   AI_BUDGET: SearchBudget;
   AI_GATE_BUDGET: SearchBudget;
   SHADOW_BAN_IDS: readonly string[];
-  /** Issue #1113: the frozen fixture pool, the same ids in the same order as SHADOW_BAN_IDS. */
+  /** Issue #1113: the frozen fixture pool, a copy of SHADOW_BAN_IDS as it stood when the fixtures were dealt. */
   FIXTURE_BANNED_IDS: readonly string[];
   AI_DECK: AiDeckConstants;
 };

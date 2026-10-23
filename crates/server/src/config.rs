@@ -2475,6 +2475,14 @@ pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
 /// the blocking pool free for the live matches' folds.
 pub const PRACTICE_VERIFY_CONCURRENCY: usize = 2;
+/// SPEC §14.8, R1688000: how many times the server tries a passed practice claim's pay (its
+/// rewards and its last board, one transaction) before it answers an error. Each try is the whole
+/// transaction, so one that fails pays nothing and the try after it pays once; the seed stays
+/// burned whatever happens (R1303001). Three tries outlast a blip in the store, as R1437's do.
+pub const PRACTICE_PAY_ATTEMPTS: usize = 3;
+/// SPEC §14.8, R1688000: the wait before the second try at a practice claim's pay, doubled before
+/// each try after it (250 ms, then 500 ms), as `MATCH_RECORD_RESULT_BACKOFF_MS` waits.
+pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
 /// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
 /// (#1333's table: 5).
 pub const QUEST_INTERVAL_HOURS: i64 = 5;
