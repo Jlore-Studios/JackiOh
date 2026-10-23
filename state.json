@@ -12622,6 +12622,9 @@
     "1731": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "7a73d068ab0bac87f43c6af159e43522cba0e165": 1
+      },
       "cleared": {
         "at": "2026-10-23T15:21:22Z",
         "by": "`claude` (strong)",
