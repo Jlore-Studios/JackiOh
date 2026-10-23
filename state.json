@@ -12453,6 +12453,13 @@
     "1723": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T13:54:03Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "AI decision code in crates/ai/src plus a new ruling (R1723000) and a spec edit rule out easy; it is a bounded pass heuristic beside the search (decide, beam, reply untouched) and was prototyped green, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
