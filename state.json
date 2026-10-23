@@ -12911,6 +12911,13 @@
     "1696": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T04:08:52Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "crates/ai/src/ reads as hard, but this is one bounded reply step that reuses best_try; the planner built and tested all of it in a scratch copy, so the builder has no search design left to do"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
