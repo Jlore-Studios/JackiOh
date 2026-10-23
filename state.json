@@ -12537,6 +12537,8 @@
       "verdict_rounds": 0
     },
     "1729": {
+      "action": "revise",
+      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "947fb11950e361fccc206250cd86c00b3b740713": 1
@@ -12556,11 +12558,15 @@
       "issue": 1718,
       "kind": "revise",
       "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-10-23T14:15:09Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:649b6e7e-1792766502",
       "self_check_findings": [],
       "source": "ci",
+      "started_at": "2026-10-23T14:42:12Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -12649,9 +12655,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T14:32:16Z",
+    "at": "2026-10-23T14:42:12Z",
     "url": "",
-    "what": "plan #1728 on claude-3"
+    "what": "revise #1729 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-23T14:30:36Z",
