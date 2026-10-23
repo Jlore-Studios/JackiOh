@@ -79,6 +79,18 @@ function errorAccount(cause: unknown, retry: () => void): Account {
   return { kind: "error", message: cause instanceof Error ? cause.message : String(cause), retry };
 }
 
+/** A screen's own failed read: the error's own sentence, and the wait a rate limit stated (R192). */
+export type ReadFailure = { message: string; retryAfterMs?: number };
+
+/** What a failed read of this screen's own says: the error's sentence and the wait it stated, if any. */
+export function readFailureOf(cause: unknown): ReadFailure {
+  const wait = retryAfterMsOf(cause);
+  return {
+    message: cause instanceof Error ? cause.message : String(cause),
+    ...(wait === null ? {} : { retryAfterMs: wait }),
+  };
+}
+
 type Renewal = { ok: true; session: Session } | { ok: false; account: Account };
 
 /** Two tokens that both name a user id, and not the same one. */

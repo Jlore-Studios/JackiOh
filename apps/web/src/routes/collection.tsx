@@ -8,11 +8,13 @@
 // Every panel renders what the server answered and decides nothing (CLAUDE.md rule 7): `GET
 // /api/collection`, `/api/wallet`, `/api/packs`, `/api/cosmetic-packs`, `/api/tracks`, `/api/quests`
 // and `/api/cosmetics`. Each panel reads for itself and says why in its place when its read fails,
-// so one refused read never blanks the others. Until the economy goes live everyone owns every
-// card (§14.12), so the screen shows a full collection. The page never scrolls: a section's body does.
+// so one refused read never blanks the others, and offers Try again (#1691). Until the economy goes live
+// everyone owns every card (§14.12), so the screen shows a full collection. The page never scrolls: a
+// section's body does.
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import { AccountError } from "../auth/AccountError.tsx";
 import OwnedCards from "../collection/OwnedCards.tsx";
 import TracksPanel from "../collection/TracksPanel.tsx";
 import WalletPanel from "../collection/WalletPanel.tsx";
@@ -31,6 +33,7 @@ import {
   type PacksResponse,
   type WalletResponse,
 } from "../net/api.ts";
+import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths, useSearch } from "../net/navigate.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import QuestsPanel from "./QuestsPanel.tsx";
@@ -51,11 +54,15 @@ async function readWallet(token: string): Promise<WalletRead> {
   return { wallet, packs, cosmeticPacks };
 }
 
-type Read<T> = { kind: "loading" } | { kind: "ready"; value: T } | { kind: "error"; message: string };
+type Read<T> =
+  | { kind: "loading" }
+  | { kind: "ready"; value: T }
+  | ({ kind: "error"; retry: () => void } & ReadFailure);
 
-/** One panel's read, once when it mounts. */
+/** One panel's read, when it mounts and each time Try again asks for it again. */
 function useRead<T>(token: string, load: (token: string) => Promise<T>): Read<T> {
   const [read, setRead] = useState<Read<T>>({ kind: "loading" });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,12 +71,20 @@ function useRead<T>(token: string, load: (token: string) => Promise<T>): Read<T>
         if (!cancelled) setRead({ kind: "ready", value });
       })
       .catch((cause: unknown) => {
-        if (!cancelled) setRead({ kind: "error", message: cause instanceof Error ? cause.message : String(cause) });
+        if (cancelled) return;
+        setRead({
+          kind: "error",
+          ...readFailureOf(cause),
+          retry: () => {
+            setRead({ kind: "loading" });
+            setAttempt((before) => before + 1);
+          },
+        });
       });
     return () => {
       cancelled = true;
     };
-  }, [token, load]);
+  }, [token, load, attempt]);
 
   return read;
 }
@@ -96,9 +111,13 @@ function Section<T>({
           {loading}
         </p>
       ) : read.kind === "error" ? (
-        <p className="notice" role="alert" data-testid={collectionTestid.error(part)}>
-          {t(read.message)}
-        </p>
+        <AccountError
+          message={read.message}
+          retryAfterMs={read.retryAfterMs}
+          onRetry={read.retry}
+          testId={collectionTestid.error(part)}
+          retryTestId={collectionTestid.retry(part)}
+        />
       ) : (
         children(read.value)
       )}

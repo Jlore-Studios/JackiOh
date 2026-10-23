@@ -3,17 +3,19 @@
 //! - `POST /api/challenges` takes the body `POST /api/rooms` takes, plus `friendId`. Past
 //!   `CHALLENGES_PER_HOUR` an hour per account it is 429, counted on every attempt before anything
 //!   else, so a create-and-cancel loop can neither grow the table nor flood a friend with toasts.
-//!   Only a friend neither side blocked may be challenged (else 404); one in a match, a series or a
-//!   co-op game is 409 `busy`, one not online 409 `offline` (B47's status); a second open challenge
-//!   to the same friend is 409 `already_challenged`. Then the room is opened exactly as
+//!   Only a friend neither side blocked may be challenged (else 404, read again as the challenge is
+//!   written, R1689000); one in a match, a series or a co-op game is 409 `busy`, one not online 409
+//!   `offline` (B47's status); a second open challenge to the same friend is 409
+//!   `already_challenged`. Then the room is opened exactly as
 //!   `POST /api/rooms` opens it (`actor::rooms::open_room`: the same body, mode rules and refusals),
 //!   open for `CHALLENGE_TTL_MS` instead of `ROOM_CODE_TTL_SECONDS`, so it lapses with the
 //!   challenge, and the answer is `201 {challengeId, roomCode}`.
 //! - `GET /api/challenges`: the caller's open challenges that have not lapsed, received and sent.
 //! - Accepting is joining the room with its code through the existing `POST /api/rooms/:code/join`,
 //!   whose claim marks the challenge accepted in its own transaction (`challenges_accept_room`). A
-//!   challenge's room is its friend's to join: anyone else meets the miss an unknown code is
-//!   (`assert_may_join`).
+//!   challenge's room is its friend's to join while the two are still friends neither of whom blocks
+//!   the other: anyone else, and the friend once that has ended, meets the miss an unknown code is
+//!   (`assert_may_join`, R1689000).
 //! - `POST /api/challenges/:id/decline` (its friend) and `DELETE /api/challenges/:id` (its
 //!   challenger) close it and free its room (`actor::rooms::release_room`); 204, or 404 for anyone
 //!   else. Answering one that is no longer open changes nothing and is 204 too, until the sweeper
@@ -110,6 +112,13 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         state: ChallengeState::Open,
     };
     let mut tx = app.db.begin(Some(&me)).await?;
+    // R1689000: read again where the challenge is written, so a friendship that ended or a block made
+    // while the room opened (whose cleanup ran before this row existed) leaves no open challenge.
+    if !are_friends(&mut tx, &me, &friend.id).await? {
+        release_room(&mut tx, &room.code).await?;
+        tx.commit().await?;
+        return Err(not_found("that player is not your friend"));
+    }
     if !tx.challenges_create(&challenge, now_ms()).await? {
         // A second challenge raced this one in: this one's room goes, unjoined.
         release_room(&mut tx, &room.code).await?;
@@ -214,16 +223,24 @@ async fn close(
     Ok(no_content())
 }
 
-/// B49: a room a challenge opened is its friend's to join; anyone else gets the answer an unknown
-/// code gets (`rooms.rs`'s miss), so a code read over a shoulder opens nothing. Any other room
-/// passes.
+/// B49, R1689000: a room a challenge opened is its friend's to join while the two are still friends
+/// neither of whom blocks the other; anyone else, and the friend once that has ended, gets the answer
+/// an unknown code gets (`rooms.rs`'s miss), so a code read over a shoulder opens nothing and no
+/// refusal tells that the code exists. Any other room passes.
 pub async fn assert_may_join(app: &App, code: &str, joiner: &str) -> Result<(), ApiError> {
     let mut tx = app.db.begin(Some(joiner)).await?;
     let challenge = tx.challenges_open_for_room(code, now_ms()).await?;
+    let may_join = match &challenge {
+        Some(challenge) => {
+            challenge.to_profile == joiner && are_friends(&mut tx, joiner, &challenge.from_profile).await?
+        }
+        None => true,
+    };
     tx.commit().await?;
-    match challenge {
-        Some(challenge) if challenge.to_profile != joiner => Err(not_found("that room code is not open")),
-        _ => Ok(()),
+    if may_join {
+        Ok(())
+    } else {
+        Err(not_found("that room code is not open"))
     }
 }
 
