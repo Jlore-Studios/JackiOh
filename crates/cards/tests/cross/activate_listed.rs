@@ -743,7 +743,10 @@ mod c_plus_n7_the_house {
 
     /// p1's Units, by definition and face.
     fn twins(s: &Scenario) -> Vec<(String, bool)> {
-        units(s, P1).into_iter().map(|unit| (unit.def_id, unit.radiant)).collect()
+        units(s, P1)
+            .into_iter()
+            .map(|unit| (unit.def_id, unit.radiant))
+            .collect()
     }
 
     #[test]

@@ -58,30 +58,29 @@ fn final_gambit(draw_count: DrawCount, instead: ReplacementInstead, then: &'stat
     }
 }
 
-fn faces(instead: ReplacementInstead, then: &'static str) -> CardScripts {
-    let base = final_gambit(
-        Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") }),
-        instead,
-        then,
-    );
+/// The base face's draws: the declared number.
+fn declared_draws() -> DrawCount {
+    Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") })
+}
 
-    let radiant = final_gambit(
-        Arc::new(|ctx: &EffectContext<'_>| -> i32 {
-            zone_count(ctx.state, ctx.controller, OffFieldZone::Library)
-        }),
-        instead,
-        then,
-    );
-
-    CardScripts { base, radiant }
+/// The Radiant face's draws: the deck as the step begins (R58).
+fn deck_draws() -> DrawCount {
+    Arc::new(|ctx: &EffectContext<'_>| -> i32 {
+        zone_count(ctx.state, ctx.controller, OffFieldZone::Library)
+    })
 }
 
 pub fn script() -> CardScripts {
+    // R1704001: the hit is cancelled.
     let cancel = ReplacementInstead {
         cancel: Some(true),
         ..ReplacementInstead::default()
     };
-    faces(cancel, "afterCancel")
+    let base = final_gambit(declared_draws(), cancel, "afterCancel");
+
+    let radiant = final_gambit(deck_draws(), cancel, "afterCancel");
+
+    CardScripts { base, radiant }
 }
 
 /// R767000: the scripts v0.4.0f and every version before it ran, the redirect to the enemy hero;
@@ -91,7 +90,10 @@ pub fn script_v0_4_0f() -> CardScripts {
         redirect: Some(InsteadRedirect::EnemyHero),
         ..ReplacementInstead::default()
     };
-    faces(redirect, "afterRedirect")
+    CardScripts {
+        base: final_gambit(declared_draws(), redirect, "afterRedirect"),
+        radiant: final_gambit(deck_draws(), redirect, "afterRedirect"),
+    }
 }
 
 // C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4

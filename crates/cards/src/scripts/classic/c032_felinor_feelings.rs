@@ -61,15 +61,14 @@ fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
-/// The card's two faces: stealing only an enemy Unit, or, through v0.4.0f, any enemy permanent.
-fn feelings(units_only: bool) -> CardScripts {
-    let of = if units_only { json!(["unit"]) } else { json!(["unit", "backrow"]) };
-    let prompt = if units_only {
-        "Steal an enemy Unit in a lane where you control a (1) Cost Unit"
-    } else {
-        "Steal an enemy permanent in a lane where you control a (1) Cost Unit"
-    };
-    let base = Script {
+/// R81: what the steal may take, an enemy Unit (R1081000: on the field or standing in their backrow).
+const UNITS: &[&str] = &["unit"];
+/// R767000: through v0.4.0f, any enemy permanent, a backrow card too.
+const PERMANENTS: &[&str] = &["unit", "backrow"];
+
+/// The base face: a declared target, an enemy card of `of` in a Felinor lane.
+fn feelings(of: &'static [&'static str]) -> Script {
+    Script {
         targets: vec![TargetDecl::target(
             1,
             1,
@@ -78,9 +77,12 @@ fn feelings(units_only: bool) -> CardScripts {
         target_checks: IndexMap::from([(LANE_RULE, lane_rule())]),
         cry: Some(hook(|_ctx| vec![steal_chosen()])),
         ..Script::default()
-    };
+    }
+}
 
-    let radiant = Script {
+/// The Radiant face: the Felinor Token, then a prompt for an enemy card of `of` in a Felinor lane.
+fn feelings_radiant(of: &'static [&'static str], prompt: &'static str) -> Script {
+    Script {
         cry: Some(hook(move |_ctx| {
             let mut choose: ChooseTargetWhereArgs = json_as(json!({
                 "step": STEAL,
@@ -92,19 +94,29 @@ fn feelings(units_only: bool) -> CardScripts {
         })),
         resume: IndexMap::from([(STEAL, hook(|_ctx| vec![steal_chosen()]))]),
         ..Script::default()
-    };
-
-    CardScripts { base, radiant }
+    }
 }
 
 pub fn script() -> CardScripts {
-    feelings(true)
+    CardScripts {
+        base: feelings(UNITS),
+        radiant: feelings_radiant(
+            UNITS,
+            "Steal an enemy Unit in a lane where you control a (1) Cost Unit",
+        ),
+    }
 }
 
 /// R767000: the scripts v0.4.0f and every version before it ran, stealing any enemy permanent;
 /// `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_4_0f() -> CardScripts {
-    feelings(false)
+    CardScripts {
+        base: feelings(PERMANENTS),
+        radiant: feelings_radiant(
+            PERMANENTS,
+            "Steal an enemy permanent in a lane where you control a (1) Cost Unit",
+        ),
+    }
 }
 
 #[cfg(test)]

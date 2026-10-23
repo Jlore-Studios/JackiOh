@@ -7,7 +7,7 @@
     "new": [
       "Float: the mana a player leaves unspent at the end of their turn. A card with \"Float reduces cost\" costs that much less.",
       "Garage Sale, a (1) Spell AI generated card: fill your hand with Coins, then discard your hand.",
-      "Leg Day, a (2) Spell AI generated card: give your Units +5/+5."
+      "Leg Day, a (3) Spell AI generated card: give your Units +5/+5."
     ],
     "balance": [
       "Book of Buff buffs 4 times, down from 5, and 8 times on its Radiant face, down from 10.",

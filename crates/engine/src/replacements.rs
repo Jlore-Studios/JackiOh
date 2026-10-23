@@ -367,8 +367,9 @@ fn finish(
 /// What a lethal hit's replacement did with it (`lethal_hit_window`).
 #[derive(Clone, Debug, PartialEq)]
 pub enum LethalHitTo {
-    /// The hit now goes here, as a new instance from the same source.
-    Target(DamageTarget),
+    /// The hit now goes here, as a new instance from the same source (boxed: a Unit target carries
+    /// its whole instance).
+    Target(Box<DamageTarget>),
     /// R1704001: the hit is cancelled and deals nothing.
     Cancelled,
 }
@@ -434,7 +435,8 @@ pub fn lethal_hit_window(
             if let Some(card) = find_instance_mut(sink.state, &cand.card.id)
                 && card.zone.z() == ZoneName::Field
             {
-                card.memory.insert(CANCELLED_MEMORY_KEY.to_string(), Value::from(turn));
+                card.memory
+                    .insert(CANCELLED_MEMORY_KEY.to_string(), Value::from(turn));
             }
             return Some(LethalHitTo::Cancelled);
         }
@@ -481,7 +483,7 @@ pub fn lethal_hit_window(
         finish(sink, &cand, &def, &record, fired);
         // R460: the hit is not on this target any more, so nothing later in the walk finds it lethal
         // here; the new instance meets its destination's replacements in a walk of its own.
-        return Some(LethalHitTo::Target(destination));
+        return Some(LethalHitTo::Target(Box::new(destination)));
     }
     None
 }

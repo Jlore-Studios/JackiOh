@@ -21,29 +21,32 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-062";
 
-fn papaya(rules: subsystems::PapayaRules) -> CardScripts {
-    let base = Script {
+/// The curve under `rules`, on either face: the Radiant face's offers and its "every enemy card" are
+/// the running face, read by the subsystem.
+fn papaya(rules: subsystems::PapayaRules) -> Script {
+    Script {
         cry: Some(hook(move |_ctx| subsystems::papaya_begin_with(rules))),
         resume: IndexMap::from([(
             subsystems::PAPAYA_STEP,
             hook(move |ctx| subsystems::papaya_answered_with(rules, ctx)),
         )]),
         ..Script::default()
-    };
-    // The same script: the Radiant face's offers and its "every enemy card" are the running face,
-    // read by the subsystem.
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    }
 }
 
 pub fn script() -> CardScripts {
-    papaya(subsystems::PAPAYA_RULES)
+    let base = papaya(subsystems::PAPAYA_RULES);
+    // The same script.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 /// R767000: the scripts v0.4.0f and every version back to v0.3.10 ran: 1 to 4 Discovers of 3 cells,
 /// then "done", and the exiles (R831003); `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_4_0f() -> CardScripts {
-    papaya(subsystems::PAPAYA_RULES_V0_4_0F)
+    let base = papaya(subsystems::PAPAYA_RULES_V0_4_0F);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 
 // C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, R831003, R1704000, BUILD M9 row C+ 62: four Discovers, one

@@ -121,8 +121,17 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-pub static PAPAYA_DEFS: LazyLock<Vec<CardDef>> =
-    LazyLock::new(|| vec![curve(), body(), snare(), field(), token(), curve_quickdraw(), curve_now()]);
+pub static PAPAYA_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
+    vec![
+        curve(),
+        body(),
+        snare(),
+        field(),
+        token(),
+        curve_quickdraw(),
+        curve_now(),
+    ]
+});
 
 /// TS `PAPAYA_SCRIPTS` (module-private there), as a call.
 pub fn papaya_scripts() -> IndexMap<String, CardScripts> {

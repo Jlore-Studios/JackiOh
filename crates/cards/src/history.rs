@@ -143,7 +143,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.0f",
         c032_felinor_feelings::script_v0_4_0f,
     ),
-    (c052_final_gambit::ID, "v0.4.0f", c052_final_gambit::script_v0_4_0f),
+    (
+        c052_final_gambit::ID,
+        "v0.4.0f",
+        c052_final_gambit::script_v0_4_0f,
+    ),
     (c054_straaza::ID, "v0.4.0f", c054_straaza::script_v0_4_0f),
     (
         c030_fickle_e_kitten::ID,

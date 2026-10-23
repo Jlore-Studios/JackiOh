@@ -164,7 +164,7 @@ mod tests {
     }
 
     fn counters(s: &Scenario) -> i32 {
-        plague_on(&s.card(HOUSE))
+        plague_on(s.card(HOUSE))
     }
 
     /// The House played into backrow zone 1, then a turn each, so its controller may activate it again.

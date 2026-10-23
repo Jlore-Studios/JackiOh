@@ -258,7 +258,11 @@ fn cell_label(point: &PapayaPoint) -> String {
 /// once a cell is picked where the rules allow it.
 fn ask_cell(points: Vec<PapayaPoint>, rules: PapayaRules) -> Effect {
     Effect::new("papayaCell", move |ctx| {
-        let offers = if ctx.radiant { PAPAYA_OFFERS } else { rules.base_offers };
+        let offers = if ctx.radiant {
+            PAPAYA_OFFERS
+        } else {
+            rules.base_offers
+        };
         let used: Vec<i32> = points.iter().map(|point| point.x).collect();
         let free: Vec<PapayaPoint> = (0..PAPAYA_LANES)
             .filter(|x| !used.contains(x))

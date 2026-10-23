@@ -487,6 +487,7 @@ fn land_hit(
             return 0;
         }
         if let Some(LethalHitTo::Target(to)) = to {
+            let to = *to;
             // R1204: the hit the guard catches is never caught again by the same guard — and a
             // hero-to-hero redirect changes controllers, so the old side's catchers can never answer
             // the new walk anyway. Only a Unit destination names its catcher.
@@ -548,6 +549,7 @@ fn land_hit(
             return 0;
         }
         if let Some(LethalHitTo::Target(to)) = to {
+            let to = *to;
             let mut next_caught: Vec<String> = caught.to_vec();
             if let DamageTarget::Unit { instance } = &to {
                 next_caught.push(instance.id.clone());

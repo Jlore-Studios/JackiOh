@@ -9,9 +9,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
     anime_armor, answer, argus, blood_moon, cancel_gambit, echo_gambit, event_types, gambit, gambit_asker,
-    grunt, in_pile,
-    joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to, round_trip,
-    second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
+    grunt, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to,
+    round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;

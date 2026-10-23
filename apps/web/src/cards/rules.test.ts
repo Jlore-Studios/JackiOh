@@ -659,10 +659,8 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       "Start of turn",
       "End of turn",
     ]);
-    // The six catalog faces that print compounds name both terms now.
+    // The four catalog faces that print compounds name both terms now.
     for (const [id, face] of [
-      ["classicplus-007", "base"],
-      ["classicplus-007", "radiant"],
       ["classic-058", "radiant"],
       ["classicplus-019-5", "base"],
       ["classicplus-070", "base"],
@@ -709,7 +707,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Buff", "classicplus-071", "base", "Buff"],
       ["Plague Counter", "classic-039", "base", "Plague Counters"],
       ["Set health", "classic-029", "base", "Set health"],
-      ["Redirect", "classic-052", "base", "Redirect"],
+      ["Redirect", "meditative-064", "base", "Redirect"],
       ["End the turn", "classicplus-026", "base", "End the turn"],
       ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
       ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
