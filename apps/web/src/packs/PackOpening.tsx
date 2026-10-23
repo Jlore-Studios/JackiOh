@@ -1,11 +1,15 @@
-// The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4): the odds and the pity
-// counters the server states, the packs the account holds, and the scene that opens one. It is on the
-// Shop screen (`routes/shop.tsx`), where pity shows once for every card pack (R1580000).
+// The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4): the packs the account
+// holds and the scene that opens one. It is on the Shop screen (`routes/shop.tsx`). The odds and the pity
+// counters the server states are the Purchases page's (#1651), not the panel's.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). `PackScene` never rolls: it draws the slots `POST
 // /api/packs/open` already settled, and nothing on screen changes before that answer. Tearing is a
 // request; skip-all, the holds and the flips only choose how fast an answer already in hand is
 // shown. A refused open leaves the pack sealed on screen with the server's words beside it.
+//
+// The pack is a `PackObject` (#1663): the sealed button around it takes the tap and the swipe, and the
+// object draws the press and the tear. Once every card shows, the scene mounts the opening's two token
+// bars (`OpeningBars`, SPEC §14.5) above its actions.
 //
 // REDUCED MOTION (the panel's setting or the system's) shows the results at once: no tear, no flip,
 // no hold and no effects. A skip-all shows the same, with the best card's sting played once.
@@ -24,6 +28,7 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import OpeningBars from "../economy/OpeningBars.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
@@ -40,19 +45,16 @@ import {
   PACK_HOLD_MS,
   PACK_SWIPE_PX,
   PACK_TEAR_MS,
-  ODDS_RARITIES,
-  PITY_RARITIES,
   bestRarity,
   holdsToFlip,
   packName,
   packTestid,
-  percent,
   playStinger,
   revealCues,
   slotOutcome,
-  tierPercents,
   withOpening,
 } from "./packs.ts";
+import PackObject from "./PackObject.tsx";
 import "./packs.css";
 
 /** The scene shakes nothing: the pack is not the board. */
@@ -85,6 +87,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const [skipped, setSkipped] = useState(false);
   const [flipped, setFlipped] = useState<ReadonlySet<number>>(new Set());
   const [holding, setHolding] = useState<number | null>(null);
+  const [pressing, setPressing] = useState(false);
 
   const holdTimer = useRef<number | null>(null);
   const swipeFrom = useRef<number | null>(null);
@@ -183,13 +186,20 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
 
   const onPackDown = (event: PointerEvent<HTMLButtonElement>): void => {
     swipeFrom.current = event.clientX;
+    setPressing(true);
     if (typeof event.currentTarget.setPointerCapture === "function") event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const onPackUp = (event: PointerEvent<HTMLButtonElement>): void => {
     const from = swipeFrom.current;
     swipeFrom.current = null;
+    setPressing(false);
     if (from !== null && Math.abs(event.clientX - from) >= PACK_SWIPE_PX) onTear();
+  };
+
+  const onPackCancel = (): void => {
+    swipeFrom.current = null;
+    setPressing(false);
   };
 
   const title = t("Opening {pack}", { pack: packName(pack) });
@@ -214,7 +224,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
       {showSlots ? null : (
         <button
           type="button"
-          className="pack"
+          className="pack-hit"
           data-testid={packTestid.pack}
           data-state={opened === null ? "sealed" : "tearing"}
           data-best={opened === null ? undefined : bestRarity(opened.slots)}
@@ -222,10 +232,16 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           onClick={onTear}
           onPointerDown={onPackDown}
           onPointerUp={onPackUp}
+          onPointerCancel={onPackCancel}
         >
-          <span className="pack__top" aria-hidden="true" />
-          <span className="pack__name">{packName(pack)}</span>
-          <span className="pack__hint">{busy || opened !== null ? t("Opening…") : t("Swipe or tap to open")}</span>
+          <PackObject
+            pack={pack}
+            size="scene"
+            state={opened !== null ? "tearing" : pressing ? "pressed" : "idle"}
+            testid={packTestid.object}
+          >
+            <span className="pack__hint">{busy || opened !== null ? t("Opening…") : t("Swipe or tap to open")}</span>
+          </PackObject>
         </button>
       )}
 
@@ -283,6 +299,8 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           {error}
         </p>
       )}
+
+      {all && opened !== null ? <OpeningBars bars={opened.bars} testid={packTestid.bars} /> : null}
 
       <div className="pack-actions">
         {all ? null : (
@@ -440,9 +458,7 @@ export default function PackOpening({
       ) : null}
       {info === null ? null : (
         <>
-          <PackPity info={info} />
           <PacksHeld info={info} onOpen={start} />
-          <PackOdds info={info} />
         </>
       )}
       {scene === null ? null : (
@@ -458,72 +474,6 @@ export default function PackOpening({
           onClose={close}
         />
       )}
-    </div>
-  );
-}
-
-/**
- * R1580000: how close each tracked rarity's pity is, as `GET /api/packs` states it; one counter set
- * counts every card pack (R1298000), so it shows once.
- */
-function PackPity({ info }: { info: PacksResponse }): ReactElement {
-  const { pity, thresholds } = info;
-  return (
-    <div className="packs-pity" data-testid={packTestid.pityPanel}>
-      <h4 className="shop-subheading">{t("Pity")}</h4>
-      <p>{t("Every card pack counts toward the same pity.")}</p>
-      <ul className="packs-pity__list">
-        {PITY_RARITIES.map(({ key, rarity }) => (
-          <li key={key} className="packs-pity__row">
-            <span>{t(rarity)}</span>
-            <span data-testid={packTestid.pity(key)}>
-              {t("{count} / {threshold} packs", { count: pity[key], threshold: thresholds[key] })}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <p data-testid={packTestid.pityLine}>
-        {t(
-          "Pity guarantees an Epic within {epic} packs, a Legendary within {legendary} packs and a Mythic within {mythic} packs.",
-          thresholds,
-        )}
-      </p>
-    </div>
-  );
-}
-
-/**
- * The odds per rarity of a slot and of the floored slot, the fallback included, and what a
- * duplicate becomes, all as `GET /api/packs` states them (R1339000). Pity is `PackPity`'s.
- */
-function PackOdds({ info }: { info: PacksResponse }): ReactElement {
-  const { odds } = info;
-  return (
-    <div data-testid={packTestid.odds}>
-      <table className="packs-odds">
-        <thead>
-          <tr>
-            <th scope="col">{t("Rarity")}</th>
-            <th scope="col">{t("Each slot")}</th>
-            <th scope="col">{t("Guaranteed slot")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ODDS_RARITIES.map(({ key, rarity }) => (
-            <tr key={key} data-testid={packTestid.oddsRow(key)}>
-              <th scope="row">{t(rarity)}</th>
-              <td>{percent(odds.slot[key])}</td>
-              <td>{percent(odds.flooredSlot[key])}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p data-testid={packTestid.duplicate}>
-        {t(
-          "A duplicate becomes a cosmetic: Common {common}, Rare {rare}, Epic {epic}, Legendary {legendary}, Mythic {mythic}. With none of that rarity left to own, it fills both token bars.",
-          tierPercents(odds.duplicateCosmetic),
-        )}
-      </p>
     </div>
   );
 }

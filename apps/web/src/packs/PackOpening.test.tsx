@@ -1,7 +1,8 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), from fixture responses:
-// each slot's outcome, the server's odds and pity on the panel before and after an opening, skip-all,
-// reduced motion, batch opening, a refused open, and the page told of an opening and asking for a
-// fresh read (#1309). Nothing here rolls a pack: the fixtures are what
+// each slot's outcome, the packs held on the panel before and after an opening, skip-all, reduced
+// motion, the pack object and the token bars after the reveal (#1663), batch opening, a refused open,
+// and the page told of an opening and asking for a fresh read (#1309). Nothing here rolls a pack: the
+// fixtures are what
 // `GET /api/packs` and `POST /api/packs/open` answer, and the audio engine is the recording fake the
 // audio suite's own wiring test uses.
 
@@ -421,6 +422,83 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.queryByTestId(T.slots)).toBeNull();
   });
 
+  it("the sealed pack is a PackObject at scene size: pressed under the pointer, tearing once the server has answered", () => {
+    const given = props();
+    const { rerender } = render(<PackScene {...given} />);
+    const object = screen.getByTestId(T.object);
+    expect(screen.getByTestId(T.pack)).toContainElement(object);
+    expect(object).toHaveAttribute("data-pack", "Core");
+    expect(object).toHaveAttribute("data-size", "scene");
+    expect(object).toHaveAttribute("data-state", "idle");
+    expect(object).toHaveTextContent("Core pack");
+
+    fireEvent.pointerDown(screen.getByTestId(T.pack), { clientX: 0, pointerId: 1 });
+    expect(screen.getByTestId(T.object)).toHaveAttribute("data-state", "pressed");
+    fireEvent.pointerUp(screen.getByTestId(T.pack), { clientX: 0, pointerId: 1 });
+    expect(screen.getByTestId(T.object)).toHaveAttribute("data-state", "idle");
+
+    fireEvent.pointerDown(screen.getByTestId(T.pack), { clientX: 0, pointerId: 1 });
+    fireEvent.pointerCancel(screen.getByTestId(T.pack), { pointerId: 1 });
+    expect(screen.getByTestId(T.object), "a cancelled press lets go").toHaveAttribute("data-state", "idle");
+
+    rerender(<PackScene {...given} opened={openedPack()} />);
+    expect(screen.getByTestId(T.object)).toHaveAttribute("data-state", "tearing");
+    advance(PACK_TEAR_MS);
+    expect(screen.queryByTestId(T.object), "the cards replace the pack").toBeNull();
+  });
+
+  it("under reduced motion the pack object holds still and the scene still reveals every slot", () => {
+    writeSettings({ reduceMotion: true });
+    const given = props();
+    const { rerender } = render(<PackScene {...given} />);
+    expect(screen.getByTestId(T.object)).toHaveAttribute("data-motion", "reduce");
+
+    rerender(<PackScene {...given} opened={openedPack()} />);
+    expect(screen.getByTestId(T.scene)).toHaveAttribute("data-motion", "reduce");
+    for (let index = 0; index < 5; index += 1) expect(revealed(index), `slot ${String(index)}`).toBe(true);
+    expect(screen.queryByTestId(T.object)).toBeNull();
+  });
+
+  it("the token bars mount once every card shows, not before", () => {
+    torn();
+    expect(screen.queryByTestId(T.bars)).toBeNull();
+
+    // Epic and above hold to turn; a keyboard press (no pointer) turns them at once.
+    for (const index of [4, 3, 2, 1]) {
+      fireEvent.click(screen.getByTestId(T.flip(index)), { detail: 0 });
+      expect(screen.queryByTestId(T.bars), `after card ${String(index)}`).toBeNull();
+    }
+    fireEvent.click(screen.getByTestId(T.flip(0)), { detail: 0 });
+    const bars = screen.getByTestId(T.bars);
+    expect(within(bars).getByTestId(`${T.bars}-card`)).toBeInTheDocument();
+    expect(within(bars).getByTestId(`${T.bars}-cosmetic`)).toBeInTheDocument();
+    expect(
+      bars.compareDocumentPosition(screen.getByTestId(T.close)) & Node.DOCUMENT_POSITION_FOLLOWING,
+      "the bars sit above the actions",
+    ).not.toBe(0);
+  });
+
+  it("skip-all mounts the token bars at once, and a reduced-motion scene shows them with the cards", () => {
+    render(<PackScene {...props({ opened: openedPack() })} />);
+    expect(screen.queryByTestId(T.bars)).toBeNull();
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    expect(screen.getByTestId(T.bars)).toBeInTheDocument();
+    cleanup();
+
+    writeSettings({ reduceMotion: true });
+    render(<PackScene {...props({ opened: openedPack() })} />);
+    expect(screen.getByTestId(T.bars)).toBeInTheDocument();
+  });
+
+  it("no token bars are drawn for an opening that moved neither", () => {
+    const still = { before: 4, after: 4, size: 12, pays: 0 };
+    const opened: OpenedPackResponse = { ...openedPack(), bars: { card: still, cosmetic: still, cosmeticPaid: [] } };
+    render(<PackScene {...props({ opened })} />);
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    expect(revealed(0)).toBe(true);
+    expect(screen.queryByTestId(T.bars)).toBeNull();
+  });
+
   it("the scene is a dialog named for its pack", () => {
     render(<PackScene {...props()} />);
     const dialog = screen.getByRole("dialog", { name: "Opening Core pack" });
@@ -448,34 +526,34 @@ function packsServer(answers: Answers = {}): ReturnType<typeof stubServer> {
 
 async function panel(): Promise<void> {
   render(<PackOpening token={TOKEN} />);
-  await screen.findByTestId(T.odds);
+  await waitFor(() => {
+    expect(screen.queryByTestId(T.loading)).toBeNull();
+  });
 }
 
 const text = (id: string): string => screen.getByTestId(id).textContent ?? "";
 
 describe("#1308 the card packs panel", () => {
-  it("R1339000 the odds and pity panel shows the server's tables, the fallback included, before opening and after", async () => {
+  it("the panel lists the packs held, before opening and after, and shows neither pity nor odds", async () => {
     const server = packsServer();
     await panel();
 
-    // Each row: the rarity, a slot's odds and the guaranteed slot's; pity is apart from them (R1580000).
-    expect(text(T.oddsRow("common"))).toBe("Common50%0%");
-    expect(text(T.oddsRow("rare"))).toBe("Rare32%82%");
-    expect(text(T.oddsRow("epic"))).toBe("Epic12.3%12.3%");
-    expect(text(T.oddsRow("legendary"))).toBe("Legendary4.5%4.5%");
-    expect(text(T.oddsRow("mythic"))).toBe("Mythic1.2%1.2%");
-    expect(text(T.pity("epic"))).toBe("7 / 10 packs");
-    expect(text(T.pity("legendary"))).toBe("13 / 20 packs");
-    expect(text(T.pity("mythic"))).toBe("21 / 40 packs");
-    expect(text(T.pityLine)).toBe(
-      "Pity guarantees an Epic within 10 packs, a Legendary within 20 packs and a Mythic within 40 packs.",
-    );
-    expect(text(T.duplicate)).toContain("Common 50%, Rare 30%, Epic 15%, Legendary 4%, Mythic 1%");
+    expect(screen.getByRole("heading", { name: "Card packs" })).toBeInTheDocument();
     expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
     expect(text(T.heldRow(GLOBAL_PACK_NAME))).toContain("Global pack: 1 unopened");
     expect(screen.queryByTestId(T.openAll(GLOBAL_PACK_NAME)), "one pack has no open-all").toBeNull();
     expect(server.to("GET", "/api/packs")).toHaveLength(1);
     expect(server.to("GET", "/api/packs")[0]?.headers.authorization).toBe(`Bearer ${TOKEN}`);
+
+    const shownNeither = (): void => {
+      expect(screen.queryByTestId(T.pityPanel)).toBeNull();
+      expect(screen.queryByTestId(T.odds)).toBeNull();
+      expect(screen.queryByTestId(T.duplicate)).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Pity" })).toBeNull();
+      expect(screen.queryByRole("table")).toBeNull();
+      expect(screen.getByTestId(T.panel).querySelector('[data-testid^="packs-pity"], [data-testid^="packs-odds"]')).toBeNull();
+    };
+    shownNeither();
 
     fireEvent.click(screen.getByTestId(T.open("Core")));
     fireEvent.click(screen.getByTestId(T.skipAll));
@@ -485,33 +563,8 @@ describe("#1308 the card packs panel", () => {
     expect(opens).toHaveLength(1);
     expect(opens[0]?.body).toEqual({ pack: "Core" });
     expect(opens[0]?.headers.authorization).toBe(`Bearer ${TOKEN}`);
-    expect(text(T.pity("epic"))).toBe("0 / 10 packs");
-    expect(text(T.pity("legendary"))).toBe("14 / 20 packs");
-    expect(text(T.pity("mythic"))).toBe("0 / 40 packs");
     expect(text(T.heldRow("Core"))).toContain("Core pack: 1 unopened");
-  });
-
-  it("R1580000 pity shows once, apart from the odds, above the packs held", async () => {
-    packsServer();
-    await panel();
-
-    const pity = screen.getByTestId(T.pityPanel);
-    expect(within(pity).getByRole("heading", { name: "Pity" })).toBeInTheDocument();
-    expect(pity).toHaveTextContent("Every card pack counts toward the same pity.");
-    expect(within(pity).getByTestId(T.pity("epic"))).toHaveTextContent("7 / 10 packs");
-    expect(within(pity).getByTestId(T.pity("legendary"))).toHaveTextContent("13 / 20 packs");
-    expect(within(pity).getByTestId(T.pity("mythic"))).toHaveTextContent("21 / 40 packs");
-    expect(within(pity).getByTestId(T.pityLine)).toBeInTheDocument();
-    expect(screen.getAllByTestId(T.pity("epic")), "pity shows once, not once per pack").toHaveLength(1);
-    expect(
-      screen.getByTestId(T.odds).querySelector('[data-testid^="packs-pity"]'),
-      "the odds hold no pity",
-    ).toBeNull();
-    expect(
-      pity.compareDocumentPosition(screen.getByTestId(T.held)) & Node.DOCUMENT_POSITION_FOLLOWING,
-      "pity comes before the packs held",
-    ).not.toBe(0);
-    expect(screen.getByRole("heading", { name: "Card packs" })).toBeInTheDocument();
+    shownNeither();
   });
 
   it("an account with no packs is told so", async () => {
@@ -536,7 +589,6 @@ describe("#1308 the card packs panel", () => {
     fireEvent.click(screen.getByTestId(T.close));
     expect(screen.queryByTestId(T.scene)).toBeNull();
     expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
-    expect(text(T.pity("epic"))).toBe("7 / 10 packs");
   });
 
   it("a tap and a swipe on one pack open it once", async () => {
@@ -591,7 +643,7 @@ describe("#1308 the card packs panel", () => {
     packsServer({ info: refusal(503, "unavailable", "the packs are not reachable") });
     render(<PackOpening token={TOKEN} />);
     expect(await screen.findByTestId(T.loadError)).toHaveTextContent("the packs are not reachable");
-    expect(screen.queryByTestId(T.odds)).toBeNull();
+    expect(screen.queryByTestId(T.held)).toBeNull();
     expect(screen.queryByTestId(T.loading)).toBeNull();
   });
 
@@ -604,7 +656,7 @@ describe("#1308 the card packs panel", () => {
     answers.info = { status: 200, body: packsInfo() };
     rerender(<PackOpening token={TOKEN} revision={1} />);
 
-    await screen.findByTestId(T.odds);
+    await screen.findByTestId(T.held);
     expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
     expect(screen.queryByTestId(T.loadError)).toBeNull();
     expect(screen.queryByTestId(T.retry)).toBeNull();
@@ -625,7 +677,7 @@ describe("#1308 the card packs panel", () => {
     expect(screen.getByTestId(T.retry)).toBeDisabled();
     fireEvent.click(screen.getByTestId(T.retry));
 
-    await screen.findByTestId(T.odds);
+    await screen.findByTestId(T.held);
     expect(text(T.heldRow("Core"))).toContain("Core pack: 2 unopened");
     expect(screen.queryByTestId(T.loadError)).toBeNull();
     expect(server.to("GET", "/api/packs")).toHaveLength(2);
@@ -635,7 +687,7 @@ describe("#1308 the card packs panel", () => {
     packsServer();
     render(<PackOpening token={TOKEN} />);
     expect(screen.getByTestId(T.loading)).toHaveTextContent("Loading your packs…");
-    await screen.findByTestId(T.odds);
+    await screen.findByTestId(T.held);
     expect(screen.queryByTestId(T.loading)).toBeNull();
   });
 
@@ -645,7 +697,7 @@ describe("#1308 the card packs panel", () => {
       open: (call) => (call === 1 ? refusal(409, "conflict", NO_PACK) : { status: 200, body: openedPack() }),
     });
     const { rerender } = render(<PackOpening token={TOKEN} onChanged={onChanged} />);
-    await screen.findByTestId(T.odds);
+    await screen.findByTestId(T.held);
 
     fireEvent.click(screen.getByTestId(T.open("Core")));
     fireEvent.click(screen.getByTestId(T.pack));

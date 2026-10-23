@@ -8,6 +8,7 @@
 import type { Difficulty } from "@jackioh/engine/config";
 import type { LeanPick, PlayerId } from "@jackioh/shared";
 
+import type { QuestPaid, TrackGain } from "../economy/xp.ts";
 import type { LastBoardCard, PracticeClaim } from "../practice/protocol.ts";
 import { apiRequest } from "./api.ts";
 
@@ -29,10 +30,11 @@ export type PracticeSeedIssued = { seed: string; lastBoard: LastBoardCard[]; exp
 /**
  * What a claim earned, or why it earned nothing (`economy::practice`'s `ClaimRefusal`, snake case).
  * R1483000: `jloreCapped` is true when the day's Jlore cap held some or all of the game's Jlore back,
- * which `jlore` already leaves out.
+ * which `jlore` already leaves out. #1664: `tracks` and `quests` are what the game moved and completed
+ * (`economy::rewards::GameEconomy`, the same as the match socket's `economy`), which the result plays.
  */
 export type PracticeClaimAnswer =
-  | { paid: true; jlore: number; xp: number; jloreCapped: boolean }
+  | { paid: true; jlore: number; xp: number; jloreCapped: boolean; tracks: TrackGain[]; quests: QuestPaid[] }
   | { paid: false; reason: string };
 
 /** 201 with the seed; a 409 while the economy is off or for a catalog the server cannot fold. */

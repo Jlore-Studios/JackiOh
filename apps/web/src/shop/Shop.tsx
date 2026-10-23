@@ -1,13 +1,18 @@
-// The Jlore shop (#1309, SPEC §14.1, §14.3): the wallet and one row per pack kind, bought at
-// the server's pack price.
+// The Jlore shop (#1309, #1667, SPEC §14.1, §14.3): the wallet and one shelf row per pack kind, each
+// a `PackObject` with its count, its price and Buy, bought at the server's pack price.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). The price comes from `GET /api/packs` and the balance
 // from `GET /api/wallet`; a short wallet disables the button and says the shortfall, and a
 // refused buy shows the server's words verbatim with nothing changed on screen (no optimistic
-// update: the wallet and the counts move only on the answer).
+// update: the wallet and the counts move only on the answer). Buy presses the pack while the
+// request is out; on the answer a copy of the pack flies into that kind's count (transform and
+// opacity, `shop.css`; with Reduce motion the count just changes) and every pill is told the
+// balance (`announceWallet`).
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useState, type CSSProperties, type ReactElement } from "react";
 
+import { useReducedMotion } from "../economy/FillBar.tsx";
+import { announceWallet } from "../economy/wallet.ts";
 import { t } from "../i18n/i18n.ts";
 import {
   buyPack,
@@ -17,8 +22,9 @@ import {
   type PacksResponse,
   type WalletResponse,
 } from "../net/api.ts";
+import PackObject from "../packs/PackObject.tsx";
 import { packName } from "../packs/packs.ts";
-import { shopPacks, shopTestid, shortfallOf } from "./shop.ts";
+import { SHOP_FLY_MS, shopPacks, shopTestid, shortfallOf } from "./shop.ts";
 import "./shop.css";
 
 /** What a failed request says: the server's words, else the error's. */
@@ -58,6 +64,9 @@ export default function Shop({
   const [busy, setBusy] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [reading, setReading] = useState(true);
+  // How many packs of each kind were bought this visit: a new count mounts a new flying copy.
+  const [flights, setFlights] = useState<Readonly<Record<string, number>>>({});
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +100,8 @@ export default function Shop({
       (bought) => {
         setWallet({ jlore: bought.jlore });
         setInfo((before) => (before === null ? before : { ...before, unopened: withBought(before.unopened, bought) }));
+        setFlights((before) => ({ ...before, [bought.pack]: (before[bought.pack] ?? 0) + 1 }));
+        announceWallet(bought.jlore);
         onChanged?.();
       },
       (cause: unknown) => {
@@ -139,25 +150,48 @@ export default function Shop({
             const held = info.unopened.find((entry) => entry.pack === pack)?.count ?? 0;
             return (
               <div key={pack} className="shop-row" data-testid={shopTestid.held(pack)}>
-                <span>{t("{pack}: {count} unopened", { pack: packName(pack), count: held })}</span>
-                <span>{t("{price} Jlore", { price: info.price })}</span>
-                <div className="account-actions">
-                  <button
-                    type="button"
-                    data-testid={shopTestid.buy(pack)}
-                    disabled={short > 0 || busy !== null}
-                    onClick={() => {
-                      buy(pack);
-                    }}
-                  >
-                    {busy === pack ? t("Buying…") : t("Buy")}
-                  </button>
+                <div className="shop-row__pack">
+                  <PackObject
+                    pack={pack}
+                    size="shelf"
+                    state={busy === pack ? "pressed" : "idle"}
+                    testid={shopTestid.packObject(pack)}
+                  />
+                  {flights[pack] === undefined || reduced ? null : (
+                    <span
+                      key={flights[pack]}
+                      className="shop-fly"
+                      aria-hidden="true"
+                      data-testid={shopTestid.fly(pack)}
+                      style={{ "--shop-fly-ms": `${String(SHOP_FLY_MS)}ms` } as CSSProperties}
+                    >
+                      <PackObject pack={pack} size="shelf" />
+                    </span>
+                  )}
                 </div>
-                {short > 0 ? (
-                  <p className="notice" data-testid={shopTestid.shortfall(pack)}>
-                    {t("Short by {shortfall} Jlore", { shortfall: short })}
-                  </p>
-                ) : null}
+                <div className="shop-row__info">
+                  <span className="shop-row__count">
+                    {t("{pack}: {count} unopened", { pack: packName(pack), count: held })}
+                  </span>
+                  <span>{t("{price} Jlore", { price: info.price })}</span>
+                  <div className="account-actions">
+                    <button
+                      type="button"
+                      data-testid={shopTestid.buy(pack)}
+                      disabled={short > 0 || busy !== null}
+                      onClick={() => {
+                        buy(pack);
+                      }}
+                    >
+                      {busy === pack ? t("Buying…") : t("Buy")}
+                    </button>
+                  </div>
+                  {short > 0 ? (
+                    <p className="notice" data-testid={shopTestid.shortfall(pack)}>
+                      {t("Short by {shortfall} Jlore", { shortfall: short })}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             );
           })}

@@ -43,7 +43,7 @@ use crate::db::store::{StoreError, StoreResult, Tx};
 use crate::duos::store::{DuosActionRow, DuosMatch, action_of};
 use crate::economy::quests::GameTally;
 use crate::economy::rewards::{
-    GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
+    GameEconomy, GameMode, GameSummary, game_jlore, is_player_action, pay_game_rewards, utc_day_bounds,
 };
 
 pub use registry::{DuosRegistry, registry};
@@ -90,22 +90,23 @@ pub fn ceiling_draw() -> DuosResult {
 /// B40, §14.8, [[R1502000]]: writes `result` and `ended_at` once (`duos_matches_finish`); the write
 /// that lands pays both people in the same transaction while `ECONOMY_LIVE` is on ([[R1302006]]), so
 /// a payout failure rolls the result back. A game a void ended pays nothing, as a voided 1v1 match
-/// does not ([[R679]]). False, paying nothing, when the match already had its result.
+/// does not ([[R679]]). `None`, paying nothing, when the match already had its result; else what it
+/// paid each person, by `HUMAN_SEATS` (#1657), `None` for both when it paid nothing.
 pub async fn finish_match(
     t: &mut Tx<'_>,
     app: &App,
     row: &DuosMatch,
     result: &DuosResult,
     at: i64,
-) -> StoreResult<bool> {
+) -> StoreResult<Option<[Option<GameEconomy>; 2]>> {
     let json = serde_json::to_value(result)?;
     if !t.duos_matches_finish(&row.id, &json, at).await? {
-        return Ok(false);
+        return Ok(None);
     }
     if app.economy_live && result.reason != DUOS_REASON_VOIDED {
-        pay_coop(t, row, result, at).await?;
+        return Ok(Some(pay_coop(t, row, result, at).await?.map(Some)));
     }
-    Ok(true)
+    Ok(Some([None, None]))
 }
 
 /// R1483000: whether the daily Jlore cap held back each person's pay for the finished co-op
@@ -149,8 +150,13 @@ pub async fn duos_game_jlore_caps(app: &App, match_id: &str) -> StoreResult<[boo
 
 /// [[R1502000]]: each person paid for their own seat at `GameMode::Coop`'s rates, a win when the
 /// humans' team won. A co-op log is not folded into what a seat played, so its quests count the
-/// result and the seat's attacks alone.
-async fn pay_coop(t: &mut Tx<'_>, row: &DuosMatch, result: &DuosResult, at: i64) -> StoreResult<()> {
+/// result and the seat's attacks alone. Answers what each was paid, by `HUMAN_SEATS`.
+async fn pay_coop(
+    t: &mut Tx<'_>,
+    row: &DuosMatch,
+    result: &DuosResult,
+    at: i64,
+) -> StoreResult<[GameEconomy; 2]> {
     // [[R1301003]]: both economy locks in profile-id order, as a 1v1 result takes its two.
     let mut ordered = [row.a1.clone(), row.a2.clone()];
     ordered.sort();
@@ -159,9 +165,13 @@ async fn pay_coop(t: &mut Tx<'_>, row: &DuosMatch, result: &DuosResult, at: i64)
     }
     let log = t.duos_actions(&row.id).await?;
     let won = result.winner.map(|team| team == Team::A);
-    for (seat, profile_id) in [(DuosSeat::A1, &row.a1), (DuosSeat::A2, &row.a2)] {
+    let mut paid: [GameEconomy; 2] = Default::default();
+    for (index, (seat, profile_id)) in [(DuosSeat::A1, &row.a1), (DuosSeat::A2, &row.a2)]
+        .into_iter()
+        .enumerate()
+    {
         let (actions, attacks) = seat_moves(&log, seat);
-        pay_game_rewards(
+        paid[index] = pay_game_rewards(
             t,
             &GameSummary {
                 mode: GameMode::Coop,
@@ -181,7 +191,7 @@ async fn pay_coop(t: &mut Tx<'_>, row: &DuosMatch, result: &DuosResult, at: i64)
         )
         .await?;
     }
-    Ok(())
+    Ok(paid)
 }
 
 /// [[R1502000]], [[R1302004]]: the moves `seat`'s person sent in `log`, and its attacks. A row under
@@ -218,7 +228,10 @@ async fn end_abandoned(app: &Arc<App>, match_id: &str, now: i64) {
     let ended = one_tx!(app.db, |t| {
         match t.duos_matches_get(match_id).await? {
             Some(row) if row.ended_at.is_none() && now >= ceiling_at(&row) => {
-                if finish_match(&mut t, app, &row, &ceiling_draw(), now).await? {
+                if finish_match(&mut t, app, &row, &ceiling_draw(), now)
+                    .await?
+                    .is_some()
+                {
                     Some((row.a1, row.a2))
                 } else {
                     None

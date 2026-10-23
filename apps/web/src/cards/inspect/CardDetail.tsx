@@ -10,7 +10,7 @@ import type { CardDef, CardType } from "@jackioh/shared";
 import { CardFace, faceText } from "../CardFace.tsx";
 import { readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
-import { useFullArt } from "../fullArt.ts";
+import { useFullArt, useOwnCopy } from "../fullArt.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
 import { RulesText } from "../RulesText.tsx";
@@ -118,6 +118,8 @@ export function CardDetail({
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
+  // R1655000: the viewer's own card's detail view wears its cosmetics, as it prints its full art.
+  const own = useOwnCopy();
 
   useLayoutEffect(() => {
     onCloseRef.current = onClose;
@@ -151,13 +153,13 @@ export function CardDetail({
             <div className="inspect-detail-faces">
               <figure className="inspect-detail-face">
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
-                  <CardFace face={base} layout="full" />
+                  <CardFace face={base} layout="full" worn={own} />
                 </div>
                 <figcaption className="inspect-detail-caption">{t("Base")}</figcaption>
               </figure>
               <figure className="inspect-detail-face inspect-detail-face--radiant">
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
-                  <CardFace face={radiant} layout="full" />
+                  <CardFace face={radiant} layout="full" worn={own} />
                 </div>
                 <figcaption className="inspect-detail-caption">{t("Radiant")}</figcaption>
               </figure>

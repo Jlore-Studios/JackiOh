@@ -15,6 +15,7 @@ import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
 import { readerName } from "../cards/chinese.ts";
 import { useCardSettings } from "../cards/settings.ts";
+import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
@@ -409,9 +410,11 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
 
         <header className="landing-topbar">
           {/* The gear beside the account pill, as every other screen keeps it top right: mute,
-              volume and reduced motion are reachable from the first screen too. */}
+              volume and reduced motion are reachable from the first screen too. A signed-in
+              account's Jlore pill leads the language button and the gear, as in every top bar. */}
           <div className="landing-corner">
             <Corner account={account} />
+            <JlorePill />
             <LanguageButton placement="nav" />
             <SettingsButton placement="nav" />
           </div>

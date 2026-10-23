@@ -113,7 +113,7 @@ export default function ResetPasswordRoute(): ReactElement {
   if (held === null) {
     return (
       <div className="app-shell auth-screen tavern" data-testid={resetTestid.screen}>
-        <BackLink onLeave={abandonRecoverySession} />
+        <BackLink onLeave={abandonRecoverySession} showWallet={false} />
         <section className="panel panel--auth panel--split">
           <div className="auth-board__head">
             <div className="brand">
@@ -249,6 +249,7 @@ export default function ResetPasswordRoute(): ReactElement {
         onPress={() => {
           exitTo(paths.landing);
         }}
+        showWallet={false}
       />
       <section className="panel panel--auth panel--split">
         <div className="auth-board__head">

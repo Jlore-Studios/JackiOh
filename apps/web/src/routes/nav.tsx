@@ -2,6 +2,7 @@
 
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 
+import JlorePill from "../economy/JlorePill.tsx";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -17,12 +18,20 @@ export type BackLinkProps = {
   label?: string;
   /** Releases screen-owned state before navigation. */
   onLeave?: () => void;
-  /** Overrides the default release-and-navigate sequence for confirmation flows. */
+  /**
+   * Overrides the default release-and-navigate sequence for confirmation flows. Such a screen guards
+   * its way out, so its top bar has no Jlore pill, a link that would leave past the guard (R1651000).
+   */
   onPress?: () => void;
   /** Extra top-bar content; settings remains the top-right control. */
   children?: ReactNode;
   /** The board supplies settings separately. */
   showSettings?: boolean;
+  /**
+   * The Jlore pill, beside settings. Off on the signed-out screens (sign-in, a password reset), where
+   * a session only lands as the screen leaves and the pill has nothing to show.
+   */
+  showWallet?: boolean;
 };
 
 /** Uses `navigate`, not history, so direct links stay in the app. */
@@ -33,6 +42,7 @@ export function BackLink({
   onPress,
   children,
   showSettings = true,
+  showWallet = true,
 }: BackLinkProps): ReactElement {
   useLocale();
   return (
@@ -53,6 +63,7 @@ export function BackLink({
         {label === undefined ? t("← Back") : t(label)}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
+      {showSettings && showWallet && onPress === undefined ? <JlorePill /> : null}
       {showSettings ? <LanguageButton placement="nav" /> : null}
       {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>

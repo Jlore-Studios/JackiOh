@@ -19,6 +19,11 @@
 // R1310004: a development build gates full art too when localStorage holds "1" under
 // `E2E_FULL_ART_GATED_KEY` as it loads, which the one e2e spec that walks the economy (spec 45) sets.
 //
+// R1655000: a full art is a per-card pick, beside the foil, finish and border a card may carry
+// (cosmetics.ts, `writeCardFullArt`): an own copy prints it by its card's pick first and by the
+// Full-art cards setting where the card has none, always behind ownership. `FullArtOwned` now holds
+// the viewer's ownership of every per-card cosmetic, `NO_FULL_ART` the empty one; the names stay.
+//
 // Presentation only (CLAUDE.md rule 7): the face is drawn differently and plays the same.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
@@ -26,6 +31,8 @@ import { createContext, createElement, useContext, type ReactElement, type React
 import { ECONOMY_LIVE } from "@jackioh/server-config";
 import { PORTRAITS } from "@jackioh/shared";
 
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
+import { OwnershipContext, ownsCosmetic, useCardPicks, type CardOwnership, type OwnedByCard } from "./cosmetics.ts";
 import type { FaceModel } from "./model.ts";
 import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
@@ -55,13 +62,18 @@ export function FullArtAllowed({ allowed, children }: { allowed: boolean; childr
 }
 
 /**
- * R1313000: the full arts the faces below a `FullArtOwned` may print: `"every"`, or the ids of the
- * cards whose full art the viewer owns.
+ * R1313000: what the faces below a `FullArtOwned` own: `"every"`, or the cosmetics the viewer owns
+ * by card. R1655000: not the full arts alone, every per-card cosmetic.
  */
-export type FullArtOwnership = "every" | ReadonlySet<string>;
+export type FullArtOwnership = CardOwnership;
 
-/** R1313000: no full art owned: an account's while its ownership is unread, or a pending one's. */
-export const NO_FULL_ART: ReadonlySet<string> = new Set();
+/** R1313000: no cosmetic owned past the defaults and starters: an account's while its ownership is unread, or a pending one's. */
+export const NO_FULL_ART: OwnedByCard = new Map();
+
+/** Each hero portrait's card, to the id of its full art (the registry's `fullArt` entries). */
+export const FULL_ART_OF_CARD: ReadonlyMap<string, string> = new Map(
+  COSMETICS.flatMap((cosmetic): [string, string][] => (cosmetic.kind === "fullArt" ? [[cosmetic.card, cosmetic.id]] : [])),
+);
 
 /** R1310004: the localStorage key whose "1", set before the page loads, gates full art in a development build (e2e spec 45). */
 export const E2E_FULL_ART_GATED_KEY = "jackioh.e2e.fullArtGated";
@@ -90,12 +102,9 @@ function e2eAsksFullArtGate(): boolean {
 /** R1313000: this build's `fullArtGated`. */
 export const FULL_ART_GATED: boolean = fullArtGated(ECONOMY_LIVE, import.meta.env.MODE, e2eAsksFullArtGate());
 
-/** R1313000: the faces below it print only the full arts it holds; `"every"` with none above it. */
-const FullArtOwnershipContext = createContext<FullArtOwnership>("every");
-
-/** R1313000: the faces below it print the full arts of `owned`, and only on the viewer's own copies. */
+/** R1313000, R1655000: the faces below it own only what `owned` holds; `"every"` with none above it. */
 export function FullArtOwned({ owned, children }: { owned: FullArtOwnership; children?: ReactNode }): ReactElement {
-  return createElement(FullArtOwnershipContext.Provider, { value: owned }, children);
+  return createElement(OwnershipContext.Provider, { value: owned }, children);
 }
 
 /** R1313000: whether the faces below it are the viewer's own copies. */
@@ -107,20 +116,34 @@ export function OwnCopy({ own, children }: { own: boolean; children?: ReactNode 
   return createElement(OwnCopyContext.Provider, { value: own || outer }, children);
 }
 
-/** R1313000: whether a copy of `defId` may print its full art: every one may, else only an own copy whose full art is owned. */
-export function ownsFullArt(owned: FullArtOwnership, defId: string, own: boolean): boolean {
-  return owned === "every" || (own && owned.has(defId));
+/** R1655000: whether the face drawn here is the viewer's own copy: what the inspect overlays and the detail view pass a `CardFace` as `worn`. */
+export function useOwnCopy(): boolean {
+  return useContext(OwnCopyContext);
 }
 
 /**
- * R1108000: the Full-art cards setting, off below a `FullArtAllowed` of false. R1313000: and, for a
- * copy of `defId`, off where ownership decides and it is not the viewer's own (`worn`, or below an
- * `OwnCopy`) with its full art owned.
+ * R1313000: whether a copy of `defId` may print its full art: every one may where every cosmetic is
+ * owned, else only an own copy whose full art is owned (R1655000: on that card, as any cosmetic is).
+ */
+export function ownsFullArt(owned: FullArtOwnership, defId: string, own: boolean): boolean {
+  if (owned === "every") return true;
+  const id = FULL_ART_OF_CARD.get(defId);
+  return own && id !== undefined && ownsCosmetic(owned, defId, id);
+}
+
+/**
+ * R1108000: whether a copy of `defId` prints full art, which is off below a `FullArtAllowed` of
+ * false. R1313000: and off where ownership decides and it is not the viewer's own (`worn`, or below
+ * an `OwnCopy`) with its full art owned. R1655000: an own copy's own pick (`writeCardFullArt`)
+ * decides first; the Full-art cards setting decides where the card has none, and for every copy
+ * that is not the viewer's own.
  */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
   const { fullArt } = useCardSettings();
   const allowed = useContext(FullArtAllowedContext);
-  const owned = useContext(FullArtOwnershipContext);
+  const owned = useContext(OwnershipContext);
   const ownCopy = useContext(OwnCopyContext);
-  return fullArt && allowed && ownsFullArt(owned, defId, worn || ownCopy);
+  const pick = useCardPicks(defId).fullArt;
+  const own = worn || ownCopy;
+  return (own ? (pick ?? fullArt) : fullArt) && allowed && ownsFullArt(owned, defId, own);
 }

@@ -3,12 +3,18 @@
 // R1579000: it is the hub of four doors, its Cards and Cosmetics sections open in place by
 // `?section=`, and Cosmetics is where a cosmetic is equipped.
 
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { newestShippedSet } from "@jackioh/shared";
 
-import { COSMETICS_SETTINGS_KEY, readCosmetics, resetCosmeticsForTests } from "../cards/cosmetics.ts";
+import {
+  COSMETICS_SETTINGS_KEY,
+  readCardPicks,
+  readCosmetics,
+  resetCosmeticsForTests,
+  writeCardPick,
+} from "../cards/cosmetics.ts";
 import { collectionTestid as T } from "../collection/collection.ts";
 import { fullCollection, questsHeld, tracksOf } from "../collection/fixtures.ts";
 import {
@@ -219,11 +225,21 @@ describe("R1579000 the Collection hub", () => {
     if (group === undefined) throw new Error("no cosmetics settings group");
     const changed = vi.fn();
     const unsubscribe = group.subscribe(changed);
+    // R1655000: the playmat, backdrop and card back are tiles, each a click on an owned one; the defaults of every card stay selects.
+    expect(screen.queryByTestId(T.equip("table"))).toBeNull();
+    fireEvent.click(within(screen.getByTestId(T.tile("table-felt"))).getByRole("button"));
+    fireEvent.click(within(screen.getByTestId(T.tile("card-back-starfield"))).getByRole("button"));
     fireEvent.change(screen.getByTestId(T.equip("foil")), { target: { value: "foil-rainbow" } });
     unsubscribe();
 
-    expect(readCosmetics().foil).toBe("foil-rainbow");
-    expect(JSON.parse(localStorage.getItem(COSMETICS_SETTINGS_KEY) ?? "null")).toMatchObject({ foil: "foil-rainbow" });
+    expect(screen.getByTestId(T.tile("table-felt"))).toHaveAttribute("data-equipped", "true");
+    expect(readCosmetics()).toMatchObject({ table: "table-felt", cardBack: "card-back-starfield", foil: "foil-rainbow" });
+    expect(JSON.parse(localStorage.getItem(COSMETICS_SETTINGS_KEY) ?? "null")).toMatchObject({
+      table: "table-felt",
+      cardBack: "card-back-starfield",
+      foil: "foil-rainbow",
+    });
+    expect(group.read()["table"]).toBe("table-felt");
     expect(group.read()["foil"]).toBe("foil-rainbow");
     expect(changed).toHaveBeenCalled();
     expect(getOwnedCosmetics).toHaveBeenCalledTimes(1);
@@ -260,5 +276,36 @@ describe("R1579000 the Collection hub", () => {
     expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "hub");
     expect(screen.getByTestId(T.door("decks"))).toBeInTheDocument();
     for (const read of READS) expect(read).not.toHaveBeenCalled();
+  });
+});
+
+describe("R1655000 the Collection's card view", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetCosmeticsForTests();
+    window.history.replaceState(null, "", paths.collectionSection("cards"));
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    resetCosmeticsForTests();
+  });
+
+  it("R1655000 a card of the Cards section opens large wearing its own picks, and equipping on it asks the server nothing", async () => {
+    answerAll();
+    writeCardPick("core-001", "border", "border-wood");
+    render(<CollectionRoute token={TOKEN} />);
+
+    fireEvent.click(await screen.findByTestId(T.setToggle("Core")));
+    fireEvent.click(screen.getByTestId(T.card("core-001")));
+    const face = screen.getByTestId(T.cardViewFace).querySelector(".cf");
+    expect(face?.getAttribute("data-frame")).toBe("border-wood");
+
+    fireEvent.click(screen.getByTestId(T.stripItem("foil-rainbow")));
+    expect(readCardPicks("core-001")).toEqual({ border: "border-wood", foil: "foil-rainbow" });
+    expect(face?.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
+    expect(readCosmetics().foil).toBe("foil-none");
+    // Who owns what is the session's (`useCanEquip`, from the screen's `ViewerFullArt`): the section reads nothing more for it.
+    expect(getOwnedCosmetics).not.toHaveBeenCalled();
   });
 });
