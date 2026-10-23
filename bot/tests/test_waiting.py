@@ -57,7 +57,7 @@ class QueueTests(unittest.TestCase):
         self.assertIn("| #41 | Hard work | build | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "
                       "first free `claude-2` at 22:05 | — |", body)
         self.assertIn("1 waits for a strong model", body)
-        self.assertIn("🔋 **1 of 11 subscriptions can start work now**: `muse`", body)
+        self.assertIn("🔋 **1 of 12 subscriptions can start work now**: `muse`", body)
         self.assertIn('<b>muse</b><br/>⚪ idle<br/>nothing queued is for it', body)
 
     def test_a_revision_that_answers_a_strong_audit_waits_for_strong(self):

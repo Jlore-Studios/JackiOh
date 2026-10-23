@@ -1497,3 +1497,222 @@ mod shown_cost_fatigue_windfury_1602 {
         );
     }
 }
+
+mod banked_modifiers_1722 {
+    use super::*;
+    use jackioh_ai::{EvalWeights, redact};
+    use jackioh_engine::effects::DELAYED_DISCARD_HAND_HOOK;
+    use jackioh_engine::testkit::{AltWinCondition, ModifierExpiry, ModifierKind, PlayerModifier};
+
+    const CONTRACT: &str = "classicplus-052"; // (2) Spell: rest of the game, a Jlockeed card each start of your turn
+    const HURRAH: &str = "classic-037"; // (0) Spell; Radiant: discard your hand at the end of your next turn
+    const VANILLA: &str = "core-008"; // (1) Unit 4/4, no keywords
+    const FILLER: &str = "core-005";
+
+    /// `state` with `kind` held by `player` for the rest of the game (R458).
+    fn holding(state: &GameState, player: PlayerId, kind: ModifierKind) -> GameState {
+        let mut out = clone(state);
+        let id = format!("m1722-{}", out.players[player].mods.len());
+        out.players[player].mods.push(PlayerModifier {
+            id,
+            expiry: ModifierExpiry::Never,
+            kind,
+        });
+        out
+    }
+
+    fn alt_win(condition: AltWinCondition, threshold: i32) -> ModifierKind {
+        ModifierKind::AltWin { condition, threshold }
+    }
+
+    /// A 4/4 on each side.
+    fn even() -> GameState {
+        board(json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [VANILLA] } }))
+    }
+
+    /// The AI's state with Classic+ #52's start-of-turn effect held, and the same state without it.
+    fn contracted() -> (GameState, GameState) {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-1722",
+            "p1": { "hand": [CONTRACT, VANILLA] },
+            "p2": { "hand": [VANILLA] },
+        }));
+        s.play(CONTRACT, json!({}));
+        let armed = s.state().clone();
+        let held = |m: &PlayerModifier| matches!(m.kind, ModifierKind::StartOfTurnEffect { .. });
+        assert_eq!(
+            armed.players[AI].mods.iter().filter(|m| held(m)).count(),
+            1,
+            "setup: the contract should bank one start-of-turn effect"
+        );
+        let mut bare = clone(&armed);
+        bare.players[AI].mods.retain(|m| !held(m));
+        (armed, bare)
+    }
+
+    /// The AI's state with Last Hurrah's delayed discard waiting, the same state without it, and that
+    /// one with the AI's hand emptied.
+    fn hurrahed() -> (GameState, GameState, GameState) {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "evaluate-1722",
+            "p1": { "hand": [{ "def": HURRAH, "radiant": true }, VANILLA], "library": [] },
+            "p2": { "hand": [VANILLA] },
+        }));
+        s.play(HURRAH, json!({}));
+        let armed = s.state().clone();
+        assert!(
+            armed
+                .delayed
+                .iter()
+                .any(|entry| entry.owner == AI && entry.resume.hook == DELAYED_DISCARD_HAND_HOOK),
+            "setup: the discard should wait"
+        );
+        assert_eq!(
+            armed.delayed.len(),
+            1,
+            "setup: it should be the only delayed entry"
+        );
+        assert_eq!(
+            armed.players[AI].hand.len(),
+            1,
+            "setup: the vanilla is left in hand"
+        );
+        let mut bare = clone(&armed);
+        bare.delayed.clear();
+        let mut empty = clone(&bare);
+        empty.players[AI].hand.clear();
+        (armed, bare, empty)
+    }
+
+    #[test]
+    fn a_held_start_of_turn_effect_outscores_the_same_state_without_it_and_counts_against_its_enemy() {
+        let (armed, bare) = contracted();
+        assert!(eval(&armed, AI) > eval(&bare, AI));
+        assert_close(
+            eval(&armed, AI) - eval(&bare, AI),
+            AI_EVAL.start_of_turn_effect,
+            9,
+        );
+        assert!(eval(&armed, HUMAN) < eval(&bare, HUMAN));
+        // Each effect is its own annuity.
+        let mut twice = clone(&armed);
+        let mut copy = twice.players[AI]
+            .mods
+            .iter()
+            .find(|m| matches!(m.kind, ModifierKind::StartOfTurnEffect { .. }))
+            .expect("setup: the effect is held")
+            .clone();
+        copy.id = "m1722-copy".to_string();
+        twice.players[AI].mods.push(copy);
+        assert_close(
+            eval(&twice, AI) - eval(&bare, AI),
+            2.0 * AI_EVAL.start_of_turn_effect,
+            9,
+        );
+    }
+
+    #[test]
+    fn an_enemy_alternative_win_near_its_threshold_reads_as_danger_and_more_the_nearer_it_is() {
+        let plain = even();
+        let far = holding(&plain, HUMAN, alt_win(AltWinCondition::Health, 100));
+        let near = holding(&plain, HUMAN, alt_win(AltWinCondition::Health, 32));
+        assert!(eval(&near, AI) < eval(&far, AI));
+        assert!(eval(&far, AI) < eval(&plain, AI));
+        assert_close(
+            eval(&plain, AI) - eval(&near, AI),
+            AI_EVAL.alt_win * (f64::from(HERO_HEALTH) / 32.0).powi(2),
+            9,
+        );
+        // For its holder it is a plan, the more so the nearer it is.
+        assert!(eval(&near, HUMAN) > eval(&far, HUMAN));
+        assert!(eval(&far, HUMAN) > eval(&plain, HUMAN));
+        // The seat's own view reads it the same: the condition is public (R169, R185).
+        assert_eq!(eval(&redact(&near, AI), AI), eval(&near, AI));
+    }
+
+    #[test]
+    fn an_own_alternative_win_counts_the_square_of_its_progress() {
+        let plain = even();
+        let half = holding(&plain, AI, alt_win(AltWinCondition::Health, 60));
+        assert_close(eval(&half, AI) - eval(&plain, AI), 0.25 * AI_EVAL.alt_win, 9);
+    }
+
+    #[test]
+    fn each_alternative_win_reads_its_own_measure_and_the_board_win_its_lesser_total() {
+        // R848: the graveyard's count.
+        let grave = board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "field": [VANILLA], "graveyard": [FILLER, FILLER, FILLER] },
+        }));
+        let held = holding(&grave, HUMAN, alt_win(AltWinCondition::Graveyard, 4));
+        assert_close(eval(&grave, AI) - eval(&held, AI), 0.5625 * AI_EVAL.alt_win, 9);
+        // R849: a 4/4 with 2 damage is 4 attack and 2 health, and the lesser of the two counts.
+        let hurt = board(json!({
+            "p1": { "field": [VANILLA] },
+            "p2": { "field": [{ "def": VANILLA, "damage": 2 }] },
+        }));
+        let held = holding(&hurt, HUMAN, alt_win(AltWinCondition::Board, 8));
+        assert_close(eval(&hurt, AI) - eval(&held, AI), 0.0625 * AI_EVAL.alt_win, 9);
+    }
+
+    #[test]
+    fn the_closest_of_several_alternative_wins_counts_alone() {
+        let plain = even();
+        let near = holding(&plain, HUMAN, alt_win(AltWinCondition::Health, 32));
+        let both = holding(&near, HUMAN, alt_win(AltWinCondition::Health, 100));
+        assert_eq!(eval(&both, AI), eval(&near, AI));
+    }
+
+    #[test]
+    fn a_waiting_discard_of_a_hand_discounts_that_hand_on_both_sides() {
+        let (armed, bare, empty) = hurrahed();
+        // Its owner's hand is worth less, by the discount's share of what the hand is worth.
+        assert!(eval(&armed, AI) < eval(&bare, AI));
+        assert_close(
+            eval(&bare, AI) - eval(&armed, AI),
+            AI_EVAL.doomed_hand_discount * (eval(&bare, AI) - eval(&empty, AI)),
+            9,
+        );
+        // The same hand, unseen, counts for the other seat at the same discount.
+        assert!(eval(&armed, HUMAN) > eval(&bare, HUMAN));
+        assert_close(
+            eval(&armed, HUMAN) - eval(&bare, HUMAN),
+            AI_EVAL.doomed_hand_discount * (eval(&empty, HUMAN) - eval(&bare, HUMAN)),
+            9,
+        );
+    }
+
+    #[test]
+    fn a_temporary_card_the_discard_also_takes_loses_one_discount_not_both() {
+        const SPLIT: EvalWeights = EvalWeights {
+            temporary_discount: 0.5,
+            doomed_hand_discount: 0.25,
+            ..AI_EVAL
+        };
+        let (mut armed, mut bare, _) = hurrahed();
+        for state in [&mut armed, &mut bare] {
+            state.players[AI].hand[0]
+                .granted_keywords
+                .push(Keyword::Temporary);
+        }
+        // Temporary's share (0.5) is the smaller, so the discard adds nothing past it (R637).
+        assert_eq!(
+            evaluate(&armed, AI, NextSwing::Enemy, &SPLIT),
+            evaluate(&bare, AI, NextSwing::Enemy, &SPLIT)
+        );
+    }
+
+    #[test]
+    fn greedy_eval_gives_the_modifier_terms_and_the_doomed_hand_nothing() {
+        let scored = |state: &GameState| evaluate(state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+        let plain = even();
+        let near = holding(&plain, HUMAN, alt_win(AltWinCondition::Health, 32));
+        assert_eq!(scored(&near), scored(&plain));
+        let (armed, bare) = contracted();
+        assert_eq!(scored(&armed), scored(&bare));
+        let (armed, bare, _) = hurrahed();
+        assert_eq!(scored(&armed), scored(&bare));
+    }
+}

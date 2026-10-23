@@ -18,7 +18,10 @@ import { beginGame, catalogVersion, createGame, reduce } from "../wasm/index.ts"
 // ends with both hands holding cards and spans a third page.
 // Re-pinned for #1563: Last Hurrah and Aestheticize the Game cost (0), so `cheap20` changed again and
 // "replay-player-6" now ends with the opponent's hand empty; "replay-player-10" holds cards in both.
-const SEED = "replay-player-10";
+// Re-pinned for #1705's 25-card decks: "replay-player-10" now ends with the viewer's hand empty, and
+// "replay-player-4" shows no card in the steps the GIF export's clip takes (8 to 14);
+// "replay-player-5" holds cards in both hands and in that clip.
+const SEED = "replay-player-5";
 /** Two pages' worth of actions and a few over, then a concede: the game ends, in a few turns. */
 const GAME_ACTIONS = 2 * REPLAY_PAGE_STEPS + 8;
 /** The turns the folded game must span for turn moves to have somewhere to go. */

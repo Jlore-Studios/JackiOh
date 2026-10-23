@@ -2,6 +2,7 @@
 // It observes R265 mulligan thinking, R745 log retention, R181/R180 handicaps, R668 reload, and R765 save/leave.
 // BUILD M8 uses deterministic seeds, retried testids, and no `cy.wait(ms)`; recorder history and reduced motion make BUILD M5-T4 AI turns observable.
 
+import { AI_DIFFICULTY } from "../../../apps/web/src/wire/engineConfig.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
   ACTION_ERROR,
@@ -509,13 +510,15 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
         expect(debug.difficulty).to.eq("hard");
         expect(debug.handicaps, "the AI seat's handicap reached the snapshot").to.have.property("p1");
         expect(debug.handicaps.p1, "Hard's handicap (R180)").to.deep.include({
-          deckSize: 30,
+          deckSize: AI_DIFFICULTY.hard.deckSize,
           manaBonus: 1,
           manaCap: 7,
           extraOpeningCards: 1,
           extraDrawsPerTurn: 1,
         });
-        expect(debug.decks[0], "the Hard AI's 30-card deck (R184)").to.have.length(30);
+        expect(debug.decks[0], `the Hard AI's ${String(AI_DIFFICULTY.hard.deckSize)}-card deck (R184)`).to.have.length(
+          AI_DIFFICULTY.hard.deckSize,
+        );
         expect(debug.log.some((action) => action.playerId === "p1"), "the AI acted").to.eq(true);
 
         cy.task<{ replayHash: string; browserHash: string; errors: unknown[] }>(

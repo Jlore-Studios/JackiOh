@@ -78,13 +78,14 @@ function candidates(catalog: CardDefs): CardDef[] {
 }
 
 /**
- * The dev decks. Both satisfy `DECK_SIZE = 20` and `MAX_COPIES = 1` by construction: they take
- * distinct definitions off a sorted list, so no id can repeat.
+ * The dev decks. Both satisfy `DECK_SIZE` and `MAX_COPIES` by construction: they take `DECK_SIZE`
+ * distinct definitions off a sorted list, so no id can repeat. Their ids (`first20`, `cheap20`) are
+ * older than #1705's `DECK_SIZE` and kept, since every hotseat link and e2e spec names them.
  */
 export const DEV_DECKS: readonly DeckSource[] = [
   {
     id: "first20",
-    label: "First 20 (by §5 index)",
+    label: `First ${String(DECK_SIZE)} (by §5 index)`,
     resolve: (catalog) =>
       candidates(catalog)
         .slice(0, DECK_SIZE)
@@ -92,7 +93,7 @@ export const DEV_DECKS: readonly DeckSource[] = [
   },
   {
     id: "cheap20",
-    label: "Cheapest 20 (by printed cost)",
+    label: `Cheapest ${String(DECK_SIZE)} (by printed cost)`,
     resolve: (catalog) =>
       [...candidates(catalog)]
         // `candidates` is already in index order and `sort` is stable, so equal costs keep it.

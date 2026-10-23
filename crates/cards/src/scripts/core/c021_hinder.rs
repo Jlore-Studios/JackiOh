@@ -311,11 +311,11 @@ mod tests {
     // hold none; turn 1's draw is what meets it, discarding at random with no prompt (R682), and
     // the log folds back to the same game (§9.3).
 
-    /// Twenty legal Core cards with no other cast-on-draw card among them, Hinder first.
-    const DECK: [&str; 20] = [
-        HINDER, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
-        "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
-        "core-044", "core-053", "core-055",
+    /// DECK_SIZE legal Core cards with no other cast-on-draw card among them, Hinder first.
+    const DECK: [&str; DECK_SIZE as usize] = [
+        HINDER, "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-008", "core-009",
+        "core-010", "core-011", "core-012", "core-013", "core-015", "core-016", "core-019", "core-020", "core-025",
+        "core-026", "core-032", "core-036", "core-043", "core-044", "core-053", "core-055",
     ];
 
     /// Apply one action with the next nonce, refusing loudly, and log it.

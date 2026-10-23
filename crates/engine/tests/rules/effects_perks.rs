@@ -31,7 +31,7 @@ fn pricey() -> CardDef {
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
-    let mut catalog = vanilla_catalog(40, 1);
+    let mut catalog = vanilla_catalog(2 * DECK_SIZE, 1);
     for def in [free(), x_spell(), pricey()] {
         catalog.insert(def.id.clone(), def);
     }

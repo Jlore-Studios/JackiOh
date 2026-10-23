@@ -44,7 +44,7 @@ use jackioh_engine::wire::{
     CardStatsFilter, GAME_SOURCES, GameMode, PilotFilter, SourceFilter, StatsTotals, card_stats,
     card_stats_of, parse_game_record, sources_of,
 };
-use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
+use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
@@ -138,12 +138,12 @@ macro_rules! both_stores {
 // A fixture catalog big enough for a legal loadout (← test/db/harness.ts)
 // ---------------------------------------------------------------------------
 
-/// SPEC §9.4 L2: `DECK_SIZE` is 20, and L1 says three decks, so 60 ids is the floor.
+/// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
 pub const CATALOG_VERSION: &str = "core-1";
 
-/// `core-001` … `core-064`.
+/// `core-001` … `core-080`, the database suite's fixture catalog (`postgres.rs`, `seed_catalog.rs`).
 pub fn playable_ids() -> Vec<String> {
-    (1..=64).map(|i| format!("core-{i:03}")).collect()
+    (1..=80).map(|i| format!("core-{i:03}")).collect()
 }
 
 /// §9.4 L3: "no Token-tagged cards" — here so the R111 launch grant can be seen skipping them.
@@ -682,7 +682,8 @@ fn board_kind(literal: &str) -> LastBoardKind {
 
 /// The deck at `slot` of a legal three-deck loadout over the fixture catalog (§9.4 L1, L2, L4).
 fn deck_of(harness: &StoreHarness, slot: usize) -> Vec<String> {
-    harness.playable_ids[slot * 20..slot * 20 + 20].to_vec()
+    let size = usize::try_from(DECK_SIZE).expect("a deck size");
+    harness.playable_ids[slot * size..slot * size + size].to_vec()
 }
 
 fn clocks(now: i64) -> MatchClocks {
@@ -970,6 +971,35 @@ mod profiles {
         assert_eq!(q!(harness, t => t.collection_get(&profile.id)), granted);
     }
 
+    /// R1705002: the eleven Core cards the practice presets gained at 25 cards are starter cards, so
+    /// an account that becomes active owns each of them, one copy, and can queue every preset. The
+    /// fixture catalog holds nine of them (core-089 and core-091 lie past its core-080).
+    async fn r1705002_an_account_becoming_active_owns_the_added_starter_cards(harness: &StoreHarness) {
+        const ADDED: [&str; 11] = [
+            "core-002", "core-003", "core-010", "core-031", "core-034", "core-043", "core-047", "core-072",
+            "core-080", "core-089", "core-091",
+        ];
+        assert!(ADDED.iter().all(|id| STARTER_CARDS.contains(id)));
+        let held: Vec<&str> = ADDED
+            .into_iter()
+            .filter(|id| harness.playable_ids.iter().any(|card| card == id))
+            .collect();
+        assert_eq!(held.len(), 9);
+        let profile = pending_profile(harness, None).await;
+        q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
+        let granted = q!(harness, t => t.collection_get(&profile.id));
+        for id in held {
+            assert_eq!(
+                granted
+                    .iter()
+                    .find(|entry| entry.card_id == id)
+                    .map(|entry| entry.quantity),
+                Some(1),
+                "{id}"
+            );
+        }
+    }
+
     both_stores!(
         creates_a_pending_profile_and_reads_it_back_by_id_and_by_user_id,
         returns_null_for_an_unknown_profile,
@@ -978,6 +1008,7 @@ mod profiles {
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
         r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently,
+        r1705002_an_account_becoming_active_owns_the_added_starter_cards,
     );
 }
 

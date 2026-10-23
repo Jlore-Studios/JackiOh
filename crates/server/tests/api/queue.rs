@@ -45,7 +45,7 @@ use std::time::Duration;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use jackioh_engine::{DEFAULT_PORTRAIT, newest_shipped_set, pick_portrait_from_seed};
+use jackioh_engine::{DEFAULT_PORTRAIT, EARLIER_DECK_SIZE, newest_shipped_set, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
@@ -61,7 +61,7 @@ use jackioh_server::config::{
 use jackioh_server::db::fake::{
     CallOutcome, E2eStoreOptions, FakeCatalog, FakeData, FakeTables, create_e2e_store,
 };
-use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, StoreError};
+use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, SavedDeck, StoreError};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 use crate::support::store::{fake_lock, q, to_json, uuid};
@@ -2337,6 +2337,53 @@ mod r253_what_may_be_queued_through_the_real_validator {
                 .as_str()
                 .unwrap_or("")
                 .contains("Midrange")
+        );
+    }
+
+    /// R1705001: a deck saved at `EARLIER_DECK_SIZE` cards, complete before the deck grew, is a draft
+    /// now: saving it again keeps it (D2 is "at most"), and the queue refuses it under L2, naming it,
+    /// until its player adds the cards it lacks; then the same deck queues.
+    #[tokio::test(start_paused = true)]
+    async fn r1705001_a_saved_twenty_card_deck_saves_and_is_refused_at_queue_naming_it() {
+        let w = real_wiring().await;
+        let earlier = usize::try_from(EARLIER_DECK_SIZE).expect("a deck size");
+        let resave = |cards: &[String]| {
+            let now = now_ms();
+            from::<SavedDeck>(json!({
+                "id": "a1705001-0000-4000-8000-000000000001",
+                "profileId": "real",
+                "name": "Old Faithful",
+                "cards": cards,
+                "portrait": null,
+                "catalogVersion": w.app.catalog.version,
+                "createdAt": now,
+                "updatedAt": now,
+            }))
+        };
+        let deck_id = "a1705001-0000-4000-8000-000000000001";
+        save_deck_as(&w.app, deck_id, "real", &w.pool[..earlier], "Old Faithful").await;
+        let again = q!(
+            w.app,
+            decks_upsert(&resave(&w.pool[..earlier]), MAX_SAVED_DECKS as i64)
+        );
+        assert_eq!(to_json(&again), json!("updated"));
+
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": deck_id }), "L2").await;
+        let message = refused["error"]["message"].as_str().unwrap_or("");
+        assert!(message.contains("Old Faithful"), "{message}");
+        assert!(message.contains(&w.size.to_string()), "{message}");
+
+        let full = q!(
+            w.app,
+            decks_upsert(&resave(&w.pool[..w.size]), MAX_SAVED_DECKS as i64)
+        );
+        assert_eq!(to_json(&full), json!("updated"));
+        let (status, body) =
+            enqueue_with(&w.app, &w.token, json!({ "mode": "bo1", "deckId": deck_id })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            tickets_table(&w.app).await.first().map(|row| row["deck"].clone()),
+            Some(json!(w.pool[..w.size]))
         );
     }
 
