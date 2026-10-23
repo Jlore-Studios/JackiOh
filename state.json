@@ -12507,7 +12507,7 @@
       "merged": true
     },
     "1728": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-23T15:53:11Z",
@@ -12534,8 +12534,8 @@
       "planned_tier": "strong",
       "provider": "claude-3",
       "round_tier": "",
-      "run_id": "39970484828",
-      "started_at": "2026-10-23T14:32:16Z",
+      "run_id": "pending:bead2e07-1792770829",
+      "started_at": "2026-10-23T15:54:09Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -12798,9 +12798,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T15:45:43Z",
+    "at": "2026-10-23T15:54:09Z",
     "url": "",
-    "what": "revise #1734 on claude-4"
+    "what": "build #1728 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-23T15:43:39Z",
