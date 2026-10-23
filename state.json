@@ -12900,7 +12900,7 @@
       "provider": "claude-6",
       "queued_at": "2026-10-23T02:44:53Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:9b9d096b-1792728576",
+      "run_id": "39898832278",
       "started_at": "2026-10-23T04:09:44Z",
       "stop_requested": false,
       "suggestion": true,
