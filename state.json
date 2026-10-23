@@ -12763,18 +12763,18 @@
             "spec/11-rulings.md",
             "spec/INDEX.md"
           ],
-          "from": "71bffb6b26922e81c7c3591e741246c954463dcf",
-          "main": "285b6b65ed864946ecb7bd652f1eeb12bf8ca205"
+          "from": "0ed2cd6776428253fe9db5faff825c9bf8a64177",
+          "main": "e38b875bbbb04faa0d2657268770b26266f83a07"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "39975396489",
+            "run": "39981055399",
             "tier": "strong"
           }
         ],
-        "sha": "0ed2cd6776428253fe9db5faff825c9bf8a64177",
+        "sha": "44905c69826cc2faa953d335448cc69c74c1e821",
         "tiers": {
           "claude": "strong"
         }
