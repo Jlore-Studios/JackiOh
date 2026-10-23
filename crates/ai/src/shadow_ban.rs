@@ -60,14 +60,15 @@
 //! 2), so the AI deals itself the whole set, generation 12 unchanged. training/history/sweep-2026-10-18.md
 //! has the report.
 //!
-//! Sweep of record for generation 13 (#1675): 2026-10-22 (UTC), `cargo jackioh sweep` on `c4bf61d`
+//! Sweep of record for generation 13 (#1675): 2026-10-22 (UTC), `cargo jackioh sweep` on `71b594b`
 //! (`main`, the learned evaluation of #1477), pass 1 over the 17 Meditative card(s) `SHADOW_BAN` held
 //! at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over the same 17 at risk, 24 seeds
 //! each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in three lanes
-//! with no build or test beside them. It swept the 17 banned Meditative cards alone, so every other card
-//! keeps the row the earlier reports gave it. It banned none of the 17 (no error, no timeout, and no decision
-//! over 2 s even on the raw clock), watches 6 and cleared 11 (R1675000), so `SHADOW_BAN` is empty and
-//! `SHADOW_WATCH` gains the 6. training/history/sweep-2026-10-22.md has the report.
+//! with no build or test beside them. It swept the 17 banned Meditative cards alone, so every other
+//! card keeps the row the earlier reports gave it. It banned 1 of the 17 (`meditative-069`, one
+//! decision still over 2 s timed again, R977000), watches 5 and cleared 11 (R1675000), so `SHADOW_BAN`
+//! holds one row and `SHADOW_WATCH` gains the 5. training/history/sweep-2026-10-22.md has the report
+//! and the slow state.
 //!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
@@ -266,17 +267,20 @@
 /// cards, so the seventeen stand as generation 12 left them, and the set's
 /// 11 at-risk cards are watched.
 ///
-/// #1675's sweep of the seventeen on generation 13 banned none of them: no
-/// decision of its games reached 2 s at either tier, even on the raw clock,
-/// and no game reached 600 actions. Eleven came off as cleared, the report's
-/// `Cleared ids:`, which by R1675000 keep no row in either table: 012, 017,
-/// 029, 030, 031, 049, 058, 085, 087, 091 and 096. Six came off as watched,
-/// a watch row lifting a ban (R1186000): 011, 025, 069, 075, 078 and 099,
-/// each at risk by its own numbers at half strength (R600) and meeting no
-/// flag in full. So the table is empty and the AI deals itself every card.
-/// Dealt at stock weight and not in `UNBANNED_PREFER`, on the generations
-/// 4–7 precedent.
-pub const SHADOW_BAN: &[(&str, &str)] = &[];
+/// #1675's sweep of the seventeen on generation 13 banned one of them,
+/// 069, at hard: one decision of a pass-2 game still over 2 s timed again
+/// (R977000), its state wide with a fused card of nine ingredients. Eleven
+/// came off as cleared, the report's `Cleared ids:`, which by R1675000 keep
+/// no row in either table: 012, 017, 029, 030, 031, 049, 058, 085, 087, 091
+/// and 096. Five came off as watched, a watch row lifting a ban (R1186000):
+/// 011, 025, 075, 078 and 099, each at risk by its own numbers at half
+/// strength (R600) and meeting no flag in full. The sixteen are dealt at
+/// stock weight and not in `UNBANNED_PREFER`, on the generations 4–7
+/// precedent.
+pub const SHADOW_BAN: &[(&str, &str)] = &[(
+    "meditative-069",
+    "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+)];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -612,7 +616,7 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
     (
         "meditative-011",
-        "at risk: hard: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change 2.5; pass 2 affordable on 35 turns over 24 games, played 1 time(s), mean evaluate change 2.8",
+        "at risk: hard: pass 2 affordable on 33 turns over 24 games, played 1 time(s), mean evaluate change 2.8",
     ),
     (
         "meditative-022",
@@ -620,7 +624,7 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
     (
         "meditative-025",
-        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 0.9; hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 22.3",
     ),
     (
         "meditative-026",
@@ -647,12 +651,8 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
         "at risk: hard: pass 1 affordable on 28 turns over 8 games, never played",
     ),
     (
-        "meditative-069",
-        "at risk: easy: pass 1 affordable on 11 turns over 8 games, never played; hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 8.6",
-    ),
-    (
         "meditative-075",
-        "at risk: easy: pass 1 affordable on 10 turns over 8 games, never played; hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 2.5",
+        "at risk: easy: pass 1 affordable on 8 turns over 8 games, never played",
     ),
     (
         "meditative-077",
@@ -660,7 +660,7 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
     (
         "meditative-078",
-        "at risk: easy: pass 1 affordable on 17 turns over 8 games, played 1 time(s), mean evaluate change 28.4; hard: pass 1 affordable on 12 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 12.1; hard: pass 1 affordable on 12 turns over 8 games, never played",
     ),
     (
         "meditative-088",

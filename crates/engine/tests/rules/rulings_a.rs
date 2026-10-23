@@ -708,9 +708,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r1_fires_cry_only_on_a_play_from_hand_or_a_cast_never_on_a_summon_recruit_or_transform() {
-        // Decide row: the constant, then the behaviour it drives.
-        const { assert!(CRY_ON_PLAY_ONLY) };
-
         // Played from hand: the Cry resolves.
         let mut played = playing("r1");
         let card = at(&in_hand(&mut played, CRIER, P1, 1), 0);
@@ -1102,7 +1099,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r14_r831000_rotates_two_independent_rings_into_a_locked_destination_and_carries_damage_and_buffs() {
-        assert_eq!(ROTATION_RING, "two-rings");
         assert_eq!(ROTATION_ROWS.to_vec(), vec![UNITS, BACKROW]);
 
         let ring: Vec<String> = ring_order(UNITS, P1)
@@ -1657,25 +1653,17 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r26_reads_genn_s_greed_as_exile_all_odd_cost_cards() {
-        assert_eq!(GENN_GREED_EXILES, "odd");
-
         let mut state = game("r26");
         let odd = at(&in_hand(&mut state, ONE_COST, P1, 1), 0);
         let even = at(&in_hand(&mut state, TWO_TOP, P1, 1), 0);
         let x_card = at(&in_hand(&mut state, X_UNIT, P1, 1), 0);
 
-        let wanted = if GENN_GREED_EXILES == "odd" { 1 } else { 0 };
-        for card in state.players.p1.hand.clone() {
-            let cost = query_cost(def_of(Some(&state), &card.def_id));
-            if cost % 2 != wanted {
-                continue;
-            }
-            run(
-                &mut state,
-                effects::exile(json_as(json!({ "target": { "of": "chosen" } }))),
-                targeting(P1, pick(&card)),
-            );
-        }
+        // #94's exile clause is `exileMatching` by parity; R26 reads it as odd.
+        run(
+            &mut state,
+            effects::exile_matching(json_as(json!({ "zones": ["hand"], "parity": "odd" }))),
+            by(P1),
+        );
 
         assert_eq!(ids(&state.players.p1.exile), vec![odd.id.clone()]);
         // The X-cost card reads as 0 outside play, so the odd filter leaves it alone (R65).
@@ -1983,7 +1971,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r36_lets_only_the_active_player_offer_a_draw_once_a_turn_and_a_decline_blocks_3_of_their_turns() {
-        assert_eq!(DRAW_OFFERS_PER_TURN, 1);
         assert_eq!(DRAW_OFFER_BLOCK_TURNS, 3);
 
         let mut state = playing("r36");
@@ -2080,8 +2067,6 @@ mod spec_11_rulings_r1_r42_m3_gate {
 
     #[test]
     fn r39_gives_felinor_fiender_printed_plus_the_sum_of_your_felinors_never_below_printed() {
-        assert_eq!(FIENDER_STATS_MODE, "printed-plus-sum");
-
         let mut state = game("r39");
         let boss = put(&mut state, FIENDER, slot(P1, UNITS, 1), json!({}));
         assert_eq!(unit_view(&state, &boss).attack, 4);

@@ -112,7 +112,7 @@ jackioh/
 
 ## 2. Constants (`crates/engine/src/config.rs`)
 
-Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 20;`; an object becomes a struct constant). Nothing in the engine hard-codes them. The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
+Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 20;`; an object becomes a struct constant). Nothing in the engine hard-codes them: `crates/tools/tests/acceptance.rs` fails on a constant no code reads, and one the engine plays at a single value (`CRY_ON_PLAY_ONLY`, `ROTATION_RING`, `FIENDER_STATS_MODE`, `DRAW_OFFERS_PER_TURN`, `MULLIGAN_ORDER`) is asserted at compile time where its rule is played (#1640). The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
 
 | Constant | Value | Spec |
 | --- | --- | --- |
@@ -140,7 +140,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `LIBRARY_CAP` | 60 | R80 |
 | `ANTI_ONESHOT_CAP` | `{ base: 5, radiant: 3 }` | §8 #73 |
 | `QUICKSTRIKER_COMBO_MULTIPLE` | `{ base: 1, radiant: 2 }`: the X each Quickstriker's granted Combo deals, as one hit | §8 #38, R281 |
-| `RANDOM_KEYWORD_POOL` | Taunt, Armor 1, Rush, Charge, First Strike, Poisonous, Lifesteal, Reborn, Divine Shield, Trample, Cleave, Pierce | R21, R346 |
+| `RANDOM_KEYWORD_POOL` | Taunt, Rush, First Strike, Flying, Ranged, Poisonous, Reborn, Divine Shield, Windfury, Cleave, Deft, Lifesteal, Pierce, Trample, in that order | R21, R346, R636, R49, R781005, R1025000, R1615000 |
 | `FIB` | `[0,1,1,2,3,5,8,13,21,34,55,89]`, index clamps at 11 | R25 |
 | `FUSE_COST_CAP` | 4 | §6.3 |
 | `MULLIGAN_ORDER` | "draw-then-shuffle" | R9 |

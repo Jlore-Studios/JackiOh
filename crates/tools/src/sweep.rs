@@ -53,6 +53,7 @@ use jackioh_ai::{
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::testkit::preview_every_set;
 use jackioh_engine::wire::SetName;
+use jackioh_engine::{CardInstance, PlayerId, legal_actions};
 
 use crate::arena::utc_date;
 use crate::gate::{MS_PER_SECOND, literal, time_decision, yardstick_ms};
@@ -97,6 +98,9 @@ const WATCH_OPEN: &str = "pub const SHADOW_WATCH: &[(&str, &str)] = &[";
 
 /// The line that closes a table written over several lines.
 const TABLE_CLOSE: &str = "];";
+
+/// The line that closes a table of one row, whose tuple rustfmt opens on the table's own line.
+const LONE_ROW_CLOSE: &str = ")];";
 
 /// R732000, R1186000: the sets whose cards the shadow ban holds.
 const BAN_SETS: [SetName; 2] = [SetName::Meditative, SetName::MeditativePlus];
@@ -243,12 +247,51 @@ fn still_slow(slow: &SlowDecision<'_>, warmed: &Cell<bool>) -> bool {
         return true;
     }
     match time_decision(slow.state, slow.seat, slow.rng, slow.budget, limit) {
-        Ok(timing) => timing.ms > limit,
+        Ok(timing) => {
+            let still = timing.ms > limit;
+            let json = serde_json::to_string(&timing).unwrap_or_default();
+            eprintln!("[ai:sweep] {}", slow_line(slow, &json, still));
+            still
+        }
         Err(error) => {
             eprintln!("[ai:sweep] re-timing a slow decision: {error:#}");
             true
         }
     }
+}
+
+/// Issue #1675: a decision `still_slow` timed again, as the log shows it: its game, turn and seat,
+/// its legal actions, the seat's hand, each field's units then backrow, and the timing.
+fn slow_line(slow: &SlowDecision<'_>, timing_json: &str, still: bool) -> String {
+    let state = slow.state;
+    let ids = |cards: Vec<&CardInstance>| {
+        cards
+            .iter()
+            .map(|card| card.def_id.as_str())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let field = |seat: PlayerId| {
+        let side = &state.players[seat];
+        ids(side
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .chain(side.backrow.iter().flatten())
+            .collect())
+    };
+    format!(
+        "slow decision: {}, turn {}, {}, {} legal, hand [{}], field p1 [{}] p2 [{}]: {timing_json} ({})",
+        state.seed,
+        state.turn,
+        literal(&slow.seat),
+        legal_actions(state, slow.seat).len(),
+        ids(state.players[slow.seat].hand.iter().collect()),
+        field(PlayerId::P1),
+        field(PlayerId::P2),
+        if still { "still slow" } else { "fast again" },
+    )
 }
 
 /// Each result is also handed to `emit` as it lands, so a slice cut short keeps what it finished.
@@ -827,17 +870,27 @@ fn table_span(lines: &[String], open: &str) -> Result<(usize, usize)> {
     }
     let to = lines[from..]
         .iter()
-        .position(|line| line == TABLE_CLOSE)
+        .position(|line| line == TABLE_CLOSE || line == LONE_ROW_CLOSE)
         .map(|offset| offset + from)
         .with_context(|| format!("{SHADOW_BAN_RS}'s `{open}` table is never closed"))?;
     Ok((from, to))
 }
 
 /// A table as rustfmt writes it: one row over four lines (every row is wider than rustfmt's one-line
-/// limit), an empty table on its opening line.
+/// limit), an empty table on its opening line, and a table of one row as one tuple, opened on the
+/// table's line and closed on its last.
 fn table_lines(open: &str, rows: &[(String, String)]) -> Vec<String> {
-    if rows.is_empty() {
-        return vec![format!("{open}{TABLE_CLOSE}")];
+    match rows {
+        [] => return vec![format!("{open}{TABLE_CLOSE}")],
+        [(id, reason)] => {
+            return vec![
+                format!("{open}("),
+                format!("    {},", json_string(id)),
+                format!("    {},", json_string(reason)),
+                LONE_ROW_CLOSE.to_string(),
+            ];
+        }
+        _ => {}
     }
     let mut out = vec![open.to_string()];
     for (id, reason) in rows {
@@ -1143,6 +1196,33 @@ mod tests {
     }
 
     #[test]
+    fn a_slow_decision_line_names_its_turn_hand_field_and_timing() {
+        jackioh_cards::register_all();
+        let game = jackioh_engine::testkit::scenario(serde_json::json!({
+            "seed": "slow-line",
+            "active": "p1",
+            "turn": 5,
+            "p1": { "hand": ["core-055", "core-024"], "mana": 4, "field": ["core-020"] },
+            "p2": { "field": ["core-019", { "defId": "core-006", "row": "backrow" }] },
+        }));
+        let state = game.state();
+        let slow = SlowDecision {
+            state,
+            seat: PlayerId::P1,
+            budget: AI_GATE_BUDGET,
+            rng: &jackioh_engine::Rng::new("slow-line", 0),
+        };
+        let legal = legal_actions(state, PlayerId::P1).len();
+        assert_eq!(
+            slow_line(&slow, r#"{"ms":2400.0}"#, true),
+            format!(
+                "slow decision: slow-line, turn 5, p1, {legal} legal, hand [core-055, core-024], field p1 [core-020] p2 [core-019, core-006]: {{\"ms\":2400.0}} (still slow)"
+            )
+        );
+        assert!(slow_line(&slow, "{}", false).ends_with("(fast again)"));
+    }
+
+    #[test]
     fn a_line_is_pass_2_when_it_names_its_forced_card() {
         assert!(is_pass2(
             &serde_json::json!({ "forced": "core-011", "tier": "easy" })
@@ -1334,6 +1414,34 @@ mod tests {
         assert_eq!(render(&written, &record).unwrap(), written);
         check_file(&written, &record).unwrap();
         assert!(check_file(&fixture_file(), &record).is_err());
+    }
+
+    #[test]
+    fn a_table_of_one_row_is_written_as_rustfmt_writes_it() {
+        jackioh_cards::register_all();
+        // #1675's sweep left `SHADOW_BAN` one row, which rustfmt writes as one tuple.
+        let lone = compose_one(
+            block_of(&["meditative-011".to_string()], &["meditative-022"]),
+            &[],
+        )
+        .unwrap();
+        let written = render(&fixture_file(), &lone).unwrap();
+        for (open, id, reason) in [
+            (BAN_OPEN, "meditative-011", "timeout: easy: fixture"),
+            (WATCH_OPEN, "meditative-022", "at risk: fixture"),
+        ] {
+            let table = format!("{open}(\n    \"{id}\",\n    \"{reason}\",\n)];\n");
+            assert!(written.contains(&table), "{written}");
+        }
+        assert_eq!(render(&written, &lone).unwrap(), written);
+        check_file(&written, &lone).unwrap();
+        // Rewritten with two rows or none, each table takes its other shapes again.
+        let record = fixture_record();
+        assert_eq!(render(&written, &record).unwrap(), fixture_written());
+        let empty = compose_one(block_of(&[], &[]), &[]).unwrap();
+        let emptied = render(&written, &empty).unwrap();
+        assert!(emptied.contains(&format!("{BAN_OPEN}];\n")), "{emptied}");
+        assert!(emptied.contains(&format!("{WATCH_OPEN}];\n")), "{emptied}");
     }
 
     #[test]

@@ -3,7 +3,7 @@
 //! B14: `candidateActions` is `legalActions` minus the four action types the AI never searches
 //! (R84's concede, offerDraw and answerDraw, and the mulligan), with plays that differ only in their
 //! lane collapsed to the lowest lane of each placement, at most `AI_SEARCH.zone_variants` of them
-//! (#1014), and endTurn last whenever it is legal.
+//! (#1014; the search's root keeps every placement, #1635), and endTurn last whenever it is legal.
 //!
 //! B15: `decide` is a pure function of (state, seat, rng seed, budget): the same inputs give a
 //! deep-equal Decision, it never spends more nodes than the budget, its action is always legal, and
@@ -124,8 +124,18 @@ fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
 
 /// The lanes `candidate_actions` offers the AI's hand card of `def_id`, lowest first.
 fn offered_lanes(state: &GameState, def_id: &str) -> Vec<i32> {
+    lanes_of(state, def_id, &candidate_actions(state, AI))
+}
+
+/// The lanes the search's root offers it (`root_candidate_actions`, every placement, #1635).
+fn root_offered_lanes(state: &GameState, def_id: &str) -> Vec<i32> {
+    lanes_of(state, def_id, &root_candidate_actions(state, AI))
+}
+
+/// The lanes `actions` play the AI's hand card of `def_id` into, lowest first.
+fn lanes_of(state: &GameState, def_id: &str, actions: &[ActionBody]) -> Vec<i32> {
     let id = hand_id(state, def_id);
-    let mut lanes: Vec<i32> = candidate_actions(state, AI)
+    let mut lanes: Vec<i32> = actions
         .iter()
         .filter_map(|action| match action {
             ActionBody::Play {
@@ -152,6 +162,18 @@ fn hand_id(state: &GameState, def_id: &str) -> String {
 
 fn is_play(action: &ActionBody) -> bool {
     matches!(action, ActionBody::Play { .. })
+}
+
+/// A unit opposite every lane: each of the AI's lanes is its own placement.
+fn crowded_row() -> GameState {
+    jackioh_cards::register_all();
+    scenario(json!({
+        "seed": "search-crowded-row",
+        "p1": { "hand": ["core-008"] },
+        "p2": { "field": ["core-011", "core-011", "core-011", "core-011", "core-011"] },
+    }))
+    .state()
+    .clone()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -309,9 +331,10 @@ mod candidate_actions_b14 {
         assert_eq!(two_lanes, vec![Some(4), Some(5)]);
     }
 
-    /// B14: a play keeps the lowest lane of each placement and none past AI_SEARCH.zone_variants (#1014)
+    /// B14: a play keeps the lowest lane of each placement: every one at the search's root (#1635), none
+    /// past AI_SEARCH.zone_variants deeper (#1014)
     #[test]
-    fn b14_a_play_keeps_the_lowest_lane_of_each_placement_and_none_past_the_cap() {
+    fn b14_a_play_keeps_the_lowest_lane_of_each_placement_every_one_at_the_root_none_past_the_cap_deeper() {
         jackioh_cards::register_all();
         let cap = AI_SEARCH.zone_variants as usize;
         // An empty row: lane 1 has the edge on its left, lane 5 on its right, and lanes 2 to 4 are one
@@ -326,18 +349,65 @@ mod candidate_actions_b14 {
         let mut expected: Vec<i32> = [1, 2, 5].into_iter().take(cap).collect();
         expected.sort();
         assert_eq!(offered_lanes(&empty, "core-008"), expected);
+        assert_eq!(root_offered_lanes(&empty, "core-008"), vec![1, 2, 5]);
 
-        // A unit opposite every lane: each lane is its own placement, so the lowest ones up to the cap.
-        let crowded = scenario(json!({
-            "seed": "search-crowded-row",
-            "p1": { "hand": ["core-008"] },
-            "p2": { "field": ["core-011", "core-011", "core-011", "core-011", "core-011"] },
-        }))
-        .state()
-        .clone();
+        // A unit opposite every lane: each lane is its own placement, so the root keeps all five and a
+        // deeper level the lowest ones up to the cap.
+        let crowded = crowded_row();
+        let deeper = (1..=5).take(cap).collect::<Vec<i32>>();
+        assert_eq!(offered_lanes(&crowded, "core-008"), deeper);
+        assert_eq!(root_offered_lanes(&crowded, "core-008"), vec![1, 2, 3, 4, 5]);
+        let root = root_expansion(
+            &crowded,
+            AI,
+            AI_BUDGET.root_branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+        assert_eq!(lanes_of(&crowded, "core-008", &root), vec![1, 2, 3, 4, 5]);
+        let deeper_expansion = expansion(
+            &crowded,
+            AI,
+            AI_BUDGET.branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+        assert_eq!(lanes_of(&crowded, "core-008", &deeper_expansion), deeper);
+    }
+
+    /// #1635: only the search's root keeps every placement. The lethal solver (lethal.rs
+    /// `lethal_moves`, which reads `candidate_actions`), the opponent's reply (reply.rs, which reads
+    /// `candidate_actions_in`) and a line's later actions (`candidate_set`) keep the lowest
+    /// AI_SEARCH.zone_variants.
+    #[test]
+    fn the_lethal_solver_and_the_reply_keep_zone_variants_lanes_and_only_the_root_keeps_every_one() {
+        let crowded = crowded_row();
+        let capped = (1..=5)
+            .take(AI_SEARCH.zone_variants as usize)
+            .collect::<Vec<i32>>();
         assert_eq!(
-            offered_lanes(&crowded, "core-008"),
-            (1..=5).take(cap).collect::<Vec<i32>>()
+            lanes_of(&crowded, "core-008", &candidate_actions(&crowded, AI)),
+            capped
+        );
+        assert_eq!(
+            lanes_of(
+                &crowded,
+                "core-008",
+                &candidate_actions_in(&crowded, AI, legal_actions(&crowded, AI))
+            ),
+            capped
+        );
+        assert_eq!(
+            lanes_of(&crowded, "core-008", &candidate_set(&crowded, AI)),
+            capped
+        );
+        assert_eq!(
+            lanes_of(&crowded, "core-008", &root_candidate_actions(&crowded, AI)),
+            vec![1, 2, 3, 4, 5]
+        );
+        assert_eq!(
+            lanes_of(&crowded, "core-008", &root_candidate_set(&crowded, AI)),
+            vec![1, 2, 3, 4, 5]
         );
     }
 
@@ -673,6 +743,81 @@ mod lanes_that_play_differently {
         .state()
         .clone();
         assert!(offered_lanes(&state, "classicplus-020").contains(&3));
+    }
+
+    /// The enemy's 9/9 Taunt opposite lane 4 of an otherwise empty board.
+    fn lane_eater_board() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-lane-eater-4",
+            "p1": { "hand": ["classic-071"], "mana": 3, "library": LIBRARY },
+            "p2": { "field": [{ "def": "core-019", "lane": 4 }], "library": LIBRARY },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// #1635: C #71 Lane Eater with the enemy's 9/9 Taunt opposite lane 4 and nothing else on the
+    /// board. Lanes 1, 2, 4 and 5 are its placements (2 and 3 are one), so the capped candidates stop
+    /// short of lane 4; the search's root offers it, and `decide` plays it there.
+    #[test]
+    fn lane_eater_is_tried_opposite_a_taunt_past_the_first_two_placements_and_decide_plays_it_there() {
+        let state = lane_eater_board();
+        let placements = vec![1, 2, 4, 5];
+        let cap = AI_SEARCH.zone_variants as usize;
+        assert_eq!(
+            offered_lanes(&state, "classic-071"),
+            placements[..cap.min(placements.len())]
+        );
+        assert_eq!(root_offered_lanes(&state, "classic-071"), placements);
+
+        let eater = hand_id(&state, "classic-071");
+        let decision =
+            decide(&state, AI, &mut ai_options("search-lane-eater-4", AI_BUDGET)).expect("a decision");
+        assert!(
+            matches!(
+                &decision.action,
+                ActionBody::Play { instance_id, zone: Some(zone), .. }
+                    if *instance_id == eater && zone.lane == 4
+            ),
+            "{}",
+            action_key(&decision.action)
+        );
+    }
+
+    /// #1635: a finalist that opens with a play only the root offers is replayed on another world, not
+    /// cut at its first action: `score_line` checks a line's first action against the root's set.
+    #[test]
+    fn score_line_replays_a_first_action_only_the_root_offers() {
+        let state = lane_eater_board();
+        let play = root_candidate_actions(&state, AI)
+            .into_iter()
+            .find(|action| lane_of(action) == Some(4))
+            .expect("the root offers lane 4");
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let played = score_line(&state, AI, &[play], &counter, false, None).expect("in budget");
+        let passed = score_line(&state, AI, &[], &counter, false, None).expect("in budget");
+        assert!(played > passed, "{played} > {passed}");
+    }
+
+    /// #1635: C+ #20 Mushroom Power with its own units in lanes 3 and 5: lane 4, which buffs both, is
+    /// past the capped candidates' first two placements, and the search's root offers it.
+    #[test]
+    fn mushroom_power_is_tried_between_its_units_in_lanes_3_and_5_at_the_root() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-mushroom-4",
+            "p1": {
+                "hand": ["classicplus-020"],
+                "field": [{ "def": "core-008", "lane": 3 }, { "def": "core-008", "lane": 5 }],
+                "library": LIBRARY,
+            },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        assert!(!offered_lanes(&state, "classicplus-020").contains(&4));
+        assert_eq!(root_offered_lanes(&state, "classicplus-020"), vec![1, 2, 4]);
     }
 }
 

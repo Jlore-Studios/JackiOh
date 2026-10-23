@@ -12,7 +12,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, in_graveyard, is_legal, on_field};
+use super::support::{AI, HUMAN, act, all_out_attack, in_graveyard, is_legal, on_field, run_puzzle, trace};
 
 const TURN: i32 = 9;
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
@@ -661,5 +661,61 @@ mod visible_activations {
             "{:?}",
             decision.action
         );
+    }
+}
+
+mod open_lethal_1634 {
+    use super::*;
+
+    /// B41, #1634: two attackers whose hits only together reach the seat's hero take the face, not a
+    /// kill worth more than one hit
+    #[test]
+    fn b41_takes_a_lethal_that_needs_both_attacks_over_a_kill_worth_more_than_one_hit() {
+        // Mr. Vanilla's worth outranks one 7 at the face, and either 7/7 kills it: 7 + 7 is lethal on 8.
+        let state = handed_over(json!({
+            "p1": { "health": 8, "field": ["core-008"] },
+            "p2": { "field": ["core-025", "core-025"] },
+        }));
+        let hidden = hidden_card_ids(&state, AI);
+
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply_with(&state, AI, &counter, &hidden, true).expect("a reply");
+        assert_eq!(
+            reply.result.map(|result| result.winner),
+            Some(Winner::from(HUMAN))
+        );
+        assert!(on_field(&reply, AI, "core-008"));
+        // The two face hits, one node each.
+        assert_eq!(counter.used(), 2);
+
+        // One hit at a time, the kill outranks the face: Mr. Vanilla dies and the seat lives on 1.
+        let blind =
+            simulate_reply_with(&state, AI, &create_node_counter(20, None), &hidden, false).expect("a reply");
+        assert!(blind.result.is_none());
+        assert!(in_graveyard(&blind, AI, "core-008"));
+        assert_eq!(blind.players[AI].hero.health, 1);
+
+        // `simulate_reply` plays by the shipped switch.
+        let shipped = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden).expect("a reply");
+        assert_eq!(shipped.result.is_some(), AI_REPLY.open_lethal);
+    }
+
+    /// #1634: at 8 health with Mr. Vanilla against two 4-mana 7/7s, lethal only together, the AI puts
+    /// Mr. Vanilla in Defense Position, whose Taunt takes one swing, and survives the swing back. One
+    /// hit at a time, the reply sees a kill and a 7, and the AI swings at the face and dies.
+    #[test]
+    fn decide_blocks_one_of_two_attackers_that_are_lethal_only_together() {
+        let run = run_puzzle(
+            "open-lethal-1634",
+            json!({
+                "p1": { "health": 8, "field": ["core-008"], "library": LIBRARY },
+                "p2": { "health": 12, "field": ["core-025", "core-025"], "library": LIBRARY },
+            }),
+        );
+        assert!(run.end.result.is_none(), "{}", trace(&run.turn));
+        let after = all_out_attack(&run.end, HUMAN);
+        let survives = after.result.as_ref().map(|result| result.winner) != Some(Winner::from(HUMAN));
+        // `decide` reads the shipped switch: on, it sees the two swings coming; off, it plays as before.
+        assert_eq!(survives, AI_REPLY.open_lethal, "{}", trace(&run.turn));
     }
 }

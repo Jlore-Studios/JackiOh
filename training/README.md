@@ -10,7 +10,7 @@ docs/v0.3.0/SURFACE.md §14.
 |---|---|---|
 | `improve` | a stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
 | `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
-| `gather` | no change to the AI: development records for the card win rates (R378), without end | [`gather.md`](gather.md) |
+| `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports (The gather lane) | [`gather.md`](gather.md) |
 | `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: improve's bar, 220 of 400 paired games, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
 The `gather` lane runs no model session and opens no pull request (The gather lane, below). The
@@ -275,6 +275,16 @@ thread count.
 
 ## The gather lane
 
+Since #1676 the development games come from the learn lane's exports. `cargo jackioh stats
+from-selfplay <shards>… --out <file>` files each game of an export that still replays under the
+catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
+and counts the rest (R1676000). The exports come about weekly, so a patch shipped between two has none
+until the next; `cargo jackioh stats` can be run by hand for it. Until a person adds the step to
+`learn.yml` that runs it after the export, run it by hand after `gh run download <run> --pattern
+'selfplay-<base>-*'`, then load the file with `jackioh-server stats-import`. The training box is being
+given back (#682's audit, `reviews/2026-10-22-issue-682-subscriptions.md`), so what follows is the
+lane's contract for a box that still runs it.
+
 `loop.sh gather` is the third lane, and it gathers data instead of improving the AI (#749, part of
 #636): it plays AI-against-AI All Random games without end and keeps their card figures, so the card
 win rates (SPEC §9.11, R376–R378) of every patch have a development source beside the live games. No
@@ -387,7 +397,8 @@ replay) and the games an hour to the run's summary. The same base and game numbe
 same games, so an export can be played again on any runner, and a base never names a gate's
 hold-out deals or the dev set (R1006002). A faulted game carries `faults`, which `positions` leaves
 out, counted `unclean` (R1489000). `gh run download <run> --pattern 'selfplay-<base>-*'`
-fetches it. The fit that learns from it is [`training/ml/`](ml/README.md).
+fetches it. `cargo jackioh stats from-selfplay` files the same games as the card statistics' development
+records (The gather lane, R1676000). The fit that learns from it is [`training/ml/`](ml/README.md).
 
 ## The ladder bots after a promotion
 
@@ -406,6 +417,7 @@ never edits `crates/server`, and a promotion does not wait for it.
 | The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL`: folded into the card statistics' totals as they load, each record's detail kept a week (R1044000, R1044001) | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` (the totals) or `stats-export --source=dev` (the last week's records) |
 | The gather lane's records: one `GameRecord` per line, a file a day | `~/training-out/gather/<date>.jsonl` |
 | The gather lane's next game number for a patch, and that patch's card figures and game figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `.json`, `games-<patch>.txt` and `.json` |
+| The learn lane's exports as development records: one `GameRecord` per line (`stats from-selfplay`) | the file `--out` names, loaded with `stats-import` |
 | The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
 | The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
