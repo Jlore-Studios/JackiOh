@@ -13347,6 +13347,13 @@
     "1709": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T05:48:22Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 6 fails outright: the only file the fix needs is .github/workflows/ci.yml, a forbidden path, so it is not easy, and it is CI design rather than engine or AI work, so not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
