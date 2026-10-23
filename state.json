@@ -12793,9 +12793,11 @@
     "what": "revise #1734 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-23T15:30:37Z",
+    "at": "2026-10-23T15:43:39Z",
     "notes": [
-      "delivered build #1721 on claude-3 (run 39977919343): infra"
+      "delivered revise #1734 on claude-4 (run 39975396489): approved",
+      "started revise #1734 on claude-4 (run 39981055399)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` its last run could not work (dependency install failed on untouched main (exit 1): 90a8ec31d5575f31a3130869719e0a2e59a2dfd15be7c3c920a29eca24ba8faaa7); it is left alone until 2026-10-23T16:21:32Z; `claude-7` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 61%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 65h 13m; `muse` it refused a call; its limit resets at 2026-10-26T00:00:00Z; `agy` 7-day usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-23T22:00:08Z; it can start a build or a plan again in 6h 13m; `gpt` it refused a call; its limit resets at 2026-10-27T18:45:27Z; `claude-2` 7-day usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-24T05:00:00Z; it can start a build or a plan again in 13h 13m; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13501,7 +13503,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T15:30:37Z",
+  "loop_tick": "2026-10-23T15:43:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
