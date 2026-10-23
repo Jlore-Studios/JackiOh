@@ -12841,6 +12841,13 @@
     "1694": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T03:20:00Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 5 fails (crates/engine/src/testkit is under crates/engine/src/) and it spans engine, tools and cards tests; not hard: testkit only, no rules or resolution-loop change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
