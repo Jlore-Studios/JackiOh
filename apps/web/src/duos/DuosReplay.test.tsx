@@ -374,6 +374,51 @@ describe("the co-op replay screen", () => {
     }
   });
 
+  it("#1691 a co-op replay that could not be read offers Try again, which reads it again and plays", async () => {
+    vi.mocked(getDuosReplay).mockRejectedValueOnce(
+      new ApiRequestError(503, { code: "unavailable", message: "the server is unavailable" }),
+    );
+    serve();
+    await open();
+    expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("the server is unavailable");
+    expect(screen.getByTestId(replayTestid.retry)).toBeEnabled();
+    expect(screen.queryByTestId(duosTestid.replay)).toBeNull();
+
+    await press(replayTestid.retry);
+    expect(screen.queryByTestId(replayTestid.failure)).toBeNull();
+    expect(screen.queryByTestId(replayTestid.retry)).toBeNull();
+    expect(shownStep()).toBe(0);
+    expect(getDuosReplay).toHaveBeenCalledTimes(2);
+  });
+
+  it("#1691 an expired or refused co-op replay offers no Try again", async () => {
+    const refusals = [
+      new ApiRequestError(410, { code: "gone", message: "expired" }),
+      new ApiRequestError(422, {
+        code: "replay_unavailable",
+        message: "this replay cannot be shown: earlier_patch",
+        details: { reason: "earlier_patch" },
+      }),
+      new ApiRequestError(422, {
+        code: "replay_unavailable",
+        message: "this replay cannot be shown: rules_changed",
+        details: { reason: "rules_changed" },
+      }),
+    ];
+    for (const error of refusals) {
+      vi.mocked(getDuosReplay).mockReset().mockRejectedValue(error);
+      const { unmount } = render(
+        <CatalogContext.Provider value={lookup}>
+          <DuosReplay matchId={MATCH} onLeave={vi.fn()} />
+        </CatalogContext.Provider>,
+      );
+      await flush();
+      expect(screen.getByTestId(replayTestid.failure), error.code).toBeInTheDocument();
+      expect(screen.queryByTestId(replayTestid.retry), error.message).toBeNull();
+      unmount();
+    }
+  });
+
   it("B41 the way back is on the board's rail while the replay plays", async () => {
     serve();
     const onLeave = vi.fn();

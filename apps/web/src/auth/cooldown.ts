@@ -83,3 +83,18 @@ export function useAddressCooldown(initial: { address: string; deadline: number 
 
   return { secondsFor, startUntil };
 }
+
+/**
+ * Seconds left of a stated wait, from when it was stated: counted on the clock, so a tab the
+ * browser put to sleep does not come back still waiting (`auth/cooldown.ts`). 0 when there is none.
+ */
+export function useCountdown(totalMs: number | undefined): number {
+  const [deadline, setDeadline] = useState(() => (totalMs === undefined ? null : Date.now() + totalMs));
+  const [stated, setStated] = useState(totalMs);
+  if (stated !== totalMs) {
+    // A new wait was stated: counted from now.
+    setStated(totalMs);
+    setDeadline(totalMs === undefined ? null : Date.now() + totalMs);
+  }
+  return useSecondsUntil(deadline);
+}

@@ -19,6 +19,7 @@ import {
 
 import type { CardDefs, CustomCard, LeanPick } from "@jackioh/shared";
 
+import { TryAgainButton } from "../auth/AccountError.tsx";
 import {
   customCardsOfDeck,
   customDefsOf,
@@ -71,8 +72,11 @@ export type SavedDecks =
   | { kind: "inactive" }
   /** An active account that has no saved deck. */
   | { kind: "none" }
-  /** The account or its saved decks could not be read. */
-  | { kind: "unavailable" }
+  /**
+   * The account or its saved decks could not be read. `retry` reads them again (#1691), after the
+   * wait a rate limit stated, `retryAfterMs` (R192); absent, there is nothing to ask again.
+   */
+  | { kind: "unavailable"; retry?: () => void; retryAfterMs?: number }
   /** `GET /api/decks`'s decks, oldest first (R250). */
   | { kind: "ready"; decks: readonly PracticeSavedDeck[] };
 
@@ -84,6 +88,10 @@ type PracticeSetupProps = {
   defsFailed: boolean;
   /** §12.9: the account's custom cards, which a saved deck may name; absent, there are none. */
   custom?: CustomCardsState;
+  /** #1691: reads the custom cards again, offered beside a failed read. */
+  onRetryCustom?: () => void;
+  /** #1691: asks the worker for the catalog again, offered beside a failed preview. */
+  onRetryDefs?: () => void;
   onStart(choice: PracticeSetupChoice): void;
 };
 
@@ -138,7 +146,17 @@ function savedHint(saved: SavedDecks): ReactElement | null {
       );
     }
     case "unavailable":
-      return <>{t("Your saved decks could not be loaded just now. The decks above still play.")}</>;
+      return (
+        <>
+          {t("Your saved decks could not be loaded just now. The decks above still play.")}
+          {saved.retry === undefined ? null : (
+            <>
+              {" "}
+              <TryAgainButton retryAfterMs={saved.retryAfterMs} onRetry={saved.retry} testId={practiceTestid.savedRetry} />
+            </>
+          )}
+        </>
+      );
   }
 }
 
@@ -223,7 +241,16 @@ function tierStats(handicap: Handicap): TierStat[] {
   ];
 }
 
-export function PracticeSetup({ saved, initial, defs, defsFailed, custom = NO_CUSTOM, onStart }: PracticeSetupProps): ReactElement {
+export function PracticeSetup({
+  saved,
+  initial,
+  defs,
+  defsFailed,
+  custom = NO_CUSTOM,
+  onRetryCustom,
+  onRetryDefs,
+  onStart,
+}: PracticeSetupProps): ReactElement {
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
   const [deck, setDeck] = useState<string>(initial.deck);
   const [lean, setLean] = useState<LeanPick | null>(initial.leanSet ?? null);
@@ -344,10 +371,17 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, custom = NO_CU
             cards={preview.cards}
             defs={previewDefs}
             defsFailed={defsFailed}
+            onRetry={onRetryDefs}
           />
           {blocked === null ? null : (
             <p className="practice-setup__hint" data-testid={practiceTestid.customBlocked} role="status">
               {blocked}
+              {custom.kind === "failed" && onRetryCustom !== undefined ? (
+                <>
+                  {" "}
+                  <TryAgainButton retryAfterMs={custom.retryAfterMs} onRetry={onRetryCustom} testId={practiceTestid.customRetry} />
+                </>
+              ) : null}
             </p>
           )}
         </div>

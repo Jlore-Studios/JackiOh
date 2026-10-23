@@ -119,6 +119,30 @@ describe("B52 sharing a replay with a friend", () => {
     expect(await screen.findByTestId("share-friend-error", undefined, SLOW)).toHaveTextContent(words);
     expect(screen.queryByTestId("share-friend-unshare")).toBeNull();
     expect(must(screen.getAllByTestId("share-friend-option")[0], "Ann's Share").getAttribute("data-shared")).toBe("false");
+    expect(screen.queryByTestId("share-friend-retry")).toBeNull();
+  });
+
+  it("#1691 a friends list that could not be read offers Try again, which lists the friends", async () => {
+    const words = "The friends could not be read.";
+    let refused = true;
+    const server = serve([ANN, BOB], (call) =>
+      refused && call.method === "GET" && call.path === "/api/friends" ? refusal(503, "unavailable", words) : undefined,
+    );
+    render(<ShareWithFriend matchId="m-done" />);
+    fireEvent.click(screen.getByTestId("share-friend-open"));
+    expect(await screen.findByTestId("share-friend-error", undefined, SLOW)).toHaveTextContent(words);
+    const retry = screen.getByTestId("share-friend-retry");
+    expect(retry).toBeEnabled();
+    expect(screen.queryAllByTestId("share-friend-option")).toHaveLength(0);
+
+    refused = false;
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("share-friend-option")).toHaveLength(2);
+    }, SLOW);
+    expect(screen.queryByTestId("share-friend-error")).toBeNull();
+    expect(screen.queryByTestId("share-friend-retry")).toBeNull();
+    expect(server.to("GET", "/api/friends")).toHaveLength(2);
   });
 });
 

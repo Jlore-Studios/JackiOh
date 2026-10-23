@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, ReactElement } from "react";
 
+import { AccountError } from "../auth/AccountError.tsx";
 import ConsentPrompt from "../auth/ConsentPrompt.tsx";
 import { FULL_ART_GATED, FullArtOwned, NO_FULL_ART } from "../cards/fullArt.ts";
 import { DuosReplayBack, DuosReplayPlayer } from "../duos/DuosReplay.tsx";
@@ -62,6 +63,9 @@ export const replaysTestid = {
   practiceRetry: "replays-retry-practice",
   /** #1568: a failed online list offers Try again beside the alert. */
   onlineRetry: "replays-retry-online",
+  /** #1691: the account read behind the online games failed, and Try again reads it again. */
+  accountError: "replays-account-error",
+  accountRetry: "replays-retry-account",
   noPractice: "replays-no-practice",
   noOnline: "replays-no-online",
   signIn: "replays-sign-in",
@@ -393,7 +397,17 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
               {t("to watch your online games again.")}
             </p>
           ) : null}
-          {account.kind === "error" ? <p role="alert">{account.message}</p> : null}
+          {account.kind === "error" ? (
+            <AccountError
+              message={account.message}
+              retryAfterMs={account.retryAfterMs}
+              onRetry={() => {
+                account.retry?.();
+              }}
+              testId={replaysTestid.accountError}
+              retryTestId={replaysTestid.accountRetry}
+            />
+          ) : null}
           {consentOwed ? (
             <p data-testid={replaysTestid.consent}>
               {t("Agree to the Terms and the Privacy Policy to see your online games.")}{" "}

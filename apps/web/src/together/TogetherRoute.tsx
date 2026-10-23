@@ -14,6 +14,7 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
+import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
 import { CoopPanel } from "../duos/CoopPanel.tsx";
 import { CatalogContext } from "../game/catalog.ts";
@@ -410,9 +411,13 @@ export function TogetherRoute(): ReactElement {
             </p>
           ) : null}
           {friends.kind === "failed" ? (
-            <p className="notice" role="alert">
-              {t(friends.message)}
-            </p>
+            <AccountError
+              message={friends.message}
+              retryAfterMs={friends.retryAfterMs}
+              onRetry={reloadFriends}
+              testId={togetherTestid.friendsError}
+              retryTestId={togetherTestid.friendsRetry}
+            />
           ) : null}
           {list !== null && list.friends.length === 0 ? (
             <p className="lobby-note" data-testid={togetherTestid.noFriends}>

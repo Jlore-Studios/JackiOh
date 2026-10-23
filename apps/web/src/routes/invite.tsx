@@ -12,6 +12,7 @@ import {
   CODE_ATTEMPT_WINDOW_SECONDS,
   CODE_STATUS_RECHECK_FLOOR_SECONDS,
 } from "@jackioh/server-config";
+import { AccountError } from "../auth/AccountError.tsx";
 import Address from "../auth/Address.tsx";
 import CodeField from "../auth/CodeField.tsx";
 import { deadlineAfter, useAddressCooldown, useSecondsUntil } from "../auth/cooldown.ts";
@@ -462,17 +463,15 @@ function InviteScreen({ account }: { account: Account }) {
           ) : null}
 
           {account.kind === "error" ? (
-            <div className="notice" role="alert">
-              <p>{t(account.message)}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  account.retry?.();
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </div>
+            <AccountError
+              message={account.message}
+              retryAfterMs={account.retryAfterMs}
+              onRetry={() => {
+                account.retry?.();
+              }}
+              testId={inviteTestid.accountError}
+              retryTestId={inviteTestid.accountRetry}
+            />
           ) : null}
 
           {active && !redeemed ? (
