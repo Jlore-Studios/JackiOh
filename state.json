@@ -12760,6 +12760,7 @@
     "1689": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T03:02:53Z",
         "difficulty": "medium",
