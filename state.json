@@ -12561,7 +12561,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-23T14:15:09Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:649b6e7e-1792766502",
+      "run_id": "39971898787",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-23T14:42:12Z",
