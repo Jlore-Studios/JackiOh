@@ -12938,6 +12938,13 @@
     "1697": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T03:27:31Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails easy on size (21 files), one place (ai, tools, server) and line 5 (crates/ai/src); not hard: setup plumbing only, no search, policy or engine rule"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
