@@ -53,10 +53,16 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
   // C+ #40 Appropriations (X spell): "Choose one: Military, Education, Culture, or Healthcare" —
   // the effects the Discover menu shows, X filled in on play.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +2X Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 2X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has an 8X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 2X−1 random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 7X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +(2X−1) Health and Armor X." },
+  },
+  // C+ #7 The House: "Activate: Spend a Plague Counter from this to summon a Right-house defender or a
+  // Wrong-House Attacker" — the twin is the Activate's mode (R1704002).
+  "classicplus-007": {
+    defender: { label: "Right-house defender", detail: "Spend a Plague Counter to summon a Right-house defender." },
+    attacker: { label: "Wrong-House Attacker", detail: "Spend a Plague Counter to summon a Wrong-House Attacker." },
   },
   // M #22 Mind Games: "Choose one in secret: Greed, Attack or Defend." The detail names no
   // numbers — the reward waits until the start of the caster's next turn (R861).
@@ -104,12 +110,17 @@ function lanes(detail: string): Record<string, ModeText> {
  * missing here reads the same on both faces.
  */
 export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText>>>> = {
-  // C+ #40 Appropriations, radiant: Attack and Armor doubled, the Books and the Culture chance 2.5 times, Health tripled.
+  // C+ #40 Appropriations, radiant: Attack and Armor doubled, and more Books, Culture chance and Health.
   "classicplus-040": {
-    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +4X Attack and Rush." },
-    Education: { label: "Education", detail: "Shuffle 5X random Radiant Books into your deck. They have Cast on draw." },
-    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 20X% chance to become Radiant." },
-    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +6X Health and Armor 2X." },
+    Military: { label: "Military", detail: "Your Units on the field, in your hand and in your deck get +(4X−2) Attack and Rush." },
+    Education: { label: "Education", detail: "Shuffle 4X random Radiant Books into your deck. They have Cast on draw." },
+    Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 17X% chance to become Radiant." },
+    Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +5X Health and Armor 2X." },
+  },
+  // C+ #7 The House, radiant: the twins it summons are Radiant.
+  "classicplus-007": {
+    defender: { label: "Radiant Right-house defender", detail: "Spend a Plague Counter to summon a Radiant Right-house defender." },
+    attacker: { label: "Radiant Wrong-House Attacker", detail: "Spend a Plague Counter to summon a Radiant Wrong-House Attacker." },
   },
   // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),

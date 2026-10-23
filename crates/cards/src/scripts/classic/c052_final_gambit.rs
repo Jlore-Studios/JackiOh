@@ -1,19 +1,21 @@
-//! C #52 Final Gambit (SPEC §8.6 row 52; §4.4 step 4a, §6.3 Redirect; R18, R33, R44, R58, R125, R216,
-//! R317, R386). Trap, cost 2, Epic.
-//!   Base:    "Activates when a hit would bring your hero to 0 or less: Redirect the hit to the enemy
-//!            hero. Then heal your hero {heal} and draw {draw}." (10, 3)
+//! C #52 Final Gambit (SPEC §8.6 row 52; §4.4 step 4a; R18, R33, R44, R58, R125, R216, R317, R386,
+//! R1704001). Trap, cost 2, Epic.
+//!   Base:    "Reveals when a hit would bring your hero to 0 or less: Cancel the hit. Then heal your hero
+//!            {heal} and draw {draw}." (10, 3)
 //!   Radiant: "… Then heal your hero {heal} and draw your deck." (20)
 //!   Engine:  a replacement at "would take lethal damage" (after Armor, multipliers and caps; this hit
-//!            alone, R44): the trap fires and the hit goes on to the enemy hero as a new instance from
-//!            the same source, through their Armor, multipliers and caps; then the heal and the draws
-//!            ("draw your deck" counts the deck as the step starts, R58). Fatigue counts; losing health
-//!            does not (R18). Either player's turn.
+//!            alone, R44): the trap fires and the hit is cancelled, dealing nothing (R1704001); then the
+//!            heal and the draws ("draw your deck" counts the deck as the step starts, R58). Fatigue
+//!            counts; losing health does not (R18). Either player's turn.
 //!
 //! The replacement is data (`Script.replacements`); its `then` step is owed on `state.work` and runs
-//! after the hit has landed, never when that hit ended the game (R216). Where no state check runs
-//! before the step (owed work drained at the start of a turn), the step finds the enemy hero at 0 or
-//! less and does nothing: that stops a Final Gambit fused into a Field Trap that stays (C+ #74) from
-//! re-aiming its own fatigue for ever.
+//! after the hit. A copy that stays on the field (fused into C+ #74's Field Trap) cancels one hit a
+//! turn (R1704001), so its follow-up's own fatigue cannot be cancelled for ever.
+//!
+//! Through v0.4.0f it redirected the hit to the enemy hero as a new instance from the same source,
+//! through their Armor, multipliers and caps (§6.3 Redirect), and its step did nothing once that hit
+//! had left the enemy hero at 0 or less (R216); `script_v0_4_0f` keeps that for those versions'
+//! replays (R767000).
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;
@@ -23,22 +25,19 @@ pub const ID: &str = "classic-052";
 /// How many cards the follow-up draws: the declared number, or the deck as the step begins (R58).
 type DrawCount = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
 
-fn final_gambit(draw_count: DrawCount) -> Script {
+fn final_gambit(draw_count: DrawCount, instead: ReplacementInstead, then: &'static str) -> Script {
     Script {
         replacements: vec![ReplacementDef {
             id: "final-gambit".to_string(),
             on: ReplacementMoment::LethalHit,
             where_: None,
             when: None,
-            instead: ReplacementInstead {
-                redirect: Some(InsteadRedirect::EnemyHero),
-                ..ReplacementInstead::default()
-            },
-            then: Some("afterRedirect".to_string()),
+            instead,
+            then: Some(then.to_string()),
             by: None,
         }],
         resume: IndexMap::from([(
-            "afterRedirect",
+            then,
             hook(move |ctx| {
                 // R216: the re-aimed hit left the enemy hero at 0 or less, so the game is over.
                 let to = replacement_of(ctx).and_then(|record| record.redirected_to);
@@ -59,29 +58,57 @@ fn final_gambit(draw_count: DrawCount) -> Script {
     }
 }
 
-pub fn script() -> CardScripts {
-    let base = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") }));
+/// The base face's draws: the declared number.
+fn declared_draws() -> DrawCount {
+    Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") })
+}
 
-    let radiant = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
+/// The Radiant face's draws: the deck as the step begins (R58).
+fn deck_draws() -> DrawCount {
+    Arc::new(|ctx: &EffectContext<'_>| -> i32 {
         zone_count(ctx.state, ctx.controller, OffFieldZone::Library)
-    }));
+    })
+}
+
+pub fn script() -> CardScripts {
+    // R1704001: the hit is cancelled.
+    let cancel = ReplacementInstead {
+        cancel: Some(true),
+        ..ReplacementInstead::default()
+    };
+    let base = final_gambit(declared_draws(), cancel, "afterCancel");
+
+    let radiant = final_gambit(deck_draws(), cancel, "afterCancel");
 
     CardScripts { base, radiant }
+}
+
+/// R767000: the scripts v0.4.0f and every version before it ran, the redirect to the enemy hero;
+/// `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
+    let redirect = ReplacementInstead {
+        redirect: Some(InsteadRedirect::EnemyHero),
+        ..ReplacementInstead::default()
+    };
+    CardScripts {
+        base: final_gambit(declared_draws(), redirect, "afterRedirect"),
+        radiant: final_gambit(deck_draws(), redirect, "afterRedirect"),
+    }
 }
 
 // C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
 // step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
 // caps (R44); fatigue counts, while losing health (R18) and set health (C #29) never open it; the hit
-// is re-aimed at the enemy hero as a new instance from the same source (`redirected`), through their
-// Armor, multipliers and caps; then heal 10 and draw 3; a redirected hit that kills the opponent ends
-// the game at the state check, a draw if both heroes are at 0 (§2.5); radiant: heal 20 and draw your
-// whole deck (R58), most of it burning (R317); tuned numbers (heal, draw) read through `param()` (R386).
+// is cancelled and deals nothing (R1704001); then heal 10 and draw 3; a copy that stays on the field
+// cancels one hit a turn; radiant: heal 20 and draw your whole deck (R58), most of it burning (R317);
+// tuned numbers (heal, draw) read through `param()` (R386). `mod v0_4_0f` keeps the redirect to the
+// enemy hero, the kept script's (R767000).
 //
 // Going Long (Armor 2), C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either
 // hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if
 // both heroes are at 0" needs a second hit inside the same effect, after the trap is spent: Prem
-// Panther's "draw 2" into an empty deck, whose first fatigue the trap re-aims at a 1-health opponent and
-// whose second then lands on you.
+// Panther's "draw 2" into an empty deck, whose first fatigue the kept trap re-aims at a 1-health
+// opponent and whose second then lands on you.
 #[cfg(test)]
 mod tests {
     use crate::merged;
@@ -180,29 +207,16 @@ mod tests {
             }
 
             #[test]
-            fn a_lethal_hit_fires_it_on_the_opponents_turn_re_aimed_at_the_enemy_hero_as_a_hit_from_the_same_source_then_heal_10_and_draw_3() {
+            fn r1704001_cancelled_then_heal_10_draw_3() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4 }));
                 let gambit = s.card(GAMBIT).id.clone();
-                let vanilla = s.card(VANILLA).id.clone();
 
-                s.expect_events(json!(["attackDeclared", "trapFired", "redirected", "damage", "healed"]));
-                assert_eq!(
-                    s.events().iter().map(js).find(|event| event["type"] == "redirected"),
-                    Some(json!({
-                        "type": "redirected",
-                        "what": "damage",
-                        "fromId": "hero-p1",
-                        "toId": "hero-p2",
-                        "byInstanceId": gambit,
-                    })),
-                );
-                let hit = s.events().iter().map(js).find(|event| event["type"] == "damage").unwrap_or_default();
-                assert_eq!(hit["sourceId"], vanilla);
-                assert_eq!(hit["targetId"], "hero-p2");
-                assert_eq!(hit["amount"], 4);
-                assert!(hero_hits(&s, PlayerId::P1).is_empty());
-                s.expect_health(PlayerId::P2, 26);
+                s.expect_events(json!(["attackDeclared", "trapFired", "healed"]));
+                // Cancelled: the hit deals nothing to either hero, and nothing is redirected.
+                assert!(s.events().iter().map(js).all(|event| event["type"] != "redirected"));
+                assert!(s.events().iter().map(js).all(|event| event["type"] != "damage"));
+                s.expect_health(PlayerId::P2, 30);
                 s.expect_health(PlayerId::P1, 14);
                 assert_eq!(s.hand(PlayerId::P1).len(), 4);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 2);
@@ -214,10 +228,9 @@ mod tests {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": POINTMASTER, "health": 7 }));
                 assert_eq!(fired(&s).len(), 1);
-                s.expect_health(PlayerId::P2, 23);
+                s.expect_health(PlayerId::P2, 30);
                 s.expect_health(PlayerId::P1, 17);
             }
-
             #[test]
             fn r44_lethal_is_this_hit_alone_a_4_at_5_health_leaves_it_set_and_the_3_that_follows_at_1_fires_it() {
                 crate::register_all();
@@ -232,7 +245,7 @@ mod tests {
 
                 s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                 assert_eq!(fired(&s).len(), 1);
-                s.expect_health(PlayerId::P2, 27);
+                s.expect_health(PlayerId::P2, 30);
                 s.expect_health(PlayerId::P1, 11);
             }
 
@@ -267,26 +280,6 @@ mod tests {
             }
 
             #[test]
-            fn s6_3_redirect_the_re_aimed_hit_meets_the_enemy_heros_own_armor_and_multipliers_7_2_5_halved_to_3() {
-                crate::register_all();
-                let mut s = lethal_attack(json!({
-                    "attacker": POINTMASTER,
-                    "health": 4,
-                    "p2": { "backrow": [GOING_LONG, ARGUSLAND] },
-                }));
-                assert_eq!(hero_hits(&s, PlayerId::P2), vec![3]);
-                s.expect_health(PlayerId::P2, 27);
-            }
-
-            #[test]
-            fn s6_3_redirect_and_the_enemy_heros_caps_anti_oneshot_armor_caps_the_re_aimed_9_at_5() {
-                crate::register_all();
-                let mut s = lethal_attack(json!({ "attacker": MENACE, "health": 4, "p2": { "backrow": [ANTI_ONESHOT] } }));
-                assert_eq!(hero_hits(&s, PlayerId::P2), vec![5]);
-                s.expect_health(PlayerId::P2, 25);
-            }
-
-            #[test]
             fn r125_fatigue_is_damage_and_counts_and_it_fires_on_its_controllers_own_turn() {
                 crate::register_all();
                 let mut s = scenario(json!({
@@ -295,10 +288,10 @@ mod tests {
                 }));
                 s.start_turn();
                 assert_eq!(fired(&s).len(), 1);
-                // The 1st fatigue (1) went to p2's hero; then heal 10 and draw 3 into the empty deck: fatigue 2, 3, 4.
-                assert_eq!(hero_hits(&s, PlayerId::P2), vec![1]);
+                // The 1st fatigue (1) was cancelled; then heal 10 and draw 3 into the empty deck: fatigue 2, 3, 4.
+                assert!(hero_hits(&s, PlayerId::P2).is_empty());
                 assert_eq!(hero_hits(&s, PlayerId::P1), vec![2, 3, 4]);
-                s.expect_health(PlayerId::P2, 29);
+                s.expect_health(PlayerId::P2, 30);
                 s.expect_health(PlayerId::P1, 2);
             }
 
@@ -356,47 +349,19 @@ mod tests {
             }
 
             #[test]
-            fn s2_5_a_re_aimed_hit_that_kills_the_opponent_ends_the_game_at_the_state_check() {
+            fn a_second_final_gambit_finds_no_lethal_hit_once_the_first_has_cancelled_it_and_stays_set() {
                 crate::register_all();
-                let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "p2": { "health": 4 } }));
+                let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "p1Backrow": [{ "def": GAMBIT }] }));
                 assert_eq!(fired(&s).len(), 1);
-                assert_eq!(js(&s.state().result)["winner"], "p1");
-                s.expect_health(PlayerId::P2, 0);
+                let (first, second) = (s.backrow(PlayerId::P1, 1), s.backrow(PlayerId::P1, 2));
+                assert!(first.is_none());
+                assert_eq!(second.as_ref().map(|card| card.def_id.as_str()), Some(GAMBIT));
+                assert_ne!(second.as_ref().and_then(|card| card.face_up), Some(true));
+                s.expect_health(PlayerId::P1, 14);
             }
 
             #[test]
-            fn s2_5_a_draw_if_both_heroes_are_at_0_the_re_aimed_fatigue_kills_the_opponent_and_the_next_one_in_the_same_draw_kills_you() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "p1": { "hand": [FILLER], "field": [PANTHER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 1 },
-                    "p2": { "hand": [FILLER], "field": [GARY], "health": 1 },
-                }));
-                let gary = s.card(GARY).id.clone();
-                s.attack(PANTHER, &gary);
-                assert_eq!(fired(&s).len(), 1);
-                assert_eq!(hero_hits(&s, PlayerId::P2), vec![1]);
-                assert_eq!(js(&s.state().result)["winner"], "draw");
-                s.expect_health(PlayerId::P2, 0);
-                assert!(s.state().players.p1.hero.health <= 0);
-            }
-
-            #[test]
-            fn r216_the_game_ends_at_that_state_check_so_nothing_after_it_happens_the_follow_up_neither_heals_nor_draws() {
-                crate::register_all();
-                let mut s = scenario(json!({
-                    "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK, "health": 1 },
-                    "p2": { "hand": [LUNAR, FILLER], "health": 3 },
-                    "active": "p2",
-                }));
-                s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-                assert_eq!(js(&s.state().result)["winner"], "p1");
-                assert_eq!(s.events().last().map(|event| js(event)["type"].clone()), Some(json!("gameOver")));
-                s.expect_health(PlayerId::P1, 1);
-                assert_eq!(s.hand(PlayerId::P1).len(), 1);
-            }
-
-            #[test]
-            fn r216_fused_into_a_field_trap_that_stays_c_74_it_re_aims_its_own_fatigue_only_until_the_enemy_hero_falls_and_the_follow_ups_owed_after_that_do_nothing() {
+            fn r1704001_fused_field_trap_cancels_one_hit_a_turn_the_next_lands() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FORWARD, FILLER], "health": 4 },
@@ -414,28 +379,15 @@ mod tests {
                 // Field Trap answers the hits below.
                 s.state_mut().players.p2.backrow[0] = None;
                 s.state_mut().players.p1.fatigue_count = 20;
-                // 4 at 4 health is lethal: re-aimed (4), then heal 10 and draw 3 from an empty deck. Each
-                // fatigue, 21, 22 and 23, is lethal at 14 and re-aimed too; p2 falls at the second, so the
-                // three follow-ups owed by then neither heal nor draw, and the drain ends at the state check.
+                // 4 at 4 health is lethal and cancelled; then heal 10 and draw 3 from an empty deck. The
+                // copy stays and has cancelled a hit this turn, so fatigue 21, lethal at 14, lands.
                 s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
-                assert_eq!(s.events().iter().map(js).filter(|event| event["type"] == "redirected").count(), 4);
-                assert_eq!(hero_hits(&s, PlayerId::P2), vec![4, 21, 22, 23]);
-                assert_eq!(js(&s.state().result)["winner"], "p1");
-                s.expect_health(PlayerId::P1, 14);
-            }
-
-            #[test]
-            fn a_second_final_gambit_finds_no_lethal_hit_once_the_first_has_re_aimed_it_and_stays_set() {
-                crate::register_all();
-                let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "p1Backrow": [{ "def": GAMBIT }] }));
                 assert_eq!(fired(&s).len(), 1);
-                let (first, second) = (s.backrow(PlayerId::P1, 1), s.backrow(PlayerId::P1, 2));
-                assert!(first.is_none());
-                assert_eq!(second.as_ref().map(|card| card.def_id.as_str()), Some(GAMBIT));
-                assert_ne!(second.as_ref().and_then(|card| card.face_up), Some(true));
-                s.expect_health(PlayerId::P1, 14);
+                assert!(s.events().iter().map(js).all(|event| event["type"] != "redirected"));
+                assert!(hero_hits(&s, PlayerId::P2).is_empty());
+                assert_eq!(hero_hits(&s, PlayerId::P1).first(), Some(&21));
+                assert_eq!(js(&s.state().result)["winner"], "p2");
             }
-
             #[test]
             fn the_hand_cap_applies_to_its_draws_the_overflow_burns_r317() {
                 crate::register_all();
@@ -515,11 +467,12 @@ mod tests {
             }
 
             #[test]
-            fn re_aims_a_lethal_hit_at_the_enemy_hero_then_heals_20() {
+            fn r1704001_cancelled_then_heal_20() {
                 crate::register_all();
                 let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "gambit": { "def": GAMBIT, "radiant": true } }));
                 assert_eq!(fired(&s).len(), 1);
-                s.expect_health(PlayerId::P2, 26);
+                assert!(s.events().iter().map(js).all(|event| event["type"] != "damage"));
+                s.expect_health(PlayerId::P2, 30);
                 s.expect_health(PlayerId::P1, 24);
             }
 
@@ -601,6 +554,159 @@ mod tests {
                 step_param(s.card_mut(&gambit), "heal", -1);
                 s.attack(VANILLA, "hero");
                 s.expect_health(PlayerId::P1, 22);
+            }
+        }
+
+        /// R767000: the scripts kept for the replays of v0.4.0f and before, which redirected the hit.
+        mod v0_4_0f {
+            use super::*;
+
+            fn kept(run: impl FnOnce()) {
+                crate::under_kept(GAMBIT, super::super::super::script_v0_4_0f(), run);
+            }
+
+            #[test]
+            fn a_lethal_hit_fires_it_on_the_opponents_turn_re_aimed_at_the_enemy_hero_as_a_hit_from_the_same_source_then_heal_10_and_draw_3() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4 }));
+                    let gambit = s.card(GAMBIT).id.clone();
+                    let vanilla = s.card(VANILLA).id.clone();
+
+                    s.expect_events(json!(["attackDeclared", "trapFired", "redirected", "damage", "healed"]));
+                    assert_eq!(
+                        s.events().iter().map(js).find(|event| event["type"] == "redirected"),
+                        Some(json!({
+                            "type": "redirected",
+                            "what": "damage",
+                            "fromId": "hero-p1",
+                            "toId": "hero-p2",
+                            "byInstanceId": gambit,
+                        })),
+                    );
+                    let hit = s.events().iter().map(js).find(|event| event["type"] == "damage").unwrap_or_default();
+                    assert_eq!(hit["sourceId"], vanilla);
+                    assert_eq!(hit["targetId"], "hero-p2");
+                    assert_eq!(hit["amount"], 4);
+                    assert!(hero_hits(&s, PlayerId::P1).is_empty());
+                    s.expect_health(PlayerId::P2, 26);
+                    s.expect_health(PlayerId::P1, 14);
+                    assert_eq!(s.hand(PlayerId::P1).len(), 4);
+                    assert_eq!(s.pile(PlayerId::P1, "library").len(), 2);
+                    s.expect_in_zone(&gambit, "graveyard");
+                });
+            }
+
+            #[test]
+            fn s6_3_redirect_the_re_aimed_hit_meets_the_enemy_heros_own_armor_and_multipliers_7_2_5_halved_to_3() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = lethal_attack(json!({
+                        "attacker": POINTMASTER,
+                        "health": 4,
+                        "p2": { "backrow": [GOING_LONG, ARGUSLAND] },
+                    }));
+                    assert_eq!(hero_hits(&s, PlayerId::P2), vec![3]);
+                    s.expect_health(PlayerId::P2, 27);
+                });
+            }
+
+            #[test]
+            fn s6_3_redirect_and_the_enemy_heros_caps_anti_oneshot_armor_caps_the_re_aimed_9_at_5() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = lethal_attack(json!({ "attacker": MENACE, "health": 4, "p2": { "backrow": [ANTI_ONESHOT] } }));
+                    assert_eq!(hero_hits(&s, PlayerId::P2), vec![5]);
+                    s.expect_health(PlayerId::P2, 25);
+                });
+            }
+
+            #[test]
+            fn s2_5_a_re_aimed_hit_that_kills_the_opponent_ends_the_game_at_the_state_check() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "p2": { "health": 4 } }));
+                    assert_eq!(fired(&s).len(), 1);
+                    assert_eq!(js(&s.state().result)["winner"], "p1");
+                    s.expect_health(PlayerId::P2, 0);
+                });
+            }
+
+            #[test]
+            fn s2_5_a_draw_if_both_heroes_are_at_0_the_re_aimed_fatigue_kills_the_opponent_and_the_next_one_in_the_same_draw_kills_you() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [FILLER], "field": [PANTHER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 1 },
+                        "p2": { "hand": [FILLER], "field": [GARY], "health": 1 },
+                    }));
+                    let gary = s.card(GARY).id.clone();
+                    s.attack(PANTHER, &gary);
+                    assert_eq!(fired(&s).len(), 1);
+                    assert_eq!(hero_hits(&s, PlayerId::P2), vec![1]);
+                    assert_eq!(js(&s.state().result)["winner"], "draw");
+                    s.expect_health(PlayerId::P2, 0);
+                    assert!(s.state().players.p1.hero.health <= 0);
+                });
+            }
+
+            #[test]
+            fn r216_the_game_ends_at_that_state_check_so_nothing_after_it_happens_the_follow_up_neither_heals_nor_draws() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [FILLER], "backrow": [{ "def": GAMBIT, "faceUp": false }], "library": DECK, "health": 1 },
+                        "p2": { "hand": [LUNAR, FILLER], "health": 3 },
+                        "active": "p2",
+                    }));
+                    s.play(LUNAR, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+                    assert_eq!(js(&s.state().result)["winner"], "p1");
+                    assert_eq!(s.events().last().map(|event| js(event)["type"].clone()), Some(json!("gameOver")));
+                    s.expect_health(PlayerId::P1, 1);
+                    assert_eq!(s.hand(PlayerId::P1).len(), 1);
+                });
+            }
+
+            #[test]
+            fn r216_fused_into_a_field_trap_that_stays_c_74_it_re_aims_its_own_fatigue_only_until_the_enemy_hero_falls_and_the_follow_ups_owed_after_that_do_nothing() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [FORWARD, FILLER], "health": 4 },
+                        "p2": { "hand": [RAPID, GAMBIT, TRUE_STRIKE], "library": DECK, "health": 40 },
+                    }));
+                    s.play(FORWARD, json!({ "zone": 2 }));
+                    s.end_turn();
+                    s.state_mut().players.p2.mana.current = 10;
+                    // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text,
+                    // stays and animates into its lane's unit zone (C+ #74, R831011).
+                    s.play(RAPID, json!({}));
+                    s.play(GAMBIT, json!({}));
+                    assert!(s.unit(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
+                    // The Gambit p2 played stays set in their backrow; take it off, so only the copy in p1's
+                    // Field Trap answers the hits below.
+                    s.state_mut().players.p2.backrow[0] = None;
+                    s.state_mut().players.p1.fatigue_count = 20;
+                    // 4 at 4 health is lethal: re-aimed (4), then heal 10 and draw 3 from an empty deck. Each
+                    // fatigue, 21, 22 and 23, is lethal at 14 and re-aimed too; p2 falls at the second, so the
+                    // three follow-ups owed by then neither heal nor draw, and the drain ends at the state check.
+                    s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+                    assert_eq!(s.events().iter().map(js).filter(|event| event["type"] == "redirected").count(), 4);
+                    assert_eq!(hero_hits(&s, PlayerId::P2), vec![4, 21, 22, 23]);
+                    assert_eq!(js(&s.state().result)["winner"], "p1");
+                    s.expect_health(PlayerId::P1, 14);
+                });
+            }
+
+            #[test]
+            fn radiant_re_aims_a_lethal_hit_at_the_enemy_hero_then_heals_20() {
+                kept(|| {
+                    crate::register_all();
+                    let mut s = lethal_attack(json!({ "attacker": VANILLA, "health": 4, "gambit": { "def": GAMBIT, "radiant": true } }));
+                    assert_eq!(fired(&s).len(), 1);
+                    s.expect_health(PlayerId::P2, 26);
+                    s.expect_health(PlayerId::P1, 24);
+                });
             }
         }
     }

@@ -767,8 +767,11 @@ pub const KY_TEST_REWARDS: KyTestRewards = KyTestRewards {
 pub const PAPAYA_ROWS: i32 = 4;
 /// R422: the most cells a curve is drawn through — four fix a cubic, the highest degree it may have.
 pub const PAPAYA_MAX_CELLS: i32 = 4;
-/// R831003: how many random cells each Discover of the curve offers (patch v0.3.10).
+/// R831003: how many random cells each Discover of the curve offers (patch v0.3.10): the Radiant
+/// face's, and both faces' through v0.4.0f.
 pub const PAPAYA_OFFERS: i32 = 3;
+/// R1704000: how many random cells each Discover of the curve offers on the base face.
+pub const PAPAYA_BASE_OFFERS: i32 = 2;
 
 // Classic+ #65 Two Grapes and #66 Vine of Grapes (SPEC §8.7, R382, BUILD §2).
 /// One Grape and its chance in percent (`GRAPE_ODDS`).

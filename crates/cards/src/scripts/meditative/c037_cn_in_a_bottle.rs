@@ -1,29 +1,35 @@
 //! M #37 CN in a Bottle (SPEC §8.8 row 37): (1) Spell, CN, Epic.
 //!
-//! Base:    "Cast on draw: Add a random Radiant card to your hand."
+//! Base:    "Cast on draw: Add a random Radiant card to your hand. It costs (1) more (up to (4))."
 //! Radiant: "Cast on draw: Add a random Radiant card to your hand. It costs (0)."
 //! Engine:
 //! - **Cast on draw** is the static flag §2.4's draw reads (R58): drawn, it casts itself at once and
 //!   the draw repeats, so its owner draws again. Setup never deals it (R635, R748).
 //! - **The card:** `add_random_from_catalog` of one non-token card of every open set but this one
-//!   (R380, R387), Radiant, carrying the NEW rider `chinese` (ME-CN) and, on the Radiant face,
-//!   `costOverride: 0`. It is a card generated into a hand, so R673's Glitch roll applies, and it
-//!   runs its own arrival hooks (R151), so a Heroic Power rolls its power. Only the owner sees it
-//!   (R97). A full hand burns it (§2.4, R4).
+//!   (R380, R387), Radiant, carrying the NEW rider `chinese` (ME-CN), on the base face `costMod: 1`
+//!   with `costModUpTo: 4` (R1704003: the raise stops at (4), so a card at (4) or more, or an X-cost
+//!   card, costs what it did) and on the Radiant face `costOverride: 0`. It is a card generated into a
+//!   hand, so R673's Glitch roll applies, and it runs its own arrival hooks (R151), so a Heroic Power
+//!   rolls its power. Only the owner sees it (R97). A full hand burns it (§2.4, R4).
 //! - **The (1) and the play** are R1149001's: a bottle that reaches a hand any other way (an add, a
 //!   bounce, a steal, a draw past R58's chain cap) stays there as a (1) Spell, and played from it, it
 //!   does the same.
 //!
 //! Through patch v0.3.7b it cost (X) and was replaced in place on any arrival in a hand (the
 //! `enters_hand` hook, R925, R926); `script_v0_3_7b` keeps that for those versions' replays
-//! (R767000).
+//! (R767000). Through v0.4.0f the base face's card took no raise; `script_v0_4_0f` keeps that.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-037";
 
-fn bottle(radiant: bool) -> Script {
+/// R1704003: "It costs (1) more (up to (4))".
+const RAISE: i32 = 1;
+const RAISE_UP_TO: i32 = 4;
+
+/// The bottle; `raised`, the base face's card costs (1) more, up to (4) (none through v0.4.0f).
+fn bottle(radiant: bool, raised: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             cast_on_draw: Some(true),
@@ -33,6 +39,9 @@ fn bottle(radiant: bool) -> Script {
             let mut args = json!({ "radiant": true, "chinese": true });
             if radiant {
                 args["costOverride"] = json!(0);
+            } else if raised {
+                args["costMod"] = json!(RAISE);
+                args["costModUpTo"] = json!(RAISE_UP_TO);
             }
             vec![add_random_from_catalog(json_as(args))]
         })),
@@ -42,8 +51,17 @@ fn bottle(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: bottle(false),
-        radiant: bottle(true),
+        base: bottle(false, true),
+        radiant: bottle(true, true),
+    }
+}
+
+/// R767000: the scripts v0.4.0f and the versions before it back to `script_v0_3_7b`'s ran, the base
+/// face's card at its own cost; `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
+    CardScripts {
+        base: bottle(false, false),
+        radiant: bottle(true, false),
     }
 }
 
@@ -78,9 +96,10 @@ pub fn script_v0_3_7b() -> CardScripts {
 
 // M #37 CN in a Bottle — SPEC §8.8 row 37, BUILD M10 row M 37: "Cast on draw (R58, R1149001): drawn,
 // it is cast and adds a random non-token Radiant card of any set but this one, carrying `chinese`,
-// hidden from the opponent (R97); the new card is generated for R673 and runs its own arrival hooks
-// (R151); a full hand burns the new card; setup never deals it (R635); added to a hand without a draw
-// it stays there at (1), and played it does the same; radiant the new card costs (0)".
+// hidden from the opponent (R97), costing (1) more up to (4) (R1704003); the new card is generated for
+// R673 and runs its own arrival hooks (R151); a full hand burns the new card; setup never deals it
+// (R635); added to a hand without a draw it stays there at (1), and played it does the same; radiant
+// the new card costs (0)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,6 +338,40 @@ mod tests {
                 }
             }
 
+            /// The cards `casts` bottles add, each with its price out of play (R65: an embiggen card's
+            /// base; `None` for an X-cost card) and the `costMod` it reached the hand with.
+            fn raised(seed: &str, casts: usize) -> Vec<(Option<i32>, i32)> {
+                let mut s = quiet(seed);
+                (0..casts)
+                    .map(|_| {
+                        let new_card = cast_bottle(&mut s, false);
+                        let def = crate::card_def(&new_card.def_id);
+                        let printed = (def.cost != CardCost::X).then(|| query_cost(&def));
+                        (printed, new_card.cost_mod)
+                    })
+                    .collect()
+            }
+
+            #[test]
+            fn r1704003_at_3_or_less_costs_1_more() {
+                let seen: Vec<(Option<i32>, i32)> = raised("bottle-raise-low", 80)
+                    .into_iter()
+                    .filter(|(printed, _)| printed.is_some_and(|cost| cost <= 3))
+                    .collect();
+                assert!(seen.iter().any(|(printed, _)| *printed == Some(3)), "{seen:?}");
+                assert!(seen.iter().all(|(_, cost_mod)| *cost_mod == 1), "{seen:?}");
+            }
+
+            #[test]
+            fn r1704003_at_4_or_more_unchanged() {
+                let seen: Vec<(Option<i32>, i32)> = raised("bottle-raise-high", 80)
+                    .into_iter()
+                    .filter(|(printed, _)| printed.is_none_or(|cost| cost >= 4))
+                    .collect();
+                assert!(seen.iter().any(|(printed, _)| *printed == Some(4)), "{seen:?}");
+                assert!(seen.iter().all(|(_, cost_mod)| *cost_mod == 0), "{seen:?}");
+            }
+
             #[test]
             fn r387_the_new_card_is_a_non_token_card_of_any_set_but_never_itself() {
                 let mut s = quiet("bottle-sweep");
@@ -407,6 +460,16 @@ mod tests {
             });
         }
 
+        #[test]
+        fn r1704003_r767000_through_v0_4_0f_the_kept_script_adds_its_card_at_its_own_cost() {
+            crate::under_kept(BOTTLE, super::super::script_v0_4_0f(), || {
+                let mut s = quiet("bottle-kept");
+                for _ in 0..20 {
+                    assert_eq!(cast_bottle(&mut s, false).cost_mod, 0);
+                }
+            });
+        }
+
         mod radiant {
             use super::*;
 
@@ -430,6 +493,16 @@ mod tests {
                 assert!(new_cards[0].radiant);
                 assert_eq!(new_cards[0].chinese, Some(true));
                 assert_eq!(new_cards[0].cost_override, Some(0));
+            }
+
+            #[test]
+            fn r1704003_costs_0_no_raise() {
+                let mut s = quiet("bottle-radiant-raise");
+                for _ in 0..20 {
+                    let new_card = cast_bottle(&mut s, true);
+                    assert_eq!(new_card.cost_override, Some(0));
+                    assert_eq!(new_card.cost_mod, 0);
+                }
             }
 
             #[test]

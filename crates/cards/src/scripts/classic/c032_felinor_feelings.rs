@@ -1,20 +1,22 @@
-//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 1, Rare.
-//!   Base:    "Steal an enemy permanent in a lane where you control a (1) Cost Unit."
-//!   Radiant: "Summon a Felinor Token. Then steal an enemy permanent in a lane where you control a (1)
-//!             Cost Unit."
+//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 2, Rare.
+//!   Base:    "Steal an enemy Unit in a lane where you control a (1) Cost Unit."
+//!   Radiant: "Summon a Felinor Token. Then steal an enemy Unit in a lane where you control a (1) Cost
+//!             Unit."
 //!
 //! A lane (§3.1) counts when the top of its unit pile (a card dormant under a Stack is not on the
 //! field, R13) is yours and costs exactly (1): R396's `costNow`, R65's cost where it stands, an X Unit
-//! at the X it was played for (0 with none chosen). The enemy permanent may be the top of their pile
-//! there or their backrow card, face-down included (the thief reads it from then on, R33; an option
-//! carries only its id, R177).
+//! at the X it was played for (0 with none chosen). The enemy Unit is the top of their pile there, or a
+//! Unit standing in their backrow zone there (R1081000); an option carries only its id (R177).
 //!
 //! Base: a declared target (R81), filtered by `targetChecks` (§10.6). With no such target the play is
 //! still legal and the steal fizzles (§8's conventions, R90). The steal is §6.3's (R15: its own lane
 //! if free, else the first free zone; none, and it stays), an entry that leaves it summoning sick (R171).
 //!
 //! Radiant: first a Felinor Token in your leftmost open unit zone (R64), then the steal is a prompt, so
-//! the token's lane counts. A full board summons no token; with no such permanent no prompt opens.
+//! the token's lane counts. A full board summons no token; with no such Unit no prompt opens.
+//!
+//! Through v0.4.0f it stole any enemy permanent, their backrow card too, face-down included (the thief
+//! reading it from then on, R33); `script_v0_4_0f` keeps that for those versions' replays (R767000).
 
 use indexmap::IndexSet;
 use jackioh_engine::prelude::*;
@@ -59,33 +61,62 @@ fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
-pub fn script() -> CardScripts {
-    let base = Script {
+/// R81: what the steal may take, an enemy Unit (R1081000: on the field or standing in their backrow).
+const UNITS: &[&str] = &["unit"];
+/// R767000: through v0.4.0f, any enemy permanent, a backrow card too.
+const PERMANENTS: &[&str] = &["unit", "backrow"];
+
+/// The base face: a declared target, an enemy card of `of` in a Felinor lane.
+fn feelings(of: &'static [&'static str]) -> Script {
+    Script {
         targets: vec![TargetDecl::target(
             1,
             1,
-            json!({ "side": "enemy", "of": ["unit", "backrow"], "check": LANE_RULE }),
+            json!({ "side": "enemy", "of": of, "check": LANE_RULE }),
         )],
         target_checks: IndexMap::from([(LANE_RULE, lane_rule())]),
         cry: Some(hook(|_ctx| vec![steal_chosen()])),
         ..Script::default()
-    };
+    }
+}
 
-    let radiant = Script {
-        cry: Some(hook(|_ctx| {
+/// The Radiant face: the Felinor Token, then a prompt for an enemy card of `of` in a Felinor lane.
+fn feelings_radiant(of: &'static [&'static str], prompt: &'static str) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
             let mut choose: ChooseTargetWhereArgs = json_as(json!({
                 "step": STEAL,
-                "scope": { "side": "enemy", "of": ["unit", "backrow"] },
-                "prompt": "Steal an enemy permanent in a lane where you control a (1) Cost Unit",
+                "scope": { "side": "enemy", "of": of },
+                "prompt": prompt,
             }));
             choose.where_ = Some(Arc::new(|ctx, card| in_feeling_lane(&*ctx.state, ctx.controller, card)));
             vec![summon(json_as(json!({ "defId": FELINOR_TOKEN }))), choose_target_where(choose)]
         })),
         resume: IndexMap::from([(STEAL, hook(|_ctx| vec![steal_chosen()]))]),
         ..Script::default()
-    };
+    }
+}
 
-    CardScripts { base, radiant }
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: feelings(UNITS),
+        radiant: feelings_radiant(
+            UNITS,
+            "Steal an enemy Unit in a lane where you control a (1) Cost Unit",
+        ),
+    }
+}
+
+/// R767000: the scripts v0.4.0f and every version before it ran, stealing any enemy permanent;
+/// `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
+    CardScripts {
+        base: feelings(PERMANENTS),
+        radiant: feelings_radiant(
+            PERMANENTS,
+            "Steal an enemy permanent in a lane where you control a (1) Cost Unit",
+        ),
+    }
 }
 
 #[cfg(test)]
@@ -104,6 +135,7 @@ mod tests {
     const POINTMASTER: &str = "core-020"; // (2) Unit 7/1.
     const MENACE: &str = "core-019"; // (3) Unit 9/9.
     const BEAR: &str = "core-060"; // (1) Trap.
+    const FIELD: &str = "core-006"; // Mana Well, a Field Spell.
     const BILLY: &str = "classicplus-069"; // (X) Unit.
     const TOKEN: &str = "core-t-felinor";
     const FILLER: &str = "core-010";
@@ -255,55 +287,47 @@ mod tests {
             }
 
             #[test]
-            fn a_backrow_card_in_that_lane_may_be_taken_face_down_included_and_lands_in_your_backrow() {
+            fn costs_2_refused_with_1_mana() {
                 crate::register_all();
                 let mut s = setup(
-                    json!({ "field": [{ "def": TIMMY, "lane": 4 }] }),
-                    json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 4 }] }),
+                    json!({ "field": [{ "def": TIMMY, "lane": 2 }] }),
+                    json!({ "field": [{ "def": VANILLA, "lane": 2 }] }),
                     false,
                 );
-                let bear = s.card(BEAR).clone();
-
-                s.play(FEELINGS, json!({ "targets": at(&bear) }));
-
-                assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(bear.id.clone()));
-                assert_eq!(s.card(&bear).controller, P1);
+                let vanilla = must_unit(&s, P2, 2);
+                crate::expect_costs(&mut s, FEELINGS, 2, json!({ "targets": at(&vanilla) }));
             }
 
             #[test]
-            fn r33_a_stolen_face_down_trap_is_read_by_you_from_then_on_and_no_longer_by_its_owner() {
+            fn r81_a_backrow_card_is_neither_offered_nor_accepted() {
                 crate::register_all();
                 let mut s = setup(
-                    json!({ "field": [{ "def": TIMMY, "lane": 4 }] }),
-                    json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 4 }] }),
+                    json!({ "field": [{ "def": TIMMY, "lane": 3 }, { "def": TIMMY, "lane": 4 }] }),
+                    json!({ "backrow": [{ "def": FIELD, "lane": 3 }, { "def": BEAR, "faceUp": false, "lane": 4 }] }),
                     false,
                 );
                 let bear = s.card(BEAR).clone();
-                let before = serde_json::to_string(&s.view(P1).opponent.backrow).expect("views serialise");
-                assert!(!before.contains(BEAR));
 
-                s.play(FEELINGS, json!({ "targets": at(&bear) }));
-
-                let mine = serde_json::to_string(&s.view(P1).you.backrow).expect("views serialise");
-                assert!(mine.contains(BEAR));
-                let theirs = serde_json::to_string(&s.view(P2).opponent.backrow).expect("views serialise");
-                assert!(!theirs.contains(BEAR));
+                assert!(offered(&s).is_empty());
+                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": at(&bear) })));
+                assert_eq!(s.backrow(P2, 4).map(|card| card.id), Some(bear.id.clone()));
             }
 
             #[test]
-            fn r177_a_face_down_option_is_offered_by_its_id_alone_the_play_s_targets_name_no_hidden_card() {
+            fn r1081000_a_unit_standing_in_the_backrow_may_be_stolen() {
                 crate::register_all();
-                let s = setup(
-                    json!({ "field": [{ "def": TIMMY, "lane": 4 }] }),
-                    json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 4 }] }),
+                let mut s = setup(
+                    json!({ "field": [{ "def": TIMMY, "lane": 3 }] }),
+                    json!({ "field": [{ "def": VANILLA, "lane": 3 }] }),
                     false,
                 );
-                let bear = s.card(BEAR).clone();
+                let vanilla = must_unit(&s, P2, 3);
+                crate::stand_in_backrow(&mut s, &vanilla.id, 3);
 
-                assert_eq!(offered(&s), vec![bear.id.clone()]);
-                // The option is the bare id: nothing p1 is shown names the card beneath it.
-                assert!(offered(&s).iter().all(|id| *id == bear.id));
-                assert!(!serde_json::to_string(&s.view(P1)).expect("views serialise").contains(BEAR));
+                assert_eq!(offered(&s), vec![vanilla.id.clone()]);
+                s.play(FEELINGS, json!({ "targets": at(&vanilla) }));
+
+                assert_eq!(s.card(&vanilla).controller, P1);
             }
 
             #[test]
@@ -479,19 +503,87 @@ mod tests {
             }
 
             #[test]
-            fn r177_a_face_down_option_in_the_prompt_names_no_card_in_your_view() {
+            fn costs_2_refused_with_1_mana() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "lane": 1 }] }), true);
+                crate::expect_costs(&mut s, FEELINGS, 2, json!({}));
+            }
+
+            #[test]
+            fn r1081000_a_backrow_card_is_not_offered_so_with_only_one_no_prompt_opens() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 1 }] }), true);
 
                 s.play(FEELINGS, json!({}));
 
-                assert!(s.state().pending.is_some());
-                let pending = serde_json::to_string(&s.view(P1).pending).expect("views serialise");
-                assert!(pending.contains(&format!("\"{}\"", s.card(BEAR).id)));
-                assert!(!serde_json::to_string(&s.view(P1)).expect("views serialise").contains(BEAR));
-                let bear = s.card(BEAR).clone();
-                s.answer(at(&bear));
-                assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(BEAR.to_string()));
+                assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
+                assert!(s.state().pending.is_none());
+                assert_eq!(s.card(BEAR).controller, P2);
+            }
+        }
+
+        /// R767000: the scripts kept for the replays of v0.4.0f and before, which stole any permanent.
+        mod v0_4_0f {
+            use super::*;
+
+            fn kept(run: impl FnOnce()) {
+                crate::under_kept(FEELINGS, super::super::super::script_v0_4_0f(), run);
+            }
+
+            #[test]
+            fn r767000_a_backrow_card_in_that_lane_may_be_taken_face_down_included_and_lands_in_your_backrow() {
+                kept(|| {
+                    let mut s = setup(
+                        json!({ "field": [{ "def": TIMMY, "lane": 4 }] }),
+                        json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 4 }] }),
+                        false,
+                    );
+                    let bear = s.card(BEAR).clone();
+                    assert_eq!(offered(&s), vec![bear.id.clone()]);
+
+                    s.play(FEELINGS, json!({ "targets": at(&bear) }));
+
+                    assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(bear.id.clone()));
+                    assert_eq!(s.card(&bear).controller, P1);
+                });
+            }
+
+            #[test]
+            fn r33_a_stolen_face_down_trap_is_read_by_you_from_then_on_and_no_longer_by_its_owner() {
+                kept(|| {
+                    let mut s = setup(
+                        json!({ "field": [{ "def": TIMMY, "lane": 4 }] }),
+                        json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 4 }] }),
+                        false,
+                    );
+                    let bear = s.card(BEAR).clone();
+                    let before = serde_json::to_string(&s.view(P1).opponent.backrow).expect("views serialise");
+                    assert!(!before.contains(BEAR));
+
+                    s.play(FEELINGS, json!({ "targets": at(&bear) }));
+
+                    let mine = serde_json::to_string(&s.view(P1).you.backrow).expect("views serialise");
+                    assert!(mine.contains(BEAR));
+                    let theirs = serde_json::to_string(&s.view(P2).opponent.backrow).expect("views serialise");
+                    assert!(!theirs.contains(BEAR));
+                });
+            }
+
+            #[test]
+            fn r177_radiant_a_face_down_option_in_the_prompt_names_no_card_in_your_view() {
+                kept(|| {
+                    let mut s = setup(json!({}), json!({ "backrow": [{ "def": BEAR, "faceUp": false, "lane": 1 }] }), true);
+
+                    s.play(FEELINGS, json!({}));
+
+                    assert!(s.state().pending.is_some());
+                    let pending = serde_json::to_string(&s.view(P1).pending).expect("views serialise");
+                    assert!(pending.contains(&format!("\"{}\"", s.card(BEAR).id)));
+                    assert!(!serde_json::to_string(&s.view(P1)).expect("views serialise").contains(BEAR));
+                    let bear = s.card(BEAR).clone();
+                    s.answer(at(&bear));
+                    assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(BEAR.to_string()));
+                });
             }
         }
     }

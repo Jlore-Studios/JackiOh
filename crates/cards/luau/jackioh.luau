@@ -51,6 +51,7 @@ radiant: boolean?,
 costOverride: number?,
 embiggenCostOverride: number?,
 costMod: number?,
+costModUpTo: number?,
 temporary: boolean?,
 chinese: boolean?,
 lucky: number?,
@@ -1971,6 +1972,7 @@ lasting: InsteadLasting?,
 flicker: InsteadFlicker?,
 to: InsteadTo?,
 interpose: boolean?,
+cancel: boolean?,
 }
 
 export type ReplacementMoment = "lethalHit" | "healed" | "wouldDie" | "toGraveyard" | "targeted"

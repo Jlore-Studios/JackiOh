@@ -1,34 +1,59 @@
-//! C+ #62 KY's Papaya (SPEC §8.7 row 62, R422, R831003; BUILD M9 row C+ 62). (1) Spell, Fruit, KY, Epic.
-//!   Base:    "Discover 1 to 4 cells, each from 3 random cells in different lanes. Exile every card on
-//!             the cubic curve through them (x = lane, y = row)."
-//!   Radiant: "… Exile every enemy card on the cubic curve through them (x = lane, y = row)."
+//! C+ #62 KY's Papaya (SPEC §8.7 row 62, R422, R831003, R1704000; BUILD M9 row C+ 62). (2) Spell, Fruit,
+//! KY, Epic.
+//!   Base:    "Discover 4 cells, each from 2 random cells in different lanes. Destroy every card on the
+//!             cubic curve through them (x = lane, y = row)."
+//!   Radiant: "Discover 4 cells, each from 3 random cells in different lanes. Destroy every enemy card
+//!             on the cubic curve through them (x = lane, y = row)."
 //!
-//! The curve is the engine's (E32): the player Discovers 1 to 4 cells in different lanes, each among
-//! `PAPAYA_OFFERS` random cells of the lanes not used yet, then "done" (patch v0.3.10, R831003; it chose
-//! any cell on the board before). The curve is the lowest-degree polynomial through them in exact
-//! rationals, announced in a public `curveDrawn`, and the top card at every cell on it is exiled. The
-//! running face decides the rows: `papayaAnswered` reads `ctx.radiant` and keeps to the enemy's rows 2
-//! and 3 on the Radiant one.
+//! The curve is the engine's (E32): the player Discovers 4 cells in different lanes, each among
+//! `PAPAYA_BASE_OFFERS` random cells of the lanes not used yet (`PAPAYA_OFFERS` on the Radiant face),
+//! with no "done" (R1704000; R831003's 1 to 4 before it, and any cell on the board before that). The
+//! curve is the lowest-degree polynomial through them in exact rationals, announced in a public
+//! `curveDrawn`, and the top card at every cell on it is destroyed. The running face decides the offers
+//! and the rows: the subsystem reads `ctx.radiant` and keeps to the enemy's rows 2 and 3 on the Radiant
+//! one.
+//!
+//! Through v0.4.0f both faces offered 3 cells, "done" ended the picks after the first, and the curve
+//! exiled its cards (`PAPAYA_RULES_V0_4_0F`); `script_v0_4_0f` keeps that for those versions' replays
+//! (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-062";
 
-pub fn script() -> CardScripts {
-    let base = Script {
-        cry: Some(hook(|_ctx| subsystems::papaya_begin())),
-        resume: IndexMap::from([(subsystems::PAPAYA_STEP, hook(subsystems::papaya_answered))]),
+/// The curve under `rules`, on either face: the Radiant face's offers and its "every enemy card" are
+/// the running face, read by the subsystem.
+fn papaya(rules: subsystems::PapayaRules) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| subsystems::papaya_begin_with(rules))),
+        resume: IndexMap::from([(
+            subsystems::PAPAYA_STEP,
+            hook(move |ctx| subsystems::papaya_answered_with(rules, ctx)),
+        )]),
         ..Script::default()
-    };
-    // The same script: the Radiant face's "every enemy card" is the running face, read by the subsystem.
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = papaya(subsystems::PAPAYA_RULES);
+    // The same script.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
-// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, R831003, BUILD M9 row C+ 62: one Discover at a time (3
-// random cells of the unused lanes, then "done" after the first), x the lane and y the row from the caster's seat, the
-// lowest-degree curve in exact rationals, every card on it exiled (a pile's top; face-down openly; tokens
-// cease; nothing between lanes); cells never cards (R177); a random cast answers itself (R452); radiant only enemy cards.
+/// R767000: the scripts v0.4.0f and every version back to v0.3.10 ran: 1 to 4 Discovers of 3 cells,
+/// then "done", and the exiles (R831003); `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
+    let base = papaya(subsystems::PAPAYA_RULES_V0_4_0F);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, R831003, R1704000, BUILD M9 row C+ 62: four Discovers, one
+// at a time (2 random cells of the unused lanes, 3 on the Radiant face, never "done"), x the lane and y
+// the row from the caster's seat, the lowest-degree curve in exact rationals, every card on it destroyed
+// (a pile's top; face-down too; Indestructible stays, Reborn returns; nothing between lanes); cells never
+// cards (R177); a random cast answers itself (R452); radiant only enemy cards.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::effects::{cast_new, lock};
@@ -58,7 +83,7 @@ mod tests {
         scenario(json!({ "p1": p1, "p2": full_side() }))
     }
 
-    /// "Done"'s option key.
+    /// "Done"'s option key (through v0.4.0f).
     const DONE: &str = "mode:done";
 
     /// The option key of the cell (x, y) from the caster's seat (R831003): y 0 their backrow, 1 their
@@ -97,25 +122,33 @@ mod tests {
             .unwrap_or_default()
     }
 
-    fn curve(s: &mut Scenario, cells: &[(i32, usize)]) {
+    /// R1704000: play the Papaya and Discover these four cells.
+    fn curve(s: &mut Scenario, cells: &[(i32, usize); 4]) {
         s.play(PAPAYA, json!({}));
         for &(x, y) in cells {
             pick(s, x, y);
         }
-        if cells.len() < 4 {
-            s.answer(json!(DONE));
-        }
         assert!(s.state().pending.is_none());
     }
 
-    fn exiled(s: &Scenario) -> Vec<String> {
-        let mut ids: Vec<String> = s
-            .pile(PlayerId::P1, "exile")
-            .into_iter()
-            .map(|card| card.id)
-            .collect();
-        ids.extend(s.pile(PlayerId::P2, "exile").into_iter().map(|card| card.id));
+    fn pile_ids(s: &Scenario, pile: &str) -> Vec<String> {
+        let mut ids: Vec<String> = s.pile(PlayerId::P1, pile).into_iter().map(|card| card.id).collect();
+        ids.extend(s.pile(PlayerId::P2, pile).into_iter().map(|card| card.id));
         ids
+    }
+
+    fn exiled(s: &Scenario) -> Vec<String> {
+        pile_ids(s, "exile")
+    }
+
+    /// The cards both graveyards hold, the Papaya itself left out.
+    fn destroyed(s: &Scenario) -> Vec<String> {
+        [PlayerId::P1, PlayerId::P2]
+            .into_iter()
+            .flat_map(|player| s.pile(player, "graveyard"))
+            .filter(|card| card.def_id != PAPAYA)
+            .map(|card| card.id)
+            .collect()
     }
 
     fn at(s: &Scenario, player: PlayerId, row: &str, lane: i32) -> String {
@@ -170,22 +203,27 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r831003_each_cell_is_discovered_among_3_random_cells_of_the_unused_lanes_then_done_every_one_in_legal_actions()
-         {
+        fn costs_2_refused_with_1_mana() {
+            let mut s = full(false);
+            crate::expect_costs(&mut s, PAPAYA, 2, json!({}));
+        }
+
+        #[test]
+        fn r1704000_four_discovers_of_2_cells_no_done() {
             let mut s = full(false);
             s.play(PAPAYA, json!({}));
-            let mut sizes: Vec<usize> = Vec::new();
             let mut used: Vec<String> = Vec::new();
-            for _ in 0..3 {
+            for _ in 0..4 {
                 let pending = s.state().pending.clone().unwrap_or_else(|| panic!("a Discover"));
                 assert_eq!(pending.kind, PromptKind::Mode);
+                assert_eq!(pending.options.len(), PAPAYA_BASE_OFFERS as usize);
                 let answers = legal_actions(s.state(), PlayerId::P1)
                     .into_iter()
                     .filter(|action| matches!(action, ActionBody::Answer { .. }))
                     .count();
-                assert_eq!(answers, pending.options.len());
-                sizes.push(pending.options.len());
-                let cells: Vec<String> = keys(&s).into_iter().filter(|key| key.as_str() != DONE).collect();
+                assert_eq!(answers, PAPAYA_BASE_OFFERS as usize);
+                let cells = keys(&s);
+                assert!(!cells.iter().any(|key| key.as_str() == DONE));
                 // Never a lane already on the curve.
                 assert!(
                     cells
@@ -196,22 +234,9 @@ mod tests {
                 used.push(first.split(',').next().unwrap_or_default().to_string() + ",");
                 s.answer(json!(first));
             }
-            sizes.push(
-                s.state()
-                    .pending
-                    .as_ref()
-                    .map_or(0, |pending| pending.options.len()),
-            );
-            assert_eq!(
-                sizes,
-                vec![
-                    PAPAYA_OFFERS as usize,
-                    PAPAYA_OFFERS as usize + 1,
-                    PAPAYA_OFFERS as usize + 1,
-                    PAPAYA_OFFERS as usize + 1
-                ]
-            );
-            assert_eq!(keys(&s).last().map(String::as_str), Some(DONE));
+            assert!(s.state().pending.is_none());
+            assert!(exiled(&s).is_empty());
+            assert!(!destroyed(&s).is_empty());
         }
 
         #[test]
@@ -245,29 +270,27 @@ mod tests {
                 "p1": { "hand": [FILLER], "field": [UNIT, UNIT], "backrow": [FIELD] },
                 "p2": { "hand": [PAPAYA, FILLER], "field": [UNIT] },
             }));
-            s.play(PAPAYA, json!({}));
-            // p2's y = 2 row is p1's unit row: the constant through (1, 2) exiles p1's units in lanes 1 and 2.
+            // p2's y = 2 row is p1's unit row: the constant through it destroys p1's units in lanes 1 and 2.
             let lanes = vec![at(&s, PlayerId::P1, "units", 1), at(&s, PlayerId::P1, "units", 2)];
-            pick(&mut s, 1, 2);
-            s.answer(json!(DONE));
-            assert_eq!(sorted(exiled(&s)), sorted(lanes));
+            curve(&mut s, &[(0, 2), (1, 2), (2, 2), (3, 2)]);
+            assert_eq!(sorted(destroyed(&s)), sorted(lanes));
             assert!(s.unit(PlayerId::P2, 1).is_some());
             assert!(s.backrow(PlayerId::P1, 1).is_some());
         }
 
         #[test]
-        fn r422_one_cell_is_a_constant_its_whole_row_is_exiled_and_nothing_else() {
+        fn r422_one_row_is_a_constant_its_whole_row_is_destroyed_and_nothing_else() {
             let mut s = full(false);
             let row: Vec<String> = (1..=5)
                 .map(|lane| at(&s, PlayerId::P2, "backrow", lane))
                 .collect();
-            curve(&mut s, &[(2, 3)]);
-            assert_eq!(sorted(exiled(&s)), sorted(row));
-            assert!(s.state().players.p1.exile.is_empty());
+            curve(&mut s, &[(0, 3), (1, 3), (2, 3), (3, 3)]);
+            assert_eq!(sorted(destroyed(&s)), sorted(row));
+            assert!(exiled(&s).is_empty());
         }
 
         #[test]
-        fn r422_two_cells_make_a_line_which_meets_a_third_cell_y_x_through_lanes_1_to_4() {
+        fn r422_cells_on_a_line_make_that_line_y_x_through_lanes_1_to_4() {
             let mut s = full(false);
             let line = vec![
                 at(&s, PlayerId::P1, "backrow", 1),
@@ -275,36 +298,37 @@ mod tests {
                 at(&s, PlayerId::P2, "units", 3),
                 at(&s, PlayerId::P2, "backrow", 4),
             ];
-            curve(&mut s, &[(0, 0), (1, 1)]);
-            assert_eq!(sorted(exiled(&s)), sorted(line));
+            curve(&mut s, &[(0, 0), (1, 1), (2, 2), (3, 3)]);
+            assert_eq!(sorted(destroyed(&s)), sorted(line));
             // Lane 5 would be row 4, off the board.
             assert!(s.unit(PlayerId::P1, 5).is_some());
         }
 
         #[test]
-        fn r422_between_lanes_the_curve_touches_nothing_y_x_2_exiles_lanes_1_3_and_5_only() {
+        fn r422_between_lanes_the_curve_touches_nothing_lane_4_of_x_x_1_x_2_over_12_is_passed_by() {
             let mut s = full(false);
+            // y = x(x − 1)(x − 2)/12 through (0, 0), (1, 0), (2, 0), (4, 2) is 1/2 at x = 3.
             let hits = vec![
                 at(&s, PlayerId::P1, "backrow", 1),
-                at(&s, PlayerId::P1, "units", 3),
+                at(&s, PlayerId::P1, "backrow", 2),
+                at(&s, PlayerId::P1, "backrow", 3),
                 at(&s, PlayerId::P2, "units", 5),
             ];
-            curve(&mut s, &[(0, 0), (2, 1)]);
-            assert_eq!(sorted(exiled(&s)), sorted(hits));
+            curve(&mut s, &[(0, 0), (1, 0), (2, 0), (4, 2)]);
+            assert_eq!(sorted(destroyed(&s)), sorted(hits));
         }
 
         #[test]
-        fn r422_three_cells_in_a_line_are_that_line_the_lowest_degree_through_them() {
+        fn r422_four_cells_in_a_line_are_that_line_the_lowest_degree_through_them() {
             let mut s = full(false);
-            // (0, 3), (1, 2), (3, 0) lie on y = 3 − x, which also meets (2, 1); a parabola would not.
             let line = vec![
                 at(&s, PlayerId::P2, "backrow", 1),
                 at(&s, PlayerId::P2, "units", 2),
                 at(&s, PlayerId::P1, "units", 3),
                 at(&s, PlayerId::P1, "backrow", 4),
             ];
-            curve(&mut s, &[(0, 3), (1, 2), (3, 0)]);
-            assert_eq!(sorted(exiled(&s)), sorted(line));
+            curve(&mut s, &[(0, 3), (1, 2), (2, 1), (3, 0)]);
+            assert_eq!(sorted(destroyed(&s)), sorted(line));
         }
 
         #[test]
@@ -320,18 +344,18 @@ mod tests {
                 at(&s, PlayerId::P2, "units", 5),
             ];
             curve(&mut s, &[(0, 0), (1, 2), (2, 1), (3, 0)]);
-            assert_eq!(sorted(exiled(&s)), sorted(hits));
-            s.expect_events(json!([
-                "cardPlayed",
-                "promptOpened",
-                "curveDrawn",
-                "exiled",
-                "cardResolved"
-            ]));
+            assert_eq!(sorted(destroyed(&s)), sorted(hits));
+            let kinds: Vec<String> = crate::events_json(&s)
+                .iter()
+                .filter_map(|event| event["type"].as_str().map(str::to_string))
+                .collect();
+            let at_kind = |kind: &str| kinds.iter().position(|seen| seen == kind);
+            assert!(at_kind("curveDrawn") < at_kind("destroyed"));
+            assert!(at_kind("exiled").is_none());
         }
 
         #[test]
-        fn r422_face_down_cards_on_the_curve_are_exiled_and_the_exile_names_them_openly() {
+        fn r1704000_face_down_cards_on_the_curve_are_destroyed() {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "backrow": [TRAP, TRAP] },
@@ -344,47 +368,30 @@ mod tests {
                 s.backrow(PlayerId::P2, 1).and_then(|card| card.face_up),
                 Some(true)
             );
-            curve(&mut s, &[(0, 3)]);
+            curve(&mut s, &[(0, 3), (1, 3), (2, 3), (3, 3)]);
             let pile: Vec<String> = s
-                .pile(PlayerId::P2, "exile")
+                .pile(PlayerId::P2, "graveyard")
                 .into_iter()
                 .map(|card| card.id)
                 .collect();
-            assert_eq!(sorted(pile), sorted(traps.clone()));
-            for viewer in [PlayerId::P1, PlayerId::P2] {
-                let shown: Vec<(String, String)> = s
-                    .view(viewer)
-                    .events
-                    .iter()
-                    .filter_map(|event| match event {
-                        GameEvent::Exiled {
-                            instance_id, def_id, ..
-                        } => Some((instance_id.clone(), def_id.clone())),
-                        _ => None,
-                    })
-                    .collect();
-                assert_eq!(
-                    sorted(shown.iter().map(|(id, _)| id.clone()).collect()),
-                    sorted(traps.clone())
-                );
-                assert!(shown.iter().all(|(_, def_id)| def_id == TRAP));
-            }
+            assert_eq!(sorted(pile), sorted(traps));
         }
 
         #[test]
-        fn s6_3_exile_is_no_destroy_an_indestructible_unit_and_a_reborn_unit_on_the_curve_are_exiled_and_nothing_comes_back()
-         {
+        fn r1704000_indestructible_stays_reborn_returns() {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "field": ["core-066", "core-003"] },
             }));
             let rock = s.unit(PlayerId::P2, 1).expect("The Rock");
-            let defender = s.unit(PlayerId::P2, 2).expect("a Reborn unit");
-            curve(&mut s, &[(0, 2)]);
-            s.expect_in_zone(&rock, "exile")
-                .expect_in_zone(&defender, "exile");
-            assert!(s.unit(PlayerId::P2, 1).is_none());
-            assert!(s.unit(PlayerId::P2, 2).is_none());
+            curve(&mut s, &[(0, 2), (1, 2), (2, 2), (3, 2)]);
+            // A destroy, so Indestructible ignores it and Reborn brings the other back (R46).
+            assert_eq!(s.unit(PlayerId::P2, 1).map(|card| card.id), Some(rock.id));
+            assert_eq!(
+                s.unit(PlayerId::P2, 2).map(|card| card.def_id),
+                Some("core-003".to_string())
+            );
+            assert!(exiled(&s).is_empty());
         }
 
         #[test]
@@ -395,20 +402,20 @@ mod tests {
             }));
             let token = s.unit(PlayerId::P2, 1).expect("a token");
             let unit = s.unit(PlayerId::P2, 2).expect("a unit");
-            curve(&mut s, &[(0, 2)]);
-            s.expect_in_zone(&token, "gone").expect_in_zone(&unit, "exile");
+            curve(&mut s, &[(0, 2), (1, 2), (2, 2), (3, 2)]);
+            s.expect_in_zone(&token, "gone").expect_in_zone(&unit, "graveyard");
         }
 
         #[test]
-        fn s3_2_r13_the_top_of_a_stack_pile_is_exiled_and_the_card_beneath_resumes_not_exiled_by_the_same_curve()
+        fn s3_2_r13_the_top_of_a_stack_pile_is_destroyed_and_the_card_beneath_resumes_not_destroyed_by_the_same_curve()
          {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": "core-043", "lane": 1 }, { "def": "core-092", "stack": true }] },
             }));
             let top = s.unit(PlayerId::P2, 1).expect("the top of the pile");
-            curve(&mut s, &[(0, 2)]);
-            s.expect_in_zone(&top, "exile");
+            curve(&mut s, &[(0, 2), (1, 2), (2, 2), (3, 2)]);
+            s.expect_in_zone(&top, "graveyard");
             assert_eq!(
                 s.unit(PlayerId::P2, 1).map(|card| card.def_id),
                 Some("core-043".to_string())
@@ -416,15 +423,15 @@ mod tests {
         }
 
         #[test]
-        fn r422_a_curve_over_empty_cells_exiles_nothing_and_the_spell_still_resolves_to_the_graveyard() {
+        fn r422_a_curve_over_empty_cells_destroys_nothing_and_the_spell_still_resolves_to_the_graveyard() {
             let mut s = scenario(json!({ "p1": { "hand": [PAPAYA, FILLER] }, "p2": { "hand": [FILLER] } }));
-            curve(&mut s, &[(0, 1), (4, 2)]);
-            assert_eq!(exiled(&s), Vec::<String>::new());
+            curve(&mut s, &[(0, 1), (1, 1), (2, 1), (3, 1)]);
+            assert_eq!(destroyed(&s), Vec::<String>::new());
             s.expect_in_zone(PAPAYA, "graveyard");
         }
 
         #[test]
-        fn r177_the_prompts_offer_cells_never_cards_the_other_seat_sees_only_that_a_prompt_is_open_then_the_exiles()
+        fn r177_the_prompts_offer_cells_never_cards_the_other_seat_sees_only_that_a_prompt_is_open_then_the_destroys()
          {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
@@ -461,16 +468,14 @@ mod tests {
                 serde_json::to_value(&s.view(PlayerId::P2).pending).unwrap(),
                 elsewhere
             );
-            s.answer(json!(DONE));
-            assert!(
-                s.view(PlayerId::P2).events.iter().any(
-                    |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == trap)
-                )
-            );
+            for x in 1..4 {
+                pick(&mut s, x, 3);
+            }
+            s.expect_in_zone(&trap, "graveyard");
         }
 
         #[test]
-        fn r452_a_random_cast_answers_the_same_prompts_at_random_nothing_pauses_and_the_curves_cards_are_exiled()
+        fn r452_a_random_cast_answers_the_same_prompts_at_random_nothing_pauses_and_the_curves_cards_are_destroyed()
          {
             for seed in 1..=4 {
                 let mut s = scenario(json!({
@@ -498,15 +503,15 @@ mod tests {
                         .iter()
                         .any(|event| matches!(event, GameEvent::PromptOpened { .. }))
                 );
-                // A full board: at least the cell the curve was drawn through, and never two cards of one lane.
+                // A full board: at least the four cells the curve was drawn through, never two cards of one lane.
                 let lanes: Vec<Option<i32>> = events
                     .iter()
                     .filter_map(|event| match event {
-                        GameEvent::Exiled { instance_id, .. } => Some(lane_of.get(instance_id).copied()),
+                        GameEvent::Destroyed { instance_id, .. } => Some(lane_of.get(instance_id).copied()),
                         _ => None,
                     })
                     .collect();
-                assert!(!lanes.is_empty());
+                assert!(lanes.len() >= 4);
                 assert_eq!(lanes.iter().collect::<IndexSet<_>>().len(), lanes.len());
                 assert!(lanes.iter().all(|lane| lane.is_some()));
             }
@@ -530,20 +535,10 @@ mod tests {
             }
             let mut live = paused;
             let mut revived = copy;
+            // The first cell offered, twice.
             for index in 0..2 {
                 let pending = live.pending.clone().unwrap_or_else(|| panic!("a prompt"));
-                // The first cell offered, then "done".
-                let key = if index == 0 {
-                    pending.options[0].key.clone()
-                } else {
-                    DONE.to_string()
-                };
-                let option = pending
-                    .options
-                    .iter()
-                    .find(|held| held.key == key)
-                    .cloned()
-                    .unwrap_or_else(|| panic!("option {key}"));
+                let option = pending.options[0].clone();
                 let body = ActionBody::Answer {
                     choice_id: pending.id.clone(),
                     selection: vec![option.selection.clone()],
@@ -623,6 +618,13 @@ mod tests {
                     &mut log,
                 );
             }
+            // Up to p1's second turn, so p1 has the Papaya's (2), whoever went first.
+            let mut p1_turns = u32::from(state.active == PlayerId::P1);
+            while p1_turns < 2 {
+                let player = state.active;
+                state = act(&state, ActionBody::EndTurn, player, &mut count, &mut log);
+                p1_turns += u32::from(state.active == PlayerId::P1);
+            }
             let papaya = state
                 .players
                 .p1
@@ -638,20 +640,12 @@ mod tests {
                 &mut count,
                 &mut log,
             );
-            // The first cell each Discover offers, twice, then "done".
-            for last in [false, false, true] {
-                let pending = state.pending.clone();
-                let key = match (&pending, last) {
-                    (_, true) => DONE.to_string(),
-                    (Some(pending), false) => pending.options[0].key.clone(),
-                    (None, false) => panic!("a Discover"),
+            // The first cell each of the four Discovers offers.
+            for _ in 0..4 {
+                let Some(pending) = state.pending.clone() else {
+                    panic!("a Discover");
                 };
-                let option = pending
-                    .as_ref()
-                    .and_then(|pending| pending.options.iter().find(|held| held.key == key).cloned());
-                let (Some(pending), Some(option)) = (pending, option) else {
-                    panic!("option {key}");
-                };
+                let option = pending.options[0].clone();
                 state = act(
                     &state,
                     ActionBody::Answer {
@@ -676,43 +670,93 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r422_only_enemy_cards_on_the_curve_are_exiled_y_x_takes_their_2_2_and_3_3_not_your_0_0_and_1_1() {
+        fn costs_2_refused_with_1_mana() {
+            let mut s = full(true);
+            crate::expect_costs(&mut s, PAPAYA, 2, json!({}));
+        }
+
+        #[test]
+        fn r1704000_four_discovers_of_3_cells() {
+            let mut s = full(true);
+            s.play(PAPAYA, json!({}));
+            for x in 0..4 {
+                assert_eq!(
+                    s.state().pending.as_ref().map(|pending| pending.options.len()),
+                    Some(PAPAYA_OFFERS as usize)
+                );
+                assert!(!keys(&s).iter().any(|key| key.as_str() == DONE));
+                pick(&mut s, x, 0);
+            }
+            assert!(s.state().pending.is_none());
+        }
+
+        #[test]
+        fn r422_only_enemy_cards_on_the_curve_are_destroyed_y_x_takes_their_2_2_and_3_3_not_your_0_0_and_1_1() {
             let mut s = full(true);
             let enemy = vec![
                 at(&s, PlayerId::P2, "units", 3),
                 at(&s, PlayerId::P2, "backrow", 4),
             ];
-            curve(&mut s, &[(0, 0), (1, 1)]);
-            assert_eq!(sorted(exiled(&s)), sorted(enemy));
-            assert!(s.state().players.p1.exile.is_empty());
+            curve(&mut s, &[(0, 0), (1, 1), (2, 2), (3, 3)]);
+            assert_eq!(sorted(destroyed(&s)), sorted(enemy));
+            assert!(exiled(&s).is_empty());
         }
 
         #[test]
-        fn r422_a_constant_through_your_own_row_exiles_nothing_through_theirs_the_whole_row() {
+        fn r422_a_constant_through_your_own_row_destroys_nothing_through_theirs_the_whole_row() {
             let mut own = full(true);
-            curve(&mut own, &[(1, 1)]);
-            assert_eq!(exiled(&own), Vec::<String>::new());
+            curve(&mut own, &[(0, 1), (1, 1), (2, 1), (3, 1)]);
+            assert_eq!(destroyed(&own), Vec::<String>::new());
             let mut theirs = full(true);
             let row: Vec<String> = (1..=5)
                 .map(|lane| at(&theirs, PlayerId::P2, "units", lane))
                 .collect();
-            curve(&mut theirs, &[(1, 2)]);
-            assert_eq!(sorted(exiled(&theirs)), sorted(row));
+            curve(&mut theirs, &[(0, 2), (1, 2), (2, 2), (3, 2)]);
+            assert_eq!(sorted(destroyed(&theirs)), sorted(row));
+        }
+    }
+
+    /// R767000: the scripts kept for the replays of v0.4.0f and before.
+    mod v0_4_0f {
+        use super::*;
+
+        fn kept(run: impl FnOnce()) {
+            crate::under_kept(PAPAYA, super::super::script_v0_4_0f(), run);
         }
 
         #[test]
-        fn r422_the_radiant_face_asks_the_same_prompts() {
-            let mut s = full(true);
-            s.play(PAPAYA, json!({}));
-            assert_eq!(
-                s.state().pending.as_ref().map(|pending| pending.options.len()),
-                Some(PAPAYA_OFFERS as usize)
-            );
-            pick(&mut s, 0, 0);
-            assert_eq!(
-                s.state().pending.as_ref().map(|pending| pending.options.len()),
-                Some(PAPAYA_OFFERS as usize + 1)
-            );
+        fn r831003_r767000_each_cell_is_discovered_among_3_random_cells_then_done_and_the_curve_exiles() {
+            kept(|| {
+                let mut s = full(false);
+                s.play(PAPAYA, json!({}));
+                assert_eq!(keys(&s).len(), PAPAYA_OFFERS as usize);
+                let row: Vec<String> = (1..=5)
+                    .map(|lane| at(&s, PlayerId::P2, "backrow", lane))
+                    .collect();
+                pick(&mut s, 2, 3);
+                assert_eq!(keys(&s).len(), PAPAYA_OFFERS as usize + 1);
+                assert_eq!(keys(&s).last().map(String::as_str), Some(DONE));
+                s.answer(json!(DONE));
+                assert!(s.state().pending.is_none());
+                assert_eq!(sorted(exiled(&s)), sorted(row));
+            });
+        }
+
+        #[test]
+        fn r831003_r767000_the_radiant_face_offers_3_then_done_and_exiles_only_enemy_cards() {
+            kept(|| {
+                let mut s = full(true);
+                s.play(PAPAYA, json!({}));
+                assert_eq!(keys(&s).len(), PAPAYA_OFFERS as usize);
+                let enemy = vec![
+                    at(&s, PlayerId::P2, "units", 3),
+                    at(&s, PlayerId::P2, "backrow", 4),
+                ];
+                pick(&mut s, 0, 0);
+                pick(&mut s, 1, 1);
+                s.answer(json!(DONE));
+                assert_eq!(sorted(exiled(&s)), sorted(enemy));
+            });
         }
     }
 }
