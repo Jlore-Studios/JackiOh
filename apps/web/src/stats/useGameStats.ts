@@ -35,7 +35,7 @@ export function useGameStats(view: PlayerView, enabled: boolean): void {
     // `view.events` is a sliding window over the match (SPEC §10.8), so only what is new is counted,
     // as the board's animation queue does; the first view of a seat has no earlier one to compare.
     const fresh = before === null || before.viewer !== view.viewer ? [] : newEventsSince(before.events, view.events);
-    log.current = observe(log.current, view, fresh);
+    log.current = observe(log.current, view, fresh, before);
 
     if (outcome !== null && !recorded.current) {
       recorded.current = true;
