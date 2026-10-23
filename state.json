@@ -13200,6 +13200,17 @@
       "started_at": "2026-10-23T22:32:54Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "1751": {
+      "action": "plan",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "agy",
+      "run_id": "pending:6b3c51c1-1792796132",
+      "started_at": "2026-10-23T22:55:43Z",
+      "stop_requested": false,
+      "taken_asks": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
@@ -13208,9 +13219,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T22:32:54Z",
+    "at": "2026-10-23T22:55:43Z",
     "url": "",
-    "what": "plan #1750 on agy"
+    "what": "plan #1751 on agy"
   },
   "last_sweep": {
     "at": "2026-10-23T22:48:13Z",
