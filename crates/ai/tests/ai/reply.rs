@@ -106,7 +106,8 @@ mod simulate_reply {
         assert!(on_field(&reply, HUMAN, "core-008"));
         assert_eq!(reply.players[AI].hero.health, 30);
         assert_eq!(reply.active, AI);
-        assert_eq!(counter.used(), 1);
+        // The trial switch to Defense Position, dropped (#1696), then the endTurn.
+        assert_eq!(counter.used(), 2);
     }
 
     /// p2's #45 Deft Duelist (4/3, Charge, Deft).
@@ -717,5 +718,93 @@ mod open_lethal_1634 {
         let survives = after.result.as_ref().map(|result| result.winner) != Some(Winner::from(HUMAN));
         // `decide` reads the shipped switch: on, it sees the two swings coming; off, it plays as before.
         assert_eq!(survives, AI_REPLY.open_lethal, "{}", trace(&run.turn));
+    }
+}
+
+mod defense_switch_1696 {
+    use super::*;
+
+    /// p2's unit `def_id` on its field.
+    fn unit_of(state: &GameState, def_id: &str) -> CardInstance {
+        active_units_of(state, HUMAN)
+            .into_iter()
+            .find(|unit| unit.def_id == def_id)
+            .cloned()
+            .expect("the unit is on p2's field")
+    }
+
+    /// What p2's own evaluation gains by switching its unit `def_id` to Defense Position, the seat
+    /// swinging next: the comparison the reply's trial switch makes.
+    fn switch_gain(state: &GameState, def_id: &str) -> f64 {
+        let switch = ActionBody::SwitchPosition {
+            instance_id: unit_of(state, def_id).id,
+        };
+        assert!(is_legal(state, HUMAN, switch.clone()));
+        let switched = act(state, HUMAN, &switch);
+        evaluate(&switched, HUMAN, NextSwing::Enemy, &AI_EVAL)
+            - evaluate(state, HUMAN, NextSwing::Enemy, &AI_EVAL)
+    }
+
+    /// #1696: Mr. Vanilla's one attack is into the seat's Defense-Position wall, worth nothing, and the
+    /// seat's 7/7 in Attack Position would finish p2 at 7. Defense Position's Taunt takes that swing, so
+    /// p2 switches Mr. Vanilla to Defense and ends its turn.
+    #[test]
+    fn switches_a_unit_with_no_attack_worth_making_to_defense_when_its_evaluation_prefers_it() {
+        let state = handed_over(json!({
+            "p1": { "field": [{ "def": "core-025", "position": "DEF" }, "core-025"] },
+            "p2": { "health": 7, "field": ["core-008"] },
+        }));
+        assert!(switch_gain(&state, "core-008") > 0.0);
+
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, "core-008")).position,
+            Position::Def
+        );
+        assert_eq!(reply.players[HUMAN].hero.health, 7);
+        assert_eq!(reply.active, AI);
+        // The trial switch, kept, then the endTurn.
+        assert_eq!(counter.used(), 2);
+    }
+
+    /// #1696: the seat's only unit is a Defense-Position wall, so there is no swing to stop and Defense
+    /// Position would only cost Mr. Vanilla half its attack: the trial switch is dropped.
+    #[test]
+    fn keeps_a_unit_with_no_attack_worth_making_in_attack_when_its_evaluation_prefers_that() {
+        let state = handed_over(json!({
+            "p1": { "field": [{ "def": "core-025", "position": "DEF" }] },
+            "p2": { "field": ["core-008"] },
+        }));
+        assert!(switch_gain(&state, "core-008") < 0.0);
+
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, "core-008")).position,
+            Position::Atk
+        );
+        assert_eq!(reply.active, AI);
+        // The trial switch, dropped, then the endTurn.
+        assert_eq!(counter.used(), 2);
+    }
+
+    /// #1696, R49: Deft Duelist hits the open face and, its switch still unspent, goes to Defense
+    /// Position, where its Taunt takes the swing of the seat's 7/7 that would finish p2 at 7.
+    #[test]
+    fn a_deft_unit_that_attacked_switches_to_defense_with_the_switch_it_has_left() {
+        let state = handed_over(json!({
+            "p1": { "field": ["core-025"] },
+            "p2": { "health": 7, "field": ["core-045"] },
+        }));
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        assert_eq!(reply.players[AI].hero.health, 26);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, "core-045")).position,
+            Position::Def
+        );
+        // The attack, the trial switch and the endTurn.
+        assert_eq!(counter.used(), 3);
     }
 }
