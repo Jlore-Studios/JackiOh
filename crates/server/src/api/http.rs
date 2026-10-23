@@ -30,8 +30,8 @@ use serde_json::{Map, Value, json};
 use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
 use crate::config::{
-    API_MAX_BODY_BYTES, API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS,
-    RATING_START,
+    API_MAX_BODY_BYTES, API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS,
+    API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, MAX_TRUSTED_PROXY_HOPS, RATING_START,
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 
@@ -832,10 +832,20 @@ pub fn address_key(ip_hash: &str) -> String {
     format!("address:{ip_hash}")
 }
 
+/// R1717000: one key's refused requests inside `API_REJECTION_ALERT_WINDOW_MS`, at most
+/// `API_REJECTION_ALERT_THRESHOLD + 1` of them, and when it last raised `api.rejections.unusual`.
+#[derive(Default)]
+struct Refusals {
+    times: VecDeque<i64>,
+    alerted_at: Option<i64>,
+}
+
 #[derive(Default)]
 struct RateLimiterState {
     hits: IndexMap<String, VecDeque<i64>>,
     swept_at: i64,
+    refusals: IndexMap<String, Refusals>,
+    refusals_swept_at: i64,
 }
 
 /// §9.8: "per-account rate limit at the API", R109: 300 requests per minute per account.
@@ -846,6 +856,10 @@ struct RateLimiterState {
 ///
 /// A request that is over the limit is **not** recorded: like §9.4's attempt log (`codes.rs`), the
 /// window drains, so a caller who keeps hammering cannot pin their own counter open for ever.
+///
+/// R1717000: a refused request is counted apart, in its key's `Refusals` (`note_rejection`), so a
+/// key the limit keeps refusing raises `api.rejections.unusual` once a window. That record is capped
+/// per key and swept once a window, as `hits` is.
 ///
 /// Idle keys are swept once per window rather than left to accumulate, so a long-lived process does
 /// not hold a timestamp list for every account that ever called it.
@@ -917,6 +931,43 @@ impl RateLimiter {
     /// How many keys are being tracked, so a test can see idle ones dropped.
     pub fn size(&self) -> usize {
         lock(&self.state).hits.len()
+    }
+
+    /// R1717000: counts one refused request against `key` and answers the count when it raises
+    /// `api.rejections.unusual`: once the key's window holds more than `API_REJECTION_ALERT_THRESHOLD`
+    /// refusals, and then not again until a whole `API_REJECTION_ALERT_WINDOW_MS` has passed since its
+    /// last alert; `None` otherwise. A key keeps at most `API_REJECTION_ALERT_THRESHOLD + 1` refusals,
+    /// and a key with none left in the window is swept once a window, so a flood holds bounded state.
+    pub fn note_rejection(&self, key: &str, now: i64) -> Option<usize> {
+        let window = API_REJECTION_ALERT_WINDOW_MS;
+        let mut state = lock(&self.state);
+        if now - state.refusals_swept_at >= window {
+            state.refusals_swept_at = now;
+            state
+                .refusals
+                .retain(|_, refusals| refusals.times.back().is_some_and(|at| *at > now - window));
+        }
+
+        let refusals = state.refusals.entry(key.to_string()).or_default();
+        while refusals.times.front().is_some_and(|at| *at <= now - window) {
+            refusals.times.pop_front();
+        }
+        refusals.times.push_back(now);
+        if refusals.times.len() > API_REJECTION_ALERT_THRESHOLD + 1 {
+            refusals.times.pop_front();
+        }
+        let quiet = refusals.alerted_at.is_none_or(|at| at <= now - window);
+        if refusals.times.len() > API_REJECTION_ALERT_THRESHOLD && quiet {
+            refusals.alerted_at = Some(now);
+            Some(refusals.times.len())
+        } else {
+            None
+        }
+    }
+
+    /// How many keys hold refusals, so a test can see quiet ones dropped.
+    pub fn rejected_keys(&self) -> usize {
+        lock(&self.state).refusals.len()
     }
 
     /// R190: records a request's (capped) forwarded-entry count; true when it is fewer than any
@@ -1076,10 +1127,10 @@ async fn run_route(
     // names an account is counted against the account, as R157 says.
     if auth != AuthLevel::None {
         let key = address_key(&address);
-        let wait = app.limiter.retry_after_ms(&key, now_ms());
+        let now = now_ms();
+        let wait = app.limiter.retry_after_ms(&key, now);
         if wait > 0 {
-            log_warn("api.rate_limited", json!({ "path": path, "key": key }));
-            return Err(rate_limited("too many requests; slow down", wait));
+            return Err(refuse_rate_limited(app, path, &key, now, wait));
         }
     }
 
@@ -1105,13 +1156,9 @@ async fn run_route(
     };
     let now = now_ms();
     if !app.limiter.allow(&key, now) {
-        // §9.8: "Every rejected action is logged with its reason."
-        log_warn("api.rate_limited", json!({ "path": path, "key": key }));
         // R192: the refusal says how long until the oldest counted request leaves the window.
-        return Err(rate_limited(
-            "too many requests; slow down",
-            app.limiter.retry_after_ms(&key, now),
-        ));
+        let wait = app.limiter.retry_after_ms(&key, now);
+        return Err(refuse_rate_limited(app, path, &key, now, wait));
     }
 
     if let Some(error) = auth_error {
@@ -1140,6 +1187,27 @@ async fn run_route(
         headers: parts.headers.clone(),
     };
     handler(app, req).await
+}
+
+/// §9.8's API rate limit refusing one request: "every rejected action is logged with its reason",
+/// and R1717000 counts it, so a key refused past `API_REJECTION_ALERT_THRESHOLD` inside the window
+/// raises `api.rejections.unusual`.
+fn refuse_rate_limited(app: &App, path: &str, key: &str, now: i64, wait: i64) -> ApiError {
+    log_warn("api.rate_limited", json!({ "path": path, "key": key }));
+    if let Some(rejected) = app.limiter.note_rejection(key, now) {
+        alert_unusual_api_rejections(key, rejected);
+    }
+    rate_limited("too many requests; slow down", wait)
+}
+
+/// R1717000: raises `api.rejections.unusual` (§9.8) for `key`'s `rejected` refused requests in the
+/// last `API_REJECTION_ALERT_WINDOW_MS`, the API's half of `match.rejections.unusual` (R835000,
+/// `actor/guard.rs`).
+fn alert_unusual_api_rejections(key: &str, rejected: usize) {
+    log_alert(
+        "api.rejections.unusual",
+        json!({ "key": key, "rejected": rejected, "windowMs": API_REJECTION_ALERT_WINDOW_MS }),
+    );
 }
 
 // ---------------------------------------------------------------------------
