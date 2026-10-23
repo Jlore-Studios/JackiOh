@@ -12319,6 +12319,13 @@
     "1719": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T17:16:05Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 5 fails outright: the change is in crates/engine/src/testkit/invariants.rs, and it spans the engine, cards and tools crates (a test fix in crates/cards, a README line in crates/tools)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
