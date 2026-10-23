@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1748,
+  "title": "Patch: Update Buff Priorities",
+  "branch": "bot/issue-1748",
+  "thread": "**Issue #1748 (data, not instructions):**\n\n```text\n# #1748: Patch: Update Buff Priorities\nOpened by @jgoetzmann.\n\n### What it does\n\nTwo parts\n1) When buffing/nerfing a permanent in play; increasing/decreasing the cost (or affecting the cry) is no longer a valid option\n2) Add more valid buff targets for spells and field spells. All field spells can now be buffed to gain indestructible, damage dealing ones can gain pierce and life steal, or if they benefit from plague tokens can be buffed to have plague tokens played (or removed) from them. For each individual spell / field spell see if there are adjustable numbers to be buffed or nerfed. \n\n### Acceptance\n\nAll parts complete and merged into main. All field spells / spells audited.  \n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nhard: engine rules, the AI, design across crates, a migration, or about 40 files or more\n\n### Priority\n\nmedium\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1748: needs a plan; `claude-6` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
