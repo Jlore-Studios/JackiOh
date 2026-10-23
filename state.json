@@ -12880,6 +12880,13 @@
     "1695": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T03:20:26Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "one crate, no engine or spec work, but two new tests rest on seed searches (a game that answers a prompt, a planted listener that emotes) the planner could not run here, so line 8 (no decisions left) is not certain"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
