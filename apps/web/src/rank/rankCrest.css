@@ -1,0 +1,70 @@
+/* The rank crest (RankCrest.tsx), imported by it only (#1650).
+ *
+ * The crest is an inline SVG with the pip bar (a Grape tier's pips, or Raisin's placements) and a
+ * Jlorious position printed beside it, in one row, so the phone's rank line and the Play hub's
+ * single screen (R1578000) keep their height. Jlorious's shimmer is the one animation.
+ */
+
+.rank-crest {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.rank-crest__art {
+  flex: none;
+}
+
+.rank-crest__position {
+  font-weight: 700;
+}
+
+.rank-crest__pips {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.rank-crest__pip {
+  width: 4px;
+  height: 4px;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.rank-crest__pip[data-filled="true"] {
+  background: currentcolor;
+  opacity: 1;
+}
+
+.rank-crest[data-size="large"] .rank-crest__pip {
+  width: 7px;
+  height: 7px;
+}
+
+.rank-crest__shimmer {
+  opacity: 0;
+  animation: rank-crest-shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes rank-crest-shimmer {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* index.css already stops the shimmer under the settings panel's Reduce motion switch (it zeroes
+   every animation under `:root[data-reduce-motion]`), and the component leaves the shimmer out
+   then; this stops it under the OS preference. */
+@media (prefers-reduced-motion: reduce) {
+  .rank-crest__shimmer {
+    animation: none;
+  }
+}

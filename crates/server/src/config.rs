@@ -1116,7 +1116,8 @@ pub struct BotStrength {
 /// chance and skill together, which the curve, measured at the arena's budget, does not) against each
 /// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
 /// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
-pub const BOT_SEED_RATINGS: [f64; 5] = [570.0, 740.0, 900.0, 1080.0, SKILL_ELO_ANCHOR];
+/// The row is generation 13's calibration, pasted over the curve's too (docs/bot-calibration.md, Results).
+pub const BOT_SEED_RATINGS: [f64; 5] = [1216.0, 1383.0, 1536.0, 1692.0, SKILL_ELO_ANCHOR];
 
 /// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
@@ -1187,7 +1188,7 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
 
 /// R748000: the AI generation (`crates/ai/generation.json`) `BOT_SEED_RATINGS` were measured on.
 /// `bot-calibrate` shifts its anchor by the promotions after it.
-pub const BOT_CALIBRATION_GENERATION: i64 = 9;
+pub const BOT_CALIBRATION_GENERATION: i64 = 13;
 /// R748000: games each pair of strengths plays in a calibration. At 40 the five strengths' offsets
 /// carried errors of about 28 Elo, wider than the gaps between three of them.
 pub const BOT_CALIBRATION_GAMES_PER_PAIR: usize = 100;
@@ -1217,11 +1218,12 @@ pub const BOT_CALIBRATION_MAX_TURN_ACTIONS: usize = 30;
 /// gain over its parent (generations 10 to 13 gained 35 to 241 Elo), and the season reset's own.
 pub const BOT_PROMOTION_DEVIATION_BOOST: f64 = 150.0;
 
-/// R747000: the Elo the arena's reference, this build's AI at full skill, is held at in
-/// `SKILL_ELO_TABLE`: the 1200 the strongest bot has been seeded at since R1454, not a new player's
-/// `RATING_START`, because the pairing seats no bot for a player rated above every bot (R1453) and a
-/// player past the middle of the ladder would otherwise have none.
-pub const SKILL_ELO_ANCHOR: f64 = 1200.0;
+/// R747000, R748000: the Elo the reference, this build's AI at full skill, is held at in
+/// `SKILL_ELO_TABLE`, and the strongest bot's seed: 1200 from R1454 until generation 13's calibration
+/// added the Elo of the promotions of generations 10 to 13 (docs/bot-calibration.md, Results). Not a
+/// new player's `RATING_START`, because the pairing seats no bot for a player rated above every bot
+/// (R1453) and a player past the middle of the ladder would otherwise have none.
+pub const SKILL_ELO_ANCHOR: f64 = 1832.0;
 
 /// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
 /// skill from `AI_SKILL_MIN` to `AI_SKILL_MAX`: the Elo a seat at that skill is expected to hold, the
@@ -1229,12 +1231,14 @@ pub const SKILL_ELO_ANCHOR: f64 = 1200.0;
 /// games of each skill against the reference and against the random policy, scored as Elo gaps and
 /// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
 /// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
-/// rows pasted over; the live Glicko ratings (R603) are the ongoing calibration.
+/// rows pasted over, or by R748000's calibration, whose readings of the strengths as built are the
+/// rows since generation 13 (docs/bot-calibration.md, Results); the live Glicko ratings (R603) are the
+/// ongoing calibration.
 pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
-    (0.0, 570.0),
-    (0.25, 740.0),
-    (0.5, 900.0),
-    (0.75, 1080.0),
+    (0.0, 1216.0),
+    (0.25, 1383.0),
+    (0.5, 1536.0),
+    (0.75, 1692.0),
     (1.0, SKILL_ELO_ANCHOR),
 ];
 
@@ -2290,7 +2294,7 @@ pub struct PackUnownedWeights {
 
 /// One step of `COSMETIC_TOKEN_CYCLE` (SPEC §14.5): a cosmetic token of that rarity, or a
 /// cosmetic pack. Serialised lower-camel for the client (`cosmeticPack`).
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum CosmeticTokenStep {
     Rare,
@@ -2342,6 +2346,16 @@ pub const PACK_FLOOR_RARITY: PrintedRarity = PrintedRarity::Rare;
 /// SPEC §14.6, R1339000: the floor of a cosmetic pack's floored slot: it rolls
 /// `COSMETIC_TIER_WEIGHTS`, and a Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
 pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
+/// SPEC §14.3, R1661001: a duplicate's global cosmetic roll (#1661: 10%): with an account cosmetic
+/// left unowned, one draw below `TIER_WEIGHT_TOTAL`, and a draw below this drops an account
+/// cosmetic in place of the duplicate's per-card one.
+pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 100;
+// SPEC §14.3, R1661001: the hit is a share of the same total, so it cannot pass it.
+const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
+/// SPEC §14.2, §14.3, R1661000, R1661001: the rarity every account cosmetic but its kind's default
+/// is at least, and the floor of the global roll's tier: it rolls `COSMETIC_TIER_WEIGHTS`, and a
+/// Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
+pub const GLOBAL_COSMETIC_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
 /// SPEC §14.4: the longest an account waits for an Epic: of any 10 card packs in a row, at
 /// least one holds an Epic (#1333's table: 10/20/30, and pity never exceeds 30 packs). Pity sits
 /// on top of `CARD_TIER_WEIGHTS` and tunes nothing: it only forces a tier on the pack a counter
@@ -2461,6 +2475,14 @@ pub const PRACTICE_SEEDS_OPEN_MAX: i64 = 3;
 /// waits for a verification to finish, and none is dropped. #1294's table gives no value; two keep
 /// the blocking pool free for the live matches' folds.
 pub const PRACTICE_VERIFY_CONCURRENCY: usize = 2;
+/// SPEC §14.8, R1688000: how many times the server tries a passed practice claim's pay (its
+/// rewards and its last board, one transaction) before it answers an error. Each try is the whole
+/// transaction, so one that fails pays nothing and the try after it pays once; the seed stays
+/// burned whatever happens (R1303001). Three tries outlast a blip in the store, as R1437's do.
+pub const PRACTICE_PAY_ATTEMPTS: usize = 3;
+/// SPEC §14.8, R1688000: the wait before the second try at a practice claim's pay, doubled before
+/// each try after it (250 ms, then 500 ms), as `MATCH_RECORD_RESULT_BACKOFF_MS` waits.
+pub const PRACTICE_PAY_BACKOFF_MS: i64 = 250;
 /// SPEC §14.9: how often a quest arrives while fewer than `QUEST_MAX_HELD` are held, in hours
 /// (#1333's table: 5).
 pub const QUEST_INTERVAL_HOURS: i64 = 5;

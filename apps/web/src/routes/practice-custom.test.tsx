@@ -234,6 +234,34 @@ describe("R915006 a saved deck that names custom cards starts with them", () => 
   });
 });
 
+describe("#1691 custom cards that could not be read", () => {
+  it("#1691 custom cards that could not be read offer Try again, and the deck starts once they are", async () => {
+    const host = fakeHost();
+    const loadCustomCards = vi
+      .fn<() => Promise<CustomCardsResponse>>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(customResponse([IMP]));
+    renderRoute(host, { loadCustomCards });
+    await waitFor(() => {
+      expect(Array.from((screen.getByTestId(practiceTestid.deck) as HTMLSelectElement).options).map((o) => o.value)).toContain("saved:1");
+    });
+    fireEvent.change(screen.getByTestId(practiceTestid.deck), { target: { value: "saved:1" } });
+    expect(await screen.findByTestId(practiceTestid.customBlocked)).toHaveTextContent("could not be loaded");
+    expect(screen.getByTestId(practiceTestid.customRetry)).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.customRetry));
+    await waitFor(() => {
+      expect(screen.queryByTestId(practiceTestid.customBlocked)).toBeNull();
+    });
+    expect(loadCustomCards).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId(practiceTestid.start)).toBeEnabled();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.start));
+    await screen.findByTestId(practiceTestid.hud);
+    expect(host.starts()[0]?.customCards).toEqual([IMP_IN_GAME]);
+  });
+});
+
 describe("#921 ?try=<custom id> plays the creator's card at once", () => {
   it("R915005 tryPath names the practice route, and ?try= is read only as a custom id", () => {
     expect(tryPath(IMP.id)).toBe(`/practice?try=${IMP.id}`);

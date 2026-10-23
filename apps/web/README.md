@@ -209,7 +209,7 @@ game/deckbuilder/       the deck workshop: up to ten named decks and five trios 
                         (TrioImportPanel.tsx, R340), and autosave with a local mirror of unsaved edits
                         (sync.ts, R256); a trio import is one POST /api/trios/import, never the autosave (R341)
 routes/play.tsx         /play, the Play hub (R1578000): one screen that does not scroll, online play first and
-                        largest, Practice, Card creator, Play together and Replays as four smaller links
+                        largest, Practice, Play together and Replays as three smaller links (R1646000)
                         beside it, and for a visitor with no account (`token` null) a Sign in in the online
                         panel and no read at all; the online panel is the mode picker (Best of 1, Conquest, All Random, R257, R330), the deck or
                         trio choice with the validator's verdict as UX, the queue and the room code; it
@@ -238,22 +238,46 @@ routes/SeriesBanner.tsx the board's banner for a series game, each side's won de
                         "Continue" once the game is over
 routes/leaderboard.tsx  /leaderboard: the global ranked ladder (R608, R612) — Jlorious #1–#100, the
                         Grape tiers, the Raisins — and the caller's own standing; rank/rank.ts says
-                        a visible rank in a player's words for this screen, the account and the board
+                        a visible rank in a player's words and rank/RankCrest.tsx draws it as a crest
+                        (#1650), for this screen, the account, Play and the board
 routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four doors, Decks (/decks) and the
                         Card builder (/creator) as links, Cards and Cosmetics opened in place by
                         `?section=` (net/navigate.ts `useSearch`) so the browser's Back and Forward move
                         between them and the hub; the page never scrolls, a section's body does. Cards is
                         the account's cards per shipped set, wallet, set tracks and quests, each panel
-                        reading for itself and saying why when its read fails; Cosmetics is the only place
-                        to equip one (the six selects, collection/CosmeticsPanel.tsx, on the same store and
-                        `cosmetics` settings group as before, R633) beside the owned list from GET
-                        /api/cosmetics; collection/ holds the panels (OwnedCards, WalletPanel, TracksPanel,
-                        CosmeticsPanel) and their model; every one renders the server's answers and
-                        decides nothing (rule 7)
+                        reading for itself and saying why when its read fails, each track a filling bar
+                        (economy/FillBar.tsx); Cosmetics is the only place to equip one: the defaults every
+                        card wears (three selects, collection/CosmeticsPanel.tsx) and the playmat, backdrop
+                        and card back as preview tiles (collection/AccountCosmeticTiles.tsx), on the same
+                        store and `cosmetics` settings group as before (R633), beside the owned list from
+                        GET /api/cosmetics; a card of the Cards section opens large wearing its own picks
+                        (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
+                        as live previews, which equip on that card alone, kept on the device
+                        (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
+                        the account owns them (cards/ownedFullArt.ts); collection/ holds the panels
+                        (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel) and their model; every one
+                        renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
-routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other; the page never
-                        scrolls, its body does
+routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
+                        one "Odds & pity" link to /purchases (R1665000); a change in a panel has the next
+                        screen read the owned cosmetics again; the page never scrolls, its body does
+routes/purchases.tsx    /purchases (#1665, R1665000): the Purchases disclaimer, public, linked from the site
+                        footer (routes/SiteFooter.tsx) and the foot of /shop; with a session, the odds GET
+                        /api/packs and GET /api/cosmetic-packs state, the global roll's line (R1661001) and
+                        the account's pity counters, shown as the server answers them; a visitor sees the
+                        disclaimer and a link to sign in
+economy/                #1651: the economy's shared pieces: `wallet.ts`, the balance the Jlore pill shows
+                        (GET /api/wallet, or the balance a later answer carries, `announceWallet`; never a
+                        client sum); `JlorePill.tsx`, the pill in routes/nav.tsx's top bar and the
+                        landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
+                        to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
+                        filled bar's reward flown out one at a time; `OpeningBars.tsx`, the token bars an
+                        opening moved (its `bars`); `XpReveal.tsx` and `xp.ts`, a finished game's tracks,
+                        level by level with each level's rewards, and its quests, from the server's
+                        `economy` answer (the match and Duos results, a paid practice game's); `bars.ts`
+                        the pure stages; Reduce motion (the setting or the system's) shows every end state
+                        at once
 routes/lobby.css        the lobby's, the series screen's and its picker's tavern look, and the banner's pips
 routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlore, fill, the clears, give or
                         complete a quest, §14.9), shown
@@ -261,9 +285,12 @@ routes/DevTools.tsx     R1300000: a dev account's own tools on /account (XP, Jlo
                         its answer or refusal; /account's "Manage sign-in & account" shows every account
                         its account secret ID, hidden until asked for, with a copy button
 packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, §14.4; `PackOpening.tsx`, imported
-                        by routes/shop.tsx): the pity counters `GET /api/packs` states, shown once for every
-                        card pack, apart from the odds, then the packs held, the odds and the scene
-                        that opens one (`POST /api/packs/open`): a tear or swipe, the best rarity tinting the
+                        by routes/shop.tsx): the packs held, each a physical pack (`PackObject.tsx`, #1663: a
+                        foil wrapper with crimped seals, its set's emblem and colours, a sheen and a tilt
+                        that follow the pointer, a press and a tear, the shelf and the scene drawing the
+                        same object), and the scene that opens one (`POST /api/packs/open`), its token bars
+                        filling after (economy/OpeningBars.tsx); the pity counters and the odds are on
+                        /purchases, not here (R1665000); the scene: a tear or swipe, the best rarity tinting the
                         glow, cards turned one at a time (Epic and above on a hold), what each became, a
                         stinger and fx per rarity, skip-all, batch opening, Reduce motion showing the results
                         at once; the server decided every slot before anything animates (`packs.ts` holds the
@@ -271,15 +298,16 @@ packs/                  #1308: the card packs on /shop (R1580000, SPEC §14.3, �
 shop/                   #1309: spending what the economy pays, on /shop (R1580000) beside the opening
                         (`Shop.tsx`, `TokenPicker.tsx`, `CosmeticPacks.tsx`, imported by
                         routes/shop.tsx): the Jlore shop buys set and global packs at
-                        `GET /api/packs`' price (`POST /api/packs/buy`), the button disabled with the
-                        shortfall shown when the wallet (`GET /api/wallet`) is short; the token picker shows
-                        both token bars and the cycle's next step (`GET /api/tokens`), a card token browsing
+                        `GET /api/packs`' price (`POST /api/packs/buy`), each shelved as a PackObject that
+                        flies into the held count when bought, the button disabled with the shortfall shown
+                        when the wallet (`GET /api/wallet`) is short; the token picker shows both token
+                        bars as filling bars and the cycle's next step (`GET /api/tokens`), a card token browsing
                         unowned cards (`POST /api/tokens/redeem-card`) and a Rare/Epic token browsing unowned
                         cosmetics at its tier or below with a preview on the card (`POST
                         /api/tokens/redeem-cosmetic`); the cosmetic packs open through a simple reveal (`POST
-                        /api/cosmetic-packs/open`) with the Chase Shard bar and the odds of a slot and of the
-                        guaranteed one (`GET /api/cosmetic-packs`, R1339000) and the bar's
-                        Legendary-or-Mythic choice only when full (`POST /api/cosmetic-packs/chase`); every
+                        /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
+                        filling from the opening's `shardBefore` and, only when full, its reward moment: the
+                        Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every
                         refusal shows the server's reason verbatim and changes nothing; a buy, an opening,
                         a redemption or a chase that lands makes the other panels, the opening's included,
                         read the account again (`onChanged`, `revision`) (`shop.ts` holds the
@@ -334,7 +362,7 @@ duos/download.ts        a finished co-op replay's "Download JSON" (R1242000): th
 The landing page offers three doors — Play (to the `/play` hub, R1578000), Collection and Shop (#1577) — and no door to Play together, which the hub links and which lives at `/together` behind the gate. The replays list and the replay player offer
 "Share with a friend". The match board's rail says how many friends are watching while any are
 (`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
-snapshot's `watchers`). A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. On the Duos board:
+snapshot's `watchers`). A finished ladder match whose `view` frame says the daily Jlore cap held back the account's Jlore (`jloreCapped`, R1483000, kept by `game/net.ts` as the snapshot's `jloreCapped`, false when absent) shows "Daily Jlore reached" in its result panel (`result-daily-jlore`); the page works nothing out, and a seat is only ever told its own. The same frame carries what the result's write paid the seat (`economy`, kept by `game/net.ts`: each set track's XP before and after, each level it reached with its rewards, each quest it completed), which the result panel plays once it has come in (`economy/XpReveal.tsx` under `game/Result.tsx`'s `OnceRevealed`) and tells the Jlore pill of; the Duos result plays its own the same way. On the Duos board:
 
 - the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
   only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
@@ -396,7 +424,7 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   library never cross the worker boundary. A finished free game's snapshot adds `lastBoard`, the
   engine's `lastBoardFor(state, human)`; the controller keeps it on the device and sends it with the
   next start, as the human's seat's last board (R508). The AI's seat and a lesson never have one.
-- A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
+- A claim's answer (`net/practice.ts`) carries `jlore` as the server paid it and `jloreCapped` (R1483000): when the daily Jlore cap held some back, the result dialog's line keeps the paid amounts and adds "Daily Jlore reached" (`practice/earning.ts`). It also carries the `tracks` the game moved and the `quests` it completed, which the result dialog plays (`economy/XpReveal.tsx`). A seed the server refuses (the account holds `PRACTICE_SEEDS_OPEN_MAX` open ones) leaves the game played as before, earning nothing.
 - A free game in progress survives a reload (R668). After every answer the core writes its save
   to the worker's store, which never crosses to the page (the log names the AI's hidden cards); the
   controller remembers the setup when the game is dealt and forgets it when the game ends, and the

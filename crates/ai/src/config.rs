@@ -74,7 +74,11 @@ pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 pub struct AiSearch {
     /// Plays identical but for `zone` keep the lowest lane of each placement (candidates.rs
     /// `placement_key`: what stands beside the lane or the board's edge, and in the lane's four
-    /// zones), at most this many (#1014). 3 let a Tribute play's sets outgrow the lethal allowance.
+    /// zones), at most this many (#1014), everywhere but the search's root: the beam's deeper levels,
+    /// the lethal solver, the opponent's reply, decide's probe and the baselines. The root keeps every
+    /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
+    /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
+    /// 197-203, edge -0.015 (-0.078 to 0.048). 3 let a Tribute play's sets outgrow the lethal allowance.
     pub zone_variants: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
@@ -665,6 +669,14 @@ pub struct AiReply {
     /// Shield weight. Board-dependent kills only — the Cleave body itself stays priced by
     /// `AI_EVAL.keyword.cleave`.
     pub cleave_share: f64,
+    /// #1634: the static trader's lethal counts every attack it has left. When `lethal::ready_gap`
+    /// says the opponent's attacks still to come reach the seat's hero past its Taunts, every attack
+    /// on that hero is worth `AI_EVAL.win`, so the face goes first; false scores one hit at a time
+    /// (`reply_face_value`), as before.
+    pub open_lethal: bool,
+    /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
+    /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
+    pub defense_switches: i32,
 }
 
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
@@ -676,6 +688,14 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
+    // #1634: off. On, its screen, 400 games of improve-dev against the parent (82d7eb4b8), read
+    // 203-197, edge 0.015 (-0.002 to 0.032), which keeps nothing (training/improve.md, A screen); the
+    // training lanes may turn it on.
+    open_lethal: false,
+    // #1696: on. Its screen, 400 games of improve-dev against the parent (20b20f9ad), read 199-199 with
+    // deal 136 aborted at the action cap in both seatings (the parent aborts it against itself too),
+    // edge 0.0 (-0.057 to 0.057), every other game clean (training/improve.md, A screen); 0 turns it off.
+    defense_switches: 4,
 };
 
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).

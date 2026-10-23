@@ -13,11 +13,15 @@
 //! stand-ins for three turn stages. `preview.rs` is R1420's preview of a set that does not ship yet.
 //! `duos_scenario.rs` is #936's: a begun Duos game, every mulligan kept, round 1 open.
 //!
+//! `golden.rs` is the golden replay's pure half (§13.3, #1641), which the engine's `tests/golden.rs` and
+//! `cargo jackioh golden check` share. It is not globbed in: a caller names `golden::<item>`.
+//!
 //! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
 //! engine functions): a test names `effects::<verb>` or imports the verbs it uses.
 
 pub mod duos_scenario;
 pub mod glow;
+pub mod golden;
 pub mod invariants;
 pub mod preview;
 pub mod scenario;

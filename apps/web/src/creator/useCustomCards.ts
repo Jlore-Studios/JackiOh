@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CUSTOM_ID_PREFIX } from "@jackioh/engine/config";
 import type { CardDef, CardDefs, CustomCard } from "@jackioh/shared";
 
+import { readFailureOf } from "../net/gate.ts";
 import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts";
 import { customDef } from "../wire/validator.ts";
 
@@ -16,7 +17,8 @@ export type CustomCardsState =
   | { kind: "none" }
   | { kind: "loading" }
   | { kind: "ready"; cards: CustomCard[]; limit: number }
-  | { kind: "failed" };
+  /** The read failed; `retryAfterMs` is the wait a rate limit stated (R192), which Try again counts down (#1691). */
+  | { kind: "failed"; retryAfterMs?: number };
 
 /**
  * An active account's custom cards, read once per token and again on `reload`; `token` null reads
@@ -46,8 +48,10 @@ export function useCustomCards(
         const cards = Array.isArray(response.cards) ? response.cards : [];
         setLoaded({ token, state: { kind: "ready", cards, limit: response.limits.cards } });
       },
-      () => {
-        if (!cancelled) setLoaded({ token, state: { kind: "failed" } });
+      (cause: unknown) => {
+        if (cancelled) return;
+        const { retryAfterMs } = readFailureOf(cause);
+        setLoaded({ token, state: retryAfterMs === undefined ? { kind: "failed" } : { kind: "failed", retryAfterMs } });
       },
     );
     return () => {
@@ -56,6 +60,8 @@ export function useCustomCards(
   }, [token, generation]);
 
   const reload = useCallback(() => {
+    // A failed read shows loading until the answer, so Try again is not offered twice (and counts its own wait).
+    setLoaded((current) => (current !== null && current.state.kind === "failed" ? null : current));
     setGeneration((value) => value + 1);
   }, []);
   /** After a save or a delete: the list as the server now holds it, without a second read. */

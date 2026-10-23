@@ -6,8 +6,6 @@ export const statsTestid = {
   tabPlayers: "stats-tab-players",
   summaryTiles: "stats-summary-tiles",
   summaryTotalGames: "stats-summary-total-games",
-  summaryBestCard: "stats-summary-best-card",
-  summaryWorstCard: "stats-summary-worst-card",
   provisionalBanner: "stats-provisional-banner",
   fallbackToggle: "stats-fallback-toggle",
   searchInput: "stats-search-input",

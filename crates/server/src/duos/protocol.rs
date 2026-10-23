@@ -29,6 +29,7 @@ use crate::actor::protocol::{
     ClientMessage, MAX_FRAME_BYTES, MAX_NONCE_LENGTH, MalformedMessage, SERVER_NONCE_PREFIX, SocketErrorCode,
     parse_client_message,
 };
+use crate::economy::rewards::GameEconomy;
 
 // ---------------------------------------------------------------------------
 // Pings (S6, B39, B64)
@@ -304,11 +305,19 @@ pub enum DuosServerMessage {
     /// cap (`JLORE_GAMES_DAILY_CAP`) held back some or all of that seat's Jlore for it
     /// (R1483000). It is the seat's own economy, so a seat never gets the teammate's; false is left
     /// off the frame.
+    ///
+    /// `economy` is what the result's write paid the receiving seat's person (#1657), as the 1v1
+    /// `view` carries it (`actor::protocol::ServerMessage::View`): set once the result is written,
+    /// carried by every view of that seat from then on, never the teammate's. A write that finds the
+    /// result already there pays nothing and an actor rebuilt on a finished match has nothing to
+    /// send, so their frames leave it off.
     View {
         view: Box<DuosView>,
         legal: Vec<DuosActionBody>,
         #[serde(default, skip_serializing_if = "std::ops::Not::not")]
         jlore_capped: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        economy: Option<GameEconomy>,
     },
     /// §9.3: the nonce accepted and the log seq it was written at.
     Ack { nonce: String, seq: i64 },

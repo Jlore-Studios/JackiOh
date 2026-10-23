@@ -17,6 +17,8 @@
 //!   practice rates (held to the day's Jlore cap, [[R1483000]]), moving the account's quests as a
 //!   ladder game does ([[R1304001]]), and keeps the board it ended on, in a task of its own that
 //!   finishes even when the caller stops waiting.
+//!   The pay is one transaction, tried again up to `PRACTICE_PAY_ATTEMPTS` times when the store
+//!   fails it ([[R1688000]]); one that never lands answers an error and leaves the seed burned.
 //!   No transaction stays open across a check.
 //!   Every refusal answers 200 with `paid: false` and why, so the result screen can say it.
 //!
@@ -24,12 +26,12 @@
 //! `economy_off`. The page asks for a seed only for a game that can pay ([[R1303000]]).
 
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use jackioh_engine::{Action, Difficulty, PlayerId};
+use jackioh_engine::{Action, Difficulty, LastBoardEntry, PlayerId};
 
 use crate::actor::engine::{self, Pinned};
 use crate::api::collection::caller_profile;
@@ -37,11 +39,13 @@ use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, log_info, log_warn,
 };
 use crate::app::{App, now_ms};
-use crate::config::{PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX};
-use crate::db::store::LastBoardKind;
+use crate::config::{
+    PRACTICE_PAY_ATTEMPTS, PRACTICE_PAY_BACKOFF_MS, PRACTICE_SEED_TTL_SECONDS, PRACTICE_SEEDS_OPEN_MAX,
+};
+use crate::db::store::{LastBoardKind, StoreResult};
 use crate::economy::practice::{ClaimRefusal, ClaimedResult, Verified, verify};
 use crate::economy::quests::tally_seat;
-use crate::economy::rewards::{GameMode, GameSummary, pay_game_rewards};
+use crate::economy::rewards::{GameEconomy, GameMode, GameSummary, pay_game_rewards};
 use crate::economy::store::{PracticeDeck, PracticeSeed, PracticeSetup};
 
 /// An issue's status: the seed is a new resource.
@@ -142,9 +146,11 @@ pub async fn post_seed(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `POST /api/practice/claims` with `{ seed, result, log }` (`AuthLevel::Active`). 200
-/// `{ paid: true, jlore, xp, jloreCapped }` for a game that passed, the game's own pay, its Jlore
-/// short of the game's rate when the day's cap held some back (R1483000); 200
-/// `{ paid: false, reason }` for every refusal.
+/// `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` for a game that passed, the game's own
+/// pay, its Jlore short of the game's rate when the day's cap held some back (R1483000), each track
+/// it moved and each quest it completed (`economy::rewards::GameEconomy`, #1657); 200
+/// `{ paid: false, reason }` for every refusal; a 500 when every try at the pay fails, the seed burned
+/// all the same (R1688000).
 pub async fn post_claim(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let claim: ClaimRequest = body_of(&req.body, "a practice game's claim")?;
@@ -203,26 +209,18 @@ async fn settle(
         Err(reason) => return refused(reason),
     };
 
-    let won = verified.won;
-    let mut tx = app.db.begin(Some(&profile_id)).await?;
-    let paid = pay_game_rewards(
-        &mut tx,
-        &GameSummary {
-            mode: GameMode::Practice,
-            profile_id: profile_id.clone(),
-            player: verified.player,
-            won,
-            actions: verified.actions,
-            match_id,
-            at: now,
-            bot: false,
-            tally: tally_seat(verified.seat.as_ref(), verified.attacks, &app.catalog.defs),
-        },
-    )
-    .await?;
-    tx.last_boards_put(&profile_id, LastBoardKind::Practice, &verified.last_board, now)
-        .await?;
-    tx.commit().await?;
+    let summary = GameSummary {
+        mode: GameMode::Practice,
+        profile_id,
+        player: verified.player,
+        won: verified.won,
+        actions: verified.actions,
+        match_id,
+        at: now,
+        bot: false,
+        tally: tally_seat(verified.seat.as_ref(), verified.attacks, &app.catalog.defs),
+    };
+    let paid = pay_with_retries(&app, &summary, &verified.last_board).await?;
     Ok(json_response(
         200,
         json!({
@@ -230,8 +228,58 @@ async fn settle(
             "jlore": paid.jlore,
             "xp": paid.xp,
             "jloreCapped": paid.jlore_capped,
+            "tracks": paid.tracks,
+            "quests": paid.quests,
         }),
     ))
+}
+
+/// One try at a passed claim's pay ([[R1688000]]): its rewards and its board in one transaction,
+/// which a failure rolls back whole, so the try after it pays once.
+async fn pay(
+    app: &Arc<App>,
+    summary: &GameSummary,
+    last_board: &[LastBoardEntry],
+) -> StoreResult<GameEconomy> {
+    let mut tx = app.db.begin(Some(&summary.profile_id)).await?;
+    let paid = pay_game_rewards(&mut tx, summary).await?;
+    tx.last_boards_put(
+        &summary.profile_id,
+        LastBoardKind::Practice,
+        last_board,
+        summary.at,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(paid)
+}
+
+/// [[R1688000]]: [`pay`], tried up to `PRACTICE_PAY_ATTEMPTS` times, the first wait
+/// `PRACTICE_PAY_BACKOFF_MS` and each next one twice the last, as the match actor tries a result
+/// ([[R1437]]). Answers the last try's error when none lands; the seed stays burned.
+async fn pay_with_retries(
+    app: &Arc<App>,
+    summary: &GameSummary,
+    last_board: &[LastBoardEntry],
+) -> StoreResult<GameEconomy> {
+    let mut wait_ms = PRACTICE_PAY_BACKOFF_MS;
+    let mut attempt = 1;
+    loop {
+        let error = match pay(app, summary, last_board).await {
+            Ok(paid) => return Ok(paid),
+            Err(error) => error,
+        };
+        log_warn(
+            "practice.claim.payFailed",
+            json!({ "matchId": summary.match_id, "attempt": attempt, "message": error.to_string() }),
+        );
+        if attempt >= PRACTICE_PAY_ATTEMPTS {
+            return Err(error);
+        }
+        tokio::time::sleep(Duration::from_millis(u64::try_from(wait_ms).unwrap_or(0))).await;
+        wait_ms *= 2;
+        attempt += 1;
+    }
 }
 
 /// `verify` on the blocking pool under a permit, timed and logged. A panic (a setup the engine

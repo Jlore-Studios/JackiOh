@@ -1,15 +1,16 @@
 //! `cargo jackioh golden check` and `cargo jackioh golden bless [--seeds N]` (SURFACE §12, §13;
 //! part 23).
 //!
-//! `check` replays `crates/engine/tests/golden/games.jsonl` against the Rust engine with the same
-//! logic as `crates/engine/tests/golden.rs` (§13.3): for each line `create_game(args)`, `begin_game`,
-//! check `begin`; then for each step check `l` (the actor's legal actions, as a set) for the actor
+//! `check` replays `crates/engine/tests/golden/games.jsonl` against the Rust engine with
+//! `jackioh_engine::testkit::golden::replay_game`, the replay `crates/engine/tests/golden.rs` runs too
+//! (§13.3, #1641): for each line `create_game(args)`, `begin_game`, check `begin`; then for each step
+//! check `l` (the actor's legal actions, as a set) for the actor
 //! `a.playerId`, apply `a` with `reduce`, check `s` (`hash_state`), `v` (both seats' `view_for`) and
 //! `e` (the step's events); last, the ending and the length must be the line's `end`. A game's first
 //! mismatch names the seed, the step, which hash and the action, writes the Rust side's canonical
 //! text to `target/golden-diff/<seed>-<step>-<which>.json`, and prints the `record.ts --dump-step`
 //! command that writes TS's side next to it, run in a checkout of 05f5cfd (the last commit that has
-//! the TypeScript). The hotseat fixture must fold to "8784adae". Games run in
+//! the TypeScript). The hotseat fixture must fold to `golden::HOTSEAT_HASH`. Games run in
 //! parallel (rayon); the report lists every divergent game, earliest seed first. Exit 1 on any
 //! divergence.
 //!
@@ -39,15 +40,19 @@ use anyhow::{Context, Result, anyhow, bail};
 use clap::Subcommand;
 use rayon::prelude::*;
 use serde::Serialize;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use jackioh_cards::{CATALOG, register_all};
-use jackioh_engine::replay::{canonical, fnv1a32_utf16};
+use jackioh_engine::replay::fnv1a32_utf16;
 use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::choose_action;
+use jackioh_engine::testkit::golden::{
+    FORMAT_VERSION, Mismatch, check_hotseat, events_text, hashed_state_text, legal_text, replay_game,
+    seed_number, view_texts,
+};
 use jackioh_engine::{
-    Action, CardDef, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt,
-    PlayerId, Winner, begin_game, create_game, deckable, fold, hash_state, legal_actions, reduce, view_for,
+    Action, CardDef, CreateGameArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, Winner,
+    begin_game, create_game, deckable, hash_state, reduce,
 };
 
 use crate::fuzz::{
@@ -63,17 +68,8 @@ use crate::fuzz::{
 pub(crate) const GAMES_PATH: &str =
     concat!(env!("CARGO_MANIFEST_DIR"), "/../engine/tests/golden/games.jsonl");
 
-/// §13.3: the hotseat fixture, folded by `check` too.
-const HOTSEAT: &str = include_str!("../../engine/tests/golden/01-hotseat-full-game.json");
-
-/// The hotseat fixture's final state hash (`hotseat-replay.test.ts`'s `EXPECTED_HASH`, SURFACE §5.2).
-const HOTSEAT_HASH: &str = "8784adae";
-
 /// §13.3: where a divergence leaves the Rust side's canonical text (the workspace's `target/`).
 const DIFF_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../target/golden-diff");
-
-/// §13.3: the file format's version, each line's first key.
-const FORMAT_VERSION: u32 = 1;
 
 /// §13.1: seeds PLAIN_FIRST..=PLAIN_LAST are fuzz.test.ts's games.
 const PLAIN_FIRST: u32 = 1;
@@ -153,41 +149,8 @@ pub fn run(args: Args) -> Result<()> {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Hashing (§13.2, with §5.2's functions)
+// The texts `check` compares (§13.2, `golden`'s)
 // ---------------------------------------------------------------------------------------------
-
-/// §5.2 step 1: the state's canonical text as `hash_state` hashes it, without `applied` and `opening`.
-fn hashed_state_text(state: &GameState) -> String {
-    let mut value = serde_json::to_value(state).expect("a GameState serialises");
-    if let Some(object) = value.as_object_mut() {
-        object.remove("applied");
-        object.remove("opening");
-    }
-    canonical(&value)
-}
-
-/// The canonical text of both seats' views, p1 first.
-fn view_texts(state: &GameState) -> [String; 2] {
-    [PlayerId::P1, PlayerId::P2].map(|player| {
-        canonical(&serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises"))
-    })
-}
-
-fn events_text(events: &[GameEvent]) -> String {
-    canonical(&serde_json::to_value(events).expect("GameEvents serialise"))
-}
-
-/// §13.2's `l`: the actor's legal actions as a set — each action's canonical text, distinct, sorted
-/// by UTF-16 code unit (JS's default `sort`), joined by "\n".
-fn legal_text(state: &GameState, actor: PlayerId) -> String {
-    let mut lines: Vec<String> = legal_actions(state, actor)
-        .iter()
-        .map(|action| canonical(&serde_json::to_value(action).expect("an ActionBody serialises")))
-        .collect();
-    lines.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
-    lines.dedup();
-    lines.join("\n")
-}
 
 /// R1365000: this build's canonical text for one comparison `check` makes in a recorded game, with
 /// the state the text was read from: `s`, `v-p1`, `v-p2` and `e` after `step` (a step number, or
@@ -236,250 +199,23 @@ pub(crate) fn text_at(game: &Value, step: &str, which: &str) -> Result<Option<(S
 // check
 // ---------------------------------------------------------------------------------------------
 
-/// A game's first divergence from its trace.
-struct Mismatch {
-    seed: String,
-    /// `begin`, the 0-based step index, or `end`.
-    step: String,
-    /// `s`, `v-p1`, `v-p2`, `e`, `l`, `refused` (reduce refused the recorded action), `end`, or
-    /// `line` (the line itself is not a trace).
-    which: &'static str,
-    expected: String,
-    actual: String,
-    /// The recorded action, as JSON, for a step.
-    action: Option<String>,
-    /// Where the Rust side's canonical text was written, when there is one to write.
-    diff: Option<String>,
-}
-
-impl Mismatch {
-    fn report(&self) -> String {
-        let mut text = format!(
-            "seed {} step {}: `{}` expected {}, Rust has {}",
-            self.seed, self.step, self.which, self.expected, self.actual
-        );
-        if let Some(action) = &self.action {
-            text.push_str(&format!("\n    action: {action}"));
-        }
-        if let Some(diff) = &self.diff {
-            text.push_str(&format!("\n    Rust side: {diff}"));
-        }
-        if let Some(k) = seed_number(&self.seed) {
-            // A refusal is compared with the state the previous step left.
-            let step = match (self.which, self.step.parse::<usize>()) {
-                ("refused", Ok(0)) => "begin".to_string(),
-                ("refused", Ok(n)) => (n - 1).to_string(),
-                _ => self.step.clone(),
-            };
-            if step != "end" {
-                text.push_str(&format!(
-                    "\n    TS side:   in a checkout of 05f5cfd, the last commit with the TypeScript \
-                     (git worktree add ../jackioh-ts 05f5cfd, then pnpm install there):\
-                     \n               pnpm exec tsx scripts/golden/record.ts --seed {k} --dump-step {step}"
-                ));
-            }
-        }
-        text
-    }
-}
-
-/// The seed number `record.ts --seed` takes: the trailing number of `jackioh-fuzz-<k>` or
-/// `jackioh-fuzz-handicap-<k>`.
-fn seed_number(seed: &str) -> Option<u32> {
-    seed.rsplit('-').next().and_then(|tail| tail.parse::<u32>().ok())
-}
-
 /// §13.3: write the Rust side's canonical text where `record.ts --dump-step` writes TS's, and say
 /// where it went.
-fn write_diff(seed: &str, step: &str, which: &str, text: &str) -> String {
+fn write_diff(mismatch: &mut Mismatch) {
+    let Some(text) = &mismatch.text else {
+        return;
+    };
     let dir = Path::new(DIFF_DIR);
-    let path = dir.join(format!("{seed}-{step}-{which}.json"));
-    match fs::create_dir_all(dir).and_then(|()| fs::write(&path, format!("{text}\n"))) {
+    let path = dir.join(mismatch.diff_file());
+    let written = match fs::create_dir_all(dir).and_then(|()| fs::write(&path, format!("{text}\n"))) {
         Ok(()) => path.display().to_string(),
         Err(error) => format!("(could not write {}: {error})", path.display()),
-    }
-}
-
-/// The recorded hash at `key` (a string), or a description of what is there instead.
-fn recorded(snapshot: &Value, key: &str) -> String {
-    snapshot[key]
-        .as_str()
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("<no `{key}` in the line>"))
-}
-
-/// Checks `s`, `v` and `e` of one snapshot (`begin`, or the state a step left with its events).
-fn check_snapshot(
-    seed: &str,
-    step: &str,
-    action: Option<&str>,
-    snapshot: &Value,
-    state: &GameState,
-    events: &[GameEvent],
-) -> Result<(), Box<Mismatch>> {
-    let mismatch = |which: &'static str, expected: String, actual: String, text: &str| {
-        Box::new(Mismatch {
-            seed: seed.to_string(),
-            step: step.to_string(),
-            which,
-            expected,
-            actual,
-            action: action.map(str::to_string),
-            diff: Some(write_diff(seed, step, which, text)),
-        })
     };
-
-    let s = hash_state(state);
-    let expected = recorded(snapshot, "s");
-    if s != expected {
-        return Err(mismatch("s", expected, s, &hashed_state_text(state)));
-    }
-
-    for (index, (text, which)) in view_texts(state).into_iter().zip(["v-p1", "v-p2"]).enumerate() {
-        let hash = fnv1a32_utf16(&text);
-        let expected = snapshot["v"][index]
-            .as_str()
-            .map(str::to_string)
-            .unwrap_or_else(|| format!("<no `v[{index}]` in the line>"));
-        if hash != expected {
-            return Err(mismatch(which, expected, hash, &text));
-        }
-    }
-
-    let text = events_text(events);
-    let hash = fnv1a32_utf16(&text);
-    let expected = recorded(snapshot, "e");
-    if hash != expected {
-        return Err(mismatch("e", expected, hash, &text));
-    }
-    Ok(())
+    mismatch.diff = Some(written);
 }
 
 /// One game's replay: the number of steps replayed, or where it diverged.
 type Replayed = Result<usize, Box<Mismatch>>;
-
-/// Replays one parsed line of `games.jsonl` (§13.3). `Ok` carries the number of steps replayed.
-fn replay_game(seed: &str, game: &Value) -> Replayed {
-    let fail = |step: &str, which: &'static str, expected: String, actual: String| {
-        Box::new(Mismatch {
-            seed: seed.to_string(),
-            step: step.to_string(),
-            which,
-            expected,
-            actual,
-            action: None,
-            diff: None,
-        })
-    };
-    if game["v"].as_u64() != Some(u64::from(FORMAT_VERSION)) {
-        return Err(fail(
-            "begin",
-            "line",
-            format!("format version {FORMAT_VERSION}"),
-            game["v"].to_string(),
-        ));
-    }
-    let args: CreateGameArgs = match serde_json::from_value(game["args"].clone()) {
-        Ok(args) => args,
-        Err(error) => {
-            return Err(fail(
-                "begin",
-                "line",
-                "createGame's options".into(),
-                error.to_string(),
-            ));
-        }
-    };
-
-    let begun = begin_game(&create_game(&args));
-    if let Some(error) = begun.error {
-        return Err(fail(
-            "begin",
-            "refused",
-            "beginGame to set the game up".into(),
-            format!("an error: {error}"),
-        ));
-    }
-    let mut state = begun.state;
-    check_snapshot(seed, "begin", None, &game["begin"], &state, &begun.events)?;
-
-    let Some(steps) = game["steps"].as_array() else {
-        return Err(fail("begin", "line", "a `steps` array".into(), "none".into()));
-    };
-    for (n, step) in steps.iter().enumerate() {
-        let label = n.to_string();
-        let action_json = step["a"].to_string();
-        let action: Action = match serde_json::from_value(step["a"].clone()) {
-            Ok(action) => action,
-            Err(error) => {
-                return Err(Box::new(Mismatch {
-                    action: Some(action_json),
-                    ..*fail(&label, "line", "an Action".into(), error.to_string())
-                }));
-            }
-        };
-
-        // `l` for the actor, on the state the action is chosen in.
-        let text = legal_text(&state, action.player_id);
-        let hash = fnv1a32_utf16(&text);
-        let expected = recorded(step, "l");
-        if hash != expected {
-            return Err(Box::new(Mismatch {
-                action: Some(action_json),
-                diff: Some(write_diff(seed, &label, "l", &text)),
-                ..*fail(&label, "l", expected, hash)
-            }));
-        }
-
-        let result = reduce(&state, &action);
-        if let Some(error) = result.error {
-            return Err(Box::new(Mismatch {
-                action: Some(action_json),
-                diff: Some(write_diff(seed, &label, "refused", &hashed_state_text(&state))),
-                ..*fail(
-                    &label,
-                    "refused",
-                    "reduce to apply the recorded action".into(),
-                    format!("a refusal: {error}"),
-                )
-            }));
-        }
-        state = result.state;
-        check_snapshot(seed, &label, Some(&action_json), step, &state, &result.events)?;
-    }
-
-    let ending = json!({
-        "winner": state.result.as_ref().map(|result| result.winner),
-        "reason": state.result.as_ref().map(|result| result.reason),
-        "steps": steps.len(),
-    });
-    if ending != game["end"] {
-        return Err(fail("end", "end", game["end"].to_string(), ending.to_string()));
-    }
-    Ok(steps.len())
-}
-
-/// `hotseat-replay.test.ts`'s first assertion: the fixture folds with no refusal to its hash.
-fn check_hotseat() -> Result<String, String> {
-    let input: FoldArgs = serde_json::from_str(HOTSEAT)
-        .map_err(|error| format!("the hotseat fixture is not a fold's input: {error}"))?;
-    let replayed = fold(&input);
-    if let Some(first) = replayed.errors.first() {
-        return Err(format!(
-            "the hotseat fixture's fold refused {} action(s); first at nonce \"{}\": {}",
-            replayed.errors.len(),
-            first.nonce,
-            first.error
-        ));
-    }
-    let hash = hash_state(&replayed.state);
-    if hash != HOTSEAT_HASH {
-        return Err(format!(
-            "the hotseat fixture folds to {hash}, not {HOTSEAT_HASH} (SURFACE §5.2)"
-        ));
-    }
-    Ok(hash)
-}
 
 fn run_check(args: &CheckArgs) -> Result<()> {
     let text = fs::read_to_string(&args.file).with_context(|| format!("reading {}", args.file.display()))?;
@@ -504,6 +240,7 @@ fn run_check(args: &CheckArgs) -> Result<()> {
                         expected: "a JSON line".into(),
                         actual: error.to_string(),
                         action: None,
+                        text: None,
                         diff: None,
                     }));
                     return Some((seed, outcome));
@@ -516,7 +253,10 @@ fn run_check(args: &CheckArgs) -> Result<()> {
             if !args.seeds.is_empty() && !seed_number(&seed).is_some_and(|k| args.seeds.contains(&k)) {
                 return None;
             }
-            let outcome = replay_game(&seed, &game);
+            let outcome = replay_game(&seed, &game).map_err(|mut mismatch| {
+                write_diff(&mut mismatch);
+                mismatch
+            });
             Some((seed, outcome))
         })
         .collect();

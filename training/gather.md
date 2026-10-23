@@ -8,6 +8,13 @@ The lane is the data side of #636. The two other lanes improve the AI; this one 
 gathers the development games the card win rates (SPEC §9.11, R376–R378) are read from, so a patch has
 AI-against-AI figures for every card beside its live games, whether or not anyone ever trains on them.
 
+## Where the development games come from now
+
+Since #1676 they come from the learn lane's exports, which `cargo jackioh stats from-selfplay` files as
+development records (R1676000; `training/README.md`, The gather lane). The training box goes back to the
+night bot (#682's audit), so this lane no longer has a home there. What follows is its contract for any box
+that still runs `loop.sh gather`.
+
 ## What it plays
 
 `jackioh stats --series gather` (R378), in batches:

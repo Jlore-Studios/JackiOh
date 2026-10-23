@@ -1,16 +1,19 @@
 // The owned-cards panel (#1307, SPEC §14): a completion count per shipped set and, behind each
 // set's toggle, its cards. A card the account does not own is a locked silhouette that still
-// opens the inspect view, so a player sees what they are missing. The server's `GET
+// opens its view, so a player sees what they are missing. The server's `GET
 // /api/collection` says which are owned (CLAUDE.md rule 7); this counts the rows and draws them.
+// R1655000: a card opens in its own view (CardCosmeticsView), large, wearing its own picks, with
+// a strip of what it may wear; the card's text is one click from there.
 
 import { useId, useState, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, SetName } from "@jackioh/shared";
 
-import { CardDefsProvider, CardDetail, CardFace, closeInspect, faceModel } from "../cards/index.ts";
+import { CardDefsProvider, CardFace, closeInspect, faceModel } from "../cards/index.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse } from "../net/api.ts";
+import CardCosmeticsView from "./CardCosmeticsView.tsx";
 import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.ts";
 
 type Inspected = { def: CardDef; owned: boolean };
@@ -80,12 +83,13 @@ export default function OwnedCards({
         );
       })}
       {inspected === null ? null : (
-        <CardDetail
+        <CardCosmeticsView
+          key={inspected.def.id}
           def={inspected.def}
+          owned={inspected.owned}
           onClose={() => {
             setInspected(null);
           }}
-          meta={<span>{inspected.owned ? t("Owned") : t("Not owned yet")}</span>}
         />
       )}
     </CardDefsProvider>

@@ -152,7 +152,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641). Every test crate enables it as a dev-dependency |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests
@@ -160,7 +160,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 | Binary | Path | What |
 | --- | --- | --- |
 | `rules` | `tests/rules.rs`, `tests/rules/<x>.rs` | one module per rule area; needs `--features testkit` |
-| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash, and the hotseat fixture's fold to `8784adae` |
+| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash through `testkit::golden` (as `cargo jackioh golden check` replays them), and the hotseat fixture's fold to `8784adae`; needs `--features testkit` |
 | `export_config` | `tests/export_config.rs` | writes `engineConfig.ts` |
 
 A test that proves a ruling is named after it: `fn r58_…` (CLAUDE.md rule 3).

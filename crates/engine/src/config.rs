@@ -1,5 +1,8 @@
 //! Every rules constant lives here (BUILD §2). The engine never hard-codes these numbers.
-//! Rows SPEC §11 marks "decide" (R1, R2, R4, R5, R14, R26, R39) are flipped here in one line.
+//! Rows SPEC §11 marks "decide" (R1, R2, R4, R5, R14, R26, R39) are flipped here in one line. A
+//! constant the engine plays at one value only (R1, R9, R14, R36, R39) is asserted at compile time
+//! where its rule is played, so flipping it stops the build at the code to change, and
+//! `crates/tools/tests/acceptance.rs` fails on a constant here that no code reads (#1640).
 //!
 //! Port of `packages/engine/src/config.ts` (part 1's type freeze, SURFACE §6.4), values verbatim,
 //! plus (CLAUDE.md rule 9) the numbers TS stated outside `config.ts` (research A §4), moved here
@@ -748,8 +751,11 @@ pub const KY_TEST_REWARDS: KyTestRewards = KyTestRewards {
 pub const PAPAYA_ROWS: i32 = 4;
 /// R422: the most cells a curve is drawn through — four fix a cubic, the highest degree it may have.
 pub const PAPAYA_MAX_CELLS: i32 = 4;
-/// R831003: how many random cells each Discover of the curve offers (patch v0.3.10).
+/// R831003: how many random cells each Discover of the curve offers (patch v0.3.10): the Radiant
+/// face's, and both faces' through v0.4.0f.
 pub const PAPAYA_OFFERS: i32 = 3;
+/// R1704000: how many random cells each Discover of the curve offers on the base face.
+pub const PAPAYA_BASE_OFFERS: i32 = 2;
 
 // Classic+ #65 Two Grapes and #66 Vine of Grapes (SPEC §8.7, R382, BUILD §2).
 /// One Grape and its chance in percent (`GRAPE_ODDS`).

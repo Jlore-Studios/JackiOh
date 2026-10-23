@@ -63,7 +63,7 @@ mod tests {
     const BIG: &str = "core-025";
     /// A (1) 4/4 with no text.
     const FILLER: &str = "core-008";
-    /// (2) Trap: a lethal hit is redirected to the enemy hero, then heal and draw.
+    /// (2) Trap: a lethal hit is cancelled, then heal and draw.
     const TRAP: &str = "classic-052";
 
     fn game(seed: &str, p1: Value, p2: Value) -> Scenario {

@@ -251,7 +251,8 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, #1 Bob's Plan's
         // AI generated helpers.
         Tag::Ai => 10 + meditative_plus(4),
-        Tag::Plague => 17 + meditative(2),
+        // Classic+ #7 The House since #1704.
+        Tag::Plague => 18 + meditative(2),
         // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         Tag::Catalyst => 2 + meditative(3) + meditative_plus(1),

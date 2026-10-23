@@ -119,6 +119,8 @@ export const paths = {
   collectionSection: (section: "cards" | "cosmetics"): string => `/collection?section=${section}`,
   /** #1577, R1580000: the shop: buying and opening packs, pity, the tokens and the cosmetic packs. */
   shop: "/shop",
+  /** #1665, R1665000: the odds and pity of every pack, public like the terms; the account's counters need a session. */
+  purchases: "/purchases",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */

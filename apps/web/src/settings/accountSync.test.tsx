@@ -6,11 +6,21 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } from "../audio/settings.ts";
-import { DEFAULT_CARD_COSMETICS, readCosmetics, resetCosmeticsForTests, resolveCosmetic, writeCosmetics } from "../cards/cosmetics.ts";
+import {
+  DEFAULT_CARD_COSMETICS,
+  readCardPicks,
+  readCosmetics,
+  resetCosmeticsForTests,
+  resolveCosmetic,
+  writeCardFullArt,
+  writeCardPick,
+  writeCosmetics,
+} from "../cards/cosmetics.ts";
 import { readCardSettings, writeCardSettings } from "../cards/settings.ts";
 import { getFxSettings, resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import type { PlayerSettingsAccountCopy, PlayerSettingsGroup } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
+import { COSMETIC_KINDS } from "../wire/generated/cosmetics.ts";
 import {
   SETTINGS_SYNC_DEBOUNCE_MS,
   SETTINGS_SYNC_GRACE_MS,
@@ -298,6 +308,39 @@ describe("R634 after the load, each change is sent as it happens", () => {
     start(fakeApi(api.account));
     await settle();
     expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, table: "table-felt", cardBack: "card-back-blueprint" });
+  });
+
+  it("R1655000 the picks of each card stay on the device: never the cosmetics group, never a settings request", async () => {
+    const api = fakeApi();
+    start(api);
+    await settle();
+
+    await pass(1_000);
+    writeCardPick("core-004", "foil", "foil-rainbow");
+    writeCardPick("core-004", "border", "border-bone");
+    writeCardFullArt("core-004", true);
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);
+    expect(api.save).not.toHaveBeenCalled();
+    expect(readCardPicks("core-004")).toEqual({ foil: "foil-rainbow", border: "border-bone", fullArt: true });
+
+    // The account's group keeps exactly its six keys, and none of a card's picks rides it.
+    writeCosmetics({ foil: "foil-holo-sweep" });
+    await pass(SETTINGS_SYNC_DEBOUNCE_MS);
+    const sent = (api.save.mock.calls[0] as [string, Record<string, PlayerSettingsGroup>])[1];
+    expect(Object.keys(sent)).toEqual(["cosmetics"]);
+    expect(Object.keys(sent["cosmetics"]?.values ?? {}).sort()).toEqual([...COSMETIC_KINDS].sort());
+    expect(JSON.stringify(sent)).not.toMatch(/core-004|fullArt/);
+    expect(JSON.stringify(api.account)).not.toMatch(/core-004|fullArt/);
+
+    // A new device loads the account's copy and has no card's picks: they stay on the device they were made on.
+    for (const sync of started.splice(0)) sync.stop();
+    __resetSettingsSyncForTests();
+    localStorage.clear();
+    resetCosmeticsForTests();
+    start(fakeApi(api.account));
+    await settle();
+    expect(readCosmetics().foil).toBe("foil-holo-sweep");
+    expect(readCardPicks("core-004")).toEqual({});
   });
 
   it("R1295000 an id this client does not know comes in, is kept and draws as its kind's default", async () => {

@@ -405,6 +405,17 @@ describe("R654 public statistics route", () => {
     expect(banner).toHaveTextContent("Provisional statistics");
   });
 
+  it("R1646000 the fixed top keeps one summary tile, the patch's games, and no top or lowest card", async () => {
+    render(<StatsRoute />);
+
+    const tiles = await screen.findByTestId(statsTestid.summaryTiles, undefined, SLOW);
+    expect(tiles.children).toHaveLength(1);
+    expect(within(tiles).getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.2.0");
+    expect(tiles).not.toHaveTextContent("Top card");
+    expect(tiles).not.toHaveTextContent("Lowest card");
+    expect(tiles).not.toHaveTextContent("Spark Pup");
+  });
+
   it("R654 cards table displays 'not enough games' below sample floor and percentage when at or above sample floor", async () => {
     render(<StatsRoute />);
 

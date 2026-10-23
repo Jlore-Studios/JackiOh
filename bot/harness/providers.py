@@ -369,6 +369,8 @@ def _schedule(raw: Any, where: str) -> Schedule:
 
 
 def _headroom(raw: Any, where: str) -> dict[str, float]:
+    """`start_headroom`, the pool's or one subscription's: a share of each window, 0 included (a
+    build, a revision or a plan may start right up to that cap)."""
     if raw in (None, {}):
         return {}
     if not isinstance(raw, Mapping):
@@ -376,7 +378,13 @@ def _headroom(raw: Any, where: str) -> dict[str, float]:
     unknown = sorted(set(raw) - set(WINDOWS))
     if unknown:
         raise ConfigError(f"{where}: unknown windows {', '.join(unknown)}")
-    return {str(window): _fraction(share, f"{where}.{window}") for window, share in raw.items()}
+    shares = {}
+    for window, share in raw.items():
+        number = float(share)
+        if not 0.0 <= number < 1.0:
+            raise ConfigError(f"{where}.{window}: {share} is outside [0, 1)")
+        shares[str(window)] = number
+    return shares
 
 
 def _limits(raw: Any, where: str) -> Limits:
@@ -407,7 +415,7 @@ _PROVIDER_KEYS = {"enabled", "cli", "family", "model", "effort", "tier", "secret
                   "limits", "quiet_check", "roles", "env", "note", "login", "runs_on",
                   "self_check", "extra_models", "off_from", "off_reason", "usage_since",
                   "lanes", "build_last", "easy_first", "off_hours", "fix_effort",
-                  "review_effort"}
+                  "review_effort", "start_headroom"}
 
 
 def _tier(value: Any, where: str) -> str:
@@ -515,7 +523,9 @@ def _provider(name: str, raw: Any) -> Provider:
         tier=_tier(raw["tier"], f"{where}.tier"),
         secret=secret,
         schedule=_schedule(raw["schedule"], f"{where}.schedule"),
-        limits=_limits(raw["limits"], f"{where}.limits"),
+        limits=dataclasses.replace(
+            _limits(raw["limits"], f"{where}.limits"),
+            headroom=_headroom(raw.get("start_headroom"), f"{where}.start_headroom")),
         quiet_check=bool(raw.get("quiet_check", False)),
         roles=roles,
         env={str(k): str(v) for k, v in env.items()},
@@ -542,7 +552,9 @@ def parse(raw: Any) -> Pool:
         raise ConfigError(f"{PROVIDERS_PATH} must hold a JSON object")
     providers = {str(k): _provider(str(k), v) for k, v in dict(raw.get("providers") or {}).items()}
     headroom = _headroom(raw.get("start_headroom"), f"{PROVIDERS_PATH}.start_headroom")
-    providers = {k: dataclasses.replace(p, limits=dataclasses.replace(p.limits, headroom=headroom))
+    # A subscription's own `start_headroom` wins, window by window, over the pool's.
+    providers = {k: dataclasses.replace(p, limits=dataclasses.replace(
+                     p.limits, headroom={**headroom, **p.limits.headroom}))
                  if p.limits.stops else p for k, p in providers.items()}
     if not providers:
         raise ConfigError(f"{PROVIDERS_PATH}: at least one provider is required")

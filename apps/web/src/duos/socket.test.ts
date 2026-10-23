@@ -525,3 +525,49 @@ describe("R1483000 a finished view carries jloreCapped, absent while false", () 
     });
   });
 });
+
+// #1664: what the result paid the seat's person, on view frames
+
+/** What a result's write paid the seat: the track moved one level, and one quest completed. */
+const ECONOMY = {
+  jlore: 30,
+  xp: 540,
+  jloreCapped: false,
+  tracks: [
+    {
+      setId: "Core",
+      before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+      after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+      levels: [{ level: 2, rewards: { jlore: 25, setPacks: 2, cardTokens: 3 } }],
+    },
+  ],
+  quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+};
+
+describe("#1664 a finished view carries the seat's economy", () => {
+  it("#1664 reads the economy for the seat, none for a frame without it", () => {
+    const h = connected();
+    expect(h.client.snapshot().economy).toBeNull();
+    h.socket().deliver({ type: "view", view: { round: 1 }, legal: [] });
+    expect(h.client.snapshot().economy).toBeNull();
+
+    h.socket().deliver({ type: "view", view: { round: 2 }, legal: [], economy: ECONOMY });
+    expect(h.client.snapshot().economy).toEqual(ECONOMY);
+    h.socket().deliver({ type: "view", view: { round: 3 }, legal: [], economy: ECONOMY });
+    expect(h.client.snapshot().economy).toEqual(ECONOMY);
+    h.socket().deliver({ type: "view", view: { round: 4 }, legal: [] });
+    expect(h.client.snapshot().economy).toBeNull();
+    expect(parseDuosFrame(JSON.stringify({ type: "view", view: { round: 0 }, legal: [] }))).not.toHaveProperty("economy");
+    expect(parseDuosFrame(JSON.stringify({ type: "view", view: { round: 0 }, legal: [], economy: ECONOMY }))).toMatchObject({
+      type: "view",
+      economy: ECONOMY,
+    });
+  });
+
+  it("#1664 an economy that is not whole is no economy, and never costs the board its view", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: { round: 2 }, legal: [], economy: { ...ECONOMY, quests: 5 } });
+    expect(roundOf(h)).toBe(2);
+    expect(h.client.snapshot().economy).toBeNull();
+  });
+});

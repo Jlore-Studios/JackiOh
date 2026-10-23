@@ -63,11 +63,14 @@ one redaction (R1184002).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks) on every determinization, and plays the first action of the
-best mean. It re-plans after every action. An action the true state refuses (a cost no determinization
-could see) is never submitted: `submitted` sends the first action of the next finalist the true state
-accepts, best mean first, with the search's reason, and only when none is accepted falls back
-(`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other legal action (#1575).
+it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
+its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
+re-plans after every action. Its root tries a play in every distinct placement; deeper levels, the
+lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). An action the true state
+refuses (a cost no determinization could see) is never submitted: `submitted` sends the first action of
+the next finalist the true state accepts, best mean first, with the search's reason, and only when none
+is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other
+legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
@@ -123,9 +126,10 @@ reads `shaped_weight` (`mulligan_keep_shaped`).
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
 and both tables from the reports of record (`training/history/sweep-<date>.md`, the output of `--report`,
 oldest first), and `cargo jackioh sweep --check` and a `jackioh-tools` test fail on any difference.
-A card takes the row of the latest report that lists it, in either table (R1186000); `SHADOW_BAN`
-keeps the Meditative and Meditative+ rows, less `SHADOW_UNBANNED`, the unban lane's removals (`--write`
-takes none out but those). The ban governs AI deck
+A card takes the row of the latest report that lists it, in either table (R1186000), and none when the
+latest report to sweep it cleared it (R1675000); `SHADOW_BAN` keeps the Meditative and Meditative+ rows,
+less `SHADOW_UNBANNED`, the unban lane's removals (`--write` takes none out but those and the cleared).
+The ban governs AI deck
 building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
 Meditative cards only, at most half of the set (R732000), and since #1186 Meditative+ cards too, each
 set held to its own half (R1186000): no sweep, lane or person adds a card of an
@@ -174,6 +178,12 @@ knows nothing of cards or sets: it keeps meaning the same when the AI improves o
 arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
 the same way, and the skill-to-Elo curve is measured with the arena.
 
+`MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, written beside the config's
+other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps (R433, R417,
+R564, R678), and `MatchConfig::fold_args` folds a record with all of them (#1697). Unset, a game is
+created, played and folded exactly as before. No gate sets it; `SweepOptions.setup` opts a sweep in,
+the same inputs in seat order in every game.
+
 ## Development runs for the card statistics (R378)
 
 `dev_game_config` and `dev_game_record` deal and play game n of a development run as All Random
@@ -183,6 +193,8 @@ record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`
 `forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
 seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
+`DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
+record stays a pure function of its number.
 
 ## The learned evaluation's features (#466, #1006)
 
@@ -272,9 +284,9 @@ pub fn beam_search_with(det, seat, counter, budget, order: MoveOrder, prior: &Po
   rule, else `hidden`), where it lands and the class of what it aims at. No key holds an instance, hero
   or prompt id. Its score is the sum of its keys' weights; a key the table lacks adds nothing.
 - `policy_label` is what `cargo jackioh positions --policy` writes on each decision row: the keys of
-  every candidate decide's probe lists there and which one was played. `src/policy/weights.json`
-  records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails on another version);
-  `build.rs` turns it into constant slices, data at compile time (rule 4).
+  every candidate the search's root lists on decide's probe world and which one was played.
+  `src/policy/weights.json` records the `POLICY_KEYS_VERSION` and catalog it was fitted on (a test fails
+  on another version); `build.rs` turns it into constant slices, data at compile time (rule 4).
 
 ## Duos (§13.7)
 

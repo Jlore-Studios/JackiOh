@@ -32,7 +32,7 @@ use jackioh_engine::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::candidates::candidate_actions;
+use crate::candidates::root_candidate_actions;
 use crate::config::{AI_SEARCH, POLICY_RANK_CAP};
 use crate::determinize::{DeterminizeOptions, determinize};
 use crate::observe::redact;
@@ -260,9 +260,10 @@ pub struct PolicyLabel {
     pub chosen: Option<usize>,
 }
 
-/// R1171000: the label of `played` at `state` for `seat`. The candidates are decide's own, listed on
-/// its probe world (`AI_SEARCH.probe_seed`), so a replay of the log gives the same label; their keys
-/// read `redact(state, seat)` alone. End Turn has no rank; every other move is ranked in that order.
+/// R1171000: the label of `played` at `state` for `seat`. The candidates are the search root's
+/// (`root_candidate_actions`, #1635), listed on decide's probe world (`AI_SEARCH.probe_seed`), so a
+/// replay of the log gives the same label; their keys read `redact(state, seat)` alone. End Turn has no
+/// rank; every other move is ranked in that order.
 pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> PolicyLabel {
     let view = redact(state, seat);
     let probe = determinize(
@@ -271,7 +272,7 @@ pub fn policy_label(state: &GameState, seat: PlayerId, played: &ActionBody) -> P
         &mut Rng::new(AI_SEARCH.probe_seed, 0),
         DeterminizeOptions::default(),
     );
-    let moves = candidate_actions(&probe, seat);
+    let moves = root_candidate_actions(&probe, seat);
     let mut rank = 0;
     let candidates = moves
         .iter()

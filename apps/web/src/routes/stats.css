@@ -55,12 +55,6 @@
   color: var(--text, #fff);
 }
 
-.stats-summary-highlight {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--accent, #60a5fa);
-}
-
 /* Provisional banner */
 .stats-provisional-banner {
   display: flex;
@@ -737,9 +731,5 @@
   .stats-drilldown-body {
     flex-direction: column;
     align-items: center;
-  }
-
-  .stats-summary-tiles {
-    grid-template-columns: 1fr 1fr;
   }
 }

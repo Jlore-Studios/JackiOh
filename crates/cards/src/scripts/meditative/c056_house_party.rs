@@ -1,4 +1,4 @@
-//! M #56 House Party (SPEC §8.8 row 56): (3) Spell, Common.
+//! M #56 House Party (SPEC §8.8 row 56): (4) Spell, Common (3 through v0.4.0f).
 //!   Base:    "Fill your board with Right-house defenders."
 //!   Radiant: "Fill your board with Radiant Right-house defenders."
 //! Engine: §7's fill with core-003 Right-house defender (R64), a Locked zone included (R1136000),
@@ -43,6 +43,29 @@ mod tests {
         (1..=5)
             .map(|lane| s.unit(player, lane).map(|unit| unit.def_id.clone()))
             .collect()
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn costs_4_refused_with_3_mana() {
+            let mut s = scenario(json!({ "p1": { "hand": [PARTY, FILLER] }, "p2": { "hand": [FILLER] } }));
+            crate::expect_costs(&mut s, PARTY, 4, json!({}));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn costs_4_refused_with_3_mana() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [{ "def": PARTY, "radiant": true }, FILLER] },
+                "p2": { "hand": [FILLER] },
+            }));
+            crate::expect_costs(&mut s, PARTY, 4, json!({}));
+        }
     }
 
     #[test]

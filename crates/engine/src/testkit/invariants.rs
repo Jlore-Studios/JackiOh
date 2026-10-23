@@ -23,6 +23,8 @@
 //!     destroyed the Unit its declared attack targeted (`destroyed` naming it the killer, R42) and is
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
+//!     A `redirected` attack targets the Unit it was re-aimed at, where its combat is fought (R1122;
+//!     fuzz seed 9123 of the handicapped wave, #1645).
 //!
 //! The eight checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
@@ -74,7 +76,9 @@
 //!      fuzz's first run found `view_for` naming a passed card's draw to the passer's opponent (R1074000).
 //!      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
-//!      (R227) once that card is public, R177's mark on the old id notwithstanding.
+//!      (R227) once that card is public, R177's mark on the old id notwithstanding. An empty id names
+//!      no card: a Cry run out of a graveyard runs with none (R127), so the `chaosRolled` its Call to
+//!      Chaos sends carries `""` beside the definition (R436; fuzz seed 7232 of the handicapped wave, #1645).
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
 //!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
 //!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
@@ -92,7 +96,8 @@
 //!      lacks is reduced on a copy without the action history (as `scorer::dry_run_base` leaves it:
 //!      nothing a refusal reads is in it), and each accepted is reported. Not probed: kinds never listed by design (R345, R923000, R79), and `play` and a
 //!      well-formed `answer` (R90's bound lists a slice, #992); a malformed answer is the fuzz's
-//!      `malformed-answer` probe (`malformed_answers`, #1574). Under a Mayor (R1200) a named target is
+//!      `malformed-answer` probe (`malformed_answers`, #1574), and a listed play, activation or mulligan
+//!      with one choice made impossible its `malformed-action` probe (`malformed_actions`, #1694). Under a Mayor (R1200) a named target is
 //!      refused. Its first run, every state of seeds 1–1000 of both waves (2026-10-18), found nothing.
 //!      `I8_GATE_STRIDE` is how often the 1,000-seed waves run it.
 //!
@@ -109,14 +114,17 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
-use crate::config::WINDFURY_ATTACKS;
+use crate::config::{MIN_PLAGUE_PAYMENT, WINDFURY_ATTACKS};
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
+use crate::play_choices::PlayAction;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
+use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
     Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
-    Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, PromptKind, Selection,
-    Team, TuningChange, ZoneName, has_keyword, opponent_of,
+    Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind,
+    RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, ZoneChoice, ZoneName, has_keyword,
+    opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -260,6 +268,12 @@ struct Lineage {
     in_hand: IndexMap<String, PlayerId>,
 }
 
+/// The card an event's id field names. R127: a Cry run out of a graveyard runs with no card, and the
+/// `chaosRolled` it sends names none by an empty `instanceId` (R436), which is no card's id.
+fn card_id(value: Option<&Value>) -> Option<&str> {
+    value.and_then(Value::as_str).filter(|id| !id.is_empty())
+}
+
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut next: IndexMap<String, String> = IndexMap::new();
     let mut unread: IndexSet<String> = IndexSet::new();
@@ -270,7 +284,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut ceased: IndexSet<String> = IndexSet::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
-            let Some(id) = id.and_then(Value::as_str) else {
+            let Some(id) = card_id(id) else {
                 return;
             };
             let tied = ties.entry(id.to_string()).or_default();
@@ -303,7 +317,7 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             );
             tie(&mut ties, object.get("newInstanceId"), &[object.get("toDefId")]);
             tie(&mut ties, object.get("resultInstanceId"), &[object.get("defId")]);
-            let Some(id) = id.and_then(Value::as_str) else {
+            let Some(id) = card_id(id) else {
                 return;
             };
             if let (Some(kind), Some(def)) = (
@@ -1141,6 +1155,183 @@ pub fn malformed_answers(
     out
 }
 
+/// The malformed-action probe's variants (#1694), each named in its failure.
+pub const UNOFFERED_TARGET_ACTION: &str = "unoffered-target";
+pub const UNOFFERED_MODE_ACTION: &str = "unoffered-mode";
+pub const UNOFFERED_ZONE_ACTION: &str = "unoffered-zone";
+pub const NEGATIVE_X_ACTION: &str = "negative-x";
+pub const UNOFFERED_TRIBUTE_ACTION: &str = "unoffered-tribute";
+pub const UNOFFERED_PLAGUE_ACTION: &str = "unoffered-plague";
+pub const UNOFFERED_REVEAL_ACTION: &str = "unoffered-reveal";
+pub const UNOFFERED_ABILITY_ACTION: &str = "unoffered-ability";
+pub const UNOFFERED_POWER_TARGET_ACTION: &str = "unoffered-power-target";
+pub const UNDEALT_KEEP_ACTION: &str = "undealt-keep";
+pub const ANSWERED_MULLIGAN_ACTION: &str = "answered-mulligan";
+/// The mode `unoffered-mode` names: no card declares it.
+const UNOFFERED_MODE: &str = "i8-unoffered-mode";
+/// The ability `unoffered-ability` names: no card has it.
+const UNOFFERED_ABILITY: &str = "i8-unoffered-ability";
+/// The lane `unoffered-zone` names: a row's zones are numbered from 1 (§3.2), so no row has it.
+const UNOFFERED_LANE: i32 = 0;
+/// The X `negative-x` chooses: an X is never negative (§2.3, R348, `play_choices::why_x_refused`).
+const NEGATIVE_X: i32 = -1;
+/// The timing `unoffered-reveal` asks for: since patch v0.3.7 a card is set face-down by its Cloaked
+/// alone (R783004, R1044), so `alt_play::face_down_options` offers no card this one.
+const UNOFFERED_REVEAL: RevealAt = RevealAt::EndOfThisTurn;
+
+/// `picks` with its first replaced by `unoffered`, or `unoffered` alone when there are none.
+fn with_unoffered<T: Clone>(picks: Option<&[T]>, unoffered: T) -> Vec<T> {
+    let mut out: Vec<T> = picks.unwrap_or_default().to_vec();
+    match out.first_mut() {
+        Some(first) => *first = unoffered,
+        None => out.push(unoffered),
+    }
+    out
+}
+
+/// #1694: `chosen`, an action `legal_actions` lists `player`, with one declared choice made impossible,
+/// each with the seat that sends it: a `play` naming a target, a mode, a zone, a Tribute, a Plague source
+/// or a face-down timing nothing offers, or a negative X (§10.5 step 1, R81, R90,
+/// `play_choices::why_choices_refused`, R454); an `activate` naming an ability the card lacks, a target,
+/// a mode or a Tribute nothing offers, and its `activatePower` alias aimed at nothing (R384,
+/// `activate::why_activate_refused`); a `mulligan` keeping a card the seat was not dealt, and a second
+/// answer from the other seat once it has answered (R265, `setup::why_mulligan_refused`). Each is
+/// impossible by construction, never merely unlisted, since R90's bound lists only a slice of the legal
+/// combinations. Empty for any other action (an answer is `malformed_answers`').
+pub fn malformed_actions(
+    state: &GameState,
+    player: PlayerId,
+    chosen: &ActionBody,
+) -> Vec<(&'static str, PlayerId, ActionBody)> {
+    let unoffered_pick = || Selection::Instance {
+        instance_id: UNOFFERED_INSTANCE_ID.to_string(),
+    };
+    let unoffered_id = || UNOFFERED_INSTANCE_ID.to_string();
+    let mut out: Vec<(&'static str, PlayerId, ActionBody)> = Vec::new();
+    if let Some(play) = PlayAction::from_body(chosen) {
+        let mut push = |name: &'static str, forged: PlayAction| out.push((name, player, forged.into_body()));
+        push(
+            UNOFFERED_TARGET_ACTION,
+            PlayAction {
+                targets: Some(with_unoffered(play.targets.as_deref(), unoffered_pick())),
+                ..play.clone()
+            },
+        );
+        push(
+            UNOFFERED_MODE_ACTION,
+            PlayAction {
+                modes: Some(with_unoffered(play.modes.as_deref(), UNOFFERED_MODE.to_string())),
+                ..play.clone()
+            },
+        );
+        push(
+            UNOFFERED_ZONE_ACTION,
+            PlayAction {
+                zone: Some(ZoneChoice {
+                    row: play.zone.map_or(Row::Units, |zone| zone.row),
+                    lane: UNOFFERED_LANE,
+                }),
+                ..play.clone()
+            },
+        );
+        // R43: an X a cost hook fixes is ignored whatever the play names, so only a chosen X is forged.
+        if play.x.is_some() {
+            push(
+                NEGATIVE_X_ACTION,
+                PlayAction {
+                    x: Some(NEGATIVE_X),
+                    ..play.clone()
+                },
+            );
+        }
+        push(
+            UNOFFERED_TRIBUTE_ACTION,
+            PlayAction {
+                tributes: Some(with_unoffered(play.tributes.as_deref(), unoffered_id())),
+                ..play.clone()
+            },
+        );
+        push(
+            UNOFFERED_PLAGUE_ACTION,
+            PlayAction {
+                plague: Some(PlagueSpend {
+                    from: unoffered_id(),
+                    tokens: MIN_PLAGUE_PAYMENT,
+                }),
+                ..play.clone()
+            },
+        );
+        push(
+            UNOFFERED_REVEAL_ACTION,
+            PlayAction {
+                face_down: Some(UNOFFERED_REVEAL),
+                ..play
+            },
+        );
+    }
+    if let Some(activate) = ActivateAction::from_body(chosen) {
+        let mut push =
+            |name: &'static str, forged: ActivateAction| out.push((name, player, forged.into_body()));
+        push(
+            UNOFFERED_ABILITY_ACTION,
+            ActivateAction {
+                ability: Some(UNOFFERED_ABILITY.to_string()),
+                ..activate.clone()
+            },
+        );
+        push(
+            UNOFFERED_TARGET_ACTION,
+            ActivateAction {
+                targets: Some(with_unoffered(activate.targets.as_deref(), unoffered_pick())),
+                ..activate.clone()
+            },
+        );
+        push(
+            UNOFFERED_MODE_ACTION,
+            ActivateAction {
+                modes: Some(with_unoffered(
+                    activate.modes.as_deref(),
+                    UNOFFERED_MODE.to_string(),
+                )),
+                ..activate.clone()
+            },
+        );
+        push(
+            UNOFFERED_TRIBUTE_ACTION,
+            ActivateAction {
+                tributes: Some(with_unoffered(activate.tributes.as_deref(), unoffered_id())),
+                ..activate.clone()
+            },
+        );
+        out.push((
+            UNOFFERED_POWER_TARGET_ACTION,
+            player,
+            ActionBody::ActivatePower {
+                instance_id: activate.instance_id.clone(),
+                targets: Some(with_unoffered(activate.targets.as_deref(), unoffered_pick())),
+            },
+        ));
+    }
+    if let ActionBody::Mulligan { keep } = chosen {
+        out.push((
+            UNDEALT_KEEP_ACTION,
+            player,
+            ActionBody::Mulligan {
+                keep: with_unoffered(Some(keep.as_slice()), unoffered_id()),
+            },
+        ));
+        let other = opponent_of(player);
+        if state.mulligan.is_some() && !crate::setup::mulligan_owed(state).contains(&other) {
+            out.push((
+                ANSWERED_MULLIGAN_ACTION,
+                other,
+                ActionBody::Mulligan { keep: Vec::new() },
+            ));
+        }
+    }
+    out
+}
+
 /// The turn and stint of an instance's latest declared attack, and how many it has declared in them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct AttackMark {
@@ -1519,6 +1710,20 @@ impl InvariantMonitor {
                         && killer_id.as_deref() == Some(attack.attacker_id.as_str())
                     {
                         attack.killed = true;
+                    }
+                }
+                GameEvent::Redirected {
+                    what: RedirectWhat::Attack,
+                    from_id,
+                    to_id,
+                    ..
+                } => {
+                    // R1122: a redirected attack is fought at the Unit it was re-aimed at, so that Unit is
+                    // the defender a Classic Golem must kill to ready its transform (R424, R42).
+                    if let Some(attack) = self.attack.as_mut()
+                        && attack.target_id == *from_id
+                    {
+                        attack.target_id = to_id.clone();
                     }
                 }
                 GameEvent::KeywordGranted {

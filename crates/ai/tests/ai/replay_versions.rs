@@ -4,7 +4,7 @@
 //! the game showed; a version the build does not carry is `earlier_patch`, and a wrong final hash
 //! `rules_changed`.
 
-use jackioh_ai::{MatchConfig, MatchHooks, SeatController, play_match};
+use jackioh_ai::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
 use jackioh_engine::config::REPLAY_PAGE_STEPS;
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, CardDefs, DECK_SIZE, IndexMap, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerView,
@@ -51,6 +51,7 @@ fn r767000_a_practice_game_on_version_n_replays_step_for_step_after_a_patch_to_n
                 handicaps: Some(handicaps.clone()),
                 controllers: PerPlayer::new(SeatController::Greedy, SeatController::Random),
                 max_actions: Some(120),
+                setup: MatchSetup::default(),
             },
             &mut MatchHooks::default(),
         );

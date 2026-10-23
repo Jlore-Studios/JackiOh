@@ -8,6 +8,7 @@ import { useMemo, type ReactElement } from "react";
 
 import type { CardCost, CardDef, CardDefs } from "@jackioh/shared";
 
+import { TryAgainButton } from "../auth/AccountError.tsx";
 import { faceModel, useInspectTrigger } from "../cards/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -52,14 +53,22 @@ export type DeckPreviewProps = {
   defs: CardDefs | null;
   /** The catalog could not be read, so there is nothing to wait for. */
   defsFailed: boolean;
+  /** #1691: asks for the catalog again; offered beside the failure when given. */
+  onRetry?: () => void;
 };
 
-export function DeckPreview({ title, identity, cards, defs, defsFailed }: DeckPreviewProps): ReactElement {
+export function DeckPreview({ title, identity, cards, defs, defsFailed, onRetry }: DeckPreviewProps): ReactElement {
   let body: ReactElement | null = null;
   if (cards !== null && defs === null) {
     body = (
       <p className="deck-preview__status">
         {defsFailed ? t("The card list could not be loaded; the deck still plays.") : t("Loading the card list…")}
+        {defsFailed && onRetry !== undefined ? (
+          <>
+            {" "}
+            <TryAgainButton onRetry={onRetry} testId={practiceTestid.defsRetry} />
+          </>
+        ) : null}
       </p>
     );
   } else if (cards !== null && defs !== null) {

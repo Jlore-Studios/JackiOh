@@ -8,8 +8,8 @@
 // client no longer reads one, SURFACE §11.3).
 // Nothing here computes legality; that is the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import { registeredCatalog } from "@jackioh/engine";
 import type { ActionBody } from "@jackioh/shared";
@@ -20,6 +20,7 @@ import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
+import { resultRevealMs } from "../game/Result.tsx";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate } from "../net/navigate.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
@@ -623,10 +624,17 @@ describe("the match screen's ranks (R604, R612)", () => {
     const banner = await screen.findByTestId("match-ranks");
     const full = banner.querySelector(".match-ranks__full");
     expect(full).toHaveTextContent("Ranked match");
-    expect(full).toHaveTextContent("Normal Grape III · 1/3 pips");
+    expect(full).toHaveTextContent("Normal Grape III");
     const short = banner.querySelector(".match-ranks__short");
-    expect(short).toHaveTextContent("Normal III 1/3");
-    expect(short).toHaveTextContent("Raisin 2/5");
+    expect(short).toHaveTextContent("Normal III");
+    expect(short).toHaveTextContent("Raisin");
+    // #1650: a small crest beside each seat's words on both lines, which carry no pips or placements words.
+    for (const name of ["Normal Grape III · 1/3 pips", "Raisin · 2/5 placements"]) {
+      const crests = within(banner).getAllByRole("img", { name, hidden: true });
+      expect(crests).toHaveLength(2);
+      for (const crest of crests) expect(crest).toHaveAttribute("data-size", "small");
+    }
+    expect(banner.textContent).not.toMatch(/pips|placements/);
     const names = [...(short?.querySelectorAll("bdi.username") ?? [])];
     expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
   });
@@ -721,6 +729,94 @@ describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
       expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
       cleanup();
     }
+  });
+});
+
+describe("the XP reveal on a finished match (#1664)", () => {
+  const finished = baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } });
+  /** What the result's write paid the account: a track moved one level, a quest completed. */
+  const economy = {
+    jlore: 30,
+    xp: 540,
+    jloreCapped: false,
+    tracks: [
+      {
+        setId: "Core",
+        before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+        after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+        levels: [{ level: 2, rewards: { jlore: 25, setPacks: 2, cardTokens: 3 } }],
+      },
+    ],
+    quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+  };
+
+  function push(view: ReturnType<typeof baseView>, extra: Record<string, unknown> = {}): void {
+    act(() => {
+      live().onmessage?.({ data: JSON.stringify({ type: "view", view, ...extra }) });
+    });
+  }
+
+  /** `announceWallet`'s event, counted: the pill reads the wallet again for each. */
+  function watchWallet(): () => number {
+    let count = 0;
+    const onChanged = (): void => {
+      count += 1;
+    };
+    window.addEventListener("jackioh:wallet-changed", onChanged);
+    onTestFinished(() => {
+      window.removeEventListener("jackioh:wallet-changed", onChanged);
+    });
+    return () => count;
+  }
+
+  it("#1664 plays the tracks and lists the quests under the result once the server's economy arrives and the panel is in", () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const announced = watchWallet();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    // The result lands first; the economy comes with the view that follows its write.
+    push(finished);
+    expect(screen.getByTestId("result-back")).toBeInTheDocument();
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+    expect(announced()).toBe(0);
+
+    push(finished, { economy });
+    expect(announced()).toBe(1);
+    // The panel waits out the effects layer's Victory, and the bars wait for it: they play where they are seen.
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "false");
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(resultRevealMs());
+    });
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "true");
+    expect(screen.getByTestId("xp-reveal-bar-Core")).toHaveTextContent("Core track");
+    expect(screen.getByTestId("xp-reveal-level-Core")).toHaveAttribute("data-level", "1");
+    expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("Win 3 games");
+    expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("80 Jlore · 4,000 XP");
+    expect(announced()).toBe(1);
+
+    // Every later view of the seat carries it: the bars play on and the pill is told once.
+    push(finished, { economy });
+    expect(screen.getAllByTestId("xp-reveal")).toHaveLength(1);
+    expect(announced()).toBe(1);
+  });
+
+  it("#1664 shows nothing, and tells the pill nothing, for a match that paid no economy", async () => {
+    const announced = watchWallet();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ view: finished });
+    expect(await screen.findByTestId("result-back")).toBeInTheDocument();
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+    expect(announced()).toBe(0);
+  });
+
+  it("#1664 an economy on a game still being played shows no bars", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ economy });
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
   });
 });
 

@@ -45,6 +45,9 @@ import type { DuosResult } from "../wire/generated/DuosResult.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { Team } from "../wire/generated/Team.ts";
+import { announceWallet } from "../economy/wallet.ts";
+import XpReveal from "../economy/XpReveal.tsx";
+import type { GameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
 import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -71,6 +74,8 @@ export type DuosBoardProps = {
   error?: string | null;
   /** R1483000: the server's per-seat flag for whether the daily cap held this seat's pay back; dev and replay pass false. */
   jloreCapped: boolean;
+  /** #1664: what the result paid this seat's person, from the server's last view; dev, replay and a game it paid nothing pass none. */
+  economy?: GameEconomy | null;
   /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
   replay?: boolean;
 };
@@ -196,12 +201,14 @@ function ConcedeControl({ view, live, onConcede }: { view: DuosView; live: boole
 function ResultPanel({
   view,
   jloreCapped,
+  economy,
   onShowBoard,
   onWatchReplay,
   onLeave,
 }: {
   view: DuosView;
   jloreCapped: boolean;
+  economy: GameEconomy | null;
   onShowBoard: () => void;
   onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
@@ -217,6 +224,8 @@ function ResultPanel({
           {t("Daily Jlore reached")}
         </p>
       ) : null}
+      {/* #1664: the tracks the game moved, level by level with their rewards, and the quests it completed. */}
+      {economy === null ? null : <XpReveal economy={economy} />}
       <div className="row duos-result__actions">
         <button type="button" data-testid={duosTestid.resultBoard} onClick={onShowBoard}>
           {t("View the board")}
@@ -236,8 +245,24 @@ function ResultPanel({
   );
 }
 
-export function DuosBoard({ view, legal, onAction, pings, onPing, error, jloreCapped, replay = false }: DuosBoardProps): ReactElement {
+export function DuosBoard({
+  view,
+  legal,
+  onAction,
+  pings,
+  onPing,
+  error,
+  jloreCapped,
+  economy = null,
+  replay = false,
+}: DuosBoardProps): ReactElement {
   useLocale();
+  // #1664: the result's write paid this seat's person, so the pill reads the wallet again, once
+  // however many views carry the answer.
+  const paid = economy !== null;
+  useEffect(() => {
+    if (paid) announceWallet();
+  }, [paid]);
   const chrome = useContext(DuosChromeContext);
   const container = useRef<HTMLDivElement>(null);
   // The same element as state, for the card bar: set as it mounts, so a ping already up is marked on
@@ -438,6 +463,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error, jloreCa
         <ResultPanel
           view={view}
           jloreCapped={jloreCapped}
+          economy={economy}
           onShowBoard={() => {
             setBoardAfterResult(true);
           }}

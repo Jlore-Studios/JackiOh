@@ -30,6 +30,7 @@ const CORPSE_PLANTATION: &str = "classic-074";
 const MUTATE_SPELL: &str = "classic-078";
 const POWER_TO_THRIVE: &str = "classic-081";
 const LOCKDOWN: &str = "classic-084";
+const THE_HOUSE: &str = "classicplus-007";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
 const KYS_GIFT: &str = "classicplus-042-1";
@@ -50,7 +51,7 @@ const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 30] = [
+const ACTIVATE_CARDS: [&str; 31] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -63,6 +64,7 @@ const ACTIVATE_CARDS: [&str; 30] = [
     MUTATE_SPELL,
     POWER_TO_THRIVE,
     LOCKDOWN,
+    THE_HOUSE,
     FUSION_LAB,
     DOCTORS_ORDERS,
     KYS_GIFT,
@@ -718,6 +720,61 @@ mod c_n84_lockdown {
     #[test]
     fn r384_radiant_tributes_itself_past_indestructible() {
         tributes_itself(true);
+    }
+}
+
+mod c_plus_n7_the_house {
+    use super::*;
+
+    /// p1's The House in its backrow with `counters` Plague Counters.
+    fn house(radiant: bool, counters: i32) -> Scenario {
+        scenario(json!({
+            "p1": {
+                "backrow": [{ "def": THE_HOUSE, "radiant": radiant, "counters": { "plague": counters } }],
+                "hand": [STOCKPILE],
+            },
+            "p2": { "hand": [FILLER] },
+        }))
+    }
+
+    fn mode(wanted: &'static str) -> impl Fn(&ActionBody) -> bool {
+        move |action| modes_of(action) == vec![wanted.to_string()]
+    }
+
+    /// p1's Units, by definition and face.
+    fn twins(s: &Scenario) -> Vec<(String, bool)> {
+        units(s, P1)
+            .into_iter()
+            .map(|unit| (unit.def_id, unit.radiant))
+            .collect()
+    }
+
+    #[test]
+    fn r1704002_base_lists_both_twins_spends_a_counter_and_summons_the_one_named_once_a_turn() {
+        let mut s = house(false, 3);
+        let id = s.card(THE_HOUSE).id.clone();
+        let mut modes: Vec<String> = listed(&s, &id).iter().flat_map(modes_of).collect();
+        modes.sort();
+        assert_eq!(modes, vec!["attacker", "defender"]);
+        activate_listed(&mut s, THE_HOUSE, mode("attacker"));
+        assert_eq!(twins(&s), vec![("classicplus-006".to_string(), false)]);
+        assert_eq!(s.card(THE_HOUSE).counters.plague, Some(2));
+        assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
+    }
+
+    #[test]
+    fn r1704002_radiant_summons_a_radiant_right_house_defender() {
+        let mut s = house(true, 3);
+        activate_listed(&mut s, THE_HOUSE, mode("defender"));
+        assert_eq!(twins(&s), vec![("core-003".to_string(), true)]);
+        assert_eq!(s.card(THE_HOUSE).counters.plague, Some(2));
+    }
+
+    #[test]
+    fn r1704002_it_is_not_listed_with_no_counter() {
+        let s = house(false, 0);
+        let id = s.card(THE_HOUSE).id.clone();
+        assert!(listed(&s, &id).is_empty(), "the Activate spends a Plague Counter");
     }
 }
 

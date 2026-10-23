@@ -12,11 +12,17 @@
 //!      AI_REPLY.visible_activations, those aimed at the seat's hero first, and uses the one its own
 //!      evaluation likes best if that beats standing still.
 //!   3. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
-//!      best value read off the layers (lethal, a kill it survives, a trade up, the face). First, a
-//!      unit of its with Deft in Defense Position, its switch and its attack unspent, is switched to
-//!      Attack on trial (R49: it can still attack): the switch is kept when the best attack after it
-//!      is one of the unit's own, and otherwise the unit stays in Defense.
-//!   4. When none is worth doing it ends its turn.
+//!      best value read off the layers (lethal, a kill it survives, a trade up, the face). Lethal
+//!      counts every attack it has left (#1634, `AI_REPLY.open_lethal`): when `ready_gap` says they
+//!      reach the seat's hero together, every attack on it counts as the win, so the face goes first
+//!      rather than a kill. First, a unit of its with Deft in Defense Position, its switch and its
+//!      attack unspent, is switched to Attack on trial (R49: it can still attack): the switch is kept
+//!      when the best attack after it is one of the unit's own, ranked one hit at a time, and
+//!      otherwise the unit stays in Defense.
+//!   4. When none is worth doing, a unit of its in Attack Position whose switch it still has (one that
+//!      attacked has spent it, §4.1, unless it has Deft, R49) is switched to Defense on trial, up to
+//!      AI_REPLY.defense_switches of them, and the one its own evaluation likes best is kept if that
+//!      beats standing still (#1696). Otherwise it ends its turn.
 //!
 //! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
 //! noise, not information; nor does it use a face-down card's Reveal, whose card is a sample too.
@@ -32,7 +38,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, effective_life,
+    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Position, Selection, effective_life,
     find_instance, has_keyword, legal_actions, pierces, reduce_unpiloted, subsystems, takes_strike_back,
     unit_view,
 };
@@ -41,7 +47,7 @@ use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange
 use crate::config::{AI_EVAL, AI_REPLY};
 use crate::evaluate::{NextSwing, coming_mana, evaluate, unit_worth};
 use crate::learned::finalist_score;
-use crate::lethal::deft_ready_switch;
+use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, note_sim_panic, simulate,
     static_score, surcharge_nodes,
@@ -115,8 +121,14 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
 }
 
 /// The opponent's attacks worth making out of `legal` (legal_actions(state, opp)), best static value
-/// first (ties keep legal_actions order).
-fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Vec<ActionBody> {
+/// first (ties keep legal_actions order). With `face_is_lethal` every attack on the seat's hero is
+/// worth AI_EVAL.win: the attacks left reach it together (#1634).
+fn ranked_attacks(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    face_is_lethal: bool,
+) -> Vec<ActionBody> {
     let hero = format!("hero-{}", seat.as_str());
     let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
     for action in legal.iter().cloned() {
@@ -130,7 +142,9 @@ fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Ve
         let Some(attacker) = find_instance(state, attacker_id) else {
             continue;
         };
-        let value = if *target_id == hero {
+        let value = if *target_id == hero && face_is_lethal {
+            AI_EVAL.win
+        } else if *target_id == hero {
             let pierce = pierces(state, Some(attacker), None);
             let damage =
                 subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
@@ -180,7 +194,8 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s, `visible_activation`'s and `deft_switch`'s answer: TS's `GameState | null | undefined`.
+/// `known_play`'s, `visible_activation`'s, `deft_switch`'s and `defense_switch`'s answer: TS's
+/// `GameState | null | undefined`.
 enum Known {
     /// The counter refused a node (TS `null`).
     Cut,
@@ -329,12 +344,38 @@ fn deft_switch(state: &GameState, seat: PlayerId, legal: &[ActionBody], counter:
             continue;
         };
         let after = legal_actions(&switched, opp);
-        let best = ranked_attacks(&switched, seat, &after).into_iter().next();
+        // The trial ranks as before #1634: one hit at a time.
+        let best = ranked_attacks(&switched, seat, &after, false).into_iter().next();
         if matches!(&best, Some(ActionBody::Attack { attacker_id, .. }) if attacker_id == instance_id) {
             return Known::Played(Box::new(switched));
         }
     }
     Known::Nothing
+}
+
+/// Step 4, #1696: once no attack is worth making, so that every unit's best attack is worth nothing,
+/// the opponent's units in Attack Position whose switch `legal` lists (a unit that attacked has spent
+/// it, §4.1, unless it has Deft, R49) are switched to Defense on trial, at most
+/// AI_REPLY.defense_switches of them in legal_actions order, one node each, and the one its own
+/// evaluation likes best is kept if that beats standing still. A unit already in Defense is never
+/// tried: its switch back to Attack is `deft_switch`'s.
+fn defense_switch(
+    state: &GameState,
+    seat: PlayerId,
+    legal: &[ActionBody],
+    counter: &dyn NodeCounter,
+) -> Known {
+    let tries: Vec<ActionBody> = legal
+        .iter()
+        .filter(|action| {
+            matches!(action, ActionBody::SwitchPosition { instance_id }
+                if find_instance(state, instance_id)
+                    .is_some_and(|unit| unit_view(state, unit).position == Position::Atk))
+        })
+        .take(AI_REPLY.defense_switches.max(0) as usize)
+        .cloned()
+        .collect();
+    best_try(state, seat.opponent(), &tries, counter)
 }
 
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
@@ -361,6 +402,18 @@ pub fn simulate_reply(
     counter: &dyn NodeCounter,
     hidden: &IndexSet<String>,
 ) -> Option<GameState> {
+    simulate_reply_with(state, seat, counter, hidden, AI_REPLY.open_lethal)
+}
+
+/// `simulate_reply` with the open-lethal switch given (`AI_REPLY.open_lethal`, #1634), for tests and
+/// screens.
+pub fn simulate_reply_with(
+    state: &GameState,
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    hidden: &IndexSet<String>,
+    open_lethal: bool,
+) -> Option<GameState> {
     let opp = seat.opponent();
     let mut current = state.clone();
     for _step in 0..AI_REPLY.max_steps {
@@ -385,7 +438,7 @@ pub fn simulate_reply(
         }
 
         // One legal_actions serves the known-play try (its ordered candidates), the visible
-        // activations, the Deft switches and the static trader's attack list.
+        // activations, the Deft switches, the static trader's attack list and the switches to Defense.
         let legal = legal_actions(&current, opp);
         match known_play(&current, seat, &legal, hidden, counter) {
             Known::Cut => return None,
@@ -412,7 +465,23 @@ pub fn simulate_reply(
             Known::Nothing => {}
         }
 
-        let attack = ranked_attacks(&current, seat, &legal).into_iter().next();
+        // #1634: one board read per step: do the attacks left reach the face together?
+        let face_is_lethal = open_lethal && ready_gap(&current, opp) <= 0.0;
+        let attack = ranked_attacks(&current, seat, &legal, face_is_lethal)
+            .into_iter()
+            .next();
+        // #1696: no attack is worth making, so before it ends its turn the opponent switches a unit
+        // its evaluation would rather have in Defense Position.
+        if attack.is_none() {
+            match defense_switch(&current, seat, &legal, counter) {
+                Known::Cut => return None,
+                Known::Played(switched) => {
+                    current = *switched;
+                    continue;
+                }
+                Known::Nothing => {}
+            }
+        }
         if !counter.take() {
             return None;
         }

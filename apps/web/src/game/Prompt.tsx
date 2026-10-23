@@ -101,6 +101,7 @@ import {
   type PlayNeed,
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { OwnCopy } from "../cards/fullArt.ts";
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { setMarkOf } from "../cards/setMark.ts";
 import { isZhCn, t, useLocale } from "../i18n/i18n.ts";
@@ -118,6 +119,7 @@ import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
+import { useWearerSeat } from "./wearer.ts";
 import "./prompt.css";
 
 export type PromptProps = {
@@ -770,6 +772,8 @@ function CardOption(props: {
   pressed: boolean;
   /** A mulligan's options say what Confirm will do to each card. */
   verdicts?: boolean;
+  /** R1655000: the option is the viewer's own card (a mulligan's, on a board that wears cosmetics): it wears its picks. */
+  own?: boolean;
   /** R515: the card would take a pick past its budget, so it is greyed and cannot be added. */
   over?: boolean;
   onPick: () => void;
@@ -867,7 +871,7 @@ function CardOption(props: {
           </>
         ) : (
           <span className="cf-option">
-            <CardFace face={face} layout="full" />
+            <CardFace face={face} layout="full" worn={props.own === true} />
           </span>
         )}
         {caption === undefined ? null : (
@@ -882,7 +886,7 @@ function CardOption(props: {
           </span>
         )}
       </button>
-      {inspect.overlay}
+      <OwnCopy own={props.own === true}>{inspect.overlay}</OwnCopy>
     </>
   );
 }
@@ -1030,6 +1034,9 @@ function CardChoice(props: {
 }) {
   const { picker } = props;
   const budget = picker.budget;
+  // R1655000: a mulligan's options are the viewer's own hand.
+  const wearer = useWearerSeat();
+  const own = picker.chrome === "mulligan" && wearer !== null;
   return (
     <>
       {budget === undefined ? null : (
@@ -1044,6 +1051,7 @@ function CardChoice(props: {
             item={item}
             pressed={props.pressed(item.key)}
             verdicts={picker.chrome === "mulligan"}
+            own={own}
             over={!props.pressed(item.key) && !props.fits(item.key)}
             onPick={() => props.pick(item.key)}
           />
@@ -1493,6 +1501,8 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
     ...(copied === undefined ? {} : { copied }),
   });
   const verdict = props.keep ? "keep" : "redraw";
+  // R1655000: the viewer's own hand, on a board that wears cosmetics.
+  const own = useWearerSeat() !== null;
   // R711000: the card's name as a reader of Chinese reads it.
   const name = isZhCn() ? chineseName(props.card.defId, info.name, info.def) : info.name;
   return (
@@ -1504,7 +1514,7 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
       role="img"
     >
       <span className="cf-option">
-        <CardFace face={face} layout="full" />
+        <CardFace face={face} layout="full" worn={own} />
       </span>
       <span className="prompt-card-verdict" aria-hidden="true">
         {props.keep ? t("Keep") : t("Redraw")}

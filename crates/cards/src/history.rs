@@ -17,13 +17,17 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
+    c008_pickle, c009_income_tax, c032_felinor_feelings, c052_final_gambit, c064_malzahars_recycler,
+    c088_siphon_squad, c090_in_too_deep,
 };
-use crate::scripts::classic_plus::{c033_ivory_tower, c040_appropriations};
-use crate::scripts::core::{c029_giga_glowy_jelly_bean, c049_snom_bunny_mind_control, c050_k_pop_fanatic};
+use crate::scripts::classic_plus::{c007_the_house, c033_ivory_tower, c040_appropriations, c062_kys_papaya};
+use crate::scripts::core::{
+    c029_giga_glowy_jelly_bean, c049_snom_bunny_mind_control, c050_k_pop_fanatic, c054_straaza,
+};
 use crate::scripts::meditative::{
-    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c037_cn_in_a_bottle, c049_yilegpt_tamed,
-    c054_money_machine, c074_montana_giant, c080_aluneth, c097_2_wishing_well, c097_8_prison,
+    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c030_fickle_e_kitten, c037_cn_in_a_bottle,
+    c049_yilegpt_tamed, c054_money_machine, c074_montana_giant, c080_aluneth, c097_2_wishing_well,
+    c097_8_prison,
 };
 use crate::scripts::meditative_plus::c001_bobs_plan;
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -49,7 +53,13 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// its quest opening beside the prompt (R1279000). #1563's ran theirs through v0.4.0f: YileGPT Tamed put
 /// its Prime on the bottom of the deck, not shuffled in, GIGA Glowy Jelly Bean had no Float discount, and
 /// Expedition12 and Expedition123 lost all mana for their turns (R844), Expedition12's Radiant face with
-/// Echo 1, and Bob's Plan added Spa Day after Aestheticize the Game, with no Discover.
+/// Echo 1, and Bob's Plan added Spa Day after Aestheticize the Game, with no Discover. #1704's nine ran
+/// theirs through v0.4.0f too: KY's Papaya offered 3 cells on its base face, could end on "done" and
+/// exiled (R831003); The House summoned at its Cry and each start of turn (R406); Felinor Feelings stole
+/// any enemy permanent; Final Gambit redirected the hit to the enemy hero; Straaza's pool was (3) or (4)
+/// Cost Units; Fickle E-Kitten asked at the start of the turn; CN in a Bottle's base card took no raise;
+/// Appropriations had +2X Attack, 2X Books, 8X% and +2X Health [+4X, 5X, 20X%, +6X]; and In Too Deep's
+/// quests 3, 5 and 6 asked 3 permanents, 12 damage and totals of 10.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -126,6 +136,35 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c019_expedition123::script_v0_4_0f,
     ),
     (c001_bobs_plan::ID, "v0.4.0f", c001_bobs_plan::script_v0_4_0f),
+    (c062_kys_papaya::ID, "v0.4.0f", c062_kys_papaya::script_v0_4_0f),
+    (c007_the_house::ID, "v0.4.0f", c007_the_house::script_v0_4_0f),
+    (
+        c032_felinor_feelings::ID,
+        "v0.4.0f",
+        c032_felinor_feelings::script_v0_4_0f,
+    ),
+    (
+        c052_final_gambit::ID,
+        "v0.4.0f",
+        c052_final_gambit::script_v0_4_0f,
+    ),
+    (c054_straaza::ID, "v0.4.0f", c054_straaza::script_v0_4_0f),
+    (
+        c030_fickle_e_kitten::ID,
+        "v0.4.0f",
+        c030_fickle_e_kitten::script_v0_4_0f,
+    ),
+    (
+        c037_cn_in_a_bottle::ID,
+        "v0.4.0f",
+        c037_cn_in_a_bottle::script_v0_4_0f,
+    ),
+    (
+        c040_appropriations::ID,
+        "v0.4.0f",
+        c040_appropriations::script_v0_4_0f,
+    ),
+    (c090_in_too_deep::ID, "v0.4.0f", c090_in_too_deep::script_v0_4_0f),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

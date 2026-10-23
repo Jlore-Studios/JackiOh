@@ -1,13 +1,13 @@
 //! #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275). Unit, cost 4,
 //! 8/8 → 16/16.
-//!   Base:    "Cry: add 2 random Units costing 3 or 4 to your hand; they cost 1"
-//!   Radiant: "Cry: add 2 random Radiant Units costing 3 or 4 to your hand; they cost 0" — §8's
+//!   Base:    "Cry: add 2 random (3) Cost Units to your hand; they cost 1"
+//!   Radiant: "Cry: add 2 random Radiant (3) Cost Units to your hand; they cost 0" — §8's
 //!            cell "They are Radiant and cost 0" (R275's raise: the cards' face and their price).
 //!            The cell restates only what the cards are and cost, so the count and the pool are
 //!            the base clause's, unchanged (§8 Conventions).
 //!
 //! The Engine cell, "Non-token pool excluding #54; `costOverride`", is §5.1's one query: tokens are
-//! left out automatically, `excludeDefId: ID` is passed explicitly, and `costRange: { min: 3, max: 4 }`
+//! left out automatically, `excludeDefId: ID` is passed explicitly, and `costRange: { min: 3, max: 3 }`
 //! is read out of play per R65 (X-cost reads 0, embiggen its base; `query_cost` is the one number
 //! every bracket reads).
 //! R60: both picks may repeat, since the row does not say "different": two draws with replacement.
@@ -18,31 +18,38 @@
 //! price, Radiant still on the radiant face.
 //! `add_random_from_catalog` picks with `ctx.rng` (a hook may not roll dice itself: that advances
 //! `rng_cursor`, which is state) and creates each card through the `add_to_hand` pipeline (§2.4, R4).
+//!
+//! Through v0.4.0f the pool was (3) or (4) Cost Units; `script_v0_4_0f` keeps it for those versions'
+//! replays (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-054";
 
-/// §8: two cards, both Units in the 3-4 bracket.
+/// §8: two cards, both (3) Cost Units.
 const COUNT: i32 = 2;
+/// §8: the cost of every Unit in the pool.
+const POOL_COST: i32 = 3;
+/// The pool's highest cost through v0.4.0f, "(3) or (4)".
+const POOL_MAX_V0_4_0F: i32 = 4;
 
-/// §5.1's pool: Units costing 3 or 4, no tokens (automatic), never Straaza herself. `ID` is the
-/// card's own catalog id, so the exclusion cannot drift (R387).
-fn unit_pool() -> Value {
+/// §5.1's pool: Units costing `POOL_COST` to `max`, no tokens (automatic), never Straaza herself. `ID`
+/// is the card's own catalog id, so the exclusion cannot drift (R387).
+fn unit_pool(max: i32) -> Value {
     json!({
         "type": "Unit",
-        "costRange": { "min": 3, "max": 4 },
+        "costRange": { "min": POOL_COST, "max": max },
         "excludeDefId": ID,
     })
 }
 
 /// The two faces differ in what the generated cards cost — "they cost 1", "they cost 0": the declared
 /// number `setCost` (R386), less being better — and whether they are Radiant.
-fn straaza(radiant: bool) -> Script {
+fn straaza(radiant: bool, max: i32) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             vec![add_random_from_catalog(json_as(json!({
-                "query": unit_pool(),
+                "query": unit_pool(max),
                 "count": COUNT,
                 "costOverride": param(&*ctx, "setCost"),
                 "radiant": radiant,
@@ -54,13 +61,22 @@ fn straaza(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: straaza(false),
-        radiant: straaza(true),
+        base: straaza(false, POOL_COST),
+        radiant: straaza(true, POOL_COST),
+    }
+}
+
+/// R767000: the scripts v0.4.0f and every version before it ran, the (3) or (4) Cost pool;
+/// `KEPT_SCRIPTS` folds those versions' replays under them.
+pub fn script_v0_4_0f() -> CardScripts {
+    CardScripts {
+        base: straaza(false, POOL_MAX_V0_4_0F),
+        radiant: straaza(true, POOL_MAX_V0_4_0F),
     }
 }
 
 // #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275).
-// BUILD M4-T4 row 54: "2 random units of cost 3 or 4, no tokens, not #54, cost override 1; radiant
+// BUILD M4-T4 row 54: "2 random units of cost 3, no tokens, not #54, cost override 1; radiant
 // Radiant units at 0". R215: a card the full hand burns reaches the graveyard without the price —
 // Radiant still on the radiant face, since that flag is set as it is made.
 #[cfg(test)]
@@ -71,7 +87,7 @@ mod tests {
 
     /// §5.1's pool for this card, which is what the script passes to the effect: the legal answers.
     fn straaza_pool() -> Vec<CardDef> {
-        crate::query::pool("core-054", &json_as(json!({ "type": "Unit", "costRange": { "min": 3, "max": 4 } })))
+        crate::query::pool("core-054", &json_as(json!({ "type": "Unit", "costRange": { "min": 3, "max": 3 } })))
             .into_iter()
             .map(owned_def)
             .collect()
@@ -147,7 +163,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s5_1_holds_only_units_costing_3_or_4_no_tokens_and_never_straaza_herself() {
+        fn s5_1_holds_only_units_costing_3_no_tokens_and_never_straaza_herself() {
             crate::register_all();
             let pool = straaza_pool();
             let ids = pool_ids();
@@ -158,8 +174,7 @@ mod tests {
                 assert!(!def.token);
                 assert!(!def.tags.contains(&Tag::Token));
                 // R65: the cost is read out of play, so an X-cost card reads 0 and an embiggen card its base.
-                assert!(query_cost(def) >= 3);
-                assert!(query_cost(def) <= 4);
+                assert_eq!(query_cost(def), 3);
             }
             // The 1-cost unit tokens (Sheep, Rush, Felinor, Spikey Pillow) are out twice over.
             assert!(!ids.contains(&"core-t-rush".to_string()));
@@ -171,7 +186,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn adds_2_random_units_costing_3_or_4_to_your_hand() {
+        fn costs_3_units_only_adds_2_random_3_cost_units_to_your_hand() {
             crate::register_all();
             let mut s = scenario(json!({ "seed": "straaza-base", "p1": { "hand": ["core-054"] } }));
 
@@ -183,8 +198,7 @@ mod tests {
                 assert!(pool_ids().contains(&card.def_id));
                 let def = crate::card_def(&card.def_id);
                 assert_eq!(def.type_, CardType::Unit);
-                assert!(query_cost(&def) >= 3);
-                assert!(query_cost(&def) <= 4);
+                assert_eq!(query_cost(&def), 3);
             }
             s.expect_in_zone("core-054", "field")
                 .expect_events(json!(["cardPlayed", "addedToHand", "addedToHand"]));
@@ -260,7 +274,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r275_adds_2_radiant_units_costing_3_or_4_each_costing_0() {
+        fn r275_adds_2_radiant_3_cost_units_each_costing_0() {
             crate::register_all();
             let mut s = radiant_straaza("straaza-radiant", &[]);
 
@@ -298,7 +312,7 @@ mod tests {
         }
 
         #[test]
-        fn r275_the_pool_is_the_base_clause_s_still_2_still_units_costing_3_or_4_still_not_n54() {
+        fn r275_the_pool_is_the_base_clause_s_still_2_still_3_cost_units_still_not_n54() {
             crate::register_all();
             let mut s = radiant_straaza("straaza-radiant", &[]);
 
@@ -308,21 +322,28 @@ mod tests {
             assert_eq!(def_ids.len(), 2);
             assert!(!def_ids.contains(&"core-054".to_string()));
             for id in &def_ids {
-                assert!(query_cost(&crate::card_def(id)) >= 3);
-                assert!(query_cost(&crate::card_def(id)) <= 4);
+                assert_eq!(query_cost(&crate::card_def(id)), 3);
             }
         }
 
         #[test]
         fn r65_r78_the_0_is_paid_a_radiant_card_it_made_is_played_for_nothing() {
             crate::register_all();
-            let mut s = radiant_straaza("straaza-radiant-play", &[]);
-
-            s.play("core-054", json!({}));
-            let made = added(s.hand(P1))
-                .into_iter()
-                .next()
-                .unwrap_or_else(|| panic!("Straaza should have added a card"));
+            // A seed whose first card asks for no target as it is played.
+            let first_made = |seed: &str| -> (Scenario, CardInstance) {
+                let mut s = radiant_straaza(seed, &[]);
+                s.play("core-054", json!({}));
+                let made = added(s.hand(P1))
+                    .into_iter()
+                    .next()
+                    .unwrap_or_else(|| panic!("Straaza should have added a card"));
+                (s, made)
+            };
+            let seed = seed_where("straaza-radiant-play", |seed| {
+                let (s, made) = first_made(seed);
+                crate::scripts_of()[&made.def_id].radiant.targets.is_empty() && s.state().pending.is_none()
+            });
+            let (mut s, made) = first_made(&seed);
             s.expect_mana(P1, 0);
 
             s.play(&made, json!({}));
@@ -363,6 +384,35 @@ mod tests {
             assert!(pool_ids().contains(&burned.def_id));
             assert!(burned.radiant);
             assert!(burned.cost_override.is_none());
+        }
+    }
+
+    /// R767000: the scripts kept for the replays of v0.4.0f and before, whose pool was (3) or (4).
+    mod v0_4_0f {
+        use super::*;
+
+        #[test]
+        fn r767000_the_kept_pool_held_3_and_4_cost_units_on_both_faces() {
+            crate::under_kept("core-054", super::super::script_v0_4_0f(), || {
+                for radiant in [false, true] {
+                    let costs: IndexSet<i32> = (0..20)
+                        .flat_map(|n| {
+                            let mut s = scenario(json!({
+                                "seed": format!("straaza-kept-{n}"),
+                                "p1": { "hand": [{ "def": "core-054", "radiant": radiant }] },
+                            }));
+                            s.play("core-054", json!({}));
+                            added(s.hand(P1))
+                                .iter()
+                                .map(|card| query_cost(&crate::card_def(&card.def_id)))
+                                .collect::<Vec<i32>>()
+                        })
+                        .collect();
+                    let mut costs: Vec<i32> = costs.into_iter().collect();
+                    costs.sort();
+                    assert_eq!(costs, vec![3, 4], "radiant: {radiant}");
+                }
+            });
         }
     }
 }

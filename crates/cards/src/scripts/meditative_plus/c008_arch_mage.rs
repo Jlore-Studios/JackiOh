@@ -1,5 +1,5 @@
 //! M+ #8 Arch Mage (SPEC §8.9 row 8, BUILD M11 row M+ 8): (2) Unit, Human, Common,
-//! 4/7 → 8/14.
+//! 4/8 → 8/16.
 //!   Base:    "Spell Damage +3"
 //!   Radiant: "Spell Damage +6"
 //!
@@ -19,7 +19,7 @@ pub fn script() -> CardScripts {
 
 // M+ #8 Arch Mage — SPEC §8.9 row 8, BUILD M11 row M+ 8: "while it acts each hit of your Spells
 // deals 3 more (a Field Spell's and a Trap's do not, §6.1); the opponent's Spells are untouched;
-// leaving the field ends it; a Nerf moves the keyword's number; radiant 8/14 and +6".
+// leaving the field ends it; a Nerf moves the keyword's number; radiant 8/16 and +6".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -32,12 +32,37 @@ mod tests {
     const TRUE_STRIKE: &str = "core-044"; // (1) Spell, Pierce: 4 damage to a declared Unit or hero.
     const ECHOES: &str = "core-040"; // Field Spell: start of turn, damage to the enemy hero = your exile count.
     const FILLER: &str = "core-005";
-    const TRAP: &str = "classic-052"; // (2) Trap: a lethal hit is redirected to the enemy hero, then heal and draw.
+    const TRAP: &str = "classic-052"; // (2) Trap: a lethal hit is cancelled, then heal and draw.
 
     use crate::scenario;
 
     fn at_hero() -> Value {
         json!({ "targets": [{ "pick": "hero", "player": "p2" }] })
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn is_4_8() {
+            crate::register_all();
+            let mut s = scenario(json!({ "p1": { "hand": [FILLER], "field": [MAGE] }, "p2": { "hand": [FILLER] } }));
+            s.expect_stats(MAGE, json!({ "attack": 4, "health": 8, "maxHealth": 8 }));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn is_8_16() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [FILLER], "field": [{ "def": MAGE, "radiant": true }] },
+                "p2": { "hand": [FILLER] },
+            }));
+            s.expect_stats(MAGE, json!({ "attack": 8, "health": 16, "maxHealth": 16 }));
+        }
     }
 
     #[test]
@@ -133,7 +158,8 @@ mod tests {
             "p2": { "hand": [FILLER] },
         }));
         let mage = s.card(MAGE).id.clone();
-        // One True Strike at 4 + 3 kills the 4/7; the Lunar Eclipse after deals its own 3.
+        // One True Strike at 4 + 3 kills the 4/8 that has taken 1; the Lunar Eclipse after deals its own 3.
+        s.card_mut(&mage).damage = 1;
         s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "instance", "instanceId": mage }] }));
         s.expect_in_zone(MAGE, "graveyard");
         s.play(LUNAR_ECLIPSE, at_hero());

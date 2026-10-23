@@ -1460,3 +1460,21 @@ rule changed, and the motion still moves by `transform` only, on a layer about a
   no-preference` and `:root:not([data-reduce-motion="true"])`, the settings panel's Reduce motion;
   under either, the old reduced-motion block is gone because there is nothing to undo — an animated
   face simply keeps the shared still rule above.
+
+## Addendum: the foil sweep's corners (2026-10-23, #1700)
+
+The sweep #200 built still showed a seam on rotated faces. It is fixed in the card layer alone;
+no rule changed.
+
+- **A dark wedge at the corners.** The moving layer kept the still foil's `mix-blend-mode:
+  overlay`. On a rotated face (every card of the home screen's fan) Chrome drew a dark wedge past
+  the rounded corner, and a dark strip along the face's edge, as the band came in at the top left
+  and left at the bottom right, which is where the loop restarts. Any blend mode did it (`screen`
+  too), and none did it once the layer was composited without one.
+- **The sweep now blends nothing.** Its rule sets `mix-blend-mode: normal`, and its stops carry
+  0.4 of the still band's alpha (gold 0.2 and 0.14, Mythic 0.16 and 0.14), about the lift the
+  overlay gave a dark panel. The layer, its size, the 8 s loop and the keyframes are unchanged, so
+  each face still costs one layer moved by `transform`, and the blend's extra pass per face per
+  frame is gone (`cards/foil.test.ts`).
+- **The still foil keeps its overlay.** It never moves, so it is painted with the face, and the
+  reduced-motion face that wears it is unchanged.

@@ -274,3 +274,37 @@ describe("with no session", () => {
     expect(getMe).not.toHaveBeenCalled();
   });
 });
+
+// #1691: the account read behind the screen
+
+describe("#1691 an account that could not be read", () => {
+  it("#1691 an account read that failed offers Try again, which reads it again", async () => {
+    vi.mocked(getMe).mockRejectedValueOnce(new Error("the server could not be reached"));
+    render(<InviteRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId(inviteTestid.accountError)).toHaveTextContent("the server could not be reached");
+    });
+    expect(screen.getByTestId(inviteTestid.accountRetry)).toBeEnabled();
+    expect(getCodeStatus).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(inviteTestid.accountRetry));
+    await waitFor(() => {
+      expect(getCodeStatus).toHaveBeenCalled();
+    });
+    expect(screen.queryByTestId(inviteTestid.accountError)).toBeNull();
+    expect(getMe).toHaveBeenCalledTimes(2);
+  });
+
+  it("#1691 a rate-limited account read holds Try again", async () => {
+    vi.mocked(getMe).mockRejectedValue(
+      new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } }),
+    );
+    render(<InviteRoute />);
+    await waitFor(() => {
+      expect(screen.getByTestId(inviteTestid.accountError)).toHaveTextContent(/You can try again in \d+ s\./);
+    });
+    const retry = screen.getByTestId(inviteTestid.accountRetry);
+    expect(retry).toBeDisabled();
+    expect(retry).toHaveTextContent(/Try again in \d+ s/);
+  });
+});

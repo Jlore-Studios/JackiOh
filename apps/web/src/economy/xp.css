@@ -1,0 +1,81 @@
+/* The XP reveal (#1664, part of #1651): a game's tracks and quests under the result. The bars and
+   the rewards are economy.css's. The one animation here, the level number's pop, moves only
+   transform and opacity (its length is `LEVEL_POP_MS`, through `--pop-ms`) and sits in the same gate
+   as theirs: with the system's reduced motion or the settings' Reduce motion on <html>
+   (`data-reduce-motion`), the number just holds its end state. */
+
+.xp-reveal {
+  display: grid;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 24rem;
+  margin: 8px auto;
+  text-align: left;
+}
+
+/* In a result panel's row of ways on it is a row of its own, after the news (`.result-overlay__note`). */
+.result-overlay__actions > .xp-reveal {
+  order: 2;
+  flex-basis: 100%;
+}
+
+.xp-reveal__tracks,
+.xp-reveal__quest-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xp-reveal__track {
+  display: grid;
+  gap: 6px;
+}
+
+.xp-reveal__level {
+  justify-self: start;
+  font-weight: 700;
+  transform-origin: 0 50%;
+}
+
+.xp-reveal__heading {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.xp-reveal__quest {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 12px;
+}
+
+.xp-reveal__quest-pay {
+  color: var(--tavern-text-dim, rgb(239 224 191 / 0.72));
+}
+
+@keyframes xp-reveal-level-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .xp-reveal__level--pop {
+    will-change: transform, opacity;
+    animation: xp-reveal-level-pop var(--pop-ms) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+}

@@ -39,6 +39,8 @@ export const noticeTestid = {
   overflowCard: (side: Side): string => `overflow-card-${side}`,
   burn: (side: Side): string => `burn-notice-${side}`,
   burnCard: (side: Side): string => `burn-card-${side}`,
+  /** R1639000: an empty deck's resting fatigue badge (Board.tsx's Seat), apart from R318's notice. */
+  fatigue: (side: Side): string => `pile-fatigue-${side}`,
 } as const;
 
 function regionOf(view: PlayerView, event: GameEvent): { side: Side; region: string } | null {

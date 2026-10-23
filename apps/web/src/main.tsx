@@ -71,7 +71,7 @@ import {
 import { createRoot } from "react-dom/client";
 
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
-import { useSecondsUntil } from "./auth/cooldown.ts";
+import { AccountError } from "./auth/AccountError.tsx";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
 import { dropStaleSignUpConsent } from "./auth/consent.ts";
 import ConsentPrompt from "./auth/ConsentPrompt.tsx";
@@ -132,6 +132,7 @@ const SeriesRoute = lazy(() => import("./routes/series.tsx"));
 const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 const TermsRoute = lazy(() => import("./routes/terms.tsx"));
+const PurchasesRoute = lazy(() => import("./routes/purchases.tsx"));
 const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
 const CopyrightRoute = lazy(() => import("./routes/copyright.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
@@ -272,46 +273,23 @@ export function Loading({ what, slow = false, testId, children }: LoadingProps):
   );
 }
 
-/**
- * Seconds left of a stated wait, from when it was stated: counted on the clock, so a tab the
- * browser put to sleep does not come back still waiting (`auth/cooldown.ts`). 0 when there is none.
- */
-function useCountdown(totalMs: number | undefined): number {
-  const [deadline, setDeadline] = useState(() => (totalMs === undefined ? null : Date.now() + totalMs));
-  const [stated, setStated] = useState(totalMs);
-  if (stated !== totalMs) {
-    // A new wait was stated: counted from now.
-    setStated(totalMs);
-    setDeadline(totalMs === undefined ? null : Date.now() + totalMs);
-  }
-  return useSecondsUntil(deadline);
-}
-
 /** The gate's error panel: the sentence, and the three ways on. A stated wait holds the retry. */
 function GateError({ account }: { account: Extract<Account, { kind: "error" }> }): ReactElement {
-  const wait = useCountdown(account.retryAfterMs);
   return (
     <ShellPanel>
-      <p className="notice" data-testid={shellTestid.error} role="alert">
-        {t(account.message)}
-        {wait > 0 ? ` ${t("You can try again in {seconds} s.", { seconds: String(wait) })}` : null}
-      </p>
-      <div className="row">
-        <button
-          type="button"
-          className="button-primary"
-          data-testid={shellTestid.retry}
-          disabled={wait > 0}
-          onClick={() => {
-            // Re-reads /api/auth/me in place, without a page load.
-            account.retry?.();
-          }}
-        >
-          {wait > 0 ? t("Try again in {seconds} s", { seconds: String(wait) }) : t("Try again")}
-        </button>
+      <AccountError
+        message={account.message}
+        retryAfterMs={account.retryAfterMs}
+        onRetry={() => {
+          // Re-reads /api/auth/me in place, without a page load.
+          account.retry?.();
+        }}
+        testId={shellTestid.error}
+        retryTestId={shellTestid.retry}
+      >
         <HomeLink testId={shellTestid.home} />
         <SignOutButton />
-      </div>
+      </AccountError>
     </ShellPanel>
   );
 }
@@ -745,6 +723,8 @@ export function App(): ReactElement {
     }
     if (path === paths.privacy) return <PrivacyRoute />;
     if (path === paths.terms) return <TermsRoute />;
+    // R1665000: the page is public, its disclaimer anyone's; with a session it reads the odds and the account's counters itself.
+    if (path === paths.purchases) return <PurchasesRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
     if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.

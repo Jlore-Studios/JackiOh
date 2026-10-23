@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { CATALOG } from "@jackioh/cards";
-import type { GameEvent, PlayerView } from "@jackioh/shared";
+import type { GameEvent, PlayerView, SideView } from "@jackioh/shared";
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -419,6 +419,67 @@ describe("R318 a board handed only what is animating", () => {
   it("R318 and nothing at all when nothing is animating", () => {
     render(withCatalog(<Board view={seatView("p1", [TURN, fatigue("p2", 2)])} />));
     expect(screen.queryByTestId(noticeTestid.pile("opponent"))).toBeNull();
+  });
+});
+
+describe("R1639000 an empty deck's resting fatigue badge", () => {
+  function fatigued(you: Partial<SideView>, opponent: Partial<SideView> = {}, events: GameEvent[] = [TURN]): PlayerView {
+    return withEvents(
+      baseView({ you: emptySide("p1", you), opponent: emptySide("p2", { hand: { count: 4 }, ...opponent }) }),
+      events,
+    );
+  }
+
+  it("R1639000 an empty deck that has dealt fatigue shows its count at rest, in its pile and label, on both seats", () => {
+    render(withCatalog(<Board view={fatigued({ libraryCount: 0, fatigueCount: 2 }, { libraryCount: 0, fatigueCount: 5 })} />));
+    const pile = screen.getByTestId(animTestid.library("you"));
+    expect(within(pile).getByTestId(noticeTestid.fatigue("you"))).toHaveTextContent(/^Fatigue 2$/);
+    expect(within(screen.getByTestId(animTestid.library("opponent"))).getByTestId(noticeTestid.fatigue("opponent"))).toHaveTextContent(
+      /^Fatigue 5$/,
+    );
+    expect(pile).toHaveAttribute("title", "Deck, Fatigue 2");
+    expect(screen.getByTestId("library-count-you")).toHaveTextContent(/^0$/);
+    expect(screen.queryByTestId(noticeTestid.pile("you"))).toBeNull();
+    expect(screen.getByTestId(animTestid.graveyard("you")).querySelector(".pile-fatigue")).toBeNull();
+  });
+
+  it("R1639000 a deck with cards, or one that has dealt no fatigue, shows no badge", () => {
+    const { unmount } = render(withCatalog(<Board view={fatigued({ libraryCount: 3, fatigueCount: 2 })} />));
+    expect(screen.queryByTestId(noticeTestid.fatigue("you"))).toBeNull();
+    expect(screen.getByTestId(animTestid.library("you"))).toHaveAttribute("title", "Deck");
+    unmount();
+    render(withCatalog(<Board view={fatigued({ libraryCount: 0, fatigueCount: 0 })} />));
+    expect(screen.queryByTestId(noticeTestid.fatigue("you"))).toBeNull();
+    expect(screen.getByTestId(animTestid.library("you"))).toHaveAttribute("title", "Deck");
+  });
+
+  it("R1639000 while R318's notice is up the pile holds one fatigue badge, the notice's, and the resting one returns after", () => {
+    const { rerender } = render(
+      withCatalog(<Game view={fatigued({ libraryCount: 0, fatigueCount: 2 })} legal={[]} onAction={vi.fn()} />),
+    );
+    rerender(
+      withCatalog(
+        <Game
+          view={fatigued({ libraryCount: 0, fatigueCount: 3 }, {}, [TURN, fatigue("p1", 3), hit("p1", 3)])}
+          legal={[]}
+          onAction={vi.fn()}
+        />,
+      ),
+    );
+    const pile = screen.getByTestId(animTestid.library("you"));
+    function expectTheNoticesBadgeOnly(): void {
+      const badges = within(pile).getAllByText(/^Fatigue \d+$/);
+      expect(badges).toHaveLength(1);
+      expect(badges[0]).toHaveTextContent("Fatigue 3");
+      expect(screen.getByTestId(noticeTestid.pile("you"))).toContainElement(badges[0] as HTMLElement);
+      expect(screen.queryByTestId(noticeTestid.fatigue("you"))).toBeNull();
+    }
+    expectTheNoticesBadgeOnly();
+    advance(ANIMATIONS.fatigue.durationMs);
+    expectTheNoticesBadgeOnly();
+    advance(ANIMATIONS.damage.durationMs);
+    expect(screen.queryByTestId(noticeTestid.pile("you"))).toBeNull();
+    expect(screen.getByTestId(noticeTestid.fatigue("you"))).toHaveTextContent(/^Fatigue 3$/);
   });
 });
 

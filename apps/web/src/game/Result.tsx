@@ -20,7 +20,7 @@
 // the panel lists it as "Their hand", every card a face that opens large, and the chip offers
 // "Their hand" as a button that opens the same cards in the list dialog (TheirHand.tsx).
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
 import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
@@ -100,6 +100,17 @@ export function theirHandOf(view: PlayerView): TheirHandProps | null {
   return cards === null ? null : { view, cards };
 }
 
+/** Whether the result panel around it has come in; true outside one. */
+const ResultRevealedContext = createContext(true);
+
+/**
+ * Its children once the result panel it sits in has come in (`data-revealed`), so what plays in them
+ * is seen playing and not over before the panel shows: the XP reveal of #1664.
+ */
+export function OnceRevealed({ children }: { children: ReactNode }): ReactElement | null {
+  return useContext(ResultRevealedContext) ? <>{children}</> : null;
+}
+
 type GameResultProps = {
   result: Result;
   viewer: PlayerId;
@@ -165,7 +176,7 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
         {shownForm === "panel" && theirHand !== null ? <TheirHand view={theirHand.view} cards={theirHand.cards} /> : null}
         {shownForm === "panel" ? (
           <div className="result-overlay__actions" ref={firstAction}>
-            {actions}
+            <ResultRevealedContext.Provider value={revealed}>{actions}</ResultRevealedContext.Provider>
             <button
               type="button"
               className="result-overlay__view"

@@ -145,7 +145,7 @@ function expectOnlineFirst(): void {
   });
 }
 
-const WAYS = [playTestid.practice, playTestid.creator, playTestid.together, playTestid.replays] as const;
+const WAYS = [playTestid.practice, playTestid.together, playTestid.replays] as const;
 
 describe("#1578 the Play hub is one screen", () => {
   // The validator and the catalog are Rust WebAssembly (docs/v0.3.0/SURFACE.md §10.3); load them first.

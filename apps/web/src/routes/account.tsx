@@ -32,8 +32,9 @@
 // hidden until asked for, with a copy button. A listed account (`me.isDev`, the server's word) also
 // gets the Dev tools panel (`DevTools.tsx`) behind a toggle of its own.
 //
-// THE SHOP (#1580, R1580000): packs, opening, pity, tokens and cosmetic packs live on `/shop`; this
-// screen links it and keeps account things only.
+// THE SHOP (#1580, R1580000): packs, opening, pity, tokens and cosmetic packs live on `/shop`. This
+// screen keeps account things only and links no other menu (R1646000): the tavern home's doors lead
+// to the Collection and the Shop.
 //
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
@@ -62,7 +63,8 @@ import {
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { t } from "../i18n/i18n.ts";
-import { badgeWords, rankWords } from "../rank/rank.ts";
+import { rankCaption } from "../rank/rank.ts";
+import RankCrest from "../rank/RankCrest.tsx";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
@@ -86,9 +88,6 @@ export const accountTestid = {
   rank: "account-rank",
   badges: "account-badges",
   leaderboard: "account-leaderboard",
-  collection: "account-collection",
-  /** R1580000: the link to the Shop. */
-  shop: "account-shop",
   manage: "account-manage",
   manageToggle: "account-manage-toggle",
   record: "account-record",
@@ -332,13 +331,24 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
               {rank !== null ? (
                 <>
                   <p data-testid={accountTestid.rank}>
-                    <Username name={rank.username} /> ·{" "}
-                    {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
+                    <Username name={rank.username} /> · <RankCrest rank={rank.rank} size="large" />{" "}
+                    {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
                   </p>
                   <p data-testid={accountTestid.badges}>
-                    {rank.badges.length === 0
-                      ? t("No season best yet — finish placements to earn one.")
-                      : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(t(", ")) })}
+                    {rank.badges.length === 0 ? (
+                      t("No season best yet — finish placements to earn one.")
+                    ) : (
+                      <>
+                        {t("Season best:")}
+                        {rank.badges.map((badge, index) => (
+                          <span key={badge.seasonId}>
+                            {index === 0 ? " " : t(", ")}
+                            <RankCrest badge={badge} size="large" />{" "}
+                            {t("{rank} · Season {season}", { rank: rankCaption(badge), season: badge.seasonId })}
+                          </span>
+                        ))}
+                      </>
+                    )}
                   </p>
                   <div className="account-actions">
                     <a
@@ -373,25 +383,6 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 </div>
               </div>
               {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
-              {/* §14.9's quests moved to /collection (#1307), the packs to /shop (R1580000). */}
-              <div className="account-actions">
-                <a
-                  className="button-secondary"
-                  href={paths.collection}
-                  data-testid={accountTestid.collection}
-                  onClick={followInApp(paths.collection)}
-                >
-                  {t("Collection")}
-                </a>
-                <a
-                  className="button-secondary"
-                  href={paths.shop}
-                  data-testid={accountTestid.shop}
-                  onClick={followInApp(paths.shop)}
-                >
-                  {t("Shop")}
-                </a>
-              </div>
             </>
           ) : null}
 

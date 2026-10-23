@@ -4,7 +4,7 @@
 // their record, and — the one that actually trapped people — could not sign out at all:
 // `net/session.ts` wrote the token and nothing ever cleared it.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -153,10 +153,16 @@ describe("the account screen", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     render(<AccountRoute token={TOKEN} />);
 
-    expect(await screen.findByTestId("account-rank")).toHaveTextContent(
-      "Max#3 · Normal Grape III · 1/3 pips · Season v0.2",
-    );
-    expect(screen.getByTestId("account-badges")).toHaveTextContent("Season best: Normal Grape II · v0.1");
+    const rank = await screen.findByTestId("account-rank");
+    expect(rank).toHaveTextContent("Max#3 · Normal Grape III · Season v0.2");
+    // #1650: the crest carries the pips, and the long words are its name.
+    const crest = within(rank).getByRole("img", { name: "Normal Grape III · 1/3 pips" });
+    expect(crest).toHaveAttribute("data-size", "large");
+    expect(crest.querySelectorAll(".rank-crest__pip")).toHaveLength(3);
+    expect(crest.querySelectorAll('.rank-crest__pip[data-filled="true"]')).toHaveLength(1);
+    const badges = screen.getByTestId("account-badges");
+    expect(badges).toHaveTextContent("Season best: Normal Grape II · Season v0.1");
+    expect(within(badges).getByRole("img", { name: "Normal Grape II · v0.1" })).toBeInTheDocument();
     expect(screen.getByTestId("account-leaderboard")).toHaveAttribute("href", "/leaderboard");
     expect(screen.queryByTestId("account-rating")).toBeNull();
   });
@@ -179,12 +185,17 @@ describe("the account screen", () => {
     expect(screen.getByText(/no finished matches yet/i)).toBeInTheDocument();
   });
 
-  it("links the collection screen, where the quests moved", async () => {
+  it("R1646000 links neither the Collection nor the Shop, and shows no quests", async () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
-    render(<AccountRoute token={TOKEN} />);
+    const { container } = render(<AccountRoute token={TOKEN} />);
 
-    const link = await screen.findByTestId(accountTestid.collection);
-    expect(link).toHaveAttribute("href", "/collection");
+    await screen.findByTestId(accountTestid.record);
+    expect(await screen.findByTestId(accountTestid.leaderboard)).toHaveAttribute("href", "/leaderboard");
+    for (const href of ["/collection", "/shop"]) {
+      expect(container.querySelector(`a[href="${href}"]`), href).toBeNull();
+    }
+    expect(screen.queryByRole("link", { name: "Collection" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Shop" })).toBeNull();
     expect(screen.queryByTestId("quests-panel")).toBeNull();
     expect(getQuests).not.toHaveBeenCalled();
   });
@@ -604,7 +615,8 @@ describe("deleting the account", () => {
 });
 
 // R1580000: the packs, their opening, pity, the tokens and the cosmetic packs left this screen for
-// `/shop`, which it links; shop.test.tsx proves they are reached there.
+// `/shop`, which the tavern home's Shop door opens (this screen links it no more, R1646000); shop.test.tsx
+// proves they are reached there.
 describe("R1580000 the account screen keeps account things", () => {
   function me(over: { isDev?: boolean; status?: MeResponse["profile"]["status"] } = {}): MeResponse {
     return {
@@ -618,13 +630,12 @@ describe("R1580000 the account screen keeps account things", () => {
     };
   }
 
-  it("R1580000 offers no packs, pack opening or pity, and links the Shop instead", async () => {
+  it("R1580000 R1646000 offers no packs, pack opening or pity, and no link to the Shop", async () => {
     for (const isDev of [true, false]) {
       vi.mocked(getProfile).mockResolvedValue(profileBody());
       const { container, unmount } = render(<AccountRoute token={TOKEN} me={me({ isDev })} />);
-      const link = await screen.findByTestId(accountTestid.shop);
-      expect(link, `isDev ${String(isDev)}`).toHaveAttribute("href", "/shop");
-      expect(link).toHaveTextContent("Shop");
+      await screen.findByTestId(accountTestid.record);
+      expect(container.querySelector('a[href="/shop"]'), `isDev ${String(isDev)}`).toBeNull();
       expect(container.querySelector('[data-testid="account-packs-toggle"]')).toBeNull();
       expect(screen.queryByRole("button", { name: "Card packs" })).toBeNull();
       for (const testid of [
@@ -648,7 +659,7 @@ describe("R1580000 the account screen keeps account things", () => {
     vi.mocked(getProfile).mockResolvedValue(profileBody());
     const { container } = render(<AccountRoute token={TOKEN} me={me({ isDev: true })} />);
 
-    await screen.findByTestId(accountTestid.shop);
+    await screen.findByTestId(accountTestid.record);
     expect(container.querySelector('[data-testid^="setting-cosmetic-"]')).toBeNull();
     expect(container.querySelector('[data-testid^="collection-equip-"]')).toBeNull();
     expect(screen.queryAllByRole("combobox", { name: /^(Foil|Finish|Border|Playmat|Backdrop|Card back)$/u })).toEqual([]);

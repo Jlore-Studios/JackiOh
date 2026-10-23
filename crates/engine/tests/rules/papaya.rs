@@ -2,7 +2,9 @@
 //! E32), through the fixture Spell: the grid, the curve in exact rationals, the Discover of each cell
 //! (`PAPAYA_OFFERS` random cells of the unused lanes, then "done"), the public `curveDrawn`, the Radiant
 //! face's enemy rows, what the other seat sees (R97, R177), a random cast (R452), and a pause that
-//! survives JSON and a game that replays (§9.2, §9.3).
+//! survives JSON and a game that replays (§9.2, §9.3). Most of it runs the rules through v0.4.0f
+//! (`curve`); `curve_now` proves today's: four Discovers of `PAPAYA_BASE_OFFERS` cells on the base face
+//! and `PAPAYA_OFFERS` on the Radiant, no "done", and the curve's cards destroyed (R1704000).
 
 use jackioh_engine::effects::cast_new;
 use jackioh_engine::subsystems::papaya::{
@@ -15,7 +17,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{events_of_type, json_of, put, setup_catalog, sink_for, slot};
 use crate::rules::fixtures::papaya::{
-    body, curve, curve_quickdraw, field, register_papaya_fixtures, snare, token,
+    body, curve, curve_now, curve_quickdraw, field, register_papaya_fixtures, snare, token,
 };
 use crate::rules::fixtures::prompt_harness::{
     AnswerResult, answer_keys, board, cast_now, must, open_as, round_trip,
@@ -744,5 +746,48 @@ mod r452_r113_9_3_random_casts_pauses_and_replays {
         });
         assert!(folded.errors.is_empty());
         assert_eq!(hash_state(&folded.state), hash_state(&state));
+    }
+}
+
+mod r1704000_four_discovers_then_the_destroys {
+    use super::*;
+
+    fn graveyard_ids(state: &GameState) -> Vec<String> {
+        state
+            .players
+            .p1
+            .graveyard
+            .iter()
+            .chain(state.players.p2.graveyard.iter())
+            .map(|card| card.id.clone())
+            .collect()
+    }
+
+    #[test]
+    fn r1704000_curve_now_offers_2_or_3_never_done_and_destroys() {
+        for (radiant, offers) in [(false, PAPAYA_BASE_OFFERS), (true, PAPAYA_OFFERS)] {
+            let mut state = game(&format!("papaya-now-{radiant}"));
+            let board = full_board(&mut state);
+            let (own, enemy) = (&board[0], &board[1]);
+            cast_now(&mut state, &curve_now().id, P1, radiant);
+            // y = 3: the enemy's whole backrow, picked a lane at a time, four Discovers in all.
+            for x in 0..PAPAYA_MAX_CELLS {
+                let pending = open_as(&state, PromptKind::Mode, P1);
+                assert_eq!(pending.options.len(), offers as usize);
+                assert!(!pending.options.iter().any(|option| option.key == done()));
+                assert_eq!(answer_count(&state, P1), offers as usize);
+                if x > 0 {
+                    assert_eq!(pending.prompt, "KY's Papaya: Discover another cell");
+                }
+                pick(&mut state, x, 3);
+            }
+            assert!(state.pending.is_none());
+            assert!(exiled_ids(&state).is_empty());
+            assert_eq!(sorted(graveyard_ids(&state)), sorted(ids_of(&enemy[5..])));
+            assert!(
+                own.iter()
+                    .all(|card| zone_name(&state, &card.id) == Some(ZoneName::Field))
+            );
+        }
     }
 }

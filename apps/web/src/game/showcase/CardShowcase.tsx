@@ -31,6 +31,7 @@ import { CatalogContext } from "../catalog.ts";
 import { sideOf, type Side } from "../contract.ts";
 import { namedFace } from "../faces.ts";
 import { createPlayTracker, type PlayTracker } from "../runs.ts";
+import { useWearerSeat } from "../wearer.ts";
 import ChaosBanner from "./ChaosBanner.tsx";
 import {
   CAST_ON_DRAW_TEXT,
@@ -161,6 +162,8 @@ function sameEvent(a: GameEvent, b: GameEvent): boolean {
 
 export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactElement {
   const lookup = useContext(CatalogContext);
+  // R1655000: a card the viewer played is their own copy, enlarged: it wears its picks.
+  const wearer = useWearerSeat();
   const [showing, setShowing] = useState<Showing | null>(null);
   const [chaos, setChaos] = useState<ChaosShowing | null>(null);
   const [chaosSaid, setChaosSaid] = useState<readonly string[] | null>(null);
@@ -431,7 +434,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
               </span>
               {face !== null ? (
                 <span ref={cardRef} className="showcase-card" data-testid={showcaseTestid.face}>
-                  <CardFace face={face} layout="full" />
+                  <CardFace face={face} layout="full" worn={wearer !== null && showing.play.player === wearer} />
                   {kind === "cast" ? <CastRibbon /> : null}
                   {badge === undefined ? null : <ShowcaseOrdinal ordinal={badge} />}
                 </span>

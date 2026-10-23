@@ -12,6 +12,11 @@
 //! R915005: the frozen decks are asked the validator's L7 before a rematch is made, so a deck with a
 //! custom card, which plays only in practice, is refused here as at the queue (`loadout_invalid`).
 //!
+//! R1638000: a match played on a catalog version other than the server's offers no rematch. An
+//! offer on it, a person's or a ladder bot's, is `409 update_required` before it is recorded, as a
+//! room's join refuses a stale catalog (§9.4): a rematch would play the old cards, or deal today's
+//! under the old rules.
+//!
 //! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
 //! The offers live in memory, one map per `App` (`RematchOffers`): rendezvous state for two sockets,
@@ -26,7 +31,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use indexmap::IndexMap;
 use jackioh_engine::{LeanPick, PlayerId};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::actor::contracts::one_tx;
 use crate::api::collection::caller_profile;
@@ -130,6 +135,15 @@ fn series_game() -> ApiError {
     ApiError::new(
         ApiErrorCode::SeriesGame,
         "series games continue from the series screen",
+    )
+}
+
+/// R1638000: a card patch went live since the match began. `details` are the co-op join's.
+fn cards_changed(app: &App, played_on: &str) -> ApiError {
+    ApiError::with_details(
+        ApiErrorCode::UpdateRequired,
+        "The cards changed since this game. Start a new one.",
+        json!({ "expected": app.catalog.version, "received": played_on }),
     )
 }
 
@@ -505,6 +519,10 @@ async fn offer_as(
     }
     if is_series_game(app, &match_row.id).await? {
         return Err(series_game());
+    }
+    // R1638000: refused before the offer is recorded, so nothing is kept and no rematch is made.
+    if match_row.catalog_version != app.catalog.version {
+        return Err(cards_changed(app, &match_row.catalog_version));
     }
 
     let now = now_ms();

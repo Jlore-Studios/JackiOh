@@ -596,7 +596,6 @@ export const PLAY_LEAN_NEWEST = "play-lean-newest";
 export const PLAY_SCREEN = "play-screen";
 export const PLAY_ONLINE = "play-online";
 export const PLAY_WAYS = "play-ways";
-export const PLAY_CREATOR = "play-creator";
 export const PLAY_TOGETHER = "play-together";
 /** R1578000: a visitor with no account is offered sign-in where the online controls would be. */
 export const PLAY_SIGN_IN = "play-sign-in";
@@ -687,8 +686,6 @@ export const STATS_TAB_CARDS = "stats-tab-cards";
 export const STATS_TAB_PLAYERS = "stats-tab-players";
 export const STATS_SUMMARY_TILES = "stats-summary-tiles";
 export const STATS_SUMMARY_TOTAL_GAMES = "stats-summary-total-games";
-export const STATS_SUMMARY_BEST_CARD = "stats-summary-best-card";
-export const STATS_SUMMARY_WORST_CARD = "stats-summary-worst-card";
 export const STATS_PROVISIONAL_BANNER = "stats-provisional-banner";
 export const STATS_FALLBACK_TOGGLE = "stats-fallback-toggle";
 export const STATS_SEARCH_INPUT = "stats-search-input";

@@ -1,8 +1,8 @@
 //! M #66 Fiery Waraxe (SPEC §8.8 row 66): (2) Field Spell, Common, 3/2 → 6/4.
-//!   Base:    "Animated on your turn, First Strike"
-//!   Radiant: "Animated on your turn, Pierce, First Strike"
+//!   Base:    "Animated on your turn, Rush, First Strike"
+//!   Radiant: "Animated on your turn, Rush, Pierce, First Strike"
 //! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only
-//! (First Strike on both faces since patch v0.3.10).
+//! (First Strike on both faces since patch v0.3.10, Rush since #1704).
 
 use jackioh_engine::prelude::*;
 
@@ -35,13 +35,32 @@ mod tests {
         s
     }
 
-    #[test]
-    fn r383_played_it_animates_into_its_lane_sick_that_turn() {
-        crate::register_all();
-        let mut s = played(false, 1);
-        assert_eq!(s.unit(PlayerId::P1, 1).map(|unit| unit.def_id), Some(WARAXE.to_string()));
-        s.expect_refused(|s| s.attack(WARAXE, "hero"));
-        s.expect_refused(|s| s.attack(WARAXE, VANILLA));
+    mod base {
+        use super::*;
+
+        #[test]
+        fn r383_animates_sick_rush_attacks_a_unit_not_the_hero() {
+            crate::register_all();
+            let mut s = played(false, 1);
+            assert_eq!(s.unit(PlayerId::P1, 1).map(|unit| unit.def_id), Some(WARAXE.to_string()));
+            s.expect_refused(|s| s.attack(WARAXE, "hero"));
+            s.attack(WARAXE, VANILLA);
+            // 3, first, into the 4/4 leaves it at 1.
+            s.expect_stats(VANILLA, json!({ "health": 1 }));
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn r383_animates_sick_rush_attacks_a_unit_not_the_hero() {
+            crate::register_all();
+            let mut s = played(true, 1);
+            s.expect_refused(|s| s.attack(WARAXE, "hero"));
+            s.attack(WARAXE, VANILLA);
+            s.expect_in_zone(VANILLA, "graveyard");
+        }
     }
 
     #[test]

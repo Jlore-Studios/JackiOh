@@ -96,6 +96,21 @@
   filter: brightness(0.55) grayscale(0.7);
 }
 
+/* R1639000: an empty deck that has dealt fatigue wears its count at rest, in the pile's own row (in
+   flow, so it covers nothing on the field), in the fatigue notice's colours. R318's notice takes its
+   place while it is up. */
+.pile > .pile-fatigue {
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--plague) 70%, white);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--plague) 34%, var(--bg-sunken));
+  color: #f3e8ff;
+  font-size: 0.74em;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
 /* The card the library turned away: small, and gone once its motion is over. The graveyard it can
    drop to is the next pile along (`--overflow-drop-x`). */
 .pile-notice > .overflow-card {

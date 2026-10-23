@@ -598,6 +598,7 @@ mod e18_a_whole_game_with_the_new_prompts {
                     p2: SeatController::Greedy,
                 },
                 max_actions: None,
+                setup: MatchSetup::default(),
             };
             let record = {
                 let mut hooks = MatchHooks {

@@ -67,6 +67,8 @@ import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } 
 import { deckCosmeticsOf } from "../cards/cosmetics.ts";
 import { FullArtAllowed } from "../cards/fullArt.ts";
 import { customDefsOf, gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
+import { announceWallet } from "../economy/wallet.ts";
+import { parseGameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
 import { getFxSettings } from "../fx/settings.ts";
@@ -75,7 +77,7 @@ import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
 import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts";
 import { PRACTICE_EARNING_API, type PracticeEarningApi } from "../net/practice.ts";
-import { useAccount, type Account } from "../net/gate.ts";
+import { readFailureOf, useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { GameBanner, LiveGameBanner, gameBannerTestid } from "./GameBanner.tsx";
@@ -312,6 +314,7 @@ function autostartConfig(params: PracticeParams): PracticeStartConfig | null {
  */
 function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<DecksResponse>): SavedDecks {
   const [loaded, setLoaded] = useState<{ token: string; saved: SavedDecks } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const token = account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
   const load = useRef(loadDecks);
   load.current = loadDecks;
@@ -347,15 +350,25 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
             : { kind: "none" };
         setLoaded({ token, saved });
       },
-      () => {
-        // A failed read offers no saved decks, and says so.
-        if (!cancelled) setLoaded({ token, saved: { kind: "unavailable" } });
+      (cause: unknown) => {
+        // A failed read offers no saved decks, and says so; Try again reads them again (#1691).
+        if (cancelled) return;
+        const { retryAfterMs } = readFailureOf(cause);
+        setLoaded({
+          token,
+          saved: retryAfterMs === undefined ? { kind: "unavailable" } : { kind: "unavailable", retryAfterMs },
+        });
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, attempt]);
+
+  const retry = useCallback((): void => {
+    setLoaded(null);
+    setAttempt((before) => before + 1);
+  }, []);
 
   switch (account.kind) {
     case "loading":
@@ -363,10 +376,13 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
     case "anonymous":
       return { kind: "anonymous" };
     case "error":
-      return { kind: "unavailable" };
+      return account.retry === undefined
+        ? { kind: "unavailable" }
+        : { kind: "unavailable", retry: account.retry, retryAfterMs: account.retryAfterMs };
     case "ready":
       if (token === null) return { kind: "inactive" };
-      return loaded !== null && loaded.token === token ? loaded.saved : { kind: "checking" };
+      if (loaded === null || loaded.token !== token) return { kind: "checking" };
+      return loaded.saved.kind === "unavailable" ? { ...loaded.saved, retry } : loaded.saved;
   }
 }
 
@@ -379,7 +395,7 @@ function useLobbyCatalog(
   wanted: boolean,
   known: CardDefs | null,
   factory: () => PracticeHost,
-): { defs: CardDefs | null; failed: boolean } {
+): { defs: CardDefs | null; failed: boolean; retry: () => void } {
   const [fetched, setFetched] = useState<CardDefs | null>(null);
   const [failed, setFailed] = useState(false);
   const make = useRef(factory);
@@ -414,7 +430,12 @@ function useLobbyCatalog(
     };
   }, [wanted, have, failed]);
 
-  return { defs: have, failed: have === null && failed };
+  /** #1691: Try again, which asks a host for the catalog once more. */
+  const retry = useCallback((): void => {
+    setFailed(false);
+  }, []);
+
+  return { defs: have, failed: have === null && failed, retry };
 }
 
 /**
@@ -1037,11 +1058,20 @@ function PracticeScreen({
       .then((claim) => api.claim(token, claim))
       .then(
         (answer) => {
-          settleTo(
-            answer.paid
-              ? { kind: "paid", jlore: answer.jlore, xp: answer.xp, jloreCapped: answer.jloreCapped }
-              : { kind: "refused", reason: answer.reason },
-          );
+          if (!answer.paid) {
+            settleTo({ kind: "refused", reason: answer.reason });
+            return;
+          }
+          // #1664: the game's Jlore is in the wallet now, and its tracks and quests are for the dialog to play.
+          announceWallet();
+          const economy = parseGameEconomy(answer);
+          settleTo({
+            kind: "paid",
+            jlore: answer.jlore,
+            xp: answer.xp,
+            jloreCapped: answer.jloreCapped,
+            ...(economy === null ? {} : { tracks: economy.tracks, quests: economy.quests }),
+          });
         },
         () => {
           settleTo({ kind: "unreachable" });
@@ -1198,6 +1228,8 @@ function PracticeScreen({
             defs={lobbyCatalog.defs}
             defsFailed={lobbyCatalog.failed}
             custom={custom.state}
+            onRetryCustom={custom.reload}
+            onRetryDefs={lobbyCatalog.retry}
             onStart={onStart}
           />
         </div>

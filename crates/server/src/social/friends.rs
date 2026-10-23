@@ -12,8 +12,8 @@
 //! - `POST /api/friends/requests/:id/accept` makes the friendship and deletes the request;
 //!   `…/decline` (its recipient) and `DELETE /api/friends/requests/:id` (its sender) delete it;
 //!   `DELETE /api/friends/:profileId` ends a friendship (B45), and with it every replay share
-//!   between the two, either way, and a watch of either by the other (B50, B52): making friends
-//!   again restores neither.
+//!   between the two, either way, every open challenge, its room freed (R1689000), and a watch of
+//!   either by the other (B50, B52): making friends again restores none of them.
 //! - `POST /api/blocks` `{profileId}` blocks a player: the friendship, every request and every
 //!   replay share between the two go, either way, and so does every open challenge, its room freed,
 //!   and a watch of either by the other; from then on requests, challenges, chat and shares are
@@ -298,13 +298,23 @@ async fn remove_request(app: &App, req: Req, mine: fn(&FriendRequestRow, &str) -
 }
 
 /// `DELETE /api/friends/:profileId` (B45): ends the friendship, if there is one, and with it the
-/// replay shares between the two (B52) and a watch of either by the other (B50). 204 either way.
+/// replay shares between the two (B52), every open challenge between them, its room freed
+/// (R1689000), and a watch of either by the other (B50). 204 either way.
 pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let friend_id = param(&req, "profileId");
+    let now = now_ms();
     let mut tx = app.db.begin(Some(&me)).await?;
     let removed = tx.friends_remove(&me, &friend_id).await?;
     let shares = tx.shares_remove_between(&me, &friend_id).await?;
+    // R1689000: an open challenge either way is cancelled and its room freed, as a block's is. One
+    // that lapsed already freed itself: its room expired with it (and its code may be another room's now).
+    let closed = tx
+        .challenges_close_between(&me, &friend_id, ChallengeState::Cancelled)
+        .await?;
+    for challenge in closed.iter().filter(|challenge| challenge.expires_at > now) {
+        release_room(&mut tx, &challenge.room_code).await?;
+    }
     tx.commit().await?;
     // After the commit, so a hello judged from here on is refused and one judged before is revoked.
     let watchers = revoke_between(app, &me, &friend_id);
@@ -314,6 +324,7 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
             json!({
                 "profileId": me,
                 "friendProfileId": friend_id,
+                "challengesClosed": closed.len(),
                 "sharesRemoved": shares,
                 "watchersRevoked": watchers,
             }),

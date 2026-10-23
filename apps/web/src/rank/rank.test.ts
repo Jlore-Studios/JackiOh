@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { badgeWords, divisionNumeral, rankShortWords, rankWords, tierName, tierShortName } from "./rank.ts";
+import { badgeWords, divisionNumeral, rankCaption, rankShortWords, rankWords, tierName, tierShortName } from "./rank.ts";
 
 describe("rank words", () => {
   it("names every tier in a player's words", () => {
@@ -32,12 +32,22 @@ describe("rank words", () => {
     expect(tierShortName("rotten")).toBe("Rotten");
   });
 
-  it("says the same rank short, without placements or pips words", () => {
-    expect(rankShortWords({ tier: "raisin", placementsPlayed: 2, placementGames: 5 })).toBe("Raisin 2/5");
+  it("says the same rank short beside its crest, without Grape, pips, placements or position", () => {
+    expect(rankShortWords({ tier: "raisin", placementsPlayed: 2, placementGames: 5 })).toBe("Raisin");
     expect(
       rankShortWords({ tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" }),
-    ).toBe("Normal III 1/3");
-    expect(rankShortWords({ tier: "jlorious", position: 12 })).toBe("Jlorious #12");
+    ).toBe("Normal III");
+    expect(rankShortWords({ tier: "jlorious", position: 12 })).toBe("Jlorious");
+  });
+
+  it("#1650 captions a crest with the tier and division, leaving pips, placements and the position to the crest", () => {
+    expect(rankCaption({ tier: "raisin", placementsPlayed: 2, placementGames: 5 })).toBe("Raisin");
+    expect(
+      rankCaption({ tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" }),
+    ).toBe("Normal Grape III");
+    expect(rankCaption({ tier: "jlorious", position: 12 })).toBe("Jlorious");
+    expect(rankCaption({ seasonId: "v0.2", tier: "golden", division: 1 })).toBe("Golden Grape I");
+    expect(rankCaption({ seasonId: "v0.2", tier: "jlorious", position: 4 })).toBe("Jlorious");
   });
 
   it("says a season's badge with its season", () => {

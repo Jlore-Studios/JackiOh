@@ -1,7 +1,7 @@
 // `/leaderboard`: Jlorious first, then the tiers, then the Raisins — and never a rating, nor a
 // profile id (R1436).
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
@@ -56,9 +56,10 @@ describe("the leaderboard screen", () => {
     const tiers = screen.getAllByTestId("leaderboard-tier");
     expect(tiers).toHaveLength(5);
     expect(tiers[1]?.textContent).toMatch(/Golden Grape \(1\)/);
-    expect(tiers[1]?.textContent).toMatch(/Lena#7 · Division I · 2 pips/);
+    // The crest between the name and the division is empty text, which toHaveTextContent folds away.
+    expect(tiers[1]).toHaveTextContent("Lena#7 · Division I · 2 pips");
     expect(screen.getByTestId("leaderboard-raisins")).toHaveTextContent("3 players are still playing placements.");
-    expect(screen.getByTestId("leaderboard-you")).toHaveTextContent("You are Jlorious #2");
+    expect(screen.getByTestId("leaderboard-you")).toHaveTextContent("You are Jlorious");
   });
 
   it("R1436 shows every player by username, isolated, and no profile id nor any slice of one", async () => {
@@ -85,7 +86,30 @@ describe("the leaderboard screen", () => {
 
     expect(await screen.findByText(/no jlorious players yet/i)).toBeInTheDocument();
     expect(screen.getByTestId("leaderboard-raisins")).toHaveTextContent("Nobody is playing placements right now.");
-    expect(screen.getByTestId("leaderboard-you")).toHaveTextContent("You are Raisin · 1/5 placements");
+    const you = screen.getByTestId("leaderboard-you");
+    expect(you).toHaveTextContent("You are Raisin — play rated games to climb");
+    expect(within(you).getByRole("img", { name: "Raisin · 1/5 placements" })).toBeInTheDocument();
+  });
+
+  it("#1650 draws a crest wherever the ladder shows a rank", async () => {
+    vi.mocked(getLeaderboard).mockResolvedValue(board());
+    render(<LeaderboardRoute token={TOKEN} />);
+
+    const you = await screen.findByTestId(leaderboardTestid.you);
+    expect(within(you).getByRole("img", { name: "Jlorious #2" })).toHaveAttribute("data-size", "large");
+
+    const jlorious = screen.getByTestId(leaderboardTestid.jlorious);
+    expect(within(jlorious).getByRole("img", { name: "Jlorious #1" })).toBeInTheDocument();
+    expect(within(jlorious).getByRole("img", { name: "Jlorious #2" })).toBeInTheDocument();
+
+    const tiers = screen.getAllByTestId(leaderboardTestid.tier);
+    const golden = within(tiers[1] as HTMLElement);
+    expect(golden.getByRole("img", { name: "Golden Grape" })).toBeInTheDocument();
+    expect(golden.getByRole("img", { name: "Golden Grape I" })).toBeInTheDocument();
+    for (const tier of tiers) {
+      const name = tier.getAttribute("data-tier") ?? "";
+      expect(within(tier).getAllByRole("img")[0]).toHaveAttribute("data-tier", name);
+    }
   });
 
   it("relays a failed read instead of rendering an empty ladder", async () => {

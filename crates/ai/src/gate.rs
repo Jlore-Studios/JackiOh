@@ -8,12 +8,12 @@ use std::ops::Index;
 
 use jackioh_engine::config::AI_DIFFICULTY;
 use jackioh_engine::{
-    FoldArgs, GameOverReason, Handicap, PerPlayer, PerPlayerOpt, PlayerId, Rng, Winner, fold, hash_state,
+    GameOverReason, Handicap, PerPlayer, PerPlayerOpt, PlayerId, Rng, Winner, fold, hash_state,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::deck::{AiDeckOptions, build_ai_deck};
-use crate::match_::{MatchConfig, MatchHooks, MatchRecord, SeatController, play_match};
+use crate::match_::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match};
 use crate::shadow_ban::FIXTURE_BANNED_IDS;
 use crate::types::SearchBudget;
 
@@ -314,6 +314,7 @@ fn game_config_with_banned(
         controllers,
         max_actions: None,
         seed,
+        setup: MatchSetup::default(),
     }
 }
 
@@ -343,13 +344,7 @@ fn run_games(
         let subject_seat = subject_seat_of(n);
         let record = play_match(&config, &mut MatchHooks::default());
 
-        let replayed = fold(&FoldArgs {
-            seed: config.seed.clone(),
-            decks: config.decks.clone(),
-            log: record.log.clone(),
-            handicaps: config.handicaps.clone(),
-            ..FoldArgs::default()
-        });
+        let replayed = fold(&config.fold_args(record.log.clone()));
 
         let won = record
             .result

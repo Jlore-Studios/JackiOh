@@ -1,14 +1,17 @@
 // `/shop` (#1577, #1580, SPEC §14.1, §14.3–§14.6, R1580000): the Shop screen holds the Jlore shop, the
-// card packs with their pity and opening, the cosmetic packs and the token picker, each reading with
-// the caller's token and the others again when one changes the account (#1309, moved from the account
-// screen). The route table serves it behind the gate like `/collection` (the anonymous and pending
-// bounces live in gate.test.tsx beside the other routes'): an active account sees the shop, the
-// landing's Shop door lands on it and so does the account screen's link.
+// card packs with their opening, the cosmetic packs and the token picker, each reading with the
+// caller's token and the others again when one changes the account (#1309, moved from the account
+// screen). Their odds and the pity are `/purchases`', which it links (R1665000). The route table serves
+// it behind the gate like `/collection` (the anonymous and pending bounces live in gate.test.tsx beside
+// the other routes'): an active account sees the shop, the landing's Shop door lands on it, and the
+// account screen links it no more but by the top bar's Jlore pill (R1646000, R1651000).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
+import { readOwnedFullArt, resetOwnedFullArtForTests } from "../cards/ownedFullArt.ts";
+import { jlorePillTestid } from "../economy/JlorePill.tsx";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
@@ -26,7 +29,8 @@ import {
 import { shopTestid } from "../shop/shop.ts";
 import { refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { accountTestid } from "./account.tsx";
-import ShopRoute from "./shop.tsx";
+import { purchasesTestid } from "./purchases.tsx";
+import ShopRoute, { shopRouteTestid } from "./shop.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 
@@ -97,6 +101,7 @@ function at(path: string): void {
 beforeEach(() => {
   window.localStorage.clear();
   resetUsernamePromptForTests();
+  resetOwnedFullArtForTests();
   at("/");
 });
 
@@ -113,7 +118,7 @@ describe("#1577 the shop screen", () => {
     render(<ShopRoute token={TOKEN} />);
 
     expect(await screen.findByTestId(shopTestid.wallet, undefined, SLOW)).toHaveTextContent("37 Jlore");
-    expect(await screen.findByTestId(packTestid.pity("epic"), undefined, SLOW)).toHaveTextContent("7 / 10 packs");
+    expect(await screen.findByTestId(packTestid.open("Core"), undefined, SLOW)).toBeInTheDocument();
     expect(await screen.findByTestId(shopTestid.cardBar, undefined, SLOW)).toBeInTheDocument();
     expect(await screen.findByTestId(shopTestid.packsPanel, undefined, SLOW)).toBeInTheDocument();
     for (const path of [
@@ -150,7 +155,7 @@ describe("#1577 the shop screen", () => {
     expect(screen.getByRole("heading", { name: "Shop" })).toBeInTheDocument();
   });
 
-  it("R1580000 buying, opening and pity are on the Shop, and the opening plays over the screen", async () => {
+  it("R1580000 buying and opening are on the Shop, and the opening plays over the screen", async () => {
     serveShop();
     render(<ShopRoute token={TOKEN} />);
 
@@ -159,7 +164,6 @@ describe("#1577 the shop screen", () => {
       expect(within(body).getByTestId(testid), testid).toBeInTheDocument();
     }
     expect(await screen.findByTestId(shopTestid.buy("Core"), undefined, SLOW)).toBeInTheDocument();
-    expect(await screen.findByTestId(packTestid.pity("epic"), undefined, SLOW)).toHaveTextContent("7 / 10 packs");
 
     fireEvent.click(await screen.findByTestId(packTestid.open("Core"), undefined, SLOW));
     const scene = await screen.findByTestId(packTestid.scene, undefined, SLOW);
@@ -212,6 +216,58 @@ describe("#1577 the shop screen", () => {
     expect(screen.getByTestId(shopTestid.wallet)).toHaveTextContent("0 Jlore");
   });
 
+  it("an opening on the Shop has the next screen read what the account owns again", async () => {
+    stubServer((call) =>
+      call.method === "POST" && call.path === "/api/cosmetic-packs/open"
+        ? { status: 200, body: openedCosmeticPack() }
+        : shopRead(call),
+    );
+    const fetchOwned = vi.fn(() => Promise.resolve(ownedCosmeticsOf()));
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned, "the session's answer is kept").toHaveBeenCalledTimes(1);
+
+    render(<ShopRoute token={TOKEN} />);
+    fireEvent.click(await screen.findByTestId(shopTestid.open, undefined, SLOW));
+    await screen.findByTestId(shopTestid.reveal, undefined, SLOW);
+
+    // The opening may have granted a per-card cosmetic: the Collection's strip and the board read again.
+    await readOwnedFullArt(TOKEN, fetchOwned);
+    expect(fetchOwned).toHaveBeenCalledTimes(2);
+  });
+
+  it("R1665000 renders no pity counters and no odds table, and links /purchases", async () => {
+    serveShop();
+    render(<ShopRoute token={TOKEN} />);
+
+    // Wait for every panel to read, so an element a panel draws only once it has its answer would be here.
+    await screen.findByTestId(packTestid.open("Core"), undefined, SLOW);
+    await screen.findByTestId(shopTestid.unopened, undefined, SLOW);
+    await screen.findByTestId(shopTestid.cardBar, undefined, SLOW);
+    await screen.findByTestId(shopTestid.wallet, undefined, SLOW);
+
+    const link = screen.getByTestId(shopRouteTestid.purchases);
+    expect(link).toHaveAttribute("href", paths.purchases);
+    expect(link).toHaveTextContent("Odds & pity");
+    expect(screen.getByTestId(shopTestid.body), "the link is at the foot, outside the scrolling body").not.toContainElement(link);
+
+    for (const key of ["epic", "legendary", "mythic"]) {
+      expect(screen.queryByTestId(packTestid.pity(key)), `pity ${key}`).toBeNull();
+    }
+    for (const testid of [
+      packTestid.pityPanel,
+      packTestid.pityLine,
+      packTestid.odds,
+      packTestid.oddsRow("common"),
+      packTestid.duplicate,
+      shopTestid.odds,
+      shopTestid.flooredOdds,
+    ]) {
+      expect(screen.queryByTestId(testid), testid).toBeNull();
+    }
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
   it("names the screen Shop", () => {
     expect(paths.shop).toBe("/shop");
     expect(screenNameFor(paths.shop)).toBe("Shop");
@@ -238,10 +294,30 @@ describe("#1577 the /shop route through the route table", () => {
     at(paths.shop);
     render(<App />);
 
-    expect(await screen.findByTestId(packTestid.pity("epic"), undefined, SLOW)).toHaveTextContent("7 / 10 packs");
+    expect(await screen.findByTestId(packTestid.open("Core"), undefined, SLOW)).toBeInTheDocument();
     for (const call of server.to("GET", "/api/packs")) {
       expect(call.headers.authorization).toBe("Bearer e2e-token");
     }
+  });
+
+  it("R1665000 the Odds & pity link at the foot of /shop opens /purchases", async () => {
+    // `packsInfo` carries no answer for the global roll (R1661001), which the Purchases page shows.
+    const info = packsInfo();
+    const globalCosmetic = { chance: 0.1, tiers: { common: 0, rare: 0, epic: 0.9, legendary: 0.08, mythic: 0.02 } };
+    stubServer((call) => {
+      if (call.path === "/api/auth/me") return { status: 200, body: meBody("active") };
+      if (call.method === "GET" && call.path === "/api/packs") {
+        return { status: 200, body: { ...info, odds: { ...info.odds, globalCosmetic } } };
+      }
+      return shopRead(call);
+    });
+    signedIn();
+    at(paths.shop);
+    render(<App />);
+
+    fireEvent.click(await screen.findByTestId(shopRouteTestid.purchases, undefined, SLOW), { button: 0 });
+    expect(await screen.findByTestId(purchasesTestid.pityLine, undefined, SLOW)).toBeInTheDocument();
+    expect(window.location.pathname).toBe(paths.purchases);
   });
 
   it("following the Shop door from the landing ends on /shop", async () => {
@@ -258,17 +334,33 @@ describe("#1577 the /shop route through the route table", () => {
   });
 });
 
-describe("R1580000 the account screen links the Shop", () => {
-  it("R1580000 the account screen's Shop link ends on /shop", async () => {
+describe("R1646000 the account screen links no Shop", () => {
+  it("R1646000 the account screen, through the route table, offers no link to /shop", async () => {
     serveShop();
     signedIn();
     at(paths.account);
     render(<App />);
 
-    fireEvent.click(await screen.findByTestId(accountTestid.shop, undefined, SLOW), { button: 0 });
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(paths.shop);
-    }, SLOW);
-    expect(await screen.findByTestId(packTestid.pity("epic"), undefined, SLOW)).toHaveTextContent("7 / 10 packs");
+    const record = await screen.findByTestId(accountTestid.record, undefined, SLOW);
+    const account = screen.getByTestId(accountTestid.screen);
+    expect(account).toContainElement(record);
+    // R1651000: the top bar's Jlore pill is every signed-in screen's; the screen's own links are these.
+    const own = Array.from(account.querySelectorAll(`a[href="${paths.shop}"]`)).filter((link) => link.closest("nav") === null);
+    expect(own).toEqual([]);
+    expect(within(account).queryByRole("link", { name: "Shop" })).toBeNull();
+    expect(window.location.pathname).toBe(paths.account);
+  });
+
+  it("R1651000 the account screen's one way to /shop is the Jlore pill in its top bar", async () => {
+    serveShop();
+    signedIn();
+    at(paths.account);
+    render(<App />);
+
+    const pill = await screen.findByTestId(jlorePillTestid, undefined, SLOW);
+    const account = screen.getByTestId(accountTestid.screen);
+    expect(Array.from(account.querySelectorAll(`a[href="${paths.shop}"]`))).toEqual([pill]);
+    expect(pill.closest("nav")).not.toBeNull();
+    expect(pill).toHaveAccessibleName(`${String(walletInfo().jlore)} Jlore`);
   });
 });

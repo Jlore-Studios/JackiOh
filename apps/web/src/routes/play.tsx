@@ -5,8 +5,9 @@
 // one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
 // R1075000: the host cancels a room nobody has joined, and the lobby finds the host's open room again on mount.
 // R1578000: /play is the hub every play mode starts from, online first: the queue, its setup and the
-// rank are the primary panel, the other ways to play are four smaller links beside it, and a visitor
+// rank are the primary panel, the other ways to play are three smaller links beside it, and a visitor
 // with no account sees the same screen with a sign-in where the online panel's controls would be.
+// R1646000: the Card creator is not one of them; the Collection's Card builder door leads to it.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -50,7 +51,8 @@ import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.t
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
-import { rankWords } from "../rank/rank.ts";
+import { rankCaption } from "../rank/rank.ts";
+import RankCrest from "../rank/RankCrest.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import "../auth/tavern.css";
@@ -78,7 +80,6 @@ export const playTestid = {
   screen: "play-screen",
   online: "play-online",
   ways: "play-ways",
-  creator: "play-creator",
   together: "play-together",
   /** R1578000: a visitor with no account is offered sign-in where the online panel's controls would be. */
   signIn: "play-sign-in",
@@ -689,7 +690,8 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
       </h2>
       {rank === null ? null : (
         <p data-testid={playTestid.rank}>
-          {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
+          <RankCrest rank={rank.rank} size="large" />{" "}
+          {t("{rank} · Season {season}", { rank: rankCaption(rank.rank), season: rank.season })}
         </p>
       )}
       <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
@@ -709,12 +711,6 @@ function waysToPlay(): readonly Way[] {
       testid: playTestid.practice,
       name: t("Practice"),
       note: t("Solo games against the AI, including the tutorial."),
-    },
-    {
-      href: paths.creator,
-      testid: playTestid.creator,
-      name: t("Card creator"),
-      note: t("Make custom cards and try them against the AI."),
     },
     {
       href: paths.together,
