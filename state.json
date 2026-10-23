@@ -27994,6 +27994,12 @@
         "number": 1692,
         "title": "Patch: the phone's game-log toggle shows when new lines landed while it was closed",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-23T13:02:04Z",
+        "number": 1716,
+        "title": "Patch: a failed clock persist is retried, not marked written",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-23T12:58:23Z",
