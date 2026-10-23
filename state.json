@@ -13142,7 +13142,7 @@
       }
     },
     "1748": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "handoff": {
         "at": "2026-10-23T22:50:19Z",
@@ -13160,8 +13160,8 @@
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-6",
-      "run_id": "40033598162",
-      "started_at": "2026-10-23T22:26:09Z",
+      "run_id": "pending:7b8489e0-1792796156",
+      "started_at": "2026-10-23T22:56:05Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -13219,9 +13219,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T22:55:43Z",
+    "at": "2026-10-23T22:56:05Z",
     "url": "",
-    "what": "plan #1751 on agy"
+    "what": "build #1748 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-23T22:48:13Z",
