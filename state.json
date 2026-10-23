@@ -12893,11 +12893,10 @@
     "what": "build #1721 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-23T16:09:43Z",
+    "at": "2026-10-23T16:23:51Z",
     "notes": [
-      "delivered build #1722 on claude-1 (run 39971983587): approved",
-      "started build #1721 on claude-1 (run 39984757271)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #1734 on claude-4 (run 39981055399): approved",
+      "delivered build #1723 on claude-7 (run 39977827027): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -13603,7 +13602,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T16:09:43Z",
+  "loop_tick": "2026-10-23T16:23:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
