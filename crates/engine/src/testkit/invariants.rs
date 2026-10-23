@@ -970,9 +970,10 @@ fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 /// I8's forged activations of one card for `player` (#1574), each with the `activate` the list would hold
 /// for it: every ability the card has (`abilities_of`) crossed with the target and mode combinations it
 /// declares (`play_choice_combinations`, the list's own bound, R90), spelled as `legal_actions` spells
-/// one (the ability named, a Tribute paid with the first of `player`'s units other than the card); and for
-/// the ability an `activatePower` names (the card's power, or its only ability, `reduce::activate_card`),
-/// each combination with no mode and no Tribute as that alias too (§10.2, R43, R384).
+/// one (the ability named, a Tribute paid with the first of `player`'s units other than the card, an
+/// empty pick list while a Mayor acts as none, R1200); and for the ability an `activatePower` names (the
+/// card's power, or its only ability, `reduce::activate_card`), each combination with no mode and no
+/// Tribute as that alias too (§10.2, R43, R384).
 fn forged_activations(
     state: &GameState,
     player: PlayerId,
@@ -990,6 +991,7 @@ fn forged_activations(
         .filter(|unit| unit.id != card.id)
         .map(|unit| unit.id.clone())
         .collect();
+    let random = crate::random_targets::targets_random(state);
     let mut out: Vec<(ActionBody, ActionBody)> = Vec::new();
     for decl in &abilities {
         let need = usize::try_from(decl.cost.and_then(|cost| cost.tribute).unwrap_or(0)).unwrap_or(0);
@@ -1006,14 +1008,27 @@ fn forged_activations(
                 modes: choice.modes.clone(),
                 tributes: tributes.clone(),
             };
+            // R1200: while a Mayor acts the list spells an activation left with no pick as no picks at
+            // all (`play_choices::without_target_picks`), and the reducer reads the two alike.
+            let listed = if random && choice.targets.as_ref().is_some_and(Vec::is_empty) {
+                ActionBody::Activate {
+                    instance_id: card.id.clone(),
+                    ability: Some(decl.id.clone()),
+                    targets: None,
+                    modes: choice.modes.clone(),
+                    tributes: tributes.clone(),
+                }
+            } else {
+                activate.clone()
+            };
             if aliased.as_deref() == Some(decl.id.as_str()) && choice.modes.is_none() && tributes.is_none() {
                 let alias = ActionBody::ActivatePower {
                     instance_id: card.id.clone(),
                     targets: choice.targets.clone(),
                 };
-                out.push((alias, activate.clone()));
+                out.push((alias, listed.clone()));
             }
-            out.push((activate.clone(), activate));
+            out.push((activate, listed));
         }
     }
     out

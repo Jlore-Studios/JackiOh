@@ -1289,3 +1289,77 @@ mod r1081000_flying_backrow {
         assert_eq!(live(&state, &field).controller, P2);
     }
 }
+
+mod r1728000_animating_a_standing_unit {
+    use super::*;
+    use jackioh_engine::animated::{AnimateOptions, animate_at_turn_start, animate_card};
+    use jackioh_engine::effects::animate;
+
+    /// A flyer standing in p1's backrow zone 2 in Defense Position, entered on turn 2 and spent since.
+    fn spent_flyer(state: &mut GameState) -> CardInstance {
+        let wing = put(state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
+        set_position(state, &wing.id, Position::Def);
+        if let Some(card) = find_instance_mut(state, &wing.id) {
+            card.summoned_turn = Some(2);
+            card.exertion.attacked = true;
+        }
+        live(state, &wing.id)
+    }
+
+    /// It stands where it stood, as it stood: nothing moved, re-entered or readied it.
+    fn assert_untouched(state: &GameState, wing: &CardInstance, events: &[GameEvent]) {
+        assert!(events_of_type(events, "animated").is_empty(), "{events:?}");
+        assert_eq!(
+            card_at(state, slot(P1, Row::Backrow, 2)).map(|card| card.id.clone()),
+            Some(wing.id.clone())
+        );
+        assert!(card_at(state, slot(P1, Row::Units, 2)).is_none());
+        let now = live(state, &wing.id);
+        assert_eq!(now.position, Some(Position::Def), "its position stays");
+        assert_eq!(now.summoned_turn, Some(2), "it enters nothing");
+        assert!(now.exertion.attacked, "its spent attack stays spent");
+    }
+
+    #[test]
+    fn r1728000_animating_a_unit_standing_in_the_backrow_leaves_it_where_it_stands() {
+        let mut state = board("r1728000-move");
+        let wing = spent_flyer(&mut state);
+        let (animated, events) = run(&mut state, |sink| {
+            animate_card(sink, &wing, AnimateOptions::default())
+        });
+        assert!(animated, "a Unit already answers true, as an animated card does");
+        assert_untouched(&state, &wing, &events);
+    }
+
+    #[test]
+    fn r1728000_the_animate_verb_aimed_at_a_standing_unit_moves_nothing() {
+        let mut state = board("r1728000-verb");
+        let wing = spent_flyer(&mut state);
+        let ((), events) = run(&mut state, |sink| {
+            let mut ctx = make_context(
+                sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            (animate(json_as(
+                json!({ "target": { "of": "instance", "instanceId": wing.id } }),
+            ))
+            .apply)(&mut ctx);
+        });
+        assert_untouched(&state, &wing, &events);
+    }
+
+    #[test]
+    fn r1728000_an_animated_on_your_turn_unit_standing_in_the_backrow_stays_there_at_its_turns_start() {
+        let mut state = board("r1728000-turn");
+        let wing = spent_flyer(&mut state);
+        if let Some(card) = find_instance_mut(&mut state, &wing.id) {
+            card.granted_keywords.push(Keyword::AnimatedOnYourTurn);
+        }
+        let ((), events) = run(&mut state, |sink| animate_at_turn_start(sink, P1));
+        assert_untouched(&state, &wing, &events);
+    }
+}
