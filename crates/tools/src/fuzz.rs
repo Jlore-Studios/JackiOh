@@ -47,8 +47,12 @@
 //! answer that action's own events (§10.1, §10.2); while a prompt is open, a malformed-answer probe
 //! sends the policy's answer with a stale choice id, from the other seat, with a pick dropped below
 //! `min`, with a pick doubled and with a pick no option offers, each owed a refusal with no events
-//! (§10.6, #1574). Every way the state must be kept exactly, the nonce memory `hash_state` leaves out
-//! included. A failure is the "probe" stage and names the step
+//! (§10.6, #1574). A malformed-action probe sends the policy's play, activation or mulligan with one
+//! choice made impossible: a target, mode, zone, Tribute or Plague source nothing offers, a negative X, a
+//! face-down timing no card is set by, an ability the card lacks, the `activatePower` alias aimed at
+//! nothing, a keep the seat was not dealt, and a second mulligan answer from the seat that gave one. Each
+//! is owed a refusal with no events (§10.5 step 1, R90, R265, #1694). Every way the state must be kept
+//! exactly, the nonce memory `hash_state` leaves out included. A failure is the "probe" stage and names the step
 //! and the probe. The handicapped wave probes the same way and `--duos` as `duos_fuzz.rs` says. The
 //! probes draw from no random stream, so every game plays as it did before them.
 //!
@@ -138,7 +142,8 @@ use anyhow::{Context, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
-    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, malformed_answers, preview_every_set, set_ships,
+    I6_GATE_STRIDE, I8_GATE_STRIDE, create_invariant_monitor, malformed_actions, malformed_answers,
+    preview_every_set, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardInstance, CardType,
@@ -1612,7 +1617,9 @@ pub(crate) fn duos_growth_breach(
 /// The probes under the gate, the handicapped wave and `--duos`: every this-many-th state (#1386);
 /// the test sweep probes every state. Measured 2026-10-20 (4 cores, release) over seeds 1–200, in wall
 /// seconds before the probes and with this stride: `cargo jackioh fuzz` 14.8 and 14.4–14.9, `--handicap`
-/// 15.2 and 15.4, `--duos` 43.6 and 44.5, so the gate's time is kept.
+/// 15.2 and 15.4, `--duos` 43.6 and 44.5, so the gate's time is kept. With the malformed-action probe
+/// (#1694), measured 2026-10-23 (4 cores, release) over seeds 1–200, in wall seconds before it and with it
+/// (two runs each): `cargo jackioh fuzz` 17.0 and 17.4 and 16.8, `--handicap` 20.9 and 21.4 and 21.7.
 pub const PROBE_GATE_STRIDE: usize = 10;
 
 /// A probe failure's name: the policy's action sent by a seat that may not take it.
@@ -1623,6 +1630,9 @@ pub(crate) const REUSED_NONCE_PROBE: &str = "reused-nonce";
 
 /// A probe failure's name: the policy's answer to the open prompt, made malformed (#1574).
 pub(crate) const MALFORMED_ANSWER_PROBE: &str = "malformed-answer";
+
+/// A probe failure's name: the policy's play, activation or mulligan with one choice made impossible (#1694).
+pub(crate) const MALFORMED_ACTION_PROBE: &str = "malformed-action";
 
 /// The probes' stride: every state in the test sweep, every PROBE_GATE_STRIDE-th otherwise.
 pub fn probe_stride() -> usize {
@@ -1669,7 +1679,9 @@ fn judge_probe(state: &GameState, result: &ReduceResult, owed: Option<&[GameEven
 /// The probes on one state (#1386), never logged. First a concede by `player` under the last logged
 /// action's nonce, owed that action's own events (`last`); then `chosen` sent by the other seat, owed
 /// a refusal, unless that seat still owes its own mulligan, which it may answer (R265); then, while a
-/// prompt is open, `chosen` made malformed (`malformed_answers`), each owed a refusal (#1574).
+/// prompt is open, `chosen` made malformed (`malformed_answers`), each owed a refusal (#1574); then
+/// `chosen`, a play, an activation or a mulligan, with one choice made impossible (`malformed_actions`),
+/// each owed a refusal (#1694).
 fn probe_state(
     state: &GameState,
     player: PlayerId,
@@ -1702,6 +1714,16 @@ fn probe_state(
         if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
             return Some(format!(
                 "{MALFORMED_ANSWER_PROBE} probe after step {step}: {seat} sent the {variant} answer to the open prompt, and it {wrong}"
+            ));
+        }
+    }
+    for (variant, seat, body) in malformed_actions(state, player, chosen) {
+        let sent = body.action_type();
+        let forged = Action::new(body, seat, format!("fuzz-probe-{step}"));
+        if let Some(wrong) = judge_probe(state, &probe(state, &forged), None) {
+            return Some(format!(
+                "{MALFORMED_ACTION_PROBE} probe after step {step}: {seat} sent the {variant} \"{}\", and it {wrong}",
+                sent.as_str()
             ));
         }
     }
@@ -3309,6 +3331,7 @@ mod tests {
 
     mod fuzz_probe_stage {
         use super::*;
+        use jackioh_engine::testkit::{ANSWERED_MULLIGAN_ACTION, UNDEALT_KEEP_ACTION};
 
         /// A reducer that ignores who sent an action and answers for the seat the game waits on.
         pub(super) fn seatless(state: &GameState, action: &Action) -> ReduceResult {
@@ -3369,6 +3392,79 @@ mod tests {
         #[test]
         fn a_reducer_that_takes_a_malformed_answer_fails_the_malformed_answer_probe() {
             assert_caught(lenient, MALFORMED_ANSWER_PROBE);
+        }
+
+        /// A reducer that takes any play its seat is not listed as the seat's first listed play.
+        fn forgiving(state: &GameState, action: &Action) -> ReduceResult {
+            if matches!(action.body, ActionBody::Play { .. }) {
+                let listed = legal_actions(state, action.player_id);
+                if !listed.contains(&action.body)
+                    && let Some(first) = listed
+                        .into_iter()
+                        .find(|body| matches!(body, ActionBody::Play { .. }))
+                {
+                    return reduce(state, &Action::new(first, action.player_id, action.nonce.clone()));
+                }
+            }
+            reduce(state, action)
+        }
+
+        #[test]
+        fn a_reducer_that_takes_a_malformed_play_fails_the_malformed_action_probe() {
+            assert_caught(forgiving, MALFORMED_ACTION_PROBE);
+        }
+
+        #[test]
+        fn a_mulligan_keeping_an_undealt_card_and_a_second_answer_from_the_seat_that_gave_one_are_refused() {
+            register_all();
+            let _preview = preview_every_set();
+            let state = begin_game(&create_game(&CreateGameOptions {
+                seed: "jackioh-fuzz-1".to_string(),
+                decks: decks_for_seed(1),
+                ..CreateGameOptions::default()
+            }))
+            .state;
+            let first_mulligan = |state: &GameState, seat: PlayerId| {
+                legal_actions(state, seat)
+                    .into_iter()
+                    .find(|body| matches!(body, ActionBody::Mulligan { .. }))
+                    .expect("a seat owing its mulligan is listed one")
+            };
+            let names = |state: &GameState, seat: PlayerId| {
+                malformed_actions(state, seat, &first_mulligan(state, seat))
+                    .into_iter()
+                    .map(|(name, sender, _)| (name, sender))
+                    .collect::<Vec<_>>()
+            };
+
+            // 1. Before anyone has answered, a keep the seat was not dealt is the only variant.
+            assert_eq!(names(&state, PlayerId::P1), [(UNDEALT_KEEP_ACTION, PlayerId::P1)]);
+
+            // 2. Once P1 has answered, P2's list adds P1's second answer.
+            let kept = reduce(
+                &state,
+                &Action::new(
+                    first_mulligan(&state, PlayerId::P1),
+                    PlayerId::P1,
+                    "probe-test-1".to_string(),
+                ),
+            );
+            assert_eq!(kept.error, None);
+            assert_eq!(
+                names(&kept.state, PlayerId::P2),
+                [
+                    (UNDEALT_KEEP_ACTION, PlayerId::P2),
+                    (ANSWERED_MULLIGAN_ACTION, PlayerId::P1)
+                ]
+            );
+
+            // 3. Every one is refused, with no events and the state kept.
+            for (state, seat) in [(&state, PlayerId::P1), (&kept.state, PlayerId::P2)] {
+                for (name, sender, body) in malformed_actions(state, seat, &first_mulligan(state, seat)) {
+                    let result = reduce(state, &Action::new(body, sender, "probe-test-2".to_string()));
+                    assert_eq!(judge_probe(state, &result, None), None, "{name} sent by {sender}");
+                }
+            }
         }
 
         #[test]
