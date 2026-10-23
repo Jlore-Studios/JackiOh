@@ -292,7 +292,7 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # Every subscription as a box, with what it does or why not and its usage, always:
         # the Claude accounts, then the night box's.
-        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 7 working"]',
+        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 8 working"]',
                       body)
         self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37 · since 21:13<br/>5h ▰▰▱▱▱ 30%"]'
                       ':::busy', body)
@@ -322,7 +322,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("| #9 | Make it so | revise | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "
                       "busy `claude-1` | — |", body)
         self.assertIn("> 🟢 **2 running** · 📋 **1 queued**: 1 waits for a strong model · 🔋 "
-                      "**none of 11 subscriptions can start work now**", body)
+                      "**none of 12 subscriptions can start work now**", body)
         self.assertIn('| <span title="took 4m">Tue 21:30</span> | schedule | ✅ '
                       '| [812](https://github.com/x/y/actions/runs/200) |', body)
         # The full status, folded.
