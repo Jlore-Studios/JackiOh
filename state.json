@@ -13361,6 +13361,7 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
+      "question": "in `.github/workflows/ci.yml`, replace the deploy rehearsal's jobs (from the comment `# The deploy rehearsal, in two jobs\u2026` through the end of the `db` summary job, the end of the file) with the block in Step 2 below, and change one comment line (Step 1). The bot may not edit `.github/`. Nothing outside `.github/` needs to change: `crates/server/tests/deploy/rehearse.sh`, `crates/server/Dockerfile` and `apps/web/src/net/deploy-rehearsal.test.ts` already support this split (#1223, #1565), and no CI job uses it yet.",
       "run_id": "39906310105",
       "started_at": "2026-10-23T05:32:15Z",
       "stop_requested": false,
