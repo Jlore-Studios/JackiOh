@@ -13148,9 +13148,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T22:07:09Z",
+    "at": "2026-10-23T22:19:36Z",
     "url": "",
-    "what": "suggestions on claude-4"
+    "what": "suggestions on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-23T22:13:03Z",
@@ -26924,11 +26924,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-23T21:03:42Z",
-    "last_run": "2026-10-23T07:31:31Z",
-    "provider": null,
+    "idle_since": "2026-10-23T22:19:36Z",
+    "last_run": "2026-10-23T22:19:36Z",
+    "provider": "claude-8",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:aa0def86-1792793966",
     "taken_asks": []
   },
   "usage": {
