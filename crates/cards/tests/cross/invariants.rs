@@ -994,8 +994,11 @@ mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
         }));
         let mut monitor = create_invariant_monitor(g.state());
         let token = g.unit(PlayerId::P2, 1).expect("p2's Rush Token").id;
-        // Turn 11 begins on p1's side, and its snapshot holds the token as a token (R419).
-        g.end_turn().end_turn();
+        // Turn 11 begins on p1's side, and its snapshot holds the token as a token (R419). The
+        // monitor reads both turn ends: I9 holds each `turnEnded` to the turn the shadow has under way.
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.end_turn();
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         // p1's Vanilla trips the trap, which fuses it onto the token: the token's id, a fused definition.
         g.play(VANILLA, json!({ "zone": 2 }));
