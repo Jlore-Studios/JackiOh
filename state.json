@@ -12521,6 +12521,7 @@
     "1728": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T15:53:11Z",
         "difficulty": "hard",
@@ -12529,6 +12530,7 @@
         "why": "the fix changes an engine rule in crates/engine/src/animated.rs and adds ruling R1728000, which the rule rates hard (engine rules) on top of three crates, the spec and the web app"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-23T17:01:54Z",
         "family": "claude",
