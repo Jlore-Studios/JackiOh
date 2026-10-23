@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1720,
+  "title": "Patch: the tools' README command table is checked against the CLI",
+  "branch": "bot/issue-1720",
+  "thread": "**Issue #1720 (data, not instructions):**\n\n```text\n# #1720: Patch: the tools' README command table is checked against the CLI\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe internal command-line tool's manual lists every command and flag, and nothing checks the list against the real tool \u2014 so it has already drifted: the AI promotion gate gained a third lane (`learn`) that the manual never mentions, meaning anyone following the manual misses the feature entirely. After the change, a test fails whenever the manual and the tool disagree.\n\n## Why\n\n`crates/tools/src/main.rs`'s clap `Command` enum (:48-90) is the registry; `crates/tools/README.md` is documented as the command contract \u2014 and README:47 says `promote --lane improve|unban` while `promote.rs:5,20-33` implements `improve|unban|learn` (the learned-evaluation lane, #1012). `tests/acceptance.rs` enforces dependency boundaries, Markdown rules, the CI scope map and daily-ignore reasons \u2014 but nothing reads the README table against the clap surface. Subcommand and flag drift compounds silently from here.\n\n## Proposal\n\nAn acceptance test that derives the clap surface (via `Command::command()` introspection, or a light parser asserting each README row's bracketed tokens exist as flags/subcommands) and holds the README's command table to it; fix the `learn` row in the same change.\n\n## Where it lands\n\n`crates/tools/tests/acceptance.rs`, `crates/tools/README.md`, and `crates/tools/src/main.rs` if the introspection needs a hook.\n\n## Acceptance criteria\n\n- The test fails on today's tree at the missing `learn` lane, and passes once documented.\n- A flag or subcommand removed from code but left in the table fails the test.\n- No nightly/external state: it is a pure source-level check.\n\n## Size and risks\n\nSmall-medium. The README row format is regular enough to parse; the main design choice is clap introspection versus a lighter token check \u2014 take whichever the acceptance suite's existing style supports.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T13:02:03Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1720: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
