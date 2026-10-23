@@ -1844,7 +1844,7 @@ mod r880_parses_a_craft_answer_and_refuses_a_malformed_recipe {
 /// sample sends back every action seeded random games list.
 mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
     use super::*;
-    use jackioh_ai::{MatchConfig, MatchHooks, SeatController, play_match};
+    use jackioh_ai::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
     use jackioh_engine::{
         ActionType, GameState, PerPlayer, PlagueSpend, RevealAt, Row, Selection, ZoneChoice,
     };
@@ -2049,6 +2049,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                     p2: SeatController::Random,
                 },
                 max_actions: Some(SAMPLE_MAX_ACTIONS),
+                setup: MatchSetup::default(),
             };
             // Every state an action was taken from: the first, after the deal, to the last but one.
             let mut states: Vec<GameState> = Vec::new();

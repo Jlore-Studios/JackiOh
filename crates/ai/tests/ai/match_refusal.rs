@@ -12,7 +12,7 @@
 
 use std::cell::OnceCell;
 
-use jackioh_ai::{MatchConfig, MatchHooks, MatchRecord, SeatController, play_match};
+use jackioh_ai::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match};
 use jackioh_engine::testkit::{
     ActionBody, FoldArgs, GameState, PerPlayer, Phase, PlayerId, fold, hash_state, json, json_as, opponent_of,
 };
@@ -33,6 +33,7 @@ fn config(seed: &str, p1: SeatController) -> MatchConfig {
         handicaps: None,
         controllers: PerPlayer::new(p1, SeatController::Random),
         max_actions: None,
+        setup: MatchSetup::default(),
     }
 }
 

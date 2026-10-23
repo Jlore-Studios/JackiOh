@@ -9,13 +9,14 @@
 //! link the tools crate (it depends on this one), so that case belongs with the CLI's tests.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchHooks, SearchBudget, SeatController,
-    build_ai_deck, dev_game_config, dev_game_record, dev_record_id, forced_dev_game_config, play_match,
+    AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchConfig, MatchHooks, MatchSetup, SearchBudget,
+    SeatController, build_ai_deck, dev_game_config, dev_game_record, dev_record_id, dev_run_config,
+    forced_dev_game_config, play_match,
 };
 use jackioh_engine::testkit::{
-    CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, PerPlayer, PilotFilter,
-    PlayerId, SourceFilter, card_stats, create_rng, json, json_as, registered_catalog, summarize_game,
-    validate_deck,
+    CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, LastBoardEntry, PerPlayer,
+    PilotFilter, PlayerId, SourceFilter, card_stats, create_rng, json, json_as, registered_catalog,
+    summarize_game, validate_deck,
 };
 
 use super::support::register_cards;
@@ -90,6 +91,7 @@ mod the_ais_development_run_9_11 {
             budget: Some(QUICK),
             force: None,
             commit: Some("0123abc".to_string()),
+            setup: MatchSetup::default(),
         };
         let generation = jackioh_ai::ai_generation();
         assert!(generation.is_some(), "generation.json holds the generation");
@@ -121,6 +123,7 @@ mod the_ais_development_run_9_11 {
             budget: Some(QUICK),
             force: None,
             commit: None,
+            setup: MatchSetup::default(),
         };
         let records: Vec<Option<GameRecord>> =
             [1, 2].into_iter().map(|n| dev_game_record(n, &options)).collect();
@@ -258,6 +261,7 @@ mod the_ais_development_run_9_11 {
             budget: Some(QUICK),
             force: Some(FORCED.to_string()),
             commit: None,
+            setup: MatchSetup::default(),
         };
         for n in [1, 2] {
             let record = dev_game_record(n, &options)
@@ -277,6 +281,62 @@ mod the_ais_development_run_9_11 {
                 serde_json::to_string(&record).expect("a record serialises"),
                 serde_json::to_string(&again).expect("a record serialises"),
                 "game {n}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_runs_games_carry_its_setup_inputs_and_deal_as_without_them() {
+        register_cards();
+        let board = vec![LastBoardEntry {
+            def_id: "core-012".to_string(),
+            radiant: false,
+        }];
+        let setup = MatchSetup {
+            last_boards: Some((board.clone(), board)),
+            ..MatchSetup::default()
+        };
+        let plain = DevRunOptions {
+            series: "dev-test".to_string(),
+            patch: "v0.2.3".to_string(),
+            budget: Some(QUICK),
+            force: None,
+            commit: None,
+            setup: MatchSetup::default(),
+        };
+        let carrying = DevRunOptions {
+            setup: setup.clone(),
+            ..plain.clone()
+        };
+        let forced = DevRunOptions {
+            force: Some(FORCED.to_string()),
+            ..carrying.clone()
+        };
+        for n in [1, 2] {
+            assert_eq!(
+                dev_run_config(n, &plain),
+                dev_game_config(n, "dev-test", Some(QUICK)),
+                "game {n}"
+            );
+            let config = dev_run_config(n, &carrying);
+            assert_eq!(config.setup, setup, "game {n}");
+            assert_eq!(
+                MatchConfig {
+                    setup: MatchSetup::default(),
+                    ..config
+                },
+                dev_run_config(n, &plain),
+                "game {n}: only the setup differs"
+            );
+            let config = dev_run_config(n, &forced);
+            assert_eq!(config.setup, setup, "game {n} forced");
+            assert_eq!(
+                MatchConfig {
+                    setup: MatchSetup::default(),
+                    ..config
+                },
+                forced_dev_game_config(n, "dev-test", Some(QUICK), FORCED),
+                "game {n} forced: only the setup differs"
             );
         }
     }

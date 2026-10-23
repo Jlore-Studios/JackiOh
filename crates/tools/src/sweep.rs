@@ -313,6 +313,7 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
                             retime: Some(&retime),
                             tier: Some(tier),
                             banned: None,
+                            setup: None,
                         },
                     )
                 },
@@ -358,6 +359,7 @@ fn pass2(
                             retime: Some(&retime),
                             tier: Some(tier),
                             banned: None,
+                            setup: None,
                         },
                     )
                 },
