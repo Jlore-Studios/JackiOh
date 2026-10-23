@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 1697,
+  "title": "Patch: the AI's own games can carry dealt decks, last boards and Glitch boards, so the cards that read them can be measured",
+  "branch": "bot/issue-1697",
+  "thread": "**Issue #1697 (data, not instructions):**\n\n```text\n# #1697: Patch: the AI's own games can carry dealt decks, last boards and Glitch boards, so the cards that read them can be measured\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe AI's self-play games \u2014 the ones its quality gates, sweeps and card-health reports run \u2014 always start from a plain deal. But some cards only work with setup a real match carries: Portal to the Past needs your previous game's board, a Glitch reads the Glitch boards, dealt-deck cards need dealt seats. In the AI's own games those cards literally cannot act, so every 'never played' and win-rate measurement of them measures an empty start, not the card \u2014 Portal to the Past is already flagged at-risk as 'never played' although it was affordable on 20 turns across the measured games. After this, a self-play game can be configured with the same setup inputs the server gives real matches.\n\n## Why\n\n- `MatchConfig` (`crates/ai/src/match_.rs`) is `{seed, decks, handicaps, controllers, max_actions}` and `play_match` builds `CreateGameOptions` with `..default()` \u2014 there is no way to pass `dealt`, `last_boards`, `glitch_boards` or `custom`, though `create_game` accepts all of them (`crates/engine/src/state.rs`).\n- Concrete consequence: `classicplus-029` is recorded 'at risk \u2026 affordable on 20 turns over 8 games, never played' (`crates/ai/src/shadow_ban.rs`) in games where the card can do nothing \u2014 an empty last board gives nothing (R129). The fuzz already draws these inputs; the AI runner can't.\n\n## Proposal\n\nAdd optional `dealt`/`last_boards`/`glitch_boards` fields to `MatchConfig` (serde defaults; unset means today's behavior, so every seeded game and fold is unchanged), plumb them through `create_game` in `play_match`, and expose them on the dev-run/sweep configuration so a measurement can opt in \u2014 for example carrying the previous game's last board into the next, as the server does. `custom` needs the Luau host and stays out of scope.\n\n## Where it lands\n\n`crates/ai/src/{match_.rs,dev_run.rs,sweep.rs,gate.rs,config.rs}`. Spec R417, R433, R564, R678, \u00a79.9.\n\n## Acceptance criteria\n\n- [ ] A `MatchConfig` with `last_boards` lets Portal to the Past resolve in a seeded test.\n- [ ] With the fields unset, existing seeded matches replay identically (byte-for-byte compatible).\n- [ ] `cargo test -p jackioh-ai` green; the `gate` smoke is unaffected.\n\n## Size and risks\n\nSmall-medium \u2014 plumbing only, no policy or ban change. Deliberately scoped: it makes the setup-input cards measurable; what the sweeps do with the new measurements is the existing lane's work. Dealt seats must respect the same deck-legality rules the fuzz and server apply.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `telemetry` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T02:45:11Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1697: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "queued #1699: it conflicts with main"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
