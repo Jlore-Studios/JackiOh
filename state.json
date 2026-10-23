@@ -13166,7 +13166,7 @@
       "taken_asks": []
     },
     "1750": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-23T22:54:38Z",
@@ -13193,11 +13193,11 @@
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
-      "provider": "agy",
+      "provider": "claude-3",
       "queued_at": "2026-10-23T22:27:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40034323118",
-      "started_at": "2026-10-23T22:32:54Z",
+      "run_id": "pending:9c4bd1da-1792796178",
+      "started_at": "2026-10-23T22:56:29Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -13219,9 +13219,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-23T22:56:05Z",
+    "at": "2026-10-23T22:56:29Z",
     "url": "",
-    "what": "build #1748 on claude-6"
+    "what": "build #1750 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-23T22:48:13Z",
