@@ -123,7 +123,7 @@ e2e/           Cypress: hotseat games and networked room-code games
 | Reading deck order or the opponent's hand | Never sent; `viewFor` sends counts (10.8) |
 | Stalling | Server clock, disconnect grace, hard match ceiling (9.5) |
 | A dead or unread match socket | Server ping and idle timeout start its grace; a bounded outbox closes a socket that stops reading ([[R1441]]) |
-| Action flooding | Per-match rate limit in the actor, per-account rate limit at the API; refusals past [[R835000]]'s threshold alert, `hello` repeats coalesce ([[R835001]]), malformed frames past [[R835002]]'s budget close the socket |
+| Action flooding | Per-match rate limit in the actor, per-account rate limit at the API; refusals past [[R835000]]'s threshold in a match or [[R1717000]]'s at the API alert, `hello` repeats coalesce ([[R835001]]), malformed frames past [[R835002]]'s budget close the socket |
 | Invite code brute force | 80-bit hashed codes, per-account and per-IP limits, verified email, circuit breaker (9.4) |
 | Multi-accounting to farm rating | Invite codes; watch for clusters of accounts sharing an IP hash |
 | Friend-request spam, or probing which names exist | Requests by exact username only, an hourly limit, and an unknown name answered as a block is (9.4) |

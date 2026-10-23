@@ -566,6 +566,16 @@ pub const REJECTION_ALERT_THRESHOLD: usize = 20;
 /// are kept over, in milliseconds. A minute: abuse inside a live match (§9.8) is bursty, and a
 /// window this wide keeps a rapid test's sends inside one of them.
 pub const REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
+/// SPEC §11 R1717000: how many requests the API's rate limit (`API_REQUESTS_PER_MINUTE`) refuses one
+/// account or address, inside `API_REJECTION_ALERT_WINDOW_MS`, before `api.rejections.unusual` is
+/// raised (§9.8). Twenty, as a seat's (`REJECTION_ALERT_THRESHOLD`): a client that waits out a
+/// refusal's `retryAfterMs` (R192) is refused about once per wait, while a script that ignores it
+/// crosses twenty in a second. Counted strictly over the threshold, so exactly this many stay silent.
+pub const API_REJECTION_ALERT_THRESHOLD: usize = 20;
+/// SPEC §11 R1717000: the rolling window `API_REJECTION_ALERT_THRESHOLD` counts in, in milliseconds,
+/// and the least time between two alerts for one key. A minute, the API limit's own window, so a
+/// sustained flood alerts once a minute.
+pub const API_REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
 /// SPEC §11 R835002: how many malformed frames from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.

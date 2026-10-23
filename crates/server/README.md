@@ -157,7 +157,11 @@ Every response is JSON; errors are `{ "error": { "code", "message", "details"? }
 of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs`'s `ROUTES`: `None`
 (open), `User` (a verified token and a profile of any status: the code screen) or `Active` (also
 `status = 'active'`; a pending account gets 403). A wrong method on a known path is 404; a body over
-65,536 bytes or not a JSON object is 400.
+65,536 bytes or not a JSON object is 400. Every route counts against §9.8's per-account rate limit,
+`API_REQUESTS_PER_MINUTE` a minute (R109), keyed on the caller's profile or, for a request that names
+none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R192) and is logged as
+`api.rate_limited`, and a key refused more than `API_REJECTION_ALERT_THRESHOLD` times inside
+`API_REJECTION_ALERT_WINDOW_MS` raises `api.rejections.unusual`, once a window (R1717000).
 
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
