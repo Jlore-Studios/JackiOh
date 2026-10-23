@@ -9,16 +9,21 @@
 //! `give_from_hand { from: enemy, cards: random }` (as M+ #10). Either way the cards become the
 //! taker's (R12), hidden from the opponent but for the count (R97), the hand cap burning the
 //! overflow (§2.4). The Radiant face's `TakenRiders.cost_override` is 0 on each card taken, either
-//! version. The count is declared and read through `param` (R386). Tunes: cards 2 ↑ (Radiant 3).
+//! version. The count is declared and read through `param` (R386), and so is the Radiant face's
+//! price, `setCost` (R1748003). Tunes: cards 2 ↑ (Radiant 3); setCost 0 ↓, on the Radiant face only
+//! (R824000). Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditativeplus-019";
 
-/// The Radiant face's price for each card taken.
+/// The Radiant face's price for each card taken, "They cost (0)" as v0.4.4b printed it before it was
+/// the declared `setCost` (R1748003).
 const TAKEN_COST: i32 = 0;
 
-fn gloves(radiant: bool) -> Script {
+/// One face; the Radiant face's cards are priced at the declared `setCost`, or at the printed (0)
+/// when `declared` is off.
+fn gloves(radiant: bool, declared: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut args = json!({
@@ -26,7 +31,7 @@ fn gloves(radiant: bool) -> Script {
                 "count": param(&*ctx, "cards"),
             });
             if radiant {
-                args["costOverride"] = json!(TAKEN_COST);
+                args["costOverride"] = json!(if declared { param(&*ctx, "setCost") } else { TAKEN_COST });
             }
             if ctx.embiggened {
                 args["cards"] = json!("random");
@@ -42,8 +47,17 @@ fn gloves(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: gloves(false),
-        radiant: gloves(true),
+        base: gloves(false, true),
+        radiant: gloves(true, true),
+    }
+}
+
+/// R767000: through v0.4.4b its Radiant face's (0) was printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: gloves(false, false),
+        radiant: gloves(true, false),
     }
 }
 
@@ -217,6 +231,37 @@ mod tests {
             assert_eq!(card.cost_override, Some(0));
             assert_eq!(effective_cost(s.state(), &card, Default::default()), 0);
         }
+    }
+
+    /// p1 plays the Radiant Gloves at its normal price after one Nerf of its `setCost`: the prices of
+    /// the cards taken.
+    fn taken_prices_after_a_nerf() -> Vec<Option<i32>> {
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
+            "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
+        }));
+        crate::degrade_number(&mut s, GLOVES, "setCost");
+        s.play(GLOVES, json!({}));
+        taken(&s).iter().map(|card| card.cost_override).collect()
+    }
+
+    #[test]
+    fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
+        crate::register_all();
+        let s = scenario(json!({
+            "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
+            "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
+        }));
+        // A Buff finds it at its floor of (0); a Nerf makes each card taken cost (1).
+        assert!(!crate::can_upgrade_number(&s, GLOVES, "setCost"));
+        assert_eq!(taken_prices_after_a_nerf(), [Some(1); 3]);
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_set_cost() {
+        crate::under_kept(GLOVES, super::script_v0_4_4b(), || {
+            assert_eq!(taken_prices_after_a_nerf(), [Some(0); 3], "the kept script prints (0)");
+        });
     }
 
     #[test]

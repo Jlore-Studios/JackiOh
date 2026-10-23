@@ -8,8 +8,8 @@
 //! the zone and does nothing when none are left. The spell itself is in `resolving` while its script
 //! runs (§10.5), so it can never pick itself.
 //!
-//! Both rolls go through the seeded `ctx.rng` (CLAUDE.md rule 4), the base one roll at 0.3 and the
-//! radiant `lucky(1, …)` — two rolls at 0.4, keeping a success, which is §6.1's Lucky X read on a
+//! Both rolls go through the seeded `ctx.rng` (CLAUDE.md rule 4), the base one roll at the declared
+//! `chance` (30%) and the radiant `lucky(1, …)` — two rolls at its 40%, keeping a success, which is §6.1's Lucky X read on a
 //! yes/no roll. The X is the face's printed Lucky as it always was (0, or 1 on the Radiant face; a
 //! Nerf or a Buff never reaches it, D14) plus any Lucky given (`given_lucky_on`, R1438), so a base
 //! face given Lucky 1 rolls twice at 0.3, and a Radiant face given Lucky 1 three times at 0.4. No
@@ -25,13 +25,31 @@
 //! graveyard triggers (R68)". No effect verb sets that flag yet (reported), so the hook gates on the
 //! flag OR this turn's play log, which is the same set of cards for a spell played normally: a copy
 //! that reached the graveyard by being discarded or milled is not in the log and stays there.
+//!
+//! Tunes: chance 30 ↑ (Radiant 40), a percentage stepping 10 up to 100 (R1748003); the Radiant face's
+//! Lucky 1 stays fixed (D14). Through v0.4.4b the chances were printed, not declared;
+//! `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-023";
 
+/// "30%" and "40%" as v0.4.4b printed them, before they were the declared `chance` (R1748003).
 const BASE_CHANCE: f64 = 0.3;
 const RADIANT_CHANCE: f64 = 0.4;
+
+/// The declared `chance` is a percentage.
+const PERCENT: i32 = 100;
+
+/// The odds one roll takes: the declared `chance` as it stands, or the printed odds when `declared`
+/// is off.
+fn odds(ctx: &EffectContext<'_>, declared: bool, printed: f64) -> f64 {
+    if declared {
+        f64::from(param(ctx, "chance")) / f64::from(PERCENT)
+    } else {
+        printed
+    }
+}
 
 /// R60: one random non-Radiant card in the caster's hand becomes Radiant.
 fn make_one_radiant() -> Vec<Effect> {
@@ -78,16 +96,18 @@ fn end_of_turn() -> Hook {
     })
 }
 
-pub fn script() -> CardScripts {
+/// Both faces, the odds read off the declared `chance` (`declared`) or as printed.
+fn dream(declared: bool) -> CardScripts {
     let base = Script {
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             if !any_to_make_radiant(ctx) {
                 return vec![];
             }
             // R987: the controller's Luck rolls extra times beside the card's own Lucky (R1438; with
             // neither, `lucky(0)` draws once, as before).
             let lucky = lucky(ctx, 0) + luck_of(&*ctx.state, ctx.controller);
-            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b);
+            let odds = odds(ctx, declared, BASE_CHANCE);
+            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(odds), |a, b| a || b);
             if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
@@ -96,15 +116,14 @@ pub fn script() -> CardScripts {
 
     let radiant = Script {
         // Lucky 1: roll twice and keep the success (§6.1), each roll at 40%.
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             if !any_to_make_radiant(ctx) {
                 return vec![];
             }
             // R987: the controller's Luck rolls extra times beside the card's own Lucky (R1438).
             let lucky = lucky(ctx, RADIANT_LUCKY) + luck_of(&*ctx.state, ctx.controller);
-            let hit = ctx
-                .rng
-                .lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
+            let odds = odds(ctx, declared, RADIANT_CHANCE);
+            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(odds), |a, b| a || b);
             if hit { make_one_radiant() } else { vec![] }
         })),
         end_of_turn: Some(end_of_turn()),
@@ -112,6 +131,15 @@ pub fn script() -> CardScripts {
     };
 
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    dream(true)
+}
+
+/// R767000: through v0.4.4b its chances were printed; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    dream(false)
 }
 
 // #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23: "Seeded 30% roll on a non-Radiant hand
@@ -202,6 +230,37 @@ mod tests {
                 assert!(bare.iter().zip(&judged).all(|(hit, judged)| judged >= hit));
                 assert!(judged.iter().sum::<usize>() > bare.iter().sum::<usize>());
             }
+        }
+
+        /// Plays the Dream after `buffs` Buffs of its `chance` and counts the Radiant cards left in the
+        /// hand.
+        fn radiants_buffed(seed: &str, buffs: usize) -> usize {
+            let mut s = dream_in(seed, false, &OTHERS);
+            for _ in 0..buffs {
+                crate::upgrade_number(&mut s, DREAM, "chance");
+            }
+            s.play(DREAM, json!({}));
+            s.hand(P1).iter().filter(|card| card.radiant).count()
+        }
+
+        #[test]
+        fn r1748003_chance_moves_with_a_buff_or_a_nerf() {
+            crate::register_all();
+            let mut s = dream_in("dream-tuned", false, &OTHERS);
+            assert_eq!(crate::upgrade_number(&mut s, DREAM, "chance"), 40);
+            let mut s = dream_in("dream-tuned", false, &OTHERS);
+            assert_eq!(crate::degrade_number(&mut s, DREAM, "chance"), 20);
+            // Seven Buffs take it to its bound of 100: every roll hits.
+            assert!(SEEDS.iter().all(|seed| radiants_buffed(seed, 7) == 1));
+        }
+
+        #[test]
+        fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_chance() {
+            crate::under_kept(DREAM, super::super::script_v0_4_4b(), || {
+                // Seven Buffs move the declared number, which the kept script never reads: it rolls
+                // its printed 30%, and some seed misses.
+                assert!(SEEDS.iter().any(|seed| radiants_buffed(seed, 7) == 0));
+            });
         }
 
         mod base {

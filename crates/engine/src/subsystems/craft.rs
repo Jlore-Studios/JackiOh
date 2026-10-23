@@ -708,6 +708,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
                 max: None,
                 tuned_on: None,
                 power: None,
+                cry: None,
             }
         })
         .collect();
@@ -748,6 +749,8 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
         cost: CardCost::Fixed(recipe.cost),
         refs: if refs.is_empty() { None } else { Some(refs) },
         params: if params.is_empty() { None } else { Some(params) },
+        deals_damage: None,
+        uses_plague: None,
         loc: Some(recipe_loc(recipe)),
         radiant_fallback: None,
         ingredients: None,

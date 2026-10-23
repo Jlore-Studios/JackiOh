@@ -539,6 +539,8 @@ fn build_def(
             .unwrap_or_else(|| CardCost::Fixed(fused_cost(state, ingredients))),
         refs,
         params: None,
+        deals_damage: None,
+        uses_plague: None,
         loc,
         radiant_fallback: None,
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from

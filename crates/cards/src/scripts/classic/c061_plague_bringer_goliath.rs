@@ -136,8 +136,8 @@ mod tests {
             assert_eq!(
                 def["params"],
                 json!([
-                    { "key": "tokens", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 },
-                    { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
+                    { "key": "tokens", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "cry": true },
+                    { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "cry": true },
                 ]),
             );
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Rush" }, { "kind": "Trample" }]));

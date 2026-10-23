@@ -5,18 +5,25 @@
 //! Engine: at the start of its controller's turn, `add_random_from_catalog({ query: { anyTags:
 //! [KY, CN] }, radiant: true })`, with `costOverride: 0` on the Radiant face. `anyTags` asks for
 //! any one of the tags (R1422); the Printer itself is excluded (R387), and R673 applies. The cards
-//! it makes are not Chinese (⚠ designer).
+//! it makes are not Chinese (⚠ designer). Tunes: setCost 0 ↓, on the Radiant face only (R824000,
+//! R1748003). Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that
+//! (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-038";
 
-fn printer(radiant: bool) -> Script {
+/// The Radiant face's "It costs (0)", as v0.4.4b printed it before it was the declared `setCost`.
+const FREE: i32 = 0;
+
+/// One face; the Radiant face's card is priced at the declared `setCost`, or at the printed (0) when
+/// `declared` is off.
+fn printer(radiant: bool, declared: bool) -> Script {
     Script {
-        start_of_turn: Some(hook(move |_ctx| {
+        start_of_turn: Some(hook(move |ctx| {
             let mut args = json!({ "query": { "anyTags": ["KY", "CN"] }, "radiant": true });
             if radiant {
-                args["costOverride"] = json!(0);
+                args["costOverride"] = json!(if declared { param(&*ctx, "setCost") } else { FREE });
             }
             vec![add_random_from_catalog(json_as(args))]
         })),
@@ -26,9 +33,18 @@ fn printer(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     // Both faces add a Radiant KY or CN card; the Radiant face's costs (0).
-    let base = printer(false);
-    let radiant = printer(true);
+    let base = printer(false, true);
+    let radiant = printer(true, true);
     CardScripts { base, radiant }
+}
+
+/// R767000: through v0.4.4b its Radiant face's (0) was printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: printer(false, false),
+        radiant: printer(true, false),
+    }
 }
 
 // M #38 H1B Printer — SPEC §8.8 row 38, BUILD M10 row M 38: "At your start of turn only, adds one
@@ -238,6 +254,37 @@ mod tests {
                 assert!(is_ky_or_cn(&printed.def_id));
                 assert_eq!(printed.cost_override, Some(0));
                 assert_eq!(printed.chinese, None);
+            }
+
+            /// The Radiant card the Printer adds at p1's next start of turn, its price riding on it.
+            fn printed_override(s: &mut Scenario) -> Option<i32> {
+                let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
+                s.start_turn();
+                let held = s.hand(P1);
+                held.iter()
+                    .filter(|card| !before.contains(&card.id))
+                    .find(|card| card.radiant)
+                    .expect("the printed card")
+                    .cost_override
+            }
+
+            #[test]
+            fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
+                let mut s = standing("printer-radiant-tuned", true);
+                // On the field it is no Cry's number (R1748000): a Buff finds it at its floor of (0), a
+                // Nerf raises it.
+                assert!(!crate::can_upgrade_number(&s, PRINTER, "setCost"));
+                assert_eq!(crate::degrade_number(&mut s, PRINTER, "setCost"), 1);
+                assert_eq!(printed_override(&mut s), Some(1));
+            }
+
+            #[test]
+            fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_set_cost() {
+                crate::under_kept(PRINTER, script_v0_4_4b(), || {
+                    let mut s = standing("printer-radiant-tuned", true);
+                    crate::degrade_number(&mut s, PRINTER, "setCost");
+                    assert_eq!(printed_override(&mut s), Some(0), "the kept script prints (0)");
+                });
             }
         }
     }
