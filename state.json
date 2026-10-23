@@ -13155,16 +13155,19 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T22:55:09Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-6",
+      "round_tier": "strong",
       "run_id": "40036705726",
       "started_at": "2026-10-23T22:56:05Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1750": {
       "action": "build",
