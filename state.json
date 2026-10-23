@@ -14391,13 +14391,9 @@
     "what": "build #1705 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-23T06:42:14Z",
+    "at": "2026-10-23T06:52:34Z",
     "notes": [
-      "delivered build #1705 on claude-7 (run 39910754302): interrupted",
-      "delivered build #1704 on claude-3 (run 39907937044): interrupted",
-      "started build #1704 on claude-4 (run 39913232141)",
-      "started build #1705 on claude-6 (run 39913268127)",
-      "nothing more to start: nothing is queued"
+      "delivered build #1696 on claude-3 (run 39900028635): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -15103,7 +15099,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-23T06:42:14Z",
+  "loop_tick": "2026-10-23T06:52:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
