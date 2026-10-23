@@ -12730,6 +12730,13 @@
     "1688": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-23T02:56:14Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 3 fails: the retry is a decision the spec does not make, so it takes a new ruling R1688000 and \u00a714.8 edits; one crate otherwise"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
