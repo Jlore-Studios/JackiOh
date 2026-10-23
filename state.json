@@ -26962,6 +26962,12 @@
         "number": 1690,
         "title": "Patch: a block landing while a friend request is accepted can't resurrect the friendship",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-23T02:42:22Z",
+        "number": 1693,
+        "title": "Patch: the fuzz starts games with dealt seats, last boards and Glitch boards in combination, as a live match does",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-23T01:50:41Z",
