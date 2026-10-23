@@ -12843,6 +12843,7 @@
     "1737": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "af9c5a34f6c7efbc9632a9f3e35ae85e6457262c",
       "ci_fixes": 1,
       "ci_reruns": {
         "5c1c2374ceebd72164d22117b4b2724584651a49": 1
@@ -12856,21 +12857,25 @@
       },
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-23T14:42:48Z",
+      "feedback_since": "2026-10-23T16:34:10Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1722,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-23T16:26:51Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "39987860495",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-23T16:34:10Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
