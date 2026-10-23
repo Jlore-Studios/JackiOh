@@ -41,7 +41,7 @@ use serde_json::json;
 use crate::config::{AI_EVAL, AI_GATE_BUDGET};
 use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::evaluate::{NextSwing, evaluate};
-use crate::match_::{MatchConfig, MatchHooks, SeatController, play_match};
+use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
 use crate::shadow_ban::SHADOW_BAN;
 use crate::types::SearchBudget;
 
@@ -237,6 +237,10 @@ pub struct SweepOptions<'a> {
     /// Issue #1113: the ids `sweep_card` keeps out of the AI's deck; absent, `SHADOW_BAN`'s. A seeded
     /// test passes `FIXTURE_BANNED_IDS`, so a shadow-ban change re-deals none of its games.
     pub banned: Option<&'a [&'a str]>,
+    /// #1697: the setup inputs every game of the sweep is created with beyond its decks (§9.3), in
+    /// seat order and the same in every game, whichever seat the AI takes (to give the AI a last
+    /// board in every game, give both seats one). Absent, every game is created as before.
+    pub setup: Option<&'a MatchSetup>,
 }
 
 const FLAG_ORDER: &[SweepFlag] = &[
@@ -395,7 +399,14 @@ struct SweepSetup {
 }
 
 /// Game n of a card's sweep at a tier: the AI on that tier's handicap, greedy on Easy's (a human's).
-fn sweep_config(seed: &str, def_id: &str, n: i32, tier: Difficulty, filler: &Filler) -> SweepSetup {
+fn sweep_config(
+    seed: &str,
+    def_id: &str,
+    n: i32,
+    tier: Difficulty,
+    filler: &Filler,
+    setup: &MatchSetup,
+) -> SweepSetup {
     let ai_seat = swept_seat_of(n);
     let greedy_seat = opponent_of(ai_seat);
     let handicap = AI_DIFFICULTY[tier];
@@ -456,6 +467,7 @@ fn sweep_config(seed: &str, def_id: &str, n: i32, tier: Difficulty, filler: &Fil
                 PerPlayer::new(greedy, ai)
             },
             max_actions: Some(AI_SWEEP.max_actions as _),
+            setup: setup.clone(),
         },
     }
 }
@@ -543,7 +555,11 @@ fn play_sweep_game(
     tracked: &[String],
     options: &SweepOptions,
 ) -> SweepGame {
-    let setup = match catch_unwind(AssertUnwindSafe(|| sweep_config(seed, def_id, n, tier, filler))) {
+    let no_setup = MatchSetup::default();
+    let inputs = options.setup.unwrap_or(&no_setup);
+    let setup = match catch_unwind(AssertUnwindSafe(|| {
+        sweep_config(seed, def_id, n, tier, filler, inputs)
+    })) {
         Ok(setup) => setup,
         // The card cannot even be dealt (not a deck-legal card, or the pool is too small): an error.
         Err(_) => {
@@ -974,5 +990,54 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
         unswept: !tiers.is_empty() && affordable == 0,
         reason,
         watch,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::LastBoardEntry;
+
+    use super::*;
+
+    const PORTAL: &str = "classicplus-029";
+
+    #[test]
+    fn a_sweep_game_carries_the_sweeps_setup_inputs_and_deals_as_without_them() {
+        jackioh_cards::register_all();
+        let board = vec![LastBoardEntry {
+            def_id: "core-012".to_string(),
+            radiant: false,
+        }];
+        let setup = MatchSetup {
+            last_boards: Some((board.clone(), board)),
+            ..MatchSetup::default()
+        };
+        let filler = Filler {
+            banned: vec![],
+            boost: None,
+        };
+        for n in [1, 2] {
+            let seed = format!("sweep:easy:{PORTAL}:{n}");
+            let plain = sweep_config(
+                &seed,
+                PORTAL,
+                n,
+                Difficulty::Easy,
+                &filler,
+                &MatchSetup::default(),
+            );
+            let carried = sweep_config(&seed, PORTAL, n, Difficulty::Easy, &filler, &setup);
+            assert_eq!(plain.config.setup, MatchSetup::default(), "game {n}");
+            assert_eq!(carried.config.setup, setup, "game {n}");
+            assert_eq!(carried.ai_seat, plain.ai_seat, "game {n}");
+            assert_eq!(
+                MatchConfig {
+                    setup: MatchSetup::default(),
+                    ..carried.config
+                },
+                plain.config,
+                "game {n}: only the setup differs"
+            );
+        }
     }
 }

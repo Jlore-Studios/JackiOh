@@ -22,14 +22,14 @@
 
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
-    DEV_RECORD_ID_PREFIX, FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot, PlayerId,
-    RecordBuild, Rng, summarize_game,
+    DEV_RECORD_ID_PREFIX, GameMode, GameRecord, GameSource, PerPlayer, Pilot, PlayerId, RecordBuild, Rng,
+    summarize_game,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::config::AI_BUDGET;
 use crate::deck::{AiDeckOptions, build_ai_deck};
-use crate::match_::{MatchConfig, MatchHooks, SeatController, play_match};
+use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
 use crate::types::SearchBudget;
 
 /// `AI_DEV_RUN`'s shape.
@@ -64,6 +64,12 @@ pub struct DevRunOptions {
     /// this build's AI generation (`ai_generation`); `None` files no build.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
+    /// #1697: the setup inputs every game of the run is created with beyond its decks (§9.3): dealt
+    /// seats (R433), last boards (R417, R564) and Glitch boards (R678), in seat order. The same in
+    /// every game, so a record stays a pure function of its number and the options (`cargo jackioh
+    /// stats` plays them in parallel). Unset, every game is created as before.
+    #[serde(flatten)]
+    pub setup: MatchSetup,
 }
 
 /// `crates/ai/generation.json`, compiled in (CLAUDE.md rule 4: data reaches a pure crate only at
@@ -112,6 +118,7 @@ fn dev_match(seed: String, decks: (Vec<String>, Vec<String>), budget: Option<Sea
             },
         },
         max_actions: None,
+        setup: MatchSetup::default(),
     }
 }
 
@@ -145,6 +152,19 @@ pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>
     dev_match(seed, decks, budget)
 }
 
+/// Game n of the run `options` describes: R258's deal, or R1284000's with `options.force` in one seat,
+/// created with the run's setup inputs (#1697).
+pub fn dev_run_config(n: i32, options: &DevRunOptions) -> MatchConfig {
+    let config = match options.force.as_deref() {
+        None => dev_game_config(n, &options.series, options.budget),
+        Some(card) => forced_dev_game_config(n, &options.series, options.budget, card),
+    };
+    MatchConfig {
+        setup: options.setup.clone(),
+        ..config
+    }
+}
+
 /// R378: a development record's id, `dev:<patch>:<seed>`. The patch is part of it, so the same seeds
 /// played again for another patch are other records, which `stats:import` adds rather than skipping
 /// as a run it has already loaded.
@@ -155,18 +175,10 @@ pub fn dev_record_id(patch: &str, seed: &str) -> String {
 /// R376, R378: plays game n and files it. `None` when the game did not finish — it hit the match's
 /// action limit or an AI panicked — since only a finished game is a record.
 pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
-    let config = match options.force.as_deref() {
-        None => dev_game_config(n, &options.series, options.budget),
-        Some(card) => forced_dev_game_config(n, &options.series, options.budget, card),
-    };
+    let config = dev_run_config(n, options);
     let played = play_match(&config, &mut MatchHooks::default());
     played.result?;
-    let game = summarize_game(&FoldArgs {
-        seed: config.seed.clone(),
-        decks: config.decks.clone(),
-        log: played.log,
-        ..FoldArgs::default()
-    })?;
+    let game = summarize_game(&config.fold_args(played.log))?;
     Some(GameRecord {
         id: dev_record_id(&options.patch, &config.seed),
         source: GameSource::Dev,

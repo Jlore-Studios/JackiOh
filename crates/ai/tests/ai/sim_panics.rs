@@ -162,6 +162,7 @@ fn a_match_record_sums_its_search_panics_and_names_the_seat_of_the_first() {
                 },
             },
             max_actions: Some(MATCH_ACTIONS),
+            setup: MatchSetup::default(),
         },
         &mut MatchHooks::default(),
     );

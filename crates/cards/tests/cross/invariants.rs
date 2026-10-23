@@ -15,7 +15,7 @@
 //!
 //! I8 (#1192, #1574) is proved by handing the oracle `legal_actions` with one attack, switch or
 //! activation taken out, which `reduce` still accepts; the whole list gives nothing. `malformed_answers`
-//! is proved by `reduce` refusing each variant.
+//! and `malformed_actions` are proved by `reduce` refusing each variant.
 //!
 //! Port of `packages/cards/test/invariants.test.ts` (SURFACE §4.1, §8).
 
@@ -1100,6 +1100,7 @@ mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
 
     const PING: &str = "classicplus-076-1"; // C+ #76.1 Brother Ping: Activate (once a turn), deal 1 to any target
     const SCARAB: &str = "core-007"; // #7 Jewelosco Scarab: Cry: Discover, a prompt of one pick
+    const DIVIDEND: &str = "core-024"; // #24 Efficiency Dividend: an X-cost Spell of three modes
 
     fn board() -> (Scenario, CardInstance) {
         let g = scenario(json!({
@@ -1213,6 +1214,62 @@ mod i8_an_activation_reduce_accepts_that_the_list_leaves_out {
             assert!(result.error.is_some(), "{name} was accepted");
         }
         assert!(malformed_answers(g.state(), &ActionBody::EndTurn).is_empty());
+    }
+
+    #[test]
+    fn every_malformed_variant_of_a_listed_play_and_activation_is_refused() {
+        let g = scenario(json!({
+            "p1": { "hand": [DIVIDEND], "mana": 3, "field": [PING], "library": [VANILLA, VANILLA] },
+            "p2": { "field": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+        let ping = g.card(PING).clone();
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        let play = legal
+            .iter()
+            .find(|body| matches!(body, ActionBody::Play { x: Some(_), .. }))
+            .expect("the list should hold a play of the X spell")
+            .clone();
+        assert!(
+            legal.contains(&at_enemy_hero(&ping)),
+            "the list should hold the ping"
+        );
+
+        let names = |malformed: &[(&'static str, PlayerId, ActionBody)]| {
+            malformed.iter().map(|(name, _, _)| *name).collect::<Vec<_>>()
+        };
+        let forged_plays = malformed_actions(g.state(), PlayerId::P1, &play);
+        assert_eq!(
+            names(&forged_plays),
+            [
+                UNOFFERED_TARGET_ACTION,
+                UNOFFERED_MODE_ACTION,
+                UNOFFERED_ZONE_ACTION,
+                NEGATIVE_X_ACTION,
+                UNOFFERED_TRIBUTE_ACTION,
+                UNOFFERED_PLAGUE_ACTION,
+                UNOFFERED_REVEAL_ACTION
+            ]
+        );
+        let forged_activations = malformed_actions(g.state(), PlayerId::P1, &at_enemy_hero(&ping));
+        assert_eq!(
+            names(&forged_activations),
+            [
+                UNOFFERED_ABILITY_ACTION,
+                UNOFFERED_TARGET_ACTION,
+                UNOFFERED_MODE_ACTION,
+                UNOFFERED_TRIBUTE_ACTION,
+                UNOFFERED_POWER_TARGET_ACTION
+            ]
+        );
+
+        for (name, seat, body) in forged_plays.into_iter().chain(forged_activations) {
+            assert_eq!(seat, PlayerId::P1, "{name}");
+            let result = reduce(g.state(), &Action::new(body, seat, "malformed".to_string()));
+            assert!(result.error.is_some(), "{name} was accepted");
+            assert!(result.events.is_empty(), "{name} emitted {:?}", result.events);
+            assert!(result.state == *g.state(), "{name} moved the state");
+        }
+        assert!(malformed_actions(g.state(), PlayerId::P1, &ActionBody::EndTurn).is_empty());
     }
 }
 
