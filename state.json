@@ -13520,6 +13520,14 @@
         }
       }
     },
+    "1724": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-23T06:43:16Z",
+      "issue": 1704,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "831": {
       "action": "build",
       "failures": 0,
