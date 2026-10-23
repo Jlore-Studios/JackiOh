@@ -1684,7 +1684,14 @@
    (cards/foil.test.ts). The band crosses a 5:7 face in about six of the eight seconds and rests off
    it for the other two. It moves by transform alone, on its own layer. Under reduced motion (the
    media query, or the settings panel's Reduce motion on <html>) none of this applies and an
-   animated face wears the still foil above. */
+   animated face wears the still foil above.
+
+   The sweep blends nothing (#1700). With `mix-blend-mode` on the layer the compositor moves,
+   Chrome drew a dark wedge past a rotated face's rounded corner, and a dark strip along its edge,
+   each time the band came in or left (the home screen's fan, rotated by landing.css); `screen`
+   did the same. Drawn with plain alpha the band stays inside the clip, and the blend's extra pass
+   per face per frame is gone. Its stops carry 0.4 of the still band's alpha, about the lift the
+   overlay gave a dark panel. The still foil keeps its overlay: it never moves. */
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .cf[data-foil="animated"]::after {
     left: 0;
@@ -1692,11 +1699,12 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgb(255 244 200 / 0.5) 25%,
+      rgb(255 244 200 / 0.2) 25%,
       transparent 46%,
-      rgb(255 214 110 / 0.35) 73%,
+      rgb(255 214 110 / 0.14) 73%,
       transparent 100%
     );
+    mix-blend-mode: normal;
     will-change: transform;
     animation: cf-foil-sweep 8s linear infinite;
   }
@@ -1705,10 +1713,10 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgb(255 106 213 / 0.4) 23%,
-      rgb(148 208 255 / 0.4) 40%,
-      rgb(125 255 198 / 0.35) 58%,
-      rgb(255 230 109 / 0.35) 75%,
+      rgb(255 106 213 / 0.16) 23%,
+      rgb(148 208 255 / 0.16) 40%,
+      rgb(125 255 198 / 0.14) 58%,
+      rgb(255 230 109 / 0.14) 75%,
       transparent 100%
     );
   }
