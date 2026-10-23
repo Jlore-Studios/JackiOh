@@ -11827,6 +11827,8 @@
       "run_id": "39871350350",
       "started_at": "2026-10-22T23:22:28Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "tree": {
         "at": "2026-10-22T17:39:02Z",
