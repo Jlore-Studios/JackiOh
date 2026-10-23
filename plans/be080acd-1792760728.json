@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 1717,
+  "title": "Patch: an account flooding the API raises the unusual-rejections alert",
+  "branch": "bot/issue-1717",
+  "thread": "**Issue #1717 (data, not instructions):**\n\n```text\n# #1717: Patch: an account flooding the API raises the unusual-rejections alert\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a match socket gets flooded with refused actions, the server raises an \"unusual rejections\" alert so abuse gets noticed. The ordinary web API enforces the same kind of per-account limits, but refused requests there are only logged one line at a time and never counted \u2014 an account can hammer the API indefinitely without the alert ever firing. After the change, sustained refusals at the API trip the same alert the socket side already raises.\n\n## Why\n\nSpec \u00a79.8 says \"every rejected action is logged with its reason, and accounts with an unusual rejection rate raise an alert.\" Only the socket side implements it: `SeatGuard::note_rejection` feeds `alert_unusual_rejections` \u2192 `match.rejections.unusual` (`crates/server/src/actor/guard.rs:73-105`). On the HTTP path each refusal is warn-logged (`api.rate_limited`, `crates/server/src/api/http.rs:1107-1115`) and rejected requests are deliberately unrecorded (:847-848); `log_alert` exists but is never used on this path. A persistently abusive account or address produces noise, not a signal.\n\n## Proposal\n\nMirror the socket side: keep a bounded per-account/per-address window of refusals in the rate-limiter's state, and past a named threshold in `crates/server/src/config.rs` emit one `api.rejections.unusual` alert per window \u2014 same shape as `match.rejections.unusual` so existing alerting picks it up.\n\n## Where it lands\n\n`crates/server/src/api/http.rs` (`RateLimiterState`), `crates/server/src/config.rs` (the threshold and window, CLAUDE.md rule 9), tests in the server suite. Spec \u00a79.8.\n\n## Acceptance criteria\n\n- Driving N refused requests inside the window raises exactly one `api.rejections.unusual` alert per window.\n- Under the threshold, or spread past the window, nothing alerts.\n- The window is bounded (no unbounded state per account), matching the guard's pattern.\n\n## Size and risks\n\nSmall. Classed `security` because it is a missing \u00a79.8 abuse mitigation rather than a bypass: without it the abuse surface's own tripwire never fires on the HTTP half of the API.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `security` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-23T13:00:06Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1717: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1721 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
