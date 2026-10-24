@@ -172,6 +172,7 @@ to the browser's downloads, for a bug report.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
+The panel takes the focus on its first way on as it comes in; its "View the board" folds it to a "Result" button on the board's rail (`duos-result-reopen`) that opens it again, the replay door and the XP reveal with it (#1755).
 A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```

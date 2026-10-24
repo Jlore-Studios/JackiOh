@@ -718,3 +718,118 @@ describe("#1308 the card packs panel", () => {
     });
   });
 });
+
+describe("#1757 the pack-opening scene's focus and keys", () => {
+  /** fireEvent returns false when a handler called preventDefault. */
+  function tabFrom(element: Element, shift = false): boolean {
+    return fireEvent.keyDown(element, { key: "Tab", shiftKey: shift });
+  }
+
+  it("#1757 the scene takes the focus when it opens, and Tab and Shift+Tab wrap inside it", () => {
+    render(
+      <>
+        <button type="button" data-testid="behind">
+          behind
+        </button>
+        <PackScene {...props()} />
+      </>,
+    );
+    const scene = screen.getByTestId(T.scene);
+    const pack = screen.getByTestId(T.pack);
+    const close = screen.getByTestId(T.close);
+    expect(scene).toHaveFocus();
+
+    expect(tabFrom(scene)).toBe(false);
+    expect(pack).toHaveFocus();
+    expect(tabFrom(pack, true)).toBe(false);
+    expect(close).toHaveFocus();
+    expect(tabFrom(close)).toBe(false);
+    expect(pack).toHaveFocus();
+
+    scene.focus();
+    expect(tabFrom(scene, true)).toBe(false);
+    expect(close).toHaveFocus();
+
+    pack.focus();
+    expect(tabFrom(pack), "a Tab between two controls inside is the browser's").toBe(true);
+
+    const behind = screen.getByTestId("behind");
+    behind.focus();
+    expect(tabFrom(behind)).toBe(false);
+    expect(pack).toHaveFocus();
+  });
+
+  it("#1757 while an open is out nothing in it can take the focus, so Tab and Shift+Tab keep it on the scene", () => {
+    render(<PackScene {...props({ busy: true })} />);
+    const scene = screen.getByTestId(T.scene);
+    expect(scene).toHaveFocus();
+
+    expect(tabFrom(scene)).toBe(false);
+    expect(scene).toHaveFocus();
+    expect(tabFrom(scene, true)).toBe(false);
+    expect(scene).toHaveFocus();
+  });
+
+  it("#1757 Escape closes the scene, but not while an open is out, when Close is disabled too", () => {
+    const given = props({ busy: true });
+    const { rerender } = render(<PackScene {...given} />);
+    const scene = screen.getByTestId(T.scene);
+
+    fireEvent.keyDown(scene, { key: "Escape" });
+    expect(given.onClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId(T.close)).toBeDisabled();
+    expect(scene).toHaveFocus();
+
+    rerender(<PackScene {...given} busy={false} />);
+    expect(screen.getByTestId(T.close)).toBeEnabled();
+    fireEvent.keyDown(scene, { key: "Escape" });
+    expect(given.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1757 under reduced motion the scene takes the focus and Escape closes it the same", () => {
+    writeSettings({ reduceMotion: true });
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    const scene = screen.getByTestId(T.scene);
+    expect(scene).toHaveAttribute("data-motion", "reduce");
+    expect(scene).toHaveFocus();
+
+    fireEvent.keyDown(scene, { key: "Escape" });
+    expect(given.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1757 focus goes back to the Open button that opened the scene, on Escape and on Done", async () => {
+    packsServer();
+    await panel();
+    const opener = screen.getByTestId(T.open("Core"));
+    opener.focus();
+    fireEvent.click(opener);
+    expect(screen.getByTestId(T.scene)).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByTestId(T.scene), { key: "Escape" });
+    expect(screen.queryByTestId(T.scene)).toBeNull();
+    expect(opener).toHaveFocus();
+
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(screen.queryByTestId(T.scene)).toBeNull();
+    expect(screen.getByTestId(T.open("Core")), "Core still holds a pack, so its row stays").toHaveFocus();
+  });
+
+  it("#1757 the next pack of a batch takes the focus again", async () => {
+    packsServer({
+      open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: call === 1 ? 1 : 0 } satisfies OpenedPackResponse }),
+    });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    fireEvent.click(screen.getByTestId(T.next));
+
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+    expect(screen.getByTestId(T.scene)).toHaveFocus();
+  });
+});

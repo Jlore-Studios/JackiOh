@@ -20,6 +20,8 @@ import {
   type Settings,
 } from "./store.ts";
 import { readRememberedTab, rememberTab } from "./tabs.ts";
+import { retrySettingsSync, useSettingsSyncState } from "./accountSync.ts";
+import { TryAgainButton } from "../auth/AccountError.tsx";
 import { syncPlayerStats } from "../stats/sync.ts";
 import { SpectatorSwitch } from "../together/SpectatorSwitch.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
@@ -129,6 +131,7 @@ export default function SettingsPanel({
 }: SettingsPanelProps): ReactElement {
   useLocale();
   const settings = useSettings();
+  const sync = useSettingsSyncState();
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef(new Map<SettingsSectionId, HTMLButtonElement>());
@@ -303,6 +306,19 @@ export default function SettingsPanel({
             );
           })}
         </div>
+        {/*
+          R1758000: a save to the account that failed says so, quietly, on every tab, with Try again;
+          nothing while a request is out, once one succeeds, or with nothing syncing. R634's own
+          retries (online, the tab shown again, the next change) are unchanged.
+        */}
+        {sync.phase === "error" ? (
+          <div className="settings-sync">
+            <p className="settings-sync__text" role="status" data-testid="settings-sync-error">
+              {t("Settings didn’t save to your account.")}
+            </p>
+            <TryAgainButton onRetry={retrySettingsSync} testId="settings-sync-retry" className="settings-sync__retry" />
+          </div>
+        ) : null}
         <footer className="settings-foot">
           <button
             type="button"

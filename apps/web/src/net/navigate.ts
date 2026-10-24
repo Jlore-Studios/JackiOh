@@ -43,13 +43,17 @@ export function guardLeaving(hold: (leave: () => void) => void): () => void {
 }
 
 function go(path: string, replace: boolean): void {
+  const from = currentPath();
   if (replace) window.history.replaceState(null, "", path);
   else window.history.pushState(null, "", path);
+  if (currentPath() !== from) window.scrollTo(0, 0);
   window.dispatchEvent(new Event(NAVIGATED));
 }
 
 /**
- * Avoid stacking history when a guard re-renders the current pathname and query.
+ * Avoid stacking history when a guard re-renders the current pathname and query. A new pathname opens
+ * at the top (#1756), scrolled after the push so the entry left keeps its position for Back; a change
+ * of query or fragment alone keeps the scroll, and Back and Forward (`popstate`) are the browser's.
  * R1754000: a page's leave guard holds the move unless `force` (a move the page itself decided);
  * returns false when it held it.
  */
