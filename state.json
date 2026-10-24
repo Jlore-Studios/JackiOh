@@ -12438,8 +12438,13 @@
     "what": "plan #1803 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-24T13:29:17Z",
-    "notes": [],
+    "at": "2026-10-24T13:35:25Z",
+    "notes": [
+      "#1803 needs a plan",
+      "started plan #1803 on agy (run 40099042289)",
+      "nothing more to start: nothing is queued",
+      "#1803: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13144,7 +13149,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T13:29:17Z",
+  "loop_tick": "2026-10-24T13:35:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
