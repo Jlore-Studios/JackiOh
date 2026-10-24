@@ -13552,7 +13552,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-24T02:41:04Z",
+      "feedback_since": "2026-10-24T06:05:51Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-24T06:00:23Z",
@@ -13574,11 +13574,11 @@
       "round_tier": "medium",
       "run_id": "40068847416",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-24T06:05:51Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "claude"
