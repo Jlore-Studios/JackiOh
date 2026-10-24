@@ -113,12 +113,14 @@ fn combat_flags() -> Option<DamageFlags> {
     })
 }
 
-/// A combat hit's flags with MD-D4's Poisonous rider: `{ combat: true }`, plus `poisonous` when an
-/// attack modifier grants it (R1120).
-fn combat_flags_poisonous(poisonous: bool) -> Option<DamageFlags> {
+/// The flags of the attacker's own hit, and of its Cleave's: `{ combat: true }` and `attacking`, the
+/// damage a Unit's Trample applies to and no strike back's (R1750000), plus `poisonous` when an
+/// attack modifier grants it (MD-D4, R1120).
+fn attack_flags(poisonous: bool) -> Option<DamageFlags> {
     Some(DamageFlags {
         combat: Some(true),
         poisonous: if poisonous { Some(true) } else { None },
+        attacking: Some(true),
         ..DamageFlags::default()
     })
 }
@@ -651,7 +653,7 @@ fn cleave(
                 source: Some(attacker.clone()),
                 target: DamageTarget::Unit { instance: neighbour },
                 amount,
-                flags: combat_flags_poisonous(poisonous),
+                flags: attack_flags(poisonous),
             },
         );
     }
@@ -673,7 +675,7 @@ fn strike(
             source: Some(source),
             target: target.clone(),
             amount: hit,
-            flags: combat_flags_poisonous(poisonous),
+            flags: attack_flags(poisonous),
         },
     );
     let source = live_or_given(sink.state, attacker);

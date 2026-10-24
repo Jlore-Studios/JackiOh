@@ -984,20 +984,18 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
 
 // The strike back's Trample split, and the window's own chain before step 5
 
-/// R176: a Lifesteal strike back that tramples heals what it really deals
-mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
+/// R176, R1750000: a Lifesteal strike back heals all it deals, a strike back never trampling
+mod r176_a_lifesteal_strike_back_heals_all_it_deals_it_never_tramples {
     use super::*;
 
-    #[test]
-    fn r176_r63_a_defenders_lifesteal_heals_only_what_its_trample_strike_back_really_deals_so_the_swing_is_lethal_s4_4_steps_2_8_9()
-     {
-        // p1's Bigot (set to its old 6/1, Trample) attacks p2's Jilliax (3/2, Taunt, Lifesteal, Trample, shield spent)
-        // with p2 at 3 and p1's hero behind Going Long (Armor 2). The swing sends 6 - 2 = 4 through.
-        // Jilliax's 3 into a 1-health Bigot lands 1 (heals p2 for 1); the 2 that tramples on is stopped
-        // by Armor 2 (the zero rule) and heals nothing. p2 ends at 3 - 4 + 1 = 0: lethal, so My Pawn cancels.
+    /// p1's Bigot (set to its old 6/1, Trample) attacks p2's Jilliax (3/2, Taunt, Lifesteal, Trample,
+    /// shield spent) with p1's hero behind Going Long (Armor 2) and p2 at `p2_health`. The swing sends
+    /// 6 - 2 = 4 through. Jilliax's 3 into a 1-health Bigot all lands on it, so it heals p2 for 3 and
+    /// none of it tramples on to p1's hero, where Going Long's Armor would have reported it.
+    fn bigot_swings_at_jilliax(seed: &str, p2_health: i32) -> Scenario {
         let mut s = setup(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
-            "seed": "cw8-pawn-trample-strikeback",
+            "seed": seed,
             "p1": {
                 "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                 "backrow": [{ "def": GOING_LONG, "lane": 1 }],
@@ -1005,7 +1003,7 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
                 "library": [GIGA, GIGA, GIGA],
             },
             "p2": {
-                "health": 3,
+                "health": p2_health,
                 "field": [{ "def": JILLIAX, "lane": 1 }],
                 "backrow": [{ "def": MY_PAWN, "lane": 2, "faceUp": false }],
                 "hand": [STOCKPILE],
@@ -1019,10 +1017,32 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
         s.card_mut(&jilliax).divine_shield_spent = Some(true);
 
         s.attack(&bigot, &jilliax);
+        s
+    }
+
+    #[test]
+    fn r176_r1750000_a_defenders_strike_back_never_tramples_so_lifesteal_heals_the_full_strike_and_the_swing_is_not_lethal_s4_4_steps_5_8_9()
+     {
+        // p2 ends at 3 - 4 + 3 = 2: not lethal, so My Pawn does not cancel.
+        let mut s = bigot_swings_at_jilliax("cw8-pawn-trample-strikeback", 3);
+
+        assert_eq!(count(&s, GameEventType::AttackCancelled), 0);
+        assert!(s.state().result.is_none());
+        s.expect_health("p2", 2);
+        // The strike back's 3 landed whole on Bigot, and no instance of it went to p1's hero.
+        assert_eq!(count(&s, GameEventType::DamageAbsorbed), 0);
+        s.expect_health("p1", 30);
+    }
+
+    #[test]
+    fn r176_r1750000_the_full_strike_heals_no_more_than_it_deals_so_one_health_less_is_lethal_s4_4_steps_5_8_9()
+     {
+        // p2 at 1 would end at 1 - 4 + 3 = 0: lethal, so My Pawn cancels the attack.
+        let mut s = bigot_swings_at_jilliax("cw8-pawn-trample-strikeback-lethal", 1);
 
         assert_eq!(count(&s, GameEventType::AttackCancelled), 1);
         assert!(s.state().result.is_none());
-        s.expect_health("p2", 3);
+        s.expect_health("p2", 1);
     }
 }
 

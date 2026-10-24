@@ -184,7 +184,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Lifesteal: keyword("Lifesteal", "Damage dealt heals your hero"),
   Reborn: keyword("Reborn", "First death: return at 1 health without Reborn"),
   "Divine Shield": keyword("Divine Shield", "Negate the first damage instance, then lose it"),
-  Trample: keyword("Trample", "Excess damage hits the hero"),
+  Trample: keyword("Trample", "Excess damage to a unit hits its hero; a unit tramples only when it attacks"),
   Cleave: keyword("Cleave", "Also damages units adjacent to the target"),
   Pierce: keyword("Pierce", "Its damage ignores Armor"),
   Indestructible: keyword("Indestructible", "Can't be destroyed or damaged; can be exiled or tributed"),

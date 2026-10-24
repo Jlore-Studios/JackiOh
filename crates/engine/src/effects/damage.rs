@@ -54,6 +54,7 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
             None
         },
         poisonous: None,
+        attacking: None,
     }
 }
 
