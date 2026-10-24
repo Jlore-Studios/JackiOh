@@ -13822,10 +13822,10 @@
       "verdict_rounds": 3,
       "votes": {
         "approvals": [],
-        "builder": "gemini",
+        "builder": "claude",
         "rejections": [],
         "reviews": [],
-        "sha": "2a0edd40aaebc953f0c50b9ef01ea8bcebb33e76",
+        "sha": "f21aa6b919bd2f4cb352a94194a60cfe631ba4f4",
         "tiers": {}
       }
     },
