@@ -14373,7 +14373,10 @@
       "feedback_since": "2026-10-24T07:27:44Z",
       "issue": 1779,
       "kind": "revise",
+      "queued_at": "2026-10-24T09:15:05Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
