@@ -14546,12 +14546,8 @@
     "what": "revise #1801 on agy"
   },
   "last_sweep": {
-    "at": "2026-10-24T10:54:30Z",
-    "notes": [
-      "delivered build #1778 on agy (run 40074247108): approved",
-      "started revise #1801 on agy (run 40087866699)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-24T11:02:14Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15256,7 +15252,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T10:54:30Z",
+  "loop_tick": "2026-10-24T11:02:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
