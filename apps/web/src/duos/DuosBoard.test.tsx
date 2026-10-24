@@ -20,9 +20,10 @@ import { PING_SHOW_MS } from "@jackioh/server-config";
 import { closeInspect } from "../cards/index.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import type { PingKind, PingTarget } from "../net/duos.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
-import { baseView, card, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, unit, withEvents, yourModifiers } from "../test/fixtures.ts";
 import { must, showsNumber } from "../test/stubServer.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -711,6 +712,49 @@ describe("R1483000 the result panel names the daily cap only for a capped seat",
     renderBoard({ view: OVER, jloreCapped: false });
     expect(screen.getByTestId("duos-result")).toBeInTheDocument();
     expect(screen.queryByTestId("duos-result-jlore")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R169: the live-modifier chip in the rail
+// ---------------------------------------------------------------------------------------------
+
+describe("R169 the modifier list on the co-op board", () => {
+  const TEAMMATE_MODIFIER = { id: "m9", label: "Your Spells cost (1) less" };
+
+  it("R169 the chip counts the seat's own duel and opens it under You and Opponent, never AI", () => {
+    const base = duosView();
+    const view: DuosView = {
+      ...base,
+      own: {
+        ...base.own,
+        you: { ...base.own.you, modifiers: yourModifiers },
+        opponent: { ...base.own.opponent, modifiers: opponentModifiers },
+      },
+      teammate: { ...base.teammate, you: { ...base.teammate.you, modifiers: [TEAMMATE_MODIFIER] } },
+    };
+    renderBoard({ view });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip, "the teammate's duel is no part of the count").toHaveAttribute("data-count", "3");
+
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of [...yourModifiers, ...opponentModifiers]) {
+      expect(panel).toHaveTextContent(modifier.label);
+    }
+    expect(panel).not.toHaveTextContent(TEAMMATE_MODIFIER.label);
+    expect(Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent)).toEqual(["You", "Opponent"]);
+  });
+
+  it("R169 no chip while the own duel has no modifier, though the teammate's has one", () => {
+    const base = duosView();
+    const view: DuosView = {
+      ...base,
+      teammate: { ...base.teammate, you: { ...base.teammate.you, modifiers: [TEAMMATE_MODIFIER] } },
+    };
+    renderBoard({ view });
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
   });
 });
 

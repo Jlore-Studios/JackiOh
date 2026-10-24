@@ -5,7 +5,8 @@
 //!
 //! The cards: Wrong-House Attacker (classicplus-006) 1/1 Rush, Lifesteal, Poisonous, Midrange Menace
 //! (core-019) 9/9 Taunt, Hit Job (core-016, 3 mana: destroy a Unit), Mr. Vanilla (core-008) 4/4, Reno
-//! (core-053) 4/6 and Tempo Timmy (core-011) 3/3 Rush, First Strike.
+//! (core-053) 4/6, Tempo Timmy (core-011) 3/3 Rush, First Strike, and Mommy Barker (classicplus-013),
+//! Radiant 4/4 Reborn.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -18,6 +19,7 @@ const HIT_JOB: &str = "core-016";
 const VANILLA: &str = "core-008";
 const RENO: &str = "core-053";
 const TIMMY: &str = "core-011";
+const BARKER: &str = "classicplus-013";
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
 
 fn board(setup: Value) -> GameState {
@@ -204,4 +206,26 @@ fn a_losing_trade_stays_behind_the_plays() {
         &attack(&unit_id(&state, AI, MENACE), &unit_id(&state, HUMAN, WRONG_HOUSE)),
     );
     assert!(trade > first_play(&actions), "{:?}", keys(&actions));
+}
+
+#[test]
+fn of_two_targets_with_equal_stats_the_even_trade_goes_into_the_one_without_reborn() {
+    // #1796: Mommy Barker's Radiant 4/4 Reborn comes back at 1 health, so the kill that trades Mr.
+    // Vanilla for it is a losing one, and the trade into the other Mr. Vanilla is the even one.
+    let state = board(json!({
+        "seed": "ai-even-trades-reborn",
+        "p1": { "hand": [VANILLA], "field": [VANILLA] },
+        "p2": { "field": [{ "def": BARKER, "radiant": true }, VANILLA] },
+    }));
+    let actions = candidate_actions(&state, AI);
+    let attacker = unit_id(&state, AI, VANILLA);
+    let on_vanilla = place(&actions, &attack(&attacker, &unit_id(&state, HUMAN, VANILLA)));
+    let on_barker = place(&actions, &attack(&attacker, &unit_id(&state, HUMAN, BARKER)));
+    let play = first_play(&actions);
+    assert!(
+        on_vanilla < play && play < on_barker,
+        "the trade into Mr. Vanilla at {on_vanilla}, the first play at {play}, the one into Mommy \
+         Barker at {on_barker}: {:?}",
+        keys(&actions)
+    );
 }
