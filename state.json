@@ -14183,12 +14183,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40076653456",
+            "tier": "medium"
+          }
+        ],
         "sha": "709aa28f3c9c65b122f4f20a7aad6598630b674f",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "1784": {
