@@ -12416,7 +12416,7 @@
       "verdict_rounds": 1
     },
     "1803": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-24T15:43:35Z",
@@ -12441,8 +12441,8 @@
       "planned_by_id": "agy",
       "planned_tier": "medium",
       "provider": "agy",
-      "run_id": "40099042289",
-      "started_at": "2026-10-24T13:38:55Z",
+      "run_id": "pending:24a4cadb-1792856642",
+      "started_at": "2026-10-24T15:44:14Z",
       "stop_requested": false,
       "taken_asks": []
     }
@@ -12453,9 +12453,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-24T13:38:55Z",
+    "at": "2026-10-24T15:44:14Z",
     "url": "",
-    "what": "plan #1803 on agy"
+    "what": "build #1803 on agy"
   },
   "last_sweep": {
     "at": "2026-10-24T15:37:02Z",
