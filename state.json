@@ -14096,6 +14096,8 @@
       "run_id": "40074223488",
       "started_at": "2026-10-24T07:27:44Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
