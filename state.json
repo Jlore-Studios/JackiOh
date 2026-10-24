@@ -13987,6 +13987,13 @@
     "1777": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T07:34:53Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the 'about 40 files or more' line: it touches 108 files (106 rules tests, the harness, acceptance.rs), though every edit is test-only and mechanical"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
