@@ -225,41 +225,43 @@
       "nonce": "a13"
     },
     {
+      "ability": "discard",
+      "instanceId": "c23",
+      "type": "activate",
+      "playerId": "p1",
+      "nonce": "a14"
+    },
+    {
       "instanceId": "c17",
       "type": "switchPosition",
       "playerId": "p1",
-      "nonce": "a14"
+      "nonce": "a15"
     },
     {
       "attackerId": "c16",
       "targetId": "c46",
       "type": "attack",
       "playerId": "p1",
-      "nonce": "a15"
+      "nonce": "a16"
     },
     {
       "attackerId": "c15",
       "targetId": "hero-p2",
       "type": "attack",
       "playerId": "p1",
-      "nonce": "a16"
+      "nonce": "a17"
     },
     {
       "attackerId": "c22",
       "targetId": "c48",
       "type": "attack",
       "playerId": "p1",
-      "nonce": "a17"
+      "nonce": "a18"
     },
     {
       "attackerId": "c19",
       "targetId": "hero-p2",
       "type": "attack",
-      "playerId": "p1",
-      "nonce": "a18"
-    },
-    {
-      "type": "endTurn",
       "playerId": "p1",
       "nonce": "a19"
     },

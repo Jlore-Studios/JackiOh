@@ -147,6 +147,29 @@ mod tests {
         s.expect_in_zone(ID, "graveyard");
     }
 
+    /// R1750000: the redirected attack is still the attacker's own, so its Trample goes on to "the
+    /// target's controller's hero", which is its own side's. The neighbour that is attacked takes no
+    /// Trample onto anyone: it strikes back 1 on the Vanilla and nothing more.
+    #[test]
+    fn r1750000_a_redirected_trample_attack_tramples_into_its_own_hero() {
+        let mut s = blood_game();
+        let foe = s.unit(P2, 1).unwrap().id;
+        let neighbour = s.unit(P2, 2).unwrap().id;
+        s.card_mut(&foe).granted_keywords.push(Keyword::Trample);
+        s.end_turn();
+        s.attack(&foe, "hero");
+        // The Vanilla's 4 into the 1/1: 1 lands on it and the 3 beyond its health hit p2's own hero.
+        assert_eq!(
+            hits(&s),
+            vec![
+                (Some(foe.clone()), neighbour.clone(), 1),
+                (Some(foe.clone()), "hero-p2".to_string(), 3),
+                (Some(neighbour.clone()), foe.clone(), 1),
+            ]
+        );
+        s.expect_events(json!(["attackDeclared", "trapFired", "redirected"]));
+    }
+
     #[test]
     fn lonely_stays_set() {
         // No adjacent Unit: Blood stays set and the hero takes the hit. (A forced attack never

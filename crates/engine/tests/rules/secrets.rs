@@ -8,6 +8,7 @@ use jackioh_engine::effects::{guess_secret, keep_secret, resolve_secret};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
+use crate::rules::fixtures::harness::json_of;
 use crate::rules::fixtures::instance_data::instance_game;
 
 const P1: PlayerId = PlayerId::P1;
@@ -45,17 +46,13 @@ fn keep(choice: &str) -> Effect {
     keep_secret(json_as(json!({ "choice": choice, "step": "reward" })))
 }
 
-fn js<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// The events of one action, as each player's view sends them.
 fn sent(state: &mut GameState, events: Vec<GameEvent>, viewer: PlayerId) -> Value {
     state.applied = vec![AppliedAction {
         nonce: "t".to_string(),
         events,
     }];
-    js(&view_for(state, viewer).events)
+    json_of(&view_for(state, viewer).events)
 }
 
 fn guess(secret_id: &str, guess: &str) -> Effect {

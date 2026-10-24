@@ -51,7 +51,7 @@ use jackioh_engine::triggers::SettleOptions;
 use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions};
 
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{in_hand, new_game, put as put_with, set_library, slot};
+use super::fixtures::harness::{both, in_hand, new_game, put as put_with, set_library, slot, spread};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -59,15 +59,6 @@ const P2: PlayerId = PlayerId::P2;
 // ---------------------------------------------------------------------------
 // Fixture definitions.
 // ---------------------------------------------------------------------------
-
-/// TS `{ ...target, ...extra }`: every key of `extra` written over `target`'s.
-fn spread(target: &mut Value, extra: Value) {
-    if let (Some(target), Value::Object(extra)) = (target.as_object_mut(), extra) {
-        for (key, value) in extra {
-            target.insert(key, value);
-        }
-    }
-}
 
 /// TS `def(name, type, extra)`. `index` is the number TS's module counter `nextIndex` (from 1900,
 /// incremented before each def) gave this def in declaration order.
@@ -85,7 +76,7 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
         "base": { "keywords": [], "text": format!("{name} base") },
         "radiant": { "keywords": [], "text": format!("{name} radiant") },
     });
-    spread(&mut card, extra);
+    card = spread(card, extra);
     json_as(card)
 }
 
@@ -104,11 +95,11 @@ fn unit(name: &str, index: u32, attack: i32, health: i32, extra: Value) -> CardD
         .and_then(|extra| extra.remove("radiant"))
         .unwrap_or(json!({}));
     let mut base = json!({ "attack": attack, "health": health, "keywords": [], "text": name });
-    spread(&mut base, base_extra);
+    base = spread(base, base_extra);
     let mut radiant = json!({ "attack": attack, "health": health, "keywords": [], "text": name });
-    spread(&mut radiant, radiant_extra);
+    radiant = spread(radiant, radiant_extra);
     let mut faces = json!({ "base": base, "radiant": radiant });
-    spread(&mut faces, rest);
+    faces = spread(faces, rest);
     def(name, "Unit", index, faces)
 }
 
@@ -472,13 +463,6 @@ fn defs() -> Vec<CardDef> {
 // ---------------------------------------------------------------------------
 // Fixture scripts.
 // ---------------------------------------------------------------------------
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
-}
 
 /// Deal `amount` to the enemy hero: the one visible thing a fixture script needs to do.
 fn hit(amount: i32) -> Hook {
@@ -1156,14 +1140,14 @@ fn act(state: &GameState, player_id: PlayerId, body: ActionBody) -> GameState {
 /// A `play` action body from TS's object literal (its fields after `type: "play"`).
 fn play_body(fields: Value) -> ActionBody {
     let mut body = json!({ "type": "play" });
-    spread(&mut body, fields);
+    body = spread(body, fields);
     json_as(body)
 }
 
 /// A `PlayAction` from TS's object literal (its fields after `type: "play"`).
 fn play_action(fields: Value) -> PlayAction {
     let mut action = json!({ "type": "play" });
-    spread(&mut action, fields);
+    action = spread(action, fields);
     json_as(action)
 }
 
@@ -2637,6 +2621,14 @@ mod spec_11_r113_the_work_cursor_m3_gate {
 mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
     use super::*;
 
+    /// The flags of an attacker's own hit: the damage a Unit's Trample applies to (R1750000).
+    fn attacking() -> Option<DamageFlags> {
+        Some(DamageFlags {
+            attacking: Some(true),
+            ..DamageFlags::default()
+        })
+    }
+
     #[test]
     fn r114_deals_nothing_to_a_unit_already_at_0_health_and_sends_the_whole_trample_amount_to_its_hero() {
         let mut state = game("r114-zero-health");
@@ -2678,7 +2670,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                             instance: control_victim.clone(),
                         },
                         amount: 5,
-                        flags: None,
+                        flags: attacking(),
                     },
                 )
             }),
@@ -2737,7 +2729,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                         instance: at_zero.clone(),
                     },
                     amount: 5,
-                    flags: None,
+                    flags: attacking(),
                 },
             )
         });
@@ -3099,7 +3091,7 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
         // An unpayable board refuses the play outright rather than fizzling on resolution (R101).
         let play = |state: &GameState, extra: Value| -> Option<String> {
             let mut fields = json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 5 } });
-            spread(&mut fields, extra);
+            fields = spread(fields, extra);
             refusal(play_choices::why_choices_refused(
                 state,
                 P1,

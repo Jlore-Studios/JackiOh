@@ -12,7 +12,7 @@ use jackioh_engine::draw::draw;
 use jackioh_engine::effects::damage;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{new_game, put, slot};
+use crate::rules::fixtures::harness::{both, new_game, put, slot};
 
 /// TS `def(name, type)`, its module `nextIndex` (from 5600) written out per definition.
 fn def(name: &str, type_: &str, index: i32) -> CardDef {
@@ -49,13 +49,6 @@ fn tax_trap() -> CardDef {
 /// p2's Field Spell with an ordinary trigger on the opponent's draws: it hits that hero for 3.
 fn watcher() -> CardDef {
     def("watcher", "Field Spell", 5604)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn opponents_draw(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {

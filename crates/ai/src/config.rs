@@ -51,12 +51,20 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
-/// (`duos_decide` at AI_GATE_BUDGET) against a team on §10.7's random policy, `duos.rs`'s `duos_gate`.
+/// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
+/// baseline, `duos.rs`'s `duos_gate`.
 pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 
 /// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
+
+/// #1760: the share of its games the Easy AI team must win against a team on the 1v1 gates' one-ply
+/// greedy baseline (`duos_greedy_action`), B32's second matchup. Only wins count. Set as §9.9 sets
+/// the 1v1 gates' counts, the most wins of DUOS_GATE_GAMES_SMOKE that a team as strong as measured
+/// reaches in 95% of runs: on fresh deals (series `duos-tune`, games 1-200, which no gate plays) the
+/// AI team won 168 of 200 against greedy, so 14 of 20.
+pub const DUOS_GATE_GREEDY_WIN_FLOOR: f64 = 0.7;
 
 /// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
 /// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
@@ -88,6 +96,13 @@ pub struct AiSearch {
     /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
     /// 197-203, edge -0.015 (-0.078 to 0.048). 3 let a Tribute play's sets outgrow the lethal allowance.
     pub zone_variants: i32,
+    /// #1759, R1759000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
+    /// would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
+    /// move order, so where `branching` is 6 (below the root), a board with that many earlier moves cut
+    /// every one, and a unit that cannot win its next fight never stood down in a line, as the
+    /// opponent's reply does (`AI_REPLY.defense_switches`). Bounds a level's children at `width` + this
+    /// + 1. A switch back to Attack is kept only where the width holds it.
+    pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
@@ -150,6 +165,7 @@ pub struct AiSearch {
 
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
+    position_switches: 2,
     max_auto_answers: 8,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
