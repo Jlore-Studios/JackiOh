@@ -6,11 +6,13 @@
 // Every object is a Proxy: unsupported or invalid Web Audio calls throw and record a violation.
 //
 // Its unseen controller records calls, controls context and decode behaviour, and advances ended
-// sources. It also provides fake speech, fetch and clock services.
+// sources. It also provides fake speech, fetch and clock services, and a fake engine for the tests
+// that swap the singleton.
 
 import { vi, type Mock } from "vitest";
 
 import type { SpeechPort } from "../engine.ts";
+import type { AudioEngine } from "../types.ts";
 
 // Strictness
 
@@ -812,4 +814,36 @@ export class FakeClock {
 /** Lets every already-settled promise chain run (fetch → decode → start), without moving any clock. */
 export async function settle(rounds = 25): Promise<void> {
   for (let i = 0; i < rounds; i += 1) await Promise.resolve();
+}
+
+// The engine
+
+/** Every member of `AudioEngine` a spy of its own type, so a member `AudioEngine` gains fails typecheck here. */
+export type FakeAudioEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
+
+/**
+ * A stand-in for the singleton (`setAudioEngineForTests`): every member a spy, every sink call
+ * accepted, the context running and none made, nothing logged and nothing spoken. `overrides`
+ * replaces members.
+ */
+export function fakeAudioEngine(overrides: Partial<FakeAudioEngine> = {}): FakeAudioEngine {
+  return {
+    state: vi.fn<AudioEngine["state"]>(() => "running"),
+    unlock: vi.fn<AudioEngine["unlock"]>(),
+    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
+    setBusy: vi.fn<AudioEngine["setBusy"]>(),
+    log: vi.fn<AudioEngine["log"]>(() => []),
+    clearLog: vi.fn<AudioEngine["clearLog"]>(),
+    contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 0),
+    speaking: vi.fn<AudioEngine["speaking"]>(() => false),
+    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
+    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
+    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
+    dispose: vi.fn<AudioEngine["dispose"]>(),
+    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
+    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
+    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
+    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
+    ...overrides,
+  };
 }

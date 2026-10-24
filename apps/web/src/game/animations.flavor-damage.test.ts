@@ -19,6 +19,7 @@ import { createFxMemory } from "../fx/memory.ts";
 import { SWEEP_MS, planEntries, type AnimationEntry } from "./animations.ts";
 import { testid } from "./contract.ts";
 import type { FxCue, FxPlanEnv } from "../fx/types.ts";
+import { must } from "../test/stubServer.ts";
 
 beforeEach(() => {
   localStorage.clear();
@@ -27,11 +28,6 @@ beforeEach(() => {
 afterEach(() => {
   localStorage.clear();
 });
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
-}
 
 function dmg(sourceId: string | null, targetId: string, amount: number, combat: boolean): GameEvent {
   return { type: "damage", sourceId, targetId, amount, combat };

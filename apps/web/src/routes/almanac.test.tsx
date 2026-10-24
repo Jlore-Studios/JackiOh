@@ -38,6 +38,7 @@ import {
 } from "../game/deckbuilder/testids.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { NEW_RIBBON_SET } from "../patches/ribbon.ts";
+import { at } from "../test/stubServer.ts";
 import AlmanacRoute, { ALMANAC_CATALOG, almanacMeta, almanacTestid } from "./almanac.tsx";
 import LandingRoute from "./landing.tsx";
 import LoginRoute from "./login.tsx";
@@ -54,10 +55,6 @@ const CARDS: readonly CardDef[] = Object.values(ALMANAC_CATALOG.cards).filter(
   (def) => def.id !== GLITCH_DEF_ID && setShips(def.set),
 );
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
 
 function cardOf(id: string): CardDef {
   const def = ALMANAC_CATALOG.cards[id];

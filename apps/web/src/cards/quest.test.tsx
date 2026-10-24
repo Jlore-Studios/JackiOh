@@ -22,6 +22,7 @@ import { testid } from "../game/contract.ts";
 import Log from "../game/Log.tsx";
 import Prompt from "../game/Prompt.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import { questProgress, questWords } from "./cardState.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
@@ -37,11 +38,6 @@ afterEach(() => {
 
 const ITD = "classic-090";
 const lookup = lookupFromDefs(CATALOG);
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
-}
 
 function withCatalog(node: ReactElement, catalog = lookup): ReactElement {
   return <CatalogContext.Provider value={catalog}>{node}</CatalogContext.Provider>;

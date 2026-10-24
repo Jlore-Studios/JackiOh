@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../auth/testids.ts";
 import { WORKSHOP } from "../game/deckbuilder/testids.ts";
 import { decksResponse } from "../game/deckbuilder/testkit.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 
 /** One `loadWasm()` download, settled by the test. */
 type Download = { promise: Promise<void>; resolve: () => void; reject: (cause: Error) => void };
@@ -79,14 +79,6 @@ async function fail(): Promise<void> {
 // the stubbed server
 // ---------------------------------------------------------------------------------------------
 
-function jsonResponse(status: number, body: unknown): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    text: () => Promise.resolve(JSON.stringify(body)),
-  } as unknown as Response;
-}
-
 /** Stub `/api/auth/me` and the reads `/decks` makes, for one account status. */
 function serveAs(status: "pending" | "active"): void {
   vi.stubGlobal(
@@ -119,15 +111,6 @@ function serveAs(status: "pending" | "active"): void {
       );
     }),
   );
-}
-
-/** The key the M8 specs seed in `cy.visit`'s `onBeforeLoad` (`net/session.ts`). */
-function signedIn(token = "e2e-token"): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 /** A lazily-imported route chunk plus a stubbed round trip can outrun testing-library's 1 s default. */
@@ -176,7 +159,7 @@ describe("#778 the screens that never call the engine", () => {
   });
 
   it("#778 /invite shows a pending account the code screen while the module is still loading", async () => {
-    signedIn();
+    signIn();
     serveAs("pending");
     at("/invite");
     render(<App />);
@@ -204,7 +187,7 @@ describe("#778 a screen that calls the engine", () => {
   });
 
   it("#778 /decks waits in the loading panel, then renders once the module is in", async () => {
-    signedIn();
+    signIn();
     serveAs("active");
     at("/decks");
     render(<App />);
@@ -221,7 +204,7 @@ describe("#778 a screen that calls the engine", () => {
 
   it("#778 a module that fails to load shows the error panel, and its retry loads it", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    signedIn();
+    signIn();
     serveAs("active");
     at("/decks");
     render(<App />);
