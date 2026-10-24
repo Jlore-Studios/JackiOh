@@ -27253,6 +27253,12 @@
         "number": 1753,
         "title": "Patch: a finished co-op match refuses a seat's attach past its window, in-memory actor or not",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-24T03:21:51Z",
+        "number": 1761,
+        "title": "Patch: an e2e spec drives the together safety flows \u2014 report, block, unblock, remove",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-24T03:12:56Z",
