@@ -12451,6 +12451,13 @@
     "1794": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:34:25Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Fails rule 1 (about 15 files, the moves included) and rule 2 (an e2e/support file besides apps/web), and the chip's place in the phone rails is a layout call."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
