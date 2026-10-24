@@ -98,7 +98,7 @@ pub struct AiSearch {
     /// In the beam, a line that differs from an earlier one only in where its units stand is a lane
     /// variant, at most this many of a position counting the first; it is closed beside the first
     /// rather than played on (#1797, `beam_search`). Its screen, 400 games of improve-dev against the
-    /// parent (`db8d97fad`), read 216-183 with one game aborted, edge 0.083 (0.025 to 0.14).
+    /// parent (`2bcd74f93`), read 215-184 with one game aborted, edge 0.078 (0.019 to 0.136).
     pub zone_variants: i32,
     /// #1759, R1759000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
     /// would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
