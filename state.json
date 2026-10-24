@@ -13192,6 +13192,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T22:54:41Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -13200,10 +13201,12 @@
       "provider": "claude-3",
       "queued_at": "2026-10-23T22:27:40Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "medium",
       "run_id": "40036744464",
       "started_at": "2026-10-23T22:56:29Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1751": {
       "action": "build",
