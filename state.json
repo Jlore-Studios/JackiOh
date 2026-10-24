@@ -14166,7 +14166,7 @@
   "planning": null,
   "providers": {
     "agy": {
-      "refused_until": "2026-10-24T03:40:16Z",
+      "refused_until": "2026-10-24T18:39:01Z",
       "spent": [
         {
           "at": "2026-10-03T02:02:07Z",
@@ -14667,6 +14667,10 @@
         {
           "at": "2026-10-24T15:43:27Z",
           "minutes": 115.1
+        },
+        {
+          "at": "2026-10-24T18:17:01Z",
+          "minutes": 139.6
         }
       ],
       "tokens_spent": [
@@ -14942,17 +14946,24 @@
           "cost": 0.0,
           "input": 3756549,
           "output": 317965
+        },
+        {
+          "at": "2026-10-24T18:17:01Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 2026922,
+          "output": 114118
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-24T18:34:22Z",
-          "utilization": 0.53
+          "utilization": 1.0
         },
-        "observed_at": "2026-10-24T15:43:27Z",
+        "observed_at": "2026-10-24T18:17:01Z",
         "seven_day": {
           "resets_at": "2026-10-30T22:00:08Z",
-          "utilization": 0.65
+          "utilization": 0.79
         },
         "status": "allowed"
       }
