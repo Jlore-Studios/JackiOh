@@ -12342,11 +12342,13 @@
         "by": "`claude` (strong)",
         "sha": "fcf2f001c4033ba0a60af143bb6529b8a1694989"
       },
+      "closed_at": "2026-10-24T17:12:07Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-24T07:57:16Z",
       "issue": 1775,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
