@@ -13144,7 +13144,9 @@
     "1748": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-23T23:55:30Z",
         "family": "claude",
