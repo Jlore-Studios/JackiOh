@@ -514,7 +514,7 @@ pub const LAST_FACE_UP_SKIPPED_TAGS: &[Tag] = &[Tag::Ai];
 
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
 
-/// B3.2 rule 7, R384: "Activate ♾️" is any number of uses per card per turn, bounded here so a game
+/// B3.2 rule 7, R384: "Activate ♾️" is any number of uses of each ability per turn, bounded here so a game
 /// still ends (a fuzz game's random policy may keep activating). Every ♾️ card in the sets is bounded
 /// by a resource too (units to Tribute, Plague Counters to consume).
 /// R884000: an "Activate N" a Buff or KY's Constant took past it counts this many uses too.

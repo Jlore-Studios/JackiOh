@@ -151,7 +151,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `HUMAN_HANDICAP` | `{ deckSize: DECK_SIZE, manaBonus: 0, manaCap: MAX_MANA, extraOpeningCards: 0, extraDrawsPerTurn: 0 }` | §9.9, R180 |
 | `AI_DIFFICULTY` | easy = `HUMAN_HANDICAP`; medium `{ DECK_SIZE + MEDIUM_EXTRA_DECK_CARDS (30), +1, cap 5, +1 opening, +0 draws }`; hard `{ DECK_SIZE + HARD_EXTRA_DECK_CARDS (35), +1, cap 7, +1 opening, +1 draw }` (fields in `Handicap` order) | §9.9, R180–R184, R1705000 |
 | `TUTORIAL_HUMAN` | `{ ...HUMAN_HANDICAP, deckSize: EARLIER_DECK_SIZE }`: a lesson's human seat, whose fixed deck holds 20 | §9.10, R1705005 |
-| `ACTIVATE_UNLIMITED_CAP` | 100: uses of one card's "Activate ♾️" in one turn | §6.2, R384 |
+| `ACTIVATE_UNLIMITED_CAP` | 100: uses of one ability of a card (Activate ♾️) in one turn | §6.2, R384 |
 | `BRITTLE_FIRST_TICK_TURNS` | 2: a Brittle count started on turn t first ticks at its controller's first start of turn numbered t + 2 or later | §6.1, R385 |
 | `TUNE_STAT_TOTAL` | 4: the stats a Nerf takes or a Buff gives, split between attack and health | §6.3, R386 |
 | `TUNE_COST_CAP` / `TUNE_COST_FLOOR` | 4 / 0: a Nerf never lifts a cost above (4), a Buff never takes one below (0) | §6.3, R386 |
