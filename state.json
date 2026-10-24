@@ -15408,11 +15408,6 @@
   "planning": null,
   "providers": {
     "agy": {
-      "infra": {
-        "at": "2026-10-24T06:21:32Z",
-        "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "streak": 1
-      },
       "refused_until": "2026-10-24T03:40:16Z",
       "spent": [
         {
