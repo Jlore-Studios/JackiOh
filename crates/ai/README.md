@@ -65,10 +65,14 @@ one redaction (R1184002).
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
-re-plans after every action. Its root tries a play in every distinct placement; deeper levels, the
-lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). Position switches are
-the last tier of the move order, so a level's `branching` cut drops them from a busy board; the first
-`AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
+re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
+enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
+opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the other
+attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
+its first `branching`, End Turn always among them. Its root tries a play in every distinct placement;
+deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). Position
+switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
+the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
 true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
