@@ -13388,10 +13388,13 @@
     "what": "plan #1757 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-24T03:11:43Z",
+    "at": "2026-10-24T03:18:49Z",
     "notes": [
-      "#1755 needs a plan",
-      "delivered build #1751 on agy (run 40038987864): interrupted"
+      "#1754 needs a plan",
+      "#1756 needs a plan",
+      "#1758 needs a plan",
+      "#1759 needs a plan",
+      "#1760 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14097,7 +14100,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T03:11:43Z",
+  "loop_tick": "2026-10-24T03:18:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
