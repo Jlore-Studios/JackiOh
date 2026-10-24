@@ -12570,6 +12570,13 @@
     "1796": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T19:32:53Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the rule rates crates/ai/src/ (the AI's search: the reply model and the move order read trade_value) hard; the change itself is ~20 lines, pre-verified"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
