@@ -13305,6 +13305,13 @@
     "1756": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T03:48:39Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule line 6: the jsdom scrollTo stub goes in apps/web/src/test/setup.ts, the suite's setup file (a test config), and the issue is classed polish; otherwise one app, two files, no decision left"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
