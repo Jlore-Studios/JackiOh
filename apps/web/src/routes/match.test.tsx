@@ -12,12 +12,12 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import { registeredCatalog } from "@jackioh/engine";
-import type { ActionBody } from "@jackioh/shared";
+import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
-import { baseView, card, emptySide, opponentModifiers, yourModifiers } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
@@ -84,6 +84,13 @@ function attach(extra: Record<string, unknown> = {}): void {
     live().onmessage?.({
       data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1" }), ...extra }),
     });
+  });
+}
+
+/** A later `view` frame on the open socket, with nothing legal. */
+function pushView(view: PlayerView): void {
+  act(() => {
+    live().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
   });
 }
 
@@ -565,6 +572,66 @@ describe("the match screen in a player's words", () => {
         data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p2" }), legal: [] }),
       });
     });
+    expect(document.title).toBe("Match · JackiOh");
+  });
+
+  it("#1792 puts Your turn in the tab while the seat still owes its mulligan, and takes it off once it is ready", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    const p2: Partial<PlayerView> = {
+      viewer: "p2",
+      active: "p1",
+      turn: 0,
+      phase: "mulligan",
+      you: emptySide("p2"),
+      opponent: emptySide("p1", { hand: { count: 4 } }),
+    };
+    attach({
+      view: baseView({
+        ...p2,
+        mulligan: { youReady: false, opponentReady: false },
+        pending: pendingFor("mulligan", [], { min: 0, max: 0 }),
+      }),
+      legal: [],
+    });
+    expect(document.title).toBe("Your turn · JackiOh");
+    pushView(
+      baseView({
+        ...p2,
+        mulligan: { youReady: true, opponentReady: false, kept: [] },
+        pending: { forYou: false, pendingFor: "p1" },
+      }),
+    );
+    expect(document.title).toBe("Match · JackiOh");
+  });
+
+  it("#1792 keeps Your turn off Player 1's tab once its mulligan is in, though the view names it active", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        turn: 0,
+        phase: "mulligan",
+        mulligan: { youReady: true, opponentReady: false, kept: [] },
+        pending: { forYou: false, pendingFor: "p2" },
+      }),
+      legal: [],
+    });
+    expect(document.title).toBe("Match · JackiOh");
+  });
+
+  it("#1792 flags the tab for a prompt the viewer holds on the opponent's turn, and not for the opponent's on its own", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p2",
+        pending: pendingFor("discover", [{ key: "mode:core-043", label: "Flood", defId: "core-043" }]),
+      }),
+      legal: [],
+    });
+    expect(document.title).toBe("Your turn · JackiOh");
+    pushView(baseView({ viewer: "p1", active: "p1", pending: { forYou: false, pendingFor: "p2" } }));
     expect(document.title).toBe("Match · JackiOh");
   });
 });

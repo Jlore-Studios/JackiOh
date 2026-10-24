@@ -21,7 +21,7 @@ import type { ActionBody } from "@jackioh/shared";
 
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
-import { installDevHandle, viewDerivedState } from "../game/net.ts";
+import { awaitsYou, installDevHandle, viewDerivedState } from "../game/net.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { navigate, paths } from "../net/navigate.ts";
@@ -149,13 +149,13 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
 
   const view = match.view;
   const slot = view === null ? 0 : duelOf(view.seat);
-  // The tab says when the seat's own turn is waiting on it, so a match in a background tab is found.
+  // #1792: the tab says when the game waits on the seat, so a match in a background tab is found: a
+  // prompt it holds, its mulligan's included, even once it has ended its turn (§13.3); otherwise its
+  // own turn, once the round is running (round 0 is the mulligans, §13.2) and until it ends it.
   const yourMove =
     view !== null &&
     view.result === null &&
-    view.round > 0 &&
-    view.own.active === view.own.viewer &&
-    view.team.ended[slot] !== true;
+    awaitsYou(view.own, view.round > 0 && view.own.active === view.own.viewer && view.team.ended[slot] !== true);
   useEffect(() => {
     document.title = yourMove ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.duos(matchId));
   }, [yourMove, matchId, locale]);
