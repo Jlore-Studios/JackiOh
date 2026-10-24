@@ -13471,6 +13471,13 @@
     "1760": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T06:14:51Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 5 fails outright (crates/ai/src/ plus crates/tools and spec/13-duos.md), so never easy; not hard: it composes the existing greedy baseline and gate loop and touches no search, engine rule or ruling"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
