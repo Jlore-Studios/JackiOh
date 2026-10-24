@@ -27817,7 +27817,7 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-24T06:24:45Z",
+    "idle_since": null,
     "last_run": "2026-10-24T05:18:31Z",
     "provider": null,
     "requested": false,
