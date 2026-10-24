@@ -14312,7 +14312,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
-      "run_id": "pending:ba1d32a6-1792830845",
+      "run_id": "40078559081",
       "started_at": "2026-10-24T08:34:16Z",
       "stop_requested": false,
       "taken_asks": []
