@@ -13939,6 +13939,14 @@
       "taken_asks": [
         "c:6380892275"
       ]
+    },
+    "1780": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-24T06:15:19Z",
+      "issue": 1760,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
