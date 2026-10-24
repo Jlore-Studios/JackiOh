@@ -9,7 +9,9 @@
 //! §2.4; a card created meanwhile was never in the library; cards already in the hand are
 //! untouched). The override is the card's cost in every zone until it reaches a graveyard or an
 //! exile pile (R766).
-//! Both counts are declared and read through `param` (R386).
+//! Both counts are declared and read through `param` (R386), and so is the drawn cards' price,
+//! `setCost` (R1748003). Tunes: draw 1 ↑ (Radiant 2); embiggenedDraw 2 ↑ (Radiant 5); setCost 0 ↓.
+//! Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, remember, set_cost_override};
 use jackioh_engine::prelude::*;
@@ -20,7 +22,8 @@ pub const ID: &str = "meditativeplus-003";
 /// Where the resolving card notes its controller's library as the Spell begins.
 const LIBRARY_KEY: &str = "wandLibrary";
 
-/// The drawn cards' price in the hand.
+/// The drawn cards' price in the hand, "They cost (0)" as v0.4.4b printed it before it was the
+/// declared `setCost` (R1748003).
 const DRAWN_COST: i32 = 0;
 
 /// "They": the cards in its controller's hand now that were in their library as the Spell began.
@@ -38,7 +41,9 @@ fn drawn_into_hand(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
         .collect()
 }
 
-fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+/// The Spell; the drawn cards' price is the declared `setCost`, or the printed (0) when `declared` is
+/// off.
+fn cry(ctx: &mut EffectContext<'_>, declared: bool) -> Vec<Effect> {
     let library: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library)
         .iter()
         .map(|card| card.id.clone())
@@ -46,6 +51,11 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     // The draw count is the Embiggened one when the play paid the dearer price (R81).
     let key = if ctx.embiggened { "embiggenedDraw" } else { "draw" };
     let count = param(&*ctx, key);
+    let cost = if declared {
+        param(&*ctx, "setCost")
+    } else {
+        DRAWN_COST
+    };
     vec![
         remember(json_as(json!({ "key": LIBRARY_KEY, "value": library }))),
         draw(json_as(json!({ "count": count }))),
@@ -53,10 +63,10 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
             cards: Arc::new(|now: &mut EffectContext<'_>| {
                 drawn_into_hand(now).into_iter().map(|card| card.id).collect()
             }),
-            each: Arc::new(|instance_id: &str| {
+            each: Arc::new(move |instance_id: &str| {
                 set_cost_override(json_as(json!({
                     "target": { "of": "instance", "instanceId": instance_id },
-                    "cost": DRAWN_COST,
+                    "cost": cost,
                 })))
             }),
         }),
@@ -65,13 +75,24 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
 
 pub fn script() -> CardScripts {
     let base = Script {
-        cry: Some(hook(cry)),
+        cry: Some(hook(|ctx| cry(ctx, true))),
         ..Script::default()
     };
 
     // The same script: the Radiant face differs only in its declared counts, read through `param`.
     let radiant = base.clone();
 
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.4.4b its drawn cards' (0) was printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| cry(ctx, false))),
+        ..Script::default()
+    };
+    let radiant = base.clone();
     CardScripts { base, radiant }
 }
 
@@ -182,6 +203,27 @@ mod tests {
         step_param(s.card_mut(WAND), "embiggenedDraw", 1);
         s.play(WAND, json!({ "embiggen": true }));
         assert_eq!(drawn_ids(s.last_events(), P1).len(), 3);
+    }
+
+    #[test]
+    fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
+        // A Buff finds it at its floor of (0); a Nerf makes the drawn card cost (1).
+        assert!(!crate::can_upgrade_number(&s, WAND, "setCost"));
+        assert_eq!(crate::degrade_number(&mut s, WAND, "setCost"), 1);
+        s.play(WAND, json!({}));
+        assert_eq!(s.card(FILLER).cost_override, Some(1));
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_set_cost() {
+        crate::under_kept(WAND, super::script_v0_4_4b(), || {
+            let mut s = scenario(json!({ "p1": { "hand": [WAND, VANILLA], "library": [FILLER, FILLER, FILLER] } }));
+            crate::degrade_number(&mut s, WAND, "setCost");
+            s.play(WAND, json!({}));
+            assert_eq!(s.card(FILLER).cost_override, Some(0), "the kept script prints (0)");
+        });
     }
 
     #[test]

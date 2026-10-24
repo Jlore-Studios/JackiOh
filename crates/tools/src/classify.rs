@@ -32,6 +32,7 @@ use std::process::Command as Process;
 
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
+use jackioh_engine::config::CRAFT_ID_PREFIX;
 use jackioh_engine::wire::SetName;
 use jackioh_engine::{GameState, find_instance};
 use serde::{Deserialize, Serialize};
@@ -556,7 +557,9 @@ pub(crate) fn differing_strings(a: &Value, b: &Value, out: &mut BTreeSet<String>
     }
 }
 
-/// The shipped families the strings name, as catalog ids or as the instances of `state`.
+/// The shipped families the strings name, as catalog ids or as the instances of `state`. A crafted
+/// definition (Meditative #17, `craft:#…`) is made in the game and ships in no patch, so it names no
+/// family, and a fragment could not claim it (`patches check`).
 fn families_named(strings: &BTreeSet<String>, head: &Side, state: &GameState) -> BTreeSet<String> {
     strings
         .iter()
@@ -568,7 +571,7 @@ fn families_named(strings: &BTreeSet<String>, head: &Side, state: &GameState) ->
             }
         })
         .flat_map(|id| fused_parts(state, &id))
-        .filter(|id| head.ships(id))
+        .filter(|id| !id.starts_with(CRAFT_ID_PREFIX) && head.ships(id))
         .map(|id| family(&id))
         .collect()
 }
@@ -714,6 +717,18 @@ fn selfplay_games(bin: &Path, out: &Path) -> Result<Vec<Value>> {
         .collect()
 }
 
+/// R1705004: the text of the parent's refusal of a deck of the size the head deals (§2.6 L2), which
+/// `validate_deck_with` words as "deck must hold exactly N cards (§2.6 L2), got M".
+const PARENT_REFUSED_DECKS: &str = "cards (§2.6 L2), got ";
+
+/// R1705004: whether the parent's `golden check` failed because it refuses the decks the head's
+/// games are dealt, as a build from before #1705 refuses every 25-card deck. Its `create_game`
+/// panics on them (it catches no unwind), so `parent_check` fails with the panic's text in its
+/// stderr: the change moved what every game is dealt, a rule.
+fn refuses_decks(error: &anyhow::Error) -> bool {
+    format!("{error:#}").contains(PARENT_REFUSED_DECKS)
+}
+
 /// R1365000's stage 2 against the parent build, this binary being the head's.
 fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
     let mut checked = Checked::default();
@@ -744,17 +759,23 @@ fn check(diff: &Diff, head: &Side, parent: &Path) -> Result<Checked> {
         let traces = temp_traces();
         let seeds: Vec<u32> = (1..=UNFORCED_GAMES).collect();
         record_seeds(&seeds, &[], &traces)?;
-        let (_, report) = parent_check(parent, &traces)?;
-        let games = games_in(&traces)?;
-        for divergence in divergences(&report) {
-            let Some(game) = games.get(&divergence.seed) else {
-                continue;
-            };
-            let touched = touched_by(&divergence, game, head)?;
-            if touched.is_empty() {
-                checked.rule = true;
+        match parent_check(parent, &traces) {
+            Ok((_, report)) => {
+                let games = games_in(&traces)?;
+                for divergence in divergences(&report) {
+                    let Some(game) = games.get(&divergence.seed) else {
+                        continue;
+                    };
+                    let touched = touched_by(&divergence, game, head)?;
+                    if touched.is_empty() {
+                        checked.rule = true;
+                    }
+                    checked.touched.extend(touched);
+                }
             }
-            checked.touched.extend(touched);
+            // R1705004: the parent cannot set up the head's games at all, a rule every game meets.
+            Err(error) if refuses_decks(&error) => checked.rule = true,
+            Err(error) => return Err(error),
         }
         let _ = fs::remove_file(&traces);
     }
@@ -1200,6 +1221,27 @@ mod tests {
     }
 
     #[test]
+    fn r1365000_a_crafted_card_is_no_shipped_family() {
+        register_all();
+        let mut game = jackioh_engine::testkit::scenario(json!({
+            "seed": "classify-crafted",
+            "p1": { "backrow": [{ "def": "core-079" }] },
+        }));
+        let id = game
+            .backrow(jackioh_engine::PlayerId::P1, 1)
+            .expect("the card is set")
+            .id;
+        jackioh_engine::find_instance_mut(game.state_mut(), &id)
+            .expect("the card is set")
+            .def_id = format!("{CRAFT_ID_PREFIX}#08aa72a2f2df2633");
+        let head = side(vec![], &[SetName::Core]);
+        assert_eq!(
+            families_named(&BTreeSet::from([id]), &head, game.state()),
+            BTreeSet::new()
+        );
+    }
+
+    #[test]
     fn r1365000_families_and_code_lines() {
         assert_eq!(family("meditative-097-6"), "meditative-097");
         assert_eq!(family("core-002"), "core-002");
@@ -1209,5 +1251,20 @@ mod tests {
             Some("fn a() { 1 } // one\n")
         ));
         assert!(code_changed("a.json", Some("{}"), Some("{ }")));
+    }
+
+    #[test]
+    fn r1705004_a_base_build_refusing_the_heads_deck_size_is_a_rule() {
+        // `parent_check`'s failure when main's `golden check` panics in `create_game` on a 25-card deck.
+        let refused = anyhow::anyhow!(
+            "/tmp/main-jackioh could not check /tmp/traces.jsonl: thread 'main' panicked at \
+             crates/engine/src/state.rs:2066:13:\np1: deck must hold exactly 20 cards (§2.6 L2), got 25"
+        );
+        assert!(refuses_decks(&refused));
+        assert!(refuses_decks(&refused.context("checking the unforced games")));
+        let other = anyhow::anyhow!("/tmp/main-jackioh could not check /tmp/traces.jsonl: No such file");
+        assert!(!refuses_decks(&other));
+        let handicap = anyhow::anyhow!("p2: handicap.manaCap must be a non-negative integer (R180)");
+        assert!(!refuses_decks(&handicap));
     }
 }

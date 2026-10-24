@@ -16,15 +16,7 @@ use std::sync::LazyLock;
 
 use jackioh_engine::testkit::*;
 
-/// Every key of `extra` written over `base`.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(target), Value::Object(extra)) = (base.as_object_mut(), extra) {
-        for (key, value) in extra {
-            target.insert(key, value);
-        }
-    }
-    base
-}
+use super::harness::spread;
 
 /// A Core Common Unit at cost 1 with empty faces, `overrides` (which names the `id`, `index` and
 /// `name`) over it.

@@ -36,9 +36,12 @@
 //!   over `PLAYER_LINE_MAX` characters, or a ruling, an issue or card number or a § in its title or a
 //!   line (R724001). It fails too when the win-rate table's rows differ from the newest shipped
 //!   version's and no fragment claims it, when two do, or when one claims it and they do not differ
-//!   (R1329000). It does not ask for a claim on a changed script: only the classifier's second stage
-//!   can tell a refactor, and the pull request's `classify` check holds that. CI runs it beside
-//!   `catalog check`.
+//!   (R1329000). It fails too when the technical log, `technical.json` (R1369000), logs a commit
+//!   twice, logs one on a version `patches.json` does not hold, holds a `cards` entry or a pull
+//!   request numbered 0, or holds a player line that breaks the note rules (R724001), and when that
+//!   file does not parse. It does not ask for a claim on a changed script: only the classifier's
+//!   second stage can tell a refactor, and the pull request's `classify` check holds that. CI runs
+//!   it beside `catalog check`.
 //! - `ship` promotes every fragment on main, oldest first-parent commit that added one first. For
 //!   each, it snapshots the patch before it with the fragment's cards as `catalog.json` holds them
 //!   (the newest snapshot is `catalog.json`), reads the tier from the two snapshots and the
@@ -1782,6 +1785,10 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
             }
         }
     }
+    // R1369000: the Patch notes page shows the technical log as it stands, so every run holds it to
+    // the shape `patches log` writes, as the fragments and the shipped notes are held above.
+    let versions: Vec<String> = patches.iter().map(|patch| patch.version.clone()).collect();
+    problems.extend(crate::technical::technical_problems(repo_root, &versions)?);
     Ok(problems)
 }
 
@@ -4386,6 +4393,41 @@ mod tests {
                         "patches.json's v0.1.1's player note cites a ruling in \"See R646.\" (R724001)"
                     ])
                 );
+            }
+
+            #[test]
+            fn r1369000_check_holds_the_technical_log_to_its_shape() {
+                let base = catalog_of(vec![card("aaa", 1)]);
+                let temp = shipped_repo("jackioh-check-technical-", &base);
+                let root = temp.path();
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                let log = |entries: serde_json::Value| {
+                    write_files(
+                        root,
+                        &[("crates/cards/patches/technical.json", format!("{entries}\n"))],
+                    )
+                };
+                let entry = serde_json::json!({
+                    "version": "v0.1.1", "commit": "c1", "pr": 1, "title": "t", "kind": "app",
+                    "player": "Duos games load faster."
+                });
+                log(serde_json::json!([entry.clone()]));
+                assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
+                let mut moved = entry.clone();
+                moved["version"] = serde_json::json!("v9");
+                log(serde_json::json!([entry.clone(), moved]));
+                assert_eq!(
+                    check_patches(root).unwrap(),
+                    strings(&[
+                        "technical.json logs c1 twice, but a commit is logged once (R1369000)",
+                        "technical.json logs c1 on v9, a version patches.json does not hold (R1369000)"
+                    ])
+                );
+                let mut unknown = entry.clone();
+                unknown["kind"] = serde_json::json!("foo");
+                log(serde_json::json!([unknown]));
+                let refused = format!("{:#}", check_patches(root).expect_err("refused"));
+                assert!(refused.contains("is not a technical log"), "{refused}");
             }
         }
     }

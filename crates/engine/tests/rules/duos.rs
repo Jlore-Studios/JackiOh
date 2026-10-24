@@ -13,15 +13,14 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use serde::Serialize;
-
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD,
     duos_ai_team,
 };
 use jackioh_engine::duos::{
-    DUOS_NONCE_PREFIX, DuosReduceResult, DuosReplayInput, DuosState, duos_begin, duos_create, duos_fold,
-    duos_hash, duos_legal_actions, duos_reduce, duos_scenario, duos_seats_to_act, duos_view_for,
+    DUOS_NONCE_PREFIX, DuosReduceResult, DuosReplayInput, DuosState, duos_begin, duos_create,
+    duos_create_recorded, duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_scenario,
+    duos_seats_to_act, duos_view_for,
 };
 use jackioh_engine::effects;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -33,7 +32,7 @@ use jackioh_engine::wire::{
 };
 
 use crate::rules::fixtures::catalog::{vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{play_random_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{both, json_of, play_random_game, put, setup_catalog, slot};
 
 // ---------------------------------------------------------------------------------------------
 // Fixture cards
@@ -131,9 +130,9 @@ fn coin() -> CardDef {
     }))
 }
 
-/// Eighty vanilla units (`fx-1` … `fx-80`), The Coin and this file's cards.
+/// Four decks' worth of vanilla units (`fx-1` … `fx-<4 × DECK_SIZE>`), The Coin and this file's cards.
 fn catalog() -> CardDefs {
-    let mut defs = vanilla_catalog(80, 1);
+    let mut defs = vanilla_catalog(4 * DECK_SIZE, 1);
     for def in [
         coin(),
         spell(NOOP, "D1", "nothing"),
@@ -157,13 +156,6 @@ fn catalog() -> CardDefs {
         defs.insert(def.id.clone(), def);
     }
     defs
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// A Spell whose resolution is `make`'s effects.
@@ -269,13 +261,13 @@ fn setup() {
 // Games
 // ---------------------------------------------------------------------------------------------
 
-/// One disjoint block of twenty vanilla ids per seat: A1 1–20, B1 21–40, A2 41–60, B2 61–80.
+/// One disjoint block of `DECK_SIZE` vanilla ids per seat: A1 first, then B1, A2 and B2.
 fn decks() -> DuosDecks {
     DuosDecks {
         a1: vanilla_deck(DECK_SIZE, 1),
-        a2: vanilla_deck(DECK_SIZE, 41),
-        b1: vanilla_deck(DECK_SIZE, 21),
-        b2: vanilla_deck(DECK_SIZE, 61),
+        a2: vanilla_deck(DECK_SIZE, 2 * DECK_SIZE + 1),
+        b1: vanilla_deck(DECK_SIZE, DECK_SIZE + 1),
+        b2: vanilla_deck(DECK_SIZE, 3 * DECK_SIZE + 1),
     }
 }
 
@@ -609,10 +601,6 @@ fn expect_result(state: &DuosState, outcome: DuosOutcome, winner: Option<Team>, 
         assert_eq!(seen.winner, winner, "{seat}");
         assert_eq!(seen.reason, result.reason, "{seat}");
     }
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn find_key<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
@@ -2785,5 +2773,57 @@ mod b25_fuzz {
             assert_eq!(replayed.refused_at, None, "{seed}");
             assert_eq!(replayed.hash, hash, "{seed}");
         }
+    }
+}
+
+// R1705003: a co-op game made before #1705 raised the deck to 25 folds as it was made.
+
+mod r1705003_a_co_op_game_made_before_1705 {
+    use super::*;
+
+    /// The four seats' decks at EARLIER_DECK_SIZE, as every co-op game held them before #1705.
+    fn earlier_options(seed: &str) -> DuosCreateOptions {
+        let size = EARLIER_DECK_SIZE;
+        DuosCreateOptions {
+            decks: DuosDecks {
+                a1: vanilla_deck(size, 1),
+                a2: vanilla_deck(size, 2 * size + 1),
+                b1: vanilla_deck(size, size + 1),
+                b2: vanilla_deck(size, 3 * size + 1),
+            },
+            ..options(seed)
+        }
+    }
+
+    #[test]
+    fn r1705003_duos_fold_folds_a_co_op_game_dealt_twenty_card_decks() {
+        setup();
+        let seed = "r1705003-duos";
+        // A new co-op game is refused them...
+        let refused = std::panic::catch_unwind(|| duos_create(&earlier_options(seed)))
+            .err()
+            .and_then(|payload| payload.downcast_ref::<String>().cloned())
+            .unwrap_or_default();
+        assert!(
+            refused.contains("deck must hold exactly 25 cards (§2.6 L2), got 20"),
+            "{refused}"
+        );
+
+        // ...but one made with them folds to the hash it was played to.
+        let begun = duos_begin(&duos_create_recorded(&earlier_options(seed)));
+        assert!(begun.error.is_none(), "{:?}", begun.error);
+        let mut live = Live {
+            state: begun.state,
+            log: Vec::new(),
+        };
+        live.keep_all();
+        play_randomly(&mut live, seed, 100);
+        assert!(live.state.round >= 2, "the log crosses a round");
+        let replayed = duos_fold(&DuosReplayInput {
+            options: earlier_options(seed),
+            log: live.log,
+        });
+        assert_eq!(replayed.refused_at, None);
+        assert_eq!(replayed.hash, duos_hash(&live.state));
     }
 }

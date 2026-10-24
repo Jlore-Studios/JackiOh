@@ -24,7 +24,7 @@ use jackioh_engine::subsystems::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    events_of_type, in_hand, new_game, play_random_game, put, set_library, sink_for, slot,
+    both, events_json, in_hand, json_of, new_game, play_random_game, put, set_library, sink_for, slot, spread,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -84,15 +84,6 @@ const WINDOW_TRAP: &str = "rb-window-trap";
 const BREAD_TRAP: &str = "rb-bread-trap";
 const EMPTY_TRAP: &str = "rb-empty-trap";
 
-/// TS's object spread `{ ...def, ...overrides }`: the overrides' keys replace the definition's.
-fn spread(def: &mut Value, overrides: Value) {
-    if let (Some(fields), Value::Object(overrides)) = (def.as_object_mut(), overrides) {
-        for (key, value) in overrides {
-            fields.insert(key, value);
-        }
-    }
-}
-
 /// TS `unitDefOf`: a Core unit fixture whose index is the next of this file's (1201 on).
 fn unit_def_of(
     next: &mut i32,
@@ -117,7 +108,7 @@ fn unit_def_of(
         "base": { "attack": attack, "health": health, "keywords": keywords, "text": name },
         "radiant": { "attack": attack * 2, "health": health * 2, "keywords": keywords, "text": format!("{name} radiant") },
     });
-    spread(&mut def, overrides);
+    def = spread(def, overrides);
     json_as(def)
 }
 
@@ -138,7 +129,7 @@ fn card_def_of(next: &mut i32, name: &str, card_type: &str, overrides: Value) ->
         "base": { "keywords": [], "text": name },
         "radiant": { "keywords": [], "text": name },
     });
-    spread(&mut def, overrides);
+    def = spread(def, overrides);
     json_as(def)
 }
 
@@ -348,13 +339,6 @@ fn rb_steps(state: &GameState) -> Vec<String> {
 // ---------------------------------------------------------------------------
 // Fixture scripts.
 // ---------------------------------------------------------------------------
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
-}
 
 fn ping_enemy_hero(amount: i32) -> Script {
     Script {
@@ -712,6 +696,17 @@ fn hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> Damag
     }
 }
 
+/// A hit of the source's own attack, the damage a Unit's Trample applies to (R1750000).
+fn attack_hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> DamageArgs {
+    DamageArgs {
+        flags: Some(DamageFlags {
+            attacking: Some(true),
+            ..DamageFlags::default()
+        }),
+        ..hit(source, target, amount)
+    }
+}
+
 /// `{ kind: "costDiscount", amount, minCurrentCost? }`.
 fn cost_discount(amount: i32, min_current_cost: Option<i32>) -> ModifierKind {
     ModifierKind::CostDiscount {
@@ -778,16 +773,6 @@ fn plays_card(action: &ActionBody, instance: &str) -> bool {
     matches!(action, ActionBody::Play { instance_id, .. } if instance_id == instance)
 }
 
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// `eventsOfType(events, type)` (fixtures/harness.ts), each event as its wire JSON so a field reads
-/// by its TS name.
-fn of_type(events: &[GameEvent], event_type: GameEventType) -> Vec<Value> {
-    events_of_type(events, event_type).iter().map(to_json).collect()
-}
-
 /// `events.map((e) => e[key])`.
 fn pluck(events: &[Value], key: &str) -> Vec<Value> {
     events.iter().map(|event| event[key].clone()).collect()
@@ -841,7 +826,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let rolled = ensure_power(&mut sink, &mut live);
         put_back(sink.state, &live);
         assert!(rolled.is_some());
-        let rolled_name = rolled.as_ref().map(|power| to_json(&power.name));
+        let rolled_name = rolled.as_ref().map(|power| json_of(power.name));
         assert_eq!(
             instance_in(sink.state, &card.id).memory.get("power").cloned(),
             rolled_name
@@ -849,7 +834,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut live = instance_in(sink.state, &card.id);
         let again = ensure_power(&mut sink, &mut live);
         put_back(sink.state, &live);
-        assert_eq!(again.map(|power| to_json(&power.name)), rolled_name);
+        assert_eq!(again.map(|power| json_of(power.name)), rolled_name);
 
         // R752: the card costs (0); the power's X is the price of each use.
         edit(sink.state, &card, |live| {
@@ -916,7 +901,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
     #[test]
     fn r45_keeps_players_as_a_map_so_the_seats_and_each_opposing_hero_are_read_from_it_not_hard_coded() {
         let mut state = game("r45");
-        let mut seats: Vec<String> = to_json(&state.players)
+        let mut seats: Vec<String> = json_of(&state.players)
             .as_object()
             .map(|players| players.keys().cloned().collect())
             .unwrap_or_default();
@@ -1149,7 +1134,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let spell = new_instance(&mut *sink.state, ALL_ENEMIES, P1, Zone::Resolving { player: P1 });
         run_hook(&mut sink, &spell, HookName::Cry, HookOptions::default());
 
-        let hits = of_type(sink.events, GameEventType::Damage);
+        let hits = events_json(sink.events, GameEventType::Damage);
         assert_eq!(
             pluck(&hits, "targetId"),
             vec![json!(first.id), json!(second.id), json!("hero-p2")]
@@ -1189,14 +1174,14 @@ mod spec_11_rulings_r43_r84_m3_gate {
         force_attack(&mut sink, &attacker, &unit_target(&target));
 
         assert_eq!(
-            pluck(&of_type(sink.events, GameEventType::Destroyed), "instanceId"),
+            pluck(&events_json(sink.events, GameEventType::Destroyed), "instanceId"),
             vec![json!(target.id)]
         );
         // The target still struck back, through the Armor 1 that Defense Position grants (§4.1).
         let struck = instance_in(sink.state, &attacker.id);
         assert_eq!(struck.damage, 2);
         assert_eq!(
-            to_json(&struck.exertion),
+            json_of(struck.exertion),
             json!({ "attacked": false, "switched": false })
         );
 
@@ -1256,7 +1241,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
     fn r55_counts_both_players_draws_plays_destructions_and_exiles_from_the_start_of_the_game() {
         let mut state = game("r55");
         assert_eq!(
-            to_json(&state.counters),
+            json_of(state.counters),
             json!({ "drawn": 0, "played": 0, "destroyed": 0, "exiled": 0 })
         );
 
@@ -1301,7 +1286,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         );
         assert_eq!(result.error, None);
         assert_eq!(
-            only(&of_type(&result.events, GameEventType::CardPlayed))["costPaid"],
+            only(&events_json(&result.events, GameEventType::CardPlayed))["costPaid"],
             json!(1)
         );
         assert_eq!(result.state.players.p1.mana.current, 0);
@@ -1339,10 +1324,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(copy.radiant);
         assert_eq!(copy.buffs, AttackHealth { attack: 0, health: 0 });
         assert_eq!(copy.damage, 0);
-        assert_eq!(to_json(&copy.counters), json!({}));
+        assert_eq!(json_of(copy.counters), json!({}));
         assert!(copy.granted_keywords.is_empty());
         assert_eq!(
-            to_json(&copy.exertion),
+            json_of(copy.exertion),
             json!({ "attacked": false, "switched": false })
         );
 
@@ -1363,7 +1348,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         );
         assert_eq!(on_field.as_ref().map(|card| card.damage), Some(0));
         assert_eq!(
-            on_field.as_ref().map(|card| to_json(&card.exertion)),
+            on_field.as_ref().map(|card| json_of(card.exertion)),
             Some(json!({ "attacked": false, "switched": false }))
         );
         // M4: cards/test/12-prejudiced-postdoc.test.ts and cards/test/33-unstable-clone-machine.test.ts
@@ -1381,7 +1366,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         draw::draw_one(&mut sink, P1, Some(ChainLinkOrCount::from(0)));
         assert_eq!(
-            of_type(sink.events, GameEventType::CardPlayed).len(),
+            events_json(sink.events, GameEventType::CardPlayed).len(),
             CAST_ON_DRAW_CHAIN_CAP as usize
         );
         assert_eq!(sink.state.players.p1.hand.len(), 1); // the next one ends the chain, uncast
@@ -1394,7 +1379,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         in_hand(full_sink.state, NOOP, P1, HAND_CAP);
         set_library(full_sink.state, P1, &[CASTER]);
         draw::draw_one(&mut full_sink, P1, Some(ChainLinkOrCount::from(0)));
-        assert_eq!(of_type(full_sink.events, GameEventType::CardPlayed).len(), 1);
+        assert_eq!(events_json(full_sink.events, GameEventType::CardPlayed).len(), 1);
         assert_eq!(full_sink.state.players.p1.hand.len(), HAND_CAP as usize);
 
         // "Draw N" is N separate draws.
@@ -1403,7 +1388,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         many_sink.state.players.p1.hand = vec![];
         set_library(many_sink.state, P1, &[PLAIN, SMALL, NOOP]);
         draw::draw(&mut many_sink, P1, 3);
-        assert_eq!(of_type(many_sink.events, GameEventType::Drawn).len(), 3);
+        assert_eq!(events_json(many_sink.events, GameEventType::Drawn).len(), 3);
     }
 
     #[test]
@@ -1419,10 +1404,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         assert!(unit_view(sink.state, &instance_in(sink.state, &first.id)).health <= 0);
         assert!(unit_view(sink.state, &instance_in(sink.state, &second.id)).health <= 0);
-        assert!(of_type(sink.events, GameEventType::Destroyed).is_empty());
+        assert!(events_json(sink.events, GameEventType::Destroyed).is_empty());
 
         state_check(&mut sink);
-        assert_eq!(of_type(sink.events, GameEventType::Destroyed).len(), 2);
+        assert_eq!(events_json(sink.events, GameEventType::Destroyed).len(), 2);
 
         for player in PLAYER_IDS {
             sink.state.players[player].hero.health = 0;
@@ -1460,7 +1445,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // pick of two would cue it, on its Radiant cards (R177).
         assert_eq!(ctx.sink.rng.cursor(), cursor);
         assert_eq!(
-            pluck(&of_type(ctx.sink.events, GameEventType::RadiantSet), "instanceId"),
+            pluck(
+                &events_json(ctx.sink.events, GameEventType::RadiantSet),
+                "instanceId"
+            ),
             cards
                 .iter()
                 .take(2)
@@ -1484,7 +1472,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert!(
             instance_in(ctx.sink.state, &first.id).radiant && instance_in(ctx.sink.state, &second.id).radiant
         );
-        let set = of_type(&ctx.sink.events[from..], GameEventType::RadiantSet);
+        let set = events_json(&ctx.sink.events[from..], GameEventType::RadiantSet);
         let picked: BTreeSet<String> = set
             .iter()
             .take(2)
@@ -1532,8 +1520,8 @@ mod spec_11_rulings_r43_r84_m3_gate {
             ))],
             &mut ctx,
         );
-        assert!(!of_type(ctx.sink.events, GameEventType::Summoned).is_empty());
-        assert!(of_type(ctx.sink.events, GameEventType::CardPlayed).is_empty());
+        assert!(!events_json(ctx.sink.events, GameEventType::Summoned).is_empty());
+        assert!(events_json(ctx.sink.events, GameEventType::CardPlayed).is_empty());
 
         // A Field Trap counts as a Trap.
         let trap = put(ctx.sink.state, EMPTY_TRAP, slot(P1, BACKROW, 1), json!({}));
@@ -1568,7 +1556,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             }),
         );
         assert_eq!(result.error, None);
-        assert_eq!(of_type(&result.events, GameEventType::TrapFired).len(), 1);
+        assert_eq!(events_json(&result.events, GameEventType::TrapFired).len(), 1);
         let live = result.state;
         assert!(
             live.players
@@ -1642,7 +1630,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // Trample: up to the unit's health lands on it, the rest on its controller's hero.
         let tramp = put(sink.state, TRAMPLER, slot(P1, UNITS, 1), json!({})); // 6/4 Trample
         let blocker = put(sink.state, SMALL, slot(P2, UNITS, 1), json!({})); // 1/2
-        deal_damage(&mut sink, hit(Some(tramp.clone()), unit_hit(&blocker), 6));
+        deal_damage(&mut sink, attack_hit(Some(tramp.clone()), unit_hit(&blocker), 6));
         assert_eq!(instance_in(sink.state, &blocker.id).damage, 2);
         assert_eq!(sink.state.players.p2.hero.health, HERO_HEALTH - 4);
 
@@ -1670,7 +1658,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             instance_in(cleave_sink.state, &defender.id).divine_shield_spent,
             Some(true)
         );
-        let cleaves: Vec<Value> = of_type(cleave_sink.events, GameEventType::Damage)
+        let cleaves: Vec<Value> = events_json(cleave_sink.events, GameEventType::Damage)
             .into_iter()
             .filter(|event| event["targetId"] == left.id.as_str() || event["targetId"] == right.id.as_str())
             .map(|event| event["amount"].clone())
@@ -1694,7 +1682,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut leech_sink = sink_for(&mut leech_game);
         let leech = put(leech_sink.state, TRAMPLE_LEECH, slot(P1, UNITS, 1), json!({}));
         let chump = put(leech_sink.state, SMALL, slot(P2, UNITS, 1), json!({}));
-        deal_damage(&mut leech_sink, hit(Some(leech.clone()), unit_hit(&chump), 6));
+        deal_damage(
+            &mut leech_sink,
+            attack_hit(Some(leech.clone()), unit_hit(&chump), 6),
+        );
         assert_eq!(leech_sink.state.players.p1.hero.health, HERO_HEALTH + 6);
 
         // Poisonous only affects units.
@@ -1913,7 +1904,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         cast_card(&mut sink, &spell, CastOptions::default());
 
-        let played = only(&of_type(sink.events, GameEventType::CardPlayed));
+        let played = only(&events_json(sink.events, GameEventType::CardPlayed));
         assert_eq!(played["costPaid"], json!(0)); // free, and no discount was consumed to get there
         assert_eq!(sink.state.players.p1.mana.current, mana_before);
         assert!(sink.state.players.p1.turn_log.played_ids.contains(&spell.id));
@@ -2007,13 +1998,13 @@ mod spec_11_rulings_r43_r84_m3_gate {
             json_as(json!({ "type": "swapped", "what": "library" })),
         ];
         assert_eq!(
-            pluck(&of_type(&swaps, GameEventType::Swapped), "what"),
+            pluck(&events_json(&swaps, GameEventType::Swapped), "what"),
             vec![json!("health"), json!("board"), json!("library")]
         );
 
         // Health and armor are separate fields, so swapping the health values leaves armor alone.
         let HeroState { health: _, armor: _ } = state.players.p1.hero;
-        let mut hero_fields: Vec<String> = to_json(&state.players.p1.hero)
+        let mut hero_fields: Vec<String> = json_of(state.players.p1.hero)
             .as_object()
             .map(|fields| fields.keys().cloned().collect())
             .unwrap_or_default();
@@ -2035,16 +2026,16 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // A face-down trap is readable by its controller only, so control is what a swap moves (R33).
         let trap = put(&mut state, EMPTY_TRAP, slot(P1, BACKROW, 1), json!({}));
         assert_eq!(
-            to_json(&view_for(&state, P2).opponent.backrow[0]),
+            json_of(&view_for(&state, P2).opponent.backrow[0]),
             json!({ "faceDown": true, "cost": 0 })
         );
         edit(&mut state, &trap, |card| card.controller = P2);
         assert_matches(
-            to_json(&view_for(&state, P2).opponent.backrow[0]),
+            json_of(&view_for(&state, P2).opponent.backrow[0]),
             json!({ "faceDown": false, "defId": EMPTY_TRAP }),
         );
         assert_eq!(
-            to_json(&view_for(&state, P1).you.backrow[0]),
+            json_of(&view_for(&state, P1).you.backrow[0]),
             json!({ "faceDown": true, "cost": 0 })
         );
 
@@ -2079,10 +2070,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let held = hand_card(ctx.sink.state, PLAIN, P1);
         apply_effects(&[set_radiant(&held)], &mut ctx);
         assert!(instance_in(ctx.sink.state, &held.id).radiant);
-        assert_eq!(of_type(ctx.sink.events, GameEventType::RadiantSet).len(), 1);
+        assert_eq!(events_json(ctx.sink.events, GameEventType::RadiantSet).len(), 1);
         apply_effects(&[set_radiant(&held)], &mut ctx);
         assert!(instance_in(ctx.sink.state, &held.id).radiant);
-        assert_eq!(of_type(ctx.sink.events, GameEventType::RadiantSet).len(), 2);
+        assert_eq!(events_json(ctx.sink.events, GameEventType::RadiantSet).len(), 2);
 
         // On the field: the base-stat layer swaps at once, damage and buffs stay, no Cry re-fires.
         let unit = put(ctx.sink.state, FUSE_A, slot(P1, UNITS, 1), json!({})); // 2/3, and its Cry pings the hero
@@ -2227,7 +2218,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         own = act(&own, json!({ "type": "endTurn", "playerId": "p1" }));
         let back = act_result(&own, json!({ "type": "endTurn", "playerId": "p2" }));
         assert_eq!(back.error, None);
-        assert!(of_type(&back.events, GameEventType::ControlChanged).is_empty());
+        assert!(events_json(&back.events, GameEventType::ControlChanged).is_empty());
         // M4: cards/test/050-k-pop-fanatic.test.ts proves the card half.
     }
 
@@ -2339,7 +2330,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         let unit_now = instance_in(sink.state, &unit.id);
         assert_matches(
-            to_json(&unit_now),
+            json_of(&unit_now),
             json!({
                 "damage": 0,
                 "buffs": { "attack": 0, "health": 0 },
@@ -2474,7 +2465,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
             ShuffleInOutcome::Dropped
         );
         assert_eq!(sink.state.players.p1.library.len(), LIBRARY_CAP as usize);
-        assert!(of_type(sink.events, GameEventType::ShuffledIn).is_empty());
+        assert!(events_json(sink.events, GameEventType::ShuffledIn).is_empty());
 
         let mut existing = put(sink.state, PLAIN, slot(P1, UNITS, 1), json!({}));
         assert_eq!(
@@ -2541,15 +2532,15 @@ mod spec_11_rulings_r43_r84_m3_gate {
         assert_eq!(resolved.error, None);
         assert!(resolved.state.pending.is_none());
         assert_eq!(
-            pluck(&of_type(&resolved.events, GameEventType::Damage), "amount"),
+            pluck(&events_json(&resolved.events, GameEventType::Damage), "amount"),
             vec![json!(1)]
         );
         assert_eq!(
-            to_json(&scripts_for(&state, MODE_SPELL).base.targets),
+            json_of(&scripts_for(&state, MODE_SPELL).base.targets),
             json!([{ "kind": "target", "min": 1, "max": 1 }])
         );
         assert_eq!(
-            to_json(&scripts_for(&state, MODE_SPELL).base.modes),
+            json_of(&scripts_for(&state, MODE_SPELL).base.modes),
             json!([{ "kind": "direction", "options": ["left", "right"] }])
         );
 
@@ -2583,7 +2574,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         );
         assert_eq!(result.error, None);
         // The draw offer was still on the table and did not hold the turn open (R36).
-        assert_eq!(of_type(&result.events, GameEventType::TurnAutoEnded).len(), 1);
+        assert_eq!(events_json(&result.events, GameEventType::TurnAutoEnded).len(), 1);
         assert_eq!(result.state.active, P2);
     }
 

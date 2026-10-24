@@ -8,18 +8,10 @@
 use jackioh_engine::subsystems::ky_competition::ky_competition_script;
 use jackioh_engine::testkit::*;
 
+use super::harness::spread;
+
 /// The fixture Kenny's one threshold: Rush from this X on, read off its X, never its stats.
 pub const KENNY_RUSH_AT: i32 = 4;
-
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
 
 fn def(index: u32, id: &str, extra: Value) -> CardDef {
     json_as(spread(

@@ -365,6 +365,7 @@ pub fn custom_def(card: &CustomCard) -> CardDef {
             max: None,
             tuned_on: None,
             power: None,
+            cry: None,
         })
         .collect();
     CardDef {
@@ -381,6 +382,8 @@ pub fn custom_def(card: &CustomCard) -> CardDef {
         cost: CardCost::Fixed(frame.cost),
         refs: None,
         params: if params.is_empty() { None } else { Some(params) },
+        deals_damage: None,
+        uses_plague: None,
         loc: None,
         radiant_fallback: None,
         ingredients: None,

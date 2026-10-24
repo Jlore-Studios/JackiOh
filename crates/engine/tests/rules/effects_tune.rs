@@ -11,10 +11,9 @@ use jackioh_engine::effects::{
     summon_copy, transform, tune_once, upgrade,
 };
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{events_of_type, in_hand, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, in_hand, json_of, put, set_library, slot};
 use super::fixtures::instance_data as instance_fx;
 use crate::rules::fixtures::harness::matches_object;
 
@@ -100,7 +99,7 @@ fn changes(events: &[GameEvent]) -> Vec<TuningChange> {
 fn change_kinds(events: &[GameEvent]) -> Vec<String> {
     changes(events)
         .iter()
-        .map(|change| to_json(change)["kind"].as_str().unwrap_or_default().to_string())
+        .map(|change| json_of(change)["kind"].as_str().unwrap_or_default().to_string())
         .collect()
 }
 
@@ -165,7 +164,7 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 
 /// `applicableChanges(state, card, direction)`, as the rows' names.
 fn rows(state: &GameState, id: &str, direction: TuneDirection) -> Value {
-    to_json(applicable_changes(state, &live(state, id), direction))
+    json_of(applicable_changes(state, &live(state, id), direction))
 }
 
 /// `card.tuning?.x?.[key]`.
@@ -187,20 +186,16 @@ fn param(state: &GameState, id: &str, key: &str) -> i32 {
 
 /// `numbersOn(state, card)` as JSON (`{ id, ref, label, value }` each).
 fn numbers(state: &GameState, id: &str) -> Vec<Value> {
-    numbers_on(state, &live(state, id)).iter().map(to_json).collect()
+    numbers_on(state, &live(state, id)).iter().map(json_of).collect()
 }
 
 fn has_rush(keywords: &[Keyword]) -> bool {
     keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush)
 }
 
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// The viewer's own hand in a view, as JSON entries (TS asserted it is a list).
 fn own_hand(view: &PlayerView) -> Vec<Value> {
-    let hand = to_json(&view.you.hand);
+    let hand = json_of(&view.you.hand);
     assert!(hand.is_array(), "own hand is a list");
     hand.as_array().cloned().unwrap_or_default()
 }
@@ -225,7 +220,7 @@ mod b3_4_the_menu_row_by_row_r386 {
         // 1 → 2 → 3 → 4, and at (4) nothing is left to change: the fourth application is cued `none`
         // because the card is in a hand the other player may not read (R440).
         assert_eq!(
-            to_json(changes(&degraded)),
+            json_of(changes(&degraded)),
             json!([
                 { "kind": "cost", "delta": 1 },
                 { "kind": "cost", "delta": 1 },
@@ -336,7 +331,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             }) = in_hand_change
             {
                 assert_eq!(
-                    to_json(stats_with_buffs(&state, &live(&state, &held.id))),
+                    json_of(stats_with_buffs(&state, &live(&state, &held.id))),
                     json!({ "attack": 2 + d_attack, "maxHealth": 2 + d_health })
                 );
             }
@@ -366,7 +361,7 @@ mod b3_4_the_menu_row_by_row_r386 {
                 .into_iter()
                 .next();
             assert_eq!(
-                to_json(change),
+                json_of(change),
                 json!({ "kind": "keyword", "keyword": { "kind": "Rush" }, "added": false })
             );
             let kinds: Vec<KeywordKind> = unit_view(&state, &live(&state, &unit.id))
@@ -582,7 +577,7 @@ mod b3_4_the_menu_row_by_row_r386 {
             RunOptions::default(),
         );
         assert_eq!(
-            to_json(live(&state, &spell.id).tuning.and_then(|tuning| tuning.x)),
+            json_of(live(&state, &spell.id).tuning.and_then(|tuning| tuning.x)),
             json!({ "X": -2 })
         );
         live_mut(&mut state, &spell.id).x = Some(3);
@@ -614,12 +609,12 @@ mod b3_4_the_menu_row_by_row_r386 {
             PlaceOnFieldOptions::default(),
         );
         assert!(matches_object(
-            &to_json(unit_view(&state, &live(&state, &unit.id))),
+            &json_of(unit_view(&state, &live(&state, &unit.id))),
             &json!({ "attack": 6, "maxHealth": 6 }),
         ));
         live_mut(&mut state, &unit.id).tuning = tuning(json!({ "x": { "X": 1 } }));
         assert!(matches_object(
-            &to_json(unit_view(&state, &live(&state, &unit.id))),
+            &json_of(unit_view(&state, &live(&state, &unit.id))),
             &json!({ "attack": 9, "maxHealth": 9 }),
         ));
         // On the field its X has resolved: neither a Degrade nor an Upgrade has an X to move (SPEC §8.7 row 69).
@@ -770,7 +765,7 @@ mod b3_4_rules_1_and_2_the_draw_immutable_n_times_r386_r442 {
             RunOptions::default(),
         );
         assert_eq!(
-            to_json(&events),
+            json_of(&events),
             json!([
                 { "type": "upgraded", "instanceId": held.id, "defId": instance_fx::stoic.id, "change": { "kind": "none" }, "hiddenFrom": ["p2"] },
                 { "type": "upgraded", "instanceId": held.id, "defId": instance_fx::stoic.id, "change": { "kind": "none" }, "hiddenFrom": ["p2"] },
@@ -1073,7 +1068,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
         let own = first_event_of(&view_for(&state, PlayerId::P1).events, GameEventType::Degraded);
         let theirs = first_event_of(&view_for(&state, PlayerId::P2).events, GameEventType::Degraded);
         assert_eq!(
-            to_json(own),
+            json_of(own),
             json!({
                 "type": "degraded",
                 "instanceId": held.id,
@@ -1082,7 +1077,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
             })
         );
         assert_eq!(
-            to_json(theirs),
+            json_of(theirs),
             json!({
                 "type": "degraded",
                 "instanceId": HIDDEN_ID,
@@ -1108,7 +1103,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
             .into_iter()
             .next()
             .expect("no card");
-        let list_before = to_json(&view_for(&state, PlayerId::P1).you.own_library);
+        let list_before = json_of(&view_for(&state, PlayerId::P1).you.own_library);
         let events = run(
             &mut state,
             upgrade(json_as(json!({ "instanceId": top.id, "times": 2 }))),
@@ -1119,7 +1114,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
             events,
         }];
         assert_eq!(
-            to_json(&view_for(&state, PlayerId::P1).you.own_library),
+            json_of(&view_for(&state, PlayerId::P1).you.own_library),
             list_before
         );
         // Drawn, the card reads with its changes — and the events made inside the deck still do not.
@@ -1132,7 +1127,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
             hand.iter()
                 .find(|entry| entry["instanceId"] == top.id.as_str())
                 .map(|entry| entry["tuning"].clone()),
-            Some(to_json(&live(&state, &top.id).tuning))
+            Some(json_of(&live(&state, &top.id).tuning))
         );
         for event in view
             .events
@@ -1140,7 +1135,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
             .filter(|event| event.event_type() == GameEventType::Upgraded)
         {
             assert!(matches_object(
-                &to_json(event),
+                &json_of(event),
                 &json!({ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID })
             ));
         }
@@ -1161,7 +1156,7 @@ mod b3_4_rule_7_what_the_views_show_r177_r311_r386 {
         live_mut(&mut state, &held.id).tuning = tuning(json!({ "numbers": { "damage": 2 } }));
         let mine = view_for(&state, PlayerId::P1);
         let theirs = view_for(&state, PlayerId::P2);
-        let (mine_json, theirs_json) = (to_json(&mine), to_json(&theirs));
+        let (mine_json, theirs_json) = (json_of(&mine), json_of(&theirs));
         assert_eq!(
             mine_json["you"]["units"][0]["tuning"],
             json!({ "attack": 2, "addKeywords": [{ "kind": "Rush" }] })
@@ -1203,7 +1198,7 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
         let mut moving = live(&state, &unit.id);
         move_to_zone(&mut state, &mut moving, OffFieldZone::Hand, Default::default());
         assert_eq!(
-            to_json(&live(&state, &unit.id).tuning),
+            json_of(&live(&state, &unit.id).tuning),
             json!({ "attack": -1, "removeKeywords": ["Rush"], "numbers": { "damage": 1 } })
         );
         assert_eq!(
@@ -1220,7 +1215,7 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
         let mut moving = live(&state, &unit.id);
         move_to_zone(&mut state, &mut moving, OffFieldZone::Exile, Default::default());
         assert_eq!(
-            to_json(&live(&state, &unit.id).tuning),
+            json_of(&live(&state, &unit.id).tuning),
             json!({ "attack": -1, "removeKeywords": ["Rush"], "numbers": { "damage": 1 } })
         );
     }
@@ -1246,7 +1241,7 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
             .as_ref()
             .and_then(|pile| pile.first())
             .cloned();
-        assert_eq!(to_json(copy.and_then(|card| card.tuning)), json!({ "health": 2 }));
+        assert_eq!(json_of(copy.and_then(|card| card.tuning)), json!({ "health": 2 }));
         // It entered the field, so its own printed Brittle starts; the source's count is not copied.
         live_mut(&mut state, &unit.id).brittle = Some(BrittleCounter {
             count: 1,
@@ -1305,7 +1300,7 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
             },
         );
         assert_eq!(
-            to_json(
+            json_of(
                 copies(&state)
                     .iter()
                     .map(|card| card.tuning.clone())
@@ -1392,7 +1387,7 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
         });
         assert_eq!(fused.map(|card| card.id), Some(kept.id.clone()));
         assert_eq!(
-            to_json(&live(&state, &kept.id).tuning),
+            json_of(&live(&state, &kept.id).tuning),
             json!({ "attack": 3, "health": -1, "x": { "Armor": 2 }, "addKeywords": [{ "kind": "Rush" }] })
         );
     }
@@ -1473,7 +1468,7 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
             vec![json!(3), json!(3), json!(3), json!(3), json!(3), json!(1)]
         );
         assert!(matches_object(
-            &to_json(unit_view(&state, &live(&state, &unit.id))),
+            &json_of(unit_view(&state, &live(&state, &unit.id))),
             &json!({ "attack": 3, "health": 3, "maxHealth": 4 }),
         ));
         {
@@ -1501,7 +1496,7 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
         );
         assert_eq!(param(&state, &spell.id, "huge"), 3);
         assert_eq!(
-            to_json(&events),
+            json_of(&events),
             json!([
                 {
                     "type": "numberChanged",
@@ -1588,7 +1583,7 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
             events,
         }];
         assert_eq!(
-            to_json(first_event_of(
+            json_of(first_event_of(
                 &view_for(&state, PlayerId::P2).events,
                 GameEventType::NumberChanged
             )),
@@ -1601,7 +1596,7 @@ mod classic_plus_41_kys_constant_a_number_set_outright_r386 {
             })
         );
         assert!(matches_object(
-            &to_json(first_event_of(
+            &json_of(first_event_of(
                 &view_for(&state, PlayerId::P1).events,
                 GameEventType::NumberChanged
             )),
@@ -1621,9 +1616,9 @@ fn stats_of_keywords(state: &GameState, c: &CardInstance) -> Vec<Value> {
 
 fn unit_view_keywords(state: &GameState, c: &CardInstance) -> Vec<Value> {
     if c.zone.z() == ZoneName::Field {
-        return unit_view(state, c).keywords.iter().map(to_json).collect();
+        return unit_view(state, c).keywords.iter().map(json_of).collect();
     }
-    let hand = to_json(&view_for(state, c.owner).you.hand);
+    let hand = json_of(&view_for(state, c.owner).you.hand);
     let Some(hand) = hand.as_array() else {
         return vec![];
     };
@@ -1965,7 +1960,7 @@ mod r1160_tune_multiplier {
         );
         assert_eq!(live(&state, &spell.id).cost_mod, 1);
         assert_eq!(
-            to_json(&events),
+            json_of(&events),
             json!([{
                 "type": "numberChanged",
                 "instanceId": spell.id,
@@ -1975,5 +1970,39 @@ mod r1160_tune_multiplier {
                 "hiddenFrom": ["p2"],
             }])
         );
+    }
+}
+
+/// Issue #1748: a permanent in play has paid its price, so on the field no Nerf or Buff draws the cost
+/// row; in a hand the same card keeps it.
+mod r1748000_in_play {
+    use super::*;
+
+    #[test]
+    fn r1748000_a_card_on_the_field_has_no_cost_row_one_in_a_hand_keeps_it() {
+        let mut state = game("in-play");
+        let held = card(&mut state, &instance_fx::dear_body.id);
+        assert_eq!(
+            rows(&state, &held.id, TuneDirection::Upgrade),
+            json!(["cost", "stats", "keyword"])
+        );
+        let unit = put(
+            &mut state,
+            &instance_fx::dear_body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Upgrade),
+            json!(["stats", "keyword"])
+        );
+        assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
+        // Ten Buffs and ten Nerfs on the field leave its price as it was.
+        for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+            for _ in 0..10 {
+                once(&mut state, &unit.id, direction);
+            }
+        }
+        assert_eq!(live(&state, &unit.id).cost_mod, 0);
     }
 }

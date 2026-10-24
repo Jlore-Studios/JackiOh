@@ -13,7 +13,7 @@ use jackioh_engine::subsystems::feng_shui::{element_of, element_of_index, last_e
 use jackioh_engine::testkit::*;
 
 use super::fixtures::feng_shui::{FS, with_feng_shui};
-use super::fixtures::harness::{in_hand, new_game, put, slot};
+use super::fixtures::harness::{events_json, in_hand, new_game, put, slot};
 
 /// TS's module `let nonce`: unique across the tests, which run on parallel threads.
 static NONCE: AtomicU32 = AtomicU32::new(0);
@@ -92,14 +92,6 @@ fn values(events: &[GameEvent]) -> Vec<Value> {
         .collect()
 }
 
-/// TS `eventsOfType`, over JSON.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    values(events)
-        .into_iter()
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
-
 /// The element fixture's catalog id, by its Hetu name.
 fn id_for(element: &str) -> String {
     let fs = &*FS;
@@ -172,7 +164,7 @@ mod r981_every_element_pair_through_the_pipeline {
                 let first = one(&mut state, PlayerId::P1, &id_for(last), false);
                 let first_play = play(&state, PlayerId::P1, &first.id);
                 assert!(
-                    of_type(&first_play.events, "fengShui").is_empty(),
+                    events_json(&first_play.events, "fengShui").is_empty(),
                     "a first play is neutral"
                 );
                 let mut state = first_play.state;
@@ -180,7 +172,7 @@ mod r981_every_element_pair_through_the_pipeline {
                 let health_before = state.players[PlayerId::P1].hero.health;
                 let played_out = play(&state, PlayerId::P1, &second.id);
                 let after = played_out.state;
-                let verdicts = of_type(&played_out.events, "fengShui");
+                let verdicts = events_json(&played_out.events, "fengShui");
                 let live = find_instance(&after, &second.id).expect("the played card is in play");
                 match expected(last, played) {
                     Some(FengShuiOutcome::Positive) => {
@@ -259,7 +251,7 @@ mod r981_every_element_pair_through_the_pipeline {
         judge(&mut state, false);
         let first = one(&mut state, PlayerId::P1, &id_for("wood"), false);
         let played_out = play(&state, PlayerId::P1, &first.id);
-        assert!(of_type(&played_out.events, "fengShui").is_empty());
+        assert!(events_json(&played_out.events, "fengShui").is_empty());
         let live = find_instance(&played_out.state, &first.id).expect("the played card is in play");
         assert!(!live.radiant);
         assert_eq!(
@@ -292,7 +284,7 @@ mod r982_a_face_down_play_is_neither_judged_nor_recorded {
                 "zone": { "row": "backrow", "lane": 2 },
             }),
         );
-        assert!(of_type(&played_out.events, "fengShui").is_empty());
+        assert!(events_json(&played_out.events, "fengShui").is_empty());
         // The record still holds the last face-up play's element.
         assert_eq!(
             last_element(&played_out.state, PlayerId::P1),
@@ -321,7 +313,7 @@ mod r982_the_record_is_written_in_every_game_since_the_set_shipped {
         let fire = one(&mut state, PlayerId::P1, &id_for("fire"), false);
         let played_out = play(&state, PlayerId::P1, &fire.id);
         assert_eq!(
-            of_type(&played_out.events, "fengShui"),
+            events_json(&played_out.events, "fengShui"),
             vec![json!({
                 "type": "fengShui",
                 "instanceId": fire.id,
@@ -361,7 +353,7 @@ mod r983_the_damage_lands_after_card_resolved {
             resolved.is_some_and(|at| hit.is_some_and(|hit| at < hit)),
             "the hit lands after the play has resolved: {kinds:?}"
         );
-        let damage = of_type(&played_out.events, "damage");
+        let damage = events_json(&played_out.events, "damage");
         assert_eq!(damage.len(), 1);
         assert_eq!(damage[0]["amount"], json!(10));
         assert_eq!(damage[0]["targetId"], json!("hero-p1"));
@@ -388,7 +380,7 @@ mod r984_two_judges_punish_twice {
         let earth = one(&mut state, PlayerId::P1, &id_for("earth"), false);
         let health_before = state.players[PlayerId::P1].hero.health;
         let played_out = play(&state, PlayerId::P1, &earth.id);
-        let mut sources: Vec<String> = of_type(&played_out.events, "fengShui")
+        let mut sources: Vec<String> = events_json(&played_out.events, "fengShui")
             .iter()
             .map(|event| event["sourceId"].as_str().unwrap_or_default().to_string())
             .collect();
@@ -419,14 +411,14 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
         let played_out = play(&state, PlayerId::P1, &fire.id);
         let live = find_instance(&played_out.state, &fire.id).expect("the rewarded card is in play");
         assert!(live.radiant);
-        assert_eq!(of_type(&played_out.events, "fengShui").len(), 1);
+        assert_eq!(events_json(&played_out.events, "fengShui").len(), 1);
         let mut state = played_out.state;
         let metal = one(&mut state, PlayerId::P1, &id_for("metal"), false);
         let health_before = state.players[PlayerId::P1].hero.health;
         let played_out = play(&state, PlayerId::P1, &metal.id);
         let live = find_instance(&played_out.state, &metal.id).expect("the spared card is in play");
         assert!(!live.radiant);
-        assert!(of_type(&played_out.events, "fengShui").is_empty());
+        assert!(events_json(&played_out.events, "fengShui").is_empty());
         assert_eq!(live.brittle.as_ref().map(|brittle| brittle.count), None);
         assert_eq!(played_out.state.players[PlayerId::P1].hero.health, health_before);
         // p2's plays: a generating pair is not rewarded, an overcoming pair is punished for 20.
@@ -439,7 +431,7 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
         let played_out = play(&state, PlayerId::P2, &fire.id);
         let live = find_instance(&played_out.state, &fire.id).expect("the unrewarded card is in play");
         assert!(!live.radiant);
-        assert!(of_type(&played_out.events, "fengShui").is_empty());
+        assert!(events_json(&played_out.events, "fengShui").is_empty());
         let mut state = played_out.state;
         let metal = one(&mut state, PlayerId::P2, &id_for("metal"), false);
         let health_before = state.players[PlayerId::P2].hero.health;
@@ -450,7 +442,7 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
             played_out.state.players[PlayerId::P2].hero.health,
             health_before - 20
         );
-        assert_eq!(of_type(&played_out.events, "fengShui").len(), 1);
+        assert_eq!(events_json(&played_out.events, "fengShui").len(), 1);
     }
 
     #[test]
@@ -466,7 +458,7 @@ mod r984_the_radiant_judge_rewards_only_its_controller_and_punishes_only_the_opp
         let earth = one(&mut state, PlayerId::P2, &id_for("earth"), false);
         let health_before = state.players[PlayerId::P2].hero.health;
         let played_out = play(&state, PlayerId::P2, &earth.id);
-        assert_eq!(of_type(&played_out.events, "fengShui").len(), 1);
+        assert_eq!(events_json(&played_out.events, "fengShui").len(), 1);
         assert_eq!(
             played_out.state.players[PlayerId::P2].hero.health,
             health_before - 10

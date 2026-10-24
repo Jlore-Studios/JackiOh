@@ -211,7 +211,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
-| `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
+| `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
@@ -745,8 +745,10 @@ Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `ca
 `game_records.folded`. A record's `record` may now be null, and only once it is folded. The retention
 loop first folds any record not yet folded (`api::game_records::fold_pending`), then
 `app.purge_expired_rows`' fourth cutoff empties the detail of each folded record written more than
-`GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). The store folds under a transaction-level advisory
-lock per patch and source, so two folds into the same rows never interleave.
+`GAME_RECORD_RAW_RETENTION_DAYS` ago (R1044001). A record the fold cannot read is marked folded with no
+counts and its detail emptied, and alerted as `game_records.fold_poison` with its id (R1715000). The
+store folds under a transaction-level advisory lock per patch and source, so two folds into the same
+rows never interleave.
 
 Migration 0042 adds `match_checkpoints` (#1169): at most one row per live match, the state, play
 telemetry and bot turns its actor held after one log row, written by the restart drain and read by
@@ -824,6 +826,18 @@ generation, so a bot's rating re-settles on each new AI from its rated games.
 Migration 0053 adds `bots.grinding` and `bots.grind_wins` (R1555000): whether a ladder bot grinds
 now, which the pool's refresh sets and clears, and its rated wins since it started grinding or last
 stepped up a strength.
+
+Migration 0055 follows the deck to 25 cards (§2.6, R1705000). `app.settings.deck_size`, 0003's
+copy of `DECK_SIZE`, which the deck save's D2 reads, becomes 25, and a deck saved at 20 stays as it
+is, a draft that saves and fails L2 at the queue until five cards are added (R1705001). The pool's
+refresh deals a ladder bot again when a deck it holds is not of `DECK_SIZE` cards
+(`bots::fallback::holds_decks`, `holds_trio`), which needs no migration. `app.settings.starter_cards`
+gains the eleven Core cards the practice presets took to reach 25 (`config::STARTER_CARDS`, now 50,
+R1705002), as a sorted union, so the grant reads them before `seed-catalog` next writes the list.
+And `app.grant_starter_cards_to_active()` runs the activation grant (`app.grant_launch_collection`,
+R111) for every active person's profile, a ladder bot's passed over (R1454), so an account made
+active under the 39-card list owns the eleven too; the migration runs it once, and a second run
+grants nothing.
 
 ## Tests
 

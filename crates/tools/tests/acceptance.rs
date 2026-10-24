@@ -33,7 +33,20 @@
 //!    file under `crates/*/src`, a crate's `build.rs`, the engine's `tests/export_config.rs` or
 //!    another constant in `config.rs`, so flipping one changes the game, or stops the build where
 //!    the code that plays it asserts the one value it plays.
+//!
+//! And one for this crate's own contract (#1720):
+//!
+//!  - README: `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface, read
+//!    off each command's `-h` page: every subcommand, flag and listed value a row names is the
+//!    CLI's, and every command, flag and possible value of the CLI is in some row.
+//!
+//! And one for the engine's rules tests (#1777):
+//!
+//!  - Helpers: no file under `crates/engine/tests/rules/` but `fixtures/harness.rs` defines its own
+//!    `both` or `spread`; each takes the harness's, so a test file copied from an old one brings no
+//!    copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
@@ -242,7 +255,8 @@ const STRUCTURAL_READERS: &[&str] = &[
     "crates/cards/tests/cross/radiant_standard.rs",
     // SPEC §7's table of tokens, its Token and Index cells, one row per token (R1177001).
     "crates/cards/tests/cross/catalog.rs",
-    // This file names the patterns it looks for.
+    // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
+    // table, the first cell of each row only (#1720).
     "crates/tools/tests/acceptance.rs",
 ];
 
@@ -933,5 +947,396 @@ mod tests {
     assert_eq!(
         unread_constants(config, &readers),
         ["ONLY_IN_A_COMMENT", "SHORT", "ONLY_IN_TESTS"]
+    );
+}
+
+/// The helpers every engine rules test takes from `crates/engine/tests/rules/fixtures/harness.rs`.
+const SHARED_RULES_HELPERS: &[&str] = &["both", "spread"];
+
+/// The 1-based lines of `text` that define one of SHARED_RULES_HELPERS (`fn both(`, `pub fn
+/// spread<`, at any indent), a `//` comment aside.
+fn shared_helper_definitions(text: &str) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code: Vec<&str> = line.split("//").next().unwrap_or("").split_whitespace().collect();
+            code.windows(2).any(|pair| {
+                pair[0] == "fn"
+                    && SHARED_RULES_HELPERS.iter().any(|name| {
+                        pair[1]
+                            .strip_prefix(name)
+                            .is_some_and(|rest| rest.starts_with(['(', '<']))
+                    })
+            })
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+#[test]
+fn helpers_the_rules_tests_take_both_and_spread_from_the_harness() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join("crates/engine/tests/rules"), &mut files);
+    assert!(
+        files.len() > 200,
+        "only {} files found under crates/engine/tests/rules/",
+        files.len()
+    );
+    let mut copies = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        let lines = shared_helper_definitions(&text);
+        if file.ends_with("fixtures/harness.rs") {
+            assert_eq!(
+                lines.len(),
+                SHARED_RULES_HELPERS.len(),
+                "crates/engine/tests/rules/fixtures/harness.rs defines each of {SHARED_RULES_HELPERS:?} once"
+            );
+            continue;
+        }
+        for line in lines {
+            copies.push(format!(
+                "{}:{line}",
+                file.strip_prefix(&root).unwrap_or(file).display()
+            ));
+        }
+    }
+    assert!(
+        copies.is_empty(),
+        "a rules test defines its own {SHARED_RULES_HELPERS:?} (#1777): import the one in crates/engine/tests/rules/fixtures/harness.rs, or give a helper whose body differs another name: {copies:?}"
+    );
+}
+
+#[test]
+fn helpers_the_scan_finds_each_local_copy() {
+    let text = "fn both(script: Script) -> CardScripts {\n}\n    pub fn spread(mut base: Value, extra: Value) -> Value {\n}\npub(crate) fn both<T>(script: T) {}\nfn both_faces() {}\nfn spreads(x: i32) {}\n// fn both(script)\nlet scripts = both(script);\n";
+    assert_eq!(shared_helper_definitions(text), [1, 3, 5]);
+}
+
+/// The built `jackioh`, whose clap surface the README's command table is held to (#1720).
+const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
+
+/// Commands that parse their own arguments: clap sees one trailing list (`patches`' `ARGS`), so the
+/// words and flags a row gives after the command's name are its parser's to check, not clap's
+/// (`patches.rs`'s `main` reads `check`, `ship`, `log`, `retcon` and the fragment's flags).
+const HAND_PARSED: &[&str] = &["patches"];
+
+/// A long flag of one command, as its `-h` page prints it.
+struct CliFlag {
+    name: String,
+    /// Whether it takes a value (`--out <DIR>`, `--write [<REPORT>...]`).
+    takes_value: bool,
+    /// Its `[possible values: …]`, empty when clap lists none.
+    values: Vec<String>,
+}
+
+/// One command as its `-h` page prints it: its subcommands (clap's own `help` aside) and its long
+/// flags (`--help` and `--version` aside).
+#[derive(Default)]
+struct CliCommand {
+    subcommands: Vec<String>,
+    flags: Vec<CliFlag>,
+}
+
+/// One `jackioh … -h` page read: the entries of its `Commands:` and `Options:` sections, each one
+/// line (clap wraps nothing without its `wrap_help` feature, which the workspace leaves off).
+fn cli_command(help: &str) -> CliCommand {
+    let mut command = CliCommand::default();
+    let mut section = "";
+    for line in help.lines() {
+        if !line.starts_with(' ') {
+            section = line;
+            continue;
+        }
+        let entry = line.trim_start();
+        match section {
+            "Commands:" if line.len() - entry.len() == 2 => {
+                let name = entry.split_whitespace().next().unwrap_or_default();
+                if name != "help" {
+                    command.subcommands.push(name.to_string());
+                }
+            }
+            "Options:" if entry.starts_with('-') => {
+                let spec = entry.split("  ").next().unwrap_or_default();
+                let values: Vec<String> = line
+                    .split_once("[possible values: ")
+                    .and_then(|(_, rest)| rest.split_once(']'))
+                    .map(|(list, _)| list.split(", ").map(str::to_string).collect())
+                    .unwrap_or_default();
+                for word in spec.split([' ', ',']) {
+                    if let Some(name) = word.strip_prefix("--")
+                        && !matches!(name, "help" | "version")
+                    {
+                        command.flags.push(CliFlag {
+                            name: name.to_string(),
+                            takes_value: spec.contains('<'),
+                            values: values.clone(),
+                        });
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    command
+}
+
+/// Every command of the built `jackioh` by its path of words (the binary itself is the empty
+/// path), read off `jackioh <path> -h` and each subcommand's page in turn.
+fn cli_tree() -> BTreeMap<Vec<String>, CliCommand> {
+    let mut tree = BTreeMap::new();
+    let mut next: Vec<Vec<String>> = vec![Vec::new()];
+    while let Some(path) = next.pop() {
+        let out = Command::new(BIN)
+            .args(&path)
+            .arg("-h")
+            .output()
+            .expect("jackioh runs");
+        assert!(
+            out.status.success(),
+            "jackioh {} -h: {}",
+            path.join(" "),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let command = cli_command(&String::from_utf8_lossy(&out.stdout));
+        for name in &command.subcommands {
+            next.push([path.clone(), vec![name.clone()]].concat());
+        }
+        tree.insert(path, command);
+    }
+    tree
+}
+
+/// The usage forms of `readme`'s command table: each code span of a row's first cell, in order,
+/// the table's escaped `\|` read as `|`.
+fn table_usages(readme: &str) -> Vec<String> {
+    readme
+        .lines()
+        .skip_while(|line| !line.starts_with("| Command |"))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .flat_map(|row| {
+            let cells = &row[1..];
+            let end = cells
+                .match_indices('|')
+                .map(|(at, _)| at)
+                .find(|&at| !cells[..at].ends_with('\\'))
+                .unwrap_or(cells.len());
+            cells[..end]
+                .split('`')
+                .skip(1)
+                .step_by(2)
+                .map(|usage| usage.replace("\\|", "|"))
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// A command's name as the table would spell it: lowercase letters, digits and `-`.
+fn is_command_word(token: &str) -> bool {
+    token.starts_with(|c: char| c.is_ascii_lowercase())
+        && token
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
+/// Where the table and the CLI disagree (#1720). Each usage is read as clap reads a command line: a
+/// word naming a subcommand of the command reached so far descends into it, a `--flag` must be a
+/// flag of that command, and the word after a flag that takes a value is its value, which must be
+/// one of the flag's possible values (each of `a|b`) when clap lists them; any other word is a
+/// placeholder. Then every command, flag and possible value of the CLI must be named by some usage.
+fn table_drift(usages: &[String], tree: &BTreeMap<Vec<String>, CliCommand>) -> Vec<String> {
+    let shown = |path: &[String]| {
+        if path.is_empty() {
+            "jackioh".to_string()
+        } else {
+            format!("jackioh {}", path.join(" "))
+        }
+    };
+    let hand_parsed = |path: &[String]| {
+        path.first()
+            .is_some_and(|name| HAND_PARSED.contains(&name.as_str()))
+    };
+    let mut problems = Vec::new();
+    let mut reached: BTreeSet<Vec<String>> = BTreeSet::from([Vec::new()]);
+    let mut named: BTreeSet<(Vec<String>, String)> = BTreeSet::new();
+    for usage in usages {
+        let mut path: Vec<String> = Vec::new();
+        let mut value_of: Option<&CliFlag> = None;
+        for word in usage.split_whitespace() {
+            if hand_parsed(&path) {
+                break;
+            }
+            let command = &tree[&path];
+            let token = word.trim_matches(|c| matches!(c, '[' | ']' | '(' | ')' | '…'));
+            if let Some(flag) = token.strip_prefix("--") {
+                let name: String = flag
+                    .chars()
+                    .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
+                    .collect();
+                value_of = command.flags.iter().find(|known| known.name == name);
+                match value_of {
+                    Some(_) => {
+                        named.insert((path.clone(), name));
+                    }
+                    None => problems.push(format!("`{usage}`: `{}` has no --{name}", shown(&path))),
+                }
+                value_of = value_of.filter(|known| known.takes_value);
+            } else if let Some(flag) = value_of.take() {
+                for value in token.split('|').filter(|_| !flag.values.is_empty()) {
+                    if flag.values.iter().any(|known| known == value) {
+                        named.insert((path.clone(), format!("{}={value}", flag.name)));
+                    } else {
+                        problems.push(format!(
+                            "`{usage}`: --{} takes no `{value}` (its values: {})",
+                            flag.name,
+                            flag.values.join(", ")
+                        ));
+                    }
+                }
+            } else if !command.subcommands.is_empty() && is_command_word(token) {
+                if !command.subcommands.iter().any(|known| known == token) {
+                    problems.push(format!(
+                        "`{usage}`: `{}` has no subcommand `{token}`",
+                        shown(&path)
+                    ));
+                    break;
+                }
+                path.push(token.to_string());
+                reached.insert(path.clone());
+            }
+        }
+    }
+    for (path, command) in tree {
+        if !reached.contains(path) {
+            problems.push(format!("`{}` is in no row of the table", shown(path)));
+        }
+        if hand_parsed(path) {
+            continue;
+        }
+        for flag in &command.flags {
+            if !named.contains(&(path.clone(), flag.name.clone())) {
+                problems.push(format!(
+                    "`{} --{}` is in no row of the table",
+                    shown(path),
+                    flag.name
+                ));
+            }
+            for value in &flag.values {
+                if !named.contains(&(path.clone(), format!("{}={value}", flag.name))) {
+                    problems.push(format!(
+                        "`{} --{} {value}` is in no row of the table",
+                        shown(path),
+                        flag.name
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
+#[test]
+fn readme_the_command_table_is_the_clis() {
+    let tree = cli_tree();
+    let commands = tree[&Vec::new()].subcommands.len();
+    assert!(
+        commands > 15,
+        "only {commands} commands read off `jackioh -h`; clap's help format changed"
+    );
+    assert!(
+        tree[&vec!["promote".to_string()]]
+            .flags
+            .iter()
+            .any(|flag| flag.name == "lane" && !flag.values.is_empty()),
+        "no possible values read off `jackioh promote -h`; clap's help format changed"
+    );
+    for name in HAND_PARSED {
+        let command = &tree[&vec![name.to_string()]];
+        assert!(
+            command.subcommands.is_empty() && command.flags.is_empty(),
+            "`jackioh {name}` now has clap subcommands or flags: take it off HAND_PARSED so its rows are checked"
+        );
+    }
+    let readme = fs::read_to_string(repo().join("crates/tools/README.md")).expect("the tools README");
+    let usages = table_usages(&readme);
+    assert!(
+        usages.len() > 30,
+        "only {} usages read off crates/tools/README.md's command table; its shape changed",
+        usages.len()
+    );
+    let problems = table_drift(&usages, &tree);
+    assert!(
+        problems.is_empty(),
+        "crates/tools/README.md's command table and `jackioh` disagree (#1720): fix the row, or the CLI: {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_the_drift_check_finds_each_disagreement() {
+    let root = cli_command(
+        "Tools\n\nUsage: jackioh <COMMAND>\n\nCommands:\n  run      Run it\n  patches  Its own parser\n  help     Print this message or the help of the given subcommand(s)\n\nOptions:\n  -h, --help     Print help\n  -V, --version  Print version\n",
+    );
+    assert_eq!(root.subcommands, ["run", "patches"]);
+    assert!(root.flags.is_empty());
+    let run = cli_command(
+        "Run it\n\nUsage: jackioh run [OPTIONS] --lane <LANE> [FILES]...\n\nArguments:\n  [FILES]...  The files\n\nOptions:\n      --lane <LANE>  The lane [default: a] [possible values: a, b, c]\n      --dry-run      Write nothing\n  -h, --help         Print help\n",
+    );
+    let flags: Vec<_> = run
+        .flags
+        .iter()
+        .map(|f| (f.name.as_str(), f.takes_value, f.values.clone()))
+        .collect();
+    assert_eq!(
+        flags,
+        [
+            (
+                "lane",
+                true,
+                vec!["a".to_string(), "b".to_string(), "c".to_string()]
+            ),
+            ("dry-run", false, Vec::new())
+        ]
+    );
+    let tree = BTreeMap::from([
+        (Vec::new(), root),
+        (vec!["run".to_string()], run),
+        (vec!["patches".to_string()], CliCommand::default()),
+    ]);
+    let drift = |rows: &str| {
+        let readme = format!("# x\n\n| Command | Module | Does |\n| --- | --- | --- |\n{rows}\n\nAfter.\n");
+        table_drift(&table_usages(&readme), &tree)
+    };
+    let row = "| `run --lane a\\|b\\|c [--dry-run] <files>…`, `patches retcon [--any]` | `run.rs` | `run --gone`, in prose, is not read |";
+    let readme = format!("| Command | Module | Does |\n| --- | --- | --- |\n{row}\n");
+    assert_eq!(
+        table_usages(&readme),
+        ["run --lane a|b|c [--dry-run] <files>…", "patches retcon [--any]"]
+    );
+    assert_eq!(drift(row), Vec::<String>::new());
+    assert_eq!(
+        drift(&row.replace("a\\|b\\|c", "a\\|b")),
+        ["`jackioh run --lane c` is in no row of the table"]
+    );
+    assert_eq!(
+        drift(&row.replace("a\\|b\\|c", "a\\|b\\|c\\|d")),
+        ["`run --lane a|b|c|d [--dry-run] <files>…`: --lane takes no `d` (its values: a, b, c)"]
+    );
+    assert_eq!(
+        drift(&row.replace(" [--dry-run]", "")),
+        ["`jackioh run --dry-run` is in no row of the table"]
+    );
+    assert_eq!(
+        drift(&row.replace("[--dry-run]", "[--dry-run] [--gone]")),
+        ["`run --lane a|b|c [--dry-run] [--gone] <files>…`: `jackioh run` has no --gone"]
+    );
+    assert_eq!(
+        drift(&row.replace("`patches retcon [--any]`", "`patches`, `walk`")),
+        ["`walk`: `jackioh` has no subcommand `walk`"]
+    );
+    assert_eq!(
+        drift(&row.replace("`patches retcon [--any]`", "`run`")),
+        ["`jackioh patches` is in no row of the table"]
     );
 }

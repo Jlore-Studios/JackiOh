@@ -9,15 +9,17 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::setup_catalog;
+use crate::rules::fixtures::catalog::vanilla_deck;
+use crate::rules::fixtures::harness::{events_json, setup_catalog};
 use crate::rules::fixtures::play_pipeline_b::{
     RANDOM_POOL, cast_trap, discover_spell, forever, grave_spell, grave_unit, jogg_box, mode_spell, monkey,
     named_caster, plantation, register_pipeline_b, second_wind, solarius, target_spell, tax, their_choice,
     titan, toe_cracker, trickster, tyrant, x_target,
 };
 
+/// Pipeline B's fixtures, then vanilla units from `fx-1` to make a legal deck of `DECK_SIZE` (§2.6).
 fn deck() -> Vec<String> {
-    [
+    let mut deck: Vec<String> = [
         second_wind(),
         plantation(),
         jogg_box(),
@@ -41,7 +43,9 @@ fn deck() -> Vec<String> {
     ]
     .into_iter()
     .map(|card| card.id)
-    .collect()
+    .collect();
+    deck.extend(vanilla_deck(DECK_SIZE - deck.len() as i32, 1));
+    deck
 }
 
 fn seeds() -> Vec<String> {
@@ -132,14 +136,6 @@ fn play(seed: &str) -> Played {
     }
 }
 
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
-
 mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
     use super::*;
 
@@ -175,11 +171,11 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
                 assert_eq!(hash_state(&state), live.hashes[at], "{seed} step {at}");
             }
 
-            graveyard_plays += of_type(&live.events, "cardPlayed")
+            graveyard_plays += events_json(&live.events, "cardPlayed")
                 .iter()
                 .filter(|event| event["from"] == "graveyard")
                 .count();
-            random_casts += of_type(&live.events, "cardPlayed")
+            random_casts += events_json(&live.events, "cardPlayed")
                 .iter()
                 .filter(|event| {
                     event["costPaid"] == 0
@@ -188,12 +184,12 @@ mod play_pipeline_b_folds_exactly_s9_2_s9_3 {
                             .is_some_and(|def_id| RANDOM_POOL.contains(&def_id))
                 })
                 .count();
-            prompts += of_type(&live.events, "promptOpened").len();
-            x_asked += of_type(&live.events, "promptOpened")
+            prompts += events_json(&live.events, "promptOpened").len();
+            x_asked += events_json(&live.events, "promptOpened")
                 .iter()
                 .filter(|event| event["kind"] == "number")
                 .count();
-            returns += of_type(&live.events, "addedToHand")
+            returns += events_json(&live.events, "addedToHand")
                 .iter()
                 .filter(|event| event["defId"] != jogg_box().id.as_str())
                 .count();

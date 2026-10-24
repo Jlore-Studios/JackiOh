@@ -54,16 +54,27 @@ use crate::simulate::{
 };
 use crate::types::NodeCounter;
 
+/// `trade_value`'s answer: what an attack is worth to the static trader, and whether its strike
+/// kills the target.
+pub(crate) struct Trade {
+    pub(crate) value: f64,
+    pub(crate) kills: bool,
+}
+
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
 /// body when that dies too, with First Strike deciding who strikes first and no strike back at all on
 /// a Ranged attacker unless the target is Ranged too (R783000). A hit that kills nothing is worth a
 /// little per point dealt, so a second attacker can finish what the first one started. A Cleave
 /// attack also prices what its splash kills or unshields on the target's neighbours (R63): a killed
 /// neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the same share
-/// of the Divine Shield weight.
-fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f64 {
+/// of the Divine Shield weight. `kills` says whether the strike kills the target itself; the move order
+/// reads both (`candidates.rs`'s even trades, #1779).
+pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> Trade {
     let Some(target) = find_instance(state, target_id) else {
-        return f64::NEG_INFINITY;
+        return Trade {
+            value: f64::NEG_INFINITY,
+            kills: false,
+        };
     };
     let a = side_of(state, attacker);
     let t = side_of(state, target);
@@ -106,7 +117,10 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     if dies {
         value -= unit_worth(state, attacker, &AI_EVAL);
     }
-    value + cleave_value
+    Trade {
+        value: value + cleave_value,
+        kills,
+    }
 }
 
 /// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
@@ -150,7 +164,7 @@ fn ranked_attacks(
                 subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
             reply_face_value(state, seat, damage)
         } else {
-            trade_value(state, attacker, target_id)
+            trade_value(state, attacker, target_id).value
         };
         if value > 0.0 {
             ranked.push((action, value));

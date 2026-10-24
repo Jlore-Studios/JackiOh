@@ -112,11 +112,13 @@ jackioh/
 
 ## 2. Constants (`crates/engine/src/config.rs`)
 
-Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 20;`; an object becomes a struct constant). Nothing in the engine hard-codes them: `crates/tools/tests/acceptance.rs` fails on a constant no code reads, and one the engine plays at a single value (`CRY_ON_PLAY_ONLY`, `ROTATION_RING`, `FIENDER_STATS_MODE`, `DRAW_OFFERS_PER_TURN`, `MULLIGAN_ORDER`) is asserted at compile time where its rule is played (#1640). The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
+Every number below is a named constant, under the name it had in TypeScript (`pub const DECK_SIZE: i32 = 25;`; an object becomes a struct constant). Nothing in the engine hard-codes them: `crates/tools/tests/acceptance.rs` fails on a constant no code reads, and one the engine plays at a single value (`CRY_ON_PLAY_ONLY`, `ROTATION_RING`, `FIENDER_STATS_MODE`, `DRAW_OFFERS_PER_TURN`, `MULLIGAN_ORDER`) is asserted at compile time where its rule is played (#1640). The ones the client reads are exported to `apps/web/src/wire/engineConfig.ts` by `crates/engine/tests/export_config.rs`.
 
 | Constant | Value | Spec |
 | --- | --- | --- |
-| `DECK_SIZE` | 20 | §2.6 |
+| `DECK_SIZE` | 25 | §2.6, R1705000 |
+| `EARLIER_DECK_SIZE` | 20: the deck size before #1705, which a recorded game made then is held to | §2.6, R1705003 |
+| `MEDIUM_EXTRA_DECK_CARDS` / `HARD_EXTRA_DECK_CARDS` | 5 / 10: the cards a Medium and a Hard AI seat's deck holds past `DECK_SIZE` | §9.9, R1705000 |
 | `MAX_COPIES` | 1 | §2.6, §9.4 |
 | `MAX_MANA` | 4 | §2.3 |
 | `HERO_HEALTH` | 30 | §2 |
@@ -147,8 +149,9 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `AI_END_TURN_PROBABILITY` | 0.1 | §10.7 |
 | `DRAWS_PER_TURN` | 1 | §2.4, R183 |
 | `HUMAN_HANDICAP` | `{ deckSize: DECK_SIZE, manaBonus: 0, manaCap: MAX_MANA, extraOpeningCards: 0, extraDrawsPerTurn: 0 }` | §9.9, R180 |
-| `AI_DIFFICULTY` | easy = `HUMAN_HANDICAP`; medium `{ 25, +1, cap 5, +1 opening, +0 draws }`; hard `{ 30, +1, cap 7, +1 opening, +1 draw }` (fields in `Handicap` order) | §9.9, R180–R184 |
-| `ACTIVATE_UNLIMITED_CAP` | 100: uses of one card's "Activate ♾️" in one turn | §6.2, R384 |
+| `AI_DIFFICULTY` | easy = `HUMAN_HANDICAP`; medium `{ DECK_SIZE + MEDIUM_EXTRA_DECK_CARDS (30), +1, cap 5, +1 opening, +0 draws }`; hard `{ DECK_SIZE + HARD_EXTRA_DECK_CARDS (35), +1, cap 7, +1 opening, +1 draw }` (fields in `Handicap` order) | §9.9, R180–R184, R1705000 |
+| `TUTORIAL_HUMAN` | `{ ...HUMAN_HANDICAP, deckSize: EARLIER_DECK_SIZE }`: a lesson's human seat, whose fixed deck holds 20 | §9.10, R1705005 |
+| `ACTIVATE_UNLIMITED_CAP` | 100: uses of one ability of a card (Activate ♾️) in one turn | §6.2, R384 |
 | `BRITTLE_FIRST_TICK_TURNS` | 2: a Brittle count started on turn t first ticks at its controller's first start of turn numbered t + 2 or later | §6.1, R385 |
 | `TUNE_STAT_TOTAL` | 4: the stats a Nerf takes or a Buff gives, split between attack and health | §6.3, R386 |
 | `TUNE_COST_CAP` / `TUNE_COST_FLOOR` | 4 / 0: a Nerf never lifts a cost above (4), a Buff never takes one below (0) | §6.3, R386 |
@@ -205,7 +208,7 @@ The AI's sweep constants (`AI_SWEEP` in `crates/ai/src/sweep.rs`, R186, R390): `
 Implement `GameState`, `PlayerState`, `CardInstance`, `PendingChoice`, `DelayedEffect`, `PlayerModifier` exactly as §10.1. `createGame({ seed, decks: [defId[], defId[]] })` returns a state in phase `setup`.
 Acceptance:
 - `state.ts` type-checks against `shared/src/catalog-types.ts`; no `any`.
-- `createGame` with two 20-card decks yields 2 players, 30 health each, empty zones, `turn = 0`, `pending = null`.
+- `createGame` with two `DECK_SIZE`-card decks yields 2 players, 30 health each, empty zones, `turn = 0`, `pending = null`.
 - `createGame` rejects a deck that is not exactly `DECK_SIZE`, contains duplicates, or contains a Token-tagged def (throws with a message naming the rule).
 
 **M1-T2 RNG.** Files: `engine/src/rng.ts`.
@@ -604,7 +607,7 @@ Every mutation writes `collection` and `collection_grants` in one transaction; n
 Acceptance: a direct insert attempt through the public API is impossible (no endpoint); a grant with `reason` writes both tables or neither (fault-injection test); a stale `catalogVersion` gets "update required".
 
 **M6-T3 Loadout validator.** Files: `validator/src/index.ts`, `server/src/api/loadouts.ts`, migrations `loadouts`, `loadout_decks`, `loadout_deck_cards` with the unique index on `(profile_id, card_id)`.
-Rules L1–L6 (§9.4) with `DECK_SIZE = 20`, `MAX_COPIES = 1`, no Token-tagged cards, every card in the catalog and not banned; one module imported by both `apps/web` and `apps/server`; `saveLoadout(profileId, catalogVersion, decks[3])` all-or-nothing.
+Rules L1–L6 (§9.4) with `DECK_SIZE = 25` (20 until #1705, R1705000), `MAX_COPIES = 1`, no Token-tagged cards, every card in the catalog and not banned; one module imported by both `apps/web` and `apps/server`; `saveLoadout(profileId, catalogVersion, decks[3])` all-or-nothing.
 Acceptance: unit test per rule with the specific error message; the unique index rejects a duplicate across decks even when the application check is bypassed (raw SQL test); `apps/web` and `apps/server` both import from `@jackioh/validator` (grep test).
 
 **M6-T4 Match actor.** Files: `server/src/match/actor.ts`, `protocol.ts`, migrations `matches`, `match_actions`, `results`.
@@ -1036,7 +1039,7 @@ SPEC §8.8 and §7's Meditative rows. The set is built on main behind R1420's re
 | M 72 | The Banisher | MB18 | Any damage it deals to a Unit, attacking or defending, marks the Unit, and the next state check exiles it ahead of deaths (MD-D31): no Death, no Reborn, no `destroyed`, a token ceasing to exist; a Divine Shield, an Indestructible Unit or 0 damage, no exile; a Unit it hits for lethal is exiled, not destroyed; its own death still happens; radiant 4/2 with Cleave, each splash hit exiling too |
 | M 73 | Plate Packer | MB15 | Cry (played or cast): counts every point of Armor on every acting Unit on both sides and on both heroes (R1064), Defense Position's +1 included, and gains that many +1/+1 permanently; with no Armor anywhere, nothing; summoned, no Cry; per reads through `param()`; radiant 12/12 and +2/+2 for each |
 | M 74 | Montaña Giant | MB15 | Costs (8) less one for each card in your hand, itself included (R1065), never below (0): (4) with four cards; at your end of turn with a full hand it becomes Radiant on the field (16/16, damage and buffs kept), not with one card fewer; discount and buff read through `param()`; radiant +8/+8 permanently at each such end of turn |
-| M 75 | Ever Growing Tree | MB16 | Activate, once a turn in your main phase: the one you Discover of three distinct random non-token Field Spells, seeded (never itself or one already fused in, R831012, patch v0.3.13) is fused into it, its aura and turn lines working from then on, its Cry never running; a fused Activate shares the Tree's once-a-turn use; a fused keyword applies at once (MD-D34); the fused definition survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469) |
+| M 75 | Ever Growing Tree | MB16 | Activate, once a turn in your main phase: the one you Discover of three distinct random non-token Field Spells, seeded (never itself or one already fused in, R831012, patch v0.3.13) is fused into it, its aura and turn lines working from then on, its Cry never running; a fused Activate keeps its own per-turn uses, apart from the Tree's once-a-turn use (R1751000); a fused keyword applies at once (MD-D34); the fused definition survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469) |
 | M 76 | Do or Die | MB19 | Marks two different random cards of the opponent's hand (all of them if fewer); at the start of your next turn each still in that hand becomes yours, in your hand (R12), the hand cap burning the rest into your graveyard; a marked card they play, discard or lose meanwhile is not taken, and one that returns to their hand later is unmarked (R1140); the owner sees the marks, you see only the count (R1141); an empty hand schedules nothing; marks reads through `param()`; radiant every card in their hand as it resolves, not cards drawn later |
 | M 77 | Bulk Booster | MB19 | Adds random non-token Common cards of any set, never itself, until your hand holds your hand cap (10, or 12 after M 79), counted as it resolves; with a full hand, nothing and no random number (R129); radiant the cards are Radiant |
 | M 78 | Occidentless Mandate | MB19 | Exiles every non-CN permanent on both sides and rows (face-down and Indestructible ones too, no Death), a CN tag M 35 granted sparing a card; then adds one random non-token CN card for each permanent of yours it exiled (R1142), a unit token counting and a card dormant under a Stack neither exiled nor counted; M 25 stays (MD-B1); the hand cap burns the overflow; radiant the cards are Radiant and cost (2) less each, the discount read through `param()` |

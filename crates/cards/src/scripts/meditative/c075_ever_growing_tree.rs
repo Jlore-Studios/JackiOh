@@ -8,8 +8,8 @@
 //! every set, never this card or an ingredient already in it (R387), then `fuse_cards` of the one
 //! chosen with the Tree as the kept instance (R77, R102), its cost kept; on the Radiant face the pick
 //! goes in on its Radiant face (R469). With no Field Spell to offer nothing happens. A Cry
-//! never runs, auras and turn lines run, fused Activates share the Tree's count, and a fused
-//! keyword applies at once (R1087).
+//! never runs, auras and turn lines run, each fused Activate keeps its own per-turn count (R1751000),
+//! and a fused keyword applies at once (R1087).
 
 use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::prelude::*;
@@ -84,7 +84,7 @@ pub fn script() -> CardScripts {
 // M #75 Ever Growing Tree — SPEC §8.8 row 75, BUILD M10 row M 75: "Activate, once a turn in your
 // main phase: the non-token Field Spell you Discover of three random ones (never itself or one already
 // fused in, R831012) is fused into it, its aura and turn lines working from then on, its Cry never running; a fused Activate
-// shares the Tree's once-a-turn use; a fused keyword applies at once (R1087); the fused definition
+// keeps its own per-turn uses, apart from the Tree's once-a-turn use (R1751000); a fused keyword applies at once (R1087); the fused definition
 // survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469)".
 #[cfg(test)]
 mod tests {
@@ -360,29 +360,29 @@ mod tests {
             }
 
             #[test]
-            fn r1087_a_fused_activate_shares_the_trees_once_a_turn_use() {
+            fn r1751000_r1087_fused_activates_have_separate_cooldowns_and_can_both_activate_in_one_turn() {
                 // The Power to Thrive: "Activate: Choose one: heal, draw or gain mana."
                 let mut s = narrowed("tree-shared", &[THRIVE]);
                 let tree = s.card(TREE).id.clone();
                 grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], THRIVE);
-                // The Tree's use is spent, so the fused Activate is refused this turn.
-                s.expect_refused(|s| {
-                    s.activate(
-                        tree.as_str(),
-                        json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
-                    )
-                });
-                // Next turn the fused Activate spends the one use, and the Tree's own is refused.
-                s.end_turn();
-                s.end_turn();
+                // Under R1751000 (amending R1087), each activate has its own cooldown and use count.
+                // The fused Activate can be activated in the same turn as grow!
                 let hand = s.hand(P1).len();
                 s.activate(
                     tree.as_str(),
                     json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
                 );
                 assert_eq!(s.hand(P1).len(), hand + 1, "the fused Activate drew");
+
+                // Both abilities are now spent for this turn.
                 s.expect_refused(|s| s.activate(tree.as_str(), json!({ "ability": "grow" })));
+                s.expect_refused(|s| {
+                    s.activate(
+                        tree.as_str(),
+                        json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
+                    )
+                });
             }
 
             #[test]

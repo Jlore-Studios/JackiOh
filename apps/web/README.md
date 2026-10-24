@@ -105,16 +105,19 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 
 ## Patch v0.2.0 at the table
 
-**Activate** (SPEC §6.2, R384, R510). A card whose view lists `activations` (the engine gives them to
-its controller's own view of a card acting on the field) wears one control per ability on the card
-itself (`ActivateControl.tsx`): a lightning glyph and a badge with the uses left this turn ("∞" for
-Activate ♾️), the ability's words (its `{key}`s filled from the card's `params`) as tooltip and
-accessible name. It is `activate-<instanceId>` with its badge `activate-uses-<instanceId>`, the
-ability named after the id (`activate-<instanceId>-<ability>`) only on a card listing several
-(`namedAbility`, `contract.ts`). It is live exactly when `legal` lists that card's `activate`;
-otherwise it is greyed and its tooltip gives the view's `reason`. A press reports
-`{ on: "activate" }`, and `actions.ts` builds the activation exactly as a play's choices are built: one
-listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
+**Activate** (SPEC §6.2, R384, R510, R1751000). A card whose view lists `activations` (the engine gives
+them to its controller's own view of a card acting on the field) wears one control on the card itself
+(`ActivateControl.tsx`), however many abilities it lists: a lightning glyph and a badge with the uses
+left this turn ("∞" for Activate ♾️; on a card listing several, the sum of its usable abilities'), the
+ability's words (its `{key}`s filled from the card's `params`) as tooltip and accessible name. It is
+`activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
+cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
+live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
+view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
+play's choices are built: one listed body is sent at once, except on a card listing several abilities,
+which asks which first (the `ability` need, a Discover-chrome picker in `Prompt.tsx` showing each
+ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
+the same turn; the rest wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
 in the inline picker. Heroic Power is built the same way: `power` (the first power) and
 `power-<instanceId>` (any further one) report the power's activation: the `activate` naming the
@@ -172,6 +175,7 @@ to the browser's downloads, for a bug report.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
+The panel takes the focus on its first way on as it comes in; its "View the board" folds it to a "Result" button on the board's rail (`duos-result-reopen`) that opens it again, the replay door and the XP reveal with it (#1755).
 A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```
@@ -647,6 +651,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
   the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
   from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+  While the editor holds unsaved changes the route registers `net/navigate.ts`'s `guardLeaving`, so every
+  `navigate` off it and the browser's Back wait for its note (R1484000, R1754000).
 - **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
   under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
   L7 (R915005), and the play lobby offers it disabled.

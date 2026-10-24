@@ -829,6 +829,9 @@ declare
     -- 0050, R1310001: app.grant_launch_collection_all and app.on_catalog_version_stamped, the
     -- catalog stamp's grant (0016, R481), are gone, so the stray check below fails if either
     -- comes back as DEFINER; 29_going_live.sql asserts both are gone.
+    -- 0055, R1705002: the starter grant to every active account, DEFINER like the grant it calls,
+    -- and service_role's alone (31_deck_size.sql asserts a client cannot call it).
+    ['grant_starter_cards_to_active', 'definer'],
     ['handle_new_user',             'definer'],
     ['join_room',                   'definer'],
     ['live_matches',                'definer'],

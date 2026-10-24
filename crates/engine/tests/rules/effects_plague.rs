@@ -30,7 +30,7 @@ use super::fixtures::generation::{
     Run, act, answer, big_body, body, charger, crawler, dusting, frozen, hand_card, outbreak, plague_book,
     playing, quiet_trap, refusal, replayed, scatter, slime, toxins,
 };
-use super::fixtures::harness::{put, slot};
+use super::fixtures::harness::{events_json, put, slot};
 use crate::rules::fixtures::harness::matches_object;
 
 fn pick(card: &CardInstance) -> Selection {
@@ -145,14 +145,6 @@ fn play_on(card: &CardInstance, target: &CardInstance) -> Value {
 
 fn view_json(state: &GameState, player: PlayerId) -> Value {
     serde_json::to_value(view_for(state, player)).expect("a view serialises")
-}
-
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
 }
 
 fn thaw(state: &GameState) -> GameState {
@@ -879,7 +871,7 @@ mod e19_stats_per_token_auras_and_self_layers {
         assert!(run.state.pending.is_none());
         assert!(run.state.players.p2.units[3].is_none());
         assert_eq!(
-            of_type(&last_events(&run.state, 1), "destroyed")
+            events_json(&last_events(&run.state, 1), "destroyed")
                 .iter()
                 .map(|event| event["instanceId"].as_str().unwrap_or_default().to_string())
                 .collect::<Vec<_>>(),
@@ -970,7 +962,7 @@ mod r452_e19_placements_under_a_random_cast_b5_e12 {
         run(&mut sink, random_cast_of_the_book(false), None, &[]);
         settle(&mut sink, Default::default());
         assert!(sink.state.pending.is_none());
-        assert!(of_type(&*sink.events, "promptOpened").is_empty());
+        assert!(events_json(&*sink.events, "promptOpened").is_empty());
         // Its two placements both landed, and the rest of its text ran after them.
         assert_eq!(placements(&*sink.events).len(), 2);
         assert_eq!(hero_health(&*sink.state, PlayerId::P2), 29);

@@ -5,11 +5,10 @@
 
 use jackioh_engine::effects::{swap, swap_board, swap_health, swap_library};
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, json_of, new_game, put, set_library, slot};
 use crate::rules::fixtures::harness::matches_object;
 
 /// A face-down Trap for R33; #87's board swap moves the backrow too.
@@ -87,10 +86,6 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 fn ids_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
@@ -133,7 +128,7 @@ mod swap_s6_3_r73_m3_t1 {
         assert_eq!(state.players.p2.hero.armor, 5);
 
         // A swap is not damage, not a heal and not "lose health" (R18): one event, and that is all.
-        assert_eq!(to_json(&events), json!([{ "type": "swapped", "what": "health" }]));
+        assert_eq!(json_of(&events), json!([{ "type": "swapped", "what": "health" }]));
     }
 
     #[test]
@@ -243,11 +238,11 @@ mod swap_s6_3_r73_m3_t1 {
             IndexSet::from([GameEventType::Swapped, GameEventType::ControlChanged])
         );
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::Swapped)),
+            json_of(events_of_type(&events, GameEventType::Swapped)),
             json!([{ "type": "swapped", "what": "board" }])
         );
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::ControlChanged)),
+            json_of(events_of_type(&events, GameEventType::ControlChanged)),
             json!([
                 { "type": "controlChanged", "instanceId": mine.id, "controller": "p2", "row": "units", "lane": 2 },
                 { "type": "controlChanged", "instanceId": my_back.id, "controller": "p2", "row": "backrow", "lane": 4 },
@@ -379,7 +374,7 @@ mod swap_s6_3_r73_m3_t1 {
         assert!(ids_of(&state.players.p1.hand).contains(&blocked.id));
         assert!(card_at(&state, slot(PlayerId::P2, Row::Units, 3)).is_none());
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::Bounced)),
+            json_of(events_of_type(&events, GameEventType::Bounced)),
             json!([{ "type": "bounced", "instanceId": blocked.id, "defId": combat_fx::plain.id, "owner": "p1" }])
         );
         // It left the field, so R78's reset ran on the way to the hand.
@@ -403,11 +398,11 @@ mod swap_s6_3_r73_m3_t1 {
         assert_eq!(live(&state, &hidden.id).face_up, None);
         // Before the swap only p1 may read it: p2 sees a face-down marker (§3, R33).
         assert!(matches_object(
-            &to_json(view_for(&state, PlayerId::P1))["you"]["backrow"][1],
+            &json_of(view_for(&state, PlayerId::P1))["you"]["backrow"][1],
             &json!({ "defId": trap().id, "faceDown": false }),
         ));
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P2))["opponent"]["backrow"][1],
+            json_of(view_for(&state, PlayerId::P2))["opponent"]["backrow"][1],
             json!({ "faceDown": true, "cost": 1 })
         );
 
@@ -420,11 +415,11 @@ mod swap_s6_3_r73_m3_t1 {
         // The swap never flips the card: `controller` is what decides who may read it (R33).
         assert_eq!(hidden_now.face_up, None);
         assert!(matches_object(
-            &to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][1],
+            &json_of(view_for(&state, PlayerId::P2))["you"]["backrow"][1],
             &json!({ "defId": trap().id, "faceDown": false }),
         ));
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
+            json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
             json!({ "faceDown": true, "cost": 1 })
         );
         assert!(
@@ -433,7 +428,7 @@ mod swap_s6_3_r73_m3_t1 {
                 .contains(&trap().id)
         );
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::ControlChanged)),
+            json_of(events_of_type(&events, GameEventType::ControlChanged)),
             json!([
                 { "type": "controlChanged", "instanceId": hidden.id, "controller": "p2", "row": "backrow", "lane": 2 },
             ])
@@ -554,7 +549,7 @@ mod swap_s6_3_r73_m3_t1 {
         );
 
         assert_eq!(
-            to_json(&events),
+            json_of(&events),
             json!([{ "type": "swapped", "what": "library" }])
         );
     }
@@ -567,7 +562,7 @@ mod swap_s6_3_r73_m3_t1 {
 
         // R81: a play-time mode arrives in `ctx.modes` …
         assert_eq!(
-            to_json(run(
+            json_of(run(
                 &mut state,
                 swap(json_as(json!({}))),
                 HookOptions {
@@ -591,7 +586,7 @@ mod swap_s6_3_r73_m3_t1 {
             },
         );
         assert_eq!(
-            to_json(&answered),
+            json_of(&answered),
             json!([{ "type": "swapped", "what": "health" }])
         );
         assert_eq!(state.players.p1.hero.health, 10);
@@ -609,7 +604,7 @@ mod swap_s6_3_r73_m3_t1 {
             .is_empty()
         );
         assert_eq!(
-            to_json(run(
+            json_of(run(
                 &mut state,
                 swap(json_as(json!({ "what": "board" }))),
                 HookOptions::default()

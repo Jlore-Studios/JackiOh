@@ -128,12 +128,16 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
     result
 }
 
+/// core-001 to core-026 but #21 Hinder, which casts on draw.
 fn p1_deck() -> Vec<String> {
-    (0..20).map(|at| format!("core-{:03}", at + 1)).collect()
+    (1..=DECK_SIZE + 1)
+        .map(|at| format!("core-{at:03}"))
+        .filter(|id| id != "core-021")
+        .collect()
 }
 
 fn p2_deck() -> Vec<String> {
-    (0..20).map(|at| format!("core-{:03}", at + 30)).collect()
+    (0..DECK_SIZE).map(|at| format!("core-{:03}", at + 30)).collect()
 }
 
 fn game_args(seed: &str, decks: (Vec<String>, Vec<String>)) -> CreateGameArgs {
@@ -249,7 +253,7 @@ mod r224_setup_waits_for_a_question {
         let deck: Vec<String> = catalog::query(&json_as(json!({})))
             .iter()
             .map(|def| def.id.clone())
-            .take(20)
+            .take(DECK_SIZE as usize)
             .collect();
         let mut game = create_game(&game_args("edge-r7-setup", (deck.clone(), deck)));
         // A card whose start-of-game clause asks, as it arrives in a hand (R151).
@@ -374,25 +378,25 @@ fn same_view(a: &PlayerView, b: &PlayerView) {
 
 // Quickdraw and the game's draw counter (#100 Ceaseless Void, R55)
 
-const QD_P1_DECK: [&str; 20] = [
+const QD_P1_DECK: [&str; DECK_SIZE as usize] = [
     "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
     "core-018", "core-023", "core-031", "core-035", "core-036", "core-039", "core-041", "core-044",
-    "core-048", "core-050", "core-060", VOID,
+    "core-048", "core-050", "core-060", "core-001", "core-002", "core-006", "core-009", "core-012", VOID,
 ];
-/// p2's deck less one card: the twentieth is #98 Heroic Power (Quickdraw) or #99 Craft a Card.
-const QD_P2_SHARED: [&str; 19] = [
+/// p2's deck less one card: the last is #98 Heroic Power (Quickdraw) or #99 Craft a Card.
+const QD_P2_SHARED: [&str; DECK_SIZE as usize - 1] = [
     "core-003", "core-004", "core-005", "core-007", "core-008", "core-011", "core-015", "core-023",
     "core-031", "core-035", "core-036", "core-044", "core-050", "core-062", "core-063", "core-081",
-    "core-082", "core-086", "core-012",
+    "core-082", "core-086", "core-012", "core-001", "core-002", "core-006", "core-009", "core-013",
 ];
 
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-fn p2_qd_deck(twentieth: &str) -> Vec<String> {
+fn p2_qd_deck(last: &str) -> Vec<String> {
     let mut deck = owned(&QD_P2_SHARED);
-    deck.push(twentieth.to_string());
+    deck.push(last.to_string());
     deck
 }
 
@@ -419,10 +423,10 @@ fn keep_both(state: &GameState) -> GameState {
 mod r225_a_quickdraw_card_is_counted_as_the_draw_it_replaces {
     use super::*;
 
-    /// "r8-l10-void-3" puts #100 in p1's opening hand.
-    fn void_game(p2_twentieth: &str) -> GameState {
-        let decks = (owned(&QD_P1_DECK), p2_qd_deck(p2_twentieth));
-        keep_both(&begin_game(&create_game(&game_args("r8-l10-void-3", decks))).state)
+    /// "r8-l10-void-0" puts #100 in p1's opening hand (re-pinned for #1705's 25-card decks).
+    fn void_game(p2_last: &str) -> GameState {
+        let decks = (owned(&QD_P1_DECK), p2_qd_deck(p2_last));
+        keep_both(&begin_game(&create_game(&game_args("r8-l10-void-0", decks))).state)
     }
 
     #[test]
@@ -484,8 +488,8 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
     /// Core card asks), and with this seed p1's opening draw reaches it, so setup waits for p1's answer
     /// before it deals to p2 (R224, R151). The answer's action then carries p2's opening deal, which
     /// p1's view shows.
-    fn paused_deal(seed: &str, p2_twentieth: &str) -> GameState {
-        let mut game = create_game(&game_args(seed, (owned(&QD_P1_DECK), p2_qd_deck(p2_twentieth))));
+    fn paused_deal(seed: &str, p2_last: &str) -> GameState {
+        let mut game = create_game(&game_args(seed, (owned(&QD_P1_DECK), p2_qd_deck(p2_last))));
         asking(&mut game);
         let card = new_instance(
             &mut game,
@@ -512,8 +516,8 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
     }
 
     /// The paused deal with p1's question answered.
-    fn answered(seed: &str, p2_twentieth: &str) -> GameState {
-        let state = paused_deal(seed, p2_twentieth);
+    fn answered(seed: &str, p2_last: &str) -> GameState {
+        let state = paused_deal(seed, p2_last);
         let pending = must(state.pending.clone(), "p1's cast question");
         assert_eq!(pending.kind, PromptKind::Mode);
         act_as(
@@ -574,10 +578,10 @@ mod r225_r224_a_quickdraw_card_is_dealt_as_the_last_opening_draw {
         );
     }
 
-    /// p1's deck is 19 cards plus #98 Heroic Power (Quickdraw) or #99; the asking card is p1's.
-    fn paused_own_deal(seed: &str, p1_twentieth: &str) -> GameState {
-        let mut p1 = owned(&QD_P1_DECK[..19]);
-        p1.push(p1_twentieth.to_string());
+    /// p1's deck is DECK_SIZE - 1 cards plus #98 Heroic Power (Quickdraw) or #99; the asking card is p1's.
+    fn paused_own_deal(seed: &str, p1_last: &str) -> GameState {
+        let mut p1 = owned(&QD_P1_DECK[..DECK_SIZE as usize - 1]);
+        p1.push(p1_last.to_string());
         let mut game = create_game(&game_args(seed, (p1, p2_qd_deck(CRAFT))));
         asking(&mut game);
         let card = new_instance(

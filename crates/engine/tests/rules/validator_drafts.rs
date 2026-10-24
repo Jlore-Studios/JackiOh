@@ -574,3 +574,39 @@ mod r340_room_for_an_imported_trio {
         ));
     }
 }
+
+mod r1705001_a_deck_saved_at_the_earlier_size_is_a_draft {
+    use super::*;
+
+    #[test]
+    fn r1705001_a_saved_twenty_card_deck_is_a_draft_d2_keeps_and_l2_refuses() {
+        let earlier = EARLIER_DECK_SIZE as usize;
+        let today = DECK_SIZE as usize;
+        // D2 is "at most": a deck saved complete at 20 before #1705 still saves, as does one of 25.
+        assert_eq!(draft(&POOL_IDS[..earlier], "Old Aggro"), json!([]));
+        assert_eq!(draft(&POOL_IDS[..today], "Aggro"), json!([]));
+        assert_eq!(rule_list(&draft(&POOL_IDS[..today + 1], "Aggro")), vec!["D2"]);
+
+        // L2 is "exactly": queueing it is refused, naming the deck, until it holds 25.
+        let queued = |cards: &[String], name: &str| {
+            deck_result(json!({
+                "deck": { "name": name, "cards": cards },
+                "catalog": snapshot(),
+                "collection": owned(),
+            }))
+        };
+        for size in [earlier, today + 1] {
+            let refused = queued(&POOL_IDS[..size], "Old Aggro");
+            assert_eq!(
+                refused["errors"],
+                json!([{
+                    "rule": "L2",
+                    "message": format!("Old Aggro has {size} cards; every deck needs exactly 25."),
+                    "deck": 1,
+                }]),
+                "{size} cards"
+            );
+        }
+        assert_eq!(queued(&POOL_IDS[..today], "Aggro"), json!({ "ok": true }));
+    }
+}

@@ -131,8 +131,9 @@ fn is_hidden_backrow(state: &GameState, card: &CardInstance, seat: PlayerId) -> 
 /// library get new identities (and Radiant flags) and a new order, every backrow card the seat
 /// cannot read gets another Trap that shows the same cost (R351: the seat reads that much, since patch
 /// v0.1.1 gave #85 a cost of its own) and leaves the seat's view unchanged (R403, R602: a live
-/// face-down aura shows on the board), the seat's own library is reordered, and seed, cursor and the
-/// nonce log are replaced.
+/// face-down aura shows on the board), or, when it is no Trap (a Unit set face down), another card of
+/// the pool on the same terms, the seat's own library is reordered, and seed, cursor and the nonce log
+/// are replaced.
 fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     let mut out = clone(state);
     let mut rng = create_rng(&format!("observe-mutate:{seed}"), 0);
@@ -158,12 +159,20 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
             // can still change what the seat reads off the board (an aura over its units; C #88 Siphon
             // Squad's sleeps until it is revealed, R1149000). That is not hidden from it, so the swap
             // must leave the seat's view as it was. The card's own def always does, so there is always
-            // a trap to pick.
+            // a card to pick.
             let shown = effective_cost(&out, &card, Default::default());
             let original = card.def_id.clone();
             let seen = view_without_events(&out, seat);
             let mut unseen: Vec<String> = Vec::new();
-            for id in &traps {
+            let mut candidates = if traps.contains(&original) {
+                traps.clone()
+            } else {
+                pool.clone()
+            };
+            if !candidates.contains(&original) {
+                candidates.push(original.clone());
+            }
+            for id in &candidates {
                 let mut probe = card.clone();
                 probe.def_id = id.clone();
                 if effective_cost(&out, &probe, Default::default()) != shown {

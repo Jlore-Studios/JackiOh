@@ -29,7 +29,7 @@
 //! the verdict matches a sequential run. Output goes to stdout; a failed gate returns `Err` naming
 //! every problem (exit 1).
 //!
-//! `gate --duos [--games N]` plays the Duos gate instead (#936 B32): `duos_gate.rs`.
+//! `gate --duos [--games N]` plays the Duos gate instead (#936 B32, #1760): `duos_gate.rs`.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -74,8 +74,9 @@ pub struct Args {
     #[arg(long, value_name = "DIR")]
     pub out: Option<PathBuf>,
     /// Play the Duos gate instead (#936 B32, `duos_gate.rs`): the Easy AI team against a
-    /// random-policy team; prints the report and fails under DUOS_GATE_WIN_FLOOR, on any refused action
-    /// or on any AI action off a fallback path.
+    /// random-policy team and against a greedy team (#1760); prints both reports and fails under
+    /// either's floor (DUOS_GATE_WIN_FLOOR, DUOS_GATE_GREEDY_WIN_FLOOR), on any refused action or on any
+    /// AI action off a fallback path.
     #[arg(long, conflicts_with_all = ["full", "shard", "out"])]
     pub duos: bool,
     /// With `--duos`: the games to play (default DUOS_GATE_GAMES_SMOKE).

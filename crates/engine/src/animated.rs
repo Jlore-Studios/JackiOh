@@ -48,7 +48,7 @@ use crate::state::{
 use crate::wire::{CardType, GameEvent, KeywordKind, PlayerId, Row, Zone, has_keyword};
 use crate::zones::{
     ZoneSlot, acts_on_field, card_at, first_entry_zone, home_of, is_carried, is_open, release_home,
-    reserve_home, slot_of, slots_of, step_into_backrow, step_into_unit_zone,
+    reserve_home, slot_of, slots_of, stands_in_backrow, step_into_backrow, step_into_unit_zone,
 };
 
 /// What the moves here need: the state and the event list — an `EngineSink`, or an effect's context
@@ -133,9 +133,10 @@ pub(crate) fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> O
 /// its return (rule 6). Emits `animated`, never `summoned` (R445).
 ///
 /// True when the card now stands in a unit zone — including a card that already did, which "does not
-/// move or change position" (rule 4). False, changing nothing, when it is not acting in a backrow zone
-/// (dormant under a pile, a carried Unit, off the field) or no unit zone of its side is open (rule 2:
-/// it stays where it is).
+/// move or change position" (rule 4) — and when it is a Unit standing in its backrow zone, which stays
+/// there (R1728000). False, changing nothing, when it is not acting in a backrow zone (dormant under a
+/// pile, a carried Unit, off the field) or no unit zone of its side is open (rule 2: it stays where it
+/// is).
 pub fn animate_card(sink: &mut FieldSink<'_>, card: &CardInstance, options: AnimateOptions) -> bool {
     step_into_units(sink, card, options, true)
 }
@@ -148,7 +149,11 @@ fn step_into_units(
     entry: bool,
 ) -> bool {
     let card = live(sink.state, card);
-    if is_animated(sink.state, &card) && acts_on_field(sink.state, &card) {
+    // R1728000: a Unit standing in its backrow zone (a Flying Unit, R1081000) is a Unit already, as an
+    // animated card is: it stays where it stands, in the position it has, and enters nothing.
+    if (is_animated(sink.state, &card) || stands_in_backrow(sink.state, &card))
+        && acts_on_field(sink.state, &card)
+    {
         return true;
     }
     let Some(from) = slot_of(sink.state, &card) else {

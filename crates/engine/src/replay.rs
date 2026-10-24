@@ -2,7 +2,7 @@
 //! comparable (SPEC §9.2, §9.3). A practice game adds its handicaps to that tuple (§9.9, R180, R187),
 //! a game with a dealt deck the seats that were dealt one (R433), and a match its seats' last boards
 //! (R417) and its Glitch boards (R678): they are setup, not actions, so the fold hands them to
-//! `create_game` exactly as the live game did.
+//! `create_recorded_game` exactly as the live game handed them to `create_game` (R1705003).
 //!
 //! The hash's text is fixed (`docs/v0.3.0/SURFACE.md` §5.2; §4.4.1 sort stability, §4.4.7 absent
 //! options; §6.1 `fold`'s signature): practice saves on players' devices store the hash, the hotseat
@@ -14,7 +14,7 @@ use serde_json::Value;
 
 use crate::catalog::{ShippedCatalog, shipped_catalog, with_shipped};
 use crate::config::{Handicap, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS};
-use crate::state::{CreateGameOptions, GameState, LastBoardInput, create_game};
+use crate::state::{CreateGameOptions, GameState, LastBoardInput, create_recorded_game};
 use crate::view_for::view_for;
 use crate::wire::{
     Action, CardDefs, PerPlayerOpt, PlayerId, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord,
@@ -832,7 +832,7 @@ pub struct ReplayResult {
 pub type FoldResult = ReplayResult;
 
 /// Fold a recorded log from scratch. Errors are collected, not thrown: a log may hold rejects. The
-/// setup is not: `create_game` throws on a deck its seat's handicap does not allow, so a handicapped
+/// setup is not: `create_recorded_game` throws on a deck its seat's handicap does not allow, so a handicapped
 /// game folded without its handicaps fails loudly instead of replaying a different game (R180).
 pub fn fold(input: &ReplayInput) -> ReplayResult {
     let mut state = opening(input);
@@ -855,7 +855,7 @@ pub fn fold(input: &ReplayInput) -> ReplayResult {
 
 /// The state after `begin_game`: `fold`'s start, and a replay's step 0 (R768).
 fn opening(input: &ReplayInput) -> GameState {
-    let start = create_game(&CreateGameOptions {
+    let start = create_recorded_game(&CreateGameOptions {
         seed: input.seed.clone(),
         decks: input.decks.clone(),
         catalog: input.catalog.clone(),
@@ -891,7 +891,7 @@ pub fn catalog_for(
 /// own catalog, which the checkpoints name. Otherwise the answer holds the step count (step 0 is the
 /// state after `begin_game`, step k the one after the k-th accepted action; a rejected one is no
 /// step) and a state every `REPLAY_CHECKPOINT_EVERY` accepted actions. As with `fold`, a setup
-/// `create_game` refuses panics; the WASM binding checks it first.
+/// `create_recorded_game` refuses panics; the WASM binding checks it first.
 pub fn replay_open(input: &ReplayInput, record: &ReplayRecord, build_version: &str) -> ReplayOpen {
     let shipped = match catalog_for(&record.catalog_version, build_version) {
         Ok(shipped) => shipped,

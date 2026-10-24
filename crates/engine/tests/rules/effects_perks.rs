@@ -15,7 +15,7 @@ use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance};
 
 use super::fixtures::catalog::{spell_def, unit_def, vanilla_catalog};
-use super::fixtures::harness::{in_hand, new_game};
+use super::fixtures::harness::{events_json, in_hand, new_game};
 
 fn free() -> CardDef {
     unit_def(801, json!({ "cost": 0 }))
@@ -31,7 +31,7 @@ fn pricey() -> CardDef {
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
-    let mut catalog = vanilla_catalog(40, 1);
+    let mut catalog = vanilla_catalog(2 * DECK_SIZE, 1);
     for def in [free(), x_spell(), pricey()] {
         catalog.insert(def.id.clone(), def);
     }
@@ -59,15 +59,6 @@ fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
     }
     state.rng_cursor = rng.cursor();
     events
-}
-
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
 }
 
 /// The card under `id` as it stands in the state now (TS read the live object).
@@ -124,7 +115,7 @@ mod discount_random_in_hand_c_plus_c49 {
         assert_eq!(live(&state, &zero.id).cost_mod, 0);
         assert_eq!(live(&state, &x.id).cost_mod, 0);
         assert_eq!(
-            of_type(&events, "costChanged"),
+            events_json(&events, "costChanged"),
             vec![json!({ "type": "costChanged", "instanceId": three.id, "cost": 1 })]
         );
     }

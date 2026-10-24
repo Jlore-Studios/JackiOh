@@ -915,9 +915,10 @@ fn is_zero(value: &i32) -> bool {
 /// B3.4, R386: what one Degrade or Upgrade application changed. `cost` is a `costMod` step; `stats`
 /// the attack and health it moved (negative for a Degrade); `keyword` one keyword added or removed;
 /// `x` a numbered keyword's or an X's step (`key` names it: "Armor", "Echo", "Activate", "X", …);
-/// `number` a declared number's step (`key` is the catalog `params` key). `delta` is how far the value
-/// moved. `none` is R440's cue on a card someone may not read that nothing could change (Immutable, or
-/// no change applies), so the events over a hidden pile number the applications, never the changes.
+/// `number` a declared number's step (`key` is the catalog `params` key); `plague` the Plague Counters
+/// placed on the card (+) or removed from it (−), R1748002. `delta` is how far the value moved. `none`
+/// is R440's cue on a card someone may not read that nothing could change (Immutable, or no change
+/// applies), so the events over a hidden pile number the applications, never the changes.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -948,6 +949,9 @@ pub enum TuningChange {
     },
     Number {
         key: String,
+        delta: i32,
+    },
+    Plague {
         delta: i32,
     },
     None,

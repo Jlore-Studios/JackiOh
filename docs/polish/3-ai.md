@@ -527,10 +527,15 @@ export function candidateActions(state: GameState, seat: PlayerId): ActionBody[]
 The move order is a stable sort by tier, and ties keep `legalActions` order:
 0 an attack on the enemy hero ·
 1 an attack on a unit it kills and survives, read from `unitView` (Divine Shield on the target means no kill) ·
+1b an attack on a unit it kills at an even trade or better by the static trader's `trade_value`
+(crates/ai/src/reply.rs: the target's worth less the attacker's when it dies too, at least 0), only each
+attacker's best (ties: the first), its others staying in 4 (#1779) ·
 2 `play` and `activatePower`, round-robin across source instances (every source's first variant,
 then every source's second, …), each round by `effectiveCost` descending; inside one source the variants
-whose first target is the enemy hero or a card the enemy controls (the enemy hero's first) alternate with
-the rest, enemy first, each group in `legalActions` order (#1062) ·
+are partitioned into ways of being played (keyed by X value, Embiggen, Equip host, face-down set, and Tribute set),
+ordered dearest price first, then cheapest, then remaining descending, Tribute sets cheapest units first (#1778),
+with variants within each way alternating between those whose first target is the enemy hero or a card the
+enemy controls (the enemy hero's first) and the rest, enemy first (#1062), and interleaved across ways before assembling ·
 3 `answer` ·
 4 any other attack ·
 5 `switchPosition` ·

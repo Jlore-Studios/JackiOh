@@ -7,6 +7,8 @@
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 fn def(index: u32, name: &str, type_: &str, extra: Value) -> CardDef {
     let mut base = json!({
         "id": format!("tm-{name}"),
@@ -39,13 +41,6 @@ fn unit(index: u32, name: &str, attack: i32, health: i32) -> CardDef {
             "radiant": { "attack": attack * 2, "health": health * 2, "keywords": [], "text": name },
         }),
     )
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn hit_enemy_hero(amount: i32) -> Effect {

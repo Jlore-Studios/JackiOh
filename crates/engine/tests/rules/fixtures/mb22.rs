@@ -13,7 +13,7 @@ use jackioh_engine::effects::{damage, destroy};
 use jackioh_engine::testkit::*;
 
 use super::damage_combat::note;
-use super::harness::new_game;
+use super::harness::{both, new_game};
 
 /// TS `def(name, type, extra = {})`: a Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
@@ -61,14 +61,6 @@ fn unit(
 
 fn plain_unit(name: &str, index: i32, attack: i32, health: i32) -> CardDef {
     unit(name, index, attack, health, json!([]), json!([]))
-}
-
-/// TS `both(script, radiant = script)`.
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn both_of(base: Script, radiant: Script) -> CardScripts {

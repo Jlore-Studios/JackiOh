@@ -12,7 +12,8 @@
 use std::cell::Cell;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AiOptions, SearchBudget, decide, duos_decide, duos_decision, duos_passes, starting_life,
+    AI_GATE_BUDGET, AiOptions, SearchBudget, decide, duos_decide, duos_decision, duos_greedy_action,
+    duos_passes, greedy_action, starting_life,
 };
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, duos_ai_team,
@@ -37,13 +38,14 @@ const A2: DuosSeat = DuosSeat::A2;
 const B1: DuosSeat = DuosSeat::B1;
 const B2: DuosSeat = DuosSeat::B2;
 
-/// Twenty Core cards, each playable on turn 1 onto an empty board (one-cost Units, cheap Traps and
-/// Field cards, cheap Spells), so a dealt hand always holds a play and no seat is ended by B9's rule
-/// before a test has set it up.
-const CHEAP: [&str; 20] = [
+/// `DECK_SIZE` Core cards, each playable on turn 1 onto an empty board (one-cost Units, cheap Traps
+/// and Field cards, cheap Spells), so a dealt hand always holds a play and no seat is ended by B9's
+/// rule before a test has set it up.
+const CHEAP: [&str; DECK_SIZE as usize] = [
     "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
-    "core-018", "core-023", "core-039", "core-041", "core-048", "core-060", "core-067", "core-071",
-    "core-075", "core-081", "core-086", "core-096",
+    "core-018", "core-023", "core-031", "core-035", "core-039", "core-041", "core-044", "core-048",
+    "core-051", "core-060", "core-062", "core-067", "core-071", "core-075", "core-081", "core-086",
+    "core-096",
 ];
 /// Mr. Vanilla, a 1-cost vanilla Unit.
 const ONE_DROP: &str = "core-008";
@@ -657,6 +659,8 @@ fn b28_off_its_own_turn_a_seat_passes_nothing() {
 
 #[test]
 fn b28_passes_stop_at_the_teams_pass_cap() {
+    // `cost` reads the catalog before `passing` registers it.
+    register_cards();
     let rules = DuosTeamRules {
         pass_cap: SMALL_PASS_CAP,
         ..DUOS_HUMAN_TEAM
@@ -669,7 +673,14 @@ fn b28_passes_stop_at_the_teams_pass_cap() {
     // A1 can afford its one-drop (so it always has a play left) and every pass, but none of the
     // four 4-costs, all of which A2 can afford.
     let seed = "duos-ai-pass-cap";
-    let (state, ids) = passing(seed, team_a(rules), &hand, cost(BIG) - 1, cost(BIG));
+    // R1723000: A2 can pay for two of them, so the second pass is worth making too.
+    let (state, ids) = passing(
+        seed,
+        team_a(rules),
+        &hand,
+        cost(BIG) - 1,
+        SMALL_PASS_CAP * cost(BIG),
+    );
     let passable = &ids[1..];
 
     let first = duos_passes(&state, A1);
@@ -1136,4 +1147,160 @@ fn r1127000_a_passed_fused_card_is_scored_with_its_match_made_definitions_along(
     // Scored without its definition, the fusion would break the scoring and every candidate would
     // fall back to cost order, BIG first.
     assert_eq!(duos_passes(&state, A1), vec![stab.clone()], "not {big}");
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1723000: the Duos AI passes a card only when the trade is worth it
+// ---------------------------------------------------------------------------------------------
+
+/// Round 1 with A1 holding only BIG at pass mana, so it can play nothing, and A2 at BIG's mana
+/// holding `a2_hand` alone.
+fn trade_state(seed: &str, teams: Option<PerTeam<DuosTeamRules>>, a2_hand: &[&str]) -> (DuosState, String) {
+    let mut state = round_one(seed, teams);
+    let big = set_hand(&mut state, A1, &[BIG]).remove(0);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_hand(&mut state, A2, a2_hand);
+    set_mana(&mut state, A2, cost(BIG));
+    (state, big)
+}
+
+#[test]
+fn r1723000_a_card_the_teammate_cannot_use_better_than_its_own_play_is_kept() {
+    let seed = "duos-ai-trade-keep";
+    let (state, big) = trade_state(seed, None, &[BIG]);
+    assert!(!can_play(&state.duels[0], PlayerId::P1, &big));
+    assert_eq!(decided_alone(&state, A1, seed), ActionBody::EndTurn);
+    assert!(duos_passes(&state, A1).is_empty());
+    assert_eq!(
+        json_of(&duos_decide(&state, A1, &mut opts(seed))),
+        json_of(&Some(end_turn()))
+    );
+}
+
+#[test]
+fn r1723000_a_free_pass_that_only_moves_a_card_between_hands_is_kept_too() {
+    let seed = "duos-ai-trade-keep-free";
+    let free = DuosTeamRules {
+        pass_cost: 0,
+        ..DUOS_HUMAN_TEAM
+    };
+    let (state, _) = trade_state(seed, team_a(free), &[BIG]);
+    assert!(duos_passes(&state, A1).is_empty());
+}
+
+#[test]
+fn r1723000_a_profitable_pass_still_fires() {
+    let seed = "duos-ai-trade-pass";
+    let (state, big) = trade_state(seed, None, &[]);
+    assert_eq!(duos_passes(&state, A1), vec![big.clone()]);
+    assert_eq!(
+        json_of(&duos_decide(&state, A1, &mut opts(seed))),
+        json_of(&Some(pass(&big)))
+    );
+}
+
+#[test]
+fn r1723000_a_card_the_teammate_can_play_after_its_own_best_play_is_passed() {
+    let seed = "duos-ai-trade-both";
+    let (mut state, big) = trade_state(seed, None, &[BIG]);
+    set_mana(&mut state, A2, cost(BIG) + cost(BIG));
+    assert_eq!(duos_passes(&state, A1), vec![big]);
+}
+
+// ---------------------------------------------------------------------------------------------
+// #1760: the Duos gate's greedy team plays each seat's duel with the 1v1 greedy baseline
+// ---------------------------------------------------------------------------------------------
+
+/// What the 1v1 `greedy_action` alone answers for `seat` in its own duel.
+fn greedy_alone(state: &DuosState, seat: DuosSeat, seed: &str) -> ActionBody {
+    greedy_action(&state.duels[seat.duel()], seat.player(), &mut create_rng(seed, 0))
+        .unwrap_or_else(|| panic!("{seat}: the 1v1 greedy baseline owes nothing"))
+}
+
+#[test]
+fn b32_a_greedy_seat_answers_its_mulligan_with_the_1v1_greedy_baseline() {
+    let state = mulligans("duos-greedy-mulligan");
+    for seat in DUOS_SEATS {
+        let seed = format!("duos-greedy-mulligan:{seat}");
+        let expected = greedy_alone(&state, seat, &seed);
+        assert_eq!(expected.action_type(), ActionType::Mulligan, "{seat}");
+        let got = duos_greedy_action(&state, seat, &mut create_rng(&seed, 0));
+        assert_eq!(json_of(&got), json_of(&Some(duel(expected))), "{seat}");
+        apply(&state, seat, got.expect("the seat owes its mulligan"));
+    }
+}
+
+#[test]
+fn b32_a_greedy_seat_plays_its_turn_with_the_1v1_greedy_baseline() {
+    let seed = "duos-greedy-turn";
+    let state = round_one(seed, None);
+    let expected = greedy_alone(&state, A1, seed);
+    let got = duos_greedy_action(&state, A1, &mut create_rng(seed, 0));
+    assert_eq!(json_of(&got), json_of(&Some(duel(expected))));
+    apply(&state, A1, got.expect("A1 owes its turn"));
+}
+
+#[test]
+fn b32_a_greedy_seat_ends_its_turn_where_the_ai_would_pass() {
+    let seed = "duos-greedy-no-pass";
+    let mut state = round_one(seed, None);
+    set_hand(&mut state, A1, &[BIG]);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_mana(&mut state, A2, cost(BIG));
+    // A2 keeps a play of its own, so round 1 stays open after A1 ends.
+    give(&mut state, A2, ONE_DROP);
+    assert!(!duos_passes(&state, A1).is_empty(), "the AI would pass BIG");
+
+    let got = duos_greedy_action(&state, A1, &mut create_rng(seed, 0));
+    assert_eq!(json_of(&got), json_of(&Some(end_turn())));
+}
+
+#[test]
+fn b32_a_whole_greedy_turn_sends_no_pass() {
+    let seed = "duos-greedy-whole-turn";
+    let mut state = round_one(seed, None);
+    let mut rng = create_rng(seed, 0);
+    let mut taken: Vec<DuosActionBody> = Vec::new();
+    let mut finished = false;
+    for _ in 0..TURN_STEPS {
+        let Some(body) = duos_greedy_action(&state, A1, &mut rng) else {
+            finished = true;
+            break;
+        };
+        assert!(
+            !is_pass(&body) && !matches!(body, DuosActionBody::Concede),
+            "{}",
+            json_of(&body)
+        );
+        taken.push(body.clone());
+        state = apply(&state, A1, body);
+    }
+    assert!(
+        finished,
+        "A1's turn ends within {TURN_STEPS} actions: {:?}",
+        json_of(&taken)
+    );
+    assert!(state.ended[0], "A1 has ended its turn");
+}
+
+#[test]
+fn b32_a_greedy_seat_owes_nothing_off_its_turn_or_once_the_game_is_over() {
+    let seed = "duos-greedy-owes";
+    let state = round_one(seed, None);
+    for seat in [B1, B2] {
+        assert!(
+            duos_greedy_action(&state, seat, &mut create_rng(seed, 0)).is_none(),
+            "{seat} is not in team A's round"
+        );
+    }
+
+    let state = apply(&state, A1, DuosActionBody::Concede);
+    let state = apply(&state, A2, DuosActionBody::Concede);
+    assert!(state.result.is_some(), "team A conceded (B11)");
+    for seat in DUOS_SEATS {
+        assert!(
+            duos_greedy_action(&state, seat, &mut create_rng(seed, 0)).is_none(),
+            "{seat} owes nothing once the game is over"
+        );
+    }
 }

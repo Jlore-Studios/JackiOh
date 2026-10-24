@@ -11,10 +11,11 @@ use std::cell::Cell;
 
 use jackioh_engine::effects::{end_turn, end_turn_after_actions};
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::catalog as catalog_fx;
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot};
+use super::fixtures::harness::{
+    events_of_type, in_hand, json_of, new_game, put, set_library, setup_catalog, slot,
+};
 use super::fixtures::turn as turn_fx;
 use crate::rules::fixtures::harness::{matches_object, round_trip};
 
@@ -155,7 +156,7 @@ fn turn_ends_mods(state: &GameState, player: PlayerId) -> Vec<PlayerModifier> {
 /// `turnEndsOf(state, player)` as JSON (the modifier, its kind's fields flat beside `id` and
 /// `expiry`), `null` when there is none.
 fn turn_ends_json(state: &GameState, player: PlayerId) -> Value {
-    to_json(turn_ends_of(state, player))
+    json_of(turn_ends_of(state, player))
 }
 
 /// The context borrows the state, so the test's effects run inside `f`.
@@ -195,15 +196,11 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 }
 
 fn first_cut_in(events: &[GameEvent]) -> Value {
-    to_json(
+    json_of(
         events
             .iter()
             .find(|event| event.event_type() == GameEventType::TurnCutShort),
     )
-}
-
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 mod b5_e10_end_your_turn_r456 {
@@ -223,7 +220,7 @@ mod b5_e10_end_your_turn_r456 {
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(after.phase, Phase::Main);
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::TurnCutShort)),
+            json_of(events_of_type(&events, GameEventType::TurnCutShort)),
             json!([{ "type": "turnCutShort", "player": "p1", "byInstanceId": card.id }])
         );
         let types = types_of(&events);
@@ -397,7 +394,7 @@ mod b5_e10_end_your_turn_r456 {
                 == drawn_id
         }));
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::TurnCutShort)),
+            json_of(events_of_type(&events, GameEventType::TurnCutShort)),
             json!([{ "type": "turnCutShort", "player": "p2", "byInstanceId": drawn_id }])
         );
         let p2_ended = events
@@ -442,12 +439,12 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         // R169: the rider is a badge on both seats.
         let badge = json!({ "label": "Your turn ends after 1 more action" });
         assert!(
-            to_json(&view_for(&started, PlayerId::P2).you.modifiers)
+            json_of(&view_for(&started, PlayerId::P2).you.modifiers)
                 .as_array()
                 .is_some_and(|modifiers| modifiers.iter().any(|modifier| matches_object(modifier, &badge)))
         );
         assert!(
-            to_json(&view_for(&started, PlayerId::P1).opponent.modifiers)
+            json_of(&view_for(&started, PlayerId::P1).opponent.modifiers)
                 .as_array()
                 .is_some_and(|modifiers| modifiers.iter().any(|modifier| matches_object(modifier, &badge)))
         );
@@ -458,7 +455,7 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         assert_eq!(turn_fx::notes(&after), vec!["marker:p2"]);
         assert_eq!(after.active, PlayerId::P1);
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::TurnCutShort)),
+            json_of(events_of_type(&events, GameEventType::TurnCutShort)),
             json!([{ "type": "turnCutShort", "player": "p2", "byInstanceId": radiant_tempo_id }])
         );
     }
@@ -586,7 +583,7 @@ mod b5_e10_the_opponents_trap_ends_the_turn_r456_the_ai_card_rate_limit {
         assert_eq!(turn_fx::notes(&after), vec!["marker:p1"]);
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::TurnCutShort)),
+            json_of(events_of_type(&events, GameEventType::TurnCutShort)),
             json!([{ "type": "turnCutShort", "player": "p1", "byInstanceId": trap.id }])
         );
         let types = types_of(&events);

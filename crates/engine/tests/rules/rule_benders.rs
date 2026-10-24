@@ -376,13 +376,7 @@ mod r943 {
         let mut cursor: u32 = 1;
         let minted = new_instance(&mut cursor, "core-001", P1, Zone::Hand { player: P1 });
         assert_eq!(minted.created, Some(true), "a minted instance is Created");
-        let deck: Vec<String> = [
-            "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
-            "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
-            "core-017", "core-018", "core-019", "core-020",
-        ]
-        .map(String::from)
-        .to_vec();
+        let deck: Vec<String> = (1..=DECK_SIZE).map(|n| format!("core-{n:03}")).collect();
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: "benders-created-shipped".to_string(),
             decks: (deck.clone(), deck),

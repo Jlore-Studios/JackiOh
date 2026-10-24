@@ -9,7 +9,7 @@ use crate::replay::{canonical, fnv1a32_utf16};
 use crate::wire::{DuosAction, DuosCreateOptions};
 
 use super::reduce::{duos_begin, duos_reduce};
-use super::state::{DuosState, duos_create};
+use super::state::{DuosState, duos_create_recorded};
 
 /// What a Duos fold starts from: the setup and the accepted actions, in order.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -38,10 +38,10 @@ pub fn duos_hash(state: &DuosState) -> String {
     fnv1a32_utf16(&canonical(&value))
 }
 
-/// Create, begin, then apply the log in order, stopping at the first refused action. Panics as
-/// `duos_create` does on a setup `create_game` refuses.
+/// Create (as a game already made, R1705003), begin, then apply the log in order, stopping at the
+/// first refused action. Panics as `duos_create` does on a setup `create_recorded_game` refuses.
 pub fn duos_fold(input: &DuosReplayInput) -> DuosReplayResult {
-    let mut state = duos_begin(&duos_create(&input.options)).state;
+    let mut state = duos_begin(&duos_create_recorded(&input.options)).state;
     let mut refused_at: Option<usize> = None;
     for (at, action) in input.log.iter().enumerate() {
         let result = duos_reduce(&state, action);

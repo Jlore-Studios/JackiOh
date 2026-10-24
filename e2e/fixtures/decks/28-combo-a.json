@@ -1,7 +1,7 @@
 {
   "id": "28-combo-a",
   "spec": "28-patch-011-ui.cy.ts",
-  "description": "Player 1's deck for spec 28's Combo-Index case (R372): spec 03's player-1 deck with #28 Knockoff Temu Glowy Jelly Bean swapped for #93 Combo-Index, so the other nineteen are spec 03's choice-free filler that never opens a picker and has no Trap, Cast-on-draw or Quickdraw card. Seed 28-combo-16 deals Combo-Index into player 1's opening hand, so player 1 can play it on its third turn with three mana. Its own play is the one card played that turn, which meets grade E's threshold of one, so the end of that turn raises it to D: the badge reads E, then D.",
+  "description": "Player 1's deck for spec 28's Combo-Index case (R372): spec 03's player-1 deck with #28 Knockoff Temu Glowy Jelly Bean swapped for #93 Combo-Index, so the other nineteen are spec 03's choice-free filler that never opens a picker and has no Trap, Cast-on-draw or Quickdraw card. Seed 28-combo-16 deals Combo-Index into player 1's opening hand, so player 1 can play it on its third turn with three mana. Its own play is the one card played that turn, which meets grade E's threshold of one, so the end of that turn raises it to D: the badge reads E, then D. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-003",
     "core-005",
@@ -23,5 +23,12 @@
     "core-081",
     "core-091",
     "core-092"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

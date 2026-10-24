@@ -1,7 +1,7 @@
 {
   "id": "17-live-a",
   "spec": "17-card-showcase-and-hovers.cy.ts",
-  "description": "Player 1's deck for spec 17's cards-in-play test (SPEC §10.10, R243, R247): #98 Heroic Power (Quickdraw, so it is always in the opening hand, and its text in play is the one power it rolled), #82 KY's Trial (its Discover offers three numbers and no card faces) and #95 Call to Chaos (its rules box reads ??? in play). The other seventeen are 08-do-nothing-a's cards without #55, #66 and #100: every one costs 3 or more and asks nothing, so nothing resolves that the spec does not play. With seed 17-live-48 player 1 opens with Heroic Power, KY's Trial and Call to Chaos in hand on turn 1, with the 1 mana KY's Trial costs.",
+  "description": "Player 1's deck for spec 17's cards-in-play test (SPEC §10.10, R243, R247): #98 Heroic Power (Quickdraw, so it is always in the opening hand, and its text in play is the one power it rolled), #82 KY's Trial (its Discover offers three numbers and no card faces) and #95 Call to Chaos (its rules box reads ??? in play). The other seventeen are 08-do-nothing-a's cards without #55, #66 and #100: every one costs 3 or more and asks nothing, so nothing resolves that the spec does not play. With seed 17-live-48 player 1 opens with Heroic Power, KY's Trial and Call to Chaos in hand on turn 1, with the 1 mana KY's Trial costs. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-006",
     "core-013",
@@ -23,5 +23,12 @@
     "core-082",
     "core-095",
     "core-098"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

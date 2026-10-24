@@ -697,19 +697,33 @@ describe("R639 your table", () => {
     expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
   });
 
-  it("R639 R1584000 the floor shows the device's stats one at a time, and Clear forgets them", async () => {
+  it("R639 R1584000 R1743000 the floor shows the device's stats one at a time in a random order, a click moving on, and Clear forgets them", async () => {
     withGames(4, { "core-004": { seen: 4, played: 9 } });
-    render(<LandingRoute />);
+    render(<LandingRoute random={seeded(5)} />);
     await act(async () => {
       await vi.dynamicImportSettled();
     });
     const table = screen.getByTestId(landingTestid.stats);
-    expect(table.textContent).toContain("Old Faithful");
-    expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe("played 9×");
-    expect(table.querySelector('[data-def-id="core-004"]')).not.toBeNull();
-    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
-    expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("The Record");
-    expect(table.textContent).toContain("4 games: 4 won, 0 lost (100% won)");
+    // The six stats this tally has, with the words each says; none of them has a button of its own.
+    const lines: Record<string, string> = {
+      "Old Faithful": "played 9×",
+      Unbreakable: "played 9×, never destroyed",
+      "The Record": "4 games: 4 won, 0 lost (100% won)",
+      "Familiar Face": "in 4 of your 4 games",
+      Explorer: "1 different card played",
+      Collector: `seen 1 of ${String(ROTATION_POOL.length)} cards`,
+    };
+    const titles = (): string => screen.getByTestId(landingTestid.showcaseTitle).textContent ?? "";
+    const seen: string[] = [];
+    for (let i = 0; i < Object.keys(lines).length; i += 1) {
+      if (i > 0) fireEvent.click(screen.getByTestId(landingTestid.showcase));
+      seen.push(titles());
+      expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe(lines[titles()]);
+      expect(table.querySelector('[data-def-id="core-004"]')).not.toBeNull();
+    }
+    // Five clicks showed six different stats: each of them once, none repeated before all were shown.
+    expect([...seen].sort()).toEqual(Object.keys(lines).sort());
+    expect(table.querySelector("button[data-testid^='landing-showcase']")).toBeNull();
     fireEvent.click(screen.getByTestId(landingTestid.statsClear));
     expect(screen.queryByTestId(landingTestid.stats)).toBeNull();
   });

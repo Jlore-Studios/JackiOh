@@ -245,7 +245,7 @@ pub const AI_DECK: AiDeck = AiDeck {
     uncastable: 0.05,
     cost_slack: 1,
     min_pool: 45,
-    // R1370 (#549): "at least half the deck", 10 of 20 and 15 of a Hard deck's 30.
+    // R1370 (#549): "at least half the deck", 13 of a human's 25 and 18 of a Hard deck's 35 (R1705000).
     lean_min_share: 0.5,
     // R1370, chosen by measurement (`r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card`
     // holds it). It was 6 while the pool was 268 cards and Classic+, 78 of them, the newest set. The
@@ -256,8 +256,9 @@ pub const AI_DECK: AiDeck = AiDeck {
     // and 6-7% at 48, every other set's at 3% or less from 20 up. 48 is the smallest of those weights
     // at which every set that ships is forced into fewer than one deck in ten wherever the floor owes
     // at most two of its cards in five; Meditative+'s 25 and 30 owe 13 and 15 of its 26, and the floor
-    // forces a card into 18% and 32% of those, as it is there to. The boost stops once the floor is
-    // met, so the rest is dealt as without it.
+    // forces a card into 18% and 32% of those, as it is there to. Those were the sizes before #1705
+    // (R1705000); the test holds the same bound at a human's 25, Easy's 25, Medium's 30 and Hard's 35.
+    // The boost stops once the floor is met, so the rest is dealt as without it.
     lean_boost: 48.0,
     // R817000 (#817): "less Quickdraw bloat".
     max_quickdraw: 2,
@@ -730,8 +731,8 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     } else {
         (f64::from(size) * AI_DECK.theme_min_share).ceil() as i32
     };
-    // R1370: rounded up, so a handicap's 25-card deck owes 13 and a 30-card one 15. R1390: never on a
-    // gated set.
+    // R1370: rounded up, so a human's 25-card deck owes 13, Medium's 30 15 and Hard's 35 18. R1390:
+    // never on a gated set.
     let lean = ungated_lean(options.lean_set, gated);
     let lean_needed = if lean.is_none() {
         0
