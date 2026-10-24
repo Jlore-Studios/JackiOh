@@ -330,6 +330,7 @@
   "opponent backrow lane {lane}": "对手的后场，纵列{lane}",
   "Reserved zone": "预留的区域",
   "Held for a Reborn unit": "为复生单位保留",
+  "Held for {name} to return": "为{name}返回保留",
   "not connected to the match": "未连接到对局",
   "That’s too long to be a JackiOh deck code.": "这太长了，不可能是 JackiOh 卡组代码。",
   "Paste a deck code to import it.": "粘贴卡组代码即可导入。",
