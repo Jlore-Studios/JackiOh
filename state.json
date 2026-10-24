@@ -14335,6 +14335,13 @@
     "1787": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T09:01:44Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "two places (crates/server/tests/deploy and apps/web) and a person's ci.yml part, so 'one place' fails; the code itself is a one-line loop and one test"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
