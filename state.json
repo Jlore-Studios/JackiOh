@@ -12497,6 +12497,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "1800": {
+      "suggestion": true
+    },
     "1801": {
       "action": "revise",
       "audit_tier": "strong",
