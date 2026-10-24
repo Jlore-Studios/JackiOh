@@ -14,12 +14,12 @@ import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { INSPECT_DETAIL, INSPECT_HOVER } from "../cards/inspect/testids.ts";
 import { paths } from "../net/navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import { seeded } from "../test/random.ts";
 import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { dropPlayerStatsCache } from "../stats/store.ts";
+import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 import { gameBannerTestid } from "./GameBanner.tsx";
 import LandingRoute from "./landing.tsx";
 import {
@@ -53,20 +53,6 @@ const SLOW = { timeout: 5_000 } as const;
 
 type MeAnswer = "active" | "unauthorized" | "hang";
 
-function jsonResponse(status: number, body?: unknown): Response {
-  const text = body === undefined ? "" : JSON.stringify(body);
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: String(status),
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () =>
-      text === "" ? Promise.reject(new SyntaxError("empty body")) : Promise.resolve(JSON.parse(text)),
-    text: () => Promise.resolve(text),
-    clone: () => jsonResponse(status, body),
-  } as unknown as Response;
-}
-
 function serve(answer: MeAnswer): void {
   vi.stubGlobal(
     "fetch",
@@ -96,10 +82,6 @@ function serve(answer: MeAnswer): void {
   );
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
-}
-
 /** jsdom's fallback drops `pointerType`; install this subclass only when the probe detects that loss. */
 function ensurePointerEvent(): void {
   const win = document.defaultView;
@@ -126,10 +108,6 @@ function ensurePointerEvent(): void {
 beforeAll(() => {
   ensurePointerEvent();
 });
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
 
 function landing(): HTMLElement {
   return screen.getByTestId(landingTestid.root);
@@ -237,7 +215,7 @@ describe("B37 the corner slot", () => {
   });
 
   it("B37 signed in: shows landing-account, which leads to /account, and no landing-sign-in", async () => {
-    signedIn();
+    signIn();
     render(<LandingRoute />);
 
     const account = await screen.findByTestId(landingTestid.account, undefined, SLOW);
@@ -248,7 +226,7 @@ describe("B37 the corner slot", () => {
 
   it("B37 loading: the slot holds nothing while /api/auth/me is unanswered", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    signedIn();
+    signIn();
     serve("hang");
     render(<LandingRoute />);
 
@@ -267,7 +245,7 @@ describe("B37 the corner slot", () => {
   });
 
   it("B37 a token the server refuses is anonymous: the slot offers landing-sign-in", async () => {
-    signedIn();
+    signIn();
     serve("unauthorized");
     render(<LandingRoute />);
 
@@ -280,7 +258,7 @@ describe("B37 the corner slot", () => {
   });
 
   it("B37 a device that holds a session is offered landing-account, not sign-in, when /api/auth/me cannot be reached", async () => {
-    signedIn();
+    signIn();
     vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
     render(<LandingRoute />);
 
@@ -300,7 +278,7 @@ describe("B37 the corner slot", () => {
   });
 
   it("B37 the three doors are there whatever the slot shows", async () => {
-    signedIn();
+    signIn();
     serve("hang");
     render(<LandingRoute />);
     for (const [, testid] of CTAS) expect(within(landing()).getByTestId(testid)).toBeInTheDocument();
@@ -786,7 +764,7 @@ describe("R765 the main menu's live-game banner", () => {
   }
 
   it("R765 a signed-in player whose match is live sees the banner on top, and Rejoin is a link to the board", async () => {
-    signedIn();
+    signIn();
     serveInGame("m-3");
     render(<LandingRoute />);
 
@@ -800,7 +778,7 @@ describe("R765 the main menu's live-game banner", () => {
   });
 
   it("R765 between the games of a Conquest series it rejoins the series screen", async () => {
-    signedIn();
+    signIn();
     serveInGame(null, "s-3");
     render(<LandingRoute />);
     const rejoin = await screen.findByTestId(gameBannerTestid.rejoin, undefined, SLOW);
@@ -808,7 +786,7 @@ describe("R765 the main menu's live-game banner", () => {
   });
 
   it("R1566000 a player whose co-op game is live sees the banner, and Rejoin leads to /duos/<id>", async () => {
-    signedIn();
+    signIn();
     serveInGame(null, null, "d-3");
     render(<LandingRoute />);
 
@@ -818,7 +796,7 @@ describe("R765 the main menu's live-game banner", () => {
   });
 
   it("R765 no live game, or no account, shows no banner", async () => {
-    signedIn();
+    signIn();
     serveInGame(null);
     render(<LandingRoute />);
     await screen.findByTestId(landingTestid.account, undefined, SLOW);

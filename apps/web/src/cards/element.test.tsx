@@ -12,6 +12,7 @@ import { testid } from "../game/contract.ts";
 import type { PlayerView } from "@jackioh/shared";
 import { CATALOG } from "@jackioh/cards";
 import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 
 afterEach(() => {
   cleanup();
@@ -25,11 +26,6 @@ function withCatalog(node: ReactElement): ReactElement {
 
 function renderBoard(view: PlayerView): void {
   render(withCatalog(<Board view={view} />));
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
 }
 
 describe("R980 a card's element is printed on its face", () => {

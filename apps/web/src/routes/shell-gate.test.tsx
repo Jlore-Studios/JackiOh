@@ -24,6 +24,7 @@ import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
+import { at } from "../test/stubServer.ts";
 import { accountTestid } from "./account.tsx";
 import { playModeTestid, playTestid } from "./play.tsx";
 
@@ -79,10 +80,6 @@ function stubFetch(answer: (url: string) => Response | "hang" | "reject"): strin
     }),
   );
   return urls;
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 async function flushMicrotasks(): Promise<void> {
