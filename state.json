@@ -14368,6 +14368,11 @@
       "taken_asks": []
     },
     "1788": {
+      "cleared": {
+        "at": "2026-10-24T09:14:42Z",
+        "by": "`claude` (strong)",
+        "sha": "85bafabb05e38a19e43b3bae076d878f41531024"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-24T07:27:44Z",
