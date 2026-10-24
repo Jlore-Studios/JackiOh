@@ -12678,7 +12678,7 @@
       "provider": "claude-8",
       "queued_at": "2026-10-24T17:17:02Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:e431bf0b-1792869302",
+      "run_id": "40124467217",
       "started_at": "2026-10-24T19:15:25Z",
       "stop_requested": false,
       "suggestion": true,
