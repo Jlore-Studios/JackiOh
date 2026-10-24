@@ -13073,7 +13073,7 @@
       "provider": "claude-4",
       "queued_at": "2026-10-24T19:45:30Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:2d1f303e-1792871823",
+      "run_id": "40127628902",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-24T19:57:29Z",
