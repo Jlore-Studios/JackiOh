@@ -24,7 +24,7 @@ import {
 import { exposeAudioDebug, type AudioDebugHandle } from "./debug.ts";
 import { createAudioEngine, getAudioEngine, setAudioEngineForTests } from "./engine.ts";
 import { readAudioSettings, resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
-import { FakeClock, FakeFetch, fakeContextFactory } from "./test/fakeAudio.ts";
+import { FakeClock, FakeFetch, fakeAudioEngine, fakeContextFactory, type FakeAudioEngine } from "./test/fakeAudio.ts";
 import type { AudioEngine, AudioState, PlayedCue, SoundSink } from "./types.ts";
 import { installUiSounds } from "./uiSounds.ts";
 import { CARD_AUDIO, voiceKeysForView } from "./voiceData.ts";
@@ -37,32 +37,17 @@ import { setReducedMotion } from "../test/setup.ts";
  * Fixtures
  * --------------------------------------------------------------------------------------------- */
 
-type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
-
 /** A stand-in for the singleton: records every call, plays nothing. */
-function fakeEngine(options: { state?: AudioState; contexts?: number; log?: PlayedCue[] } = {}): FakeEngine {
+function recordingEngine(options: { state?: AudioState; contexts?: number; log?: PlayedCue[] } = {}): FakeAudioEngine {
   const log: PlayedCue[] = [...(options.log ?? [])];
-  const engine: FakeEngine = {
+  return fakeAudioEngine({
     state: vi.fn<AudioEngine["state"]>(() => options.state ?? "locked"),
-    unlock: vi.fn<AudioEngine["unlock"]>(),
-    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-    setBusy: vi.fn<AudioEngine["setBusy"]>(),
     log: vi.fn<AudioEngine["log"]>(() => log),
     clearLog: vi.fn<AudioEngine["clearLog"]>(() => {
       log.length = 0;
     }),
     contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => options.contexts ?? 0),
-    speaking: vi.fn<AudioEngine["speaking"]>(() => false),
-    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
-    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-    dispose: vi.fn<AudioEngine["dispose"]>(),
-    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
-    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
-  };
-  return engine;
+  });
 }
 
 function renderGame(view: PlayerView) {
@@ -154,7 +139,7 @@ describe("B28 Game plays sound in step with its runner", () => {
 
   it("B28 a unit's play line reaches the engine when the runner starts its entry, not when the view arrives", () => {
     vi.useFakeTimers();
-    const engine = fakeEngine();
+    const engine = recordingEngine();
     setAudioEngineForTests(engine);
     const first = baseView();
     const { rerender } = renderGame(first);
@@ -180,7 +165,7 @@ describe("B28 Game plays sound in step with its runner", () => {
   it("B28 under reduced motion the play line arrives through the flush, once", () => {
     setReducedMotion(true);
     vi.useFakeTimers();
-    const engine = fakeEngine();
+    const engine = recordingEngine();
     setAudioEngineForTests(engine);
     const first = baseView();
     const { rerender } = renderGame(first);
@@ -196,7 +181,7 @@ describe("B28 Game plays sound in step with its runner", () => {
   });
 
   it("B2 inside Game, the first click unlocks the engine", () => {
-    const engine = fakeEngine({ state: "locked" });
+    const engine = recordingEngine({ state: "locked" });
     setAudioEngineForTests(engine);
     renderGame(baseView());
     expect(engine.unlock).not.toHaveBeenCalled();
@@ -207,7 +192,7 @@ describe("B28 Game plays sound in step with its runner", () => {
   });
 
   it("B31 inside Game, clicking an enabled button plays uiClick", () => {
-    const engine = fakeEngine({ state: "running" });
+    const engine = recordingEngine({ state: "running" });
     setAudioEngineForTests(engine);
     renderGame(baseView());
 
@@ -567,7 +552,7 @@ describe("B31 UI click and hover sounds", () => {
 describe("B32 window.__jackiohAudio", () => {
   it("B32 mounting Game exposes the singleton's state, log, clearLog and contextsCreated, and unmounting removes it", () => {
     const entry: PlayedCue = { kind: "sfx", id: "draw", delayMs: 0, atMs: 12 };
-    const engine = fakeEngine({ state: "suspended", contexts: 1, log: [entry] });
+    const engine = recordingEngine({ state: "suspended", contexts: 1, log: [entry] });
     setAudioEngineForTests(engine);
     expect(window.__jackiohAudio).toBeUndefined();
 
@@ -596,7 +581,7 @@ describe("B32 window.__jackiohAudio", () => {
   });
 
   it("B32 exposeAudioDebug sets the handle and its remover deletes it", () => {
-    const engine = fakeEngine({ state: "running", contexts: 1 });
+    const engine = recordingEngine({ state: "running", contexts: 1 });
     const off = exposeAudioDebug(engine);
 
     expect(window.__jackiohAudio?.state()).toBe("running");
@@ -605,7 +590,7 @@ describe("B32 window.__jackiohAudio", () => {
   });
 
   it("B32 the remover leaves a handle that is no longer its own", () => {
-    const off = exposeAudioDebug(fakeEngine());
+    const off = exposeAudioDebug(recordingEngine());
     const other: AudioDebugHandle = {
       state: () => "running",
       log: () => [],
@@ -628,7 +613,7 @@ describe("B32 window.__jackiohAudio", () => {
 
 describe("B44 Game preloads the voice lines each view makes likely, once the context runs", () => {
   it("B44 a running engine is asked for voiceKeysForView of the first view and of every new one", () => {
-    const engine = fakeEngine({ state: "running" });
+    const engine = recordingEngine({ state: "running" });
     setAudioEngineForTests(engine);
     const first = baseView({ you: emptySide("p1", { hand: [card({ defId: "core-004" }), card({ defId: "core-005" })] }) });
     const { rerender } = renderGame(first);
@@ -644,7 +629,7 @@ describe("B44 Game preloads the voice lines each view makes likely, once the con
 
   it("B44 an engine that is not running is never asked to preload", () => {
     for (const state of ["locked", "suspended", "unsupported"] as const) {
-      const engine = fakeEngine({ state });
+      const engine = recordingEngine({ state });
       setAudioEngineForTests(engine);
       const view = baseView({ you: emptySide("p1", { hand: [card({ defId: "core-004" })] }) });
       const { rerender, unmount } = renderGame(view);
@@ -677,7 +662,7 @@ function autoEndedTurns(): GameEvent[] {
 describe("B58 the board's animations hold background voice work", () => {
   it("B58 Game holds the engine busy while its runner has an entry in flight, before that entry's cues, and frees it at idle", () => {
     vi.useFakeTimers();
-    const engine = fakeEngine({ state: "running" });
+    const engine = recordingEngine({ state: "running" });
     setAudioEngineForTests(engine);
     const first = baseView();
     const { rerender, unmount } = renderGame(first);
@@ -755,7 +740,7 @@ describe("B58 the board's animations hold background voice work", () => {
 
 describe("B52 the unlock and the UI ticks are page-wide, installed once", () => {
   it("B52 the app root and a Game share one set of listeners: a click ticks once and unlocks once", () => {
-    const engine = fakeEngine({ state: "locked" });
+    const engine = recordingEngine({ state: "locked" });
     setAudioEngineForTests(engine);
     const releaseRoot = retainAppAudio();
     renderGame(baseView());
@@ -772,7 +757,7 @@ describe("B52 the unlock and the UI ticks are page-wide, installed once", () => 
   });
 
   it("B52 outside any Game, a held app root ticks on a button click, and a release takes the listeners off", () => {
-    const engine = fakeEngine({ state: "running" });
+    const engine = recordingEngine({ state: "running" });
     setAudioEngineForTests(engine);
     const root = mount(<button id="menu">Decks</button>);
     const release = retainAppAudio();
@@ -788,12 +773,12 @@ describe("B52 the unlock and the UI ticks are page-wide, installed once", () => 
   });
 
   it("B52 the listeners reach whichever engine is the singleton at the time of the event", () => {
-    const first = fakeEngine({ state: "running" });
+    const first = recordingEngine({ state: "running" });
     setAudioEngineForTests(first);
     const root = mount(<button id="menu">Play</button>);
     const release = retainAppAudio();
 
-    const second = fakeEngine({ state: "running" });
+    const second = recordingEngine({ state: "running" });
     setAudioEngineForTests(second);
     fireEvent.click(byId(root, "menu"));
 
@@ -809,7 +794,7 @@ describe("B52 the unlock and the UI ticks are page-wide, installed once", () => 
 
 describe("B54 changing a sound setting answers with a sound", () => {
   it("B54 unmuting with the toggle plays uiClick after the store says unmuted; muting plays nothing more", () => {
-    const engine = fakeEngine({ state: "running" });
+    const engine = recordingEngine({ state: "running" });
     setAudioEngineForTests(engine);
     writeAudioSettings({ muted: true });
     render(<AudioToggle />);
@@ -830,7 +815,7 @@ describe("B54 changing a sound setting answers with a sound", () => {
   });
 
   it("B54 the master and effects sliders tick as they move; the voice slider speaks its sample on release, at the lowest priority", () => {
-    const engine = fakeEngine({ state: "running" });
+    const engine = recordingEngine({ state: "running" });
     setAudioEngineForTests(engine);
     render(<AudioControls />);
 

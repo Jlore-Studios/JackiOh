@@ -57,6 +57,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::merged;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const SOFTLOCK: &str = "classicplus-077";
@@ -121,7 +122,7 @@ mod tests {
              {
                 let mut s = softlock(false, json!({ "field": [ARMORED], "backrow": [MANA_WELL] }), json!({}));
                 s.play(SOFTLOCK, json!({}));
-                let hand: Vec<String> = s.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+                let hand = def_ids(&s.hand(P1));
                 assert_eq!(hand, vec![VANILLA, TIMMY]);
                 let mut everywhere: Vec<Option<CardInstance>> = Vec::new();
                 everywhere.extend(s.hand(P1).into_iter().map(Some));

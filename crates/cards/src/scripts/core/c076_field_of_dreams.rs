@@ -60,6 +60,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -95,14 +96,6 @@ mod tests {
         let mut hand = vec![first];
         hand.extend(rest.iter().map(|id| json!(id)));
         Value::Array(hand)
-    }
-
-    fn hand_def_ids(s: &Scenario) -> Vec<String> {
-        s.pile(P1, "hand").into_iter().map(|card| card.def_id).collect()
-    }
-
-    fn graveyard_def_ids(s: &Scenario) -> Vec<String> {
-        s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect()
     }
 
     fn sorted(ids: &[&str]) -> Vec<String> {
@@ -144,9 +137,9 @@ mod tests {
             s.play(FIELD_OF_DREAMS, json!({}));
 
             // N = 4: the four filler cards are replaced, Field of Dreams never counts itself (§10.5 step 4).
-            assert_eq!(hand_def_ids(&s), [REMINISCE, REMINISCE, REMINISCE, REMINISCE]);
+            assert_eq!(def_ids(&s.pile(P1, "hand")), [REMINISCE, REMINISCE, REMINISCE, REMINISCE]);
             // R31: "Replaced cards go to the GY", which is the pool Reminisce discovers from (R50).
-            assert_eq!(sorted_owned(graveyard_def_ids(&s)), sorted(&FILLER));
+            assert_eq!(sorted_owned(def_ids(&s.pile(P1, "graveyard"))), sorted(&FILLER));
         }
 
         #[test]
@@ -173,7 +166,7 @@ mod tests {
             s.play(FIELD_OF_DREAMS, json!({}));
 
             s.expect_in_zone(&self_, "exile");
-            assert!(!graveyard_def_ids(&s).contains(&FIELD_OF_DREAMS.to_string()));
+            assert!(!def_ids(&s.pile(P1, "graveyard")).contains(&FIELD_OF_DREAMS.to_string()));
             // The order the card states: the hand is discarded, then replaced, then this is exiled.
             s.expect_events(json!(["cardPlayed", "discarded", "enteredGraveyard", "exiled"]));
         }
@@ -188,8 +181,8 @@ mod tests {
 
             s.play(FIELD_OF_DREAMS, json!({}));
 
-            assert!(hand_def_ids(&s).is_empty());
-            assert!(graveyard_def_ids(&s).is_empty());
+            assert!(def_ids(&s.pile(P1, "hand")).is_empty());
+            assert!(def_ids(&s.pile(P1, "graveyard")).is_empty());
             s.expect_in_zone(&self_, "exile");
         }
 
@@ -204,8 +197,8 @@ mod tests {
 
             // N ≤ HAND_CAP − 1 because Field of Dreams held a slot, and the copies arrive into an empty
             // hand, so the cap never bites: exactly 9 in hand and exactly the 9 originals in the GY.
-            assert_eq!(hand_def_ids(&s), vec![REMINISCE; 9]);
-            assert_eq!(sorted_owned(graveyard_def_ids(&s)), sorted(&NINE));
+            assert_eq!(def_ids(&s.pile(P1, "hand")), vec![REMINISCE; 9]);
+            assert_eq!(sorted_owned(def_ids(&s.pile(P1, "graveyard"))), sorted(&NINE));
         }
     }
 
@@ -232,7 +225,7 @@ mod tests {
             // §5.2, R74: "Radiant Reminisce" is the radiant flag on each created copy and nothing else.
             let radiant: Vec<bool> = hand.iter().map(|card| card.radiant).collect();
             assert_eq!(radiant, [true, true, true, true]);
-            assert_eq!(sorted_owned(graveyard_def_ids(&s)), sorted(&FILLER));
+            assert_eq!(sorted_owned(def_ids(&s.pile(P1, "graveyard"))), sorted(&FILLER));
         }
 
         #[test]
@@ -245,7 +238,7 @@ mod tests {
 
             s.play(FIELD_OF_DREAMS, json!({}));
 
-            assert!(hand_def_ids(&s).is_empty());
+            assert!(def_ids(&s.pile(P1, "hand")).is_empty());
             s.expect_in_zone(&self_, "exile");
         }
     }

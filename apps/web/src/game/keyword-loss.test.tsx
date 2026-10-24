@@ -18,6 +18,7 @@ import { keywordLossesFrom } from "./keywordLoss.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, emptySide, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 import { setReducedMotion } from "../test/setup.ts";
+import { must } from "../test/stubServer.ts";
 
 function readSheet(fromWeb: string): string {
   for (const candidate of [fromWeb, `apps/web/${fromWeb}`]) {
@@ -54,11 +55,6 @@ afterEach(() => {
   window.localStorage.clear();
   __resetSettingsForTests();
 });
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
-}
 
 const START: GameEvent[] = [{ type: "turnStarted", player: "p1", turn: 3 }];
 

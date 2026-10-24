@@ -29,17 +29,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { targetFor } from "./animations.ts";
 import Game from "./Game.tsx";
 import { fullBoardView, pendingFor } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 
 afterEach(cleanup);
 
 /* --------------------------------------------------------------------------------------------- *
  * The view: a full board, plus the three pieces of chrome that only appear on a condition.
  * --------------------------------------------------------------------------------------------- */
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
-}
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;

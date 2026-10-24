@@ -86,6 +86,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -282,7 +283,7 @@ mod tests {
 
             assert!(!s.card(SAINTESS).radiant);
             assert_eq!(
-                s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+                def_ids(&s.pile(P1, "graveyard")),
                 vec![SAINTESS.to_string()]
             );
         }
@@ -366,7 +367,7 @@ mod tests {
             expect_stats_or(&mut s, timmy, TIMMY, json!({ "attack": 6, "health": 6, "maxHealth": 6 }));
             // Every card left in the hand (True Strike was resolving, so it is not one of them).
             assert_eq!(
-                s.hand(P1).iter().map(|card| card.def_id.clone()).collect::<Vec<_>>(),
+                def_ids(&s.hand(P1)),
                 vec![TIMMY, STOCKPILE, BIGOT]
             );
             assert!(s.hand(P1).iter().all(|card| card.radiant));

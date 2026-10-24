@@ -116,6 +116,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -165,10 +166,6 @@ mod tests {
         (1..=5).map(|lane| s.unit(P1, lane).map(|card| card.def_id)).collect()
     }
 
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
-
     use crate::js;
 
     fn backrow_def(s: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
@@ -216,7 +213,7 @@ mod tests {
             for card in &cards {
                 s.expect_in_zone(card, "hand");
             }
-            assert_eq!(hand_defs(&s, P1), [STOCKPILE, VANILLA, MENACE, TIMMY]);
+            assert_eq!(def_ids(&s.hand(P1)), [STOCKPILE, VANILLA, MENACE, TIMMY]);
             s.expect_in_zone(SHADOWSTEP, "graveyard");
         }
 
@@ -253,7 +250,7 @@ mod tests {
             let token = s.card(RUSH_TOKEN).clone();
             s.play(BIG_FELINOR, json!({}));
             s.expect_in_zone(&token, "gone");
-            assert_eq!(hand_defs(&s, P1), [STOCKPILE, VANILLA]);
+            assert_eq!(def_ids(&s.hand(P1)), [STOCKPILE, VANILLA]);
         }
 
         #[test]
@@ -262,7 +259,7 @@ mod tests {
             let defender = s.card(DEFENDER).clone();
             s.play(BIG_FELINOR, json!({}));
             s.expect_in_zone(&defender, "field");
-            assert_eq!(hand_defs(&s, P1), [STOCKPILE, VANILLA]);
+            assert_eq!(def_ids(&s.hand(P1)), [STOCKPILE, VANILLA]);
         }
 
         #[test]

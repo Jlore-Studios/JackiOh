@@ -134,6 +134,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -292,7 +293,7 @@ mod tests {
 
                 assert_eq!(drawn(&s), 1);
                 s.expect_mana(P1, 3);
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+                let graveyard = def_ids(&s.pile(P1, "graveyard"));
                 assert!(graveyard.contains(&BREATH.to_string()));
             }
 

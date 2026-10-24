@@ -35,6 +35,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -93,7 +94,7 @@ mod tests {
 
             s.play("core-051-1", json!({})).expect_in_zone("core-051-1", "graveyard");
             // R50: which is why #72 Reminisce can then Discover it back out of the graveyard.
-            let graveyard: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+            let graveyard = def_ids(&s.pile(P1, "graveyard"));
             assert!(graveyard.contains(&"core-051-1".to_string()));
         }
 
@@ -111,7 +112,7 @@ mod tests {
             // Still p1's own turn, so every number below belongs to the play above (§2.5).
             assert_eq!(s.state().active, P1);
             // Nothing was drawn: the hand holds the anchor and nothing else.
-            let hand: Vec<String> = s.pile(P1, "hand").iter().map(|card| card.def_id.clone()).collect();
+            let hand = def_ids(&s.pile(P1, "hand"));
             assert_eq!(hand, vec![ANCHOR.to_string()]);
             assert_eq!(s.state().players.p1.turn_log.cards_played, 1);
             // §2.4/R3: no card is drawn, so no `drawn` event — the fatigue damage instance is what happened.
@@ -137,7 +138,7 @@ mod tests {
 
             assert_eq!(s.state().players.p1.library.len(), 1);
             assert_eq!(s.state().players.p1.hand.len(), 2);
-            let hand: Vec<String> = s.pile(P1, "hand").iter().map(|card| card.def_id.clone()).collect();
+            let hand = def_ids(&s.pile(P1, "hand"));
             assert_eq!(hand, vec!["core-005".to_string(), "core-016".to_string()]);
         }
 

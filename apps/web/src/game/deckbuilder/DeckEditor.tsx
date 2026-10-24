@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
-import type { CatalogSnapshot, Collection } from "@jackioh/validator";
+import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validator";
 import { portraitOrDefault } from "@jackioh/shared";
 
 import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
@@ -185,6 +185,16 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     () => deckVerdict(deck, catalog, collection, limits.nameLength),
     [deck, catalog, collection, limits.nameLength],
   );
+  // The verdict's first error naming each card, for that card's tile; one naming no card (L2) stays in
+  // the verdict box only. The tile shows the validator's words and checks nothing (CLAUDE.md rule 7).
+  const cardIssues = useMemo(() => {
+    const named = new Map<string, LoadoutError>();
+    if (verdict.ok) return named;
+    for (const issue of verdict.errors) {
+      if (issue.cardId !== undefined && !named.has(issue.cardId)) named.set(issue.cardId, issue);
+    }
+    return named;
+  }, [verdict]);
   const code = useMemo(() => (codeShown ? encodeDeckCode(label, deck.cards, catalog) : ""), [codeShown, label, deck.cards, catalog]);
   // R915005: the "Custom" chip, once the catalog holds one of the account's custom cards.
   const sets = useMemo(
@@ -379,6 +389,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           cards={deck.cards}
           catalog={catalog}
           conflicts={conflicts}
+          issues={cardIssues}
           head={head}
           onDropCard={drop}
           onRemove={remove}

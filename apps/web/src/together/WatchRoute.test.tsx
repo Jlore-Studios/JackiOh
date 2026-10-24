@@ -23,7 +23,7 @@ import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import type { Friend } from "../net/social.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
-import { must, stubServer } from "../test/stubServer.ts";
+import { must, signIn, stubServer } from "../test/stubServer.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { WatchRoute } from "./WatchRoute.tsx";
 
@@ -47,10 +47,6 @@ function serve(): void {
     if (call.method === "GET" && call.path === "/api/catalog") return { status: 200, body: { version: "v1", defs: {} } };
     return undefined;
   });
-}
-
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-watch" }));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -131,7 +127,7 @@ beforeEach(() => {
   sockets = [];
   vi.stubGlobal("WebSocket", FakeWatchSocket);
   window.localStorage.clear();
-  signedIn();
+  signIn("tok-watch");
   serve();
 });
 

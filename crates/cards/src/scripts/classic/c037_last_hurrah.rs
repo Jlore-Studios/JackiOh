@@ -44,6 +44,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::merged;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const HURRAH: &str = "classic-037";
@@ -106,7 +107,7 @@ mod tests {
                 s.play(HURRAH, json!({}));
 
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 0);
-                let hand: Vec<String> = s.hand(PlayerId::P1).iter().map(|card| card.def_id.clone()).collect();
+                let hand = def_ids(&s.hand(PlayerId::P1));
                 let mut want = vec!["core-010"];
                 want.extend(DECK);
                 assert_eq!(hand, want);
@@ -128,8 +129,7 @@ mod tests {
                 assert_eq!(s.hand(PlayerId::P1).len(), HAND_CAP as usize);
                 assert_eq!(s.pile(PlayerId::P1, "library").len(), 0);
                 assert_eq!(count(s.last_events(), "burned"), DECK.len() - 1);
-                let grave: Vec<String> =
-                    s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 let burnt_ones: Vec<String> = [MENACE, POINTMASTER, FELINORS].iter().map(|id| id.to_string()).collect();
                 assert!(contains_all(&grave, &burnt_ones));
                 // R317: both players read which cards burned; the one kept in hand stays unread by p2.

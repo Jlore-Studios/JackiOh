@@ -72,6 +72,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -108,10 +109,6 @@ mod tests {
 
     fn ids(s: &Scenario, def_ids: &[&str]) -> Vec<String> {
         def_ids.iter().map(|def_id| s.card(*def_id).id.clone()).collect()
-    }
-
-    fn def_ids(cards: Vec<CardInstance>) -> Vec<String> {
-        cards.into_iter().map(|card| card.def_id).collect()
     }
 
     mod c_56_spell_tyrant {
@@ -200,8 +197,8 @@ mod tests {
                     (2..=5).map(|lane| s.unit(P1, lane).map(|unit| unit.def_id)).collect::<Vec<Option<String>>>(),
                     vec![Some("core-t-felinor".to_string()); 4],
                 );
-                assert_eq!(def_ids(s.pile(P1, "exile")), vec![STOCKPILE, FRIENDS]);
-                assert_eq!(def_ids(s.pile(P1, "graveyard")), vec![SPEK]);
+                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![STOCKPILE, FRIENDS]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![SPEK]);
             }
 
             #[test]
@@ -224,7 +221,7 @@ mod tests {
                 s.play(TYRANT, json!({}));
                 s.answer(json!([]));
                 assert_eq!(played(&s), vec![TYRANT]);
-                assert_eq!(def_ids(s.pile(P1, "graveyard")), vec![STOCKPILE, SPEK]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![STOCKPILE, SPEK]);
             }
 
             #[test]
@@ -263,7 +260,7 @@ mod tests {
                 s.answer(json!(menace));
                 s.expect_stats(MENACE, json!({ "health": 6 }));
                 assert_eq!(played(&s), vec![TYRANT, LUNAR, STOCKPILE]);
-                assert_eq!(def_ids(s.pile(P1, "exile")), vec![LUNAR, STOCKPILE]);
+                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![LUNAR, STOCKPILE]);
             }
 
             #[test]
@@ -292,7 +289,7 @@ mod tests {
                 assert_eq!(frozen.state, live.state);
                 assert_eq!(frozen.events, live.events);
                 assert_eq!(live.state.players.p2.hero.health, 27);
-                assert_eq!(def_ids(live.state.players.p1.exile.clone()), vec![LUNAR, STOCKPILE]);
+                assert_eq!(def_ids(&live.state.players.p1.exile), vec![LUNAR, STOCKPILE]);
             }
 
             #[test]
@@ -345,8 +342,8 @@ mod tests {
                 }));
                 s.play(TYRANT, json!({}));
                 assert_eq!(played(&s), vec![TYRANT, STOCKPILE, SPEK, FRIENDS]);
-                assert_eq!(def_ids(s.pile(P1, "exile")), vec![STOCKPILE, SPEK, FRIENDS]);
-                assert_eq!(def_ids(s.pile(P1, "graveyard")), vec![VANILLA, MANA_WELL]);
+                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![STOCKPILE, SPEK, FRIENDS]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![VANILLA, MANA_WELL]);
                 s.expect_stats(TYRANT, json!({ "attack": 10, "health": 10 }));
                 assert_eq!(cards_played_this_turn(s.state(), P1), 4);
             }

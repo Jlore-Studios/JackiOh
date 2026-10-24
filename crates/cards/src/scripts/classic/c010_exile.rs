@@ -108,6 +108,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -147,10 +148,6 @@ mod tests {
     }
 
     use crate::js;
-
-    fn defs(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
-    }
 
     #[test]
     fn is_a_trap_on_both_faces_whose_condition_lives_in_when_r99() {
@@ -291,7 +288,7 @@ mod tests {
             assert!(!announced.map(Value::to_string).unwrap_or_default().contains(BEAR));
             let exiled = seen.iter().find(|event| event["type"] == "exiled");
             assert_eq!(exiled.map(|event| event["defId"].clone()), Some(json!(BEAR)));
-            assert_eq!(defs(&s.pile(P2, "exile")), [BEAR]);
+            assert_eq!(def_ids(&s.pile(P2, "exile")), [BEAR]);
         }
 
         #[test]
@@ -405,7 +402,7 @@ mod tests {
             s.expect_in_zone(TIMMY, "exile");
             s.expect_in_zone(&dormant, "field");
             assert_eq!(s.unit(P2, 1).map(|card| card.def_id), Some(MENACE.to_string()));
-            assert_eq!(defs(&s.pile(P2, "exile")), [TIMMY]);
+            assert_eq!(def_ids(&s.pile(P2, "exile")), [TIMMY]);
         }
 
         #[test]

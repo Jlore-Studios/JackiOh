@@ -26,6 +26,7 @@ import { answerPrompts, devDeck, handDefId, playOf, realGame, type RealGame } fr
 import type { AudioEngine, CardAudioTable, CardHook, PlayableLineKind, SfxId, SfxParams, SoundSink } from "./types.ts";
 import { newEventsSince, planEntries, sameOccurrence, type AnimationEntry } from "../game/animations.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 
 // Fixtures
 
@@ -155,11 +156,6 @@ function begin(director: SoundDirector, events: GameEvent[], first: PlayerView =
 
 function entriesOf(view: PlayerView, events: readonly GameEvent[], reducedMotion = false): AnimationEntry[] {
   return planEntries(events, view, reducedMotion);
-}
-
-function must<T>(value: T | undefined, what: string): T {
-  if (value === undefined) throw new Error(`expected ${what}`);
-  return value;
 }
 
 // B24: cues play when an entry starts

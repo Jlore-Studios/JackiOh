@@ -90,6 +90,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script, script_v0_4_4b};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -193,8 +194,8 @@ mod tests {
             .collect()
     }
 
-    fn def_ids(s: &Scenario, pile: &str) -> Vec<String> {
-        let mut ids: Vec<String> = s.pile(PlayerId::P1, pile).into_iter().map(|card| card.def_id).collect();
+    fn sorted_def_ids(s: &Scenario, pile: &str) -> Vec<String> {
+        let mut ids = def_ids(&s.pile(PlayerId::P1, pile));
         ids.sort();
         ids
     }
@@ -211,8 +212,8 @@ mod tests {
             library.extend(copies(2, STOCKPILE));
             let s = cast(library, "eugenics");
 
-            assert_eq!(def_ids(&s, "exile"), vec![STOCKPILE, STOCKPILE, VANILLA, VANILLA, VANILLA]);
-            assert_eq!(def_ids(&s, "library"), vec![MENACE, MENACE, PLAIN, PLAIN, PLAIN, PLAIN]);
+            assert_eq!(sorted_def_ids(&s, "exile"), vec![STOCKPILE, STOCKPILE, VANILLA, VANILLA, VANILLA]);
+            assert_eq!(sorted_def_ids(&s, "library"), vec![MENACE, MENACE, PLAIN, PLAIN, PLAIN, PLAIN]);
         }
 
         #[test]
@@ -227,8 +228,8 @@ mod tests {
             ];
             let s = cast(library, "eugenics-r65");
 
-            assert_eq!(def_ids(&s, "exile"), vec!["core-019", "core-024", "core-046", "core-056"]);
-            assert_eq!(def_ids(&s, "library"), vec![VANILLA, MENACE]);
+            assert_eq!(sorted_def_ids(&s, "exile"), vec!["core-019", "core-024", "core-046", "core-056"]);
+            assert_eq!(sorted_def_ids(&s, "library"), vec![VANILLA, MENACE]);
         }
 
         #[test]
