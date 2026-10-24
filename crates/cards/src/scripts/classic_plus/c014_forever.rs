@@ -39,6 +39,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -267,7 +268,7 @@ mod tests {
         fn the_floor_is_1_with_no_draw() {
             let mut s = forever(true, &[LUNAR], json!({}), json!({}));
             // Balance patch 1: the Radiant face draws nothing.
-            let held: Vec<String> = s.hand(P1).into_iter().map(|card| card.def_id).collect();
+            let held = def_ids(&s.hand(P1));
             assert_eq!(held, vec![LUNAR]);
             let id = lunar_in(&s);
             s.play(&id, json!({ "targets": at_hero() }));

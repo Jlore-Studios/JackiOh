@@ -71,6 +71,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -87,10 +88,6 @@ mod tests {
     const A: &str = "core-020";
     const B: &str = "core-001";
     const C: &str = "core-045";
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
 
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         [1, 2, 3, 4, 5].into_iter().map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
@@ -123,7 +120,7 @@ mod tests {
 
                 s.expect_in_zone(VANILLA, "graveyard").expect_in_zone(TITAN, "field");
                 s.expect_stats(TITAN, json!({ "attack": 6, "health": 6 }));
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR, A]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A]);
                 s.expect_health(P1, 23);
             }
 
@@ -233,7 +230,7 @@ mod tests {
                 s.attack(TITAN, "hero");
 
                 s.expect_health(P2, 24).expect_health(P1, 23);
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR, A]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A]);
                 s.expect_events(json!(["attackDeclared", "damage", "drawn", "healed"]));
             }
 
@@ -249,7 +246,7 @@ mod tests {
 
                 assert_eq!(s.state().active, P2);
                 assert!(s.events().iter().any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })));
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR, A]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A]);
                 s.expect_health(P1, 23);
             }
 
@@ -264,7 +261,7 @@ mod tests {
                 s.attack(TITAN, MENACE);
 
                 s.expect_in_zone(TITAN, "graveyard");
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR]);
                 s.expect_health(P1, 20);
             }
 
@@ -279,7 +276,7 @@ mod tests {
 
                 s.attack(TEMPO, TITAN);
 
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR]);
                 s.expect_health(P1, 20);
             }
 
@@ -292,7 +289,7 @@ mod tests {
                 }));
                 step_param(draw_up.card_mut(TITAN), "draw", 1);
                 draw_up.play(TITAN, json!({ "tributes": [VANILLA] }));
-                assert_eq!(hand_defs(&draw_up, P1), vec![ANCHOR, A, B]);
+                assert_eq!(def_ids(&draw_up.hand(P1)), vec![ANCHOR, A, B]);
                 draw_up.expect_health(P1, 23);
 
                 let mut heal_up = scenario(json!({
@@ -319,7 +316,7 @@ mod tests {
                 s.play(TITAN, json!({ "tributes": [VANILLA] }));
 
                 s.expect_stats(TITAN, json!({ "attack": 12, "health": 12 }));
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR, A, B]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A, B]);
                 s.expect_health(P1, 26);
             }
 
@@ -334,7 +331,7 @@ mod tests {
                 s.attack(TITAN, "hero");
 
                 s.expect_health(P2, 18).expect_health(P1, 26);
-                assert_eq!(hand_defs(&s, P1), vec![ANCHOR, A, B]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![ANCHOR, A, B]);
             }
 
             #[test]

@@ -58,6 +58,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -93,10 +94,6 @@ mod tests {
                 (action["type"] == "activate" || action["type"] == "activatePower") && action["instanceId"] == instance_id
             })
             .collect()
-    }
-
-    fn defs_of(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     /// The def ids a viewer reads in an exile pile of their view (`you` or `opponent`).
@@ -141,8 +138,8 @@ mod tests {
 
             s.expect_in_zone(&discarded, "graveyard");
             s.expect_in_zone(&bottom, "exile");
-            assert_eq!(defs_of(&s.pile(P2, "library")), [VANILLA, TIMMY]);
-            assert_eq!(defs_of(&s.pile(P2, "exile")), [POINTMASTER]);
+            assert_eq!(def_ids(&s.pile(P2, "library")), [VANILLA, TIMMY]);
+            assert_eq!(def_ids(&s.pile(P2, "exile")), [POINTMASTER]);
             s.expect_events(json!(["activated", "discarded", "exiled"]));
         }
 
@@ -296,13 +293,13 @@ mod tests {
             let mut up = setup(json!({ "hand": [FILLER], "field": [NOSE] }), json!({}));
             step_param(up.card_mut(NOSE), "exile", 1);
             up.activate(NOSE, json!({}));
-            assert_eq!(defs_of(&up.pile(P2, "exile")), [POINTMASTER, TIMMY]);
-            assert_eq!(defs_of(&up.pile(P2, "library")), [VANILLA]);
+            assert_eq!(def_ids(&up.pile(P2, "exile")), [POINTMASTER, TIMMY]);
+            assert_eq!(def_ids(&up.pile(P2, "library")), [VANILLA]);
 
             let mut down = setup(json!({ "hand": [FILLER], "field": [NOSE] }), json!({}));
             step_param(down.card_mut(NOSE), "exile", -1);
             down.activate(NOSE, json!({}));
-            assert_eq!(defs_of(&down.pile(P2, "exile")), [POINTMASTER]);
+            assert_eq!(def_ids(&down.pile(P2, "exile")), [POINTMASTER]);
         }
     }
 
@@ -326,7 +323,7 @@ mod tests {
             s.activate(NOSE, json!({}));
 
             s.expect_in_zone(&menace, "exile");
-            let mut exiled = defs_of(&s.pile(P2, "exile"));
+            let mut exiled = def_ids(&s.pile(P2, "exile"));
             exiled.sort();
             let mut expected = vec![MENACE.to_string(), POINTMASTER.to_string()];
             expected.sort();
@@ -354,7 +351,7 @@ mod tests {
 
             s.activate(NOSE, json!({}));
 
-            assert_eq!(defs_of(&s.pile(P2, "exile")), [POINTMASTER]);
+            assert_eq!(def_ids(&s.pile(P2, "exile")), [POINTMASTER]);
         }
 
         #[test]

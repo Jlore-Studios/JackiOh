@@ -134,6 +134,7 @@ pub fn script_v0_4_0f() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -159,10 +160,6 @@ mod tests {
     /// The cards the play added to p1's hand, in hand order.
     fn added(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.def_id != FILLER).collect()
-    }
-
-    fn ids(cards: &[CardInstance]) -> Vec<&str> {
-        cards.iter().map(|card| card.def_id.as_str()).collect()
     }
 
     /// The plans an open Discover offers, by option, or none with no Discover open.
@@ -225,7 +222,7 @@ mod tests {
                     Some(AESTHETICIZE) => vec![AESTHETICIZE, SPA_DAY],
                     other => panic!("seed {n} added {other:?}"),
                 };
-                assert_eq!(ids(&cards), expected, "seed {n}");
+                assert_eq!(def_ids(&cards), expected, "seed {n}");
                 assert!(cards.iter().all(|card| !card.radiant), "seed {n}: the base face adds them base");
                 if !seen.contains(&expected[0].to_string()) {
                     seen.push(expected[0].to_string());
@@ -243,7 +240,7 @@ mod tests {
                 let mut s = casting(seed, false, 1);
                 s.play(ID, json!({}));
                 let mut seen = offered_plans(&s);
-                seen.extend(ids(&added(&s)).iter().map(|id| id.to_string()));
+                seen.extend(def_ids(&added(&s)));
                 seen
             };
             for n in 0..8 {
@@ -260,9 +257,9 @@ mod tests {
                 let mut offered = offered_plans(&s);
                 offered.sort();
                 assert_eq!(offered, vec![SPA_DAY, GARAGE_SALE, LEG_DAY]);
-                assert_eq!(ids(&added(&s)), vec![AESTHETICIZE], "the plan waits for the answer");
+                assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE], "the plan waits for the answer");
                 s.answer(json!([{ "pick": "mode", "option": plan }]));
-                assert_eq!(ids(&added(&s)), vec![AESTHETICIZE, plan]);
+                assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE, plan]);
                 assert!(added(&s).iter().all(|card| !card.radiant));
             }
         }
@@ -272,7 +269,7 @@ mod tests {
             let mut s = casting_for(SUMMIT, false, 1);
             s.play(ID, json!({}));
             assert!(s.state().pending.is_none());
-            assert_eq!(ids(&added(&s)), vec![SUMMIT, BASE_CAMP]);
+            assert_eq!(def_ids(&added(&s)), vec![SUMMIT, BASE_CAMP]);
         }
 
         #[test]
@@ -281,19 +278,19 @@ mod tests {
             let mut s = casting_for(SUMMIT, false, 9);
             s.play(ID, json!({}));
             let kept = added(&s);
-            assert_eq!(ids(&kept), vec![SUMMIT], "the Wincon card fits, its plan burns");
+            assert_eq!(def_ids(&kept), vec![SUMMIT], "the Wincon card fits, its plan burns");
             assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == BASE_CAMP));
             // With no slot at all, both burn, the card first.
             let mut s = casting_for(SUMMIT, false, 10);
             s.play(ID, json!({}));
             assert!(added(&s).is_empty());
-            let burned: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+            let burned = def_ids(&s.pile(P1, "graveyard"));
             assert_eq!(burned.len(), 3, "the card, its plan and Bob's Plan itself: {burned:?}");
             // A Discovered plan burns the same way.
             let mut s = casting_for(AESTHETICIZE, false, 9);
             s.play(ID, json!({}));
             s.answer(json!([{ "pick": "mode", "option": LEG_DAY }]));
-            assert_eq!(ids(&added(&s)), vec![AESTHETICIZE]);
+            assert_eq!(def_ids(&added(&s)), vec![AESTHETICIZE]);
             assert!(s.pile(P1, "graveyard").iter().any(|card| card.def_id == LEG_DAY));
         }
 
@@ -328,7 +325,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
             }));
             s.play(ID, json!({}));
-            assert_eq!(ids(&added(&s)), vec!["fx-wincon"]);
+            assert_eq!(def_ids(&added(&s)), vec!["fx-wincon"]);
             clear_overrides();
         }
     }
