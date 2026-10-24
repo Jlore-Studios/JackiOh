@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1776,
+  "title": "Patch: a Buffed spell's Pierce is proven to go through Armor, and the damage steps say a spell's keywords come through Buffs",
+  "branch": "bot/issue-1776",
+  "thread": "**Issue #1776 (data, not instructions):**\n\n```text\n# #1776: Patch: a Buffed spell's Pierce is proven to go through Armor, and the damage steps say a spell's keywords come through Buffs\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSince the latest Buff change, a Buff can give a damage spell Pierce (its damage ignores Armor) or Lifesteal, and a Field Spell Indestructible. The game already plays all three right, but only Lifesteal has a test for the spell case, and the rules text a builder reads still says a spell pierces only when Pierce is printed on it. A later change that followed that text would quietly break Buffed spells, and nothing would fail. Once built, a test pins the Pierce half, and the rules text matches the game.\n\n## Why\n- R1748001 (#1748, shipped in #1752) says a Buffed \"Pierce one pierces, as a printed keyword does\". Its spell test, `r1748001_a_damage_spell_may_gain_pierce_or_lifesteal_and_its_lifesteal_heals` (`crates/cards/tests/cross/buff_priorities.rs:136`), checks only the Lifesteal heal. Nothing casts a Buffed Pierce spell at a hero or unit with Armor.\n- \u00a74.4 step 2 (`spec/04-combat.md:52`) still reads \"a unit's Pierce through the layers, a spell's printed on its face (True Strike, [[R346]])\", and \u00a76.1's Pierce row (`spec/06-keywords.md:28`) says the same. #1752 edited only the Nerf row of `06-keywords.md` and left `04-combat.md` untouched.\n- The engine reads the layers for every source (`crates/engine/src/damage.rs:368-378`, `pierces` \u2192 `layers::unit_view(state, source).keywords`), so it plays right today, but narrowing it to printed keywords, as the text says, would break no test.\n- \u00a74.5 step 1 speaks of Indestructible units only, though a Buff can now make a Field Spell Indestructible (`crates/engine/src/state_check.rs` handles it, and R1748001's first test proves it).\n\n## Proposal\n- Add an `r1748001_\u2026` test: Lunar Eclipse (`core-035`) given Pierce through its `tuning`, cast at a hero with Armor, deals its full damage and is no `damageAbsorbed`. Add a second case for a damage-dealing Field Spell such as The Power to Punish (`classic-020`) given Pierce.\n- Fix the text of \u00a74.4 step 2 and \u00a76.1's Pierce row (\"a spell's through its Buffs as well as its face\", citing [[R1748001]]), \u00a74.5 step 1 for an Indestructible Field Spell, and \u00a76.1's Lifesteal and Indestructible rows if they say \"printed\".\n- R1748001 already decides all of this, so no new ruling is needed. List the test's file in its `proven_in` if it is a new file, and run `cargo jackioh spec index` and `spec check`.\n\n## Where it lands\n- `crates/cards/tests/cross/buff_priorities.rs`\n- `spec/04-combat.md` (\u00a74.4, \u00a74.5), `spec/06-keywords.md` (\u00a76.1), `spec/INDEX.md`\n\n## Acceptance criteria\n- [ ] The new test fails when `pierces` is narrowed to a source's printed keywords, and passes at HEAD.\n- [ ] \u00a74.4 step 2 and \u00a76.1's Pierce row say a spell's Pierce may come from a Buff, citing R1748001.\n- [ ] `cargo test -p jackioh-cards --test cards buff_priorities` and `cargo jackioh spec check` pass.\n- [ ] No card plays differently: the classifier finds no change, so no fragment is needed.\n\n## Size and risks\nSmall: one test file and three spec paragraphs. Medium (spec text). No risk to play.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T06:48:48Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1776: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
