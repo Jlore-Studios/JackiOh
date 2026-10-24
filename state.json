@@ -13258,9 +13258,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-24T22:08:58Z",
+    "at": "2026-10-24T22:47:15Z",
     "url": "",
-    "what": "build #1816 on agy"
+    "what": "suggestions on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-24T22:37:53Z",
@@ -27693,11 +27693,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-24T22:15:03Z",
-    "last_run": "2026-10-24T10:06:43Z",
-    "provider": null,
+    "idle_since": "2026-10-24T22:47:15Z",
+    "last_run": "2026-10-24T22:47:15Z",
+    "provider": "claude-3",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:c5d42ae3-1792882026",
     "taken_asks": []
   },
   "usage": {
