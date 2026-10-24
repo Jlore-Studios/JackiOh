@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1792,
+  "title": "Patch: the browser tab says it is your move during the mulligan and when a prompt waits on you, not only on your turn",
+  "branch": "bot/issue-1792",
+  "thread": "**Issue #1792 (data, not instructions):**\n\n```text\n# #1792: Patch: the browser tab says it is your move during the mulligan and when a prompt waits on you, not only on your turn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn an online match the browser tab's title reads \"Your turn\", so a player who switched tabs can find the game. Today it follows only whose turn it is:\n- During the opening mulligan, the player going first sees \"Your turn\" the whole time, even after pressing Ready.\n- The player going second, who still has to choose, sees nothing.\n- A choice the game asks of you during your opponent's turn doesn't flag the tab either.\n\nOnce built, the tab is flagged exactly when the game is waiting on you.\n\n## Why\n- `apps/web/src/routes/match.tsx:325-328`: `yourTurn = view !== null && view.result === null && view.active === view.viewer`.\n- A new game's `active` is P1 (`crates/engine/src/state.rs:2119`) and stays P1 until the first turn starts (`turn.rs:383`), so P1 always reads as active during the mulligan.\n- The view already carries the mulligan as `PlayerView.mulligan` (`youReady`, `opponentReady`; `wire/generated/MulliganView.ts`, R265, R266). The title never reads it.\n- A prompt waiting on the viewer is `pending.forYou`. `promptHolderOf` (`match.tsx:66-70`) already works out who a prompt waits on, but the title doesn't use it.\n- The co-op table has the same rule (`apps/web/src/duos/DuosRoute.tsx:153-161`, `view.own.active === view.own.viewer`).\n- The only title test (`routes/match.test.tsx:558-568`) covers just the active-player case.\n\n## Proposal\nAdd one small pure helper, `awaitsYou(view)`. It is true only when there is no result and:\n- the mulligan is open and the viewer has not answered it (`!mulligan.youReady`); otherwise\n- a prompt is open and it is the viewer's (`pending.forYou`); otherwise\n- it is the viewer's turn (`active === viewer`).\n\nUse it for the 1v1 title, and on `view.own` for the co-op title, keeping co-op's `round > 0` and ended-duel checks. It reads only the view (CLAUDE.md rule 7).\n\n## Where it lands\n- `apps/web/src/routes/match.tsx`, `apps/web/src/duos/DuosRoute.tsx`\n- `apps/web/src/routes/match.test.tsx` and the co-op route's test\n- \u00a72.1 (the mulligan). No spec change.\n\n## Acceptance criteria\n- [ ] Mulligan open, viewer p2 not yet ready: the title is \"Your turn \u00b7 JackiOh\".\n- [ ] Mulligan open, viewer p1 already ready: the title is the match's plain title, even though `active` is p1.\n- [ ] On the opponent's turn, a prompt with `forYou: true` flags the title.\n- [ ] On the viewer's turn, a prompt waiting on the opponent does not flag it.\n- [ ] The existing active-player test still passes, and the co-op route gets the same mulligan and prompt cases.\n- [ ] The web test files touched, typecheck and eslint pass.\n\n## Size and risks\nExtra small: one helper, two call sites and a handful of tests. No risk to play: it changes only `document.title`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T17:12:39Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1792: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
