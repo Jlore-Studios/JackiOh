@@ -14062,11 +14062,17 @@
     "what": "build #1774 on devin"
   },
   "last_sweep": {
-    "at": "2026-10-24T07:01:39Z",
+    "at": "2026-10-24T07:11:22Z",
     "notes": [
-      "delivered build #1760 on claude-7 (run 40069476570): approved",
-      "started plan #1771 on claude-7 (run 40072590887)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-24T08:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 61%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 49h 57m; `muse` it refused a call; its limit resets at 2026-10-26T00:00:00Z; `agy` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-10-24T07:11:32Z; `gpt` it refused a call; its limit resets at 2026-10-27T18:45:27Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
+      "delivered plan #1771 on claude-7 (run 40072590887): planned",
+      "delivered plan #1774 on claude-8 (run 40072130485): planned",
+      "delivered plan #1779 on claude-2 (run 40070334540): planned",
+      "started plan #1778 on agy (run 40073267006)",
+      "started plan #1776 on claude-8 (run 40073288405)",
+      "started plan #1775 on claude-7 (run 40073307307)",
+      "started build #1771 on claude-2 (run 40073328144)",
+      "started build #1774 on devin (run 40073350398)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-24T08:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 61%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 49h 45m; `muse` it refused a call; its limit resets at 2026-10-26T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-10-27T18:45:27Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14772,7 +14778,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T07:01:39Z",
+  "loop_tick": "2026-10-24T07:11:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
