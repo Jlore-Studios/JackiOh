@@ -12418,6 +12418,13 @@
     "1803": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T15:43:35Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the planner gave no rating line"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "agy",
