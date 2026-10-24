@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1793,
+  "title": "Patch: the deck list marks each card that keeps the deck from being queued",
+  "branch": "bot/issue-1793",
+  "thread": "**Issue #1793 (data, not instructions):**\n\n```text\n# #1793: Patch: the deck list marks each card that keeps the deck from being queued\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSometimes a deck can't be used: it holds a card the player doesn't own enough copies of, a card that was banned or retired, a token, or a custom card. The deck editor lists these problems as sentences above the deck, but the cards themselves look like every other card in the list. After importing a deck code, the player has to hunt for each named card among twenty-five tiles. Once built, each problem card in the deck list carries a warning mark and says what's wrong on hover and to a screen reader, the way a card shared with another deck already does.\n\n## Why\n- The validator's per-card errors already name the card: `LoadoutError.cardId` (`crates/engine/src/validator.rs:125`, `apps/web/src/wire/generated/LoadoutError.ts`).\n- It is set by the L3, L5 (ownership), L6 and L7 rules (`validator.rs:323-461`).\n- `DeckEditor.tsx:300` collects those `errors` and draws them only as text (`DeckEditor.tsx:474-484`, `data-card={issue.cardId}` on a list item).\n- `DeckTile` (`DeckSidebar.tsx:96-157`) takes only `conflict`. Its flag, `title` and `aria-label` exist only for a card that is also in another deck.\n- The pool side already marks unowned cards (`PoolGrid.tsx:169`, `data-owned`), so the deck side is the odd one out.\n\n## Proposal\n- In `DeckEditor`, build a map from card id to the first error naming that card, and pass it to `DeckSidebar`.\n- `DeckTile` sets `data-issue={rule}`, adds the error's translated message to its `title` and `aria-label`, and shows the existing `db-tile-flag` mark in a warning tone.\n- Errors without a card id stay in the verdict box only.\n\nThe client decides nothing new. It shows the verdict the engine's validator already gave (CLAUDE.md rule 7).\n\n## Where it lands\n- `apps/web/src/game/deckbuilder/DeckEditor.tsx`, `DeckSidebar.tsx`, `deckbuilder.css`\n- `apps/web/src/game/deckbuilder/DeckWorkshop.test.tsx`\n- \u00a79.4's loadout rules, read and not changed. No spec change.\n\n## Acceptance criteria\n- [ ] In a deck with a card the collection owns none of, that card's tile has `data-issue=\"L5\"` and its accessible name includes the error's message.\n- [ ] A tile with no error has no `data-issue`.\n- [ ] A card that both clashes with another deck and has an error shows both reasons.\n- [ ] When the collection couldn't be read, no ownership marks appear, matching the editor's existing hint.\n- [ ] Every new string has its `zh-CN.json` entry (`i18n.test.ts`).\n- [ ] `pnpm --dir apps/web exec vitest run src/game/deckbuilder/DeckWorkshop.test.tsx`, typecheck and eslint pass.\n\n## Size and risks\nSmall: three files and a test. A tile's accessible name grows for a card in error, so a test that finds tiles by name may need its expected text updated. Test ids stay as they are.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T17:13:22Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1793: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
