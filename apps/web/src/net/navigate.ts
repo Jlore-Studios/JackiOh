@@ -21,16 +21,22 @@ function splitTarget(path: string): { pathname: string; search: string } {
   };
 }
 
-/** Avoid stacking history when a guard re-renders the current pathname and query. */
+/**
+ * Avoid stacking history when a guard re-renders the current pathname and query. A new pathname opens
+ * at the top (#1756), scrolled after the push so the entry left keeps its position for Back; a change
+ * of query or fragment alone keeps the scroll, and Back and Forward (`popstate`) are the browser's.
+ */
 export function navigate(path: string, options: { replace?: boolean } = {}): void {
   if (typeof window === "undefined") return;
   const target = splitTarget(path);
-  if (currentPath() === target.pathname && window.location.search === target.search) return;
+  const from = currentPath();
+  if (from === target.pathname && window.location.search === target.search) return;
   if (options.replace === true) {
     window.history.replaceState(null, "", path);
   } else {
     window.history.pushState(null, "", path);
   }
+  if (currentPath() !== from) window.scrollTo(0, 0);
   window.dispatchEvent(new Event(NAVIGATED));
 }
 
