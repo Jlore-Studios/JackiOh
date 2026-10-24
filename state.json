@@ -27265,6 +27265,12 @@
         "number": 1761,
         "title": "Patch: an e2e spec drives the together safety flows \u2014 report, block, unblock, remove",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-24T03:23:45Z",
+        "number": 1762,
+        "title": "Patch: the Luau lint refuses what makes a custom script's answer run-dependent",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-24T03:12:56Z",
