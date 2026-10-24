@@ -1170,7 +1170,6 @@ fn check_serial_restart(
         turn: live.turn,
         actions: log.len(),
     };
-    let started_at = Instant::now();
     let (step, was_paused) = checkpoint_step(&setup.stream("checkpoint-"), paused, log.len());
     register_all();
     let prefix = fold(&setup.fold_args(decks.clone(), log[..step].to_vec()));
@@ -1186,6 +1185,7 @@ fn check_serial_restart(
             at,
         ));
     }
+    let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, hash_state, round_trip)
         .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
     for action in &log[step..] {

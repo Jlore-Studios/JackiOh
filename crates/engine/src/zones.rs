@@ -1744,8 +1744,18 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     // R1040: a card set face-down as a Trap re-enters its backrow zone the Trap it was set as, since
     // a Unit or a Spell face never stands there on its own.
     let set_as = current.set_as.filter(|_| row == Row::Backrow);
+    // R444, R175: an X/X token's X/X is its printed face, so the reset keeps it.
+    let token_face = if is_unit_token(state, &current) {
+        Some((current.stats_override, current.armor_override))
+    } else {
+        None
+    };
     if let Some(live) = find_instance_mut(state, &current.id) {
         reset_instance(live);
+        if let Some((stats, armor)) = token_face {
+            live.stats_override = stats;
+            live.armor_override = armor;
+        }
         live.set_as = set_as;
         live.controller = player;
         live.summoned_turn = Some(turn);

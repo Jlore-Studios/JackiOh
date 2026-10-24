@@ -151,6 +151,7 @@ fn copy_riders(copy: &mut CardInstance, source: &CardInstance) {
     // MD-B15, R923: a copy keeps the granted tags of the card copied.
     copy.granted_tags = source.granted_tags.clone();
     copy.stats_override = source.stats_override;
+    copy.armor_override = source.armor_override;
     copy.tuning = source.tuning.clone();
 }
 

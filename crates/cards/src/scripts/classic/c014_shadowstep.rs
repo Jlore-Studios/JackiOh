@@ -94,6 +94,7 @@ pub fn script() -> CardScripts {
                     .into_iter()
                     .map(|card| {
                         add_to_hand(json_as(json!({
+                            "copyOf": card.instance_id,
                             "defId": card.def_id,
                             "radiant": card.radiant,
                             "costOverride": cost,
@@ -439,6 +440,19 @@ mod tests {
                 copies.iter().map(|card| (card.def_id.clone(), card.radiant, card.cost_override)).collect();
             assert_eq!(seen, vec![(VANILLA.to_string(), true, Some(0)), (MENACE.to_string(), false, Some(0))]);
             assert!(!copies.iter().any(|card| card.id == vanilla.id));
+        }
+
+        #[test]
+        fn r57_a_token_copy_keeps_stats_override_and_armor_override() {
+            let mut s = wipe(true, json!([{ "def": RUSH_TOKEN }]), json!({}));
+            let rush_id = s.card(RUSH_TOKEN).id.clone();
+            s.card_mut(&rush_id).stats_override = Some(AttackHealth { attack: 4, health: 4 });
+            s.card_mut(&rush_id).armor_override = Some(2);
+            s.play(BIG_FELINOR, json!({}));
+            let copy = s.hand(P1).into_iter().find(|card| card.def_id == RUSH_TOKEN).expect("copy in hand");
+            assert_eq!(copy.stats_override, Some(AttackHealth { attack: 4, health: 4 }));
+            assert_eq!(copy.armor_override, Some(2));
+            assert_eq!(copy.cost_override, Some(0));
         }
 
         #[test]

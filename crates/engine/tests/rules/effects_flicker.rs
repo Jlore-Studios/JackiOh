@@ -200,6 +200,61 @@ mod b5_e22_flicker {
     }
 
     #[test]
+    fn r444_r175_a_flickered_unit_token_preserves_stats_and_armor_override() {
+        let mut state = playing("flicker-token-stats-override");
+        let mut catalog = jackioh_engine::catalog::registered_catalog().clone();
+        let bread = json_as(json!({
+            "id": "fd-token-bread",
+            "index": "9499",
+            "name": "Fixture Bread Token",
+            "set": "Core",
+            "type": "Unit",
+            "tags": ["Token"],
+            "rarity": "Token",
+            "token": true,
+            "cost": 1,
+            "base": { "attack": 0, "health": 0, "keywords": [{ "kind": "Armor", "n": 0 }], "text": "" },
+            "radiant": { "attack": 0, "health": 0, "keywords": [{ "kind": "Armor", "n": 0 }], "text": "" },
+        }));
+        catalog.insert("fd-token-bread".to_string(), bread);
+        register_catalog(catalog);
+
+        let mut token = new_instance(
+            &mut state,
+            "fd-token-bread",
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        token.stats_override = Some(AttackHealth { attack: 5, health: 5 });
+        token.armor_override = Some(2);
+        place_on_field(
+            &mut state,
+            &mut token,
+            slot(PlayerId::P1, Row::Units, 2),
+            Default::default(),
+        );
+        live_mut(&mut state, &token.id).damage = 1;
+        let mut sink = sink_for(&state);
+        assert!(sink.flicker_card(&mut state, &token.id));
+        let flickered = by_id(&state, &token.id);
+        assert_eq!(
+            flickered.stats_override,
+            Some(AttackHealth { attack: 5, health: 5 }),
+            "R175/R444: stats_override is the token's printed face and survives flicker"
+        );
+        assert_eq!(
+            flickered.armor_override,
+            Some(2),
+            "R175/R444: armor_override survives flicker"
+        );
+        assert_eq!(flickered.damage, 0);
+        let view = jackioh_engine::layers::unit_view(&state, flickered);
+        assert_eq!(view.attack, 5);
+        assert_eq!(view.health, 5);
+        assert_eq!(view.armor, 2);
+    }
+
+    #[test]
     fn counts_as_summoned_an_enemy_tesla_answers_the_flicker_of_a_unit_on_the_other_side() {
         let mut state = playing("flicker-summoned");
         let zapper = put(
