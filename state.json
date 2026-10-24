@@ -13824,10 +13824,10 @@
       "question": "",
       "queued_at": "2026-10-24T09:57:19Z",
       "round_tier": "",
-      "run_id": "40083560903",
+      "run_id": "pending:b2661614-1792835836",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-24T09:50:37Z",
+      "started_at": "2026-10-24T09:57:30Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -14499,7 +14499,7 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-24T09:50:37Z",
+    "at": "2026-10-24T09:57:30Z",
     "url": "",
     "what": "revise #1770 on claude-6"
   },
