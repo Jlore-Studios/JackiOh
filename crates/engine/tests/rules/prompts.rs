@@ -28,7 +28,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, json_of, matches_object, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, json_of, matches_object, new_game, put, slot};
 use crate::rules::fixtures::scripts::{going_long, x_bolt};
 
 // ---------------------------------------------------------------------------
@@ -333,13 +333,6 @@ fn tributer_script() -> Script {
             ..TargetDecl::tribute(1, 1, json!({ "side": "ally", "of": ["unit"] }))
         }],
         ..Script::default()
-    }
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
     }
 }
 

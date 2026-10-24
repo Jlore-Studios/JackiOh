@@ -11,17 +11,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use super::harness::new_game;
+use super::harness::{both, new_game, spread};
 
 pub use super::harness::{in_hand, put, slot};
-
-/// `{ ...defaults, ...extra }`: the keys of `extra` replace the defaults' (TS's object spread).
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(fields), Value::Object(over)) = (base.as_object_mut(), extra) {
-        fields.extend(over);
-    }
-    base
-}
 
 /// TS `def(name, type, extra)`; indices run from 8200 in declaration order.
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
@@ -114,13 +106,6 @@ pub fn tribute_one() -> CardDef {
 
 fn flags(value: Value) -> Option<StaticFlags> {
     Some(json_as(value))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {

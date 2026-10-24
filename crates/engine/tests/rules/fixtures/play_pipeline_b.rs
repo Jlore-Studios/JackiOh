@@ -12,17 +12,7 @@ use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 use serde::Serialize;
 
-use super::harness::new_game;
-
-/// Merge two object literals: `extra`'s keys replace `base`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
+use super::harness::{both, new_game, spread};
 
 fn def_json(index: u32, name: &str, type_: &str, extra: Value) -> Value {
     spread(
@@ -53,13 +43,6 @@ fn unit(index: u32, name: &str, attack: i32, health: i32, extra: Value, keywords
         "radiant": { "attack": attack * 2, "health": health * 2, "keywords": keywords, "text": name },
     });
     def(index, name, "Unit", spread(faces, extra))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 // E11: permissions to play from the graveyard (R454)

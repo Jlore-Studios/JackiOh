@@ -9,6 +9,8 @@ use jackioh_engine::effects::{cast_new, choose_target, counter_play, damage, hea
 use jackioh_engine::subsystems::copied_text::copied_text_of;
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 /// A Core Common at cost 1 whose faces print `id` (`<id> radiant`).
 fn def(id: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
@@ -30,13 +32,6 @@ fn def(id: &str, index: i32, type_: &str, extra: Value) -> CardDef {
         }
     }
     json_as(card)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn damage_params() -> Value {

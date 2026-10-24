@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{round_trip, setup_catalog};
+use crate::rules::fixtures::harness::{both, round_trip, setup_catalog};
 use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 
 type Handicaps = PerPlayerOpt<Handicap>;
@@ -95,13 +95,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn local_scripts() -> IndexMap<String, CardScripts> {

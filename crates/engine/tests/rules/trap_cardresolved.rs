@@ -11,7 +11,7 @@
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, slot};
 
 // The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
 // so the event list and the rng live here and each call borrows the state again.
@@ -56,13 +56,6 @@ fn def(name: &str, index: u32, type_: &str, extra: Value) -> CardDef {
         }
     }
     json_as(literal)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// A Trap that answers the moment a played card has resolved (R17).

@@ -30,7 +30,7 @@ use jackioh_engine::effects::{chosen_options, damage, discover_from_catalog};
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, in_hand, new_game, put, slot};
 
 // ---------------------------------------------------------------------------
 // Fixtures.
@@ -154,13 +154,6 @@ fn grant_echo(amount: i32) -> Effect {
             ModifierKind::EchoNextSpell { amount, source_id },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn hit_two() -> Hook {

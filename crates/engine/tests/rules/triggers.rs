@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, new_game, put, round_trip, set_library, slot,
+    both, events_of_type, in_hand, new_game, put, round_trip, set_library, slot,
 };
 use crate::rules::fixtures::scripts::double_edge;
 
@@ -225,13 +225,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> Vec<(String, CardScripts)> {

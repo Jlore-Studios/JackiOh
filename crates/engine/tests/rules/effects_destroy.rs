@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::indestructible;
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, slot};
 
 // Fixture cards.
 
@@ -76,13 +76,6 @@ fn rush_token() -> CardDef {
 
 fn defs() -> Vec<CardDef> {
     vec![dier(), warded_dier(), rememberer(), field_spell()]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn ping_enemy_hero() -> Script {

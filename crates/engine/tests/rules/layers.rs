@@ -12,7 +12,7 @@ use crate::rules::fixtures::combat::{
     armoured, big_body, big_dfender, indestructible, plain, poisonous, shielded, spikey_pillow, stacker,
     taunter, zero_attack,
 };
-use crate::rules::fixtures::harness::{new_game, put, slot};
+use crate::rules::fixtures::harness::{both, new_game, put, slot};
 
 // Local defs for the three §10.4 cards ./fixtures/combat lacks. Indices start above 1200 so they
 // never collide with a fixture catalog or another test file's local defs.
@@ -210,13 +210,6 @@ fn felinor_set_stat() -> AuraHook {
             },
         }]
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// R349: a token that prints no Radiant form (the Ghoul Token's shape): printed 0/0 for an X/X, so its
