@@ -14057,6 +14057,10 @@
       "run_id": "40074247108",
       "started_at": "2026-10-24T07:28:06Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-1` (claude, opus) rejected it: `task`: Acceptance criterion 3 asks for `cargo jackioh gate` to pass, performance probes included, but nothing shows it was run, and CI does not run"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
