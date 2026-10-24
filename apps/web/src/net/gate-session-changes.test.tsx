@@ -13,6 +13,7 @@ import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
 import { inviteTestid, shellTestid } from "../auth/testids.ts";
 import { signOut } from "../routes/account.tsx";
 import InviteRoute from "../routes/invite.tsx";
+import { jsonResponse } from "../test/stubServer.ts";
 import { ApiRequestError } from "./api.ts";
 import { callWithRenewal, renewAfterUnauthorized } from "./gate.ts";
 import { paths } from "./navigate.ts";
@@ -37,19 +38,6 @@ function base64url(text: string): string {
 /** A token whose payload names a user id; the client reads it, the provider and server verify it. */
 function tokenFor(sub: string, tag: string): string {
   return [base64url(JSON.stringify({ alg: "HS256" })), base64url(JSON.stringify({ sub, tag })), "sig"].join(".");
-}
-
-function jsonResponse(status: number, body?: unknown): Response {
-  const text = body === undefined ? "" : JSON.stringify(body);
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: String(status),
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () => (text === "" ? Promise.reject(new SyntaxError("empty")) : Promise.resolve(JSON.parse(text))),
-    text: () => Promise.resolve(text),
-    clone: () => jsonResponse(status, body),
-  } as unknown as Response;
 }
 
 function me(status: "pending" | "active", email = "player@example.test") {

@@ -839,6 +839,17 @@ R111) for every active person's profile, a ladder bot's passed over (R1454), so 
 active under the 39-card list owns the eleven too; the migration runs it once, and a second run
 grants nothing.
 
+Migration 0056 indexes every foreign key that a delete or a lookup walks (#1800): `tickets.match_id`,
+which `matches_mode_of` reads at every match start, and `profiles.current_match_id`, both walked by
+every delete of a match; the keys into `profiles` an account deletion walks, among them five whose
+only leading index was partial on another predicate (`tickets.profile_id`,
+`challenges.from_profile`, `chat_messages.to_profile`, `duos_matches.a1` and `a2`); and `trios`'
+three slot keys. Each nullable key is indexed partially on `is not null`, and no data changes.
+`tests/sql/01_schema_invariants.sql` CHECK 19 fails on any foreign key in `public` with no valid
+btree index leading with its columns, whole or partial only on one of them `is not null`, except the
+keys into the catalog (`cards`, `cosmetics`), whose rows the server never deletes. A new foreign key
+brings its index in the same migration.
+
 ## Tests
 
 ```

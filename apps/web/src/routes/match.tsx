@@ -30,6 +30,7 @@ import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { OnceRevealed } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { announceWallet } from "../economy/wallet.ts";
@@ -491,6 +492,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           <BackLink showSettings={false} />
           {/* #936 B58: chat with a friend without leaving the board. */}
           <InMatchChat />
+          {/* R169: every live modifier in full, one tap away; on a phone the badges beside each hero are cut short. */}
+          <ModifierList view={view} opponentLabel={t("Opponent")} />
           <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
           {/*
             The rematch navigation that survives "View the board": the buttons above live in the

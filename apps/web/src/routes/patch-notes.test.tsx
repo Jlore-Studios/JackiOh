@@ -12,6 +12,7 @@ import { PatchSourceProvider } from "../patches/context.tsx";
 import { fixtureSource } from "../patches/fixtures.ts";
 import { realPatchSource } from "../patches/source.ts";
 import { patchTestid } from "../patches/testids.ts";
+import { at } from "../test/stubServer.ts";
 import LandingRoute from "./landing.tsx";
 import LoginRoute from "./login.tsx";
 import PatchNotesRoute from "./patch-notes.tsx";
@@ -21,10 +22,6 @@ const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
 
 /** A lazily-imported route chunk and the real history's first read can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
 
 beforeEach(() => {
   window.localStorage.clear();

@@ -63,7 +63,8 @@ one redaction (R1184002).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
+it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
+less the body it comes back as, #1796), and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the

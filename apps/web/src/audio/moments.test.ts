@@ -14,6 +14,7 @@ import type { SfxId, SfxParams, SoundSink } from "./types.ts";
 import { castOnDrawAt } from "../fx/castOnDraw.ts";
 import { newEventsSince, planEntries } from "../game/animations.ts";
 import { baseView, emptySide, withEvents } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 
 /* --------------------------------------------------------------------------------------------- *
  * Rig
@@ -269,11 +270,6 @@ function castOnDrawGame(defId: string, also: (events: readonly GameEvent[]) => b
   }
   return null;
 }
-
-const must = <T,>(value: T | null, what: string): T => {
-  if (value === null) throw new Error(`expected ${what}`);
-  return value;
-};
 
 describe("R506 against real games: #21 Hinder cast on draw", () => {
   const scenario = castOnDrawGame(HINDER_DEF_ID);

@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inviteTestid, landingTestid, shellTestid } from "../auth/testids.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
+import { at, jsonResponse, meBody, signIn } from "../test/stubServer.ts";
 
 const main = await import("../main.tsx");
 const { App, Gated } = main;
@@ -27,30 +28,6 @@ type MeAnswer = "active" | "pending" | "banned" | "unauthorized" | "failing" | "
 let meAnswer: MeAnswer = "active";
 let meCalls = 0;
 
-function jsonResponse(status: number, body?: unknown): Response {
-  const text = body === undefined ? "" : JSON.stringify(body);
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: String(status),
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () =>
-      text === "" ? Promise.reject(new SyntaxError("empty body")) : Promise.resolve(JSON.parse(text)),
-    text: () => Promise.resolve(text),
-    clone: () => jsonResponse(status, body),
-  } as unknown as Response;
-}
-
-function meBody(status: "pending" | "active" | "banned") {
-  return {
-    profile: { id: "profile-1", status },
-    needsInviteCode: status === "pending",
-    emailVerified: true,
-    currentMatchId: null,
-    email: "player@example.test",
-  };
-}
-
 function meReply(): Promise<Response> {
   switch (meAnswer) {
     case "unreachable":
@@ -62,7 +39,9 @@ function meReply(): Promise<Response> {
     case "unauthorized":
       return Promise.resolve(jsonResponse(401, { error: { code: "unauthorized", message: "sign in first" } }));
     default:
-      return Promise.resolve(jsonResponse(200, meBody(meAnswer)));
+      return Promise.resolve(
+        jsonResponse(200, meBody({ profile: { id: "profile-1", status: meAnswer }, needsInviteCode: meAnswer === "pending" })),
+      );
   }
 }
 
@@ -94,14 +73,6 @@ function serve(): void {
       );
     }),
   );
-}
-
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 function renderGated(): void {
@@ -149,7 +120,7 @@ describe("B40 the gate's error panel", () => {
     ["the server answers 500", "failing"],
     ["the server cannot be reached", "unreachable"],
   ] as const)("B40 when %s, it offers gate-retry, gate-home and gate-sign-out", async (_name, answer) => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = answer;
     renderGated();
 
@@ -161,7 +132,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 gate-retry re-reads /api/auth/me and opens the gate when it succeeds", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "failing";
     renderGated();
     await screen.findByTestId(shellTestid.error, undefined, SLOW);
@@ -178,7 +149,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 gate-retry after an unreachable server opens the gate once the server answers", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "unreachable";
     renderGated();
     await screen.findByTestId(shellTestid.error, undefined, SLOW);
@@ -190,7 +161,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 a retry that fails again keeps the error panel and all three exits", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "failing";
     renderGated();
     await screen.findByTestId(shellTestid.error, undefined, SLOW);
@@ -209,7 +180,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 a retry whose read is refused as unauthorised sends the browser to plain /login", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "failing";
     render(<App />);
     await screen.findByTestId(shellTestid.error, undefined, SLOW);
@@ -224,7 +195,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 through the route table, a retry that succeeds opens the gated screen at the same URL", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "failing";
     at(paths.invite);
     render(<App />);
@@ -239,7 +210,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 gate-home leads to the landing page", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "failing";
     render(<App />);
     await screen.findByTestId(shellTestid.error, undefined, SLOW);
@@ -248,7 +219,7 @@ describe("B40 the gate's error panel", () => {
   });
 
   it("B40 gate-sign-out clears both session keys; the panel alone signs nobody out", async () => {
-    signedIn();
+    signIn(TOKEN);
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
     meAnswer = "failing";
     renderGated();
@@ -270,7 +241,7 @@ describe("B40 the gate's error panel", () => {
 
 describe("B40 the banned panel", () => {
   it("B40 offers gate-home and gate-sign-out, and never opens the gate", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "banned";
     renderGated();
 
@@ -280,7 +251,7 @@ describe("B40 the banned panel", () => {
   });
 
   it("B40 gate-home on the banned panel leads to the landing page", async () => {
-    signedIn();
+    signIn(TOKEN);
     meAnswer = "banned";
     render(<App />);
 
@@ -288,7 +259,7 @@ describe("B40 the banned panel", () => {
   });
 
   it("B40 gate-sign-out on the banned panel clears both session keys", async () => {
-    signedIn();
+    signIn(TOKEN);
     window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
     meAnswer = "banned";
     renderGated();

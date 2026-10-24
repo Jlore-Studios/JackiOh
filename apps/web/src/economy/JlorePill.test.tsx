@@ -9,12 +9,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid } from "../auth/testids.ts";
 import { paths } from "../net/navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { BackLink } from "../routes/nav.tsx";
 import DevTools, { devToolsTestid } from "../routes/DevTools.tsx";
 import LandingRoute from "../routes/landing.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { jsonResponse, refusal, stubServer, type StubServer } from "../test/stubServer.ts";
+import { jsonResponse, refusal, signIn, stubServer, type StubServer } from "../test/stubServer.ts";
 import { setReducedMotion } from "../test/setup.ts";
 import JlorePill, { JLORE_COUNT_MS, jlorePillTestid } from "./JlorePill.tsx";
 import { __resetWalletForTests, announceWallet } from "./wallet.ts";
@@ -53,10 +52,6 @@ function serve(): StubServer {
   });
 }
 
-function signIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
-}
-
 /** The pill, once the wallet's answer has put it on screen. */
 async function pill(): Promise<HTMLElement> {
   return screen.findByTestId(jlorePillTestid);
@@ -81,7 +76,7 @@ afterEach(() => {
 
 describe("the Jlore pill", () => {
   it("with a session renders the wallet answer's balance, read with the session's token", async () => {
-    signIn();
+    signIn(TOKEN);
     const server = serve();
     render(<JlorePill />);
 
@@ -94,7 +89,7 @@ describe("the Jlore pill", () => {
   });
 
   it("links to /shop, in the app on a plain click and with the browser's own on a modified one", async () => {
-    signIn();
+    signIn(TOKEN);
     serve();
     render(<JlorePill />);
     const element = await pill();
@@ -107,7 +102,7 @@ describe("the Jlore pill", () => {
   });
 
   it("announceWallet(140), a bought pack's answer, re-renders it to 140 with no request", async () => {
-    signIn();
+    signIn(TOKEN);
     setReducedMotion(true);
     const server = serve();
     render(<JlorePill />);
@@ -124,7 +119,7 @@ describe("the Jlore pill", () => {
   });
 
   it("announceWallet() reads the wallet again and shows what the server answers", async () => {
-    signIn();
+    signIn(TOKEN);
     setReducedMotion(true);
     const server = serve();
     render(<JlorePill />);
@@ -142,7 +137,7 @@ describe("the Jlore pill", () => {
   });
 
   it("reads the wallet again on a navigation and when the page becomes visible again", async () => {
-    signIn();
+    signIn(TOKEN);
     setReducedMotion(true);
     const server = serve();
     render(<JlorePill />);
@@ -174,7 +169,7 @@ describe("the Jlore pill", () => {
   });
 
   it("keeps an announced balance when an older read answers after it", async () => {
-    signIn();
+    signIn(TOKEN);
     setReducedMotion(true);
     let answer: ((jlore: number) => void) | undefined;
     vi.stubGlobal(
@@ -218,7 +213,7 @@ describe("the Jlore pill", () => {
   });
 
   it("with a session whose wallet read is refused (a pending account) renders nothing", async () => {
-    signIn();
+    signIn(TOKEN);
     walletStatus = 403;
     const server = serve();
     const { container } = render(<JlorePill />);
@@ -230,7 +225,7 @@ describe("the Jlore pill", () => {
   });
 
   it("with a wallet answer that is no balance renders nothing", async () => {
-    signIn();
+    signIn(TOKEN);
     const server = stubServer((call) => (call.path === "/api/wallet" ? { status: 200, body: { jlore: "plenty" } } : undefined));
     const { container } = render(<JlorePill />);
 
@@ -259,7 +254,7 @@ describe("the pill counts to a new balance", () => {
   }
 
   it("up or down through the numbers between, ending on the new one", async () => {
-    signIn();
+    signIn(TOKEN);
     serve();
     render(<JlorePill />);
     const element = await pill();
@@ -293,7 +288,7 @@ describe("the pill counts to a new balance", () => {
   });
 
   it("at once under the system's reduced motion", async () => {
-    signIn();
+    signIn(TOKEN);
     serve();
     render(<JlorePill />);
     await pill();
@@ -309,7 +304,7 @@ describe("the pill counts to a new balance", () => {
   });
 
   it("at once under the settings panel's Reduce motion", async () => {
-    signIn();
+    signIn(TOKEN);
     serve();
     render(<JlorePill />);
     await pill();
@@ -329,7 +324,7 @@ describe("the pill counts to a new balance", () => {
 
 describe("where the pill sits", () => {
   it("BackLink's top bar has it, before the language button and the gear", async () => {
-    signIn();
+    signIn(TOKEN);
     serve();
     render(<BackLink />);
 
@@ -341,7 +336,7 @@ describe("where the pill sits", () => {
   });
 
   it("BackLink with showSettings={false}, the board's, has no pill and reads no wallet", async () => {
-    signIn();
+    signIn(TOKEN);
     const server = serve();
     render(<BackLink showSettings={false} />);
     act(() => {
@@ -353,7 +348,7 @@ describe("where the pill sits", () => {
   });
 
   it("R1651000 BackLink with onPress, a screen that guards its way out (the card creator's), has no pill to leave by", async () => {
-    signIn();
+    signIn(TOKEN);
     const server = serve();
     const onPress = vi.fn<() => void>();
     render(<BackLink onPress={onPress} />);
@@ -367,7 +362,7 @@ describe("where the pill sits", () => {
   });
 
   it("BackLink with showWallet={false}, a signed-out screen's, keeps its buttons, has no pill and reads no wallet", async () => {
-    signIn();
+    signIn(TOKEN);
     const server = serve();
     render(<BackLink showWallet={false} />);
     act(() => {
@@ -380,7 +375,7 @@ describe("where the pill sits", () => {
   });
 
   it("the landing's top bar has one beside its two buttons", async () => {
-    signIn();
+    signIn(TOKEN);
     serve();
     render(<LandingRoute />);
 
@@ -405,7 +400,7 @@ describe("where the pill sits", () => {
 
 describe("the Dev tools tell the pill", () => {
   it("Give Jlore shows the answer's balance with no read, and a clear has the pill read the wallet again", async () => {
-    signIn();
+    signIn(TOKEN);
     setReducedMotion(true);
     const server = serve();
     render(

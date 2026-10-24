@@ -15,6 +15,7 @@ import { PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { EMPTY_LOG } from "../stats/model.ts";
 import { recordGame, resetPlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
+import { at } from "../test/stubServer.ts";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 import StatsRoute from "./stats.tsx";
 
@@ -288,10 +289,6 @@ const MOCK_DRILL_DOWN = {
   ],
   coPlayed: [{ id: "core-002", name: "Lava Hound", games: 20, winRate: 0.7 }],
 };
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
 
 type HeldRequest = {
   url: URL;

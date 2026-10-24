@@ -6,13 +6,14 @@
 // focus return are B25, in inspect.test.tsx. Real catalog throughout.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../../audio/constants.ts";
 import { setAudioEngineForTests } from "../../audio/engine.ts";
+import { fakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../../audio/types.ts";
 import { locWords } from "../model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../settings.ts";
@@ -260,28 +261,6 @@ describe("CardDetail (B29)", () => {
 });
 
 describe("VoicePreview (R630)", () => {
-  /** A stand-in for the audio singleton: records every call, plays nothing. */
-  function fakeEngine(playVoice: Mock<AudioEngine["playVoice"]>): AudioEngine {
-    return {
-      state: vi.fn<AudioEngine["state"]>(() => "running"),
-      unlock: vi.fn<AudioEngine["unlock"]>(),
-      preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-      setBusy: vi.fn<AudioEngine["setBusy"]>(),
-      log: vi.fn<AudioEngine["log"]>(() => []),
-      clearLog: vi.fn<AudioEngine["clearLog"]>(),
-      contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 0),
-      speaking: vi.fn<AudioEngine["speaking"]>(() => false),
-      subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
-      musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-      subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-      dispose: vi.fn<AudioEngine["dispose"]>(),
-      playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-      playVoice,
-      playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-      playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
-    };
-  }
-
   function optionsOf(select: HTMLElement): string[] {
     return within(select as HTMLSelectElement)
       .getAllByRole("option")
@@ -290,7 +269,7 @@ describe("VoicePreview (R630)", () => {
 
   it("R630 R1448 a unit offers its play, attack and death lines, and choosing one plays it at the summon priority", () => {
     const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
-    setAudioEngineForTests(fakeEngine(playVoice));
+    setAudioEngineForTests(fakeAudioEngine({ playVoice }));
     render(<CardDetail def={defOf("core-008")} onClose={() => undefined} />);
 
     const select = screen.getByTestId("voice-preview");
@@ -304,7 +283,7 @@ describe("VoicePreview (R630)", () => {
 
   it("R630 a spell offers only its cast line", () => {
     const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
-    setAudioEngineForTests(fakeEngine(playVoice));
+    setAudioEngineForTests(fakeAudioEngine({ playVoice }));
     render(<CardDetail def={defOf("core-023")} onClose={() => undefined} />);
 
     const select = screen.getByTestId("voice-preview");
@@ -316,7 +295,7 @@ describe("VoicePreview (R630)", () => {
 
   it("R630 the dropdown sits in the pinned actions row before Close, and a card with no lines has none", () => {
     const playVoice = vi.fn<AudioEngine["playVoice"]>(() => true);
-    setAudioEngineForTests(fakeEngine(playVoice));
+    setAudioEngineForTests(fakeAudioEngine({ playVoice }));
     render(
       <CardDetail
         def={defOf("core-008")}
