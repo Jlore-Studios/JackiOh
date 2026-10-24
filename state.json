@@ -13563,6 +13563,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1766": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-24T03:53:14Z",
+      "issue": 1758,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
