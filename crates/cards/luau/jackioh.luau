@@ -2449,6 +2449,9 @@ delta: number,
 key: string,
 delta: number,
 } | {
+["kind"]: "plague",
+delta: number,
+} | {
 ["kind"]: "none",
 }
 
