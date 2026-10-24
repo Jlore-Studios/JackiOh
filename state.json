@@ -14140,7 +14140,25 @@
       "feedback_since": "2026-10-24T07:14:02Z",
       "issue": 1771,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40073328144",
+            "tier": "strong"
+          }
+        ],
+        "sha": "17e6b2c30ddacdcdda8afb3ec4724c30866a2112",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
