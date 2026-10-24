@@ -13909,6 +13909,13 @@
     "1775": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T07:26:40Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy line 1 (about 650 lines removed, past 400) and touches crates/cards/build.rs, which the classifier counts as play code; no engine, spec or card work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
