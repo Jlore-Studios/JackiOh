@@ -49,6 +49,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const ACQUIRE: &str = "classic-034";
@@ -109,8 +110,7 @@ mod tests {
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(PlayerId::P1).len(), 3);
-                let grave: Vec<String> =
-                    s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 assert_eq!(grave.len(), 4);
                 assert!(grave.iter().any(|def_id| def_id == ACQUIRE));
                 // The two in hand came from the graveyard's five.
@@ -174,8 +174,7 @@ mod tests {
                 let mut s = acquire(false, json!({ "graveyard": [] }));
                 s.play(ACQUIRE, json!({}));
                 assert!(s.state().pending.is_none());
-                let grave: Vec<String> =
-                    s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 assert_eq!(grave, vec![ACQUIRE]);
             }
 
@@ -243,8 +242,7 @@ mod tests {
                 // The one own-graveyard card is the only thing that could come: it did.
                 s.expect_in_zone(MENACE, "hand");
                 assert_eq!(s.pile(PlayerId::P2, "graveyard").len(), 2);
-                let exile: Vec<String> =
-                    s.pile(PlayerId::P1, "exile").iter().map(|card| card.def_id.clone()).collect();
+                let exile = def_ids(&s.pile(PlayerId::P1, "exile"));
                 assert_eq!(exile, vec![VANILLA]);
             }
 
@@ -288,7 +286,7 @@ mod tests {
                 }));
                 s.play(RECURRING, json!({}));
                 assert!(s.state().pending.is_none());
-                let mut got: Vec<String> = s.hand(PlayerId::P1).iter().map(|card| card.def_id.clone()).collect();
+                let mut got = def_ids(&s.hand(PlayerId::P1));
                 got.sort();
                 let mut want = vec![FILLER, MENACE, VANILLA];
                 want.sort();
@@ -321,8 +319,7 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 // All four pooled cards come: both piles empty but for the spent Spell.
                 assert_eq!(s.hand(PlayerId::P1).len(), 5);
-                let grave: Vec<String> =
-                    s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let grave = def_ids(&s.pile(PlayerId::P1, "graveyard"));
                 assert_eq!(grave, vec![ACQUIRE]);
                 assert!(s.pile(PlayerId::P1, "exile").is_empty());
             }

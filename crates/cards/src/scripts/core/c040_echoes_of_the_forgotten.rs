@@ -91,6 +91,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const ECHOES: &str = "core-040"; // Field Spell, 2
     const MENACE: &str = "core-019"; // library filler — not cast-on-draw, so a draw is just a draw
@@ -125,10 +126,6 @@ mod tests {
             .collect()
     }
 
-    fn defs_in(s: &Scenario, player: &str, zone: &str) -> Vec<String> {
-        s.pile(player, zone).into_iter().map(|card| card.def_id).collect()
-    }
-
     fn exiled_events(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -154,8 +151,8 @@ mod tests {
             s.expect_health("p2", 27);
             assert_eq!(damage_to(&s, "hero-p2"), vec![3]);
             // The bottom card (#61) left the library for the exile pile; the top card (#19) was drawn.
-            assert_eq!(defs_in(&s, "p1", "exile"), strings(&[STOCKPILE, TIMMY, MENACE, POSTDOC]));
-            assert_eq!(defs_in(&s, "p1", "library"), strings(&[TIMMY]));
+            assert_eq!(def_ids(&s.pile("p1", "exile")), strings(&[STOCKPILE, TIMMY, MENACE, POSTDOC]));
+            assert_eq!(def_ids(&s.pile("p1", "library")), strings(&[TIMMY]));
             assert_eq!(exiled_events(&s), strings(&[POSTDOC]));
         }
 
@@ -171,7 +168,7 @@ mod tests {
             // The card this turn exiles brings the pile to 1, and yet the hit was 0: the order is the rule.
             assert!(damage_to(&s, "hero-p2").is_empty());
             s.expect_health("p2", 30);
-            assert_eq!(defs_in(&s, "p1", "exile"), strings(&[POSTDOC]));
+            assert_eq!(def_ids(&s.pile("p1", "exile")), strings(&[POSTDOC]));
         }
 
         #[test]
@@ -188,7 +185,7 @@ mod tests {
             s.end_turn(); // back to p1: exile 1 → 1 damage, and #61 (the new bottom) is exiled
 
             s.expect_health("p2", 29);
-            assert_eq!(defs_in(&s, "p1", "exile"), strings(&[BIG_D, POSTDOC]));
+            assert_eq!(def_ids(&s.pile("p1", "exile")), strings(&[BIG_D, POSTDOC]));
         }
 
         #[test]
@@ -235,7 +232,7 @@ mod tests {
             s.expect_health("p2", 30);
             s.expect_health("p1", 30);
             assert_eq!(s.pile("p1", "exile").len(), 3);
-            assert_eq!(defs_in(&s, "p1", "library"), strings(&LIBRARY));
+            assert_eq!(def_ids(&s.pile("p1", "library")), strings(&LIBRARY));
         }
 
         #[test]
@@ -288,7 +285,7 @@ mod tests {
             s.expect_health("p2", 30);
             assert!(damage_to(&s, "hero-p2").is_empty());
             // The exile clause still runs, so next turn pays out 2.
-            assert_eq!(defs_in(&s, "p1", "exile"), strings(&[POSTDOC]));
+            assert_eq!(def_ids(&s.pile("p1", "exile")), strings(&[POSTDOC]));
         }
 
         #[test]
@@ -301,7 +298,7 @@ mod tests {
             s.start_turn();
 
             s.expect_health("p2", 28); // 2 × 1
-            assert_eq!(defs_in(&s, "p1", "exile"), strings(&[STOCKPILE, POSTDOC]));
+            assert_eq!(def_ids(&s.pile("p1", "exile")), strings(&[STOCKPILE, POSTDOC]));
             assert_eq!(exiled_events(&s), strings(&[POSTDOC]));
         }
 

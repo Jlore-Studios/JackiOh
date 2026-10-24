@@ -46,6 +46,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const PILE_ON: &str = "classic-060";
     const VANILLA: &str = "core-008"; // Unit 4/4
@@ -61,10 +62,6 @@ mod tests {
     const FILLER: &str = "core-005";
 
     use crate::js;
-
-    fn library_ids(s: &Scenario) -> Vec<String> {
-        s.pile(PlayerId::P1, "library").iter().map(|card| card.def_id.clone()).collect()
-    }
 
     /// p1's unit zones, lane 1 to 5: each top card's def id, or `null`.
     fn unit_row(s: &Scenario) -> Value {
@@ -128,7 +125,7 @@ mod tests {
                 assert_eq!(unit_row(&s), json!([VANILLA, GARY, BIGOT, null, null]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, SHEEPISH, BREAD, null, null]));
                 // The Spells keep their order, and Pile On itself goes under them (the base clause).
-                assert_eq!(library_ids(&s), vec![STOCKPILE, LUNAR, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![STOCKPILE, LUNAR, PILE_ON]);
             }
 
             #[test]
@@ -184,7 +181,7 @@ mod tests {
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, VANILLA, VANILLA, VANILLA, GARY]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, null, null, null, null]));
-                assert_eq!(library_ids(&s), vec![LUNAR, BIGOT, VANILLA, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![LUNAR, BIGOT, VANILLA, PILE_ON]);
             }
 
             #[test]
@@ -193,7 +190,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "library": [RUSH_TOKEN, VANILLA], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, null, null, null, null]));
-                assert_eq!(library_ids(&s), vec![RUSH_TOKEN, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![RUSH_TOKEN, PILE_ON]);
             }
 
             #[test]
@@ -202,7 +199,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [PILE_ON, FILLER], "mana": 5 }, "p2": { "hand": [FILLER] } }));
                 s.play(PILE_ON, json!({}));
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "summoned"));
-                assert_eq!(library_ids(&s), vec![PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![PILE_ON]);
             }
 
             #[test]
@@ -235,7 +232,7 @@ mod tests {
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(&pile_on, json!({}));
                 s.expect_in_zone(&pile_on, "library");
-                assert_eq!(library_ids(&s), vec![LUNAR, STOCKPILE, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![LUNAR, STOCKPILE, PILE_ON]);
                 assert!(s.pile(PlayerId::P1, "graveyard").is_empty());
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "enteredGraveyard"));
             }
@@ -248,7 +245,7 @@ mod tests {
                 s.play(ZAO_GAO, json!({}));
                 s.expect_in_zone(&pile_on, "library");
                 s.expect_in_zone(LUNAR, "graveyard");
-                assert_eq!(library_ids(&s), vec![STOCKPILE, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![STOCKPILE, PILE_ON]);
             }
 
             #[test]
@@ -260,9 +257,9 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": hand, "library": [LUNAR, PILE_ON, GARY] }, "p2": { "hand": [FILLER] } }));
                 s.play(STOCKPILE, json!({}));
                 assert!(s.events().iter().map(js).any(|event| event["type"] == "burned"));
-                assert_eq!(library_ids(&s), vec![GARY, PILE_ON]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![GARY, PILE_ON]);
                 assert_eq!(
-                    s.pile(PlayerId::P1, "graveyard").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.pile(PlayerId::P1, "graveyard")),
                     vec![STOCKPILE],
                 );
             }
@@ -301,7 +298,7 @@ mod tests {
                 s.play(PILE_ON, json!({}));
                 assert_eq!(unit_row(&s), json!([VANILLA, GARY, BIGOT, null, null]));
                 assert_eq!(back_row(&s), json!([MANA_WELL, SHEEPISH, BREAD, null, null]));
-                assert_eq!(library_ids(&s), vec![STOCKPILE, LUNAR]);
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), vec![STOCKPILE, LUNAR]);
             }
 
             #[test]
@@ -311,7 +308,7 @@ mod tests {
                 let pile_on = s.card(PILE_ON).id.clone();
                 s.play(&pile_on, json!({}));
                 s.expect_in_zone(&pile_on, "graveyard");
-                assert_eq!(library_ids(&s), Vec::<String>::new());
+                assert_eq!(def_ids(&s.pile(PlayerId::P1, "library")), Vec::<String>::new());
             }
 
             #[test]

@@ -50,6 +50,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -227,10 +228,6 @@ mod tests {
 
     fn tags_of(id: &str) -> Vec<Value> {
         def_json(id)["tags"].as_array().cloned().unwrap_or_default()
-    }
-
-    fn hand_ids(s: &Scenario) -> Vec<String> {
-        s.hand(P1).into_iter().map(|card| card.def_id).collect()
     }
 
     fn view_json(s: &Scenario, seat: PlayerId) -> Value {
@@ -437,7 +434,7 @@ mod tests {
                 },
             );
             s.activate(&card, json!({}));
-            assert_eq!(hand_ids(&s), vec![SPARE.to_string(), MENACE.to_string()]);
+            assert_eq!(def_ids(&s.hand(P1)), vec![SPARE.to_string(), MENACE.to_string()]);
             s.expect_health(P1, 28).expect_mana(P1, 7);
             assert_eq!(
                 events_of(&s, "damage").iter().map(|event| event["targetId"].clone()).collect::<Vec<_>>(),
@@ -656,7 +653,7 @@ mod tests {
                 },
             );
             s.activate(&card, json!({}));
-            assert_eq!(hand_ids(&s), vec![SPARE.to_string(), MENACE.to_string(), JAMMED.to_string()]);
+            assert_eq!(def_ids(&s.hand(P1)), vec![SPARE.to_string(), MENACE.to_string(), JAMMED.to_string()]);
             s.expect_health(P1, 30);
         }
 
@@ -860,7 +857,7 @@ mod tests {
             assert!(!crate::can_degrade_number(&s, HEROIC, "tapDraw"));
             assert_eq!(tuned(&mut s, "tapDraw", true), 2);
             s.activate(&card, json!({}));
-            assert_eq!(hand_ids(&s), vec![SPARE.to_string(), MENACE.to_string(), JAMMED.to_string()]);
+            assert_eq!(def_ids(&s.hand(P1)), vec![SPARE.to_string(), MENACE.to_string(), JAMMED.to_string()]);
             s.expect_health(P1, 28);
         }
 
@@ -879,7 +876,7 @@ mod tests {
             assert_eq!(tuned(&mut s, "tapDraw", true), 2);
             s.activate(&card, json!({}));
             assert_eq!(
-                hand_ids(&s),
+                def_ids(&s.hand(P1)),
                 [SPARE, MENACE, SPARE, JAMMED, FREE].map(str::to_string).to_vec(),
             );
             s.expect_health(P1, 30);

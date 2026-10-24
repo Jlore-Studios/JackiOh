@@ -43,6 +43,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::filler;
     use jackioh_engine::testkit::*;
 
@@ -71,10 +72,6 @@ mod tests {
         s
     }
 
-    fn hand_def_ids(s: &Scenario) -> Vec<String> {
-        s.hand(P1).iter().map(|card| card.def_id.clone()).collect()
-    }
-
     mod m63_skull_of_jnari {
         use super::*;
 
@@ -91,8 +88,8 @@ mod tests {
                 // Summoning sick: it arrived this turn.
                 assert_eq!(unit.summoned_turn, Some(s.state().turn));
                 // The Vanilla left the hand (the draw plus the Filler stay).
-                assert!(!hand_def_ids(&s).contains(&VANILLA.to_string()));
-                assert!(hand_def_ids(&s).contains(&FILLER.to_string()));
+                assert!(!def_ids(&s.hand(P1)).contains(&VANILLA.to_string()));
+                assert!(def_ids(&s.hand(P1)).contains(&FILLER.to_string()));
             }
 
             #[test]
@@ -121,7 +118,7 @@ mod tests {
                 s.start_turn();
 
                 // The Vanilla never left the hand, and no pick was drawn.
-                assert!(hand_def_ids(&s).contains(&VANILLA.to_string()));
+                assert!(def_ids(&s.hand(P1)).contains(&VANILLA.to_string()));
                 assert_eq!(cursor, s.state().rng_cursor);
             }
 
@@ -197,7 +194,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, PlayerId::P2);
                 assert_eq!(p1_units(&s), 0);
-                assert!(hand_def_ids(&s).contains(&VANILLA.to_string()));
+                assert!(def_ids(&s.hand(P1)).contains(&VANILLA.to_string()));
             }
 
             #[test]

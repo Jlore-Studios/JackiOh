@@ -47,6 +47,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::effects::{CastNewArgs, cast_new};
     use jackioh_engine::testkit::*;
 
@@ -62,10 +63,6 @@ mod tests {
 
     use crate::js;
 
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
-
     #[test]
     fn r1179001_steals_one_random_card_of_the_opponents_hand_as_yours() {
         crate::register_all();
@@ -75,11 +72,11 @@ mod tests {
         }));
         s.play(GRIFTER, json!({ "zone": 1 }));
         s.expect_in_zone(GRIFTER, "field");
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE]);
         let taken = s.hand(P1).into_iter().find(|card| card.def_id == MENACE).expect("the stolen card");
         assert_eq!(taken.owner, P1);
         assert_eq!(taken.controller, P1);
-        assert_eq!(hand_defs(&s, P2), Vec::<String>::new());
+        assert_eq!(def_ids(&s.hand(P2)), Vec::<String>::new());
     }
 
     #[test]
@@ -93,7 +90,7 @@ mod tests {
         s.play(GRIFTER, json!({ "zone": 1 }));
         assert_eq!(s.state().rng_cursor, cursor);
         s.expect_in_zone(GRIFTER, "field");
-        assert_eq!(hand_defs(&s, P1), [FILLER]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER]);
     }
 
     #[test]
@@ -182,7 +179,7 @@ mod tests {
         s.play(&spell, json!({}));
         // The cast Grifter entered the field and its Cry stole the Menace.
         s.expect_in_zone(GRIFTER, "field");
-        assert_eq!(hand_defs(&s, P1), [VANILLA, MENACE]);
+        assert_eq!(def_ids(&s.hand(P1)), [VANILLA, MENACE]);
         let taken = s.hand(P1).into_iter().find(|card| card.def_id == MENACE).expect("the stolen card");
         assert_eq!(taken.owner, P1);
     }
@@ -197,7 +194,7 @@ mod tests {
         step_param(s.card_mut(GRIFTER), "cards", 1);
         s.play(GRIFTER, json!({ "zone": 1 }));
         // Both cards of their hand, in whatever order the shuffle took them.
-        let mut hand = hand_defs(&s, P1);
+        let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, VANILLA, MENACE]);
     }
