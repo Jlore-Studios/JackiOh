@@ -14166,7 +14166,15 @@
       "feedback_since": "2026-10-24T07:14:23Z",
       "issue": 1774,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
+        "sha": "709aa28f3c9c65b122f4f20a7aad6598630b674f",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
