@@ -13363,6 +13363,13 @@
     "1758": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T03:47:57Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Rule line 3 fails: R634 says a failed request 'changes nothing on screen and raises nothing', so showing a notice needs a new ruling (R1758000) that amends R634 and edits \u00a710.11 and \u00a711"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
