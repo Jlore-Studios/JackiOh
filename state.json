@@ -13829,6 +13829,13 @@
     "1771": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T07:11:46Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Fails easy rule line 3: the change needs a new ruling (R1771000) and edits to spec/ notes and spec/INDEX.md. It is not hard: it is one server function, no engine, AI or migration work."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
