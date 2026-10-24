@@ -12626,6 +12626,13 @@
     "1799": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:50:44Z",
+        "difficulty": "hard",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the 'about 40 files or more' line: this touches 55 files (2 helpers, 53 test files), even though each edit is mechanical and test-only"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
