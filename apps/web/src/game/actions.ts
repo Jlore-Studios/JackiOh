@@ -115,6 +115,7 @@ type Activating = {
   ability?: string;
   candidates: ActionBody[];
   picked: Partial<PlayBuild>;
+  cardAbilities?: string[];
 };
 type Building = Playing | Activating;
 
@@ -475,15 +476,22 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
+
+  // R1751000: an activation on a card with several abilities asks which one first.
+  if (interaction.stage === "activating" && interaction.picked.ability === undefined) {
+    const cardAbilities = interaction.cardAbilities;
+    const remaining = remainingCandidates(interaction);
+    const fields = remaining.map(fieldsOf);
+    const legalAbilities = [...new Set(fields.flatMap((c) => (c.ability === undefined ? [] : [c.ability])))];
+    const hasMultiple = (cardAbilities !== undefined && cardAbilities.length > 1) || legalAbilities.length > 1;
+    if (hasMultiple && legalAbilities.length > 0) {
+      return { kind: "ability", min: 1, max: 1, abilities: legalAbilities };
+    }
+  }
+
   const remaining = remainingCandidates(interaction);
   if (remaining.length < 2) return null;
   const fields = remaining.map(fieldsOf);
-
-  // R1751000: an activation with several abilities asks which one first.
-  if (interaction.stage === "activating" && interaction.picked.ability === undefined) {
-    const abilities = [...new Set(fields.flatMap((c) => (c.ability === undefined ? [] : [c.ability])))];
-    if (abilities.length > 1) return { kind: "ability", min: 1, max: 1, abilities };
-  }
 
   // ME-ALTPLAY: how it is played is asked before anything else, face-up first.
   if (interaction.picked.faceDown === undefined) {
@@ -897,6 +905,7 @@ function startActivation(
   legal: readonly ActionBody[],
   interaction: Interaction,
   target: Extract<ClickTarget, { on: "activate" }>,
+  view?: PlayerView,
 ): ClickResult {
   if (
     interaction.stage === "activating" &&
@@ -907,12 +916,15 @@ function startActivation(
   }
   const candidates = activationsFor(legal, target.instanceId, target.ability);
   if (candidates.length === 0) return { interaction };
+  const listed = view ? activationsOnField(view, target.instanceId) : null;
+  const cardAbilities = listed && listed.length > 1 ? listed.map((a) => a.ability) : undefined;
   return settle({
     stage: "activating",
     instanceId: target.instanceId,
     ...(target.ability === undefined ? {} : { ability: target.ability }),
     candidates,
     picked: target.ability === undefined ? {} : { ability: target.ability },
+    cardAbilities,
   });
 }
 
@@ -944,7 +956,7 @@ export function onClickTarget(
     }
 
     case "activate":
-      return startActivation(legal, interaction, target);
+      return startActivation(legal, interaction, target, view);
 
     case "zone": {
       if (!isBuilding(interaction)) return { interaction };

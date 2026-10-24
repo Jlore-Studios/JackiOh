@@ -312,17 +312,11 @@ pub fn ability_uses_this_turn(state: &GameState, card: &CardInstance, ability: &
     if let Some(abilities) = raw.get("abilities").and_then(Value::as_object) {
         return abilities.get(ability).and_then(Value::as_f64).unwrap_or(0.0) as i32;
     }
-    let count = raw.get("count").and_then(Value::as_f64).unwrap_or(0.0) as i32;
+    // Backward-compatibility fallback when an older record lacks "abilities":
+    // If the card has only one ability, that ability had all uses.
     let decls = abilities_of(state, card);
-    if decls.len() <= 1 {
-        return count;
-    }
-    // If the card has several abilities (e.g. after a fusion), any pre-existing count
-    // without an abilities breakdown belonged to the kept card's ability.
-    // In a fusion, the kept card is placed at the end of the ingredients list,
-    // so its abilities are at the end of the declarations list.
-    if decls.last().map(|d| d.id.as_str()) == Some(ability) {
-        count
+    if decls.len() == 1 && decls[0].id == ability {
+        raw.get("count").and_then(Value::as_f64).unwrap_or(0.0) as i32
     } else {
         0
     }
@@ -345,36 +339,22 @@ fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
     let Some(card) = find_instance(state, card_id) else {
         return;
     };
-    let decls = abilities_of(state, card);
     let count = uses_this_turn(state, card) + 1;
-    let record = if decls.len() <= 1 {
-        json!({
-            "turn": state.turn,
-            "count": count,
-        })
-    } else {
-        let mut abilities_map = serde_json::Map::new();
-        if let Some(raw) = card.memory.get(ACTIVATIONS_MEMORY_KEY) {
-            let turn = raw.get("turn").and_then(Value::as_f64).unwrap_or(-1.0);
-            if turn == f64::from(state.turn) {
-                if let Some(existing) = raw.get("abilities").and_then(Value::as_object) {
-                    abilities_map = existing.clone();
-                } else if let Some(last) = decls.last() {
-                    let prev = raw.get("count").and_then(Value::as_f64).unwrap_or(0.0) as i32;
-                    if prev > 0 {
-                        abilities_map.insert(last.id.clone(), json!(prev));
-                    }
-                }
-            }
-        }
-        let prev_ability_count = abilities_map.get(ability).and_then(Value::as_f64).unwrap_or(0.0) as i32;
-        abilities_map.insert(ability.to_string(), json!(prev_ability_count + 1));
-        json!({
-            "turn": state.turn,
-            "count": count,
-            "abilities": abilities_map,
-        })
-    };
+    let mut abilities_map = card
+        .memory
+        .get(ACTIVATIONS_MEMORY_KEY)
+        .filter(|raw| raw.get("turn").and_then(Value::as_f64) == Some(f64::from(state.turn)))
+        .and_then(|raw| raw.get("abilities"))
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let prev = abilities_map.get(ability).and_then(Value::as_f64).unwrap_or(0.0) as i32;
+    abilities_map.insert(ability.to_string(), json!(prev + 1));
+    let record = json!({
+        "turn": state.turn,
+        "count": count,
+        "abilities": abilities_map,
+    });
     if let Some(card) = find_instance_mut(state, card_id) {
         card.memory.insert(ACTIVATIONS_MEMORY_KEY.to_string(), record);
     }

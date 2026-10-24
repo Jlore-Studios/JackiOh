@@ -96,6 +96,9 @@ describe("R384 the Activate control is lit by the activations legalActions lists
 
     expect(lit.has(testid.activate("act2"))).toBe(true);
 
+    const oneInteraction = onClickTarget(view, legal, IDLE, { on: "activate", instanceId: "act2" }).interaction;
+    expect(outstandingNeed(oneInteraction)).toEqual({ kind: "ability", min: 1, max: 1, abilities: ["turtle"] });
+
     const twoLegal: ActionBody[] = [
       { type: "activate", instanceId: "act2", ability: "ping", targets: [at("e1")] },
       { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u1"], targets: [at("e1")] },

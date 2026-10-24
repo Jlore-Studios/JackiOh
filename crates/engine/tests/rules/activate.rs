@@ -244,7 +244,7 @@ mod r384_b3_2_activate_using_an_ability {
                 .as_ref()
                 .and_then(|held| held.memory.get("activations"))
                 .cloned(),
-            Some(json!({ "turn": state.turn, "count": 1 }))
+            Some(json!({ "turn": state.turn, "count": 1, "abilities": { "ping": 1 } }))
         );
     }
 
@@ -1337,7 +1337,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
                 .as_ref()
                 .and_then(|held| held.memory.get("activations"))
                 .cloned(),
-            Some(json!({ "turn": state.turn, "count": 1 }))
+            Some(json!({ "turn": state.turn, "count": 1, "abilities": { "burn": 1 } }))
         );
         assert_eq!(
             act_result(
@@ -1723,5 +1723,67 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         assert!(zap_view.usable);
         assert_eq!(recall_view.uses_left, Some(0));
         assert!(!recall_view.usable);
+    }
+
+    #[test]
+    fn r1751000_fused_activates_with_target_first_ingredient_tracks_uses_correctly() {
+        let mut state = playing("fused-target-first");
+        let card_inst = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card_inst.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+
+        // Activate recall on the target BEFORE fusion.
+        let state = act(
+            &state,
+            activate(P1, &card_inst.id, json!({ "ability": "recall" })),
+        )
+        .0;
+
+        // Verify recall was marked used on the card.
+        assert_eq!(
+            card(&state, &card_inst.id).memory.get("activations"),
+            Some(&json!({ "turn": state.turn, "count": 1, "abilities": { "recall": 1 } }))
+        );
+
+        // Fuse with target as first ingredient: [&target, &food].
+        let mut fused_state = state.clone();
+        let other = in_hand(&mut fused_state, &zapper.id, P1, 1).remove(0);
+        let live_target = card(&fused_state, &card_inst.id).clone();
+        fuse_onto(&mut fused_state, vec![live_target, other], &card_inst);
+
+        // The fused card has recall (from target at ingredient 0) and zap (from food).
+        // recall is already used this turn.
+        assert_eq!(
+            why_not(&fused_state, P1, &card_inst.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+
+        // zap was NOT used, and can be activated!
+        assert_eq!(why_not(&fused_state, P1, &card_inst.id, Some("zap")), None);
+
+        // Activate zap.
+        let state_after_zap = act(
+            &fused_state,
+            activate(
+                P1,
+                &card_inst.id,
+                json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
+            ),
+        )
+        .0;
+
+        // Both are now spent.
+        assert_eq!(
+            why_not(&state_after_zap, P1, &card_inst.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+        assert_eq!(
+            why_not(&state_after_zap, P1, &card_inst.id, Some("zap")),
+            Some("that ability has already been used this turn".to_string())
+        );
     }
 }

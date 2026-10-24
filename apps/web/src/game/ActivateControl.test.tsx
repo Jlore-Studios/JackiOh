@@ -295,6 +295,11 @@ describe("R384 an activation is built through the board as a play is", () => {
     const { onAction } = renderGame([TURTLE_U1, TURTLE_U2]);
 
     fireEvent.click(el(testid.activate("act2")));
+    // R1751000: Even when only one ability is legal on a multi-ability card, clicking Activate opens the ability modal first.
+    expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "discover");
+    expect(screen.getByTestId("prompt-option-turtle")).toBeInTheDocument();
+
+    fireEvent.click(el("prompt-option-turtle"));
     expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "tribute");
     expect(el(testid.card("u2"))).toHaveAttribute("data-glow", "ready");
 
@@ -314,6 +319,21 @@ describe("R384 an activation is built through the board as a play is", () => {
 
     fireEvent.click(el("prompt-option-ping"));
     expect(onAction).toHaveBeenCalledWith(PING_ACT2);
+  });
+
+  it("R1751000 clicking Activate on a card with several abilities opens the discover modal even when only one ability is legal and has no targets", () => {
+    const DRAW_ACT2: ActionBody = { type: "activate", instanceId: "act2", ability: "ping" };
+    const { onAction } = renderGame([DRAW_ACT2]);
+
+    fireEvent.click(el(testid.activate("act2")));
+    // Does not dispatch immediately; opens discover modal!
+    expect(onAction).not.toHaveBeenCalled();
+    const modal = el("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-kind", "discover");
+    expect(screen.getByTestId("prompt-option-ping")).toBeInTheDocument();
+
+    fireEvent.click(el("prompt-option-ping"));
+    expect(onAction).toHaveBeenCalledWith(DRAW_ACT2);
   });
 
   it("R384 Cancel puts the activation down and sends nothing", () => {
