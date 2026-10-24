@@ -6,10 +6,10 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
-    UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at, carried_at,
-    effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces,
-    row_size, slot_of, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Position, Row,
+    Selection, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent, attack_mod_for, beneath_at,
+    canonical, card_at, carried_at, effective_cost, find_instance, has_keyword, is_locked,
+    lane_multiplier_for, legal_actions, pierces, row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -631,4 +631,19 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
     out.extend(switches);
     out.extend(ends);
     out
+}
+
+/// #1759: whether `action` switches a unit in Attack Position to Defense, a stand-down, when a unit of the
+/// opponent's would kill it and survive in a fight (`kills_and_survives`): a unit that cannot win its next fight.
+pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
+    let ActionBody::SwitchPosition { instance_id } = action else {
+        return false;
+    };
+    let Some(unit) = find_instance(state, instance_id) else {
+        return false;
+    };
+    unit_view(state, unit).position == Position::Atk
+        && active_units_of(state, unit.controller.opponent())
+            .into_iter()
+            .any(|enemy| kills_and_survives(state, enemy, unit))
 }
