@@ -846,6 +846,20 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   };
 }
 
+// What waits on the viewer (#1792)
+
+/**
+ * #1792: whether the game waits on the viewer, for the tab's title. Never once the game is over;
+ * while a prompt is open, only when it is the viewer's (`pending.forYou`), the mulligan's included
+ * (R265, R266: a seat that has answered sees the other seat's as `forYou: false`); otherwise on
+ * `yourTurn`, the viewer's own turn unless the caller says what its turn is (the co-op round, §13.3).
+ */
+export function awaitsYou(view: PlayerView, yourTurn: boolean = view.active === view.viewer): boolean {
+  if (view.result !== null) return false;
+  if (view.pending !== null) return view.pending.forYou;
+  return yourTurn;
+}
+
 // The dev handle (BUILD M5-T3, consumed by e2e/support/commands.ts)
 
 /**
