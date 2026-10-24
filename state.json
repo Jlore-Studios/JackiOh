@@ -14133,6 +14133,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1782": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-24T07:14:02Z",
+      "issue": 1771,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
