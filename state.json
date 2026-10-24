@@ -27910,6 +27910,12 @@
         "number": 1762,
         "title": "Patch: the Luau lint refuses what makes a custom script's answer run-dependent",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-24T06:50:31Z",
+        "number": 1773,
+        "title": "Patch: at the 1v1, practice and lesson tables the focus lands on the result's reopen button and stays inside the Leave dialog, as the co-op table's already does",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-24T06:37:07Z",
