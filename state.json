@@ -13510,7 +13510,7 @@
       "failures": 0,
       "feedback_since": "2026-10-24T02:41:04Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 1750,
       "kind": "revise",
       "last_findings": [],
