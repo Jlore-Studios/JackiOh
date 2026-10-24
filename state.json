@@ -14504,8 +14504,10 @@
       "feedback_since": "2026-10-24T07:28:06Z",
       "issue": 1778,
       "kind": "revise",
-      "queued_at": "2026-10-24T10:55:23Z",
+      "queued_at": "2026-10-24T10:55:52Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "gemini"
