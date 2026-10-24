@@ -172,6 +172,7 @@ to the browser's downloads, for a bug report.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
+The panel takes the focus on its first way on as it comes in; its "View the board" folds it to a "Result" button on the board's rail (`duos-result-reopen`) that opens it again, the replay door and the XP reveal with it (#1755).
 A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```
@@ -647,6 +648,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
   the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
   from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+  While the editor holds unsaved changes the route registers `net/navigate.ts`'s `guardLeaving`, so every
+  `navigate` off it and the browser's Back wait for its note (R1484000, R1754000).
 - **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
   under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
   L7 (R915005), and the play lobby offers it disabled.

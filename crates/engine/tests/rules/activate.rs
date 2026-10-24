@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::subsystems::activate::{
     ACTIVATION_WORK, ActivateAction, abilities_of, activate_ability, activate_actions_for,
-    is_acting_on_field, uses_allowed, why_cannot_activate_ability,
+    is_acting_on_field, uses_allowed, uses_record_after_refund, why_cannot_activate_ability,
 };
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::subsystems::hero_power::POWER_KEY;
@@ -1723,6 +1723,45 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         assert!(zap_view.usable);
         assert_eq!(recall_view.uses_left, Some(0));
         assert!(!recall_view.usable);
+    }
+
+    #[test]
+    fn r1751000_a_refund_gives_back_only_the_named_abilitys_use() {
+        let mut state = playing("fused-refund");
+        let card_inst = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card_inst.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card_inst);
+        assert_eq!(
+            uses_record_after_refund(&state, card(&state, &card_inst.id), Some("recall")),
+            None
+        );
+
+        let state = act(
+            &state,
+            activate(P1, &card_inst.id, json!({ "ability": "recall" })),
+        )
+        .0;
+        let state = act(
+            &state,
+            activate(
+                P1,
+                &card_inst.id,
+                json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
+            ),
+        )
+        .0;
+        let record = uses_record_after_refund(&state, card(&state, &card_inst.id), Some("recall"))
+            .expect("a use to give back");
+        assert_eq!(
+            record,
+            json!({ "turn": state.turn, "count": 1, "abilities": { "recall": 0, "zap": 1 } })
+        );
     }
 
     #[test]

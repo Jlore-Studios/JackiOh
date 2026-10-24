@@ -8,6 +8,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { guardLeaving } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink } from "../net/roomLink.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
@@ -236,6 +237,36 @@ describe("B57 the challenge toast", () => {
       expect(await screen.findByRole("button", { name: /^accept/i }, SOON)).toBeInTheDocument();
       expect(acceptButtons()).toHaveLength(1);
       expect(must(acceptButtons()[0], "accept")).toBeInTheDocument();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1754000 Accept on a page holding unsaved work waits for its note, and the toast stays until the player goes",
+    async () => {
+      signedIn();
+      serve({ incoming: [INCOMING], outgoing: [] });
+      const held: (() => void)[] = [];
+      const release = guardLeaving((leave) => {
+        held.push(leave);
+      });
+      try {
+        render(<ChallengeToast />);
+        fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
+        expect(held).toHaveLength(1);
+        expect(window.location.pathname).toBe("/decks");
+        expect(acceptButtons()).toHaveLength(1);
+
+        act(() => {
+          must(held[0], "held move")();
+        });
+        await waitFor(() => {
+          expect(window.location.pathname).toBe("/play");
+        });
+        expect(readRoomLink()?.code).toBe(INCOMING.roomCode);
+      } finally {
+        release();
+      }
     },
     TEST_MS,
   );

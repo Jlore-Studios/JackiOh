@@ -335,5 +335,6 @@ than the screen does ([[R203]]).
   in on return, unless the player turns it on. The dialog groups them in tabs (Gameplay, Visuals,
   Audio and Account), and opens on the tab the player used last on that device. All are kept on the
   device, and for an active account on the account too ([[R633]], [[R634]]), so they follow the player to
-  another device; they change nothing in the game. Muting, or turning voice lines off, also stops the line
+  another device; they change nothing in the game. A save to the account that fails says so in the dialog,
+  a quiet line with Try again ([[R1758000]]). Muting, or turning voice lines off, also stops the line
   that is speaking. With dynamic music off, only the station's in-game track plays.

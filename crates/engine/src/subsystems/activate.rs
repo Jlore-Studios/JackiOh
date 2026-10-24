@@ -348,7 +348,8 @@ fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
-    let prev = abilities_map.get(ability).and_then(Value::as_f64).unwrap_or(0.0) as i32;
+    // A record an older engine wrote (`{ turn, count }`) counts for the card's only ability.
+    let prev = ability_uses_this_turn(state, card, ability);
     abilities_map.insert(ability.to_string(), json!(prev + 1));
     let record = json!({
         "turn": state.turn,
@@ -358,6 +359,37 @@ fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
     if let Some(card) = find_instance_mut(state, card_id) {
         card.memory.insert(ACTIVATIONS_MEMORY_KEY.to_string(), record);
     }
+}
+
+/// R757, R1751000: the record with one use of `ability` given back, or `None` when the card has none
+/// to give back this turn. The other abilities of a fusion keep their own uses.
+pub fn uses_record_after_refund(
+    state: &GameState,
+    card: &CardInstance,
+    ability: Option<&str>,
+) -> Option<Value> {
+    let count = uses_this_turn(state, card);
+    if count == 0 {
+        return None;
+    }
+    let mut abilities_map = card
+        .memory
+        .get(ACTIVATIONS_MEMORY_KEY)
+        .and_then(|raw| raw.get("abilities"))
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    if let Some(ability) = ability {
+        let prev = ability_uses_this_turn(state, card, ability);
+        if prev > 0 {
+            abilities_map.insert(ability.to_string(), json!(prev - 1));
+        }
+    }
+    Some(json!({
+        "turn": state.turn,
+        "count": count - 1,
+        "abilities": abilities_map,
+    }))
 }
 
 // ---------------------------------------------------------------------------
