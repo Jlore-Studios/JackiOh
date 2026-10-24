@@ -12472,6 +12472,13 @@
     "1793": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:52:50Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "Five files in apps/web, unit-tested and under 400 lines, but it adds a warning tone to the tile in deckbuilder.css. That is visual polish, which the rule never rates easy."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
