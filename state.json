@@ -14871,10 +14871,7 @@
       "total": 8153960448
     }
   ],
-  "planning": {
-    "at": "2026-10-24T04:15:21Z",
-    "owner": "loop 40039665074"
-  },
+  "planning": null,
   "providers": {
     "agy": {
       "refused_until": "2026-10-24T03:40:16Z",
