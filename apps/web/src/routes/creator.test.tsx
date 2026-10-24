@@ -1,6 +1,7 @@
 // R1484000, #1484: the card creator asks before leaving a card with changes not yet saved.
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CustomCard } from "@jackioh/shared";
@@ -8,7 +9,7 @@ import type { CustomCard } from "@jackioh/shared";
 import { type CreatorApi } from "../creator/Creator.tsx";
 import { creatorTestid } from "../creator/testids.ts";
 import { type CustomCardInput } from "../net/customCards.ts";
-import { paths } from "../net/navigate.ts";
+import { navigate, paths, tryPath, usePathname } from "../net/navigate.ts";
 import CreatorRoute from "./creator.tsx";
 import { navTestid } from "./nav.tsx";
 
@@ -52,6 +53,28 @@ async function openRoute(): Promise<ReturnType<typeof render>> {
   const view = render(<CreatorRoute token="token-1" api={fakeApi()} />);
   await screen.findByText("0 of 50 cards");
   return view;
+}
+
+/** The creator where the app puts it, with any other path shown as text: what a move off it leaves behind. */
+function Shell({ api }: { api: CreatorApi }): ReactElement {
+  const path = usePathname();
+  return path === paths.creator ? <CreatorRoute token="token-1" api={api} /> : <p data-testid="elsewhere">{path}</p>;
+}
+
+async function openShell(): Promise<void> {
+  render(<Shell api={fakeApi()} />);
+  await screen.findByText("0 of 50 cards");
+}
+
+/** The browser's Back, waited for until its `popstate` has fired. */
+async function browserBack(): Promise<void> {
+  await act(async () => {
+    const popped = new Promise((resolve) => {
+      window.addEventListener("popstate", resolve, { once: true });
+    });
+    window.history.back();
+    await popped;
+  });
 }
 
 function typeName(value: string): void {
@@ -122,5 +145,87 @@ describe("R1484000 the creator asks before leaving a card with changes not yet s
     expect(unloadIsCancelled()).toBe(true);
     view.unmount();
     expect(unloadIsCancelled()).toBe(false);
+  });
+});
+
+describe("R1754000 every way off the creator asks before it drops unsaved changes", () => {
+  it("R1754000 a move the queue or a challenge makes off a card with unsaved changes shows the note; Keep editing stays and is asked again, Discard them goes", async () => {
+    await openShell();
+    typeName("Half made");
+
+    act(() => {
+      navigate(paths.match("m-1"));
+    });
+    expect(window.location.pathname).toBe(paths.creator);
+    expect(screen.getByText(UNSAVED)).toBeInTheDocument();
+    expect((screen.getByTestId(creatorTestid.name) as HTMLInputElement).value).toBe("Half made");
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.queryByText(UNSAVED)).toBeNull();
+
+    act(() => {
+      navigate(paths.match("m-1"));
+    });
+    expect(screen.getByText(UNSAVED)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard them" }));
+    expect(window.location.pathname).toBe(paths.match("m-1"));
+    expect(screen.getByTestId("elsewhere")).toHaveTextContent(paths.match("m-1"));
+  });
+
+  it("R1754000 the browser's Back off a card with unsaved changes stays on the card and shows the note; Discard them goes back", async () => {
+    window.history.replaceState(null, "", paths.collection);
+    window.history.pushState(null, "", paths.creator);
+    await openShell();
+    typeName("Half made");
+
+    await browserBack();
+    expect(window.location.pathname).toBe(paths.creator);
+    expect(screen.getByText(UNSAVED)).toBeInTheDocument();
+    expect((screen.getByTestId(creatorTestid.name) as HTMLInputElement).value).toBe("Half made");
+    expect(screen.queryByTestId("elsewhere")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.queryByText(UNSAVED)).toBeNull();
+    await browserBack();
+    expect(screen.getByText(UNSAVED)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard them" }));
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(paths.collection);
+    });
+    await screen.findByTestId("elsewhere");
+  });
+
+  it("R1754000 a card with nothing unsaved is left at once by the browser's Back and by any move", async () => {
+    window.history.replaceState(null, "", paths.collection);
+    window.history.pushState(null, "", paths.creator);
+    await openShell();
+
+    await browserBack();
+    expect(window.location.pathname).toBe(paths.collection);
+    expect(screen.queryByText(UNSAVED)).toBeNull();
+
+    act(() => {
+      navigate(paths.creator);
+    });
+    await screen.findByText("0 of 50 cards");
+
+    act(() => {
+      navigate(paths.match("m-1"));
+    });
+    expect(window.location.pathname).toBe(paths.match("m-1"));
+    expect(screen.queryByText(UNSAVED)).toBeNull();
+  });
+
+  it("R1754000 Try it on a card with unsaved changes saves it and goes to practice without the note", async () => {
+    await openShell();
+    typeName("Tried card");
+    await waitFor(() => expect((screen.getByTestId(creatorTestid.tryIt) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByTestId(creatorTestid.tryIt));
+    await waitFor(() => {
+      expect(window.location.pathname + window.location.search).toBe(tryPath(`custom-${"1".padStart(32, "0")}`));
+    });
+    expect(screen.queryByText(UNSAVED)).toBeNull();
   });
 });

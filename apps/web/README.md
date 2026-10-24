@@ -647,6 +647,8 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
   the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
   from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+  While the editor holds unsaved changes the route registers `net/navigate.ts`'s `guardLeaving`, so every
+  `navigate` off it and the browser's Back wait for its note (R1484000, R1754000).
 - **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
   under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
   L7 (R915005), and the play lobby offers it disabled.
