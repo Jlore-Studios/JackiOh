@@ -40,6 +40,7 @@ import { CatalogContext } from "../game/catalog.ts";
 import { currentCatalogLookup } from "../game/currentCatalog.ts";
 import {
   installDevHandle,
+  awaitsYou,
   remainingMs,
   useMatch,
   viewDerivedState,
@@ -321,11 +322,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     );
   }, [readOnly]);
 
-  // The tab says when it is the player's turn, so a match in a background tab can be found.
-  const yourTurn = view !== null && view.result === null && view.active === view.viewer;
+  // #1792: the tab says when the game waits on the player (its mulligan, a prompt it holds, or its
+  // turn: `awaitsYou`), so a match in a background tab can be found.
+  const yourMove = view !== null && awaitsYou(view);
   useEffect(() => {
-    document.title = yourTurn ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
-  }, [yourTurn, matchId, locale]);
+    document.title = yourMove ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
+  }, [yourMove, matchId, locale]);
 
   if (view === null) {
     if (match.connection === "refused") {
