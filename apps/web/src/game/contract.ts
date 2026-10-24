@@ -118,9 +118,9 @@ export const testid = {
 } as const;
 
 /**
- * R384, R510: the `ability` an Activate control names, in its testid and in its click: none when the
- * card lists one ability (the engine then takes the card's only one), the ability's id when it lists
- * several. The board's control and `actions.ts`'s highlight both ask this, so they agree.
+ * R384, R510, R1751000: the `ability` an Activate control names. Under R1751000, board Activate
+ * controls on cards with multiple abilities target `{ on: "activate", instanceId }` (without ability)
+ * to open the Discover choice modal; `namedAbility` is retained for backwards compatibility.
  */
 export function namedAbility(abilityCount: number, ability: string): string | undefined {
   return abilityCount > 1 ? ability : undefined;

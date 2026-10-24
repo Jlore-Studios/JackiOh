@@ -105,16 +105,19 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 
 ## Patch v0.2.0 at the table
 
-**Activate** (SPEC §6.2, R384, R510). A card whose view lists `activations` (the engine gives them to
-its controller's own view of a card acting on the field) wears one control per ability on the card
-itself (`ActivateControl.tsx`): a lightning glyph and a badge with the uses left this turn ("∞" for
-Activate ♾️), the ability's words (its `{key}`s filled from the card's `params`) as tooltip and
-accessible name. It is `activate-<instanceId>` with its badge `activate-uses-<instanceId>`, the
-ability named after the id (`activate-<instanceId>-<ability>`) only on a card listing several
-(`namedAbility`, `contract.ts`). It is live exactly when `legal` lists that card's `activate`;
-otherwise it is greyed and its tooltip gives the view's `reason`. A press reports
-`{ on: "activate" }`, and `actions.ts` builds the activation exactly as a play's choices are built: one
-listed body is sent at once; several wait for a target clicked on the board (or dragged to from the
+**Activate** (SPEC §6.2, R384, R510, R1751000). A card whose view lists `activations` (the engine gives
+them to its controller's own view of a card acting on the field) wears one control on the card itself
+(`ActivateControl.tsx`), however many abilities it lists: a lightning glyph and a badge with the uses
+left this turn ("∞" for Activate ♾️; on a card listing several, the sum of its usable abilities'), the
+ability's words (its `{key}`s filled from the card's `params`) as tooltip and accessible name. It is
+`activate-<instanceId>` with its badge `activate-uses-<instanceId>`; each ability counts its own uses and
+cooldown (R1751000), and `namedAbility` (`contract.ts`) is kept only for the ability a press names. It is
+live exactly when `legal` lists that card's `activate`; otherwise it is greyed and its tooltip gives the
+view's `reason`. A press reports `{ on: "activate" }`, and `actions.ts` builds the activation exactly as a
+play's choices are built: one listed body is sent at once, except on a card listing several abilities,
+which asks which first (the `ability` need, a Discover-chrome picker in `Prompt.tsx` showing each
+ability's words and uses left, even when only one is legal) and leaves the card's other abilities usable
+the same turn; the rest wait for a target clicked on the board (or dragged to from the
 control, or from a card of yours that has nothing to attack and one ability), a Tribute, or a mode
 in the inline picker. Heroic Power is built the same way: `power` (the first power) and
 `power-<instanceId>` (any further one) report the power's activation: the `activate` naming the
