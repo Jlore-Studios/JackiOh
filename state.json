@@ -13470,7 +13470,9 @@
     },
     "1760": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6379208351"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -13493,9 +13495,7 @@
       "started_at": "2026-10-24T03:50:36Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6379208351"
-      ]
+      "taken_asks": []
     },
     "1763": {
       "action": "revise",
