@@ -13289,6 +13289,13 @@
     "1757": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T03:26:03Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "line 8/9: it changes useModalOverlay, the shared hook seven overlays use (a new closable flag and a trapTab edge), and I cannot see whether an open PR touches store.ts"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
