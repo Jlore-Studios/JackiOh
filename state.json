@@ -14160,13 +14160,21 @@
       }
     },
     "1783": {
+      "action": "review",
+      "asks": [],
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-24T07:14:23Z",
       "issue": 1774,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-10-24T08:03:55Z",
+      "run_id": "pending:522a3c4e-1792829087",
       "self_check_findings": [],
+      "started_at": "2026-10-24T08:05:02Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
@@ -14217,9 +14225,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-24T07:57:16Z",
+    "at": "2026-10-24T08:05:02Z",
     "url": "",
-    "what": "build #1775 on claude-2"
+    "what": "review #1783 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-24T07:56:12Z",
