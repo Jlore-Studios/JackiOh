@@ -12470,6 +12470,13 @@
     "1795": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:33:44Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Line 9 (stands alone) is the doubt: I can't see open pull requests from here, so I can't rule out one touching Zone.tsx. The issue is also labelled medium. Every other line would hold for easy (3 files, apps/web only, unit-tested)."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
