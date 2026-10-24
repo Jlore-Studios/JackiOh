@@ -27100,6 +27100,12 @@
         "number": 1716,
         "title": "Patch: a failed clock persist is retried, not marked written",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-24T03:05:55Z",
+        "number": 1753,
+        "title": "Patch: a finished co-op match refuses a seat's attach past its window, in-memory actor or not",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
