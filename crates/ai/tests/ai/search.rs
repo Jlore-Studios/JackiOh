@@ -515,7 +515,7 @@ mod candidate_actions_b14 {
             .expect("a stand-down");
         let width = first + 1;
         let kept = AI_SEARCH.position_switches as usize;
-        assert!(stand_downs.len() >= 1 + kept);
+        assert!(stand_downs.len() > kept);
         let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
         assert_eq!(expanded[..width], candidates[..width]);
         assert_eq!(expanded[width..width + kept], stand_downs[1..1 + kept]);
