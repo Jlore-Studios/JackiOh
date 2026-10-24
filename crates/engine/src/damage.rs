@@ -366,11 +366,11 @@ fn credit_killer(unit: &mut CardInstance, source: Option<&CardInstance>, killed_
 }
 
 /// R346: whether a hit skips §4.4 step 2. Pierce is a keyword of the source — a unit's, read through
-/// the layers like its Lifesteal and Trample (§10.4), or a spell's printed on its face (#44 True
-/// Strike), which the same reading finds on the card while it resolves — or the effect's own
-/// `ignore_armor`, which states that its damage pierces without the source having the keyword, as
-/// R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine Shield, the hero
-/// cap and Indestructible all still apply.
+/// the layers like its Lifesteal and Trample (§10.4), or a spell's, printed on its face (#44 True
+/// Strike) or given by a Buff (R1748001), which the same reading finds on the card while it resolves —
+/// or the effect's own `ignore_armor`, which states that its damage pierces without the source having
+/// the keyword, as R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine
+/// Shield, the hero cap and Indestructible all still apply.
 pub fn pierces(state: &GameState, source: Option<&CardInstance>, flags: Option<&DamageFlags>) -> bool {
     if flags.is_some_and(|flags| flags.ignore_armor == Some(true)) {
         return true;
