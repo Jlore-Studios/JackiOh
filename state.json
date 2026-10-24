@@ -12433,6 +12433,13 @@
     "1792": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:35:50Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "everything is in apps/web and small, but line 9 (no open PR on the same files) cannot be checked from here, and the co-op guard is a design call this plan settles"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
