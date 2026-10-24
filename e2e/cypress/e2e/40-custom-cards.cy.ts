@@ -300,7 +300,7 @@ describe("40 custom cards — made in the creator, kept on the account, played i
       });
 
       // R915009: practice with that deck runs in the Luau module; the AI's deck stays a normal deck.
-      const params = new URLSearchParams({ seed: SEED, seat: "p2", pace: "fast" });
+      const params = new URLSearchParams({ seed: SEED, seat: "p2", pace: "fast", aipool: "fixture" });
       cy.visitAs(me(), `${routes.practice()}?${params.toString()}`);
       cy.get(ts(PRACTICE_DECK), { timeout: timeouts.view }).select("saved:1");
       cy.get(ts(PRACTICE_START), { timeout: timeouts.view }).should("not.be.disabled").click();

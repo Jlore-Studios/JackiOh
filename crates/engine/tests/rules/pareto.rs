@@ -12,7 +12,7 @@
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::combat_judge::{cheap, combat_judge_game, dear, judge, snare};
+use crate::rules::fixtures::combat_judge::{cheap, combat_judge_game, dear, feeder, judge, snare, spark};
 use crate::rules::fixtures::harness::{in_hand, put, slot};
 
 /// P2 to play at turn 4 with 10 mana and the judge watching from P1's backrow.
@@ -189,5 +189,38 @@ fn r1125_replay_fold_matches_hash() {
     assert_eq!(
         serde_json::to_value(&first.events).expect("serialises"),
         serde_json::to_value(&second.events).expect("serialises")
+    );
+}
+
+#[test]
+fn r1803000_a_dry_run_that_never_settles_stops_where_it_stands() {
+    // P2's Feeder casts a Spark at its End of turn and a Spark's Cry triggers End of turn effects, so
+    // trying the Spark in hand feeds itself: each cast queues the next. A real play of it would end at
+    // the resolution loop's cap with a panic; the judge's trial of it must not hang or panic.
+    let mut state = watched("r1803000-feeds-itself");
+    put(
+        &mut state,
+        &feeder.id,
+        slot(P2, Row::Units, 1),
+        Default::default(),
+    );
+    let spark_card = in_hand(&mut state, &spark.id, P2, 1).into_iter().next().unwrap();
+    let cheap_card = in_hand(&mut state, &cheap.id, P2, 1).into_iter().next().unwrap();
+
+    // The Spark's trial stops where it stands, so both plays are judged and the 1/1 for 1 is the best
+    // of them as it was without the Spark's loop.
+    assert!(jackioh_engine::subsystems::pareto::judge_play(&state, P2, &cheap_card.id));
+    jackioh_engine::subsystems::pareto::judge_play(&state, P2, &spark_card.id);
+
+    // The play itself is judged and resolves as ever: the verdict is stored on the cheap body.
+    let out = play(&state, P2, &cheap_card.id, "n1");
+    assert!(out.error.is_none());
+    assert_eq!(
+        out.state.play_judgement,
+        Some(PlayJudgement {
+            instance_id: cheap_card.id.clone(),
+            optimal: true,
+            turn: 4,
+        })
     );
 }

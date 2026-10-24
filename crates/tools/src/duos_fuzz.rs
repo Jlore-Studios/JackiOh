@@ -717,7 +717,8 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
 /// through JSON requiring the identical hash, then applies the rest of the log from the restored
 /// state and requires the live hash and ending. Failures carry the `checkpoint:` prefix the way
 /// growth failures carry `growth:`. Returns the step, whether it held paused work, and the cost
-/// in milliseconds.
+/// in milliseconds: the restart's (the round trip and the continuation), not the prefix fold's,
+/// as the 1v1 wave's (`CHECKPOINT_TIME_BOUND_MS`, #1803).
 fn check_duos_serial_restart(
     options: &DuosCreateOptions,
     log: &[DuosAction],

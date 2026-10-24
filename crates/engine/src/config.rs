@@ -1009,6 +1009,15 @@ pub const SCORER_LOW_HEALTH: i32 = 10;
 /// viewer's own a heal's, and the board's units come after them (`subsystems::scorer`).
 pub const SCORER_DRY_RUN_PLAYS: usize = 8;
 
+/// R1803000: how many passes of the resolution loop (`triggers::settle`) one dry run makes in all, every
+/// loop nested in it counted together, before it stops where it stands and is scored as it stands. A dry
+/// run is a copy played to see what a card's text does (the scorer's, `subsystems::autopilot`'s trial),
+/// and a card pair that feeds itself (a Cry that triggers End of turn effects beside an End of turn that
+/// casts a copy of it) never settles: the real play stops at `triggers::SETTLE_PASS_CAP` with a panic,
+/// but a dry run is only a guess at a play, so it may not hang or end the game for it. It is R58's bound
+/// on one play's triggers, a whole library drawn with a cast-on-draw chain behind each card.
+pub const DRY_RUN_SETTLE_PASSES: usize = (LIBRARY_CAP * CAST_ON_DRAW_CHAIN_CAP) as usize;
+
 /// R753: Life Tap's "Draw 1" (on the Radiant face, from each player's deck) and its "Take 2 damage",
 /// dealt to its own hero by the card (`subsystems::hero_power`).
 pub const LIFE_TAP_DRAW: i32 = 1;

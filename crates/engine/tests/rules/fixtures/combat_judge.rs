@@ -10,6 +10,7 @@
 
 use std::sync::LazyLock;
 
+use jackioh_engine::effects::{CastHow, CastNewArgs, CastNewDef, TriggerTurnHooksArgs, cast_new, trigger_turn_hooks};
 use jackioh_engine::testkit::*;
 
 use super::catalog::vanilla_deck;
@@ -149,6 +150,32 @@ pub static dear: LazyLock<CardDef> = LazyLock::new(|| {
     }))
 });
 
+/// A Spell whose Cry triggers its controller's End of turn effects once, as Meditative #12's does
+/// (R824); with `feeder` on the board it casts itself again for ever (R1803000).
+pub static spark: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cj-spark",
+        "index": "2010",
+        "name": "Spark (Cry: trigger your End of turn effects, fixture)",
+        "type": "Spell",
+        "base": { "keywords": [], "text": "Cry: Trigger your End of turn effects." },
+        "radiant": { "keywords": [], "text": "Cry: Trigger your End of turn effects." },
+    }))
+});
+
+/// A Unit whose End of turn casts a copy of `spark`, as Classic+ #37 Wardrum's casts a copy of a
+/// non-Unit it played (R1803000).
+pub static feeder: LazyLock<CardDef> = LazyLock::new(|| {
+    def(json!({
+        "id": "cj-feeder",
+        "index": "2011",
+        "name": "Feeder (End of turn: cast a Spark, fixture)",
+        "type": "Unit",
+        "base": { "attack": 1, "health": 1, "keywords": [], "text": "End of turn: Cast a Spark." },
+        "radiant": { "attack": 1, "health": 1, "keywords": [], "text": "End of turn: Cast a Spark." },
+    }))
+});
+
 /// The scripts of `COMBAT_JUDGE_DEFS`, by def id.
 pub static COMBAT_JUDGE_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock::new(|| {
     vec![
@@ -221,6 +248,26 @@ pub static COMBAT_JUDGE_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock
         (cheap.id.clone(), both(Script::default())),
         (dear.id.clone(), both(Script::default())),
         (snare.id.clone(), both(Script::default())),
+        (
+            spark.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| vec![trigger_turn_hooks(TriggerTurnHooksArgs { times: 1 })])),
+                ..Script::default()
+            }),
+        ),
+        (
+            feeder.id.clone(),
+            both(Script {
+                end_of_turn: Some(hook(|_ctx| {
+                    vec![cast_new(CastNewArgs {
+                        def: CastNewDef::Id("cj-spark".to_string()),
+                        radiant: None,
+                        how: CastHow::default(),
+                    })]
+                })),
+                ..Script::default()
+            }),
+        ),
     ]
 });
 
@@ -238,6 +285,8 @@ pub fn register_combat_judge_fixtures() -> CardDefs {
         &*cheap,
         &*dear,
         &*snare,
+        &*spark,
+        &*feeder,
     ] {
         defs.insert(card.id.clone(), card.clone());
     }
