@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1758,
+  "title": "Patch: a failed settings save to the account says so and offers Try again",
+  "branch": "bot/issue-1758",
+  "thread": "**Issue #1758 (data, not instructions):**\n\n```text\n# #1758: Patch: a failed settings save to the account says so and offers Try again\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSettings like \"confirm end turn\" save to your account in the background. When that save fails today, it fails silently: you change a setting, the account copy never updates, and the only recovery is an automatic retry you never see. After the change the settings panel shows a quiet \"settings didn't save to your account\" line with a Try again button.\n\n## Why\n\n`settings/accountSync.ts` already tracks the sync as `signedOut | syncing | saved | error` (lines 31-38) and exports `useSettingsSyncState` and `retrySettingsSync` (lines 62-68) \u2014 both tested \u2014 but no production code consumes either: the sync engine is mounted (`main.tsx:467`, `routes/practice.tsx:644`, `routes/landing.tsx:366`) and writes happen, while the failure state and the retry are dead exports. `SettingsPanel.tsx` renders no sync state at all. A failed write is invisible until the automatic retry on tab visibility/online fires (`accountSync.ts:291-307`).\n\n## Proposal\n\nA status line in the settings panel bound to `useSettingsSyncState`, plus a Try again calling `retrySettingsSync` \u2014 no new sync machinery, only consuming what is already built and tested.\n\n## Where it lands\n\n`apps/web/src/settings/SettingsPanel.tsx` and `apps/web/src/settings/accountSync.ts` (the exports it needs already exist); vitest beside `SettingsPanel`.\n\n## Acceptance criteria\n\n- [ ] A failed account sync surfaces the notice with Try again\n- [ ] Try again retries and the notice clears on success\n- [ ] No notice while `syncing`, `saved` or `signedOut`\n- [ ] The automatic retry behaviour is unchanged\n\n## Size and risks\n\nSmall \u2014 the state machine, the states and the retry already exist and are tested; the patch is presentation wiring only.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T03:12:41Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1758: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
