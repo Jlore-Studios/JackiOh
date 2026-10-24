@@ -13948,6 +13948,13 @@
     "1776": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T07:34:27Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 3 fails: it edits spec notes (\u00a74.4, \u00a74.5, \u00a76.1) and cites R1748001, and it also touches an engine file's comment, so it spans crates/cards, crates/engine and spec/"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
