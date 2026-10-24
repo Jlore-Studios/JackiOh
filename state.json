@@ -14166,6 +14166,7 @@
     "1783": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-24T07:14:23Z",
