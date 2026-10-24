@@ -763,6 +763,79 @@ describe("#1664 the result panel plays what the game paid the seat's person", ()
 });
 
 // ---------------------------------------------------------------------------------------------
+// #1755: the result panel takes the focus, folds to the rail's Result and opens again
+// ---------------------------------------------------------------------------------------------
+
+describe("#1755 the result panel takes the focus and opens again", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+  const ECONOMY = {
+    jlore: 30,
+    xp: 540,
+    jloreCapped: false,
+    tracks: [
+      {
+        setId: "Core" as const,
+        before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+        after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+        levels: [{ level: 2, rewards: { jlore: 25, setPacks: 2, cardTokens: 3 } }],
+      },
+    ],
+    quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+  };
+
+  it("#1755 the panel takes the focus on its first way on as it comes in", () => {
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
+    expect(screen.getByTestId("duos-result-board")).toHaveFocus();
+  });
+
+  it("#1755 View the board still dismisses to the board, and the rail's Result takes the focus", () => {
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
+    fireEvent.click(screen.getByTestId("duos-result-board"));
+    expect(screen.queryByTestId("duos-result")).toBeNull();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+    expect(screen.getByTestId("duos-result-reopen")).toHaveFocus();
+  });
+
+  it("#1755 Result opens the panel again, its replay door and XP reveal with it, and the panel takes the focus", () => {
+    const onWatchReplay = vi.fn<() => void>();
+    renderBoard({ view: OVER, economy: ECONOMY }, { onWatchReplay });
+    fireEvent.click(screen.getByTestId("duos-result-board"));
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("duos-result-reopen"));
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+    expect(screen.getByTestId("duos-result-board")).toHaveFocus();
+    expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("Win 3 games");
+
+    fireEvent.click(screen.getByTestId("duos-result-replay"));
+    expect(onWatchReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1755 the rail's Result is on the teammate's board too", () => {
+    renderBoard({ view: OVER });
+    fireEvent.click(screen.getByTestId("duos-result-board"));
+    flipPortal();
+    expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("duos-result-reopen"));
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+  });
+
+  it("#1755 no Result before the game ends, while the panel is up, or in replay mode", () => {
+    renderBoard();
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+    cleanup();
+
+    renderBoard({ view: OVER });
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+    cleanup();
+
+    renderBoard({ replay: true, view: OVER });
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
 // #1146: the team's result waits for the own duel's last burst
 // ---------------------------------------------------------------------------------------------
 
