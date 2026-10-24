@@ -13854,8 +13854,10 @@
     "what": "plan #1779 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-24T06:42:43Z",
-    "notes": [],
+    "at": "2026-10-24T06:48:33Z",
+    "notes": [
+      "#1777 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -14560,7 +14562,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T06:42:43Z",
+  "loop_tick": "2026-10-24T06:48:33Z",
   "machine_disk": {
     "issue": null,
     "reading": {
