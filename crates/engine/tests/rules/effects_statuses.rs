@@ -17,16 +17,7 @@ use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instanc
 use jackioh_engine::view_for::view_for;
 
 use super::fixtures::damage_combat::{bot_loser, grunt, playing, recorder, replays_to};
-use super::fixtures::harness::{put, slot};
-
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
+use super::fixtures::harness::{events_json, put, slot};
 
 /// The card under `id` as it stands in the state now (TS read the live object).
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
@@ -73,7 +64,7 @@ mod e35_go_berserk {
             }
             assert!(is_berserk(live(&*sink.state, &bot.id)));
             assert_eq!(
-                of_type(&*sink.events, "marked"),
+                events_json(&*sink.events, "marked"),
                 vec![
                     json!({ "type": "marked", "instanceId": bot.id, "mark": "berserk", "color": "red", "added": true })
                 ]
@@ -83,7 +74,7 @@ mod e35_go_berserk {
                 let mut ctx = make_context(&mut sink, None, HookOptions::default());
                 apply_effects(&[go_berserk(json_as(on(&bot.id)))], &mut ctx);
             }
-            assert_eq!(of_type(&*sink.events, "marked").len(), 1);
+            assert_eq!(events_json(&*sink.events, "marked").len(), 1);
         }
         for viewer in [PlayerId::P1, PlayerId::P2] {
             let view = serde_json::to_value(view_for(&state, viewer)).expect("a view serialises");
@@ -103,7 +94,7 @@ mod e35_go_berserk {
         let after = game.state().clone();
         assert_eq!(after.players.p1.hero.health, 25);
         assert_eq!(
-            of_type(&back.events, "attackDeclared"),
+            events_json(&back.events, "attackDeclared"),
             vec![
                 json!({ "type": "attackDeclared", "attackerId": bot.id, "targetId": "hero-p1", "forced": true })
             ]

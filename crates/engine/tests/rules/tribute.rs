@@ -18,18 +18,10 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, matches_object, new_game, put, sink_for, slot,
+    both, events_of_type, in_hand, matches_object, new_game, put, sink_for, slot, spread,
 };
 
 // Fixtures.
-
-/// The keys of `extra` replace the defaults'.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(fields), Value::Object(over)) = (base.as_object_mut(), extra) {
-        fields.extend(over);
-    }
-    base
-}
 
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     json_as(spread(
@@ -145,13 +137,6 @@ fn defs() -> Vec<CardDef> {
         hand_over_golem(),
         reborn_body(),
     ]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn flags(value: Value) -> Option<StaticFlags> {

@@ -65,7 +65,7 @@ fn mag() -> CardDef {
 }
 
 /// A 1/1 with both Stack and Equip.
-fn both() -> CardDef {
+fn stack_and_equip() -> CardDef {
     def_of_kind(
         "both",
         1903,
@@ -123,7 +123,7 @@ fn paid() -> CardDef {
 }
 
 fn defs() -> Vec<CardDef> {
-    vec![host(), mag(), both(), immutable(), sentry(), paid()]
+    vec![host(), mag(), stack_and_equip(), immutable(), sentry(), paid()]
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -416,7 +416,7 @@ fn r1086_stack_and_equip_are_two_plays() {
         slot(PlayerId::P1, Row::Units, 1),
         json!({}),
     );
-    let both = in_hand(&mut state, &both().id, PlayerId::P1, 1).remove(0);
+    let both = in_hand(&mut state, &stack_and_equip().id, PlayerId::P1, 1).remove(0);
     flush(&mut state, PlayerId::P1, 10);
 
     // The occupied zone is offered both ways: plain (Stack) and Equip.
@@ -450,7 +450,7 @@ fn r1086_stack_and_equip_are_two_plays() {
         slot(PlayerId::P1, Row::Units, 1),
         json!({}),
     );
-    let both = in_hand(&mut state, &self::both().id, PlayerId::P1, 1).remove(0);
+    let both = in_hand(&mut state, &stack_and_equip().id, PlayerId::P1, 1).remove(0);
     flush(&mut state, PlayerId::P1, 10);
     let result = act_result(&state, play_input(&both.id, 1, true, Value::Null));
     assert_eq!(result.error, None);

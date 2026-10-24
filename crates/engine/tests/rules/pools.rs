@@ -10,19 +10,11 @@ use std::borrow::Borrow;
 
 use jackioh_engine::testkit::*;
 
+use crate::rules::fixtures::harness::spread;
+
 /// TS `FACE`.
 fn face() -> Value {
     json!({ "keywords": [], "text": "fixture" })
-}
-
-/// TS `{ ...base, ...extra }`: every key of `extra` written over `base`.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(target), Value::Object(extra)) = (base.as_object_mut(), extra) {
-        for (key, value) in extra {
-            target.insert(key, value);
-        }
-    }
-    base
 }
 
 /// TS `card(id, set, index, overrides = {})`: `set` as the catalog spells it ("Classic+").

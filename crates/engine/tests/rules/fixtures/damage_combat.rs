@@ -20,7 +20,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::{new_game, put, slot};
+use super::harness::{both, new_game, put, slot};
 
 /// TS `def(name, type, extra = {})`: a Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
@@ -142,14 +142,6 @@ fn attack_facts(ctx: &EffectContext<'_>) -> String {
         .map_or(String::new(), |facts| facts.destroyed_ids.join("+"));
     let survived = js_bool(facts.as_ref().map(|facts| facts.survived));
     format!("after:{destroyed}:{survived}:{}", ctx.controller)
-}
-
-/// TS `both(script, radiant = script)`.
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn both_of(base: Script, radiant: Script) -> CardScripts {

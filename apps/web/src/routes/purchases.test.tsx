@@ -2,6 +2,7 @@
 // footer's link to it. Signed in, the page shows what `GET /api/packs` and `GET /api/cosmetic-packs`
 // answer, each figure the server's; signed out it shows the disclaimer and a sign-in link and asks the
 // server for nothing. Every figure below is the fixture's, none of them the shipped tables'.
+// A read that fails offers Try again, which reads it again (#1774).
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -158,6 +159,69 @@ describe("R1665000 /purchases signed in", () => {
     expect(await screen.findByTestId(purchasesTestid.odds, undefined, SLOW)).toBeInTheDocument();
     expect(await screen.findByTestId(purchasesTestid.pityLine, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByTestId(purchasesTestid.cosmeticSlot)).toBeNull();
+  });
+});
+
+describe("#1774 /purchases offers Try again", () => {
+  it("#1774 a failed packs read offers Try again, which reads it again and shows the odds and the pity", async () => {
+    let refused = false;
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/packs" && !refused) {
+        refused = true;
+        return refusal(503, "internal", "the packs are closed");
+      }
+      return answers(call);
+    });
+    signedIn();
+    render(<PurchasesRoute />);
+
+    // Both places the packs read feeds show the failure, each with an enabled Try again.
+    expect(await screen.findByTestId(purchasesTestid.loadError("card-packs"), undefined, SLOW)).toHaveTextContent(
+      "the packs are closed",
+    );
+    expect(screen.getByTestId(purchasesTestid.loadError("pity"))).toHaveTextContent("the packs are closed");
+    for (const place of ["card-packs", "pity"] as const) {
+      expect(screen.getByTestId(purchasesTestid.retry(place))).toBeEnabled();
+      expect(screen.getByTestId(purchasesTestid.retry(place))).toHaveTextContent("Try again");
+    }
+    expect(await screen.findByTestId(purchasesTestid.cosmeticSlot, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId(purchasesTestid.retry("cosmetic-packs"))).toBeNull();
+
+    fireEvent.click(screen.getByTestId(purchasesTestid.retry("card-packs")));
+
+    // The one shared read ran again and both places show its answer together.
+    const odds = await screen.findByTestId(purchasesTestid.odds, undefined, SLOW);
+    expect(within(odds).getByTestId(purchasesTestid.oddsRow("rare"))).toHaveTextContent("Rare32%82%");
+    expect(await screen.findByTestId(purchasesTestid.pityRow("epic"), undefined, SLOW)).toHaveTextContent(
+      "7 / 10 packs",
+    );
+    expect(screen.getByTestId(purchasesTestid.pityLine)).toBeInTheDocument();
+    expect(screen.queryByTestId(purchasesTestid.loadError("card-packs"))).toBeNull();
+    expect(screen.queryByTestId(purchasesTestid.loadError("pity"))).toBeNull();
+    expect(screen.queryByTestId(purchasesTestid.retry("card-packs"))).toBeNull();
+    expect(screen.queryByTestId(purchasesTestid.retry("pity"))).toBeNull();
+    expect(server.to("GET", "/api/packs")).toHaveLength(2);
+    expect(server.to("GET", "/api/cosmetic-packs")).toHaveLength(1);
+  });
+
+  it("#1774 a rate-limited read says when to try again and holds Try again", async () => {
+    const rateLimited: Reply = {
+      status: 429,
+      body: { error: { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } } },
+    };
+    stubServer((call) => (call.method === "GET" && call.path === "/api/packs" ? rateLimited : answers(call)));
+    signedIn();
+    render(<PurchasesRoute />);
+
+    const error = await screen.findByTestId(purchasesTestid.loadError("card-packs"), undefined, SLOW);
+    expect(error).toHaveTextContent("slow down");
+    expect(error).toHaveTextContent(/You can try again in \d+ s\./);
+    expect(screen.getByTestId(purchasesTestid.loadError("pity"))).toHaveTextContent(/You can try again in \d+ s\./);
+    for (const place of ["card-packs", "pity"] as const) {
+      const retry = screen.getByTestId(purchasesTestid.retry(place));
+      expect(retry).toBeDisabled();
+      expect(retry).toHaveTextContent(/Try again in \d+ s/);
+    }
   });
 });
 

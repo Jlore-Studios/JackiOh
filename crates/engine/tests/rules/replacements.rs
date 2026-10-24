@@ -12,7 +12,7 @@ use crate::rules::fixtures::damage_combat::{
     grunt, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to,
     round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 const P1: PlayerId = PlayerId::P1;
@@ -100,15 +100,8 @@ fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .into_iter()
-        .map(|event| serde_json::to_value(event).unwrap())
-        .collect()
-}
-
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
-    of_type(events, kind)
+    events_json(events, kind)
         .into_iter()
         .map(|event| event[field].clone())
         .collect()
@@ -155,8 +148,8 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         assert_eq!(hero(&after, P2), 2 + 10);
         assert_eq!(after.players.p2.hand.len(), hand_before + 3);
         assert_eq!(notes(&after), strings(&["cancel:after:none"]));
-        assert!(of_type(&result.events, GameEventType::Redirected).is_empty());
-        assert!(of_type(&result.events, GameEventType::Damage).is_empty());
+        assert!(events_json(&result.events, GameEventType::Redirected).is_empty());
+        assert!(events_json(&result.events, GameEventType::Damage).is_empty());
         assert_eq!(
             field_of(&result.events, GameEventType::TrapFired, "instanceId"),
             vec![json!(trap.id)]
@@ -198,7 +191,7 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         assert_eq!(after.players.p2.hand.len(), hand_before + 3);
         assert_eq!(notes(&after), strings(&["gambit:after:p1"]));
         assert_eq!(
-            of_type(&result.events, GameEventType::Redirected),
+            events_json(&result.events, GameEventType::Redirected),
             vec![
                 json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": first.id })
             ]
@@ -244,7 +237,7 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         let after = game.state().clone();
 
         // p2's Gambit sent it to p1, p1's sent it back, and p2 has no second one: p2 falls, p1 wins.
-        let moves: Vec<Value> = of_type(&result.events, GameEventType::Redirected)
+        let moves: Vec<Value> = events_json(&result.events, GameEventType::Redirected)
             .into_iter()
             .map(|e| json!([e["fromId"], e["toId"], e["byInstanceId"]]))
             .collect();
@@ -287,7 +280,7 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
         let mut b = Bench::sink_for(state);
         b.deal(None, hero_target(P2), 5);
         assert_eq!(
-            of_type(&b.events, GameEventType::Redirected).len(),
+            events_json(&b.events, GameEventType::Redirected).len(),
             DAMAGE_REDIRECT_CAP as usize
         );
         // An even number of moves brings it back to p2, where it lands.
@@ -505,12 +498,12 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         // Pierce: the hero's Armor 3 stops none of the 5, and the damage is Blood Moon's.
         assert_eq!(hero(&now, P1), 25);
         assert_eq!(
-            of_type(&first.events, GameEventType::Damage),
+            events_json(&first.events, GameEventType::Damage),
             vec![
                 json!({ "type": "damage", "sourceId": moon.id, "targetId": "hero-p1", "amount": 5, "combat": false })
             ]
         );
-        assert!(of_type(&first.events, GameEventType::Healed).is_empty());
+        assert!(events_json(&first.events, GameEventType::Healed).is_empty());
         assert!(in_pile(&now, P2, ZoneName::Graveyard, &moon.id));
         let kinds: Vec<Value> = now
             .players
@@ -635,7 +628,7 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         })));
         assert_eq!(hero(game.state(), P1), 13);
         assert_eq!(
-            of_type(&result.events, GameEventType::HealthSet),
+            events_json(&result.events, GameEventType::HealthSet),
             vec![json!({ "type": "healthSet", "player": "p1", "health": 13, "sourceId": spell.id })]
         );
         assert_eq!(
@@ -665,7 +658,7 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
         // From now on: the face-up Field Trap converts by its text, with no firing and no modifier.
         heal_hero(&mut b.sink(), P1, 6);
         assert_eq!(hero(&b.state, P1), 20);
-        assert_eq!(of_type(&b.events, GameEventType::TrapFired).len(), 1);
+        assert_eq!(events_json(&b.events, GameEventType::TrapFired).len(), 1);
         assert!(b.state.players.p2.mods.is_empty());
         // Its own side's heals go through.
         heal_hero(&mut b.sink(), P2, 6);
@@ -859,7 +852,7 @@ mod e5_would_go_to_a_graveyard {
         assert!(in_pile(&after, P1, ZoneName::Exile, &bell.id));
         assert!(unit_at(&after, P2, 1).is_none());
         assert!(after.reserved.is_empty());
-        assert!(of_type(&result.events, GameEventType::Destroyed).is_empty());
+        assert!(events_json(&result.events, GameEventType::Destroyed).is_empty());
         assert!(notes(&after).is_empty());
         assert_eq!(after.counters.destroyed, 0);
         // The Spell itself, on its way to its graveyard, is exiled too; three exiles in all.
@@ -873,7 +866,7 @@ mod e5_would_go_to_a_graveyard {
         let mut expected = vec![bird.id.clone(), bell.id.clone(), spell.id.clone()];
         expected.sort();
         assert_eq!(exiled, expected);
-        assert!(of_type(&result.events, GameEventType::EnteredGraveyard).is_empty());
+        assert!(events_json(&result.events, GameEventType::EnteredGraveyard).is_empty());
         assert!(replays_to(&game.start, &game.log, &after));
     }
 
@@ -988,7 +981,7 @@ mod e5_would_go_to_a_graveyard {
         let bottom = library.len() - 1;
         assert_eq!(library.last().map(|c| c.id.clone()), Some(spell.id.clone()));
         assert_eq!(notes(&after), strings(&["pile-on:cry"]));
-        let shuffled: Vec<Value> = of_type(&result.events, GameEventType::ShuffledIn)
+        let shuffled: Vec<Value> = events_json(&result.events, GameEventType::ShuffledIn)
             .into_iter()
             .map(|e| json!([e["instanceId"], e["position"]]))
             .collect();
@@ -1125,14 +1118,14 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
 
         let opening: Vec<String> = event_types(&result.events).into_iter().take(3).collect();
         assert_eq!(opening, strings(&["summoned", "redirected", "attackDeclared"]));
-        let summoned = of_type(&result.events, GameEventType::Summoned);
+        let summoned = events_json(&result.events, GameEventType::Summoned);
         let entry = summoned.first().expect("a summon");
         assert_eq!(entry["instanceId"], json!(decoy.id));
         assert_eq!(entry["player"], json!("p2"));
         assert_eq!(entry["row"], json!("units"));
         assert_eq!(entry["lane"], json!(2));
         assert_eq!(
-            of_type(&result.events, GameEventType::Redirected),
+            events_json(&result.events, GameEventType::Redirected),
             vec![
                 json!({ "type": "redirected", "what": "attack", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })
             ]
@@ -1202,7 +1195,7 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         let moved = answer_targeting(&mut b.sink(), &target, P1, TargetedWhat::Target);
         assert_eq!(moved.map(|card| card.id), Some(decoy.id.clone()));
         assert_eq!(
-            of_type(&b.events, GameEventType::Redirected),
+            events_json(&b.events, GameEventType::Redirected),
             vec![
                 json!({ "type": "redirected", "what": "target", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })
             ]
@@ -1257,7 +1250,7 @@ mod r97_r177_the_replacement_events_in_both_views {
             let view = view_for(game.state(), viewer);
             let events = &view.events;
             assert_eq!(
-                of_type(events, GameEventType::Redirected),
+                events_json(events, GameEventType::Redirected),
                 vec![
                     json!({ "type": "redirected", "what": "damage", "fromId": "hero-p2", "toId": "hero-p1", "byInstanceId": trap.id })
                 ]
@@ -1296,7 +1289,7 @@ mod r97_r177_the_replacement_events_in_both_views {
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         ));
         for viewer in [P1, P2] {
-            let flickered = of_type(&view_for(other.state(), viewer).events, GameEventType::Flickered);
+            let flickered = events_json(&view_for(other.state(), viewer).events, GameEventType::Flickered);
             assert_eq!(
                 flickered,
                 vec![

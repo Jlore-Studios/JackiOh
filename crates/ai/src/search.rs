@@ -11,7 +11,9 @@ use std::cmp::Ordering;
 use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
-use crate::candidates::{candidate_actions, candidate_set, root_candidate_actions, root_candidate_set};
+use crate::candidates::{
+    candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down,
+};
 use crate::config::{AI_MOVE_ORDER, AI_SEARCH, MoveOrder};
 use crate::evaluate::NextSwing;
 use crate::learned::{finalist_score, line_score, open_score};
@@ -56,7 +58,8 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
     lines
 }
 
-/// The first `width` candidates that are not endTurn, plus endTurn when it is legal. With
+/// The first `width` candidates that are not endTurn, then the first `AI_SEARCH.position_switches`
+/// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then endTurn when it is legal. With
 /// `MoveOrder::Learned` the candidates are sorted by `prior` before the first `width` are taken
 /// (`prior_order`, R1171001); with `MoveOrder::Heuristic` they keep `candidate_actions`' order.
 pub fn expansion(
@@ -101,6 +104,11 @@ fn expand(
         .iter()
         .find(|action| matches!(action, ActionBody::EndTurn))
         .cloned();
+    let stand_downs: Vec<ActionBody> = candidates
+        .iter()
+        .filter(|action| stands_down(state, action))
+        .cloned()
+        .collect();
     let mut moves: Vec<ActionBody> = candidates
         .into_iter()
         .filter(|action| !matches!(action, ActionBody::EndTurn))
@@ -109,6 +117,12 @@ fn expand(
         moves = prior_order(state, seat, moves, prior);
     }
     moves.truncate(width);
+    let left_out: Vec<ActionBody> = stand_downs
+        .into_iter()
+        .filter(|stand_down| !moves.contains(stand_down))
+        .take(AI_SEARCH.position_switches.max(0) as usize)
+        .collect();
+    moves.extend(left_out);
     if let Some(end) = end {
         moves.push(end);
     }

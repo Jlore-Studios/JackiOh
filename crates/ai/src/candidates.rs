@@ -6,14 +6,15 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
-    SetAs, UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at,
-    carried_at, effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions,
-    pierces, row_size, slot_of, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Position, Row,
+    Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent, attack_mod_for, beneath_at,
+    canonical, card_at, carried_at, effective_cost, find_instance, has_keyword, is_locked,
+    lane_multiplier_for, legal_actions, pierces, row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
 use crate::config::AI_SEARCH;
+use crate::reply::trade_value;
 
 /// Canonical JSON of an action body (keys sorted), for equality across determinizations. TS's
 /// `JSON.stringify` with a key-sorting replacer is SURFACE §5.2's `canonical`.
@@ -305,6 +306,16 @@ fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: 
         return 1;
     }
     4
+}
+
+/// #1779: what an attack on a unit is worth when it kills its target at an even trade or better by the
+/// opponent model's static read (`trade_value`: the target's worth, less the attacker's when it dies
+/// too), else `None`. Each attacker's best one goes just after the winning trades (`in_move_order`).
+/// Its screen, 400 games of improve-dev against the parent (`496b5cd87`), read 199-201, edge -0.005
+/// (-0.034 to 0.024).
+fn even_trade(state: &GameState, attacker_id: &str, target_id: &str) -> Option<f64> {
+    let trade = trade_value(state, find_instance(state, attacker_id)?, target_id);
+    (trade.kills && trade.value >= 0.0).then_some(trade.value)
 }
 
 /// Tier 2's actions: a play, Heroic Power's power (R43) and any card's Activate ability (B3.2, R384).
@@ -764,14 +775,15 @@ pub fn root_candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBo
     in_move_order(state, seat, root_candidate_set(state, seat))
 }
 
-/// The candidates `actions` in move order: hero attacks, winning trades, plays round-robin, answers,
-/// other attacks, position switches, endTurn.
+/// The candidates `actions` in move order: hero attacks, winning trades, even trades (each attacker's
+/// best, #1779), plays round-robin, answers, other attacks, position switches, endTurn.
 fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) -> Vec<ActionBody> {
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();
     let mut plays: Vec<ActionBody> = Vec::new();
     let mut answers: Vec<ActionBody> = Vec::new();
-    let mut other_attacks: Vec<ActionBody> = Vec::new();
+    // Tier 4, each with `even_trade`'s value.
+    let mut late_attacks: Vec<(ActionBody, Option<f64>)> = Vec::new();
     let mut switches: Vec<ActionBody> = Vec::new();
     let mut ends: Vec<ActionBody> = Vec::new();
 
@@ -787,7 +799,8 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
                 } else if tier == 1 {
                     good_trades.push(action);
                 } else {
-                    other_attacks.push(action);
+                    let even = even_trade(state, attacker_id, target_id);
+                    late_attacks.push((action, even));
                 }
             }
             ActionBody::Play { .. } | ActionBody::ActivatePower { .. } | ActionBody::Activate { .. } => {
@@ -799,13 +812,45 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
         }
     }
 
+    // #1779: each attacker's best even trade (ties: the first) moves up; the rest stay late.
+    let mut best: IndexMap<String, (usize, f64)> = IndexMap::new();
+    for (at, (action, even)) in late_attacks.iter().enumerate() {
+        if let (ActionBody::Attack { attacker_id, .. }, Some(value)) = (action, *even)
+            && best.get(attacker_id).is_none_or(|(_, kept)| value > *kept)
+        {
+            best.insert(attacker_id.clone(), (at, value));
+        }
+    }
+    let picked: IndexSet<usize> = best.values().map(|(at, _)| *at).collect();
+    let (even_trades, other_attacks): (Vec<_>, Vec<_>) = late_attacks
+        .into_iter()
+        .enumerate()
+        .map(|(at, (action, _))| (at, action))
+        .partition(|(at, _)| picked.contains(at));
+
     let mut out: Vec<ActionBody> = Vec::new();
     out.extend(hero_attacks);
     out.extend(good_trades);
+    out.extend(even_trades.into_iter().map(|(_, action)| action));
     out.extend(round_robin(state, seat, &plays));
     out.extend(answers);
-    out.extend(other_attacks);
+    out.extend(other_attacks.into_iter().map(|(_, action)| action));
     out.extend(switches);
     out.extend(ends);
     out
+}
+
+/// #1759: whether `action` switches a unit in Attack Position to Defense, a stand-down, when a unit of the
+/// opponent's would kill it and survive in a fight (`kills_and_survives`): a unit that cannot win its next fight.
+pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
+    let ActionBody::SwitchPosition { instance_id } = action else {
+        return false;
+    };
+    let Some(unit) = find_instance(state, instance_id) else {
+        return false;
+    };
+    unit_view(state, unit).position == Position::Atk
+        && active_units_of(state, unit.controller.opponent())
+            .into_iter()
+            .any(|enemy| kills_and_survives(state, enemy, unit))
 }

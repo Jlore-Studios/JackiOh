@@ -981,6 +981,87 @@ mod r654_public_card_and_player_stats {
     }
 }
 
+/// R1771000: the server keeps the account copy in R1142000's shape, whatever the PUT holds.
+mod r1771000_player_stats_account_copy {
+    use super::*;
+
+    /// PUT `stats` as the caller (`e2e-p1`); answers the echoed and the read-back copy.
+    async fn put_and_read(app: &Arc<App>, stats: Value) -> (Value, Value) {
+        let (status, _, put) = request(
+            app,
+            "PUT",
+            "/api/stats/player",
+            Some(USER_TOKEN),
+            Some(json!({ "stats": stats, "isPrivate": false })),
+        )
+        .await;
+        assert_eq!(status, 200);
+        let (_, _, read) = request(app, "GET", "/api/stats/player", Some(USER_TOKEN), None).await;
+        (put["stats"].clone(), read["stats"].clone())
+    }
+
+    #[tokio::test]
+    async fn r1771000_put_player_stats_keeps_only_catalog_cards_and_whole_counts() {
+        let app = test_app().await;
+        let (put, read) = put_and_read(
+            &app,
+            json!({
+                "games": 12, "wins": "7", "losses": -1, "draws": 2.0,
+                "motto": "Visit example.test for free packs",
+                "cards": {
+                    "core-001": { "played": 9, "playedAgainst": 2.5, "destroyed": "3", "defeated": -4, "seen": 6 },
+                    "Visit example.test for free packs": { "played": 1000 },
+                    "core-002": { "played": 0, "seen": 5 },
+                    "core-003": { "playedAgainst": 4, "destroyed": 1 },
+                },
+            }),
+        )
+        .await;
+        let kept = json!({
+            "games": 12,
+            "draws": 2,
+            "cards": { "core-001": { "played": 9 }, "core-003": { "playedAgainst": 4, "destroyed": 1 } },
+        });
+        assert_eq!(put, kept);
+        assert_eq!(read, kept);
+
+        let (_, _, list) = get_public(&app, "/api/stats/players").await;
+        let player = find(&list["players"], "games", &json!(12)).expect("the caller's summary");
+        assert_eq!(player["wins"], json!(0));
+        assert_eq!(player["losses"], json!(0));
+        assert_eq!(player["draws"], json!(2));
+        assert_eq!(
+            player["favouriteCards"],
+            json!([{ "id": "core-001", "count": 9 }])
+        );
+        assert_eq!(
+            player["funStats"],
+            json!({ "nemesisCardId": "core-003", "totalDestroyed": 1, "totalDefeated": 0 })
+        );
+    }
+
+    #[tokio::test]
+    async fn r1771000_put_player_stats_stores_what_sync_payload_sends_unchanged() {
+        let app = test_app().await;
+
+        let first = json!({ "games": 0, "wins": 0, "losses": 0, "draws": 0, "cards": {} });
+        let (put, read) = put_and_read(&app, first.clone()).await;
+        assert_eq!(put, first);
+        assert_eq!(read, first);
+
+        let synced = json!({
+            "games": 3, "wins": 2, "losses": 1, "draws": 0,
+            "cards": {
+                "core-001": { "played": 4, "playedAgainst": 1, "destroyed": 2, "defeated": 3 },
+                "core-002": { "playedAgainst": 5 },
+            },
+        });
+        let (put, read) = put_and_read(&app, synced.clone()).await;
+        assert_eq!(put, synced);
+        assert_eq!(read, synced);
+    }
+}
+
 mod r978000_kept_card_stats {
     use super::*;
     use std::time::Duration;

@@ -14,15 +14,11 @@ use crate::rules::fixtures::damage_combat::{
     anime_armor, argus, bolt, grunt, hidden_argus, hidden_lens, lance, lens, playing, recorder, replays_to,
     solar, sweep, wall,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 fn spell_in(state: &mut GameState, def_id: &str) -> CardInstance {
     in_hand(state, def_id, P1, 1).first().cloned().expect("no card")
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn damage_hits(events: &[GameEvent]) -> Vec<(String, i32)> {
@@ -79,7 +75,7 @@ mod e6_spell_damage_s4_4_step_0 {
             "playerId": "p1",
         }));
         assert_eq!(
-            to_json(&events_of_type(&result.events, GameEventType::Damage)),
+            json_of(events_of_type(&result.events, GameEventType::Damage)),
             json!([{ "type": "damage", "sourceId": spell.id, "targetId": target.id, "amount": 3 + 8, "combat": false }])
         );
         assert!(replays_to(&game.start, &game.log, game.state()));

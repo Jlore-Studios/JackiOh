@@ -7,6 +7,8 @@ use std::sync::LazyLock;
 
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 fn def(index: u32, id: &str, type_: &str, extra: Value) -> CardDef {
     let mut rest = match extra {
         Value::Object(map) => map,
@@ -45,13 +47,6 @@ fn def(index: u32, id: &str, type_: &str, extra: Value) -> CardDef {
         }
     }
     json_as(card)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// TS's `FS` object: one definition per key. The units' indices end in 1–5 on purpose: 水 火 木 金

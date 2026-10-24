@@ -14,15 +14,7 @@ use jackioh_engine::subsystems::ai_policy::choose_action;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::setup_catalog;
-
-fn spread(into: &mut Value, from: &Value) {
-    if let (Some(into), Some(from)) = (into.as_object_mut(), from.as_object()) {
-        for (key, value) in from {
-            into.insert(key.clone(), value.clone());
-        }
-    }
-}
+use crate::rules::fixtures::harness::{both, setup_catalog, spread};
 
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let mut def = json!({
@@ -38,7 +30,7 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
         "base": { "keywords": [], "text": name },
         "radiant": { "keywords": [], "text": name },
     });
-    spread(&mut def, &extra);
+    def = spread(def, extra);
     json_as(def)
 }
 
@@ -52,7 +44,7 @@ fn unit(name: &str, index: u32, attack: i32, health: i32, extra: Value) -> CardD
         "base": { "attack": attack, "health": health, "keywords": keywords, "text": name },
         "radiant": { "attack": attack * 2, "health": health * 2, "keywords": keywords, "text": name },
     });
-    spread(&mut fields, &extra);
+    fields = spread(fields, extra);
     def(name, "Unit", index, fields)
 }
 
@@ -160,13 +152,6 @@ fn bolt() -> CardDef {
 }
 fn study() -> CardDef {
     def("study", "Spell", 1420, json!({}))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn steps(entries: Vec<(&'static str, Hook)>) -> IndexMap<&'static str, Hook> {
