@@ -13729,7 +13729,15 @@
       "feedback_since": "2026-10-24T04:15:09Z",
       "issue": 1751,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gemini",
+        "rejections": [],
+        "reviews": [],
+        "sha": "2a0edd40aaebc953f0c50b9ef01ea8bcebb33e76",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
