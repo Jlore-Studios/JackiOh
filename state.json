@@ -13561,11 +13561,13 @@
         "by": "`claude` (strong)",
         "sha": "ff9dfae7fa5fac24bc0ef75ab6c5a3b3cbc7c965"
       },
+      "closed_at": "2026-10-24T04:59:37Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-24T03:53:14Z",
       "issue": 1758,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
