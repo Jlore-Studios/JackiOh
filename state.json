@@ -13179,6 +13179,7 @@
     "1751": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T23:18:26Z",
         "difficulty": "medium",
@@ -13187,6 +13188,7 @@
         "why": "the planner gave no rating line"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-24T03:08:02Z",
         "family": "gemini",
