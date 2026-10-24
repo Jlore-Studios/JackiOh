@@ -53,6 +53,7 @@ import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import type { GameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
@@ -413,6 +414,8 @@ export function DuosBoard({
           {showing === "own" ? t("Teammate's board") : t("Back to your board")}
         </button>
         {replay ? null : <ConcedeControl view={view} live={concedeLegal} onConcede={sendConcede} />}
+        {/* R169: the seat's own duel's live modifiers in full, whichever board the portal shows. */}
+        <ModifierList view={view.own} opponentLabel={t("Opponent")} />
         {over && boardAfterResult && !replay ? (
           <button
             ref={reopen}
