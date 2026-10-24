@@ -13247,6 +13247,13 @@
     "1754": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T03:49:20Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "adds ruling R1754000 and edits spec notes (easy line 3 fails) across apps/web and spec/"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
