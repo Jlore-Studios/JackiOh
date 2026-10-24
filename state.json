@@ -793,637 +793,6 @@
     }
   },
   "items": {
-    "1047": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T12:37:54Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "line 3 fails (three new ruling notes and spec/INDEX.md) and line 1 is near its limit (14 files); server-only with no engine, AI or migration change, so not hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T12:37:56Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1060,
-      "provider": "claude-3",
-      "queued_at": "2026-10-16T12:18:00Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38902003954",
-      "started_at": "2026-10-16T12:39:42Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1048": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T12:29:19Z",
-        "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "line 9 (stands alone) cannot be verified: with no GitHub access I cannot tell whether an open PR touches REVIEW.md, so medium at least"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T12:29:21Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_by_id": "muse",
-      "planned_tier": "medium",
-      "pr": 1056,
-      "provider": "muse",
-      "queued_at": "2026-10-16T12:17:36Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38900889600",
-      "started_at": "2026-10-16T12:30:18Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1050": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T12:43:09Z",
-        "difficulty": "medium",
-        "provider": "claude-7",
-        "tier": "strong",
-        "why": "rule 7 fails outright (a new Cypress spec) and rule 2 too (e2e/ and apps/web); no engine, AI, migration or cross-crate design keeps it below hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T12:43:11Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_by_id": "claude-7",
-      "planned_tier": "strong",
-      "pr": 1061,
-      "provider": "claude-7",
-      "queued_at": "2026-10-16T12:18:30Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38902549380",
-      "started_at": "2026-10-16T12:44:10Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1055": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T13:27:08Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "rule 7 fails: three of the four files are Cypress specs (one e2e, two component), and rule 2 fails because the change spans crates/tools and e2e/"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T13:27:13Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1066,
-      "provider": "muse",
-      "round_tier": "medium",
-      "run_id": "38908002283",
-      "started_at": "2026-10-16T13:28:45Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "1056": {
-      "action": "revise",
-      "audit_tier": "strong",
-      "cleared": {
-        "at": "2026-10-16T13:43:33Z",
-        "by": "`claude` (strong)",
-        "sha": "94f645259fed4331ce1f2aefeb41888a77b6500c"
-      },
-      "closed_at": "2026-10-16T13:58:32Z",
-      "cross_rounds": 1,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T12:50:26Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1048,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-16T12:49:33Z",
-      "review_floor": "",
-      "review_notes": "",
-      "round_tier": "strong",
-      "run_id": "38903277878",
-      "source": "",
-      "started_at": "2026-10-16T12:50:26Z",
-      "stop_requested": false,
-      "verdict_rounds": 2
-    },
-    "1058": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T15:05:52Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1078,
-      "provider": "claude-6",
-      "queued_at": "2026-10-16T13:26:37Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "strong",
-      "run_id": "38927211995",
-      "started_at": "2026-10-16T15:52:56Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "1059": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T14:36:59Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_by_id": "claude-1",
-      "planned_tier": "strong",
-      "provider": "claude-1",
-      "queued_at": "2026-10-16T13:27:11Z",
-      "requested_by": "MaxGoetzmann",
-      "run_id": "38917318311",
-      "started_at": "2026-10-16T14:38:38Z",
-      "stop_requested": false
-    },
-    "1060": {
-      "cleared": {
-        "at": "2026-10-16T13:33:54Z",
-        "by": "`claude` (strong)",
-        "sha": "27e75cdcb247e173c91ff5ba3b94862d1e36b68d"
-      },
-      "closed_at": "2026-10-16T13:47:18Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T12:39:42Z",
-      "issue": 1047,
-      "kind": "revise",
-      "merged": true
-    },
-    "1061": {
-      "cleared": {
-        "at": "2026-10-16T13:46:02Z",
-        "by": "`claude` (strong)",
-        "sha": "12c7a8dc440d3084185e21384d108a5af43b3c4f"
-      },
-      "closed_at": "2026-10-16T13:58:15Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T12:44:10Z",
-      "issue": 1050,
-      "kind": "revise",
-      "merged": true
-    },
-    "1062": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T16:49:10Z",
-        "difficulty": "hard",
-        "provider": "claude-7",
-        "tier": "strong",
-        "why": "the change is in crates/ai/src/ (the AI's move order, which feeds the beam, the lethal solver and the reply model): the rule's hard line, so never easy or medium"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T16:49:12Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_by_id": "claude-7",
-      "planned_tier": "strong",
-      "pr": 1079,
-      "provider": "claude-7",
-      "queued_at": "2026-10-16T14:40:24Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "strong",
-      "run_id": "38934954220",
-      "started_at": "2026-10-16T16:50:09Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1063": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T14:52:04Z",
-        "difficulty": "medium",
-        "provider": "claude-7",
-        "tier": "strong",
-        "why": "the planner gave no rating line"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T14:52:06Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_by_id": "claude-7",
-      "planned_tier": "strong",
-      "pr": 1068,
-      "provider": "claude-7",
-      "queued_at": "2026-10-16T14:40:53Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38919311784",
-      "started_at": "2026-10-16T14:53:11Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1064": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T15:16:17Z",
-        "difficulty": "medium",
-        "provider": "claude-4",
-        "tier": "strong",
-        "why": "rule 3 fails for certain: it amends R835000 and R835002 and regenerates spec/INDEX.md, across 12 files"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T15:16:18Z",
-      "planned_by": "`claude-4` (claude, `opus`, strong)",
-      "planned_by_id": "claude-4",
-      "planned_tier": "strong",
-      "pr": 1072,
-      "provider": "claude-4",
-      "queued_at": "2026-10-16T14:41:47Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38922601984",
-      "started_at": "2026-10-16T15:17:18Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1065": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T15:00:16Z",
-        "difficulty": "medium",
-        "provider": "claude-6",
-        "tier": "strong",
-        "why": "fails easy on a new ruling and spec edits (rule 3) and ~15 files; not hard: server only, no engine, AI, store or migration change"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T15:00:20Z",
-      "planned_by": "`claude-6` (claude, `opus`, strong)",
-      "planned_by_id": "claude-6",
-      "planned_tier": "strong",
-      "pr": 1069,
-      "provider": "claude-6",
-      "queued_at": "2026-10-16T14:42:01Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38920434815",
-      "started_at": "2026-10-16T15:01:26Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1066": {
-      "action": "review",
-      "ci_reruns": {
-        "5dcac172374313a78659a119c6a080e7058ec5cb": 1
-      },
-      "cleared": {
-        "at": "2026-10-16T14:42:22Z",
-        "by": "`muse` (medium), `claude` (strong)",
-        "sha": "5dcac172374313a78659a119c6a080e7058ec5cb"
-      },
-      "closed_at": "2026-10-16T14:48:54Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T13:28:45Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1055,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-16T14:37:37Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38917259062",
-      "started_at": "2026-10-16T14:38:08Z",
-      "stop_requested": false
-    },
-    "1067": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T15:41:02Z",
-        "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "least sure of the hard band's 'about 40 files or more' line at ~42 touched paths, but every edit is a one-literal spelling swap with no behavior, engine, AI, or migration judgment, so medium's 'a card or catalog change' holds"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T15:41:04Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_by_id": "muse",
-      "planned_tier": "medium",
-      "pr": 1073,
-      "provider": "muse",
-      "queued_at": "2026-10-16T15:11:34Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38926062589",
-      "started_at": "2026-10-16T15:42:56Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "1068": {
-      "cleared": {
-        "at": "2026-10-16T15:41:45Z",
-        "by": "`claude` (strong)",
-        "sha": "7d811e2e59b8a0c2c5dc29e35935f826da1337be"
-      },
-      "closed_at": "2026-10-16T15:50:54Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T14:53:11Z",
-      "issue": 1063,
-      "kind": "revise",
-      "merged": true
-    },
-    "1069": {
-      "cleared": {
-        "at": "2026-10-16T15:50:22Z",
-        "by": "`claude` (strong)",
-        "sha": "ab15cc2a40362ce814143b2742c7b8d3d9ecdf0d"
-      },
-      "closed_at": "2026-10-16T16:00:14Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T15:01:26Z",
-      "issue": 1065,
-      "kind": "revise",
-      "merged": true
-    },
-    "1072": {
-      "cleared": {
-        "at": "2026-10-16T16:14:44Z",
-        "by": "`claude` (strong)",
-        "sha": "6dda8c3144bd1765019f4878b76115d83b095347"
-      },
-      "closed_at": "2026-10-16T16:25:09Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T15:17:18Z",
-      "issue": 1064,
-      "kind": "revise",
-      "merged": true
-    },
-    "1073": {
-      "action": "revise",
-      "audit_tier": "strong",
-      "cleared": {
-        "at": "2026-10-16T19:07:22Z",
-        "by": "`claude` (strong)",
-        "sha": "3997907c20c5a7cc8e60c94e35410103724f89f7"
-      },
-      "closed_at": "2026-10-16T19:16:31Z",
-      "cross_rounds": 1,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T17:25:46Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1067,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-16T17:24:55Z",
-      "review_floor": "",
-      "review_notes": "",
-      "round_tier": "strong",
-      "run_id": "38939531954",
-      "source": "",
-      "started_at": "2026-10-16T17:25:46Z",
-      "stop_requested": false,
-      "verdict_rounds": 1
-    },
-    "1074": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T20:40:27Z",
-        "difficulty": "medium",
-        "provider": "agy",
-        "tier": "medium",
-        "why": "the planner gave no rating line"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T20:40:30Z",
-      "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
-      "planned_by_id": "agy",
-      "planned_tier": "medium",
-      "pr": 1099,
-      "provider": "agy",
-      "queued_at": "2026-10-16T20:26:01Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38963916505",
-      "started_at": "2026-10-16T20:41:04Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 2
-    },
-    "1075": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T20:39:58Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "Fails 'one place': the server, the web and the spec all change and a new ruling R1075000 is added. Not hard: no migration, nothing in crates/engine or crates/ai, and about 16 files."
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T20:40:00Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1090,
-      "provider": "claude-7",
-      "queued_at": "2026-10-16T20:26:30Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38974885236",
-      "started_at": "2026-10-16T22:18:27Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1076": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T20:46:36Z",
-        "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "rule 1 fails: 12 files across game/, cards/ and i18n, plus new badge CSS (visual polish); everything stays inside apps/web"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T20:46:39Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_by_id": "claude-1",
-      "planned_tier": "strong",
-      "pr": 1082,
-      "provider": "claude-1",
-      "queued_at": "2026-10-16T20:27:48Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38964731449",
-      "started_at": "2026-10-16T20:47:47Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1078": {
-      "cleared": {
-        "at": "2026-10-16T17:17:44Z",
-        "by": "`claude` (strong)",
-        "sha": "67e793c6f15f5f7f2334a32f4a66678e1b3a27ad"
-      },
-      "closed_at": "2026-10-16T17:22:37Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-16T15:52:56Z",
-      "issue": 1058,
-      "kind": "revise",
-      "merged": true
-    },
-    "1079": {
-      "cleared": {
-        "at": "2026-10-16T18:08:59Z",
-        "by": "`claude` (strong)",
-        "sha": "37bf5e7fae25de27f15a18dc627c29817b582c64"
-      },
-      "closed_at": "2026-10-16T18:17:58Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-16T16:50:09Z",
-      "issue": 1062,
-      "kind": "revise",
-      "merged": true
-    },
-    "1080": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T20:58:24Z",
-        "difficulty": "hard",
-        "provider": "claude-7",
-        "tier": "strong",
-        "why": "all of it is crates/ai/src (the lethal solver, the reply and the evaluation): the rule rates the AI's search hard, whatever its size"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T20:58:27Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_by_id": "claude-7",
-      "planned_tier": "strong",
-      "pr": 1084,
-      "provider": "claude-7",
-      "queued_at": "2026-10-16T20:26:58Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "strong",
-      "run_id": "38966112523",
-      "started_at": "2026-10-16T20:59:30Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
     "1081": {
       "action": "build",
       "died": 0,
@@ -1450,158 +819,6 @@
       "started_at": "2026-10-16T20:39:49Z",
       "stop_requested": false,
       "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "1082": {
-      "cleared": {
-        "at": "2026-10-16T21:28:41Z",
-        "by": "`claude` (strong)",
-        "sha": "2079f66baedcde38d6ba7a8b5b5ca8a7e2c8be58"
-      },
-      "closed_at": "2026-10-16T21:37:24Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T20:47:47Z",
-      "issue": 1076,
-      "kind": "revise",
-      "merged": true
-    },
-    "1084": {
-      "cleared": {
-        "at": "2026-10-16T22:17:24Z",
-        "by": "`claude` (strong)",
-        "sha": "b44766cf3ebed5bff7f0ceb7f1422e3ade74311d"
-      },
-      "closed_at": "2026-10-16T22:26:22Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-16T20:59:30Z",
-      "issue": 1080,
-      "kind": "revise",
-      "merged": true
-    },
-    "1085": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T23:10:37Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "rule line 1 fails: about 22 files change, all in crates/server (the seam's new Pinned argument reaches six test files); no engine, AI, spec or migration work, so not hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T23:10:40Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1091,
-      "provider": "muse",
-      "queued_at": "2026-10-16T22:40:40Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38980042755",
-      "started_at": "2026-10-16T23:11:50Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1086": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-16T23:24:57Z",
-        "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "the hard line 'the AI's search (crates/ai/src/)': only evaluate.rs and config.rs change, but every eval shift re-plays the seeded AI fixtures, which is AI work by rule 11"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-16T23:24:59Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1098,
-      "provider": "claude-7",
-      "queued_at": "2026-10-16T22:41:14Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "strong",
-      "run_id": "38981991982",
-      "started_at": "2026-10-16T23:35:04Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 2
-    },
-    "1087": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T00:15:59Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "rule 7 fails outright: the whole change is a Cypress e2e spec (plus its wsPlayer helper), which the easy rule excludes; it is test-only and in e2e/ alone, so not hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T00:16:00Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1097,
-      "provider": "claude-3",
-      "queued_at": "2026-10-16T22:43:10Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38978051007",
-      "started_at": "2026-10-16T22:50:37Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1088": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T00:07:52Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "rule 7 fails: the issue asks for a Cypress assertion in e2e/cypress/e2e/05-reconnect.cy.ts and a 390px layout check, and the change spans apps/web and e2e (rule 2)"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T00:07:54Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1096,
-      "provider": "claude-3",
-      "queued_at": "2026-10-16T22:43:29Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38978130268",
-      "started_at": "2026-10-16T22:51:29Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
       "verdict_rounds": 1
     },
     "1089": {
@@ -1643,47 +860,6 @@
       "stop_requested": false,
       "verdict_rounds": 3
     },
-    "1090": {
-      "cleared": {
-        "at": "2026-10-16T23:32:09Z",
-        "by": "`claude` (strong)",
-        "sha": "12d3ccdda0284f1aae20d07a9c6b87dc2142c80b"
-      },
-      "closed_at": "2026-10-16T23:41:14Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T22:18:27Z",
-      "issue": 1075,
-      "kind": "revise",
-      "merged": true
-    },
-    "1091": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-17T00:16:37Z",
-        "by": "`muse` (medium), `claude` (strong)",
-        "sha": "a84c5f41cb7d323138b3aba5a2e21f328968d712"
-      },
-      "closed_at": "2026-10-17T00:18:15Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T23:11:50Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1085,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-17T00:04:14Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "38984985257",
-      "started_at": "2026-10-17T00:11:18Z",
-      "stop_requested": false
-    },
     "1092": {
       "action": "build",
       "died": 0,
@@ -1710,293 +886,6 @@
       "round_tier": "medium",
       "run_id": "38994209586",
       "started_at": "2026-10-17T02:16:08Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1093": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T01:58:04Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "line 9 (stands alone) cannot be checked without GitHub, and app.rs changes often; the planner also could not compile the change, and the paused-time test timeline is subtle for a weak builder"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T01:58:07Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1100,
-      "provider": "claude-3",
-      "queued_at": "2026-10-17T01:52:13Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38993064061",
-      "started_at": "2026-10-17T01:59:28Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1094": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T02:32:46Z",
-        "difficulty": "hard",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "it changes the AI's search (crates/ai/src/candidates.rs and reply.rs), which the rule rates hard; muse's hard rating stands"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T02:32:48Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_by_id": "claude-1",
-      "planned_tier": "strong",
-      "pr": 1106,
-      "provider": "claude-1",
-      "queued_at": "2026-10-17T01:50:28Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "strong",
-      "run_id": "38995360584",
-      "started_at": "2026-10-17T02:33:49Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1095": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T02:04:34Z",
-        "difficulty": "medium",
-        "provider": "claude-7",
-        "tier": "strong",
-        "why": "Rule 3 fails: it adds a sentence to spec/09-architecture.md (\u00a79.9). It also touches the web app and the spec together and makes UX decisions, so it cannot be easy."
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T02:04:35Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_by_id": "claude-7",
-      "planned_tier": "strong",
-      "pr": 1101,
-      "provider": "claude-7",
-      "queued_at": "2026-10-17T01:52:37Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "38993497055",
-      "started_at": "2026-10-17T02:05:30Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1096": {
-      "cleared": {
-        "at": "2026-10-17T00:08:16Z",
-        "by": "`claude` (strong)",
-        "sha": "64486ebda86590f7c53ca47c9279826a0e172a38"
-      },
-      "closed_at": "2026-10-17T00:19:23Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T22:51:29Z",
-      "issue": 1088,
-      "kind": "revise",
-      "merged": true
-    },
-    "1097": {
-      "cleared": {
-        "at": "2026-10-17T00:16:18Z",
-        "by": "`claude` (strong)",
-        "sha": "9ea5a7d65a2d376cddc96c3ad546944926897821"
-      },
-      "closed_at": "2026-10-17T00:26:56Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-16T22:50:37Z",
-      "issue": 1087,
-      "kind": "revise",
-      "merged": true
-    },
-    "1098": {
-      "cleared": {
-        "at": "2026-10-17T00:55:02Z",
-        "by": "`claude` (strong)",
-        "sha": "94c821050bbc292d5c6aaede3928964aa3ac878a"
-      },
-      "closed_at": "2026-10-17T01:03:39Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-16T23:35:04Z",
-      "issue": 1086,
-      "kind": "revise",
-      "merged": true
-    },
-    "1099": {
-      "action": "revise",
-      "audit_tier": "strong",
-      "cleared": {
-        "at": "2026-10-17T04:46:32Z",
-        "by": "`claude` (strong)",
-        "sha": "3b6cafb9fc5efae44e4d6dddf78a574b9f14cbd0"
-      },
-      "closed_at": "2026-10-17T04:56:42Z",
-      "cross_rounds": 1,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T02:42:37Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1074,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-7",
-      "queued_at": "2026-10-17T01:50:34Z",
-      "review_floor": "",
-      "review_notes": "",
-      "round_tier": "strong",
-      "run_id": "38995823580",
-      "source": "",
-      "started_at": "2026-10-17T02:42:37Z",
-      "stop_requested": false,
-      "verdict_rounds": 1
-    },
-    "1100": {
-      "cleared": {
-        "at": "2026-10-17T02:33:22Z",
-        "by": "`claude` (strong)",
-        "sha": "70be0a1acc463bc93b093b76adc303b026900045"
-      },
-      "closed_at": "2026-10-17T02:42:52Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T01:59:28Z",
-      "issue": 1093,
-      "kind": "revise",
-      "merged": true
-    },
-    "1101": {
-      "cleared": {
-        "at": "2026-10-17T02:39:50Z",
-        "by": "`claude` (strong)",
-        "sha": "f6ae79bd1149b9aa40b67c127f6745cbe3b7eb98"
-      },
-      "closed_at": "2026-10-17T02:51:06Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T02:05:30Z",
-      "issue": 1095,
-      "kind": "revise",
-      "merged": true
-    },
-    "1102": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T05:28:34Z",
-        "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Easy line 5 fails (touches crates/ai/src/), so not easy; the hard bullet naming crates/ai/src/ is the AI's search algorithm, while this is localized evaluation/reply arithmetic plus one weight in one crate, so medium."
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T05:28:36Z",
-      "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
-      "planned_by_id": "muse",
-      "planned_tier": "medium",
-      "pr": 1109,
-      "provider": "muse",
-      "queued_at": "2026-10-17T05:14:44Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "39006407027",
-      "started_at": "2026-10-17T05:29:35Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1103": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T06:00:42Z",
-        "difficulty": "medium",
-        "provider": "agy",
-        "tier": "medium",
-        "why": "the planner gave no rating line"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T06:00:44Z",
-      "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
-      "planned_by_id": "agy",
-      "planned_tier": "medium",
-      "pr": 1117,
-      "provider": "agy",
-      "queued_at": "2026-10-17T05:15:08Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "39008346775",
-      "started_at": "2026-10-17T06:01:45Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 2
-    },
-    "1104": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T05:33:52Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "rule 5 fails (it changes crates/ai/src/duos.rs) and rule 2 fails (crates/ai and crates/tools); it is not hard because it touches no search, eval or engine rule, only the gate's report and verdict"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T05:33:54Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_by_id": "claude-3",
-      "planned_tier": "strong",
-      "pr": 1116,
-      "provider": "claude-3",
-      "queued_at": "2026-10-17T05:15:40Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "39006740622",
-      "started_at": "2026-10-17T05:34:42Z",
       "stop_requested": false,
       "strikes": 0,
       "suggestion": true,
@@ -2030,151 +919,6 @@
       "run_id": "38999207251",
       "source": "",
       "started_at": "2026-10-17T03:33:36Z",
-      "stop_requested": false,
-      "verdict_rounds": 1
-    },
-    "1106": {
-      "cleared": {
-        "at": "2026-10-17T03:28:14Z",
-        "by": "`claude` (strong)",
-        "sha": "be36995605c1d14a0a05b2ec2c7985c2c0eb7fa2"
-      },
-      "closed_at": "2026-10-17T03:38:21Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-10-17T02:33:49Z",
-      "issue": 1094,
-      "kind": "revise",
-      "merged": true
-    },
-    "1107": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T05:34:48Z",
-        "difficulty": "medium",
-        "provider": "claude-7",
-        "tier": "strong",
-        "why": "rule line 3 fails: the spec does not say when a watch ends, so a new ruling R1107000 and a \u00a79.5 edit are needed, beside the server change"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T05:34:51Z",
-      "planned_by": "`claude-7` (claude, `opus`, strong)",
-      "planned_by_id": "claude-7",
-      "planned_tier": "strong",
-      "pr": 1110,
-      "provider": "claude-7",
-      "queued_at": "2026-10-17T05:15:56Z",
-      "requested_by": "MaxGoetzmann",
-      "round_tier": "medium",
-      "run_id": "39006742558",
-      "started_at": "2026-10-17T05:35:11Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1108": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-17T05:33:46Z",
-        "difficulty": "medium",
-        "provider": "claude-1",
-        "tier": "strong",
-        "why": "Rule line 3 fails: the tutorial override is a presentation decision the spec doesn't make (R1017001 only names the setting), so it needs a new ruling R1108000, edits to spec/ and an INDEX rewrite. It also touches two areas of apps/web (cards and routes)."
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-17T05:33:48Z",
-      "planned_by": "`claude-1` (claude, `opus`, strong)",
-      "planned_by_id": "claude-1",
-      "planned_tier": "strong",
-      "pr": 1111,
-      "provider": "claude-1",
-      "queued_at": "2026-10-17T05:21:56Z",
-      "requested_by": "jgoetzmann",
-      "round_tier": "medium",
-      "run_id": "39006772982",
-      "started_at": "2026-10-17T05:35:42Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "1109": {
-      "action": "review",
-      "cleared": {
-        "at": "2026-10-17T06:15:40Z",
-        "by": "`muse` (medium), `claude` (strong)",
-        "sha": "1c962f57be4edd5bd9b54c9e4a53faab6daef10d"
-      },
-      "closed_at": "2026-10-17T06:18:48Z",
-      "cross_rounds": 0,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T05:29:35Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1102,
-      "kind": "review",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-7",
-      "queued_at": "2026-10-17T06:07:57Z",
-      "review_floor": "",
-      "review_notes": "",
-      "run_id": "39008795896",
-      "started_at": "2026-10-17T06:10:59Z",
-      "stop_requested": false
-    },
-    "1110": {
-      "cleared": {
-        "at": "2026-10-17T06:08:25Z",
-        "by": "`claude` (strong)",
-        "sha": "15d6aea3e4a9a03ed2520a4d6a3750c147bed9ca"
-      },
-      "closed_at": "2026-10-17T06:22:02Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T05:35:11Z",
-      "issue": 1107,
-      "kind": "revise",
-      "merged": true
-    },
-    "1111": {
-      "action": "revise",
-      "cleared": {
-        "at": "2026-10-17T07:05:57Z",
-        "by": "`claude` (strong)",
-        "carried_from": "180a356bfbb17931e124256d1deb63f79ef9e77b",
-        "resolved_by": "`muse` (medium)",
-        "sha": "7af58ff0268b9519b25dbf2d0dd42a837943a8ef"
-      },
-      "closed_at": "2026-10-17T07:17:33Z",
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T06:41:06Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1108,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "muse",
-      "queued_at": "2026-10-17T06:40:52Z",
-      "round_tier": "medium",
-      "run_id": "39010769688",
-      "source": "",
-      "started_at": "2026-10-17T06:41:06Z",
       "stop_requested": false,
       "verdict_rounds": 1
     },
@@ -2300,51 +1044,6 @@
       "stop_requested": false,
       "strikes": 0,
       "suggestion": true,
-      "verdict_rounds": 1
-    },
-    "1116": {
-      "cleared": {
-        "at": "2026-10-17T06:50:44Z",
-        "by": "`claude` (strong)",
-        "sha": "d047f370dd1d6199d9b86e9b9806d19b19338297"
-      },
-      "closed_at": "2026-10-17T07:03:07Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T05:34:42Z",
-      "issue": 1104,
-      "kind": "revise",
-      "merged": true
-    },
-    "1117": {
-      "action": "revise",
-      "audit_tier": "strong",
-      "cleared": {
-        "at": "2026-10-17T08:30:25Z",
-        "by": "`claude` (strong)",
-        "sha": "ece20b24c39bfadbcdfed4f7b5707565f0d86a84"
-      },
-      "closed_at": "2026-10-17T08:39:43Z",
-      "cross_rounds": 1,
-      "died": 0,
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-17T07:42:22Z",
-      "forced": false,
-      "interruptions": 0,
-      "issue": 1103,
-      "kind": "revise",
-      "merged": true,
-      "pending_request": false,
-      "provider": "claude-3",
-      "queued_at": "2026-10-17T07:41:40Z",
-      "review_floor": "",
-      "review_notes": "",
-      "round_tier": "strong",
-      "run_id": "39014590763",
-      "source": "",
-      "started_at": "2026-10-17T07:42:22Z",
-      "stop_requested": false,
       "verdict_rounds": 1
     },
     "1121": {
@@ -12034,13 +10733,11 @@
     },
     "1705": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T06:18:09Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -12048,16 +10745,13 @@
       "planned_tier": "strong",
       "pr": 1736,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-23T05:06:58Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "39964046643",
       "started_at": "2026-10-23T13:46:44Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1706": {
@@ -12093,22 +10787,12 @@
     },
     "1709": {
       "action": "plan",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-23T05:48:22Z",
         "difficulty": "medium",
         "provider": "claude-4",
         "tier": "strong",
         "why": "rule 6 fails outright: the only file the fix needs is .github/workflows/ci.yml, a forbidden path, so it is not easy, and it is CI design rather than engine or AI work, so not hard"
-      },
-      "handoff": {
-        "at": "2026-10-23T05:47:13Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Plan (opus, strong)\n\n**Human required:** in `.github/workflows/ci.yml`, replace the deploy rehearsal's jobs (from the comment `# The deploy rehearsal, in two jobs\u2026` through the end of the `db` summary job, the end of the file) with the block in Step 2 below, and change one comment line (Step 1). The bot may not edit `.github/`. Nothing outside `.github/` needs to change: `crates/server/tests/deploy/rehearse.sh`, `crates/server/Dockerfile` and `apps/web/src/net/deploy-rehearsal.test.ts` already support this split (#1223, #1565), and no CI job uses it yet.\n\n## Goal\n\nEvery job in the deploy rehearsal finishes under the 5-minute target, not just under the 7-minute alert. Today `db (deploy rehearsal)` builds the `crates` and `build` Dockerfile stages itself, then boots the image three times: 7m14s on `f37ef66`, a push to main that changed only `crates/tools`. Done means four jobs in a chain:\n\n1. `db-deploy-deps`, unchanged.\n2. `db-deploy-crates`, new: `REHEARSAL_STAGE=crates`.\n3. `db-deploy-image`, new: `REHEARSAL_STAGE=image`. It saves the image as an artifact.\n4. `db-deploy-boot`, a matrix that replaces `db-deploy`: `REHEARSAL_LOAD_IMAGE` and one `REHEARSAL_BOOT` (`migrate`, `stale`) per job.\n\nThe required `db` summary must wait on all of them and check their results. `super.yml` keeps its one-job daily full rehearsal, which has a 30-minute timeout.\n\n## Files to touch\n\n| Path | New/change | What |\n|---|---|---|\n| `.github/workflows/ci.yml` | change (a person) | One comment line in the `db-suite` header. The deploy rehearsal block is replaced: new jobs `db-deploy-crates` and `db-deploy-image`, `db-deploy` becomes the `db-deploy-boot` matrix, and the `db` summary gets new `needs` and checks. |\n\nMust not touch: `crates/server/tests/deploy/rehearse.sh`, `crates/server/Dockerfile`, `.github/workflows/super.yml`, `scripts/ci-scope.sh` (the new jobs use the existing `db_deploy` line), `apps/web/src/net/deploy-rehearsal.test.ts`, and every crate and app. No spec section or ruling governs this. The budget is `ci.yml`'s header and `ci-duration.yml` (#73).\n\nWhat the planner found and ran:\n- `rehearse.sh`'s header (lines 36\u201358) already describes this shape: \"one job per Dockerfile stage, then the image, then one boot shard per database shape\", naming `db-deploy-crates`, `db-deploy-image` and the `db-deploy-boot` matrix. Only `ci.yml` was never changed.\n- The planner ran the whole split locally on a 4-core runner, with plain `docker build`, a local BuildKit cache and no GHA cache. Every step exited 0:\n\n  | Step | Time |\n  |---|---|\n  | `REHEARSAL_STAGE=deps` | 151 s |\n  | `REHEARSAL_STAGE=crates` | 91 s |\n  | `REHEARSAL_STAGE=image` with `REHEARSAL_SAVE_IMAGE` | 118 s, a 145 MB tar |\n  | `REHEARSAL_LOAD_IMAGE` + `REHEARSAL_BOOT=migrate`, after `docker rmi` of the image | 9 s |\n  | `REHEARSAL_LOAD_IMAGE` + `REHEARSAL_BOOT=stale` | 5 s |\n\n- The planner spliced the Step 2 block into a copy of `ci.yml`, with the Step 1 line, and ran `rhysd/actionlint:1.7.7` over it: exit 0, no findings.\n\n## Steps\n\n1. In `.github/workflows/ci.yml`, in the comment above `db-suite:` (line 1087), replace\n   `  # super.yml regardless. The rehearsal runs as two jobs of its own, below.`\n   with\n   `  # super.yml regardless. The rehearsal runs as jobs of its own, below.`\n\n2. In the same file, delete everything from line 1136 (`  # The deploy rehearsal, in two jobs that each finish under five minutes (#653, #873). Its image is`) to the end of the file, the whole `db:` job included. Put this in its place, exactly:\n\n```yaml\n  # The deploy rehearsal, in jobs that each finish under five minutes (#653, #873, #1223, #1556,\n  # #1709). Its image is built by buildx with its layer cache in GitHub's cache service, so an\n  # image whose Dockerfile and context have not changed is not compiled again. Every stage's layers\n  # are kept (mode=max): the Dockerfile's dependency layer (cargo-chef and `cargo chef cook`, about\n  # 1.2 GB) changes only with a manifest, Cargo.lock or the Dockerfile's `chef` stage, so a change\n  # to the sources alone reuses it. The build is the same Dockerfile and context either way\n  # (rehearse.sh's REHEARSAL_CACHE_FROM and _TO).\n  #\n  # In one job the rehearsal took 7m21s (#653) and 7m03s (#873) when the dependency layer was\n  # rebuilt, and 7m14s on a push to main that changed only crates/tools (#1709): the workspace's\n  # crates, the server's thin-LTO binary and the boots. So each Dockerfile stage is a job of its\n  # own, which writes its layers to the cache for the next (rehearse.sh's REHEARSAL_STAGE):\n  # db-deploy-deps the dependencies (`deps`), db-deploy-crates the workspace's crates and the\n  # server's library on them (`crates`), and db-deploy-image the binary and the image (`image`),\n  # which it saves as the `deploy-image` artifact (REHEARSAL_SAVE_IMAGE). The first two write the\n  # cache on every run, pull requests included, so the next always finds it; layers the cache\n  # already holds are not uploaded again. db-deploy-image writes the whole image's layers only\n  # from main and staging, as the Rust cache is written. db-deploy-boot loads the image\n  # (REHEARSAL_LOAD_IMAGE) and boots it once per database shape (REHEARSAL_BOOT): `migrate`, the\n  # first boot and the nothing-to-migrate second on one database, and `stale`, the stale\n  # CATALOG_VERSION boot on a fresh one.\n  db-deploy-deps:\n    name: db (deploy image deps)\n    needs: changes\n    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    steps:\n      - uses: actions/checkout@v4\n      - uses: docker/setup-buildx-action@v3\n      # The cache service's URL and token, which only an action sees, for the script's buildx.\n      - uses: crazy-max/ghaction-github-runtime@v3\n      - name: the image's dependency stage\n        env:\n          REHEARSAL_DEPS_ONLY: \"1\"\n          REHEARSAL_CACHE_FROM: type=gha,scope=deploy-rehearsal\n          REHEARSAL_CACHE_TO: type=gha,mode=max,scope=deploy-rehearsal\n        run: sh crates/server/tests/deploy/rehearse.sh\n\n  db-deploy-crates:\n    name: db (deploy image crates)\n    needs: [changes, db-deploy-deps]\n    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    steps:\n      - uses: actions/checkout@v4\n      - uses: docker/setup-buildx-action@v3\n      - uses: crazy-max/ghaction-github-runtime@v3\n      - name: the image's crates stage\n        env:\n          REHEARSAL_STAGE: crates\n          REHEARSAL_CACHE_FROM: type=gha,scope=deploy-rehearsal\n          REHEARSAL_CACHE_TO: type=gha,mode=max,scope=deploy-rehearsal\n        run: sh crates/server/tests/deploy/rehearse.sh\n\n  db-deploy-image:\n    name: db (deploy image)\n    needs: [changes, db-deploy-crates]\n    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    steps:\n      - uses: actions/checkout@v4\n      - uses: docker/setup-buildx-action@v3\n      - uses: crazy-max/ghaction-github-runtime@v3\n      - name: the image, saved for the boots\n        env:\n          REHEARSAL_STAGE: image\n          REHEARSAL_SAVE_IMAGE: ${{ runner.temp }}/deploy-image.tar\n          REHEARSAL_CACHE_FROM: type=gha,scope=deploy-rehearsal\n          REHEARSAL_CACHE_TO: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}\n        run: sh crates/server/tests/deploy/rehearse.sh\n      - uses: actions/upload-artifact@v4\n        with:\n          name: deploy-image\n          path: ${{ runner.temp }}/deploy-image.tar\n          if-no-files-found: error\n          retention-days: 1\n\n  db-deploy-boot:\n    name: db (deploy rehearsal ${{ matrix.boot }})\n    needs: [changes, db-deploy-image]\n    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db_deploy == 'true' }}\n    runs-on: ubuntu-latest\n    timeou",
-        "provider": "claude-4",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": " \"git show --stat 576009234 | head -40; git show --stat ffc723a23 | head -30; git show --stat ba5e8f07b | head -30\", \"description\": \"Show prior rehearsal split commits\"}\n- Bash: {\"command\": \"git show 576009234 -- apps/web/src/net/deploy-rehearsal.test.ts | head -150; cat crates/server/Dockerfile\", \"description\": \"Show prior split test and Dockerfile\"}\n- Grep: {\"pattern\": \"db-deploy-crates|db-deploy-image|db-deploy-boot|REHEARSAL_STAGE|REHEARSAL_BOOT\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!crates/server/tests/deploy/rehearse.sh\"}\n- Bash: {\"command\": \"grep -n -i \\\"rehears\\\\|deploy\\\" .github/workflows/super.yml | head -30; grep -n \\\"db_deploy\\\\|db_sql\\\\|db_store\\\" scripts/ci-scope.sh | head -20\", \"description\": \"Find rehearsal in super\u2026\n- Grep: {\"pattern\": \"ci\\\\.yml\", \"glob\": \"*.{rs,ts,mjs,py,sh}\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"grep -n \\\"db-deploy\\\\|db (deploy\\\\|deploy rehearsal\\\\|rehearse\\\" crates/tools/tests/acceptance.rs apps/web/src/net/ci-scope.test.ts bot/tests/test_workflows.py bot/tests/test_repo_meta.p\u2026\n- Bash: {\"command\": \"grep -n \\\"fn \\\\|ci.yml\\\" crates/tools/tests/acceptance.rs | grep -i -B1 -A1 \\\"ci.yml\\\\|workflow\\\\|job\\\" | head -60\", \"description\": \"List acceptance tests on workflows\"}\n- Bash: {\"command\": \"grep -n \\\"db\\\\b\\\\|db-\\\\|timeout\\\\|five-minute\\\\|budget\\\" bot/tests/test_workflows.py | head -30; sed -n 1,60p .github/workflows/ci.yml\", \"description\": \"Check bot workflow tests and ci.y\u2026\n- Bash: {\"command\": \"grep -n \\\"ci.yml\\\\|ci_yml\\\\|\\\\\\\"ci\\\\\\\"\\\" bot/tests/test_workflows.py bot/tests/test_repo_meta.py | head; ls .github/actions/; grep -rn \\\"upload-artifact\\\\|download-artifact\\\" .github/wor\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1709/.github/workflows/ci.yml\", \"offset\": 395, \"limit\": 50}\n- Bash: {\"command\": \"git show --stat f37ef66 | tail -25; grep -n \\\"7\\\\|five\\\\|threshold\\\\|minutes\\\" .github/workflows/ci-duration.yml | head -30\", \"description\": \"Check commit touched files and ci-duration\"}\n- Grep: {\"pattern\": \"deploy image deps|db \\\\(deploy|deploy-rehearsal|db-deploy\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"*.md\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1709/.github/workflows/super.yml\", \"offset\": 360, \"limit\": 50}\n- Bash: {\"command\": \"timeout 300 pnpm --dir apps/web exec vitest run src/net/deploy-rehearsal.test.ts 2>&1 | tail -25\", \"description\": \"Run the rehearsal script's unit tests\", \"timeout\": 320000}\n- Bash: {\"command\": \"grep -rn \\\"deploy rehearsal\\\\|db-deploy\\\\|deploy image\\\" .github/ .harness/ .squishy/ bot/ scripts/ 2>/dev/null | grep -v \\\"^.github/workflows/ci.yml\\\" | head; which docker && docker ver\u2026\n- Grep: {\"pattern\": \"CATALOG_VERSION\", \"path\": \"crates/server/src\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"nproc; free -g | head -2; which psql curl; docker buildx version 2>&1 | head -1; df -h /tmp | tail -1; docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | head\", \"description\":\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-1709/.bot-plan.md\", \"content\": \"# Draft plan, issue #1709 (db (deploy rehearsal) 7m14s on main f37ef66, a tools-only push)\\n\\n## Findings so far\\n- `.\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/rehearsal-1709 && cat > /tmp/rehearsal-1709/run.sh <<'EOF'\\n#!/bin/sh\\nset -eu\\nR=/home/runner/work/_temp/work/item-1709/crates/server/tests/deploy/rehearse.sh\\nexport RUNN\u2026\n- Bash: {\"command\": \"sh /tmp/rehearsal-1709/run.sh 2>&1\", \"description\": \"Run the split rehearsal locally, timing each stage\", \"timeout\": 5400000, \"run_in_background\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1709/.github/workflows/ci.yml\", \"offset\": 795, \"limit\": 40}\n- Bash: {\"command\": \"sleep 240; cat /tmp/claude-1001/-home-runner-work--temp-work-item-1709/ca9b1cbe-663a-4b7b-a4ed-1bd00aa223b0/tasks/btgmax3s1.output; tail -3 /tmp/rehearsal-1709/deps.log\", \"description\": \u2026\n- Bash: {\"command\": \"sleep 200; cat /tmp/claude-1001/-home-runner-work--temp-work-item-1709/ca9b1cbe-663a-4b7b-a4ed-1bd00aa223b0/tasks/btgmax3s1.output; tail -3 /tmp/rehearsal-1709/image.log\", \"description\":\u2026\n- Bash: {\"command\": \"which actionlint; ls ~/go/bin 2>/dev/null; grep -n \\\"actionlint\\\" .github/workflows/ci.yml | head -5; docker rmi jackioh-server:rehearsal >/dev/null 2>&1; echo ok\", \"description\": \"Check\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/ci-1709 && cat > /tmp/ci-1709/block.yml <<'EOF'\\n # The deploy rehearsal, in jobs that each finish under five minutes (#653, #873, #1223, #1556,\\n # #1709). Its image is bu\u2026\n- Bash: {\"command\": \"diff .github/workflows/ci.yml /tmp/ci-1709/repo/.github/workflows/ci.yml | head -30; diff .github/workflows/ci.yml /tmp/ci-1709/repo/.github/workflows/ci.yml | wc -l; docker images -q rh\u2026\n- Bash: {\"command\": \"cd /tmp/ci-1709 && sed -i 's/^ db-deploy:$/ db-deploy-boot:/; s/db-deploy-image, db-deploy\\\\]/db-deploy-image, db-deploy-boot]/; s/needs\\\\.db-deploy\\\\.result/needs.db-deploy-boot.result/\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\.github\\\" scripts/ci-scope.sh | head -20\", \"description\": \"See how ci-scope treats workflow changes\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-1709/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"rule 6 fails outright: the only file the fix needs is .github/workfl\u2026\n- Bash: {\"command\": \"cd /tmp/ci-1709 && awk '/^```yaml$/{f=1;next} /^```$/{f=0} f' /home/runner/work/_temp/work/item-1709/.bot-plan.md > planblock.yml && diff block.yml planblock.yml; { head -n 1135 /home/ru\u2026\n- Bash: {\"command\": \"git status --porcelain; docker ps -a --format '{{.Names}}' | grep -i jackioh || echo \\\"no leftover containers\\\"\", \"description\": \"Confirm clean worktree and no leftover containers\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"rule 6 fails outright: the only file the fix needs is .github/workflows/ci.yml, a forbidden path, so it is not easy, and it is CI design rather than engine or AI work, so not hard\"} --> **Human required:** in `.github/workflows/ci.yml`, replace the deploy \u2026"
       },
       "kind": "build",
       "pending_request": false,
@@ -12117,11 +10801,9 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "question": "in `.github/workflows/ci.yml`, replace the deploy rehearsal's jobs (from the comment `# The deploy rehearsal, in two jobs\u2026` through the end of the `db` summary job, the end of the file) with the block in Step 2 below, and change one comment line (Step 1). The bot may not edit `.github/`. Nothing outside `.github/` needs to change: `crates/server/tests/deploy/rehearse.sh`, `crates/server/Dockerfile` and `apps/web/src/net/deploy-rehearsal.test.ts` already support this split (#1223, #1565), and no CI job uses it yet.",
       "run_id": "39906310105",
       "started_at": "2026-10-23T05:32:15Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "1710": {
       "action": "revise",
@@ -12182,7 +10864,6 @@
     },
     "1714": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:44:42Z",
@@ -12195,7 +10876,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:44:45Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -12203,22 +10883,18 @@
       "planned_tier": "strong",
       "pr": 1734,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-23T12:59:24Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39965195376",
       "started_at": "2026-10-23T13:55:02Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1715": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:25:34Z",
@@ -12231,7 +10907,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:25:38Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -12239,22 +10914,18 @@
       "planned_tier": "strong",
       "pr": 1731,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-23T12:59:45Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39963892532",
       "started_at": "2026-10-23T13:45:37Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1717": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:15:09Z",
@@ -12267,7 +10938,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:15:13Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -12275,22 +10945,18 @@
       "planned_tier": "strong",
       "pr": 1730,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-23T13:00:26Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39963965995",
       "started_at": "2026-10-23T13:46:09Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1718": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T14:02:24Z",
@@ -12303,7 +10969,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T14:02:27Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -12311,22 +10976,18 @@
       "planned_tier": "strong",
       "pr": 1729,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-23T13:04:06Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39958701668",
       "started_at": "2026-10-23T13:07:58Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1719": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T17:16:05Z",
@@ -12339,7 +11000,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T17:16:08Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -12347,22 +11007,18 @@
       "planned_tier": "strong",
       "pr": 1746,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-23T13:03:21Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39998619131",
       "started_at": "2026-10-23T17:52:10Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1720": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:24:47Z",
@@ -12375,7 +11031,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:24:51Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -12383,22 +11038,18 @@
       "planned_tier": "strong",
       "pr": 1732,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-23T13:02:28Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39966464997",
       "started_at": "2026-10-23T14:03:55Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1721": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:43:14Z",
@@ -12411,7 +11062,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:43:17Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -12419,22 +11069,18 @@
       "planned_tier": "strong",
       "pr": 1740,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-23T13:05:22Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39984757271",
       "started_at": "2026-10-23T16:11:49Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1722": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:43:57Z",
@@ -12447,7 +11093,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:44:01Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -12455,22 +11100,18 @@
       "planned_tier": "strong",
       "pr": 1737,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-23T13:04:29Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39971983587",
       "started_at": "2026-10-23T14:42:48Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1723": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T13:54:03Z",
@@ -12483,7 +11124,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T13:54:07Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -12491,17 +11131,14 @@
       "planned_tier": "strong",
       "pr": 1738,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-23T13:04:49Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "39977827027",
       "started_at": "2026-10-23T15:23:10Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1724": {
@@ -12520,7 +11157,6 @@
     },
     "1728": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T15:53:11Z",
@@ -12533,7 +11169,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T15:53:15Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -12541,19 +11176,15 @@
       "planned_tier": "strong",
       "pr": 1745,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "strong",
       "run_id": "39993834321",
       "started_at": "2026-10-23T17:17:13Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1729": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "e11f905c8d00b390ba964a22090df7f845f8d784",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -12575,39 +11206,17 @@
       "interruptions": 0,
       "issue": 1718,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-23T14:15:09Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "39971898787",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-23T14:42:12Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39971898787",
-            "tier": "strong"
-          }
-        ],
-        "sha": "e11f905c8d00b390ba964a22090df7f845f8d784",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1730": {
       "cleared": {
@@ -12621,30 +11230,10 @@
       "feedback_since": "2026-10-23T13:46:09Z",
       "issue": 1717,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39963965995",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d32feefd5f32987842e0a0ab59b45b92ceb255bd",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1731": {
       "action": "revise",
-      "asks": [],
       "ci_reruns": {
         "7a73d068ab0bac87f43c6af159e43522cba0e165": 1
       },
@@ -12664,47 +11253,16 @@
       "interruptions": 0,
       "issue": 1715,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-23T14:51:36Z",
       "round_tier": "medium",
       "run_id": "39973295593",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-23T14:51:56Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "a7e3ed16164feda474447e7a7eef54f82d9eb7df",
-          "main": "e9b88bdbcf345e0694cd9f536c4adb9c3b9d6834"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39973295593",
-            "tier": "strong"
-          }
-        ],
-        "sha": "7a73d068ab0bac87f43c6af159e43522cba0e165",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1732": {
       "cleared": {
@@ -12718,30 +11276,10 @@
       "feedback_since": "2026-10-23T14:03:55Z",
       "issue": 1720,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39966464997",
-            "tier": "strong"
-          }
-        ],
-        "sha": "96d4a4f7e3e70d94782429863bf54582466bf56b",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1734": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-23T16:25:07Z",
         "by": "`claude` (strong)",
@@ -12758,51 +11296,19 @@
       "interruptions": 0,
       "issue": 1714,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-23T15:45:22Z",
       "round_tier": "medium",
       "run_id": "39981055399",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-23T15:45:43Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "0ed2cd6776428253fe9db5faff825c9bf8a64177",
-          "main": "e38b875bbbb04faa0d2657268770b26266f83a07"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39981055399",
-            "tier": "strong"
-          }
-        ],
-        "sha": "44905c69826cc2faa953d335448cc69c74c1e821",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1736": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-23T18:00:27Z",
         "by": "`claude` (strong)",
@@ -12819,51 +11325,19 @@
       "interruptions": 0,
       "issue": 1705,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-23T17:01:39Z",
       "round_tier": "strong",
       "run_id": "39991716972",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-23T17:01:57Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "a585396efc1937e5e61cfcd590d6d10ea0334fe1",
-          "main": "67834024768036cc1bb9f823e9bbd3bf5c3d385d"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39991716972",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9957cd0a837b8ff554210fe57127b970b4525efa",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1737": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "af9c5a34f6c7efbc9632a9f3e35ae85e6457262c",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -12887,47 +11361,17 @@
       "interruptions": 0,
       "issue": 1722,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-23T17:16:57Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "39993913182",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-23T17:17:48Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/ai/src/evaluate.rs"
-          ],
-          "from": "af9c5a34f6c7efbc9632a9f3e35ae85e6457262c",
-          "main": "658df0331f0319a0bf098731bf4e1a8abd028c46"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39993913182",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ddf717ca9adb20ba9d8251dbc082a707d54c93ae",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1738": {
       "cleared": {
@@ -12941,26 +11385,7 @@
       "feedback_since": "2026-10-23T15:23:10Z",
       "issue": 1723,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39977827027",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ca278105796cdf1d4a451d3ef423ba0ee340bd49",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1740": {
       "cleared": {
@@ -12974,36 +11399,15 @@
       "feedback_since": "2026-10-23T16:11:49Z",
       "issue": 1721,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39984757271",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6cfb10d4565c627e81cee40a96e9908c2387c1a0",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1743": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T18:43:04Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -13011,21 +11415,17 @@
       "planned_tier": "strong",
       "pr": 1747,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-23T18:18:25Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40005683442",
       "started_at": "2026-10-23T18:43:42Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1745": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "944f620c6d7abe76caafb02cacf533af47411eff",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -13047,39 +11447,17 @@
       "interruptions": 0,
       "issue": 1728,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-23T19:20:38Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "40023154591",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-23T20:57:11Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40023154591",
-            "tier": "strong"
-          }
-        ],
-        "sha": "944f620c6d7abe76caafb02cacf533af47411eff",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1746": {
       "cleared": {
@@ -13093,26 +11471,7 @@
       "feedback_since": "2026-10-23T17:52:10Z",
       "issue": 1719,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "39998619131",
-            "tier": "strong"
-          }
-        ],
-        "sha": "71c6cc825f36766d149212d41da3fe0dac0f27b9",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1747": {
       "cleared": {
@@ -13126,36 +11485,15 @@
       "feedback_since": "2026-10-23T18:43:42Z",
       "issue": 1743,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40005683442",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6443aab14dd8d85270a77a238adbb1467acd0edc",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1748": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T22:55:09Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -13163,19 +11501,15 @@
       "planned_tier": "strong",
       "pr": 1752,
       "provider": "claude-7",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40042491982",
       "started_at": "2026-10-23T23:57:20Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1750": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T22:54:38Z",
@@ -13188,7 +11522,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T22:54:41Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -13196,21 +11529,17 @@
       "planned_tier": "medium",
       "pr": 1763,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-23T22:27:40Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40048658163",
       "started_at": "2026-10-24T01:11:34Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1751": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-23T23:18:26Z",
@@ -13221,18 +11550,8 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-24T05:45:02Z",
-        "family": "gemini",
-        "kind": "work",
-        "notes": "## State\n\n- Plan: #1751 Update how multiple activates work\n- Completed:\n  - Resolved merge conflicts from `main` in `crates/engine/tests/golden/games.jsonl`, `spec/11-rulings.md`, and `spec/INDEX.md`.\n  - Re-blessed golden games with `cargo jackioh golden bless` and confirmed `golden check` (240 of 240 identical, 0 diverged).\n  - Validated `spec check` (1123 rulings, 2594 proofs ok), `catalog check`, and `patches check`.\n  - Verified engine activate tests (`cargo test -p jackioh-engine --features testkit r1751000`), card test (`c075_ever_growing_tree`), web tests (`ActivateControl.test.tsx`, `activate.test.ts`), and clippy on both engine and cards.\n  - `cargo fmt --check` is clean.\n\n## Log\n\n- Pass 2: Addressed reviewer feedback regarding activate test update, memory schema compatibility, web TypeScript errors, and fusion ability attribution.\n- Pass 3: Removed decls.last() assumption in activate.rs, updated actions.ts to always open ability modal on multi-ability cards, updated web and engine tests.\n- Merge resolution: Resolved merge conflicts from main, ran `jackioh golden bless`, confirmed all checks and tests pass.\n",
-        "provider": "agy",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its Strong final audit",
-        "trail": "- said: \n- run_command: ./target/release/jackioh patches check\n- said: \n- run_command: ls -la crates/cards/patches/pending/\n- said: \n- run_command: ./target/release/jackioh catalog check\n- said: \n- run_command: cargo fmt --check\n- said: Waiting for `cargo fmt --check` to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"70aef11c-0476-488a-ae41-856120ac3e93/task-60\"}\n- said: \n- run_command: cargo test -p jackioh-engine --features testkit r1751000\n- said: Waiting for engine r1751000 tests to complete.\n- said: \n- run_command: cargo test -p jackioh-cards c075_ever_growing_tree\n- said: Waiting for `cargo test -p jackioh-cards c075_ever_growing_tree` to complete.\n- said: \n- run_command: pnpm --dir apps/web test src/game/ActivateControl.test.tsx\n- said: Waiting for `ActivateControl.test.tsx` tests to run.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"70aef11c-0476-488a-ae41-856120ac3e93/task-73\"}\n- said: Waiting for wasm build and Vitest to finish running `ActivateControl.test.tsx`.\n- said: \n- run_command: pnpm --dir apps/web test src/game/activate.test.ts\n- said: \n- run_command: cargo clippy -p jackioh-engine --all-targets -- -D warnings\n- said: Waiting for clippy check on `jackioh-engine` to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"70aef11c-0476-488a-ae41-856120ac3e93/task-81\"}\n- said: Waiting for `cargo clippy -p jackioh-engine --all-targets -- -D warnings` to finish.\n- said: \n- run_command: cargo clippy -p jackioh-cards --all-targets -- -D warnings\n- said: Waiting for clippy check on `jackioh-cards` to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"70aef11c-0476-488a-ae41-856120ac3e93/task-87\"}\n- said: Waiting for `cargo clippy -p jackioh-cards --all-targets -- -D warnings` to finish.\n- said: \n- run_command: ./target/release/jackioh spec check && ./target/release/jackioh catalog check && ./target/release/jackioh patches check\n- said: \n- run_command: git status\n- said: \n- replace_file_content: {\"TargetFile\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-1751/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Update how multiple activates work\"} --> ## Summary of changes When cards with Activate abilities fuse, each Activate ability on the resulting card now has its uses per turn and cooldowns tracked independently in the engine. On the client, a card with m\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-23T23:18:29Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -13240,14 +11559,11 @@
       "planned_tier": "medium",
       "pr": 1770,
       "provider": "agy",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40061610081",
       "started_at": "2026-10-24T04:15:09Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1752": {
@@ -13262,30 +11578,10 @@
       "feedback_since": "2026-10-23T23:57:20Z",
       "issue": 1748,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40042491982",
-            "tier": "strong"
-          }
-        ],
-        "sha": "faa8218c6f8629de093af1979b7128f3551c2cc8",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1754": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T03:49:20Z",
@@ -13298,7 +11594,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T03:49:23Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -13306,22 +11601,18 @@
       "planned_tier": "strong",
       "pr": 1769,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-24T03:12:10Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40059991043",
       "started_at": "2026-10-24T03:51:07Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1755": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T03:35:09Z",
@@ -13334,7 +11625,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T03:35:12Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -13342,22 +11632,18 @@
       "planned_tier": "strong",
       "pr": 1765,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-24T03:06:14Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40060061115",
       "started_at": "2026-10-24T03:52:08Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1756": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T03:48:39Z",
@@ -13370,7 +11656,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T03:48:42Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -13378,22 +11663,18 @@
       "planned_tier": "strong",
       "pr": 1767,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-24T03:12:51Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40060096522",
       "started_at": "2026-10-24T03:52:41Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1757": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T03:26:03Z",
@@ -13406,7 +11687,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T03:26:07Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -13414,22 +11694,18 @@
       "planned_tier": "strong",
       "pr": 1768,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-24T03:04:41Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40060023434",
       "started_at": "2026-10-24T03:51:37Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1758": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T03:47:57Z",
@@ -13442,7 +11718,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T03:48:01Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -13450,22 +11725,18 @@
       "planned_tier": "strong",
       "pr": 1766,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-24T03:12:58Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40060134314",
       "started_at": "2026-10-24T03:53:14Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1759": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T04:14:09Z",
@@ -13478,7 +11749,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T04:14:12Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -13486,22 +11756,18 @@
       "planned_tier": "medium",
       "pr": 1784,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-24T03:13:25Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40062939879",
       "started_at": "2026-10-24T04:35:19Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1760": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T06:14:51Z",
@@ -13514,7 +11780,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T06:14:52Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -13522,22 +11787,18 @@
       "planned_tier": "strong",
       "pr": 1780,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-24T03:17:33Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40069476570",
       "started_at": "2026-10-24T06:15:19Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1763": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-24T06:54:58Z",
         "by": "`claude` (strong)",
@@ -13554,47 +11815,16 @@
       "interruptions": 0,
       "issue": 1750,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-24T05:18:23Z",
       "round_tier": "medium",
       "run_id": "40068847416",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-24T06:05:51Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "e959dc09678b5dcbac64692bf780a2e41bf3bf31",
-          "main": "7d10ab7032784013e7d555303637b32f020ee849"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40068847416",
-            "tier": "strong"
-          }
-        ],
-        "sha": "a58176fe7e9cba6abc19d2682c84cca7b8576d45",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 3
     },
     "1765": {
       "cleared": {
@@ -13608,26 +11838,7 @@
       "feedback_since": "2026-10-24T03:52:08Z",
       "issue": 1755,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40060061115",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9ece4d148eb1f762f0893d09be9d5c3e3d83b957",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1766": {
       "ci_reruns": {
@@ -13644,26 +11855,7 @@
       "feedback_since": "2026-10-24T03:53:14Z",
       "issue": 1758,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40060134314",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ff9dfae7fa5fac24bc0ef75ab6c5a3b3cbc7c965",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1767": {
       "cleared": {
@@ -13677,26 +11869,7 @@
       "feedback_since": "2026-10-24T03:52:41Z",
       "issue": 1756,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40060096522",
-            "tier": "strong"
-          }
-        ],
-        "sha": "69826569e1de6e26b1284b16fdaa1bb1151c203c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1768": {
       "cleared": {
@@ -13710,30 +11883,10 @@
       "feedback_since": "2026-10-24T03:51:37Z",
       "issue": 1757,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40060023434",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ae4d2ba305c2b764626204f227c9a3d8dfc4b665",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1769": {
       "action": "revise",
-      "asks": [],
       "ci_reruns": {
         "3dcd151134f4cb9b53e8484fc04995abbffdb7fe": 1
       },
@@ -13753,52 +11906,19 @@
       "interruptions": 0,
       "issue": 1754,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-24T04:59:59Z",
       "round_tier": "medium",
       "run_id": "40064538285",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-24T05:00:09Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/net/navigate.ts",
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "ae3ced4c63f2138aad85a7117484b1954eb8ed27",
-          "main": "5d1574fd8e8498e9e5cd02ff60ad9d1e3c0d33bd"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40064538285",
-            "tier": "strong"
-          }
-        ],
-        "sha": "3dcd151134f4cb9b53e8484fc04995abbffdb7fe",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1770": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-24T12:48:30Z",
         "by": "`claude` (strong)",
@@ -13813,42 +11933,19 @@
       "interruptions": 0,
       "issue": 1751,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-24T09:57:19Z",
       "round_tier": "medium",
       "run_id": "40083995609",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-24T09:57:30Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40083995609",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d6e479e3feb645c0710a282dd42d74e97c29f4d1",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1771": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T07:11:46Z",
@@ -13861,7 +11958,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T07:11:47Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -13869,22 +11965,18 @@
       "planned_tier": "strong",
       "pr": 1782,
       "provider": "claude-2",
-      "question": "",
       "queued_at": "2026-10-24T06:50:55Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40073328144",
       "started_at": "2026-10-24T07:14:02Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1774": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T07:12:12Z",
@@ -13895,18 +11987,8 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-24T08:01:23Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "**Goal.** When a read on `/purchases` (`GET /api/packs` or `GET /api/cosmetic-packs`) fails, its place shows the error and a Try again button, like the other screens' reads since #1691. Clicking it reads again and shows the answer: for packs, the odds table and the pity rows. A rate-limited failure says when to try again and keeps the button off until then, through `readFailureOf` and `AccountError`. `purchasesTestid.loadError(place)` still marks the error, and a new `purchasesTestid.retry(place)` marks the button.\n\n**Files to touch.**\n\n| Path | new/change | What changes |\n|---|---|---|\n| `apps/web/src/routes/purchases.tsx` | change | header comment; imports; `purchasesTestid.retry`; `Read<T>`'s failed case; delete `wordsOf`; `useRead` gets an attempt counter and a retry; `Answered` renders `AccountError` |\n| `apps/web/src/routes/purchases.test.tsx` | change | a new `describe(\"#1774 \u2026\")` with two tests; one header comment line |\n\nDo not touch any other file: no CSS (`.row` and `.button-primary` are global in `apps/web/src/index.css`), not `apps/web/src/auth/AccountError.tsx`, not `apps/web/src/net/gate.ts`, nothing in `spec/`, `crates/`, `e2e/`, `.github/`, `.harness/` or `bot/`. The governing ruling is `spec/rulings/R1665000.md` (\"A read that fails says why in its place\"). It stays true and is not edited. The new tests cite no R-id, so `spec check` is unaffected.\n\n**Steps.**\n\n1. `apps/web/src/routes/purchases.tsx`, header comment, line 8. Replace `A read that fails says why in its place.` with `A read that fails says why in its place and offers Try again (#1774), as the other screens' own reads do (#1691).`\n\n2. Same file, imports.\n   - Add `import { AccountError } from \"../auth/AccountError.tsx\";` directly above `import { t, useLocale } from \"../i18n/i18n.ts\";`.\n   - Add `import { readFailureOf, type ReadFailure } from \"../net/gate.ts\";` directly below the `../net/api.ts` import.\n\n3. Same file, `purchasesTestid`. Directly after the `loadError` line, add:\n   ```ts\n     retry: (place: PurchasesPlace) => `purchases-${place}-retry`,\n   ```\n\n4. Same file, type `Read<T>` and its doc comment. Replace both with:\n   ```ts\n   /** A read as the page shows it: waiting, answered, or refused with the words to show and Try again. */\n   type Read<T> =\n     | { kind: \"loading\" }\n     | { kind: \"ready\"; value: T }\n     | ({ kind: \"failed\"; retry: () => void } & ReadFailure);\n   ```\n   Delete `wordsOf` with its doc comment (lines 48\u201351). `readFailureOf` replaces it, and nothing else uses it.\n\n5. Same file, `useRead`. Copy the pattern of `useRead` in `apps/web/src/routes/collection.tsx:63-90`.\n   - Keep the signature `useRead<T>(token: string | null, read: (token: string) => Promise<T>): Read<T>` and the `if (token === null) return;` guard.\n   - Change the doc comment to `` /** `read(token)` once the page has a token, and again each time Try again asks; never, without one. */ ``.\n   - Add `const [attempt, setAttempt] = useState(0);` after the `state` line.\n   - Replace the rejection handler with:\n     ```ts\n           (cause: unknown) => {\n             if (cancelled) return;\n             setState({\n               kind: \"failed\",\n               ...readFailureOf(cause),\n               retry: () => {\n                 setState({ kind: \"loading\" });\n                 setAttempt((before) => before + 1);\n               },\n             });\n           },\n     ```\n   - Change the effect's dependency array to `[token, read, attempt]`.\n\n6. Same file, `Answered`.\n   - Change its doc comment to `` /** `ready` where the read answered, else what it is waiting for, or why it failed with Try again, in the same place. */ ``.\n   - Replace the body of `case \"failed\":` with:\n     ```tsx\n           return (\n             <AccountError\n               message={read.message}\n               retryAfterMs={read.retryAfterMs}\n               onRetry={read.retry}\n               testId={purchasesTestid.loadError(place)}\n               retryTestId={purchasesTestid.retry(place)}\n(the rest of the state was cut here)\n\n## Log\n(earlier lines of the log were cut here)\n- Read `.bot-notes.md`, `.bot-journal.md` tail, `purchases.tsx`, `collection.tsx`, `AccountError.tsx`, `purchases.test.tsx`, `net/gate.ts`, `stubServer.ts`, `net/api.ts` (`errorBodyOf`, `retryAfterMsOf`): plan matches the code.\n- Edited `purchases.tsx` (steps 1\u20136) and `purchases.test.tsx` (steps 7\u20138) exactly as planned.\n- `build-wasm.sh` then vitest/typecheck/eslint: all green, first try.\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may approve it, so it waits for its final audit",
-        "trail": "- said: WASM built. Now running the purchases test file.\n- ran `pnpm --dir apps/web exec vitest run src/routes/shop.test.tsx 2>&1 | tail -12`\n- said: All 10 tests pass (8 existing + 2 new). Now the other verification commands from the plan: shop tests, typecheck, eslint.\n- ran `pnpm --dir apps/web typecheck 2>&1 | tail -15`\n- get_output: {\"shell_id\": \"9cfb8e\", \"timeout\": 180000}\n- ran `pnpm exec eslint apps/web/src/routes/purchases.tsx apps/web/src/routes/purchases.test.tsx 2>&1 | tail -20`\n- said: Typecheck clean. Now eslint on both touched files.\n- ran `git status --porcelain; echo \"---\"; ls .prettierrc* prettier.config.* 2>/dev/null; grep -n '\"prettier\"\\|format' package.json | head -10`\n- said: Clean. Let me verify `git status` and check the repo's formatter (prettier) on the changed files.\n- ran `find . -name \".prettierrc*\" -o -name \"prettier.config.*\" 2>/dev/null | grep -v node_modules | head; grep -rn \"prettier\" package.json apps/web/package.json e2e/package.json 2>/dev/null | head`\n- ran `git diff apps/web/src/routes/purchases.tsx`\n- said: No prettier \u2014 eslint is the style gate. Let me review the final diff of `purchases.tsx`.\n- ran `grep -n -A 15 \"^## Titles\\|Titles\" docs/issues-and-patches.md | head -40`\n- said: The diff matches the plan. Let me check the title convention in `docs/issues-and-patches.md` before finalizing.\n- ran `python3 - <<'EOF' content = open('.bot-notes.md').read() idx = content.index('\\n## State') content = content[:idx] + ''' ## State Built and verified. `purchases.tsx` follows `collection.tsx`'s `useRe\u2026`\n- said: Title convention confirmed: `Patch: <what it does>`. Updating `.bot-notes.md` before finishing.\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a failed read on the Purchases page offers Try again, as the other screens do\"} --> Closes #1774 ## What changed `apps/web/src/routes/purchases.tsx` now follows the `collection.tsx` pattern for failed reads, as planned: - `useRead` gained an `atte\u2026\n- --- answer ---\n- I'll start by reading the bot notes and the files the plan touches.Now let me read the test file and `readFailureOf`/`ReadFailure` in gate.ts.Let me check the collection test's rate-limit pattern and the stubServer helpers.Let me verify `retryAfterMsOf` reads `error.details.retryAfterMs` from a stu\u2026\n- Closes #1774\n- ## What changed\n- `apps/web/src/routes/purchases.tsx` now follows the `collection.tsx` pattern for failed reads, as planned:\n- - `useRead` gained an `attempt` counter; a rejection sets `kind: \"failed\"` with `readFailureOf(cause)` (the server's message and a stated rate-limit wait) plus a `retry` that returns the read to `loading` and bumps `attempt` so the effect reads again.\n- - `Answered`'s failed case renders `AccountError` \u2014 the same component the other screens use since #1691 \u2014 keeping `purchasesTestid.loadError(place)` on its `role=\"alert\"` paragraph and putting the new `purchasesTestid.retry(place)` on the button. A stated wait counts down (\"You can try again in N \u2026\n- - `Read<T>`'s failed case is now `{ retry: () => void } & ReadFailure`; `wordsOf` was deleted since `readFailureOf` replaces it.\n- - The packs read feeds both the card-packs and pity places, so one failure shows the error and a Try again in each; either button retries the one shared read.\n- `apps/web/src/routes/purchases.test.tsx` gained `describe(\"#1774 /purchases offers Try again\")` with two tests: a once-rejecting `/api/packs` shows the error and enabled Try again in both places, clicking re-reads and shows the odds table and pity rows; a `429 rate_limited` reply with `error.detail\u2026\n- ## Tests\n- - `sh scripts/build-wasm.sh` \u2014 built `apps/web/src/wasm/pkg` (fresh worktree prerequisite).\n- - `pnpm --dir apps/web exec vitest run src/routes/purchases.test.tsx` \u2014 **10 passed** (8 existing + 2 new).\n- - `pnpm --dir apps/web exec vitest run src/routes/shop.test.tsx` \u2014 **13 passed**.\n- - `pnpm --dir apps/web typecheck` \u2014 clean.\n- - `pnpm exec eslint apps/web/src/routes/purchases.tsx apps/web/src/routes/purchases.test.tsx` \u2014 clean.\n- - `git status` \u2014 only the two tracked files; `wasm/pkg` is gitignored. No Rust or spec file touched; the new tests cite no R-id, so `spec check` is unaffected (R1665000 stays true and unedited).\n- ## Decisions\n- None beyond the plan \u2014 every step landed as written, including keeping the load-error testid on `AccountError`'s alert paragraph so existing tests pass unchanged.\n- ## For the reviewer\n- - The failed packs read surfaces in two places (`card-packs` and `pity`); both `AccountError`s share the one read's `retry`, so clicking either reloads both \u2014 asserted by the request counts (`/api/packs` \u00d72, `/api/cosmetic-packs` \u00d71).\n- - `AccountError` renders `t(message)`; unknown English sentences pass through unchanged, so the fixture messages still match.\n- - Rule 7 holds: the client computes nothing new \u2014 message and wait come from `readFailureOf` over the server's refusal."
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T07:12:13Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -13914,17 +11996,14 @@
       "planned_tier": "strong",
       "pr": 1783,
       "provider": "devin",
-      "question": "",
       "queued_at": "2026-10-24T06:49:41Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "weak",
       "run_id": "40073350398",
       "started_at": "2026-10-24T07:14:23Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "1775": {
@@ -13963,7 +12042,6 @@
     },
     "1776": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T07:34:27Z",
@@ -13976,7 +12054,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T07:34:28Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -13984,22 +12061,18 @@
       "planned_tier": "strong",
       "pr": 1785,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-24T06:49:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40074756529",
       "started_at": "2026-10-24T07:35:39Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1777": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T07:34:53Z",
@@ -14012,7 +12085,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T07:34:54Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -14020,22 +12092,18 @@
       "planned_tier": "strong",
       "pr": 1786,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-24T06:48:20Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "40074736039",
       "started_at": "2026-10-24T07:35:20Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1778": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T07:27:10Z",
@@ -14048,7 +12116,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T07:27:12Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -14056,22 +12123,18 @@
       "planned_tier": "medium",
       "pr": 1801,
       "provider": "agy",
-      "question": "",
       "queued_at": "2026-10-24T06:31:28Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40074247108",
       "started_at": "2026-10-24T07:28:06Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1779": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T07:12:37Z",
@@ -14084,7 +12147,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T07:12:39Z",
       "planned_by": "`claude-2` (claude, `opus`, strong)",
@@ -14092,17 +12154,14 @@
       "planned_tier": "strong",
       "pr": 1788,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-24T06:27:06Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "40074223488",
       "started_at": "2026-10-24T07:27:44Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1780": {
@@ -14117,26 +12176,7 @@
       "feedback_since": "2026-10-24T06:15:19Z",
       "issue": 1760,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40069476570",
-            "tier": "strong"
-          }
-        ],
-        "sha": "012a595d149515eda184a68c5a4056c791c35a1d",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1782": {
       "cleared": {
@@ -14150,30 +12190,10 @@
       "feedback_since": "2026-10-24T07:14:02Z",
       "issue": 1771,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40073328144",
-            "tier": "strong"
-          }
-        ],
-        "sha": "17e6b2c30ddacdcdda8afb3ec4724c30866a2112",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1783": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-24T08:11:31Z",
         "by": "`claude` (medium)",
@@ -14196,32 +12216,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40076653456",
-      "self_check_findings": [],
       "started_at": "2026-10-24T08:05:02Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "cognition",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40076653456",
-            "tier": "medium"
-          }
-        ],
-        "sha": "709aa28f3c9c65b122f4f20a7aad6598630b674f",
-        "tiers": {
-          "claude": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1784": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-24T08:55:27Z",
         "by": "`claude` (strong)",
@@ -14238,47 +12237,16 @@
       "interruptions": 0,
       "issue": 1759,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-24T08:04:52Z",
       "round_tier": "medium",
       "run_id": "40077097011",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-24T08:11:56Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "f771fe190d9e46d03c0808851d38b81253304472",
-          "main": "bb38d512d4bae083849654fe48717d257f09b9e1"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40077097011",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c6099b76d6659ae66715820fbd54f26233a02b41",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1785": {
       "cleared": {
@@ -14292,26 +12260,7 @@
       "feedback_since": "2026-10-24T07:35:39Z",
       "issue": 1776,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40074756529",
-            "tier": "strong"
-          }
-        ],
-        "sha": "76776a671f314e896478cc8cff9c17e74c43f139",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1786": {
       "cleared": {
@@ -14325,30 +12274,10 @@
       "feedback_since": "2026-10-24T07:35:20Z",
       "issue": 1777,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40074736039",
-            "tier": "strong"
-          }
-        ],
-        "sha": "131d46be6ac0767e8fc555d1f7b921c8e67a4b3a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1787": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T09:01:44Z",
@@ -14361,7 +12290,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T09:01:46Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -14369,19 +12297,15 @@
       "planned_tier": "strong",
       "pr": 1790,
       "provider": "claude-8",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40080368779",
       "started_at": "2026-10-24T09:02:17Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1788": {
       "action": "revise",
-      "asks": [],
       "ci_reruns": {
         "fef6ab327a2cc26b196b7979a5e663f1ee44bbc2": 1
       },
@@ -14401,46 +12325,16 @@
       "interruptions": 0,
       "issue": 1779,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-24T09:15:05Z",
       "round_tier": "strong",
       "run_id": "40081225344",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-24T09:15:15Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/ai/README.md"
-          ],
-          "from": "85bafabb05e38a19e43b3bae076d878f41531024",
-          "main": "26cf16be37eb589dc55dc59adc75a1e299642569"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40081225344",
-            "tier": "strong"
-          }
-        ],
-        "sha": "fef6ab327a2cc26b196b7979a5e663f1ee44bbc2",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1789": {
       "cleared": {
@@ -14485,30 +12379,10 @@
       "feedback_since": "2026-10-24T09:02:17Z",
       "issue": 1787,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40080368779",
-            "tier": "strong"
-          }
-        ],
-        "sha": "215c0f95485912a2f21e05dd58d98fb07d1440e9",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1801": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "ci_reruns": {
         "8ac30673151d097060a77f43fb54f9fb15ec832a": 1
@@ -14528,40 +12402,18 @@
       "interruptions": 0,
       "issue": 1778,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-24T11:49:18Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "40091458748",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-24T11:49:45Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40091458748",
-            "tier": "strong"
-          }
-        ],
-        "sha": "8ac30673151d097060a77f43fb54f9fb15ec832a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     }
   },
   "labels_synced": "7853ef3862488cbb",
@@ -28535,9 +26387,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-23T13:26:19Z",
-    "dropped": 58,
-    "shed": 62
+    "at": "2026-10-24T13:35:57Z",
+    "dropped": 53,
+    "shed": 59
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
