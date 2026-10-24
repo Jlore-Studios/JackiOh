@@ -177,6 +177,12 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `params`: the numbers a Nerf, a Buff and KY's Constant may change (R386), per face, written
   `{key}` in the text. A script reads `param(ctx, key)`, never a literal. Players read Nerf and Buff
   for the engine's Degrade and Upgrade, whose verbs keep their names (`degrade`, `upgrade`, R1320).
+  `cry: true` marks a number only the card's Cry reads, which no Nerf or Buff draws on the field
+  (R1748000); `catalog check` holds it to the text. A number a Spell or a Field Spell prints is
+  declared, or `tests/cross/params.rs` names why it stays fixed (R1748003).
+- `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
+  Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
+  which a Buff places one and from which a Nerf removes one on the field (R1748002).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.

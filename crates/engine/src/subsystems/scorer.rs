@@ -615,6 +615,8 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         cost: CardCost::Fixed(0),
         refs: None,
         params: None,
+        deals_damage: None,
+        uses_plague: None,
         loc: None,
         radiant_fallback: None,
         ingredients: None,

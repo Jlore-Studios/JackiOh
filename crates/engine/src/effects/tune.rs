@@ -9,12 +9,18 @@
 //!
 //! ```text
 //!   | Row     | Degrade                          | Upgrade                         | Can apply to
-//!   | cost    | `costMod` +1, never above (4)    | −1, never below (0)             | never an X-cost card (R65)
+//!   | cost    | `costMod` +1, never above (4)    | −1, never below (0)             | off the field; never X-cost (R65)
 //!   | stats   | −4 split, k to attack            | +4 split                        | a Unit or an Animated card
-//!   | keyword | remove one it has                | add one it lacks (R21's pool)   | add: a Unit
+//!   | keyword | remove one it has                | add one it lacks                | add: see below
 //!   | x       | one numbered keyword or X worse  | one better                      | never below 1
 //!   | number  | one declared number a step worse | one step better                 | within its bounds
+//!   | plague  | remove a Plague Counter          | place one                       | a `usesPlague` card on the field
 //! ```
+//!
+//! On the field neither the cost row nor a declared number only the card's Cry reads (`Param.cry`) is
+//! drawn, the price and the Cry being spent (R1748000). An Upgrade's keyword comes from R21's pool for
+//! a Unit, is Indestructible for a Field Spell, and Pierce or Lifesteal for a Spell or a Field Spell
+//! that deals damage (`CardDef.deals_damage`, R1748001). The plague row is R1748002's.
 //!
 //! R442: the draw is the row first, uniformly among the rows that can change the card, then the item
 //! within the row (which keyword, which number), uniformly, and for a stats row the split k in 0–4. A
@@ -43,8 +49,9 @@ use serde_json::{Value, json};
 
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
-    TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_HARMFUL_KEYWORDS,
-    TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE, TUNE_STAT_TOTAL, TUNE_X_STEP,
+    TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS,
+    TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
+    TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
@@ -150,6 +157,8 @@ enum MenuApply {
     X { items: Vec<XItem> },
     /// One declared number drawn and stepped: `(key, steps, delta)` per item.
     Number { items: Vec<(String, i32, i32)> },
+    /// R1748002: `amount` Plague Counters placed on the card (an Upgrade) or removed (a Degrade).
+    Plague { amount: i32 },
 }
 
 /// B3.4 rule 3's menu rows, in its order.
@@ -166,6 +175,8 @@ pub enum TuneRow {
     X,
     #[serde(rename = "number")]
     Number,
+    #[serde(rename = "plague")]
+    Plague,
 }
 
 impl TuneRow {
@@ -177,6 +188,7 @@ impl TuneRow {
             TuneRow::Keyword => "keyword",
             TuneRow::X => "x",
             TuneRow::Number => "number",
+            TuneRow::Plague => "plague",
         }
     }
 }
@@ -202,9 +214,13 @@ fn pick_one<'a, T>(ctx: &mut EffectContext<'_>, items: &'a [T]) -> &'a T {
     }
 }
 
-/// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65).
-/// R1160: the step is `times` steps, clamped as today.
+/// B3.4 rule 3, cost: `costMod` one step toward (4) or toward (0); never an X-cost card (R65), and
+/// never a card on the field (R1748000). R1160: the step is `times` steps, clamped as today.
 fn cost_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
+    // R1748000: a permanent in play has paid its price.
+    if card.zone.z() == ZoneName::Field {
+        return None;
+    }
     let own = own_cost(state, card)?;
     let delta = match direction {
         TuneDirection::Degrade => (TUNE_COST_STEP * times).min(TUNE_COST_CAP - own),
@@ -254,8 +270,9 @@ const HARMFUL: &[KeywordKind] = TUNE_HARMFUL_KEYWORDS;
 /// leaves it) or granted, never one an aura or its position lends it, and never a harmful one (Can't
 /// attack, Brittle): every entry of the kind goes, a printed one by `tuning.removeKeywords`, an added
 /// one out of `tuning.addKeywords`, a granted one off the instance. An Upgrade adds one R21 keyword a
-/// Unit lacks (`tuning.addKeywords`); a Vanilla unit's text is gone, and an added keyword would be
-/// text, so nothing is added to one.
+/// Unit lacks (`tuning.addKeywords`), and R1748001 one a Spell or a Field Spell lacks of its own
+/// (`non_unit_candidates`); a Vanilla card's text is gone, and an added keyword would be text, so
+/// nothing is added to one.
 fn keyword_row(
     state: &GameState,
     card: &CardInstance,
@@ -285,12 +302,16 @@ fn keyword_row(
             },
         });
     }
-    if card_type_of(state, card) != CardType::Unit || card.vanilla {
+    if card.vanilla {
         return None;
     }
-    // R21, R781004: a keyword it lacks from the combat keyword pool, never Taunt beside Indestructible.
     let held = keywords_now(state, card);
-    let candidates: Vec<Keyword> = candidates_beside(&held);
+    let candidates: Vec<Keyword> = if card_type_of(state, card) == CardType::Unit {
+        // R21, R781004: a keyword it lacks from the combat keyword pool, never Taunt beside Indestructible.
+        candidates_beside(&held)
+    } else {
+        non_unit_candidates(state, card, &held)
+    };
     if candidates.is_empty() {
         return None;
     }
@@ -301,6 +322,28 @@ fn keyword_row(
             count: times,
         },
     })
+}
+
+/// R1748001: the keywords a Buff may add to a card that is no Unit, in this order: Indestructible to a
+/// Field Spell (`TUNE_FIELD_SPELL_KEYWORDS`), and Pierce and Lifesteal to a Spell or a Field Spell
+/// that deals damage (`CardDef.deals_damage`, `TUNE_DAMAGE_KEYWORDS`), each only while it lacks it.
+/// Nothing for a Trap, a Field Trap or any other card.
+fn non_unit_candidates(state: &GameState, card: &CardInstance, held: &[Keyword]) -> Vec<Keyword> {
+    let card_type = card_type_of(state, card);
+    let mut kinds: Vec<KeywordKind> = Vec::new();
+    if card_type == CardType::FieldSpell {
+        kinds.extend_from_slice(TUNE_FIELD_SPELL_KEYWORDS);
+    }
+    if matches!(card_type, CardType::Spell | CardType::FieldSpell)
+        && crate::catalog::def_of(Some(state), &card.def_id).deals_damage == Some(true)
+    {
+        kinds.extend_from_slice(TUNE_DAMAGE_KEYWORDS);
+    }
+    kinds
+        .into_iter()
+        .filter(|kind| !has_keyword(held, *kind))
+        .map(|kind| Keyword::of_kind(kind, 0))
+        .collect()
 }
 
 fn remove_kind(state: &mut GameState, card_id: &str, kind: KeywordKind) {
@@ -500,6 +543,34 @@ fn number_row(
     })
 }
 
+/// R1748002: on the field, a card that uses its own Plague Counters (`CardDef.uses_plague`) takes
+/// `TUNE_PLAGUE_STEP` more from an Upgrade, and gives one up to a Degrade while it carries any. A
+/// Vanilla card's text is gone, and so is its use for them; so is a face-down card's while it sleeps
+/// (R1487000). R1160: `times` counters at once.
+fn plague_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+) -> Option<MenuRow> {
+    if card.vanilla
+        || crate::catalog::def_of(Some(state), &card.def_id).uses_plague != Some(true)
+        || !crate::plague::carries_plague(state, card)
+        || crate::preview::lasting_text_dormant(state, card)
+    {
+        return None;
+    }
+    if direction == TuneDirection::Degrade && crate::plague::plague_on(card) == 0 {
+        return None;
+    }
+    Some(MenuRow {
+        row: TuneRow::Plague,
+        apply: MenuApply::Plague {
+            amount: TUNE_PLAGUE_STEP * times,
+        },
+    })
+}
+
 /// A drawn row's change, written onto the card (`card_id`) and reported.
 fn apply_row(
     ctx: &mut EffectContext<'_>,
@@ -617,10 +688,23 @@ fn apply_row(
             }
             TuningChange::Number { key, delta }
         }
+        MenuApply::Plague { amount } => {
+            let Some(live) = find_instance(ctx.state, card_id).cloned() else {
+                return TuningChange::Plague { delta: 0 };
+            };
+            // R471: a Buff's counters are a placement, which "whenever Plague Counters are placed on
+            // this" answers; a Nerf's come off as a removal.
+            let delta = match direction {
+                TuneDirection::Upgrade => crate::plague::place_plague_on(ctx, &live, *amount),
+                TuneDirection::Degrade => 0 - crate::plague::remove_plague(ctx, &live, *amount),
+            };
+            TuningChange::Plague { delta }
+        }
     }
 }
 
-/// B3.4 rules 1–3: the rows that can change the card now, in the menu's order.
+/// B3.4 rules 1–3: the rows that can change the card now, in the menu's order, R1748002's plague row
+/// last.
 /// R1160: `times` scales each row's change, still one row drawn per application.
 fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<MenuRow> {
     // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
@@ -633,6 +717,7 @@ fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
         keyword_row(state, card, direction, times),
         x_row(state, card, direction, times),
         number_row(state, card, direction, times),
+        plague_row(state, card, direction, times),
     ]
     .into_iter()
     .flatten()

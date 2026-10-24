@@ -446,6 +446,14 @@ pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Brittle,
     KeywordKind::Untributable,
 ];
+/// R1748001: the keywords a Buff's keyword row may add to a Field Spell.
+pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible];
+/// R1748001: the keywords a Buff's keyword row may add to a Spell or a Field Spell that deals damage
+/// (`CardDef.deals_damage`).
+pub const TUNE_DAMAGE_KEYWORDS: &[KeywordKind] = &[KeywordKind::Pierce, KeywordKind::Lifesteal];
+/// R1748002: the Plague Counters one Buff places on, or one Nerf removes from, a card that uses its
+/// own (`CardDef.uses_plague`).
+pub const TUNE_PLAGUE_STEP: i32 = 1;
 
 /// `{ upTo, step }`: one band of `PARAM_DEFAULT_STEP`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
