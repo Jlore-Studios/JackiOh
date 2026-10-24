@@ -12685,6 +12685,13 @@
     "1800": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:52:07Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the 'hard: a database migration' line: the change adds crates/server/migrations/0056_foreign_key_indexes.sql, so the rule rates it hard however small the rest is"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
