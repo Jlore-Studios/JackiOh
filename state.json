@@ -13968,6 +13968,13 @@
     "1779": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T07:12:37Z",
+        "difficulty": "hard",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "It changes the AI's move order in crates/ai/src, which the rule rates hard (the AI's search). The diff is small, but whether it ships depends on an improve-dev screen"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
