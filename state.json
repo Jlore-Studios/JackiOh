@@ -12820,7 +12820,7 @@
       "started_at": "2026-10-24T18:18:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1806": {
       "cleared": {
