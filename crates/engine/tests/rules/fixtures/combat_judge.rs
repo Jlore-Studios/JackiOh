@@ -10,7 +10,9 @@
 
 use std::sync::LazyLock;
 
-use jackioh_engine::effects::{CastHow, CastNewArgs, CastNewDef, TriggerTurnHooksArgs, cast_new, trigger_turn_hooks};
+use jackioh_engine::effects::{
+    CastHow, CastNewArgs, CastNewDef, TriggerTurnHooksArgs, cast_new, trigger_turn_hooks,
+};
 use jackioh_engine::testkit::*;
 
 use super::catalog::vanilla_deck;
@@ -251,7 +253,9 @@ pub static COMBAT_JUDGE_SCRIPTS: LazyLock<Vec<(String, CardScripts)>> = LazyLock
         (
             spark.id.clone(),
             both(Script {
-                cry: Some(hook(|_ctx| vec![trigger_turn_hooks(TriggerTurnHooksArgs { times: 1 })])),
+                cry: Some(hook(|_ctx| {
+                    vec![trigger_turn_hooks(TriggerTurnHooksArgs { times: 1 })]
+                })),
                 ..Script::default()
             }),
         ),

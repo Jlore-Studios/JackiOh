@@ -717,8 +717,7 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
 /// through JSON requiring the identical hash, then applies the rest of the log from the restored
 /// state and requires the live hash and ending. Failures carry the `checkpoint:` prefix the way
 /// growth failures carry `growth:`. Returns the step, whether it held paused work, and the cost
-/// in milliseconds: the restart's (the round trip and the continuation), not the prefix fold's,
-/// as the 1v1 wave's (`CHECKPOINT_TIME_BOUND_MS`, #1803).
+/// in milliseconds.
 fn check_duos_serial_restart(
     options: &DuosCreateOptions,
     log: &[DuosAction],
@@ -726,6 +725,7 @@ fn check_duos_serial_restart(
     stream: &str,
     paused: &[usize],
 ) -> Result<(usize, bool, u128), String> {
+    let started_at = Instant::now();
     let (step, was_paused) = checkpoint_step(stream, paused, log.len());
     let prefix = duos_fold(&DuosReplayInput {
         options: options.clone(),
@@ -738,7 +738,6 @@ fn check_duos_serial_restart(
             log.get(at).map(|action| &action.body)
         ));
     }
-    let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, duos_hash, round_trip)
         .map_err(|error| format!("checkpoint: {error}"))?;
     for action in &log[step..] {

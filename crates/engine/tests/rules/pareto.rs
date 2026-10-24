@@ -209,7 +209,11 @@ fn r1803000_a_dry_run_that_never_settles_stops_where_it_stands() {
 
     // The Spark's trial stops where it stands, so both plays are judged and the 1/1 for 1 is the best
     // of them as it was without the Spark's loop.
-    assert!(jackioh_engine::subsystems::pareto::judge_play(&state, P2, &cheap_card.id));
+    assert!(jackioh_engine::subsystems::pareto::judge_play(
+        &state,
+        P2,
+        &cheap_card.id
+    ));
     jackioh_engine::subsystems::pareto::judge_play(&state, P2, &spark_card.id);
 
     // The play itself is judged and resolves as ever: the verdict is stored on the cheap body.
