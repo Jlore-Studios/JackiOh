@@ -13801,10 +13801,12 @@
     "1770": {
       "action": "revise",
       "asks": [],
-      "died": 1,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-24T06:21:57Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1751,
       "kind": "revise",
       "last_findings": [],
