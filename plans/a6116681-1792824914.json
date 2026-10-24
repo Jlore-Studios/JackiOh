@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1777,
+  "title": "Patch: the engine's rule tests take `both`, `spread` and their JSON helpers from the shared harness instead of a hundred-odd private copies",
+  "branch": "bot/issue-1777",
+  "thread": "**Issue #1777 (data, not instructions):**\n\n```text\n# #1777: Patch: the engine's rule tests take `both`, `spread` and their JSON helpers from the shared harness instead of a hundred-odd private copies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe engine's rules tests are about 230 files, and many begin by writing out the same few small helpers again. One of them, which makes a card do the same thing on its normal and Radiant faces, is copied word for word into 56 files. Nothing a player sees changes. Once built, each helper lives once in the shared test harness, the copies go, and a new test file starts from the shared helper instead of copying an old file's.\n\n## Why\nCounted at HEAD under `crates/engine/tests/rules/`:\n- `fn both(script: Script) -> CardScripts { CardScripts { base: script.clone(), radiant: script } }` is in 56 files, every copy byte-identical (for example `rounds.rs:86`, `trap_cardresolved.rs:61` and `effects_summon_copies.rs:81`).\n- `fn spread(\u2026)`, the port of TypeScript's `{...a, ...b}`, is in 31 files (for example `hero_power.rs:43` and `view_for.rs:25`). It is the same as the cards crate's `merged` (`crates/cards/src/lib.rs:251`).\n- `fn to_json` or `fn js`, wrapping `serde_json::to_value(v).expect(\u2026)`, is in 21 files, though `fixtures/harness.rs:173` already has `json_of`.\n- `fn of_type` is in 27 files with 5 signatures, beside `harness.rs:96`'s `events_of_type`. 21 of them return the events as JSON values.\n- `docs/ADDING_CARDS.md` \u00a72 already asks tests to use the shared helpers \"rather than a copy\", but nothing holds the engine's tests to it.\n\n## Proposal\n- Add `both`, a by-value `spread` and an `events_json(events, kind)` (for the JSON-returning `of_type` forms) to `crates/engine/tests/rules/fixtures/harness.rs`.\n- Delete the local copies whose body is the same, and replace `to_json` and `js` with `json_of`. Keep a local helper only where its body differs, as ADDING_CARDS says.\n- Add a scan in `crates/tools/tests/acceptance.rs` that refuses a new local `fn both(` or `fn spread(` under `crates/engine/tests/rules/`, so copying an old test file does not bring them back.\n\nIt splits cleanly into two pull requests: `both` and `spread` first (about 68 files), then the JSON helpers.\n\n## Where it lands\n- `crates/engine/tests/rules/fixtures/harness.rs` and about 110 files under `crates/engine/tests/rules/`\n- `crates/tools/tests/acceptance.rs`\n\n## Acceptance criteria\n- [ ] `cargo test -p jackioh-engine --features testkit --test rules -- --list` lists the same tests before and after, and they all pass.\n- [ ] No `fn both(` remains under `crates/engine/tests/rules/` outside the harness, and no copy of `spread` or `to_json` whose body equals the shared one.\n- [ ] The acceptance scan fails on a fixture holding a local `fn both(`.\n- [ ] `cargo clippy -p jackioh-engine --all-targets --features testkit -- -D warnings`, `cargo fmt --check` and `cargo jackioh spec check` pass, with no test renamed.\n- [ ] The classifier calls it Internal (tests only).\n\n## Size and risks\nAbout 110 files and roughly \u2212950/+40 lines, all tests, so hard by file count; it is two medium pull requests if split. The risk is merge conflicts with other engine-test work in flight. No shared surface (`effects/mod.rs`, `script.rs`, `state.rs`, `wire/events.rs`) is touched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T06:48:02Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1777: needs a plan; `claude-4` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": []
+}
