@@ -13205,8 +13205,8 @@
       "planned_tier": "medium",
       "provider": "agy",
       "round_tier": "medium",
-      "run_id": "40038987864",
-      "started_at": "2026-10-23T23:19:06Z",
+      "run_id": "pending:9406e410-1792815289",
+      "started_at": "2026-10-24T04:15:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2
@@ -13545,9 +13545,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-24T03:53:14Z",
+    "at": "2026-10-24T04:15:09Z",
     "url": "",
-    "what": "build #1758 on claude-3"
+    "what": "build #1751 on agy"
   },
   "last_sweep": {
     "at": "2026-10-24T04:06:35Z",
