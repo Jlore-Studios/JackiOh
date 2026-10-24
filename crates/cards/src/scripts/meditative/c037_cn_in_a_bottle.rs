@@ -493,7 +493,7 @@ mod tests {
         #[test]
         fn r1748003_surcharge_moves_with_a_buff_or_a_nerf() {
             // A Buff finds it at its floor of 1 (an amount never drops below 1, R386); a Nerf in the
-            // deck makes the card it adds cost (2) more, still up to (4).
+            // hand makes the card it adds cost (2) more, still up to (4).
             let mut s = quiet("bottle-surcharge");
             let _ = apply_for_p1(
                 &mut s,
@@ -588,7 +588,7 @@ mod tests {
 
             #[test]
             fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
-                // A Buff finds it at its floor of (0); a Nerf in the deck makes the card it adds cost (1).
+                // A Buff finds it at its floor of (0); a Nerf in the hand makes the card it adds cost (1).
                 let mut s = quiet("bottle-radiant-set-cost");
                 let _ = apply_for_p1(
                     &mut s,

@@ -50,8 +50,8 @@ use serde_json::{Value, json};
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
     TUNE_ATTACK_FLOOR, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS,
-    TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE, TUNE_PLAGUE_STEP,
-    TUNE_STAT_TOTAL, TUNE_X_STEP,
+    TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
+    TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::faces::card_type_of;
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
@@ -547,7 +547,12 @@ fn number_row(
 /// `TUNE_PLAGUE_STEP` more from an Upgrade, and gives one up to a Degrade while it carries any. A
 /// Vanilla card's text is gone, and so is its use for them; so is a face-down card's while it sleeps
 /// (R1487000). R1160: `times` counters at once.
-fn plague_row(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Option<MenuRow> {
+fn plague_row(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+) -> Option<MenuRow> {
     if card.vanilla
         || crate::catalog::def_of(Some(state), &card.def_id).uses_plague != Some(true)
         || !crate::plague::carries_plague(state, card)

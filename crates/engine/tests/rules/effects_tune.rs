@@ -1997,7 +1997,10 @@ mod r1748000_in_play {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        assert_eq!(rows(&state, &unit.id, TuneDirection::Upgrade), json!(["stats", "keyword"]));
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Upgrade),
+            json!(["stats", "keyword"])
+        );
         assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
         // Ten Buffs and ten Nerfs on the field leave its price as it was.
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {

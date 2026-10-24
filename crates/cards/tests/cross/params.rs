@@ -651,13 +651,21 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
                 unexplained.push(format!("{} {}", card.id, card.name));
             }
         }
-        assert_eq!(unexplained, Vec::<String>::new(), "declare it as a param, or name why it is fixed");
+        assert_eq!(
+            unexplained,
+            Vec::<String>::new(),
+            "declare it as a param, or name why it is fixed"
+        );
         let stale: Vec<&str> = fixed
             .iter()
             .copied()
             .filter(|id| !printing.contains(*id))
             .collect();
-        assert_eq!(stale, Vec::<&str>::new(), "a card here that prints no number any more");
+        assert_eq!(
+            stale,
+            Vec::<&str>::new(),
+            "a card here that prints no number any more"
+        );
         assert!(FIXED.iter().all(|(_, reason)| !reason.is_empty()));
     }
 }

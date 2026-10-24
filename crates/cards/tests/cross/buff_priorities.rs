@@ -4,7 +4,7 @@
 //! on the field a Buff places a Plague Counter on a Field Spell that uses its own, and a Nerf removes
 //! one (R1748002).
 
-use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes, degrade, upgrade};
+use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes, degrade, destroy, upgrade};
 use jackioh_engine::testkit::*;
 
 use super::scenario;
@@ -76,7 +76,10 @@ fn r1748000_a_cry_number_is_out_of_reach_on_the_field() {
         "p1": { "hand": [CRAWLER, FILLER] },
         "p2": { "hand": [FILLER] },
     }));
-    assert_eq!(steppable_keys(&s, CRAWLER, TuneDirection::Upgrade), ["tokens", "draw"]);
+    assert_eq!(
+        steppable_keys(&s, CRAWLER, TuneDirection::Upgrade),
+        ["tokens", "draw"]
+    );
     assert!(rows(&s, CRAWLER, TuneDirection::Upgrade).contains(&TuneRow::Cost));
 
     // On the field its price is paid and its Cry spent: only the number its lasting text reads moves.
@@ -85,7 +88,10 @@ fn r1748000_a_cry_number_is_out_of_reach_on_the_field() {
         "p2": { "hand": [FILLER] },
     }));
     for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
-        assert!(!rows(&s, CRAWLER, direction).contains(&TuneRow::Cost), "{direction:?}");
+        assert!(
+            !rows(&s, CRAWLER, direction).contains(&TuneRow::Cost),
+            "{direction:?}"
+        );
     }
     assert_eq!(steppable_keys(&s, CRAWLER, TuneDirection::Upgrade), ["draw"]);
 }
@@ -104,10 +110,26 @@ fn r1748001_a_buff_gives_a_field_spell_indestructible() {
     assert!(has(&s, LIVING_BOMB, KeywordKind::Indestructible));
     assert!(events.iter().any(|event| matches!(
         event,
-        GameEvent::Upgraded { change: TuningChange::Keyword { keyword: Keyword::Indestructible, added: true, .. }, .. }
+        GameEvent::Upgraded {
+            change: TuningChange::Keyword {
+                keyword: Keyword::Indestructible,
+                added: true,
+                ..
+            },
+            ..
+        }
     )));
     // Indestructible already, it has nothing left to gain.
     assert!(rows(&s, LIVING_BOMB, TuneDirection::Upgrade).is_empty());
+    // And it keeps its zone through a destroy, as a printed Indestructible would.
+    let id = s.card(LIVING_BOMB).id.clone();
+    apply_for_p1(
+        &mut s,
+        &[destroy(json_as(
+            json!({ "target": { "of": "instance", "instanceId": id } }),
+        ))],
+    );
+    assert_eq!(s.card(LIVING_BOMB).zone.z(), ZoneName::Field);
 }
 
 #[test]
@@ -129,7 +151,10 @@ fn r1748001_a_damage_spell_may_gain_pierce_or_lifesteal_and_its_lifesteal_heals(
         add_keywords: Some(vec![Keyword::Lifesteal]),
         ..Tuning::default()
     });
-    s.play(ECLIPSE, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+    s.play(
+        ECLIPSE,
+        json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+    );
     s.expect_health(P2, 27);
     s.expect_health(P1, 23);
 }
@@ -144,7 +169,9 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
             "p1": { "hand": [FILLER], "backrow": [{ "def": PLANTATION, "faceUp": true }] },
             "p2": { "hand": [FILLER] },
         }));
-        s.card_mut(PLANTATION).granted_keywords.push(Keyword::Indestructible);
+        s.card_mut(PLANTATION)
+            .granted_keywords
+            .push(Keyword::Indestructible);
         s
     };
     let seed = seed_where("plantation-plague", |seed| {
@@ -153,7 +180,10 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
         s.card(PLANTATION).counters.plague.is_some()
     });
     let mut s = plantation(&seed);
-    assert_eq!(rows(&s, PLANTATION, TuneDirection::Upgrade), [TuneRow::X, TuneRow::Plague]);
+    assert_eq!(
+        rows(&s, PLANTATION, TuneDirection::Upgrade),
+        [TuneRow::X, TuneRow::Plague]
+    );
 
     let events = tune(&mut s, PLANTATION, TuneDirection::Upgrade);
 
@@ -161,7 +191,12 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
     let id = s.card(PLANTATION).id.clone();
     let told: Vec<&GameEvent> = events
         .iter()
-        .filter(|event| matches!(event, GameEvent::CounterChanged { .. } | GameEvent::Upgraded { .. }))
+        .filter(|event| {
+            matches!(
+                event,
+                GameEvent::CounterChanged { .. } | GameEvent::Upgraded { .. }
+            )
+        })
         .collect();
     assert!(matches!(
         told.as_slice(),
@@ -181,7 +216,10 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
     assert_eq!(s.card(PLANTATION).counters.plague, Some(1));
     assert!(events.iter().any(|event| matches!(
         event,
-        GameEvent::Degraded { change: TuningChange::Plague { delta: -1 }, .. }
+        GameEvent::Degraded {
+            change: TuningChange::Plague { delta: -1 },
+            ..
+        }
     )));
     let s = scenario(json!({
         "p1": { "hand": [FILLER], "backrow": [{ "def": PLANTATION, "faceUp": true }] },
@@ -195,6 +233,9 @@ fn r1748002_a_buff_places_a_plague_counter_and_a_nerf_removes_one() {
         "p2": { "hand": [FILLER] },
     }));
     for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
-        assert!(!rows(&s, PLANTATION, direction).contains(&TuneRow::Plague), "{direction:?}");
+        assert!(
+            !rows(&s, PLANTATION, direction).contains(&TuneRow::Plague),
+            "{direction:?}"
+        );
     }
 }
