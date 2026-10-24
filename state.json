@@ -13274,8 +13274,13 @@
     "what": "revise #1815 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-24T23:51:37Z",
-    "notes": [],
+    "at": "2026-10-24T23:52:18Z",
+    "notes": [
+      "delivered build #1803 on claude-1 (run 40120079977): interrupted",
+      "started build #1803 on claude-4 (run 40144519507)",
+      "started revise #1815 on claude-1 (run 40144544252)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -13980,7 +13985,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T23:43:39Z",
+  "loop_tick": "2026-10-24T23:52:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
