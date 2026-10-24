@@ -347,14 +347,6 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
-  "Immune to tribal tag based hate": () => (
-    <Part className="kw-glyph-art kw-tribal" anim fit="contain">
-      <circle cx="50" cy="50" r="30" fill="none" stroke="#0b0d12" strokeWidth="6" />
-      <circle cx="50" cy="50" r="30" fill="none" stroke="#7fb6dd" strokeWidth="3" />
-      <circle cx="50" cy="50" r="18" fill="none" stroke="#7fb6dd" strokeWidth="2" strokeOpacity="0.7" />
-    </Part>
-  ),
-
   Equip: () => (
     <Part className="kw-glyph-art kw-magnet" anim fit="contain">
       <path d="M28 24 V56 A22 22 0 0 0 72 56 V24 H58 V54 A8 8 0 0 1 42 54 V24 Z" fill="#e0574f" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />

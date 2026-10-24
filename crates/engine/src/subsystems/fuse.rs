@@ -1127,6 +1127,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_be_attacked: flags(|f| f.cant_be_attacked),
                 attacked_only_from_lane: flags(|f| f.attacked_only_from_lane),
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
+                immune_to_tribal_hate: flags(|f| f.immune_to_tribal_hate),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
                 random_targets: flags(|f| f.random_targets),

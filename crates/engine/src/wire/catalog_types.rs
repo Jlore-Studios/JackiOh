@@ -484,8 +484,9 @@ pub enum Keyword {
     /// E35: a Spell can't target this and doesn't affect it.
     #[serde(rename = "Immune to Spells")]
     ImmuneToSpells,
-    /// MD-B1, R940: harmful effects that pick cards by a tribal tag can't target or affect this.
+    /// A retired historical keyword from v0.3.0..v0.4.4b, kept only to deserialize historical snapshots.
     #[serde(rename = "Immune to tribal tag based hate")]
+    #[cfg_attr(feature = "ts", ts(skip))]
     ImmuneToTribalHate,
     /// R636: a Unit may attack twice each turn.
     Windfury,
@@ -537,7 +538,6 @@ string_union! {
         Brittle = "Brittle",
         SpellDamage = "Spell Damage",
         ImmuneToSpells = "Immune to Spells",
-        ImmuneToTribalHate = "Immune to tribal tag based hate",
         Windfury = "Windfury",
         Temporary = "Temporary",
         Deft = "Deft",
@@ -583,7 +583,7 @@ impl Keyword {
             Keyword::Brittle { .. } => KeywordKind::Brittle,
             Keyword::SpellDamage { .. } => KeywordKind::SpellDamage,
             Keyword::ImmuneToSpells => KeywordKind::ImmuneToSpells,
-            Keyword::ImmuneToTribalHate => KeywordKind::ImmuneToTribalHate,
+            Keyword::ImmuneToTribalHate => panic!("historical keyword ImmuneToTribalHate has no KeywordKind"),
             Keyword::Windfury => KeywordKind::Windfury,
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
@@ -634,7 +634,6 @@ impl Keyword {
             KeywordKind::Brittle => Keyword::Brittle { n },
             KeywordKind::SpellDamage => Keyword::SpellDamage { n },
             KeywordKind::ImmuneToSpells => Keyword::ImmuneToSpells,
-            KeywordKind::ImmuneToTribalHate => Keyword::ImmuneToTribalHate,
             KeywordKind::Windfury => Keyword::Windfury,
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,
