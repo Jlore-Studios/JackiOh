@@ -61,6 +61,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -97,10 +98,6 @@ mod tests {
 
     fn unit_ids(s: &Scenario) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(P1, lane).map(|card| card.def_id)).collect()
-    }
-
-    fn library_ids(s: &Scenario) -> Vec<String> {
-        s.pile(P1, "library").into_iter().map(|card| card.def_id).collect()
     }
 
     fn row(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
@@ -181,7 +178,7 @@ mod tests {
             }));
             s.play(CALL, json!({}));
 
-            assert_eq!(library_ids(&s), [SPELL, MENACE, TRAP, POINTMASTER, TIMMY]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [SPELL, MENACE, TRAP, POINTMASTER, TIMMY]);
         }
 
         #[test]
@@ -190,7 +187,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([None, None, None, None, None]));
-            assert_eq!(library_ids(&s), [SPELL, TRAP, SPELL, TRAP]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [SPELL, TRAP, SPELL, TRAP]);
             // §8 Conventions: the spell still counts as played, and it goes to the graveyard (§10.5).
             s.expect_in_zone(CALL, "graveyard").expect_mana(P1, 2);
         }
@@ -201,7 +198,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([Some(TIMMY), None, None, None, None]));
-            assert_eq!(library_ids(&s), [POINTMASTER, POINTMASTER]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [POINTMASTER, POINTMASTER]);
         }
 
         #[test]
@@ -221,7 +218,7 @@ mod tests {
                 unit_ids(&s),
                 row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(DEFENDER), Some(VANILLA)])
             );
-            assert_eq!(library_ids(&s), [TIMMY, POINTMASTER]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TIMMY, POINTMASTER]);
         }
 
         #[test]
@@ -237,7 +234,7 @@ mod tests {
             // The first scan takes the one open unlocked zone (lane 3); with none left, the next scans
             // take the leftmost empty Locked lanes (R688 prefers unlocked, then fills Locked).
             assert_eq!(unit_ids(&s), row([Some(VANILLA), Some(DEFENDER), Some(TIMMY), None, None]));
-            assert!(library_ids(&s).is_empty());
+            assert!(def_ids(&s.pile(P1, "library")).is_empty());
         }
 
         #[test]
@@ -276,7 +273,7 @@ mod tests {
                 unit_ids(&s),
                 row([Some(POINTMASTER), Some(TIMMY), Some(POINTMASTER), None, None])
             );
-            assert_eq!(library_ids(&s), [MENACE, SPELL, MENACE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [MENACE, SPELL, MENACE]);
         }
 
         #[test]
@@ -285,7 +282,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([None, None, None, None, None]));
-            assert_eq!(library_ids(&s), [MENACE, MENACE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [MENACE, MENACE]);
         }
 
         #[test]
@@ -303,7 +300,7 @@ mod tests {
                 unit_ids(&s),
                 row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(POINTMASTER)])
             );
-            assert_eq!(library_ids(&s), [TIMMY, VANILLA]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TIMMY, VANILLA]);
         }
     }
 
@@ -321,7 +318,7 @@ mod tests {
             assert_eq!(unit_ids(&s), row([Some(TIMMY), None, None, None, None]));
             let ids: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.id).collect();
             assert!(token.is_some_and(|token| ids.contains(&token.id)));
-            assert_eq!(library_ids(&s), [RUSH_TOKEN, MENACE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [RUSH_TOKEN, MENACE]);
         }
     }
 }

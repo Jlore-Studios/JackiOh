@@ -76,6 +76,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -92,10 +93,6 @@ mod tests {
 
     fn ids(cards: &[CardInstance]) -> Vec<String> {
         cards.iter().map(|card| card.id.clone()).collect()
-    }
-
-    fn defs(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     fn library_and_hand(s: &Scenario) -> Vec<String> {
@@ -152,7 +149,7 @@ mod tests {
 
                 s.play(RECYCLE, json!({}));
 
-                assert_eq!(defs(&s.pile(P1, "graveyard")), vec![RECYCLE]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![RECYCLE]);
                 assert_eq!(s.pile(P1, "library").len(), 4);
                 assert_eq!(s.hand(P1).len(), 1);
                 assert_eq!(library_and_hand(&s), before);
@@ -185,8 +182,8 @@ mod tests {
 
                 s.play(RECYCLE, json!({}));
 
-                assert_eq!(defs(&s.hand(P1)), vec![X]);
-                assert_eq!(defs(&s.pile(P1, "library")), vec![Y]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![X]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![Y]);
                 assert_eq!(
                     s.events().iter().filter(|event| matches!(event, GameEvent::ShuffledIn { .. })).count(),
                     0
@@ -204,7 +201,7 @@ mod tests {
 
                 s.play(RECYCLE, json!({}));
 
-                assert_eq!(defs(&s.pile(P1, "graveyard")), vec![B, RECYCLE]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![B, RECYCLE]);
                 assert_eq!(
                     s.pile(P1, "graveyard").first().map(|card| card.id.clone()),
                     Some(turned_away.id.clone())
@@ -253,7 +250,7 @@ mod tests {
                     .own_library
                     .map(|library| library.cards.into_iter().map(|entry| entry.def_id).collect())
                     .unwrap_or_default();
-                let in_deck = defs(&s.pile(P1, "library"));
+                let in_deck = def_ids(&s.pile(P1, "library"));
                 for def_id in &in_deck {
                     assert!(listed.contains(def_id));
                 }
@@ -268,7 +265,7 @@ mod tests {
 
                 s.play(RECYCLE, json!({}));
 
-                assert_eq!(defs(&s.hand(P1)), vec![X, Y]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![X, Y]);
             }
         }
 
@@ -355,7 +352,7 @@ mod tests {
 
                 s.play(RECYCLE, json!({}));
 
-                assert_eq!(defs(&s.hand(P1)), vec![X]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![X]);
             }
 
             #[test]

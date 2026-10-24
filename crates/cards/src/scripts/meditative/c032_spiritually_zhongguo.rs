@@ -83,6 +83,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::filler;
     use jackioh_engine::testkit::*;
 
@@ -155,10 +156,6 @@ mod tests {
         panic!("no roll of {wanted} over 64 seeds");
     }
 
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).iter().map(|card| card.def_id.clone()).collect()
-    }
-
     mod m32_spiritually_zhongguo {
         use super::*;
 
@@ -185,7 +182,7 @@ mod tests {
                         }
                         // The transform: one CN definition for the whole hand, each costing (0).
                         1 => {
-                            let defs = hand_defs(&s, P1);
+                            let defs = def_ids(&s.hand(P1));
                             assert_eq!(defs.len(), 2, "{seed}");
                             assert!(defs.iter().all(|def| *def == defs[0]), "{seed}");
                             assert!(CN_IDS.contains(&defs[0].as_str()), "{seed}");
@@ -231,7 +228,7 @@ mod tests {
                 let (seed, mut s) = with_roll(1, false);
                 let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
                 s.play(SPIRITUALLY, json!({}));
-                let defs = hand_defs(&s, P1);
+                let defs = def_ids(&s.hand(P1));
                 // The played Spell left; the other two were replaced in place by one definition.
                 assert_eq!(defs.len(), 2, "{seed}");
                 assert!(defs.iter().all(|def| *def == defs[0]), "{seed}");
@@ -314,7 +311,7 @@ mod tests {
             fn r921_hand_cards_and_units_are_radiant() {
                 let (seed, mut s) = with_roll(1, true);
                 s.play(SPIRITUALLY, json!({}));
-                assert_eq!(hand_defs(&s, P1).len(), 2, "{seed}");
+                assert_eq!(def_ids(&s.hand(P1)).len(), 2, "{seed}");
                 for card in s.hand(P1) {
                     assert!(card.radiant, "{seed}");
                     assert_eq!(card.cost_override, Some(0), "{seed}");

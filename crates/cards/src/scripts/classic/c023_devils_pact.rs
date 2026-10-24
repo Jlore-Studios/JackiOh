@@ -82,6 +82,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::merged;
     use jackioh_engine::testkit::*;
 
@@ -275,7 +276,7 @@ mod tests {
                 }
                 assert_eq!(s.state().players[P1].turn_log.cards_played, 1);
                 s.expect_mana(P1, 3);
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+                let graveyard = def_ids(&s.pile(P1, "graveyard"));
                 assert!(graveyard.contains(&BOOK.to_string()));
             }
 

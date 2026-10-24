@@ -90,6 +90,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use indexmap::IndexSet;
     use jackioh_engine::testkit::*;
 
@@ -196,7 +197,7 @@ mod tests {
 
     /// The def ids of p1's graveyard, sorted.
     fn graveyard(s: &Scenario) -> Vec<String> {
-        let mut ids: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+        let mut ids = def_ids(&s.pile(P1, "graveyard"));
         ids.sort();
         ids
     }
@@ -310,7 +311,7 @@ mod tests {
             let picked = |seed: &str| -> Vec<String> {
                 let mut s = board(false, &DISCARDABLE, Some(seed));
                 s.play(ZAO_GAO, json!({}));
-                s.pile(P1, "hand").iter().map(|card| card.def_id.clone()).collect()
+                def_ids(&s.pile(P1, "hand"))
             };
             assert_eq!(picked("core-080-rng-a"), picked("core-080-rng-a"));
             let kept: IndexSet<Option<String>> =

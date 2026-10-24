@@ -83,6 +83,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -122,10 +123,6 @@ mod tests {
 
     fn units_on_board(s: &Scenario) -> Value {
         json!([1, 2, 3, 4, 5].map(|lane| s.unit(P1, lane).map(|card| card.def_id)))
-    }
-
-    fn graveyard_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "graveyard").into_iter().map(|card| card.def_id).collect()
     }
 
     /// The def id of the card an option offers, or "?" for an option that is not an instance.
@@ -181,7 +178,7 @@ mod tests {
                 let picks = json!([s.card(POINTMASTER).id, s.card(MENACE).id]);
                 s.answer(picks);
                 assert_eq!(units_on_board(&s), json!([VANILLA, POINTMASTER, MENACE, null, null]));
-                assert_eq!(graveyard_defs(&s, P1), vec![SEVEN]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![SEVEN]);
             }
 
             #[test]
@@ -260,7 +257,7 @@ mod tests {
                 }));
                 r.play(BACK, json!({}));
                 assert_eq!(units_on_board(&r), json!([VANILLA, null, null, null, null]));
-                assert_eq!(graveyard_defs(&r, P2), vec![MENACE, SEVEN]);
+                assert_eq!(def_ids(&r.pile(P2, "graveyard")), vec![MENACE, SEVEN]);
             }
 
             #[test]
@@ -361,7 +358,7 @@ mod tests {
                 s.play(BACK, json!({}));
                 assert!(s.state().pending.is_none());
                 assert_eq!(units_on_board(&s), json!([SEVEN, MENACE, VANILLA, null, null]));
-                assert_eq!(graveyard_defs(&s, P1), vec![FILLER]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![FILLER]);
             }
 
             #[test]
@@ -378,7 +375,7 @@ mod tests {
                 let mut s = back(true, json!([SEVEN, MENACE, POINTMASTER, TIMMY]), &[VANILLA, VANILLA, VANILLA]);
                 s.play(BACK, json!({}));
                 assert_eq!(units_on_board(&s), json!([VANILLA, VANILLA, VANILLA, SEVEN, MENACE]));
-                assert_eq!(graveyard_defs(&s, P1), vec![POINTMASTER, TIMMY]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![POINTMASTER, TIMMY]);
             }
 
             #[test]

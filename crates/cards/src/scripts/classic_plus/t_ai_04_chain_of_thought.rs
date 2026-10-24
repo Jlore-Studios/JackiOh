@@ -49,6 +49,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const CHAIN: &str = "classicplus-t-ai-04";
     const TIMMY: &str = "core-011"; // (1) Unit
@@ -86,10 +87,6 @@ mod tests {
         s.events().iter().filter(|event| js(*event)["type"] == kind).count()
     }
 
-    fn library_defs(s: &Scenario) -> Vec<String> {
-        s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect()
-    }
-
     mod t_ai_4_chain_of_thought {
         use super::*;
 
@@ -123,7 +120,7 @@ mod tests {
                 s.play(CHAIN, json!({}));
                 assert_eq!(drawn(&s), 2);
                 s.expect_in_zone(D_FENDER, "hand");
-                assert_eq!(library_defs(&s), vec![TIMMY]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![TIMMY]);
             }
 
             #[test]
@@ -215,7 +212,7 @@ mod tests {
                 s.expect_in_zone(HINDER, "graveyard");
                 s.expect_in_zone(CHAIN, "graveyard");
                 assert_eq!(s.pile(P1, "graveyard").len(), 3);
-                assert_eq!(library_defs(&s), vec![TIMMY]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![TIMMY]);
                 assert_eq!(s.hand(P1).len(), 2);
                 assert!(s.hand(P1).iter().any(|card| card.def_id == TIMMY));
             }
@@ -229,7 +226,7 @@ mod tests {
                 let mut s = chain(json!([D_FENDER, TIMMY, MENACE, TIMMY]), true, None);
                 s.play(CHAIN, json!({}));
                 assert_eq!(drawn(&s), 3);
-                assert_eq!(library_defs(&s), vec![TIMMY]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![TIMMY]);
             }
 
             #[test]

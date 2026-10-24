@@ -72,6 +72,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -361,7 +362,7 @@ mod tests {
             t.play(&trap, json!({}));
 
             assert_eq!(countered(t.events()), vec![trap.id.clone()]);
-            let graveyard: Vec<String> = t.pile(P2, "graveyard").into_iter().map(|card| card.def_id).collect();
+            let graveyard = def_ids(&t.pile(P2, "graveyard"));
             assert_eq!(graveyard, [PAWN]);
             // p1 reads it only now that the graveyard shows it.
             let opponent = js(&t.view(P1))["opponent"].clone();

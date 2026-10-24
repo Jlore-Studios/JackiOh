@@ -90,6 +90,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -160,10 +161,6 @@ mod tests {
 
     fn zone_of(state: &GameState, card: &CardInstance) -> Option<ZoneName> {
         find_instance(state, &card.id).map(|found| found.zone.z())
-    }
-
-    fn defs_of(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     /// Second Wind standing, with a graveyard to play from. The Radiant face is set up standing (its Cry
@@ -246,7 +243,7 @@ mod tests {
                     "p2": { "hand": [STOCKPILE] },
                 }));
                 s.play(WIND, json!({ "zone": 1 }));
-                assert_eq!(defs_of(&s.pile(P1, "graveyard")), vec![ECLIPSE, MR_TOKEN]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![ECLIPSE, MR_TOKEN]);
                 assert_eq!(graveyard_defs_offered(&s), vec![ECLIPSE, MR_TOKEN]);
             }
 
@@ -434,8 +431,8 @@ mod tests {
                 }));
                 s.play(WIND, json!({ "zone": 1 }));
                 assert!(s.pile(P1, "library").is_empty());
-                assert_eq!(defs_of(&s.pile(P1, "exile")), vec![VANILLA, MENACE]);
-                assert_eq!(defs_of(&s.pile(P1, "graveyard")), vec![ECLIPSE, MR_TOKEN]);
+                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![VANILLA, MENACE]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![ECLIPSE, MR_TOKEN]);
             }
 
             #[test]
