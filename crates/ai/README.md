@@ -66,11 +66,14 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Its root tries a play in every distinct placement; deeper levels, the
-lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). An action the true state
-refuses (a cost no determinization could see) is never submitted: `submitted` sends the first action of
-the next finalist the true state accepts, best mean first, with the search's reason, and only when none
-is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other
-legal action (#1575).
+lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). Position switches are
+the last tier of the move order, so a level's `branching` cut drops them from a busy board; the first
+`AI_SEARCH.position_switches` stand-downs (Attack to Defense) it cuts are kept (#1759), so a unit that
+cannot win its next fight can stand down however many earlier moves the board offers. An action the
+true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
+first action of the next finalist the true state accepts, best mean first, with the search's reason, and
+only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
+or other legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then

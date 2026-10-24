@@ -445,6 +445,86 @@ mod candidate_actions_b14 {
         );
     }
 
+    /// R1759000: three units, each with a hero attack, a trade and a stand-down, and three cards to play
+    /// push every position switch past a level's `branching` moves. The cut keeps the first
+    /// `AI_SEARCH.position_switches` of the stand-downs beside endTurn, and keeps none twice where the
+    /// width holds them all.
+    #[test]
+    fn r1759000_position_switches_survive_truncation_up_to_named_constant() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-switches-survive",
+            "p1": { "field": ["core-008", "core-008", "core-008"], "hand": ["core-003", "core-004", "core-011"], "mana": 5 },
+            "p2": { "field": ["core-030"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let width = AI_BUDGET.branching;
+        let stand_downs: Vec<ActionBody> = candidates
+            .iter()
+            .filter(|action| stands_down(&state, action))
+            .cloned()
+            .collect();
+        assert_eq!(stand_downs.len(), 3);
+        assert!(
+            candidates
+                .iter()
+                .position(|action| stands_down(&state, action))
+                .is_some_and(|first| first > width)
+        );
+        let kept = AI_SEARCH.position_switches as usize;
+        assert!(0 < kept && kept < stand_downs.len());
+
+        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
+            let expanded = expansion(&state, AI, width, order, &POLICY_PRIOR);
+            assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
+            assert_eq!(expanded[..width], candidates[..width]);
+            assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
+            assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
+        }
+
+        // Wide enough to hold every candidate, nothing is cut and nothing is added twice.
+        assert_eq!(
+            expansion(&state, AI, candidates.len(), MoveOrder::Heuristic, &POLICY_PRIOR),
+            candidates
+        );
+    }
+
+    /// R1759000: only a stand-down is kept past the cut. A unit already in Defense Position keeps its
+    /// switch back to Attack where the cut leaves it, as before.
+    #[test]
+    fn r1759000_a_switch_back_to_attack_is_cut_with_the_rest() {
+        jackioh_cards::register_all();
+        let defending = json!({ "def": "core-008", "position": "DEF" });
+        let state = scenario(json!({
+            "seed": "search-switch-back-cut",
+            "p1": { "field": [defending, defending, defending], "hand": ["core-003", "core-004", "core-011", "core-015"], "mana": 5 },
+            "p2": { "field": ["core-030"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let width = AI_BUDGET.branching;
+        let switches = |actions: &[ActionBody]| {
+            actions
+                .iter()
+                .filter(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+                .count()
+        };
+        assert_eq!(switches(&candidates), 3);
+        assert!(!candidates.iter().any(|action| stands_down(&state, action)));
+        assert!(
+            candidates
+                .iter()
+                .position(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+                .is_some_and(|first| first > width)
+        );
+        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        assert_eq!(switches(&expanded), 0, "{expanded:?}");
+        assert_eq!(expanded.len(), width + 1);
+    }
+
     /// B14: a seat answering its own prompt gets exactly the prompt's answers and no endTurn
     #[test]
     fn b14_a_seat_answering_its_own_prompt_gets_exactly_the_prompts_answers_and_no_end_turn() {

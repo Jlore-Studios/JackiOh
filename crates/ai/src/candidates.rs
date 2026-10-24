@@ -6,10 +6,10 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, Selection,
-    UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at, carried_at,
-    effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions, pierces,
-    row_size, slot_of, subsystems, takes_strike_back, unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Position, Row,
+    Selection, UnitView, ZoneChoice, ZoneSlot, adjacent, attack_mod_for, beneath_at, canonical, card_at,
+    carried_at, effective_cost, find_instance, has_keyword, is_locked, lane_multiplier_for, legal_actions,
+    pierces, row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -631,4 +631,11 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
     out.extend(switches);
     out.extend(ends);
     out
+}
+
+/// #1759: whether `action` switches a unit in Attack Position to Defense, a stand-down.
+pub fn stands_down(state: &GameState, action: &ActionBody) -> bool {
+    matches!(action, ActionBody::SwitchPosition { instance_id }
+        if find_instance(state, instance_id)
+            .is_some_and(|unit| unit_view(state, unit).position == Position::Atk))
 }

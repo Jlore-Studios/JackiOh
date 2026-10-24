@@ -88,6 +88,13 @@ pub struct AiSearch {
     /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
     /// 197-203, edge -0.015 (-0.078 to 0.048). 3 let a Tribute play's sets outgrow the lethal allowance.
     pub zone_variants: i32,
+    /// #1759, R1759000: the stand-downs (a unit's switch from Attack to Defense Position) `expand` keeps past its
+    /// `width`, the first of them in move order, beside endTurn. Switches are the last tier of the
+    /// move order, so where `branching` is 6 (below the root), a board with that many earlier moves cut
+    /// every one, and a unit that cannot win its next fight never stood down in a line, as the
+    /// opponent's reply does (`AI_REPLY.defense_switches`). Bounds a level's children at `width` + this
+    /// + 1. A switch back to Attack is kept only where the width holds it.
+    pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
@@ -150,6 +157,7 @@ pub struct AiSearch {
 
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
+    position_switches: 2,
     max_auto_answers: 8,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
