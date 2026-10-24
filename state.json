@@ -13952,18 +13952,23 @@
       ]
     },
     "1778": {
-      "asks": [
-        "c:6380930887"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-24T06:31:28Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:327c02c2-1792825977",
+      "started_at": "2026-10-24T07:13:06Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:6380930887"
+      ]
     },
     "1779": {
       "action": "plan",
@@ -14042,9 +14047,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-24T07:02:41Z",
+    "at": "2026-10-24T07:13:06Z",
     "url": "",
-    "what": "plan #1771 on claude-7"
+    "what": "plan #1778 on agy"
   },
   "last_sweep": {
     "at": "2026-10-24T07:01:39Z",
