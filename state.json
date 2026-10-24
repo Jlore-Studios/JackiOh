@@ -13266,6 +13266,13 @@
     "1755": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T03:35:09Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 7 holds (one app, 4 files, unit-tested), but it adds a visible control to the co-op board, which is UI polish, and placing it was a design choice, so it is not easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
