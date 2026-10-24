@@ -13203,6 +13203,8 @@
       "run_id": "40048658163",
       "started_at": "2026-10-24T01:11:34Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
