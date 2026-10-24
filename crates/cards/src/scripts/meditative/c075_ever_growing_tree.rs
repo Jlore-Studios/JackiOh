@@ -8,8 +8,8 @@
 //! every set, never this card or an ingredient already in it (R387), then `fuse_cards` of the one
 //! chosen with the Tree as the kept instance (R77, R102), its cost kept; on the Radiant face the pick
 //! goes in on its Radiant face (R469). With no Field Spell to offer nothing happens. A Cry
-//! never runs, auras and turn lines run, fused Activates share the Tree's count, and a fused
-//! keyword applies at once (R1087).
+//! never runs, auras and turn lines run, each fused Activate keeps its own per-turn count (R1751000),
+//! and a fused keyword applies at once (R1087).
 
 use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::prelude::*;
@@ -84,7 +84,7 @@ pub fn script() -> CardScripts {
 // M #75 Ever Growing Tree — SPEC §8.8 row 75, BUILD M10 row M 75: "Activate, once a turn in your
 // main phase: the non-token Field Spell you Discover of three random ones (never itself or one already
 // fused in, R831012) is fused into it, its aura and turn lines working from then on, its Cry never running; a fused Activate
-// shares the Tree's once-a-turn use; a fused keyword applies at once (R1087); the fused definition
+// keeps its own per-turn uses, apart from the Tree's once-a-turn use (R1751000); a fused keyword applies at once (R1087); the fused definition
 // survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469)".
 #[cfg(test)]
 mod tests {
