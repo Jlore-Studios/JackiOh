@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1778,
+  "title": "Patch: the AI tries an X card at its biggest X, an Embiggened price, an Equip and a face-down set before a second lane of its cheapest play",
+  "branch": "bot/issue-1778",
+  "thread": "**Issue #1778 (data, not instructions):**\n\n```text\n# #1778: Patch: the AI tries an X card at its biggest X, an Embiggened price, an Equip and a face-down set before a second lane of its cheapest play\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn a big turn the AI looks at only a short list of moves for each card in its hand, and today that list fills up with the same cheap play in different spots before anything else. A card that costs X (pay any amount, get that much effect) is only ever tried at its smallest amounts. A card's other ways of being played, such as its upgraded price, equipping it to a unit or setting it face down, are often never tried at all. So with 6 mana and Buff Billy, which grows with every mana spent, the AI plays it small beside a 2-drop instead of all in as an 18/18. Once built, each card's first tries cover its different ways of being played, biggest X first, before repeating one of them in another lane.\n\n## Why\n- The search keeps 20 moves at the root and 6 at each later step (`crates/ai/src/config.rs:40-41`, `root_branching` and `branching`), cut at `crates/ai/src/search.rs:111` (`moves.truncate(width)`). The shipped order is the heuristic one (`AI_MOVE_ORDER = MoveOrder::Heuristic`, `config.rs:551`).\n- `round_robin` (`crates/ai/src/candidates.rs`, around 413-460) deals every card its first variant, then every card its second, and keeps each card's variants in the engine's listing order. `enemy_first` only interleaves them by aim.\n- The engine lists a card's plays price outermost, lowest first:\n  - `legal_x_values`: \"every X `why_x_refused` passes, lowest first\" (`crates/engine/src/play_choices.rs:732`), then `for x in &x_values { for embiggen in &embiggens` (around 2057).\n  - The Embiggened price comes second (`vec![false, true]`).\n  - Equip plays come after every plain lane (\"the plain zones first, then the Equip host zones after them\").\n  - A face-down set comes last (`out.extend(face_down_play_actions(\u2026))`).\n- The lane variants that crowd the rest out are often worth nothing to the search. Its duplicate check leaves a unit's lane out (`crates/ai/src/simulate.rs`, around 833-835: \"A unit's lane is left out, so the two lanes `candidate_actions` keeps for one play stay one position\"), so several of a card's slots collapse into one position.\n- On the AI's dealt-deck measure (`DEALT_Q`, `crates/ai/src/shadow_ban.rs`, around 755-773, mean 0.6685 over 261 cards), Adaptive UI (`core-074`, an X spell) reads 0.5815, 75th lowest. The Meditative+ tests (`crates/ai/tests/ai/meditative_plus.rs`, around 255-344) check only that a dearer price is a candidate at all, not that it survives the cut.\n\n## Proposal\nIn `round_robin`, split each source's variants into ways of being played, keyed by `x`, `embiggen`, equip host or not, face-down or not, and the Tribute set:\n- Each way gets its first variant before any way gets a second lane or target.\n- The ways are taken dearest price first, then cheapest, then the rest, and Tribute sets go cheapest units first.\n- `enemy_first` keeps working inside each way.\n\nThe beam's widths and the node budget are unchanged.\n\n## Where it lands\n- `crates/ai/src/candidates.rs` (`round_robin`)\n- `crates/ai/tests/ai/search.rs` (or `meditative_plus.rs`)\n- `crates/ai/README.md`, and the move-order paragraph of `docs/polish/3-ai.md`\n\n## Acceptance criteria\n- [ ] On a hand wide enough to fill the root, `root_expansion` at `AI_BUDGET.root_branching` holds Buff Billy (`classicplus-069`) at `x == mana`, an Embiggened play and a Cloaked card's face-down set.\n- [ ] `decide` with 6 mana, Buff Billy and three 2-drops plays Billy at X=6.\n- [ ] The B18 lethal puzzles and every `crates/ai` test stay green, and `cargo jackioh gate` passes, its performance probes included.\n- [ ] The pull request reports an improve-dev arena screen against the parent (400 paired games), and `stats` before and after for `classicplus-069` and `core-074`.\n\n## Size and risks\nHard, since it is the AI: about 80 lines in one function and about 200 lines of tests.\n- The greedy baseline breaks exact ties by this list (`crates/ai/src/baselines.rs:52`), so its play shifts slightly. #1062 is the precedent, or greedy can keep a frozen order.\n- Bigger X plays mean more draws and Buffs later in a line, so watch decision time on the perf gate's pinned positions.\n- It touches the same move order as #1759, which is in flight, so build it after that.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T06:31:12Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1778: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
