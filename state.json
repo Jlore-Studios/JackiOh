@@ -12853,15 +12853,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/routes/match.test.tsx"
+          ],
+          "from": "0b3ced1d1be6788d37217692fffe0ffcbeee17a9",
+          "main": "db8d97fad993ff1eb4a01566c0d7de262b7bbe09"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40118250230",
+            "run": "40121649354",
             "tier": "strong"
           }
         ],
-        "sha": "0b3ced1d1be6788d37217692fffe0ffcbeee17a9",
+        "sha": "08f7f42837e42eff8c6db39574ddcb26e9c6c208",
         "tiers": {
           "claude": "strong"
         }
