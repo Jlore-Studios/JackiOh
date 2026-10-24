@@ -12588,6 +12588,13 @@
     "1797": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:51:26Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the rule's hard line names the AI's search (crates/ai/src/) outright, and this changes search.rs's beam; only 5 files, but size does not lower it"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
