@@ -27111,9 +27111,9 @@
     ],
     "idle_since": "2026-10-24T02:01:36Z",
     "last_run": "2026-10-24T02:01:36Z",
-    "provider": "devin",
+    "provider": null,
     "requested": false,
-    "run_id": "40052427232",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
