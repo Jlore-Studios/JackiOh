@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1760,
+  "title": "Patch: the Duos gate measures the co-op AI against a greedy team, not only a random one",
+  "branch": "bot/issue-1760",
+  "thread": "**Issue #1760 (data, not instructions):**\n\n```text\n# #1760: Patch: the Duos gate measures the co-op AI against a greedy team, not only a random one\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe co-op AI's quality gate \u2014 the check that decides whether a change to the team AI is allowed \u2014 only ever plays opponents who pick random moves. Any regression that is merely bad rather than broken still beats random play, so the gate cannot see it. After the change the gate also plays a greedy team, the way the 1v1 gate already does.\n\n## Why\n\nThe 1v1 gate measures three matchups \u2014 Random, Greedy, and Hard-vs-Easy (`crates/tools/src/gate.rs:212-221`). The Duos gate's only opponent is `duos_random_action`, the spec's random policy (`crates/ai/src/duos.rs:558-576`, used at `duos.rs:753`), at `DUOS_GATE_WIN_FLOOR: 0.8` (`config.rs:53-59`). A degraded `pass_gain` ordering or a teammate-probe bug \u2014 exactly the kind of feature #1723 shipped \u2014 is invisible to an opponent that never punishes it.\n\n## Proposal\n\nA `duos_greedy_action` built from the existing per-duel `greedy_action` (each seat greedily, sharing only what Duos seats may share), a second matchup in `duos_gate_game_at`, and its floor a named constant beside `DUOS_GATE_WIN_FLOOR`.\n\n## Where it lands\n\n`crates/ai/src/duos.rs` or `duos_gate.rs`, `crates/tools/src/duos_gate.rs`, `crates/ai/src/config.rs`; `cargo jackioh gate --duos`.\n\n## Acceptance criteria\n\n- [ ] `gate --duos` runs a greedy matchup alongside the random one\n- [ ] Its win floor is a named constant in `config.rs`\n- [ ] A deliberately weakened pass heuristic fails the greedy matchup (shown in a test or a documented run), where the random one cannot tell\n\n## Size and risks\n\nSmall\u2013medium \u2014 the pieces exist; the work is composing them and choosing an honest floor from measured runs rather than a guess.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T03:17:15Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1760: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
