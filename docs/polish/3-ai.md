@@ -714,10 +714,12 @@ The rule, one step at a time, each step one `reduce` (one node):
    (`readyGap` at most zero; #1634, behind `AI_REPLY.openLethal`, switched off until a screen keeps
    it); one on the hero is worth `facePerDamage` per point of `projectedHeroDamage`; one on a unit
    is worth the target's `unitWorth` if it dies (First Strike deciding who strikes first, Divine
-   Shield popped for its keyword weight, Poisonous killing), `chipPerDamage` per point otherwise,
-   less the attacker's own `unitWorth` if it dies. First, a Deft unit of its in Defense Position,
-   its switch and its attack unspent, is switched to Attack on trial (one node, R49), and the switch
-   is kept when the best attack afterwards, ranked one hit at a time, is its own.
+   Shield popped for its keyword weight, Poisonous killing), less the `unitWorth` of the body it
+   comes back as while its Reborn is unspent (§4.5 step 4, #1796), `chipPerDamage` per point
+   otherwise, less the attacker's own, priced the same way, if it dies. First, a Deft unit of its
+   in Defense Position, its switch and its attack unspent, is switched to Attack on trial (one node,
+   R49), and the switch is kept when the best attack afterwards, ranked one hit at a time, is its
+   own.
 4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
    to Defense Position of its units in Attack Position whose switch is unspent (a unit that
    attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own
