@@ -924,6 +924,15 @@
     0 0 6px var(--db-rarity, transparent);
 }
 
+/* A card the deck's verdict names (a token, a copy too many, one not owned, banned or gone, a
+   custom card): an amber edge, the verdict's hint colour, and the flag below in the same tone. */
+.deckbuilder.app-shell .db-tile[data-issue] {
+  border-color: color-mix(in srgb, #e0a93b 75%, var(--line-bright));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 3px 0 0 #e0a93b;
+}
+
 /* A card a compared deck also holds (R251): the tile keeps its place and wears a small flag, and
    its edge takes the colour of a clash. Nothing is taken out for the player. */
 .deckbuilder.app-shell .db-tile[data-conflict="true"] {
@@ -941,6 +950,10 @@
   height: 11px;
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
   background: #ffb45c;
+}
+
+.db-tile[data-issue] .db-tile-flag {
+  background: #e0a93b;
 }
 
 .db-actions {
