@@ -372,15 +372,26 @@ describe("R655 click-click: choosing your attacker is a pick-up", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R655 a click that leaves the chosen attacker chosen (your own Unit, not its target) plays nothing more", () => {
+  it("R655 a click that leaves the chosen attacker chosen (your own Unit with no attack, not its target) plays nothing more", () => {
     const { onAction } = renderGame();
 
     fireEvent.click(el("card-u1"));
     fireEvent.click(el("card-u2"));
-    fireEvent.click(el("card-u3"));
 
     expect(el("card-u1")).toHaveAttribute("data-selected", "true");
     expect(pickups()).toEqual([ROCK]);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R655 a click on another of your attackers switches the choice and plays the pick-up again", () => {
+    const { onAction } = renderGame();
+
+    fireEvent.click(el("card-u1"));
+    fireEvent.click(el("card-u3"));
+
+    expect(el("card-u1")).not.toHaveAttribute("data-selected");
+    expect(el("card-u3")).toHaveAttribute("data-selected", "true");
+    expect(pickups()).toEqual([ROCK, TIMMY]);
     expect(onAction).not.toHaveBeenCalled();
   });
 

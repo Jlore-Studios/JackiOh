@@ -155,6 +155,10 @@ export function modifierBadgeOf(modifierId: string): string {
   return `[data-modifier-id="${modifierId}"]`;
 }
 
+/** R169: the live-modifier chip (`data-count`) at every table, and the full list it opens (game/ModifierList.tsx). */
+export const MODIFIER_LIST = "modifier-list";
+export const MODIFIER_LIST_PANEL = "modifier-list-panel";
+
 /** §10.8: a face-down `BackrowView` has no `instanceId`. */
 export function backrowRegionId(side: Side): string {
   return `backrow-${side}`;
@@ -435,9 +439,6 @@ export const PRACTICE_VIEW_BOARD = "practice-view-board";
 export const PRACTICE_WATCH_REPLAY = "practice-watch-replay";
 export const PRACTICE_SHARE_LAST_TURN = "practice-share-last-turn";
 export const PRACTICE_OUTCOME = "practice-outcome";
-/** R169: live-modifier count and panel. */
-export const PRACTICE_MODIFIERS = "practice-modifiers";
-export const PRACTICE_MODIFIERS_PANEL = "practice-modifiers-panel";
 /** R923000: the sandbox checkbox on the setup, and a sandbox game's dev tools. */
 export const PRACTICE_SANDBOX = "practice-sandbox";
 export const PRACTICE_SANDBOX_PANEL = "practice-sandbox-panel";

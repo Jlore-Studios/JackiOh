@@ -17,9 +17,10 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
-import { baseView, card, emptySide, pendingFor } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate } from "../net/navigate.ts";
@@ -796,6 +797,62 @@ describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
       expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
       cleanup();
     }
+  });
+});
+
+describe("R169 the modifier list at the online table", () => {
+  /** The panel's headings, in order: who each group of labels belongs to. */
+  function headings(panel: HTMLElement): (string | null)[] {
+    return Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent);
+  }
+
+  it("R169 shows the chip with both sides' count and opens every label under You and Opponent, never AI", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        you: emptySide("p1", { modifiers: yourModifiers }),
+        opponent: emptySide("p2", { hand: { count: 4 }, modifiers: opponentModifiers }),
+      }),
+    });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", String(yourModifiers.length + opponentModifiers.length));
+
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of yourModifiers) {
+      expect(panel.querySelector('[data-side="you"]')).toHaveTextContent(modifier.label);
+    }
+    for (const modifier of opponentModifiers) {
+      expect(panel.querySelector('[data-side="opponent"]')).toHaveTextContent(modifier.label);
+    }
+    expect(headings(panel)).toEqual(["You", "Opponent"]);
+  });
+
+  it("R169 a long modifier on the opponent's side alone shows the chip too", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        opponent: emptySide("p2", { hand: { count: 4 }, modifiers: opponentModifiers }),
+      }),
+    });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", "1");
+    expect(chip).toHaveAccessibleName("1 active modifier");
+
+    fireEvent.click(chip);
+    expect(headings(screen.getByTestId(modifierListTestid.panel))).toEqual(["Opponent"]);
+  });
+
+  it("R169 shows no chip while no modifier is live", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
   });
 });
 
