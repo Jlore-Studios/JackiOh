@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1791,
+  "title": "Patch: clicking another attacker while one is picked switches the attack to it",
+  "branch": "bot/issue-1791",
+  "thread": "**Issue #1791 (data, not instructions):**\n\n```text\n# #1791: Patch: clicking another attacker while one is picked switches the attack to it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA player picks one of their units to attack, changes their mind, and clicks a different unit that can also attack. Today nothing happens. They have to click the first unit again to put it down, then click the second. The second unit already looks clickable, so this feels broken. Once built, that second click picks up the new attacker, the way dragging it already does.\n\n## Why\n- `apps/web/src/game/actions.ts:776-780` (`highlightFor`, attacking stage) keeps every other legal attacker lit, with the comment \"Any other unit the engine listed as an attacker stays clickable, so the player can switch.\"\n- `onClickTarget`'s `unit`/`backrow` case (`actions.ts:957-966`) breaks that promise. While attacking, it looks for the click only among the picked attacker's own targets. A click on another attacker matches nothing and returns `{ interaction }` unchanged: no switch, no notice.\n- The only test, \"leaves the other attackers live while an attack is in flight\" (`actions.test.ts:946-961`), checks the highlight and never clicks.\n- Dragging already switches: `planAttack` (`apps/web/src/game/drag/model.ts:123-142`) lifts any legal attacker even while another is picked, so click and drag disagree.\n\n## Proposal\nIn the attacking branch of `onClickTarget`, when the attack-target lookup finds nothing, use the path an idle click on a unit already takes (`attacksBy(legal, target.instanceId)`, `actions.ts:984-994`): if the clicked unit has attacks, return `{ interaction: { stage: \"attacking\", attackerId: target.instanceId, candidates } }`. R1200's rule still applies: a single random-target attack is sent at once.\n- A click on a unit that is a target of the picked attacker still attacks it, as today.\n- `Game.handleClick` (`Game.tsx:488-503`) already plays the pick-up sound when `attackerId` changes, so nothing else needs to change.\n- Legality still comes only from `legalActions` (CLAUDE.md rule 7).\n\n## Where it lands\n- `apps/web/src/game/actions.ts` (`onClickTarget`)\n- `apps/web/src/game/actions.test.ts`\n- No spec change: this is client input only (CLAUDE.md rule 7).\n\n## Acceptance criteria\n- [ ] With legal attacks for `u1` and `u2`, clicking `u1` then `u2` gives `{ stage: \"attacking\", attackerId: \"u2\" }` and no action.\n- [ ] Clicking a unit that is a legal target of the picked attacker still returns that attack.\n- [ ] Clicking the picked attacker again still drops it.\n- [ ] Clicking a unit with no legal attack while attacking leaves the interaction unchanged.\n- [ ] `pnpm --dir apps/web exec vitest run src/game/actions.test.ts`, `pnpm --dir apps/web typecheck` and eslint pass.\n\n## Size and risks\nExtra small: a few lines in one function and four unit tests. One risk: a unit that is both a target of the picked attacker and an attacker itself. The target reading must win, and the second criterion pins that.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T17:12:51Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1791: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
