@@ -12,7 +12,8 @@
 use std::cell::Cell;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AiOptions, SearchBudget, decide, duos_decide, duos_decision, duos_passes, starting_life,
+    AI_GATE_BUDGET, AiOptions, SearchBudget, decide, duos_decide, duos_decision, duos_greedy_action,
+    duos_passes, greedy_action, starting_life,
 };
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, duos_ai_team,
@@ -1204,4 +1205,102 @@ fn r1723000_a_card_the_teammate_can_play_after_its_own_best_play_is_passed() {
     let (mut state, big) = trade_state(seed, None, &[BIG]);
     set_mana(&mut state, A2, cost(BIG) + cost(BIG));
     assert_eq!(duos_passes(&state, A1), vec![big]);
+}
+
+// ---------------------------------------------------------------------------------------------
+// #1760: the Duos gate's greedy team plays each seat's duel with the 1v1 greedy baseline
+// ---------------------------------------------------------------------------------------------
+
+/// What the 1v1 `greedy_action` alone answers for `seat` in its own duel.
+fn greedy_alone(state: &DuosState, seat: DuosSeat, seed: &str) -> ActionBody {
+    greedy_action(&state.duels[seat.duel()], seat.player(), &mut create_rng(seed, 0))
+        .unwrap_or_else(|| panic!("{seat}: the 1v1 greedy baseline owes nothing"))
+}
+
+#[test]
+fn b32_a_greedy_seat_answers_its_mulligan_with_the_1v1_greedy_baseline() {
+    let state = mulligans("duos-greedy-mulligan");
+    for seat in DUOS_SEATS {
+        let seed = format!("duos-greedy-mulligan:{seat}");
+        let expected = greedy_alone(&state, seat, &seed);
+        assert_eq!(expected.action_type(), ActionType::Mulligan, "{seat}");
+        let got = duos_greedy_action(&state, seat, &mut create_rng(&seed, 0));
+        assert_eq!(json_of(&got), json_of(&Some(duel(expected))), "{seat}");
+        apply(&state, seat, got.expect("the seat owes its mulligan"));
+    }
+}
+
+#[test]
+fn b32_a_greedy_seat_plays_its_turn_with_the_1v1_greedy_baseline() {
+    let seed = "duos-greedy-turn";
+    let state = round_one(seed, None);
+    let expected = greedy_alone(&state, A1, seed);
+    let got = duos_greedy_action(&state, A1, &mut create_rng(seed, 0));
+    assert_eq!(json_of(&got), json_of(&Some(duel(expected))));
+    apply(&state, A1, got.expect("A1 owes its turn"));
+}
+
+#[test]
+fn b32_a_greedy_seat_ends_its_turn_where_the_ai_would_pass() {
+    let seed = "duos-greedy-no-pass";
+    let mut state = round_one(seed, None);
+    set_hand(&mut state, A1, &[BIG]);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_mana(&mut state, A2, cost(BIG));
+    // A2 keeps a play of its own, so round 1 stays open after A1 ends.
+    give(&mut state, A2, ONE_DROP);
+    assert!(!duos_passes(&state, A1).is_empty(), "the AI would pass BIG");
+
+    let got = duos_greedy_action(&state, A1, &mut create_rng(seed, 0));
+    assert_eq!(json_of(&got), json_of(&Some(end_turn())));
+}
+
+#[test]
+fn b32_a_whole_greedy_turn_sends_no_pass() {
+    let seed = "duos-greedy-whole-turn";
+    let mut state = round_one(seed, None);
+    let mut rng = create_rng(seed, 0);
+    let mut taken: Vec<DuosActionBody> = Vec::new();
+    let mut finished = false;
+    for _ in 0..TURN_STEPS {
+        let Some(body) = duos_greedy_action(&state, A1, &mut rng) else {
+            finished = true;
+            break;
+        };
+        assert!(
+            !is_pass(&body) && !matches!(body, DuosActionBody::Concede),
+            "{}",
+            json_of(&body)
+        );
+        taken.push(body.clone());
+        state = apply(&state, A1, body);
+    }
+    assert!(
+        finished,
+        "A1's turn ends within {TURN_STEPS} actions: {:?}",
+        json_of(&taken)
+    );
+    assert!(state.ended[0], "A1 has ended its turn");
+}
+
+#[test]
+fn b32_a_greedy_seat_owes_nothing_off_its_turn_or_once_the_game_is_over() {
+    let seed = "duos-greedy-owes";
+    let state = round_one(seed, None);
+    for seat in [B1, B2] {
+        assert!(
+            duos_greedy_action(&state, seat, &mut create_rng(seed, 0)).is_none(),
+            "{seat} is not in team A's round"
+        );
+    }
+
+    let state = apply(&state, A1, DuosActionBody::Concede);
+    let state = apply(&state, A2, DuosActionBody::Concede);
+    assert!(state.result.is_some(), "team A conceded (B11)");
+    for seat in DUOS_SEATS {
+        assert!(
+            duos_greedy_action(&state, seat, &mut create_rng(seed, 0)).is_none(),
+            "{seat} owes nothing once the game is over"
+        );
+    }
 }

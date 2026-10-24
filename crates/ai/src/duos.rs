@@ -14,9 +14,10 @@
 //! opponent's hidden card never reaches a decision, so two states that differ only there decide
 //! alike under the same options.
 //!
-//! The gate (B32): `duos_gate` plays the Easy AI team (`duos_decide` at AI_GATE_BUDGET) against a team
-//! on §10.7's random policy over `duos_legal_actions` (`duos_random_action`), the AI on team A in odd
-//! games and on team B in even ones, every seat dealt by `build_ai_deck` on its Easy handicap. An action
+//! The gate (B32): `duos_gate` plays the Easy AI team (`duos_decide` at AI_GATE_BUDGET) against one
+//! `DuosOpponent`: §10.7's random policy over `duos_legal_actions` (`duos_random_action`) or the 1v1
+//! gates' one-ply greedy baseline on each seat's own duel (`duos_greedy_action`, #1760), the AI on
+//! team A in odd games and on team B in even ones, every seat dealt by `build_ai_deck` on its Easy handicap. An action
 //! `duos_reduce` refuses, on either team, fails the gate (`DuosGateReport::passes`). So does any AI
 //! action that came off a fallback path (`duos_decision`, #1385), and any panic an AI seat's 1v1
 //! search caught (`DuosDecision::sim_panics`, #1429). Pure and seeded like the rest of the
@@ -45,9 +46,10 @@ use jackioh_engine::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::baselines::greedy_action;
 use crate::config::{
-    AI_EVAL, AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_WIN_FLOOR, DUOS_PASS_MARGIN_PER_COST,
-    DUOS_PASS_MAX_FOLLOWUPS, DUOS_PASS_MIN_GAIN, DUOS_PASS_PROBE_SEED,
+    AI_EVAL, AI_GATE_BUDGET, AI_SEARCH, DUOS_GATE_GREEDY_WIN_FLOOR, DUOS_GATE_WIN_FLOOR,
+    DUOS_PASS_MARGIN_PER_COST, DUOS_PASS_MAX_FOLLOWUPS, DUOS_PASS_MIN_GAIN, DUOS_PASS_PROBE_SEED,
 };
 use crate::decide::decide;
 use crate::deck::{AiDeckOptions, build_ai_deck};
@@ -161,6 +163,18 @@ fn pass_or_end(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> D
 fn fallback(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> Option<DuosActionBody> {
     if offers(legal, ActionType::EndTurn) {
         return Some(pass_or_end(state, seat, legal));
+    }
+    duel_fallback(legal)
+}
+
+/// The duel action a seat falls back on without passing: the turn's end when offered, else the first
+/// answer or mulligan, else the first other duel action §10.7's policy would take (`replacements_for`
+/// order). None when only passes and the concede are left.
+fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
+    if offers(legal, ActionType::EndTurn) {
+        return Some(DuosActionBody::Duel {
+            body: ActionBody::EndTurn,
+        });
     }
     let duel_actions: Vec<&ActionBody> = legal
         .iter()
@@ -595,12 +609,84 @@ fn policy_kind(body: &DuosActionBody) -> PolicyKind {
     }
 }
 
-/// Gate: the Easy AI team against a random-policy team (B32). `wins` counts the games the AI team won;
+/// B32's second opponent (#1760): the 1v1 gates' one-ply greedy baseline (`greedy_action`) on the
+/// seat's own duel. Its mulligan, prompts and turn are `greedy_action`'s, sent as a duel action when
+/// the wrapper offers that kind, else `duel_fallback`'s. It never passes: a yardstick that shared
+/// `duos_passes` would move with the AI it measures. It reads its duel through `greedy_action`'s
+/// `redact` alone (R185) and draws on `rng` only there. None when the seat has nothing to send.
+pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody> {
+    if state.result.is_some() {
+        return None;
+    }
+    let legal = duos_legal_actions(state, seat);
+    if legal.iter().all(|body| matches!(body, DuosActionBody::Concede)) {
+        return None;
+    }
+    let duel = state.duels.get(seat.duel())?;
+    match greedy_action(duel, seat.player(), rng) {
+        Some(action) if offers(&legal, action.action_type()) => Some(DuosActionBody::Duel { body: action }),
+        _ => duel_fallback(&legal),
+    }
+}
+
+/// B32: the team the Easy AI team plays in a gate game (#1760).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum DuosOpponent {
+    /// Every seat on §10.7's random policy (`duos_random_action`).
+    #[default]
+    Random,
+    /// Every seat on the one-ply greedy baseline (`duos_greedy_action`).
+    Greedy,
+}
+
+impl DuosOpponent {
+    /// The gate's matchups, in the order it plays them.
+    pub const ALL: [DuosOpponent; 2] = [DuosOpponent::Random, DuosOpponent::Greedy];
+
+    /// The share of its games the AI team must win against this team.
+    pub fn win_floor(self) -> f64 {
+        match self {
+            DuosOpponent::Random => DUOS_GATE_WIN_FLOOR,
+            DuosOpponent::Greedy => DUOS_GATE_GREEDY_WIN_FLOOR,
+        }
+    }
+
+    /// Game n's seed: `${series}:${n}` against random (the seeds B32 always played), and
+    /// `${series}:greedy:${n}` against greedy.
+    pub fn seed(self, series: &str, n: usize) -> String {
+        match self {
+            DuosOpponent::Random => format!("{series}:{n}"),
+            DuosOpponent::Greedy => format!("{series}:greedy:{n}"),
+        }
+    }
+
+    /// This team's action for one of its seats, on that seat's stream.
+    fn action(self, state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody> {
+        match self {
+            DuosOpponent::Random => duos_random_action(state, seat, rng),
+            DuosOpponent::Greedy => duos_greedy_action(state, seat, rng),
+        }
+    }
+}
+
+impl std::fmt::Display for DuosOpponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            DuosOpponent::Random => "random",
+            DuosOpponent::Greedy => "greedy",
+        })
+    }
+}
+
+/// Gate: the Easy AI team against one opponent team (B32). `wins` counts the games the AI team won;
 /// `draws` is reported beside them and counts for nothing; any `rejected` action, any `fallbacks` or
 /// any `sim_panics` fails the gate.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct DuosGateReport {
+    /// The team the AI team played (#1760).
+    pub opponent: DuosOpponent,
     pub games: usize,
     pub wins: usize,
     pub draws: usize,
@@ -622,7 +708,7 @@ impl DuosGateReport {
         }
     }
 
-    /// B32: the AI team won at least DUOS_GATE_WIN_FLOOR of a run of at least one game, and no game had
+    /// B32: the AI team won at least its opponent's floor (`DuosOpponent::win_floor`) of a run of at least one game, and no game had
     /// an action refused. A refusal is an AI bug or a gap between `duos_legal_actions` and
     /// `duos_reduce`, on either team, and fails the gate as a rejected action fails the 1v1 gates (B31);
     /// and no AI action came off a fallback path (`DuosDecision::fallback`), which fails the gate as a
@@ -633,7 +719,7 @@ impl DuosGateReport {
             && self.rejected == 0
             && self.fallbacks == 0
             && self.sim_panics == 0
-            && self.wins as f64 >= DUOS_GATE_WIN_FLOOR * self.games as f64
+            && self.wins as f64 >= self.opponent.win_floor() * self.games as f64
     }
 }
 
@@ -653,6 +739,8 @@ pub struct DuosGateGame {
     pub seed: String,
     /// The team the AI played (`duos_gate_subject`).
     pub subject: Team,
+    /// The team the AI played (#1760).
+    pub opponent: DuosOpponent,
     pub won: bool,
     pub drawn: bool,
     /// The result's reason ("poolEmptied", "turnCap", …); None when the game reached
@@ -662,7 +750,7 @@ pub struct DuosGateGame {
     pub actions: usize,
     /// Actions `duos_reduce` refused, each replaced by the random policy's.
     pub rejected: usize,
-    /// Of `rejected`, the actions the AI team sent; the rest were the random-policy team's.
+    /// Of `rejected`, the actions the AI team sent; the rest were the opponent team's.
     pub ai_rejected: usize,
     /// The AI team's actions that came off a fallback path (`DuosDecision::fallback`), each sent as
     /// chosen; any fails the gate (#1385).
@@ -680,15 +768,18 @@ pub fn duos_gate_subject(n: usize) -> Team {
     if n % 2 == 1 { Team::A } else { Team::B }
 }
 
-/// B32: games 1..=games of the series `seed`, the Easy AI team against the random-policy team.
-pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport {
-    let played: Vec<DuosGateGame> = (1..=games).map(|n| duos_gate_game(n, seed)).collect();
-    duos_gate_report(&played)
+/// B32: games 1..=games of the series `seed`, the Easy AI team against `opponent`.
+pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport {
+    let played: Vec<DuosGateGame> = (1..=games).map(|n| duos_gate_game(n, seed, opponent)).collect();
+    duos_gate_report(opponent, &played)
 }
 
-/// The report a run of these games makes.
-pub fn duos_gate_report(played: &[DuosGateGame]) -> DuosGateReport {
+/// The report a run of these games against `opponent` makes; games against another opponent are left
+/// out.
+pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> DuosGateReport {
+    let played: Vec<&DuosGateGame> = played.iter().filter(|game| game.opponent == opponent).collect();
     DuosGateReport {
+        opponent,
         games: played.len(),
         wins: played.iter().filter(|game| game.won).count(),
         draws: played.iter().filter(|game| game.drawn).count(),
@@ -698,22 +789,42 @@ pub fn duos_gate_report(played: &[DuosGateGame]) -> DuosGateReport {
     }
 }
 
-/// Game n of the series at AI_GATE_BUDGET (`duos_gate_game_at`), the gate's own.
-pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
-    duos_gate_game_at(n, series, AI_GATE_BUDGET)
+/// Game n of the series against `opponent` at AI_GATE_BUDGET (`duos_gate_game_at`), the gate's own.
+pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame {
+    duos_gate_game_at(n, series, opponent, AI_GATE_BUDGET)
 }
 
-/// Game n (1-based) of the series: seed `${series}:${n}`, every seat on AI_DIFFICULTY.easy with a deck
-/// `build_ai_deck` deals for it, the AI team on `duos_ai_team(Easy)` and the other on
+/// Game n of the series at `budget`, the AI team on `duos_decision` (`duos_gate_game_with`).
+pub fn duos_gate_game_at(
+    n: usize,
+    series: &str,
+    opponent: DuosOpponent,
+    budget: SearchBudget,
+) -> DuosGateGame {
+    duos_gate_game_with(n, series, opponent, budget, duos_decision)
+}
+
+/// How an AI-team seat decides in a gate game: `duos_decision`, or a test's weakened stand-in that
+/// shows what the gate catches (#1760).
+pub type DuosGateDecider = fn(&DuosState, DuosSeat, &mut AiOptions<'_>) -> Option<DuosDecision>;
+
+/// Game n (1-based) of the series: seed `opponent.seed(series, n)`, every seat on AI_DIFFICULTY.easy
+/// with a deck `build_ai_deck` deals for it, the AI team on `duos_ai_team(Easy)` and the other on
 /// DUOS_HUMAN_TEAM. While a game is live, the first seat of `duos_seats_to_act` that sends something
-/// acts: an AI seat through `duos_decision` at `budget`, each action it marks `fallback` counted in
-/// `fallbacks` and the panics its search caught in `sim_panics`, a random-policy seat through
-/// `duos_random_action`, each on its own stream. An action `duos_reduce` refuses is replaced by the
+/// acts: an AI seat through `ai` at `budget`, each action it marks `fallback` counted in
+/// `fallbacks` and the panics its search caught in `sim_panics`, an opponent seat through
+/// `opponent`'s policy, each on its own stream. An action `duos_reduce` refuses is replaced by the
 /// random policy's for that seat and counted in `rejected` (in `ai_rejected` too when the AI team sent
 /// it). A game in which no listed seat sends anything stops there, unfinished. A pure function of `n`,
-/// `series` and `budget`.
-pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGateGame {
-    let seed = format!("{series}:{n}");
+/// `series`, `opponent`, `budget` and `ai`.
+pub fn duos_gate_game_with(
+    n: usize,
+    series: &str,
+    opponent: DuosOpponent,
+    budget: SearchBudget,
+    ai: DuosGateDecider,
+) -> DuosGateGame {
+    let seed = opponent.seed(series, n);
     let subject = duos_gate_subject(n);
     let mut state = duos_begin(&duos_create(&duos_gate_options(&seed, subject))).state;
     let mut rngs: [Rng; 4] = DUOS_SEATS.map(|seat| Rng::new(&format!("{seed}:ctl:{seat}"), 0));
@@ -732,7 +843,7 @@ pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGa
             let slot = gate_slot(seat);
             let chosen = if seat.team() == subject {
                 let mut options = AiOptions::with_budget(rngs[slot].clone(), budget);
-                let decided = duos_decision(&state, seat, &mut options);
+                let decided = ai(&state, seat, &mut options);
                 rngs[slot] = options.rng;
                 if let Some(decision) = &decided {
                     if decision.fallback {
@@ -750,7 +861,7 @@ pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGa
                 }
                 decided.map(|decision| decision.body)
             } else {
-                duos_random_action(&state, seat, &mut rngs[slot])
+                opponent.action(&state, seat, &mut rngs[slot])
             };
             if let Some(chosen) = chosen {
                 picked = Some((seat, slot, chosen));
@@ -801,6 +912,7 @@ pub fn duos_gate_game_at(n: usize, series: &str, budget: SearchBudget) -> DuosGa
     DuosGateGame {
         seed,
         subject,
+        opponent,
         won: result
             .is_some_and(|result| result.outcome == DuosOutcome::Win && result.winner == Some(subject)),
         drawn: result.is_some_and(|result| result.outcome == DuosOutcome::Draw),

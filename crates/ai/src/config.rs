@@ -51,12 +51,20 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
-/// (`duos_decide` at AI_GATE_BUDGET) against a team on §10.7's random policy, `duos.rs`'s `duos_gate`.
+/// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
+/// baseline, `duos.rs`'s `duos_gate`.
 pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 
 /// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
+
+/// #1760: the share of its games the Easy AI team must win against a team on the 1v1 gates' one-ply
+/// greedy baseline (`duos_greedy_action`), B32's second matchup. Only wins count. Set as §9.9 sets
+/// the 1v1 gates' counts, the most wins of DUOS_GATE_GAMES_SMOKE that a team as strong as measured
+/// reaches in 95% of runs: on fresh deals (series `duos-tune`, games 1-200, which no gate plays) the
+/// AI team won 168 of 200 against greedy, so 14 of 20.
+pub const DUOS_GATE_GREEDY_WIN_FLOOR: f64 = 0.7;
 
 /// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
 /// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
