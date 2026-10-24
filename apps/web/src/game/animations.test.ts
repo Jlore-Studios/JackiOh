@@ -26,6 +26,7 @@ import {
 import { testid } from "./contract";
 import { baseView, fullBoardView } from "../test/fixtures";
 import { setReducedMotion } from "../test/setup";
+import { must } from "../test/stubServer";
 
 afterEach(() => {
   setReducedMotion(false);
@@ -388,12 +389,6 @@ describe("durations", () => {
 /* ------------------------------------------------------------------------------------------- *
  * Payload-dependent targets
  * ------------------------------------------------------------------------------------------- */
-
-/** The fixture numbers its instance ids as it builds, so they are read off it, never guessed. */
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
-}
 
 function handIds(view: PlayerView): string[] {
   const hand = view.you.hand;

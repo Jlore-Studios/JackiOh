@@ -9,7 +9,7 @@ import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-c
 import type { MeResponse } from "./api.ts";
 import { MATCH_FOUND_STATUS, readQueued, rememberQueued, useQueueFollow } from "./liveGame.ts";
 import { guardLeaving, navigate, paths, usePathname } from "./navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "./session.ts";
+import { at, signIn } from "../test/stubServer.ts";
 
 function me(currentMatchId: string | null): MeResponse {
   return {
@@ -31,10 +31,6 @@ async function advance(ms: number): Promise<void> {
   });
 }
 
-function signIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
-}
-
 function Follower({ path, read }: { path: string; read: (token: string) => Promise<MeResponse> }) {
   const found = useQueueFollow(path, read);
   return found === null ? null : <p data-testid="found">{MATCH_FOUND_STATUS}</p>;
@@ -51,10 +47,6 @@ function guard(): (() => void)[] {
     }),
   );
   return held;
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 /** Moves the history by `step` and waits for the `popstate` it fires. */

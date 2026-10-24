@@ -51,6 +51,7 @@ import {
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
 import type { AudioEngine, PlayedCue, SfxId, VoiceKey, CardAudioTable, VoiceManifest } from "./types.ts";
+import { must } from "../test/stubServer.ts";
 
 /* --------------------------------------------------------------------------------------------- *
  * Fixtures
@@ -157,11 +158,6 @@ function tick(r: Rig, ms: number): void {
   r.clock.advance(ms);
   for (const audio of r.factory.made) audio.advance(ms / 1000);
   vi.advanceTimersByTime(ms);
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
 }
 
 type Buses = { compressor: FakeNode; master: FakeNode; sfx: FakeNode; sfxDuck: FakeNode; voice: FakeNode };

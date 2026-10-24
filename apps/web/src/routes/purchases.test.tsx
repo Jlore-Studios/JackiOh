@@ -10,10 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { cosmeticPacksInfo } from "../shop/fixtures.ts";
-import { refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import PurchasesRoute, { purchasesTestid } from "./purchases.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
 
@@ -50,14 +49,6 @@ function servePurchases(): StubServer {
   return stubServer(answers);
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: TOKEN }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
-
 /** What the page's two odds reads cost: no request at all. */
 function oddsReads(server: StubServer): Call[] {
   return [...server.to("GET", "/api/packs"), ...server.to("GET", "/api/cosmetic-packs")];
@@ -81,7 +72,7 @@ afterEach(() => {
 describe("R1665000 /purchases signed in", () => {
   it("R1665000 shows the server's odds, the global roll's line and the pity counters", async () => {
     const server = servePurchases();
-    signedIn();
+    signIn(TOKEN);
     render(<PurchasesRoute />);
 
     const odds = await screen.findByTestId(purchasesTestid.odds, undefined, SLOW);
@@ -130,7 +121,7 @@ describe("R1665000 /purchases signed in", () => {
       if (call.method === "GET" && call.path === "/api/packs") return refusal(503, "internal", "the packs are closed");
       return answers(call);
     });
-    signedIn();
+    signIn(TOKEN);
     render(<PurchasesRoute />);
 
     expect(await screen.findByTestId(purchasesTestid.loadError("card-packs"), undefined, SLOW)).toHaveTextContent(
@@ -150,7 +141,7 @@ describe("R1665000 /purchases signed in", () => {
       }
       return answers(call);
     });
-    signedIn();
+    signIn(TOKEN);
     render(<PurchasesRoute />);
 
     expect(await screen.findByTestId(purchasesTestid.loadError("cosmetic-packs"), undefined, SLOW)).toHaveTextContent(
@@ -172,7 +163,7 @@ describe("#1774 /purchases offers Try again", () => {
       }
       return answers(call);
     });
-    signedIn();
+    signIn(TOKEN);
     render(<PurchasesRoute />);
 
     // Both places the packs read feeds show the failure, each with an enabled Try again.
@@ -210,7 +201,7 @@ describe("#1774 /purchases offers Try again", () => {
       body: { error: { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } } },
     };
     stubServer((call) => (call.method === "GET" && call.path === "/api/packs" ? rateLimited : answers(call)));
-    signedIn();
+    signIn(TOKEN);
     render(<PurchasesRoute />);
 
     const error = await screen.findByTestId(purchasesTestid.loadError("card-packs"), undefined, SLOW);
@@ -270,7 +261,7 @@ describe("R1665000 /purchases is a page of its own", () => {
 
   it("R1665000 an active session at /purchases reads the odds with its token", async () => {
     const server = servePurchases();
-    signedIn();
+    signIn(TOKEN);
     at(paths.purchases);
     render(<App />);
 

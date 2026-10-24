@@ -19,6 +19,7 @@ import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import { listedFace } from "../game/faces.ts";
 import { baseView, card, emptySide } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import { copyingWords } from "./inspect/StateNotes.tsx";
 import { closeInspect } from "./inspect/store.ts";
@@ -40,11 +41,6 @@ const STOCKPILE = "core-005";
 const ECHO_SENTENCE = "This has the text of the last Spell either player played.";
 
 const lookup = lookupFromDefs(CATALOG);
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
-}
 
 function withCatalog(node: ReactElement, catalog = lookup): ReactElement {
   return <CatalogContext.Provider value={catalog}>{node}</CatalogContext.Provider>;

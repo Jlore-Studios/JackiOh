@@ -8,9 +8,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend } from "../net/social.ts";
-import { must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { CoopPanel } from "./CoopPanel.tsx";
 import { COOP_ROOM_POLL_MS } from "./config.ts";
 
@@ -97,14 +96,6 @@ function serve(room: Room, special?: (call: Call) => Reply | undefined): StubSer
   });
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-coop" }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
-
 /** `coop-difficulty` as a select, a radio group or a row of buttons. */
 function chooseDifficulty(value: "easy" | "medium" | "hard"): void {
   const control = screen.getByTestId("coop-difficulty");
@@ -139,7 +130,7 @@ function expectOneDeckChoice(body: Record<string, unknown>): void {
 }
 
 async function renderPanel(friends: readonly Friend[] = [ANN]): Promise<void> {
-  signedIn();
+  signIn("tok-coop");
   render(<CoopPanel friends={friends} />);
   await screen.findByTestId("coop-create", undefined, SLOW);
 }
