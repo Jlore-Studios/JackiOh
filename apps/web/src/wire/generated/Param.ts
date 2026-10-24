@@ -47,4 +47,9 @@ tunedOn?: ParamTunedOn,
  * keeps whatever tuning it has, so the power brings it back. Absent, the card's number whatever
  * power it has.
  */
-power?: string, };
+power?: string, 
+/**
+ * R1748000: only the card's Cry reads it, so while the card is on the field no Nerf or Buff draws
+ * it (KY's Constant still may). Only ever `Some(true)`.
+ */
+cry?: boolean, };

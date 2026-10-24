@@ -43,6 +43,18 @@ refs?: Array<string>,
  */
 params?: Array<Param>, 
 /**
+ * R1748001: this Spell or Field Spell deals damage, so a Buff may give it Pierce or Lifesteal
+ * (`TUNE_DAMAGE_KEYWORDS`). Absent on every other card, a fused or crafted definition included.
+ * Only ever `Some(true)`.
+ */
+dealsDamage?: boolean, 
+/**
+ * R1748002: this Field Spell uses the Plague Counters on itself, so on the field a Buff places one
+ * on it and a Nerf removes one (`TUNE_PLAGUE_STEP`). Absent on every other card, a fused or
+ * crafted definition included. Only ever `Some(true)`.
+ */
+usesPlague?: boolean, 
+/**
  * E36: the non-blank, non-comment lines of this card's script file, imports excluded. Frozen
  * gameplay data since v0.3.0 (SURFACE §7.5): C+ #44, C+ #45 and Classic #48 read it. Public (the
  * inspect overlay prints it) and part of the card's patch history (B4.2). Absent while the card

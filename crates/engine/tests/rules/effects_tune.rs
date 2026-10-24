@@ -1977,3 +1977,37 @@ mod r1160_tune_multiplier {
         );
     }
 }
+
+/// Issue #1748: a permanent in play has paid its price, so on the field no Nerf or Buff draws the cost
+/// row; in a hand the same card keeps it.
+mod r1748000_in_play {
+    use super::*;
+
+    #[test]
+    fn r1748000_a_card_on_the_field_has_no_cost_row_one_in_a_hand_keeps_it() {
+        let mut state = game("in-play");
+        let held = card(&mut state, &instance_fx::dear_body.id);
+        assert_eq!(
+            rows(&state, &held.id, TuneDirection::Upgrade),
+            json!(["cost", "stats", "keyword"])
+        );
+        let unit = put(
+            &mut state,
+            &instance_fx::dear_body.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Upgrade),
+            json!(["stats", "keyword"])
+        );
+        assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
+        // Ten Buffs and ten Nerfs on the field leave its price as it was.
+        for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+            for _ in 0..10 {
+                once(&mut state, &unit.id, direction);
+            }
+        }
+        assert_eq!(live(&state, &unit.id).cost_mod, 0);
+    }
+}
