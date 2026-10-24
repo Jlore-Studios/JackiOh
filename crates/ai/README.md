@@ -69,15 +69,18 @@ re-plans after every action. Each line tries its moves in move order (`candidate
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
 opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the other
 attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
-its first `branching`, End Turn always among them. Within each source, variants are grouped into ways of being
-played (X prices, Embiggen, Equip, face-down, and Tribute sets) before multiple lane variants of one play are
-repeated (#1778). Its root tries a play in every distinct placement; deeper levels, the lethal solver and the reply try the
-first `AI_SEARCH.zone_variants` (#1635). Position switches are the last tier of the move order, so a level's `branching` cut drops
-them from a busy board; the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would
-kill and survive, `kills_and_survives`) it cuts are kept (#1759), so a unit that cannot win its next fight can stand down however
-many earlier moves the board offers. An action the true state refuses (a cost no determinization could see) is never
-submitted: `submitted` sends the first action of the next finalist the true state accepts, best mean first, with the search's reason,
-and only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other legal action (#1575).
+its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
+X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
+target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
+first (#1778). Its root tries a play in every distinct placement;
+deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). Position
+switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
+the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
+kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
+true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
+first action of the next finalist the true state accepts, best mean first, with the search's reason, and
+only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
+or other legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then

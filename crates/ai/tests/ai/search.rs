@@ -1664,6 +1664,7 @@ mod ways_of_being_played {
     }
 
     /// Acceptance criterion 2: decide with 6 mana, Buff Billy and three 2-drops plays Billy at X=6 (#1778).
+    /// Billy at X=4 beside a 2-drop is among the root's moves too, so the search weighs the two.
     #[test]
     fn decide_with_six_mana_and_buff_billy_plays_billy_at_x_six() {
         jackioh_cards::register_all();
@@ -1672,9 +1673,9 @@ mod ways_of_being_played {
             "p1": {
                 "hand": [
                     "classicplus-069", // Buff Billy
-                    "core-011",
-                    "core-008",
-                    "core-017"
+                    "core-001",        // Big D-fender, a 2-cost Unit
+                    "core-020",        // Pointmaster, a 2-cost Unit
+                    "core-030"         // Archivist, a 2-cost Unit
                 ],
                 "mana": 6,
                 "library": ["core-008", "core-011"],
@@ -1688,6 +1689,20 @@ mod ways_of_being_played {
         .clone();
 
         let billy_id = hand_id(&state, "classicplus-069");
+        let root = root_expansion(
+            &state,
+            AI,
+            AI_BUDGET.root_branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+        assert!(
+            root.iter().any(|action| {
+                matches!(action, ActionBody::Play { instance_id, x: Some(4), .. } if *instance_id == billy_id)
+            }),
+            "the root must also try Billy at X=4, which leaves 2 mana for a 2-drop"
+        );
+
         let mut options = ai_options("billy-decide-seed", AI_BUDGET);
         let decision = decide(&state, AI, &mut options).expect("a decision is reached");
 
@@ -1703,14 +1718,15 @@ mod ways_of_being_played {
     fn tribute_sets_prefer_cheaper_units() {
         jackioh_cards::register_all();
         // The Rock (core-066) requires Tribute 1.
-        // Field has a 1-cost unit (core-003) and a 3-cost unit (core-013).
+        // Field has a 3-cost unit (core-013) in lane 1 and a 1-cost unit (core-003) in lane 2:
+        // legal_actions lists the lane-1 unit's set first, so only the sort puts the cheap set first.
         let state = scenario(json!({
             "seed": "ways-tribute-prefer",
             "p1": {
                 "hand": ["core-066"],
                 "field": [
-                    { "def": "core-003", "lane": 1 },
-                    { "def": "core-013", "lane": 2 }
+                    { "def": "core-013", "lane": 1 },
+                    { "def": "core-003", "lane": 2 }
                 ],
                 "mana": 4,
                 "library": ["core-008", "core-011"],
@@ -1740,6 +1756,20 @@ mod ways_of_being_played {
             .find(|c| c.def_id == "core-013")
             .map(|c| c.id.clone())
             .unwrap();
+
+        let first_tributing = |actions: &[ActionBody], unit_id: &String| {
+            actions.iter().position(|a| {
+                matches!(a, ActionBody::Play { instance_id, tributes: Some(t), .. }
+                    if *instance_id == rock_id && t.contains(unit_id))
+            })
+        };
+        let listed = legal_actions(&state, AI);
+        let listed_dear = first_tributing(&listed, &unit_3cost_id).expect("a set tributing the 3-cost unit");
+        let listed_cheap = first_tributing(&listed, &unit_1cost_id).expect("a set tributing the 1-cost unit");
+        assert!(
+            listed_dear < listed_cheap,
+            "legal_actions lists the lane-1 (dearer) unit's set first, so the order below is the sort's"
+        );
 
         let candidates = candidate_actions(&state, AI);
         let rock_plays: Vec<&ActionBody> = candidates
