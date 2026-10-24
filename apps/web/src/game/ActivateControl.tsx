@@ -71,7 +71,7 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
   if (activations.length === 0) return null;
   const flashing = props.animating?.get(testid.card(card.instanceId)) === ACTIVATED_EVENT;
 
-  if (activations.length === 1) {
+  if (activations.length === 1 && activations[0] !== undefined) {
     const activation = activations[0];
     return (
       <span className="activate-controls" data-count={1}>

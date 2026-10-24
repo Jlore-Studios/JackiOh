@@ -308,7 +308,8 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     }
 
     #[test]
-    fn r384_uses_are_counted_per_card_a_card_with_several_abilities_counts_every_use_of_any_of_them() {
+    fn r1751000_r384_uses_are_counted_per_ability_a_card_with_several_abilities_tracks_each_ability_separately()
+     {
         let mut state = playing("per-card");
         let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
         card_mut(&mut state, &card.id)
@@ -320,10 +321,28 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
                 .as_ref()
                 .and_then(|held| held.memory.get("activations"))
                 .cloned(),
-            Some(json!({ "turn": state.turn, "count": 1 }))
+            Some(json!({ "turn": state.turn, "count": 1, "abilities": { "gamma": 1 } }))
+        );
+        // Under R1751000 (amending R384), each ability tracks its uses separately.
+        // gamma's activation does not lock out alpha!
+        assert_eq!(why_not(&after, P1, &card.id, Some("alpha")).as_deref(), None);
+
+        // Activating alpha in the same turn succeeds.
+        let after2 = act(&after, activate(P1, &card.id, json!({ "ability": "alpha" }))).0;
+        assert_eq!(
+            after2.players.p1.backrow[0]
+                .as_ref()
+                .and_then(|held| held.memory.get("activations"))
+                .cloned(),
+            Some(json!({ "turn": state.turn, "count": 2, "abilities": { "gamma": 1, "alpha": 1 } }))
+        );
+        // Both abilities are now spent for the turn.
+        assert_eq!(
+            why_not(&after2, P1, &card.id, Some("alpha")).as_deref(),
+            Some("that ability has already been used this turn")
         );
         assert_eq!(
-            why_not(&after, P1, &card.id, Some("alpha")).as_deref(),
+            why_not(&after2, P1, &card.id, Some("gamma")).as_deref(),
             Some("that ability has already been used this turn")
         );
     }

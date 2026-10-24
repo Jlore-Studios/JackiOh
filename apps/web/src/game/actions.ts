@@ -61,7 +61,6 @@ import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import {
   LANES,
   NO_HIGHLIGHT,
-  namedAbility,
   playerOf,
   sideOf,
   testid,
