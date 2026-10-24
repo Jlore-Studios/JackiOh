@@ -792,6 +792,11 @@ pub struct Param {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub power: Option<String>,
+    /// R1748000: only the card's Cry reads it, so while the card is on the field no Nerf or Buff draws
+    /// it (KY's Constant still may). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cry: Option<bool>,
 }
 
 impl Param {
@@ -1013,6 +1018,18 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<Vec<Param>>,
+    /// R1748001: this Spell or Field Spell deals damage, so a Buff may give it Pierce or Lifesteal
+    /// (`TUNE_DAMAGE_KEYWORDS`). Absent on every other card, a fused or crafted definition included.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deals_damage: Option<bool>,
+    /// R1748002: this Field Spell uses the Plague Counters on itself, so on the field a Buff places one
+    /// on it and a Nerf removes one (`TUNE_PLAGUE_STEP`). Absent on every other card, a fused or
+    /// crafted definition included. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub uses_plague: Option<bool>,
     /// E36: the non-blank, non-comment lines of this card's script file, imports excluded. Frozen
     /// gameplay data since v0.3.0 (SURFACE §7.5): C+ #44, C+ #45 and Classic #48 read it. Public (the
     /// inspect overlay prints it) and part of the card's patch history (B4.2). Absent while the card
@@ -1527,6 +1544,8 @@ mod tests {
             cost: CardCost::Fixed(1),
             refs: None,
             params: Some(params),
+            deals_damage: None,
+            uses_plague: None,
             loc: None,
             radiant_fallback: None,
             ingredients: None,
@@ -1547,6 +1566,7 @@ mod tests {
             max: None,
             tuned_on: None,
             power: None,
+            cry: None,
         }
     }
 

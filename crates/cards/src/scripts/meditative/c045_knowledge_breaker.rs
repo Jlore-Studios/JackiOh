@@ -103,7 +103,8 @@ mod tests {
     }
 
     /// Breaker in p1's hand; CN/KY cards spread over both fields, hands and decks; a vanilla
-    /// control on each side.
+    /// control on each side. On the field a Nerf moves no cost (R1748000), so each Printer there is
+    /// Radiant, whose declared `setCost` a Nerf can move.
     fn spread_board(seed: &str, radiant_face: bool) -> Scenario {
         scenario(json!({
             "seed": seed,
@@ -114,12 +115,12 @@ mod tests {
                     { "def": CNKY },
                     { "def": VANILLA },
                 ],
-                "field": [{ "def": CNKY, "lane": 1 }],
+                "field": [{ "def": CNKY, "lane": 1, "radiant": true }],
                 "library": [{ "def": CNKY }, { "def": VANILLA }],
             },
             "p2": {
                 "hand": [{ "def": CNKY }],
-                "field": [{ "def": CNKY, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                "field": [{ "def": CNKY, "lane": 1, "radiant": true }, { "def": VANILLA, "lane": 2 }],
                 "library": [{ "def": CNKY }],
             },
         }))
@@ -297,12 +298,13 @@ mod tests {
         #[test]
         fn m25_is_skipped() {
             // M 25 carries a granted CN tag: the Nerf's tag-filtered scope cannot reach it while it
-            // acts on the field (ME-TRIBAL).
+            // acts on the field (ME-TRIBAL). The Printer beside it is Radiant, so a Nerf has its
+            // declared `setCost` to move where its cost is out of reach (R1748000).
             const FELINOR: &str = "meditative-025";
             let mut s = scenario(json!({
                 "seed": "breaker-felinor",
                 "p1": { "mana": 8, "hand": [BREAKER, VANILLA], "library": [VANILLA] },
-                "p2": { "hand": [VANILLA], "field": [{ "def": FELINOR, "lane": 1 }, { "def": CNKY, "lane": 2 }], "library": [VANILLA] },
+                "p2": { "hand": [VANILLA], "field": [{ "def": FELINOR, "lane": 1 }, { "def": CNKY, "lane": 2, "radiant": true }], "library": [VANILLA] },
             }));
             let felinor = s.unit(P2, 1).expect("M 25").id;
             s.card_mut(&felinor).granted_tags = Some(vec![Tag::Cn]);
