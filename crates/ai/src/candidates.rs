@@ -7,7 +7,7 @@
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
     ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Position, Row,
-    Selection, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent, attack_mod_for, beneath_at,
+    Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent, attack_mod_for, beneath_at,
     canonical, card_at, carried_at, effective_cost, find_instance, has_keyword, is_locked,
     lane_multiplier_for, legal_actions, pierces, row_size, slot_of, subsystems, takes_strike_back, unit_view,
 };
@@ -421,11 +421,129 @@ fn enemy_first(state: &GameState, seat: PlayerId, variants: Vec<ActionBody>) -> 
     out
 }
 
+/// What kind of play or activation a variant represents, so that different ways of being played
+/// (biggest/smallest X, Embiggen, Equip, face-down, Tribute sets) get their first candidate
+/// before any way repeats a second lane or target (#1778).
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct WayKey {
+    x: Option<i32>,
+    embiggen: Option<bool>,
+    equip: bool,
+    face_down: bool,
+    tributes: Option<Vec<String>>,
+    ability: Option<String>,
+}
+
+fn way_key(action: &ActionBody) -> WayKey {
+    match action {
+        ActionBody::Play {
+            x,
+            embiggen,
+            equip,
+            face_down,
+            tributes,
+            ..
+        } => WayKey {
+            x: *x,
+            embiggen: *embiggen,
+            equip: *equip == Some(true),
+            face_down: face_down.is_some(),
+            tributes: tributes.as_ref().map(|t| {
+                let mut sorted = t.clone();
+                sorted.sort();
+                sorted
+            }),
+            ability: None,
+        },
+        ActionBody::Activate {
+            ability, tributes, ..
+        } => WayKey {
+            x: None,
+            embiggen: None,
+            equip: false,
+            face_down: false,
+            tributes: tributes.as_ref().map(|t| {
+                let mut sorted = t.clone();
+                sorted.sort();
+                sorted
+            }),
+            ability: ability.clone(),
+        },
+        _ => WayKey {
+            x: None,
+            embiggen: None,
+            equip: false,
+            face_down: false,
+            tributes: None,
+            ability: None,
+        },
+    }
+}
+
+/// The effective price of a specific play or activation way (#1778).
+fn way_price(state: &GameState, action: &ActionBody) -> i32 {
+    match action {
+        ActionBody::Play {
+            instance_id,
+            x,
+            embiggen,
+            face_down,
+            ..
+        } => {
+            let Some(card) = find_instance(state, instance_id) else {
+                return 0;
+            };
+            let probe = CardInstance {
+                x: x.or(card.x),
+                embiggened: embiggen.or(card.embiggened),
+                set_as: face_down
+                    .map(|reveal| SetAs {
+                        reveal,
+                        set_turn: state.turn,
+                        echo: None,
+                        revealing: None,
+                    })
+                    .or(card.set_as),
+                ..card.clone()
+            };
+            effective_cost(state, &probe, CostOptions { as_play: Some(true) })
+        }
+        _ => source_cost(state, action),
+    }
+}
+
+/// The cost of sacrificed units in a Tribute set: total cost and individual sorted unit costs (#1778).
+fn tribute_set_cost(state: &GameState, tributes: Option<&[String]>) -> (i32, Vec<i32>) {
+    let Some(ids) = tributes else {
+        return (0, Vec::new());
+    };
+    let mut costs: Vec<i32> = ids
+        .iter()
+        .map(|id| {
+            find_instance(state, id)
+                .map(|card| effective_cost(state, card, CostOptions::default()))
+                .unwrap_or(0)
+        })
+        .collect();
+    costs.sort();
+    (costs.iter().sum(), costs)
+}
+
+struct Way {
+    variants: Vec<ActionBody>,
+    price: i32,
+    tribute_cost: (i32, Vec<i32>),
+    first_seen: usize,
+}
+
 /// Tier 2: round-robin across source instances — every source's first variant, then every source's
 /// second, … — each round by current cost, highest first (ties keep legal_actions order). A card on
 /// the field with an Activate ability is a source like a hand card (B3.2): a ♾️ or Activate N card's
 /// repeated uses need nothing here, since the AI re-plans after every action.
-/// Inside one source, the variants aimed at the enemy alternate with the rest, enemy first
+/// Inside one source, variants are grouped into ways of being played (keyed by x, embiggen, equip,
+/// face-down, and Tribute sets), sorted dearest price first, then cheapest, then remaining descending,
+/// Tribute sets cheapest units first, and interleaved across ways before assembling the source's
+/// variants (#1778). Inside each way, variants aimed at the enemy alternate with the rest, enemy first
 /// (`enemy_first`, #1062), so a board of the seat's own targets cannot crowd the enemy's out of the beam.
 fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
     let mut sources: Vec<Source> = Vec::new();
@@ -450,7 +568,66 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
         }
     }
     for source in &mut sources {
-        source.variants = enemy_first(state, seat, std::mem::take(&mut source.variants));
+        let mut way_groups: IndexMap<WayKey, (usize, Vec<ActionBody>)> = IndexMap::new();
+        for (idx, action) in std::mem::take(&mut source.variants).into_iter().enumerate() {
+            let key = way_key(&action);
+            let entry = way_groups.entry(key).or_insert_with(|| (idx, Vec::new()));
+            entry.1.push(action);
+        }
+
+        let mut ways: Vec<Way> = way_groups
+            .into_iter()
+            .map(|(key, (first_seen, variants))| {
+                let variants = enemy_first(state, seat, variants);
+                let price = way_price(state, &variants[0]);
+                let tribute_cost = tribute_set_cost(state, key.tributes.as_deref());
+                Way {
+                    variants,
+                    price,
+                    tribute_cost,
+                    first_seen,
+                }
+            })
+            .collect();
+
+        let max_price = ways.iter().map(|w| w.price).max().unwrap_or(0);
+        let min_price = ways.iter().map(|w| w.price).min().unwrap_or(0);
+
+        ways.sort_by(|a, b| {
+            let rank_of = |price: i32| -> u8 {
+                if price == max_price {
+                    0
+                } else if price == min_price {
+                    1
+                } else {
+                    2
+                }
+            };
+            let rank_a = rank_of(a.price);
+            let rank_b = rank_of(b.price);
+            rank_a
+                .cmp(&rank_b)
+                .then_with(|| {
+                    if rank_a == 2 {
+                        b.price.cmp(&a.price)
+                    } else {
+                        std::cmp::Ordering::Equal
+                    }
+                })
+                .then_with(|| a.tribute_cost.cmp(&b.tribute_cost))
+                .then_with(|| a.first_seen.cmp(&b.first_seen))
+        });
+
+        let way_rounds = ways.iter().map(|w| w.variants.len()).max().unwrap_or(0);
+        let mut assembled = Vec::new();
+        for round in 0..way_rounds {
+            for way in &ways {
+                if let Some(variant) = way.variants.get(round) {
+                    assembled.push(variant.clone());
+                }
+            }
+        }
+        source.variants = assembled;
     }
     let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
     ordered.sort_by(|(ia, a), (ib, b)| b.cost.cmp(&a.cost).then(ia.cmp(ib)));

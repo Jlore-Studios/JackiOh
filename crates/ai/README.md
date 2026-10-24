@@ -69,7 +69,10 @@ re-plans after every action. Each line tries its moves in move order (`candidate
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
 opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the other
 attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
-its first `branching`, End Turn always among them. Its root tries a play in every distinct placement;
+its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
+X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
+target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
+first (#1778). Its root tries a play in every distinct placement;
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are

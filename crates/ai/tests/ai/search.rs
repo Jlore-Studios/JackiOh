@@ -1587,3 +1587,220 @@ mod rescored_own_prompts_1636 {
         assert_eq!(cut_counter.used(), stopped_counter.used());
     }
 }
+
+mod ways_of_being_played {
+    use super::*;
+
+    /// Acceptance criterion 1: On a hand wide enough to fill the root (10 cards),
+    /// root_expansion at AI_BUDGET.root_branching holds Buff Billy (classicplus-069)
+    /// at x == mana, an Embiggened play, and a Cloaked card's face-down set (#1778).
+    #[test]
+    fn buff_billy_embiggen_and_cloaked_set_survive_root_expansion() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "ways-root-wide",
+            "p1": {
+                "hand": [
+                    "classicplus-069", // Buff Billy (X cost)
+                    "core-084",        // Going Long (Embiggen 4 vs base 2)
+                    "classic-006",     // Cloaked Toe Cracker (Cloaked unit, cost 2)
+                    "core-008",
+                    "core-011",
+                    "core-017",
+                    "core-005",
+                    "core-020",
+                    "core-025",
+                    "core-035"
+                ],
+                "mana": 6,
+                "library": ["core-008", "core-011"],
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "library": ["core-008", "core-011"],
+            }
+        }))
+        .state()
+        .clone();
+
+        let expanded = root_expansion(
+            &state,
+            AI,
+            AI_BUDGET.root_branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+
+        let billy_id = hand_id(&state, "classicplus-069");
+        let going_long_id = hand_id(&state, "core-084");
+        let toe_cracker_id = hand_id(&state, "classic-006");
+
+        // Holds Buff Billy at x == mana (x == 6)
+        let has_billy_max_x = expanded.iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, x: Some(6), .. } if *instance_id == billy_id)
+        });
+        assert!(
+            has_billy_max_x,
+            "root_expansion must hold Buff Billy at x == mana (6)"
+        );
+
+        // Holds an Embiggened play of Going Long
+        let has_embiggened = expanded.iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, embiggen: Some(true), .. } if *instance_id == going_long_id)
+        });
+        assert!(
+            has_embiggened,
+            "root_expansion must hold an Embiggened play of Going Long"
+        );
+
+        // Holds Cloaked Toe Cracker's face-down set
+        let has_face_down = expanded.iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if *instance_id == toe_cracker_id)
+        });
+        assert!(
+            has_face_down,
+            "root_expansion must hold a Cloaked card's face-down set"
+        );
+    }
+
+    /// Acceptance criterion 2: decide with 6 mana, Buff Billy and three 2-drops plays Billy at X=6 (#1778).
+    /// Billy at X=4 beside a 2-drop is among the root's moves too, so the search weighs the two.
+    #[test]
+    fn decide_with_six_mana_and_buff_billy_plays_billy_at_x_six() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "ways-billy-decide",
+            "p1": {
+                "hand": [
+                    "classicplus-069", // Buff Billy
+                    "core-001",        // Big D-fender, a 2-cost Unit
+                    "core-020",        // Pointmaster, a 2-cost Unit
+                    "core-030"         // Archivist, a 2-cost Unit
+                ],
+                "mana": 6,
+                "library": ["core-008", "core-011"],
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "library": ["core-008", "core-011"],
+            }
+        }))
+        .state()
+        .clone();
+
+        let billy_id = hand_id(&state, "classicplus-069");
+        let root = root_expansion(
+            &state,
+            AI,
+            AI_BUDGET.root_branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+        assert!(
+            root.iter().any(|action| {
+                matches!(action, ActionBody::Play { instance_id, x: Some(4), .. } if *instance_id == billy_id)
+            }),
+            "the root must also try Billy at X=4, which leaves 2 mana for a 2-drop"
+        );
+
+        let mut options = ai_options("billy-decide-seed", AI_BUDGET);
+        let decision = decide(&state, AI, &mut options).expect("a decision is reached");
+
+        assert!(
+            matches!(&decision.action, ActionBody::Play { instance_id, x: Some(6), .. } if *instance_id == billy_id),
+            "decision should be playing Buff Billy at X=6, got: {:?}",
+            decision.action
+        );
+    }
+
+    /// Tribute sets prefer cheaper sacrificed units (#1778).
+    #[test]
+    fn tribute_sets_prefer_cheaper_units() {
+        jackioh_cards::register_all();
+        // The Rock (core-066) requires Tribute 1.
+        // Field has a 3-cost unit (core-013) in lane 1 and a 1-cost unit (core-003) in lane 2:
+        // legal_actions lists the lane-1 unit's set first, so only the sort puts the cheap set first.
+        let state = scenario(json!({
+            "seed": "ways-tribute-prefer",
+            "p1": {
+                "hand": ["core-066"],
+                "field": [
+                    { "def": "core-013", "lane": 1 },
+                    { "def": "core-003", "lane": 2 }
+                ],
+                "mana": 4,
+                "library": ["core-008", "core-011"],
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "library": ["core-008", "core-011"],
+            }
+        }))
+        .state()
+        .clone();
+
+        let rock_id = hand_id(&state, "core-066");
+        let unit_1cost_id = state.players[AI]
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .find(|c| c.def_id == "core-003")
+            .map(|c| c.id.clone())
+            .unwrap();
+        let unit_3cost_id = state.players[AI]
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .find(|c| c.def_id == "core-013")
+            .map(|c| c.id.clone())
+            .unwrap();
+
+        let first_tributing = |actions: &[ActionBody], unit_id: &String| {
+            actions.iter().position(|a| {
+                matches!(a, ActionBody::Play { instance_id, tributes: Some(t), .. }
+                    if *instance_id == rock_id && t.contains(unit_id))
+            })
+        };
+        let listed = legal_actions(&state, AI);
+        let listed_dear = first_tributing(&listed, &unit_3cost_id).expect("a set tributing the 3-cost unit");
+        let listed_cheap = first_tributing(&listed, &unit_1cost_id).expect("a set tributing the 1-cost unit");
+        assert!(
+            listed_dear < listed_cheap,
+            "legal_actions lists the lane-1 (dearer) unit's set first, so the order below is the sort's"
+        );
+
+        let candidates = candidate_actions(&state, AI);
+        let rock_plays: Vec<&ActionBody> = candidates
+            .iter()
+            .filter(|a| matches!(a, ActionBody::Play { instance_id, .. } if *instance_id == rock_id))
+            .collect();
+
+        assert!(!rock_plays.is_empty(), "Rock should have candidate plays");
+
+        let first_tributes_cheap = rock_plays.iter().position(|a| match a {
+            ActionBody::Play {
+                tributes: Some(t), ..
+            } => t.contains(&unit_1cost_id),
+            _ => false,
+        });
+        let first_tributes_expensive = rock_plays.iter().position(|a| match a {
+            ActionBody::Play {
+                tributes: Some(t), ..
+            } => t.contains(&unit_3cost_id),
+            _ => false,
+        });
+
+        assert!(
+            first_tributes_cheap.is_some() && first_tributes_expensive.is_some(),
+            "both tribute combinations should be present in candidate plays"
+        );
+        assert!(
+            first_tributes_cheap.unwrap() < first_tributes_expensive.unwrap(),
+            "tributing cheaper unit (index {:?}) must come before tributing expensive unit (index {:?})",
+            first_tributes_cheap,
+            first_tributes_expensive
+        );
+    }
+}
