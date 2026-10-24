@@ -12610,6 +12610,7 @@
     "1797": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T17:51:26Z",
         "difficulty": "hard",
