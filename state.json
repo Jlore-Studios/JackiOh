@@ -14510,41 +14510,22 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-24T10:56:05Z",
+      "feedback_since": "2026-10-24T11:49:45Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1778,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "Acceptance criterion 3 asks for `cargo jackioh gate` to pass, performance probes included, but nothing shows it was run, and CI does not run it on a pull request.",
-          "evidence": "The builder's Verification list names fmt, clippy, catalog, patches, spec check, `cargo test -p jackioh-ai`, arena and stats, and no gate. `.github/workflows/ci.yml:36` says the AI gates are \"Not run per pull request\". The issue names the gate's risks itself: decision time on the perf gate's pinned positions, and the greedy baseline's tie-breaks shifting (`baselines.rs:52`). The plan said the gate would cover both. The new `way_price` clones a `CardInstance` and calls `effective_cost` once per way per source at every node, so a perf check is needed, not optional.",
-          "severity": "blocking",
-          "where": "task"
-        },
-        {
-          "claim": "Acceptance criterion 2 is 'decide with 6 mana, Buff Billy and three 2-drops plays Billy at X=6', but the test's hand has no 2-drops.",
-          "evidence": "The hand is `classicplus-069`, `core-011`, `core-008`, `core-017`. In `crates/cards/catalog.json` those are Tempo Timmy (cost 1), Mr. Vanilla (cost 1) and Flood (a 4-cost Spell). The issue's motivating line, Billy played small beside a 2-drop (X=4 plus a 2-drop), is never offered to `decide`, so the scenario the criterion names is untested. The `/// Acceptance criterion 2` doc comment still claims three 2-drops.",
-          "severity": "blocking",
-          "where": "crates/ai/tests/ai/search.rs:1667"
-        },
-        {
-          "claim": "`tribute_sets_prefer_cheaper_units` passes without the change, so the 'Tribute sets go cheapest units first' ordering has no test.",
-          "evidence": "The cheap unit (`core-003`, cost 1) is in lane 1 and the dear one (`core-013`, cost 3) in lane 2. `legal_tribute_units` (`crates/engine/src/play_choices.rs:833`) walks `active_units_of`, which reads lanes 1 to 5 in order (`zones.rs:1525`). The base's legal_actions order therefore already lists the cheap set first, and the assertion `first_tributes_cheap < first_tributes_expensive` holds on `1d6ec7144`. Putting the cheap unit in the later lane would make the test prove the new sort.",
-          "severity": "blocking",
-          "where": "crates/ai/tests/ai/search.rs:1700"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
       "queued_at": "2026-10-24T11:49:18Z",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "strong",
       "run_id": "40091458748",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-24T11:49:45Z",
       "stop_requested": false,
       "taken_asks": [],
