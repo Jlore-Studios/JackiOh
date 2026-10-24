@@ -19,7 +19,7 @@ use jackioh_engine::scripts::registered_scripts;
 use jackioh_engine::state::{CardInstance, GameState, find_instance_mut};
 use jackioh_engine::view_for::view_for;
 
-use super::fixtures::harness::{in_hand, new_game, put, slot};
+use super::fixtures::harness::{both, in_hand, new_game, put, slot};
 
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let face = json!({ "keywords": [], "text": name });
@@ -123,13 +123,6 @@ fn defs() -> Vec<CardDef> {
         immutable(),
         plain(),
     ]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn storm_cry(rounds: i32, side: &'static str) -> Option<Hook> {

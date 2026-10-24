@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 use jackioh_engine::effects::{cast, cast_new, cast_random, damage, heal};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, round_trip, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, in_hand, put, round_trip, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     DISCOVER_POOL, RANDOM_POOL, ask_target, cast_field, cast_trap, discover_spell, grave_spell, in_graveyard,
     jogg_box, mode_spell, named_caster, pb_act, pb_playing, pb_reduce, solarius, target_spell, their_choice,
@@ -62,13 +62,6 @@ fn inline_defs() -> Vec<CardDef> {
             "radiant": { "attack": 2, "health": 6, "keywords": [], "text": "cry-any" },
         })),
     ]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn inline_scripts() -> IndexMap<String, CardScripts> {

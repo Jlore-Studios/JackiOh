@@ -8,7 +8,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, json_of, new_game, put, slot};
 
 // ---------------------------------------------------------------------------
 // The sink: TS `sinkFor(state, events)`, a sink whose rng starts at the state's cursor, as reduce
@@ -59,10 +59,6 @@ fn instance_ids(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
             _ => None,
         })
         .collect()
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 /// The text of a caught panic (TS `toThrow(/…/)` reads the thrown error's message).
@@ -282,13 +278,6 @@ fn defs() -> Vec<CardDef> {
         warded_field_spell(),
         rememberer(),
     ]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn ping_enemy_hero() -> Script {
@@ -621,7 +610,7 @@ mod the_state_check_m2_t5 {
         assert!(!unit_has(&state, card(&state, &warded.id), KeywordKind::Taunt));
         assert_eq!(card(&state, &warded.id).taunt_suppressed_turn, Some(3));
         assert_eq!(
-            to_json(&events_of_type(&events, GameEventType::PositionSwitched)),
+            json_of(events_of_type(&events, GameEventType::PositionSwitched)),
             json!([{ "type": "positionSwitched", "instanceId": warded.id, "position": "ATK" }])
         );
         assert_eq!(events_of_type(&events, GameEventType::Destroyed).len(), 0);
@@ -887,7 +876,7 @@ mod the_state_check_m2_t5 {
         );
         assert_eq!(drawn.phase, Phase::Over);
         assert_eq!(
-            to_json(&events_of_type(&draw_events, GameEventType::GameOver)),
+            json_of(events_of_type(&draw_events, GameEventType::GameOver)),
             json!([{ "type": "gameOver", "winner": "draw", "reason": "both-heroes-dead" }])
         );
 
@@ -907,7 +896,7 @@ mod the_state_check_m2_t5 {
         );
         assert_eq!(lost.phase, Phase::Over);
         assert_eq!(
-            to_json(&events_of_type(&loss_events, GameEventType::GameOver)),
+            json_of(events_of_type(&loss_events, GameEventType::GameOver)),
             json!([{ "type": "gameOver", "winner": "p1", "reason": "hero-death" }])
         );
     }
@@ -1083,7 +1072,7 @@ mod what_a_death_reports_r89_m3 {
         let events = sink.events;
 
         assert_eq!(
-            to_json(&events_of_type(&events, GameEventType::Destroyed)),
+            json_of(events_of_type(&events, GameEventType::Destroyed)),
             json!([
                 {
                     "type": "destroyed",
@@ -1125,7 +1114,7 @@ mod what_a_death_reports_r89_m3 {
         let events = sink.events;
 
         assert_eq!(
-            to_json(&events_of_type(&events, GameEventType::Destroyed)),
+            json_of(events_of_type(&events, GameEventType::Destroyed)),
             json!([
                 {
                     "type": "destroyed",

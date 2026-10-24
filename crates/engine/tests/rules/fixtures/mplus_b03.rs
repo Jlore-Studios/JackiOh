@@ -13,6 +13,8 @@ use std::sync::LazyLock;
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 /// The fixture "in N turns" counts.
 pub const LATER_TURNS: i32 = 3;
 /// What the delayed hit deals to each enemy.
@@ -65,13 +67,6 @@ pub static CASTER: LazyLock<CardDef> = LazyLock::new(|| card(11843, "caster", "S
 /// A (0) Spell: "Add a swell to your hand; its Embiggened version costs (0)" (M+ #23's shape).
 pub static ELDER: LazyLock<CardDef> = LazyLock::new(|| card(11844, "elder", "Spell", json!(0)));
 
-fn both(script: impl Fn() -> Script) -> CardScripts {
-    CardScripts {
-        base: script(),
-        radiant: script(),
-    }
-}
-
 fn garden(premium: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
@@ -86,7 +81,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     IndexMap::from([
         (
             LATER.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![effects::delay(json_as(json!({
                         "at": { "phase": "start", "player": "self" },
@@ -120,7 +115,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             CASTER.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![effects::cast_new(json_as(json!({ "def": SWELL.id })))]
                 })),
@@ -129,7 +124,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             ELDER.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![effects::add_to_hand(effects::AddToHandArgs {
                         def_id: Some(SWELL.id.clone()),

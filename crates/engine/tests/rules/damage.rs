@@ -10,7 +10,7 @@ use crate::rules::fixtures::combat::{
     armoured, big_body, big_dfender, cleaver, indestructible, lifestealer, plain, poisonous, shielded,
     trample_lifesteal, trampler,
 };
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, json_of, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 /// TS `newGame()`: the harness's default seed.
@@ -64,10 +64,6 @@ fn hit(
             flags: flags.map(json_as),
         },
     )
-}
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn amounts(events: &[GameEvent], kind: GameEventType) -> Vec<i32> {
@@ -314,7 +310,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
                 3
             );
             assert_eq!(
-                to_json(&events_of_type(sink.events, GameEventType::Damage)[0]),
+                json_of(&events_of_type(sink.events, GameEventType::Damage)[0]),
                 // R1360: the Armor 7 took the rest, and the event says so.
                 json!({ "type": "damage", "sourceId": source.id, "targetId": target.id, "amount": 3, "combat": true, "absorbed": 7 })
             );
@@ -326,7 +322,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             sink.state.players[P2].hero.armor = 1;
             assert_eq!(hit(sink, None, on_hero(P2), 4, None), 3);
             assert_eq!(
-                to_json(&events_of_type(sink.events, GameEventType::Damage)[1]),
+                json_of(&events_of_type(sink.events, GameEventType::Damage)[1]),
                 json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 3, "combat": false, "absorbed": 1 })
             );
         });
@@ -346,7 +342,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(live(sink.state, &armour.id).damage, 0);
             // R1361: the Armor took it whole, which is reported, and is no `damage`.
             assert_eq!(
-                to_json(&*sink.events),
+                json_of(&*sink.events),
                 json!([{ "type": "damageAbsorbed", "sourceId": null, "targetId": armour.id, "absorbed": 7, "combat": false }])
             );
             sink.events.clear();
@@ -455,7 +451,7 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             assert_eq!(sink.state.players[P1].hero.health, 23);
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH);
             assert_eq!(
-                to_json(&events_of_type(sink.events, GameEventType::Healed)),
+                json_of(events_of_type(sink.events, GameEventType::Healed)),
                 json!([{ "type": "healed", "targetId": "hero-p1", "amount": 3 }])
             );
 
@@ -615,7 +611,7 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
             assert_eq!(now.damage, 0);
             assert_eq!(unit_view(sink.state, &now).health, 10);
             assert_eq!(
-                to_json(&events_of_type(sink.events, GameEventType::Healed)),
+                json_of(events_of_type(sink.events, GameEventType::Healed)),
                 json!([{ "type": "healed", "targetId": unit.id, "amount": 4 }])
             );
 
@@ -641,7 +637,7 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
             assert_eq!(heal_hero(sink, P1, 5), 5);
             assert_eq!(sink.state.players[P1].hero.health, HERO_HEALTH + 5);
             assert_eq!(
-                to_json(&events_of_type(sink.events, GameEventType::Healed)),
+                json_of(events_of_type(sink.events, GameEventType::Healed)),
                 json!([{ "type": "healed", "targetId": "hero-p1", "amount": 5 }])
             );
 
@@ -669,7 +665,7 @@ mod r18_r19_heal_and_lose_health_s6_3_m2_t3 {
             assert_eq!(lose_health(sink, P1, 12), 12);
             assert_eq!(sink.state.players[P1].hero.health, HERO_HEALTH - 12);
             assert_eq!(
-                to_json(&events_of_type(sink.events, GameEventType::HealthLost)),
+                json_of(events_of_type(sink.events, GameEventType::HealthLost)),
                 json!([{ "type": "healthLost", "player": "p1", "amount": 12 }])
             );
             assert_eq!(events_of_type(sink.events, GameEventType::Damage).len(), 0);

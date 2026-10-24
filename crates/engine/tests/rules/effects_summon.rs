@@ -8,9 +8,10 @@ use jackioh_engine::effects::{
     damage, fill_board, fill_board_random, recruit, summon, summon_random_from_hand,
 };
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{
+    both, events_of_type, in_hand, json_of, new_game, put, set_library, slot, spread,
+};
 
 // ---------------------------------------------------------------------------
 // Fixture cards.
@@ -32,17 +33,8 @@ fn def_of_kind(name: &str, index: i32, type_: &str, overrides: Value) -> CardDef
         "base": { "attack": 2, "health": 2, "keywords": [], "text": name },
         "radiant": { "attack": 4, "health": 4, "keywords": [], "text": format!("{name} radiant") },
     });
-    spread(&mut def, overrides);
+    def = spread(def, overrides);
     json_as(def)
-}
-
-/// TS `{ ...base, ...overrides }`: the override's keys replace the base's.
-fn spread(target: &mut Value, overrides: Value) {
-    if let (Some(into), Value::Object(from)) = (target.as_object_mut(), overrides) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
 }
 
 /// #12-style: a Cry that pings the enemy hero, so "a summon fires no Cry" is observable (R1).
@@ -96,13 +88,6 @@ const RUSH_TOKEN: &str = "fx-token-rush";
 
 fn defs() -> Vec<CardDef> {
     vec![crier(), trap(), field_spell(), spell(), felinor(), pricey()]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -170,7 +155,7 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
 /// The def id in each of the row's five lanes, `null` where it is empty (as JSON, so an assertion
 /// reads like TS's array).
 fn lanes_of(state: &GameState, player: PlayerId, row: Row) -> Value {
-    to_json(
+    json_of(
         [1, 2, 3, 4, 5]
             .iter()
             .map(|lane| card_at(state, slot(player, row, *lane)).map(|card| card.def_id.clone()))
@@ -194,10 +179,6 @@ fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
         .unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn summoned_lanes(events: &[GameEvent]) -> Vec<i32> {
@@ -363,7 +344,7 @@ mod summon_s6_3_m3_t1 {
         let card = card.expect("the summoned card");
         assert_eq!(card.summoned_turn, Some(state.turn));
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::Summoned)),
+            json_of(events_of_type(&events, GameEventType::Summoned)),
             json!([
                 { "type": "summoned", "player": "p1", "instanceId": card.id, "defId": "fx-7", "row": "units", "lane": 4 },
             ])
@@ -677,7 +658,7 @@ mod recruit_s6_3_m3_t1 {
         assert_eq!(set.as_ref().map(|card| card.id.clone()), Some(next.clone()));
         assert_ne!(set.as_ref().map(|card| card.id.clone()), Some(held.clone()));
         assert_eq!(
-            to_json(events_of_type(&events, GameEventType::Summoned)),
+            json_of(events_of_type(&events, GameEventType::Summoned)),
             json!([
                 {
                     "type": "summoned",

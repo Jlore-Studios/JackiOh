@@ -13,7 +13,7 @@ use jackioh_engine::subsystems::combo_index::{
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, in_hand, json_of, new_game, put, slot};
 
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut out = json!({
@@ -64,13 +64,6 @@ fn body() -> CardDef {
             "radiant": { "attack": 4, "health": 4, "keywords": [], "text": "body" },
         }),
     )
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> Vec<(String, CardScripts)> {

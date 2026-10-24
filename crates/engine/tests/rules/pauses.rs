@@ -18,7 +18,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::harness::{
-    events_of_type, json_of, matches_object, new_game, put, sink_for, slot,
+    both, events_of_type, json_of, matches_object, new_game, put, sink_for, slot, spread,
 };
 
 // The handlers the engine registers, registered here too
@@ -127,15 +127,6 @@ fn sequence_handler(sink: &mut EngineSink<'_>, item: &WorkItem) {
 
 // The cards
 
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
-        for (key, value) in extra {
-            base.insert(key, value);
-        }
-    }
-    base
-}
-
 /// Fixture defs are indexed from 1400.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     json_as(spread(
@@ -154,13 +145,6 @@ fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
         }),
         extra,
     ))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn enemy_hero(amount: i32) -> Effect {
