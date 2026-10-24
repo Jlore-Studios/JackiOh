@@ -6,10 +6,14 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PlayerView } from "@jackioh/shared";
+
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { baseView, duosTeamView, duosView, pendingFor } from "../test/fixtures.ts";
 import { must, stubServer } from "../test/stubServer.ts";
+import type { DuosView } from "../wire/generated/DuosView.ts";
 import { DuosRoute } from "./DuosRoute.tsx";
 import { duosTestid } from "./testids.ts";
 
@@ -118,5 +122,66 @@ describe("the co-op route's token", () => {
     expect(sockets).toHaveLength(2);
     expect(tokenFromProtocols(latest().protocols)).toBe("tok-new");
     expect(latest().url).not.toContain("tok-");
+  });
+});
+
+describe("the co-op route's tab title (#1792)", () => {
+  function open(): void {
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+  }
+  /** A `view` frame as the server pushes one; the title reads the view alone, so nothing is legal. */
+  function push(view: DuosView): void {
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
+    });
+  }
+  /** A1's seat (duel 0) at `round`: its own duel's view as given, and its team's ended flags. */
+  function a1(round: number, own: Partial<PlayerView>, ended: boolean[] = [false, false]): DuosView {
+    return { ...duosView(round), own: baseView(own), team: { ...duosTeamView("a"), ended } };
+  }
+
+  it("#1792 says Your turn while the seat owes its mulligan, not once it is ready, nor while round 0 waits on the other duel", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    open();
+    push(
+      a1(0, {
+        turn: 0,
+        phase: "mulligan",
+        mulligan: { youReady: false, opponentReady: false },
+        pending: pendingFor("mulligan", [], { min: 0, max: 0 }),
+      }),
+    );
+    expect(document.title).toBe("Your turn · JackiOh");
+    push(
+      a1(0, {
+        turn: 0,
+        phase: "mulligan",
+        mulligan: { youReady: true, opponentReady: false, kept: [] },
+        pending: { forYou: false, pendingFor: "p2" },
+      }),
+    );
+    expect(document.title).toBe("Duos · JackiOh");
+    // Its duel's mulligans are in and it is that duel's active Player 1, but the round has not opened.
+    push(a1(0, { turn: 0 }));
+    expect(document.title).toBe("Duos · JackiOh");
+  });
+
+  it("#1792 says Your turn for a prompt the seat holds, even once it has ended its turn, and not for the enemy's on its own turn", () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    open();
+    const flood = pendingFor("discover", [{ key: "mode:core-043", label: "Flood", defId: "core-043" }]);
+    push(a1(3, {}));
+    expect(document.title).toBe("Your turn · JackiOh");
+    push(a1(3, { pending: { forYou: false, pendingFor: "p2" } }));
+    expect(document.title).toBe("Duos · JackiOh");
+    push(a1(3, { active: "p2", pending: flood }));
+    expect(document.title).toBe("Your turn · JackiOh");
+    push(a1(3, {}, [true, false]));
+    expect(document.title).toBe("Duos · JackiOh");
+    push(a1(3, { pending: flood }, [true, false]));
+    expect(document.title).toBe("Your turn · JackiOh");
   });
 });
