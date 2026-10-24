@@ -31,6 +31,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const BOOK: &str = "classicplus-056";
     const FILLER: &str = "core-005";
@@ -50,10 +51,6 @@ mod tests {
         }))
     }
 
-    fn grave_defs(s: &Scenario) -> Vec<String> {
-        s.pile(PlayerId::P2, "graveyard").into_iter().map(|card| card.def_id).collect()
-    }
-
     mod base {
         use super::*;
 
@@ -64,7 +61,7 @@ mod tests {
             assert_eq!(s.state().active, PlayerId::P1);
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(PlayerId::P2).len(), 1);
-            let grave = grave_defs(&s);
+            let grave = def_ids(&s.pile(PlayerId::P2, "graveyard"));
             assert_eq!(grave.len(), 2);
             for def_id in &grave {
                 assert!([A, B, C].contains(&def_id.as_str()));
@@ -119,7 +116,7 @@ mod tests {
             s.play(BOOK, json!({}));
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(PlayerId::P2), Vec::<CardInstance>::new());
-            assert_eq!(grave_defs(&s), vec![A.to_string()]);
+            assert_eq!(def_ids(&s.pile(PlayerId::P2, "graveyard")), vec![A.to_string()]);
         }
 
         #[test]

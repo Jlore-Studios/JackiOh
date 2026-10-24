@@ -47,6 +47,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -108,10 +109,6 @@ mod tests {
         subsystems::rank_perfect_hand(&resolving_state(setup), P1, json_as(options))
     }
 
-    fn hand_defs(s: &Scenario) -> Vec<String> {
-        s.hand(P1).iter().map(|card| card.def_id.clone()).collect()
-    }
-
     fn top_ids(scored: &[subsystems::Scored], n: usize) -> Vec<String> {
         scored.iter().take(n).map(|entry| entry.def.id.clone()).collect()
     }
@@ -157,8 +154,8 @@ mod tests {
                 crate::register_all();
                 let setup = json!({ "p1": { "hand": [STOCKPILE, MENACE, TIMMY] } });
                 let s = play(&setup, false);
-                assert_eq!(hand_defs(&s), top_ids(&ranked(&setup, false), 3));
-                let distinct: IndexSet<String> = hand_defs(&s).into_iter().collect();
+                assert_eq!(def_ids(&s.hand(P1)), top_ids(&ranked(&setup, false), 3));
+                let distinct: IndexSet<String> = def_ids(&s.hand(P1)).into_iter().collect();
                 assert_eq!(distinct.len(), 3);
             }
 
@@ -229,7 +226,7 @@ mod tests {
                 let top = ranking.first().expect("a ranking");
                 assert!(matches!(top.priority, subsystems::ScorePriority::Lethal));
                 let s = play(&setup, false);
-                assert_eq!(hand_defs(&s)[0], top.def.id);
+                assert_eq!(def_ids(&s.hand(P1))[0], top.def.id);
                 // With no lethal on the board, nothing ranks for it.
                 assert!(
                     ranked(&json!({ "p1": { "hand": [STOCKPILE, MENACE], "mana": 8 } }), false)
@@ -251,7 +248,7 @@ mod tests {
                     .expect("#45 is in the pool");
                 assert_eq!(duelist.def.set, SetName::Core);
                 assert!(matches!(duelist.priority, subsystems::ScorePriority::Lethal));
-                assert!(hand_defs(&play(&setup, false)).contains(&DEFT_DUELIST.to_string()));
+                assert!(def_ids(&play(&setup, false).hand(P1)).contains(&DEFT_DUELIST.to_string()));
             }
 
             #[test]
@@ -264,7 +261,7 @@ mod tests {
                 seeded_b["seed"] = json!("zealotism-b");
                 let a = play(&seeded_a, false);
                 let b = play(&seeded_b, false);
-                assert_eq!(hand_defs(&a), hand_defs(&b));
+                assert_eq!(def_ids(&a.hand(P1)), def_ids(&b.hand(P1)));
                 let mut options = setup.clone();
                 options["p1"]["hand"] = json!([ZEALOTISM, STOCKPILE, MENACE, TIMMY]);
                 let mut before = scenario(options);
@@ -289,7 +286,7 @@ mod tests {
                 s.play(ZEALOTISM, json!({}));
                 assert_eq!(s.hand(P1).len(), 2);
                 s.expect_in_zone(&token, "gone");
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let graveyard = def_ids(&s.pile(P1, "graveyard"));
                 assert!(!graveyard.iter().any(|id| id == RUSH_TOKEN));
                 assert!(graveyard.iter().any(|id| id == STOCKPILE));
             }
@@ -370,7 +367,7 @@ mod tests {
                 crate::register_all();
                 let setup = json!({ "p1": { "hand": [STOCKPILE, MENACE, TIMMY] } });
                 let mut s = play(&setup, true);
-                assert_eq!(hand_defs(&s), top_ids(&ranked(&setup, true), 3));
+                assert_eq!(def_ids(&s.hand(P1)), top_ids(&ranked(&setup, true), 3));
                 assert!(s.hand(P1).iter().all(|card| card.radiant));
                 s.expect_mana(P1, 4);
             }

@@ -37,6 +37,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -55,14 +56,6 @@ mod tests {
     const F: &str = "core-045";
     const G: &str = "core-032";
 
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
-
-    fn library_defs(s: &Scenario) -> Vec<String> {
-        s.pile(P1, "library").into_iter().map(|card| card.def_id).collect()
-    }
-
     fn count(s: &Scenario, kind: GameEventType) -> usize {
         s.events().iter().filter(|event| event.event_type() == kind).count()
     }
@@ -80,8 +73,8 @@ mod tests {
 
                 s.play(BOOK, json!({}));
 
-                assert_eq!(hand_defs(&s, P1), vec![A, B, C]);
-                assert_eq!(library_defs(&s), vec![D]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![A, B, C]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![D]);
                 assert_eq!(count(&s, GameEventType::Drawn), 3);
             }
 
@@ -92,9 +85,9 @@ mod tests {
 
                 s.play(BOOK, json!({}));
 
-                assert_eq!(hand_defs(&s, P1), vec![A, B, C]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![A, B, C]);
                 s.expect_health(P1, 29);
-                assert_eq!(library_defs(&s), vec![D]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![D]);
             }
 
             #[test]
@@ -104,7 +97,7 @@ mod tests {
 
                 s.play(BOOK, json!({}));
 
-                assert_eq!(hand_defs(&s, P1), vec![A]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![A]);
                 assert_eq!(count(&s, GameEventType::Fatigue), 2);
                 s.expect_health(P1, 27);
             }
@@ -123,9 +116,9 @@ mod tests {
                 s.play(BOOK, json!({}));
 
                 assert_eq!(s.hand(P1).len(), 10);
-                assert_eq!(hand_defs(&s, P1).last().map(String::as_str), Some(A));
+                assert_eq!(def_ids(&s.hand(P1)).last().map(String::as_str), Some(A));
                 assert_eq!(count(&s, GameEventType::Burned), 2);
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+                let graveyard = def_ids(&s.pile(P1, "graveyard"));
                 assert!(graveyard.contains(&B.to_string()) && graveyard.contains(&C.to_string()));
                 let theirs = serde_json::to_string(&s.view(P2)).unwrap();
                 assert!(theirs.contains(B));
@@ -150,9 +143,9 @@ mod tests {
                 let stolen = s.card(book.id.as_str());
                 assert_eq!(stolen.owner, P2);
                 assert_eq!(stolen.zone, Zone::Graveyard { player: P2 });
-                assert_eq!(hand_defs(&s, P2), [FILLER, D, E, F]);
+                assert_eq!(def_ids(&s.hand(P2)), [FILLER, D, E, F]);
                 assert_eq!(s.pile(P1, "library").len(), 3);
-                assert_eq!(hand_defs(&s, P1), Vec::<String>::new());
+                assert_eq!(def_ids(&s.hand(P1)), Vec::<String>::new());
             }
 
             #[test]
@@ -179,12 +172,12 @@ mod tests {
                 let mut up = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
                 step_param(up.card_mut(BOOK), "draw", 1);
                 up.play(BOOK, json!({}));
-                assert_eq!(hand_defs(&up, P1), vec![A, B, C, D]);
+                assert_eq!(def_ids(&up.hand(P1)), vec![A, B, C, D]);
 
                 let mut down = scenario(json!({ "p1": { "hand": [BOOK], "library": [A, B, C, D, E] }, "p2": { "hand": [FILLER] } }));
                 step_param(down.card_mut(BOOK), "draw", -1);
                 down.play(BOOK, json!({}));
-                assert_eq!(hand_defs(&down, P1), vec![A, B]);
+                assert_eq!(def_ids(&down.hand(P1)), vec![A, B]);
             }
         }
 
@@ -201,8 +194,8 @@ mod tests {
 
                 s.play(BOOK, json!({}));
 
-                assert_eq!(hand_defs(&s, P1), vec![A, B, C, D, E, F]);
-                assert_eq!(library_defs(&s), vec![G]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![A, B, C, D, E, F]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![G]);
             }
 
             #[test]
@@ -215,7 +208,7 @@ mod tests {
 
                 s.play(BOOK, json!({}));
 
-                assert_eq!(hand_defs(&s, P1), vec![A, B, C, D]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![A, B, C, D]);
                 s.expect_health(P1, 27);
             }
 
@@ -230,7 +223,7 @@ mod tests {
 
                 s.play(BOOK, json!({}));
 
-                assert_eq!(hand_defs(&s, P1), vec![A, B, C, D, E, F, G]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![A, B, C, D, E, F, G]);
             }
         }
     }

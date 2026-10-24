@@ -92,6 +92,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -214,10 +215,7 @@ mod tests {
                 assert_eq!(units(&s), lanes([Some(VANILLA), None, None, None, None]));
                 s.expect_in_zone(&ace, "graveyard");
                 assert_eq!(
-                    s.pile(P1, "library")
-                        .iter()
-                        .map(|card| card.def_id.clone())
-                        .collect::<Vec<String>>(),
+                    def_ids(&s.pile(P1, "library")),
                     vec![LUNAR, GARY, VANILLA],
                 );
             }
