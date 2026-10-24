@@ -14388,15 +14388,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/ai/README.md"
+          ],
+          "from": "85bafabb05e38a19e43b3bae076d878f41531024",
+          "main": "26cf16be37eb589dc55dc59adc75a1e299642569"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40074223488",
+            "run": "40081225344",
             "tier": "strong"
           }
         ],
-        "sha": "85bafabb05e38a19e43b3bae076d878f41531024",
+        "sha": "fef6ab327a2cc26b196b7979a5e663f1ee44bbc2",
         "tiers": {
           "claude": "strong"
         }
