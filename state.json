@@ -14583,12 +14583,8 @@
     "what": "revise #1801 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-24T11:48:34Z",
-    "notes": [
-      "delivered review #1801 on claude-1 (run 40090976707): reviewed",
-      "started revise #1801 on claude-1 (run 40091458748)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-24T11:55:57Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15293,7 +15289,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-24T11:48:34Z",
+  "loop_tick": "2026-10-24T11:55:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
