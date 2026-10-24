@@ -14171,6 +14171,7 @@
         "by": "`claude` (medium)",
         "sha": "709aa28f3c9c65b122f4f20a7aad6598630b674f"
       },
+      "closed_at": "2026-10-24T08:16:25Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "easy",
@@ -14180,6 +14181,7 @@
       "interruptions": 0,
       "issue": 1774,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-24T08:03:55Z",
