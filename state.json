@@ -13811,15 +13811,6 @@
       "failures": 0,
       "feedback_since": "2026-10-24T09:57:30Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-10-24T09:52:07Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n- Pass 3 (revise) for #1770. Both review findings held and are fixed: \u00a78.8 row 75, BUILD.md row M 75, c075 header and BUILD-row comment, R1087's sentence now say each fused Activate keeps its own per-turn count (R1751000); \u00a711's R1751000 entry now also names \u00a78.8.\n- Verified: fmt, spec index/check, patches check, catalog check, c075 tests (12), clippy -p jackioh-cards. Only docs/comments changed this pass.\n- Gotcha: a shared CARGO_TARGET_DIR makes base/head builds overwrite one binary; touch crates/*/src/lib.rs to force a rebuild.\n## Log\n- Done; only the final report is left.\n- pass 3: fixing review's stale shared-count wording in \u00a78.8, BUILD.md, c075 header/comment, R1087; running checks\n- pass 3 done; checks green; only the final report is left.\n",
-        "provider": "claude-6",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its Strong final audit",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 1751,
       "kind": "revise",
