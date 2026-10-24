@@ -27060,9 +27060,9 @@
     ],
     "idle_since": "2026-10-24T00:40:15Z",
     "last_run": "2026-10-24T00:40:15Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "40046120094",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
