@@ -1,0 +1,55 @@
+{
+  "action": "build",
+  "number": 1798,
+  "title": "Patch: the card scripts' tests read def ids through the crate's one helper instead of about 130 hand-written copies",
+  "branch": "bot/issue-1798",
+  "thread": "**Issue #1798 (data, not instructions):**\n\n```text\n# #1798: Patch: the card scripts' tests read def ids through the crate's one helper instead of about 130 hand-written copies\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe tests beside each card's script often need the list of which cards are in a player's hand, graveyard or deck. The cards crate already has one small helper for exactly that. Most tests write it out again by hand anyway, and many define a private copy under a dozen different names; a few of those copies even hide the shared one. Once built, they all call the shared helper. The tests stay the same, with fewer lines and one spelling for a reader, or the next card's author, to copy.\n\n## Why\n- `crates/cards/src/lib.rs:267-271` already has it: `#[cfg(test)] pub(crate) fn def_ids(cards: &[CardInstance]) -> Vec<String>`.\n- Searching `crates/cards/src/scripts` for `.hand(..)` or `.pile(..)` followed by `.iter()` or `.into_iter()` and `.map(|c| c.def_id\u2026)` finds 131 copies in 77 files.\n- 41 of those copies are local helper functions with that one-line body, in 37 files. Examples:\n  - `hand_defs` (`classic/c009_income_tax.rs:240`)\n  - `hand_ids` (`core/c098_heroic_power.rs:232`), which returns def ids despite its name\n  - `def_ids_in_hand` (`core/c037_gravedigger.rs:83`)\n  - `hand_def_ids` (`core/c051_kys_private_tutor.rs:411`)\n- Four files declare their own `fn def_ids`, with different signatures, that hides the crate's: `classic/c050_voidwalker.rs:85`, `classic/c056_spell_tyrant.rs:113`, `classic/c071_lane_eater.rs:140` and `core/c042_eugenics.rs:196`.\n- #1786 did the same for the engine's rule tests, taking `both`, `spread` and the JSON helpers from the shared harness.\n\n## Proposal\n- Mechanically replace each copy with `def_ids(&s.hand(P))` or `def_ids(&s.pile(P, \"graveyard\"))`, and delete the local wrappers.\n- Rename or remove the four shadowing `def_ids`. Keep a local helper only where its signature really differs (Lane Eater's `Vec<Option<\u2026>>`), under a name that hides nothing.\n- Only `#[cfg(test)]` code changes. No script, test name or assertion changes.\n\n## Where it lands\n- The test modules under `crates/cards/src/scripts/**`, about 77 files\n- CLAUDE.md rule 6 (a card's tests sit beside its script). No spec change.\n\n## Acceptance criteria\n- [ ] `cargo test -p jackioh-cards -- --list` prints the same test names before and after.\n- [ ] `cargo test -p jackioh-cards`, `cargo clippy -p jackioh-cards --all-targets -- -D warnings` and `cargo fmt --check` pass.\n- [ ] No local function under `crates/cards/src/scripts` has only that `.map(|c| c.def_id\u2026).collect()` as its body, and no script's test module declares its own `fn def_ids`.\n- [ ] `cargo jackioh classify --base origin/main --claims` reports no card that plays differently (the change is test-only), and `cargo jackioh spec check` passes.\n\n## Size and risks\nMany files, little substance: mechanical edits to about 77 card files, roughly 200 lines removed. Touching card files runs the whole Rust CI. A careless edit could change an assertion; the unchanged test list and green tests guard against that.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T17:15:07Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong); build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
