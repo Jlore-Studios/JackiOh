@@ -491,6 +491,61 @@ mod candidate_actions_b14 {
         );
     }
 
+    /// R1759000: the stand-downs kept are the first the cut left out, not the first overall. With one
+    /// stand-down inside the width, the next `AI_SEARCH.position_switches` after it are added.
+    #[test]
+    fn r1759000_the_kept_stand_downs_are_the_first_the_cut_left_out() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-switches-left-out",
+            "p1": { "field": ["core-008", "core-008", "core-008"], "hand": ["core-003", "core-004", "core-011"], "mana": 5 },
+            "p2": { "field": ["core-030"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let stand_downs: Vec<ActionBody> = candidates
+            .iter()
+            .filter(|action| stands_down(&state, action))
+            .cloned()
+            .collect();
+        let first = candidates
+            .iter()
+            .position(|action| stands_down(&state, action))
+            .expect("a stand-down");
+        let width = first + 1;
+        let kept = AI_SEARCH.position_switches as usize;
+        assert!(stand_downs.len() >= 1 + kept);
+        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        assert_eq!(expanded[..width], candidates[..width]);
+        assert_eq!(expanded[width..width + kept], stand_downs[1..1 + kept]);
+        assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
+    }
+
+    /// R1759000: a unit no enemy unit would beat is not stood down: the same board against an equal
+    /// 4/4 has three switches to Defense and none of them is a stand-down, so the cut drops them all.
+    #[test]
+    fn r1759000_a_unit_no_enemy_would_beat_is_not_stood_down() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-switch-unthreatened",
+            "p1": { "field": ["core-008", "core-008", "core-008"], "hand": ["core-003", "core-004", "core-011"], "mana": 5 },
+            "p2": { "field": ["core-008"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let width = AI_BUDGET.branching;
+        assert!(
+            candidates
+                .iter()
+                .any(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+        );
+        assert!(!candidates.iter().any(|action| stands_down(&state, action)));
+        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        assert_eq!(expanded.len(), width + 1, "{expanded:?}");
+    }
+
     /// R1759000: only a stand-down is kept past the cut. A unit already in Defense Position keeps its
     /// switch back to Attack where the cut leaves it, as before.
     #[test]

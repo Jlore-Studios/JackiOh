@@ -107,7 +107,6 @@ fn expand(
     let stand_downs: Vec<ActionBody> = candidates
         .iter()
         .filter(|action| stands_down(state, action))
-        .take(AI_SEARCH.position_switches.max(0) as usize)
         .cloned()
         .collect();
     let mut moves: Vec<ActionBody> = candidates
@@ -118,11 +117,12 @@ fn expand(
         moves = prior_order(state, seat, moves, prior);
     }
     moves.truncate(width);
-    for stand_down in stand_downs {
-        if !moves.contains(&stand_down) {
-            moves.push(stand_down);
-        }
-    }
+    let left_out: Vec<ActionBody> = stand_downs
+        .into_iter()
+        .filter(|stand_down| !moves.contains(stand_down))
+        .take(AI_SEARCH.position_switches.max(0) as usize)
+        .collect();
+    moves.extend(left_out);
     if let Some(end) = end {
         moves.push(end);
     }

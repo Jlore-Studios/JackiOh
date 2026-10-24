@@ -44,15 +44,13 @@ fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
         .take(width)
         .cloned()
         .collect();
-    let stand_downs = candidates
+    let left_out: Vec<ActionBody> = candidates
         .iter()
-        .filter(|action| stands_down(state, action))
-        .take(AI_SEARCH.position_switches.max(0) as usize);
-    for stand_down in stand_downs {
-        if !moves.contains(stand_down) {
-            moves.push(stand_down.clone());
-        }
-    }
+        .filter(|action| stands_down(state, action) && !moves.contains(action))
+        .take(AI_SEARCH.position_switches.max(0) as usize)
+        .cloned()
+        .collect();
+    moves.extend(left_out);
     if candidates.contains(&ActionBody::EndTurn) {
         moves.push(ActionBody::EndTurn);
     }
