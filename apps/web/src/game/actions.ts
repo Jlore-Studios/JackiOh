@@ -929,6 +929,19 @@ function startActivation(
 }
 
 /**
+ * Picks a unit up to attack with it: the attacks `legal` lists for it become the candidates.
+ * R1200: while a Mayor acts the attack names no target, so the click sends it at once. `null` when
+ * `legal` offers the unit no attack.
+ */
+function startAttack(legal: readonly ActionBody[], attackerId: string): ClickResult | null {
+  const candidates = attacksBy(legal, attackerId);
+  if (candidates.length === 0) return null;
+  const only = candidates.length === 1 ? candidates[0] : undefined;
+  if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
+  return { interaction: { stage: "attacking", attackerId, candidates } };
+}
+
+/**
  * One click. A click that no candidate can account for returns the interaction unchanged and no
  * action: an illegal click is simply not a move.
  */
@@ -986,7 +999,10 @@ export function onClickTarget(
               candidate.attackerId === interaction.attackerId &&
               attackTargetTestid(view, candidate.targetId) === testid.card(target.instanceId),
           );
-        return action === undefined ? { interaction } : { interaction: IDLE, action };
+        if (action !== undefined) return { interaction: IDLE, action };
+        // The other attackers stay clickable (`highlightFor`), so a click on one switches the attack to
+        // it, as dragging it does (`planAttack`); a target of the picked attacker is read first, above.
+        return startAttack(legal, target.instanceId) ?? { interaction };
       }
       if (isBuilding(interaction)) {
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
@@ -1004,17 +1020,12 @@ export function onClickTarget(
         }
         return { interaction };
       }
-      const candidates = attacksBy(legal, target.instanceId);
-      if (candidates.length === 0) {
-        // R849000: legal offers this unit no attack; say why in the engine's words where the view gives
-        // them (`UnitView.attackReason`, on the viewer's own units only). Nothing is sent.
-        const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
-        return reason === undefined ? { interaction } : { interaction, notice: reason };
-      }
-      // R1200: while a Mayor acts the attack names no target, so the click sends it at once.
-      const only = candidates.length === 1 ? candidates[0] : undefined;
-      if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
-      return { interaction: { stage: "attacking", attackerId: target.instanceId, candidates } };
+      const started = startAttack(legal, target.instanceId);
+      if (started !== null) return started;
+      // R849000: legal offers this unit no attack; say why in the engine's words where the view gives
+      // them (`UnitView.attackReason`, on the viewer's own units only). Nothing is sent.
+      const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
+      return reason === undefined ? { interaction } : { interaction, notice: reason };
     }
 
     case "hero": {
