@@ -131,7 +131,7 @@
       "instanceId": "c22",
       "type": "play",
       "zone": {
-        "lane": 3,
+        "lane": 4,
         "row": "units"
       },
       "playerId": "p1",
@@ -181,7 +181,7 @@
       "instanceId": "c15",
       "type": "play",
       "zone": {
-        "lane": 4,
+        "lane": 3,
         "row": "units"
       },
       "playerId": "p1",
@@ -218,7 +218,7 @@
       "instanceId": "c12",
       "type": "play",
       "zone": {
-        "lane": 3,
+        "lane": 4,
         "row": "units"
       },
       "playerId": "p1",
@@ -295,14 +295,14 @@
       "nonce": "a20"
     },
     {
-      "attackerId": "c22",
+      "attackerId": "c15",
       "targetId": "hero-p2",
       "type": "attack",
       "playerId": "p1",
       "nonce": "a21"
     },
     {
-      "attackerId": "c15",
+      "attackerId": "c22",
       "targetId": "hero-p2",
       "type": "attack",
       "playerId": "p1",
