@@ -13811,7 +13811,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
-      "queued_at": "2026-10-24T06:21:31Z",
+      "queued_at": "2026-10-24T09:50:10Z",
       "round_tier": "medium",
       "run_id": "40069918348",
       "self_check_findings": [],
