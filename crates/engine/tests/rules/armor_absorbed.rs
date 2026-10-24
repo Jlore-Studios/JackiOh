@@ -255,7 +255,8 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
         let target = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({})); // 3/3
         grant(&mut state, &target.id, Keyword::Armor { n: 1 });
         state.players.p2.hero.armor = 2;
-        let (dealt, events) = hit_alone(&mut state, Some(&source.id), Aim::Unit(&target.id), 10, None);
+        let attacking = Some(json!({ "attacking": true }));
+        let (dealt, events) = hit_alone(&mut state, Some(&source.id), Aim::Unit(&target.id), 10, attacking);
         // 10 − 1 = 9 onto 3 health: 3 dealt and 6 trample on, of which p2's Armor takes 2 (R63).
         assert_eq!(dealt, 3);
         assert_eq!(

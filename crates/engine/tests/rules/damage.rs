@@ -467,18 +467,32 @@ mod the_damage_pipeline_s4_4_m2_t3 {
     }
 
     #[test]
-    fn r63_step_9_trample_sends_only_the_excess_to_the_target_s_hero_from_non_combat_damage_too() {
+    fn r63_r1750000_step_9_trample_sends_only_the_excess_to_the_target_s_hero_from_the_hits_of_an_attack_alone()
+     {
+        let attacking = || Some(json!({ "attacking": true }));
         let mut state = game();
         let source = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({}));
         let target = put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         let spare = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
+        let other = put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({}));
         with_sink(&mut state, |sink| {
-            // No combat flag: Trample applies to any damage the unit deals.
-            assert_eq!(hit(sink, Some(&source.id), on_unit(&target.id), 10, None), 3);
+            // R1750000: damage that is no hit of an attack, a strike back or a card's text, never
+            // tramples, whatever the source's keywords: the whole 10 lands on the unit.
+            assert_eq!(hit(sink, Some(&source.id), on_unit(&other.id), 10, None), 10);
+            assert_eq!(live(sink.state, &other.id).damage, 10);
+            assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH);
+            assert_eq!(events_of_type(sink.events, GameEventType::Damage).len(), 1);
+
+            // A hit of the attack: only the excess goes to the hero, as its own instance.
+            assert_eq!(
+                hit(sink, Some(&source.id), on_unit(&target.id), 10, attacking()),
+                3
+            );
             assert_eq!(live(sink.state, &target.id).damage, 3);
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH - 7);
             let hits: Vec<(String, i32, bool)> = events_of_type(sink.events, GameEventType::Damage)
                 .iter()
+                .skip(1)
                 .map(|event| match event {
                     GameEvent::Damage {
                         target_id,
@@ -495,9 +509,9 @@ mod the_damage_pipeline_s4_4_m2_t3 {
             );
 
             // Nothing beyond the target's health means no second instance.
-            assert_eq!(hit(sink, Some(&source.id), on_unit(&spare.id), 2, None), 2);
+            assert_eq!(hit(sink, Some(&source.id), on_unit(&spare.id), 2, attacking()), 2);
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH - 7);
-            assert_eq!(events_of_type(sink.events, GameEventType::Damage).len(), 3);
+            assert_eq!(events_of_type(sink.events, GameEventType::Damage).len(), 4);
         });
 
         // Trample plus Lifesteal heals the total damage once: 3 to the unit and 7 to the hero.
@@ -510,7 +524,10 @@ mod the_damage_pipeline_s4_4_m2_t3 {
         );
         let victim = put(&mut both, &plain.id, slot(P2, Row::Units, 1), json!({}));
         with_sink(&mut both, |sink| {
-            assert_eq!(hit(sink, Some(&drainer.id), on_unit(&victim.id), 10, None), 3);
+            assert_eq!(
+                hit(sink, Some(&drainer.id), on_unit(&victim.id), 10, attacking()),
+                3
+            );
             assert_eq!(sink.state.players[P2].hero.health, HERO_HEALTH - 7);
             assert_eq!(amounts(sink.events, GameEventType::Healed), vec![3, 7]);
             assert_eq!(sink.state.players[P1].hero.health, HERO_HEALTH + 10);

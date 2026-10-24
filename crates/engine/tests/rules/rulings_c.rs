@@ -2637,6 +2637,14 @@ mod spec_11_r113_the_work_cursor_m3_gate {
 mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
     use super::*;
 
+    /// The flags of an attacker's own hit: the damage a Unit's Trample applies to (R1750000).
+    fn attacking() -> Option<DamageFlags> {
+        Some(DamageFlags {
+            attacking: Some(true),
+            ..DamageFlags::default()
+        })
+    }
+
     #[test]
     fn r114_deals_nothing_to_a_unit_already_at_0_health_and_sends_the_whole_trample_amount_to_its_hero() {
         let mut state = game("r114-zero-health");
@@ -2678,7 +2686,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                             instance: control_victim.clone(),
                         },
                         amount: 5,
-                        flags: None,
+                        flags: attacking(),
                     },
                 )
             }),
@@ -2737,7 +2745,7 @@ mod spec_11_r114_r116_the_damage_pipeline_and_the_stat_layers_m3_gate {
                         instance: at_zero.clone(),
                     },
                     amount: 5,
-                    flags: None,
+                    flags: attacking(),
                 },
             )
         });

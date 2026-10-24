@@ -712,6 +712,17 @@ fn hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> Damag
     }
 }
 
+/// A hit of the source's own attack, the damage a Unit's Trample applies to (R1750000).
+fn attack_hit(source: Option<CardInstance>, target: DamageTarget, amount: i32) -> DamageArgs {
+    DamageArgs {
+        flags: Some(DamageFlags {
+            attacking: Some(true),
+            ..DamageFlags::default()
+        }),
+        ..hit(source, target, amount)
+    }
+}
+
 /// `{ kind: "costDiscount", amount, minCurrentCost? }`.
 fn cost_discount(amount: i32, min_current_cost: Option<i32>) -> ModifierKind {
     ModifierKind::CostDiscount {
@@ -1642,7 +1653,7 @@ mod spec_11_rulings_r43_r84_m3_gate {
         // Trample: up to the unit's health lands on it, the rest on its controller's hero.
         let tramp = put(sink.state, TRAMPLER, slot(P1, UNITS, 1), json!({})); // 6/4 Trample
         let blocker = put(sink.state, SMALL, slot(P2, UNITS, 1), json!({})); // 1/2
-        deal_damage(&mut sink, hit(Some(tramp.clone()), unit_hit(&blocker), 6));
+        deal_damage(&mut sink, attack_hit(Some(tramp.clone()), unit_hit(&blocker), 6));
         assert_eq!(instance_in(sink.state, &blocker.id).damage, 2);
         assert_eq!(sink.state.players.p2.hero.health, HERO_HEALTH - 4);
 
@@ -1694,7 +1705,10 @@ mod spec_11_rulings_r43_r84_m3_gate {
         let mut leech_sink = sink_for(&mut leech_game);
         let leech = put(leech_sink.state, TRAMPLE_LEECH, slot(P1, UNITS, 1), json!({}));
         let chump = put(leech_sink.state, SMALL, slot(P2, UNITS, 1), json!({}));
-        deal_damage(&mut leech_sink, hit(Some(leech.clone()), unit_hit(&chump), 6));
+        deal_damage(
+            &mut leech_sink,
+            attack_hit(Some(leech.clone()), unit_hit(&chump), 6),
+        );
         assert_eq!(leech_sink.state.players.p1.hero.health, HERO_HEALTH + 6);
 
         // Poisonous only affects units.

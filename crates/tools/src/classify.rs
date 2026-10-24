@@ -32,6 +32,7 @@ use std::process::Command as Process;
 
 use anyhow::{Context, Result, bail};
 use jackioh_cards::register_all;
+use jackioh_engine::config::CRAFT_ID_PREFIX;
 use jackioh_engine::wire::SetName;
 use jackioh_engine::{GameState, find_instance};
 use serde::{Deserialize, Serialize};
@@ -556,7 +557,9 @@ pub(crate) fn differing_strings(a: &Value, b: &Value, out: &mut BTreeSet<String>
     }
 }
 
-/// The shipped families the strings name, as catalog ids or as the instances of `state`.
+/// The shipped families the strings name, as catalog ids or as the instances of `state`. A crafted
+/// definition (Meditative #17, `craft:#…`) is made in the game and ships in no patch, so it names no
+/// family, and a fragment could not claim it (`patches check`).
 fn families_named(strings: &BTreeSet<String>, head: &Side, state: &GameState) -> BTreeSet<String> {
     strings
         .iter()
@@ -568,7 +571,7 @@ fn families_named(strings: &BTreeSet<String>, head: &Side, state: &GameState) ->
             }
         })
         .flat_map(|id| fused_parts(state, &id))
-        .filter(|id| head.ships(id))
+        .filter(|id| !id.starts_with(CRAFT_ID_PREFIX) && head.ships(id))
         .map(|id| family(&id))
         .collect()
 }
@@ -1214,6 +1217,27 @@ mod tests {
                 "core-067".to_string(),
                 "core-079".to_string(),
             ])
+        );
+    }
+
+    #[test]
+    fn r1365000_a_crafted_card_is_no_shipped_family() {
+        register_all();
+        let mut game = jackioh_engine::testkit::scenario(json!({
+            "seed": "classify-crafted",
+            "p1": { "backrow": [{ "def": "core-079" }] },
+        }));
+        let id = game
+            .backrow(jackioh_engine::PlayerId::P1, 1)
+            .expect("the card is set")
+            .id;
+        jackioh_engine::find_instance_mut(game.state_mut(), &id)
+            .expect("the card is set")
+            .def_id = format!("{CRAFT_ID_PREFIX}#08aa72a2f2df2633");
+        let head = side(vec![], &[SetName::Core]);
+        assert_eq!(
+            families_named(&BTreeSet::from([id]), &head, game.state()),
+            BTreeSet::new()
         );
     }
 
