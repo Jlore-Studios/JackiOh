@@ -12626,6 +12626,13 @@
     "1798": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T19:24:45Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the rule's 'about 40 files or more' line: 86 files change, though every edit is a mechanical, test-only rewrite (a planner dry run kept all 7,004 card tests green)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
