@@ -13353,7 +13353,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-24T03:12:51Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:3f9eb1df-1792813943",
+      "run_id": "40060096522",
       "started_at": "2026-10-24T03:52:41Z",
       "stop_requested": false,
       "suggestion": true,
