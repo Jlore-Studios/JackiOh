@@ -360,29 +360,29 @@ mod tests {
             }
 
             #[test]
-            fn r1087_a_fused_activate_shares_the_trees_once_a_turn_use() {
+            fn r1751000_r1087_fused_activates_have_separate_cooldowns_and_can_both_activate_in_one_turn() {
                 // The Power to Thrive: "Activate: Choose one: heal, draw or gain mana."
                 let mut s = narrowed("tree-shared", &[THRIVE]);
                 let tree = s.card(TREE).id.clone();
                 grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], THRIVE);
-                // The Tree's use is spent, so the fused Activate is refused this turn.
-                s.expect_refused(|s| {
-                    s.activate(
-                        tree.as_str(),
-                        json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
-                    )
-                });
-                // Next turn the fused Activate spends the one use, and the Tree's own is refused.
-                s.end_turn();
-                s.end_turn();
+                // Under R1751000 (amending R1087), each activate has its own cooldown and use count.
+                // The fused Activate can be activated in the same turn as grow!
                 let hand = s.hand(P1).len();
                 s.activate(
                     tree.as_str(),
                     json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
                 );
                 assert_eq!(s.hand(P1).len(), hand + 1, "the fused Activate drew");
+
+                // Both abilities are now spent for this turn.
                 s.expect_refused(|s| s.activate(tree.as_str(), json!({ "ability": "grow" })));
+                s.expect_refused(|s| {
+                    s.activate(
+                        tree.as_str(),
+                        json!({ "ability": THRIVE_ABILITY, "modes": ["draw"] }),
+                    )
+                });
             }
 
             #[test]

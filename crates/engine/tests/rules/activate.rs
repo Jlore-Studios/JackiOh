@@ -1612,3 +1612,97 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         );
     }
 }
+
+mod r1751000_fused_activates_have_separate_cooldowns {
+    use super::*;
+
+    #[test]
+    fn r1751000_each_ability_on_a_fused_card_tracks_its_uses_separately() {
+        let mut state = playing("fused-separate-uses");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card);
+        assert_eq!(ability_ids(&state, &card.id), vec!["zap", "recall"]);
+
+        // Ability 1 ("recall") activated.
+        let state = act(&state, activate(P1, &card.id, json!({ "ability": "recall" }))).0;
+        assert_eq!(notes(&state), vec!["recall:spell"]);
+
+        // Ability 2 ("zap") is still usable in the same turn!
+        assert_eq!(why_not(&state, P1, &card.id, Some("zap")), None);
+
+        // Ability 1 cannot be activated again this turn.
+        assert_eq!(
+            why_not(&state, P1, &card.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+
+        // Activate ability 2 ("zap") in the same turn.
+        let state = act(
+            &state,
+            activate(
+                P1,
+                &card.id,
+                json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
+            ),
+        )
+        .0;
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - ZAPPER_DAMAGE);
+
+        // Now both abilities have spent their uses for this turn.
+        assert_eq!(
+            why_not(&state, P1, &card.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+        assert_eq!(
+            why_not(&state, P1, &card.id, Some("zap")),
+            Some("that ability has already been used this turn".to_string())
+        );
+    }
+
+    #[test]
+    fn r1751000_activation_views_report_independent_uses_left_per_ability() {
+        let mut state = playing("fused-views");
+        let card_inst = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card_inst.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card_inst);
+
+        let live_card = card(&state, &card_inst.id);
+        let views =
+            jackioh_engine::subsystems::activate::activation_views_for(&state, P1, live_card).unwrap();
+        let zap_view = views.iter().find(|v| v.ability == "zap").unwrap();
+        let recall_view = views.iter().find(|v| v.ability == "recall").unwrap();
+        assert_eq!(zap_view.uses_left, Some(1));
+        assert!(zap_view.usable);
+        assert_eq!(recall_view.uses_left, Some(1));
+        assert!(recall_view.usable);
+
+        // Activate recall
+        let state = act(
+            &state,
+            activate(P1, &card_inst.id, json!({ "ability": "recall" })),
+        )
+        .0;
+        let live_card = card(&state, &card_inst.id);
+        let views =
+            jackioh_engine::subsystems::activate::activation_views_for(&state, P1, live_card).unwrap();
+        let zap_view = views.iter().find(|v| v.ability == "zap").unwrap();
+        let recall_view = views.iter().find(|v| v.ability == "recall").unwrap();
+        assert_eq!(zap_view.uses_left, Some(1));
+        assert!(zap_view.usable);
+        assert_eq!(recall_view.uses_left, Some(0));
+        assert!(!recall_view.usable);
+    }
+}

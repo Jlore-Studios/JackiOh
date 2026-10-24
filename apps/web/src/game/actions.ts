@@ -93,6 +93,7 @@ export type FaceDownChoice = RevealAt | "up";
 
 /** The R81 play-time choices (and an activation's), as the client accumulates them. */
 export type PlayBuild = {
+  ability?: string;
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
@@ -134,6 +135,7 @@ export function isBuilding(interaction: Interaction): interaction is Building {
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
 export type PlayNeed =
+  | { kind: "ability"; min: number; max: number; abilities: string[] }
   | { kind: "faceDown"; min: number; max: number; options: FaceDownChoice[] }
   | { kind: "zone"; min: number; max: number; zones: ZoneChoice[] }
   | { kind: "x"; min: number; max: number; values: number[] }
@@ -328,8 +330,7 @@ export function activationControlTestids(view: PlayerView, body: ActivationBody)
   if (body.type === "activate") {
     const listed = activationsOnField(view, body.instanceId);
     if (listed !== null && listed.length > 0) {
-      const ability = body.ability === undefined ? undefined : namedAbility(listed.length, body.ability);
-      out.push(testid.activate(body.instanceId, ability));
+      out.push(testid.activate(body.instanceId));
     }
   }
   if (out.length === 0) out.push(body.type === "activatePower" ? testid.power : testid.activate(body.instanceId));
@@ -342,6 +343,7 @@ export function activationControlTestids(view: PlayerView, body: ActivationBody)
 
 /** Every choice field a build body can carry, read the same way off a play or an activation. */
 type BuildFields = {
+  ability?: string;
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
@@ -370,6 +372,9 @@ function containsAll(fixed: readonly string[], wanted: readonly string[]): boole
  */
 function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   const fixed = fieldsOf(candidate);
+  if (picked.ability !== undefined && fixed.ability !== undefined && fixed.ability !== picked.ability) {
+    return false;
+  }
   // ME-ALTPLAY: face-up is the absence of a timing, compared strictly.
   if (picked.faceDown !== undefined && (fixed.faceDown ?? "up") !== picked.faceDown) return false;
   // A picked zone excludes a candidate that fixes none: a board click never carries through.
@@ -434,6 +439,7 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
     case "activate": {
       const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
       const body: ActivateBody = { ...rest };
+      if (picked.ability !== undefined) body.ability = picked.ability;
       if (tributes !== undefined) body.tributes = tributes;
       if (targets !== undefined) body.targets = targets;
       if (modes !== undefined) body.modes = modes;
@@ -473,6 +479,12 @@ export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   const remaining = remainingCandidates(interaction);
   if (remaining.length < 2) return null;
   const fields = remaining.map(fieldsOf);
+
+  // R1751000: an activation with several abilities asks which one first.
+  if (interaction.stage === "activating" && interaction.picked.ability === undefined) {
+    const abilities = [...new Set(fields.flatMap((c) => (c.ability === undefined ? [] : [c.ability])))];
+    if (abilities.length > 1) return { kind: "ability", min: 1, max: 1, abilities };
+  }
 
   // ME-ALTPLAY: how it is played is asked before anything else, face-up first.
   if (interaction.picked.faceDown === undefined) {
@@ -901,7 +913,7 @@ function startActivation(
     instanceId: target.instanceId,
     ...(target.ability === undefined ? {} : { ability: target.ability }),
     candidates,
-    picked: {},
+    picked: target.ability === undefined ? {} : { ability: target.ability },
   });
 }
 
