@@ -12805,6 +12805,14 @@
       "started_at": "2026-10-24T15:44:14Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "1806": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-24T17:37:55Z",
+      "issue": 1792,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
