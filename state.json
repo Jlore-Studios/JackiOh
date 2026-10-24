@@ -12394,6 +12394,13 @@
     "1791": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T17:35:08Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Line 9 (stands alone) can't be checked offline: I have no GitHub access, and the remote branches claude/dreamy-edison-6fsjp1 and claude/v02-classic-balance-1 touch actions.ts. Every other easy line holds."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
