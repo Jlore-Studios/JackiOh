@@ -14285,11 +14285,13 @@
         "by": "`claude` (strong)",
         "sha": "131d46be6ac0767e8fc555d1f7b921c8e67a4b3a"
       },
+      "closed_at": "2026-10-24T08:42:38Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-24T07:35:20Z",
       "issue": 1777,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
