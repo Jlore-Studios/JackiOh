@@ -13777,6 +13777,7 @@
     "1770": {
       "action": "revise",
       "asks": [],
+      "died": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-24T04:15:09Z",
@@ -13784,7 +13785,7 @@
       "kind": "revise",
       "pending_request": false,
       "provider": "agy",
-      "queued_at": "2026-10-24T05:46:13Z",
+      "queued_at": "2026-10-24T06:21:31Z",
       "run_id": "40067564839",
       "self_check_findings": [],
       "source": "conflict",
