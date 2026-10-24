@@ -13194,7 +13194,9 @@
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
+      "pr": 1763,
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-10-23T22:27:40Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
@@ -13202,7 +13204,7 @@
       "started_at": "2026-10-24T01:11:34Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1751": {
       "action": "build",
