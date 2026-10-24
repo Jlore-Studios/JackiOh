@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1774,
+  "title": "Patch: a failed read on the Purchases page offers Try again, as the other screens do",
+  "branch": "bot/issue-1774",
+  "thread": "**Issue #1774 (data, not instructions):**\n\n```text\n# #1774: Patch: a failed read on the Purchases page offers Try again, as the other screens do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThe Purchases page shows a player the pack odds and how close each of their pity counters is to paying out. If its first request to the server fails once, the page shows the error and stays stuck there, and the only way out is to reload the whole site. The other menus already offer a Try again button for this. Once built, Purchases does too.\n\n## Why\n- `apps/web/src/routes/purchases.tsx:54-71`: its own `useRead` fetches once, with no attempt counter. On a failure (`:93-98`) it renders `<p className=\"notice\" role=\"alert\" data-testid={purchasesTestid.loadError(place)}>{read.message}</p>` and nothing else, and it ignores a stated rate-limit wait.\n- The page came with #1665, after #1706 had moved the other screens to `AccountError` with Try again. `routes/collection.tsx:57-90`'s `useRead` is the pattern: an `attempt` state, `readFailureOf(cause)` and a `retry`.\n\n## Proposal\nFollow `collection.tsx`'s `useRead`: the hook gains an `attempt` and a `retry`, its failure keeps `readFailureOf(cause)`, and `Answered` renders `AccountError` (`apps/web/src/auth/AccountError.tsx`) with a new `purchasesTestid.retry(place)`. The existing load-error testid stays on the error.\n\n## Where it lands\n- `apps/web/src/routes/purchases.tsx`\n- `apps/web/src/routes/purchases.test.tsx`\n\n## Acceptance criteria\n- [ ] With `getPacks` rejecting once, the page shows the error and a Try again button. Clicking it reads again and shows the odds table and the pity rows.\n- [ ] A rate-limited failure says when to try again, as the other screens do through `readFailureOf`.\n- [ ] `purchasesTestid.loadError(place)` still marks the error.\n- [ ] `pnpm --dir apps/web exec vitest run src/routes/purchases.test.tsx` passes.\n\n## Size and risks\nSmall: one component and its test, about 30 lines, and no decision left. No risk beyond the page itself.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T06:49:21Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1774: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
