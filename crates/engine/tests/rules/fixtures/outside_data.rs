@@ -16,7 +16,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::setup_catalog;
+use super::harness::{both, setup_catalog};
 
 /// The vanilla units the fuse and code fixtures name (`super::catalog::vanilla_catalog`'s).
 pub const FIRST_UNIT: &str = "fx-1";
@@ -43,13 +43,6 @@ fn spell(name: &str, index: i32, cost: i32, extra: Value) -> CardDef {
         }
     }
     json_as(card)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// M+ #18's last clause as a fixture: "the AI plays the rest of your turn" (R1183002).

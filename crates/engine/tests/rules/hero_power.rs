@@ -31,23 +31,13 @@ use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::feng_shui::{FS, register_feng_shui};
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, new_game, put, set_library, sink_for, slot,
+    events_json, events_of_type, in_hand, json_of, new_game, put, set_library, sink_for, slot, spread,
 };
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
 // ---------------------------------------------------------------------------
 // Fixtures: this file's stand-in for #98 and the three tokens it summons by index.
 // ---------------------------------------------------------------------------
-
-/// TS `{ ...base, ...extra }`: the keys `extra` names replace the defaults'.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
-        for (key, value) in extra {
-            base.insert(key, value);
-        }
-    }
-    base
-}
 
 /// TS `def(name, type, extra)`; `index` is the value TS's running `nextIndex` (from 1600) gives it.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
@@ -242,10 +232,6 @@ fn name_of<T: Serialize>(name: T) -> String {
 fn is_power_name(value: Option<&Value>) -> bool {
     let names = json_of(HERO_POWER_NAMES);
     value.is_some_and(|value| names.as_array().is_some_and(|names| names.contains(value)))
-}
-
-fn events_json(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind).into_iter().map(json_of).collect()
 }
 
 fn def_ids(cards: &[&CardInstance]) -> Vec<String> {

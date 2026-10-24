@@ -11,7 +11,7 @@ use crate::rules::fixtures::generation::{
     act, body, classic_plus_unit, classic_spell, classic_unit, frozen, fuse_a, fuse_b, hand_card, immutable,
     juhan, playing, replayed,
 };
-use crate::rules::fixtures::harness::{events_of_type, matches_object, put, sink_for, slot};
+use crate::rules::fixtures::harness::{events_json, events_of_type, matches_object, put, sink_for, slot};
 
 fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>) {
     let mut ctx = make_context(
@@ -50,14 +50,6 @@ fn pile(state: &mut GameState, def_ids: &[String], owner: PlayerId) -> Vec<CardI
         placed.push(card);
     }
     placed
-}
-
-/// `eventsOfType(events, kind)`, each event as its JSON.
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .into_iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
 }
 
 /// `state.players.p1.units[index]?.[0]`.
@@ -122,7 +114,7 @@ mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
             .map(|applied| applied.events.clone())
             .unwrap_or_default();
         assert_eq!(
-            of_type(&applied, GameEventType::Transformed)
+            events_json(&applied, GameEventType::Transformed)
                 .into_iter()
                 .map(|event| json!([event["fromDefId"], event["toDefId"]]))
                 .collect::<Vec<_>>(),
@@ -338,12 +330,12 @@ mod e24_a_card_becomes_a_random_card_of_a_pool_classic_plus_73_1 {
             nonce: "transform-view".to_string(),
             events,
         });
-        let theirs = of_type(&view_for(state, PlayerId::P2).events, GameEventType::Transformed).pop();
+        let theirs = events_json(&view_for(state, PlayerId::P2).events, GameEventType::Transformed).pop();
         assert!(theirs.is_some_and(|event| matches_object(
             &event,
             &json!({ "instanceId": HIDDEN_ID, "fromDefId": HIDDEN_ID, "toDefId": HIDDEN_ID })
         )));
-        let mine = of_type(&view_for(state, PlayerId::P1).events, GameEventType::Transformed).pop();
+        let mine = events_json(&view_for(state, PlayerId::P1).events, GameEventType::Transformed).pop();
         assert!(mine.is_some_and(|event| matches_object(&event, &json!({ "toDefId": classic_unit.id }))));
     }
 }

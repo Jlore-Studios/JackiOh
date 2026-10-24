@@ -17,7 +17,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game, translator};
 use crate::rules::fixtures::scripts::cn_virus;
 
@@ -69,10 +69,6 @@ fn live(state: &GameState, id: &str) -> CardInstance {
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("a card")
-}
-
-fn js<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn is_cn(state: &GameState, id: &str) -> bool {
@@ -133,7 +129,7 @@ mod r1176000_every_card_in_chinese_is_cn {
         assert!(!is_cn(&state, &spell.id));
         // A pool reads printed tags: the translated cards join no CN pool.
         let pool_after = jackioh_engine::catalog::query(&json_as(json!({ "tags": ["CN"] })));
-        assert_eq!(js(&pool_after), js(&pool_before));
+        assert_eq!(json_of(&pool_after), json_of(&pool_before));
         assert!(
             !pool_after
                 .iter()
@@ -220,7 +216,7 @@ mod r1176000_every_card_in_chinese_is_cn {
             tags_of(&state, &live(&state, &virus.id)),
             vec![Tag::Token, Tag::Cn]
         );
-        let mine = js(&view_for(&state, P1));
+        let mine = json_of(view_for(&state, P1));
         let shown = mine["you"]["hand"]
             .as_array()
             .expect("a hand")
@@ -244,8 +240,8 @@ mod r1176000_every_card_in_chinese_is_cn {
         translate_card(&mut state, &deck.id);
 
         // The unit: both seats read it, so both views list its CN.
-        let mine = js(&view_for(&state, P1));
-        let theirs = js(&view_for(&state, P2));
+        let mine = json_of(view_for(&state, P1));
+        let theirs = json_of(view_for(&state, P2));
         assert_eq!(mine["you"]["units"][0]["tags"], json!(["CN"]));
         assert_eq!(theirs["opponent"]["units"][0]["tags"], json!(["CN"]));
         // The hand card and the face-down trap: their controller's alone (R1301, R351).

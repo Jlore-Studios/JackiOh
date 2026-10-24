@@ -13,8 +13,6 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use serde::Serialize;
-
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD,
     duos_ai_team,
@@ -34,7 +32,7 @@ use jackioh_engine::wire::{
 };
 
 use crate::rules::fixtures::catalog::{vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{play_random_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{both, json_of, play_random_game, put, setup_catalog, slot};
 
 // ---------------------------------------------------------------------------------------------
 // Fixture cards
@@ -158,13 +156,6 @@ fn catalog() -> CardDefs {
         defs.insert(def.id.clone(), def);
     }
     defs
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// A Spell whose resolution is `make`'s effects.
@@ -610,10 +601,6 @@ fn expect_result(state: &DuosState, outcome: DuosOutcome, winner: Option<Team>, 
         assert_eq!(seen.winner, winner, "{seat}");
         assert_eq!(seen.reason, result.reason, "{seat}");
     }
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn find_key<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {

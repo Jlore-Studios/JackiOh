@@ -17,7 +17,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::new_game;
+use super::harness::{both, new_game};
 
 /// A face as the JSON a def literal takes.
 fn face(text: &str, extra: Value) -> Value {
@@ -68,13 +68,6 @@ fn unit(name: &str, index: i32, attack: i32, health: i32, extra: Value) -> CardD
         }
     }
     def(name, index, "Unit", faces)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 // E19 Plague Counters.

@@ -20,7 +20,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 
 use super::catalog::vanilla_deck;
-use super::harness::setup_catalog;
+use super::harness::{both, setup_catalog};
 
 /// TS `def(name, overrides = {})`: a Core Common 2/2 Unit at cost 1 (4/4 Radiant) whose faces print
 /// `name`, `overrides` over it.
@@ -44,13 +44,6 @@ fn def(name: &str, index: i32, overrides: Value) -> CardDef {
         }
     }
     json_as(card)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// Classic+ #74's printed Brittle on a Unit: Brittle 2, Radiant Brittle 4.

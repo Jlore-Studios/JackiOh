@@ -13,16 +13,7 @@ use jackioh_engine::state::{CardInstance, GameState, clone_state, find_instance_
 use jackioh_engine::state_check::state_check;
 
 use super::fixtures::damage_combat::{bolt, grunt, playing, rattle, snake, wall, warded};
-use super::fixtures::harness::{in_hand, put, slot};
-
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
+use super::fixtures::harness::{events_json, in_hand, put, slot};
 
 /// A JSON string field, as an owned string.
 fn text(value: &Value, key: &str) -> String {
@@ -93,7 +84,7 @@ mod e37_damage_split {
     fn classic_plus_3s_death_one_1_damage_hit_per_token_on_a_random_enemy_deterministic_from_the_seed() {
         let mut one = build();
         let events = snake_dies(&mut one.state);
-        let hits = of_type(&events, "damage");
+        let hits = events_json(&events, "damage");
         assert_eq!(hits.len(), 3);
         for hit in &hits {
             assert_eq!(text(hit, "sourceId"), one.snake_id);
@@ -102,7 +93,7 @@ mod e37_damage_split {
         }
         // The same seed and board draw the same enemies (R60: the match rng).
         let mut two = build();
-        let again = of_type(&snake_dies(&mut two.state), "damage");
+        let again = events_json(&snake_dies(&mut two.state), "damage");
         assert_eq!(
             again.iter().map(|hit| text(hit, "targetId")).collect::<Vec<_>>(),
             hits.iter().map(|hit| text(hit, "targetId")).collect::<Vec<_>>()
@@ -131,7 +122,7 @@ mod e37_damage_split {
                 HookOptions::default(),
                 json!({ "amount": 6, "among": "enemies" }),
             );
-            let hits = of_type(&events, "damage");
+            let hits = events_json(&events, "damage");
             assert_eq!(hits.len(), 6);
             assert!(
                 hits.iter()
@@ -164,7 +155,7 @@ mod e37_damage_split {
             json!({ "amount": 5, "perHit": 2, "among": "enemyUnits" }),
         );
         assert_eq!(
-            of_type(&events, "damage")
+            events_json(&events, "damage")
                 .iter()
                 .map(|hit| json!([hit["targetId"], hit["amount"]]))
                 .collect::<Vec<_>>(),
@@ -211,7 +202,7 @@ mod e37_damage_split {
             json!({ "amount": 4, "among": "enemies" }),
         );
         assert_eq!(
-            of_type(&events, "damage")
+            events_json(&events, "damage")
                 .iter()
                 .map(|hit| text(hit, "targetId"))
                 .collect::<Vec<_>>(),

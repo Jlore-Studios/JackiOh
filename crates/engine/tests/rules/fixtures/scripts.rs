@@ -7,15 +7,7 @@ use jackioh_engine::effects;
 use jackioh_engine::subsystems::hero_power::{POWER_RESUME, STEADY_SHOT_PARAM, hero_power, power_abilities};
 use jackioh_engine::testkit::*;
 
-/// `b`'s keys replace `a`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
+use super::harness::spread;
 
 /// "All enemies": every enemy unit plus the enemy hero, one instance each (R51).
 fn damage_all_enemies(amount: i32) -> Effect {

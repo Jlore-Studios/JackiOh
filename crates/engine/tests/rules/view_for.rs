@@ -14,21 +14,14 @@ use jackioh_engine::effects::steal::steal;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, matches_object, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    in_hand, json_of, matches_object, new_game, put, set_library, slot, spread,
+};
 
 // Fixtures
 
 /// Every definition below takes the next index from here.
 const FIRST_INDEX: i32 = 1300;
-
-/// `extra`'s keys replace `base`'s.
-fn spread(base: &mut Value, extra: Value) {
-    if let (Some(base), Value::Object(extra)) = (base.as_object_mut(), extra) {
-        for (key, value) in extra {
-            base.insert(key, value);
-        }
-    }
-}
 
 fn def(next_index: &mut i32, name: &str, type_: &str, extra: Value) -> CardDef {
     *next_index += 1;
@@ -45,7 +38,7 @@ fn def(next_index: &mut i32, name: &str, type_: &str, extra: Value) -> CardDef {
         "base": { "keywords": [], "text": name },
         "radiant": { "keywords": [], "text": name },
     });
-    spread(&mut literal, extra);
+    literal = spread(literal, extra);
     json_as(literal)
 }
 
@@ -54,7 +47,7 @@ fn unit(next_index: &mut i32, name: &str, extra: Value) -> CardDef {
         "base": { "attack": 2, "health": 3, "keywords": [], "text": name },
         "radiant": { "attack": 4, "health": 6, "keywords": [], "text": name },
     });
-    spread(&mut literal, extra);
+    literal = spread(literal, extra);
     def(next_index, name, "Unit", literal)
 }
 
@@ -178,10 +171,6 @@ fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn to_json(value: impl serde::Serialize) -> Value {
-    serde_json::to_value(value).expect("a view serialises")
 }
 
 fn serialized(view: &PlayerView) -> String {
@@ -369,7 +358,7 @@ mod view_for_10_8_m3_t6 {
         assert_eq!(view.you.library_count, state.players.p1.library.len() as i32);
         assert_eq!(view.opponent.library_count, their_library.len() as i32);
         // Units are public on both sides; the two traps are markers and the Field Spell is not.
-        let v = to_json(&view);
+        let v = json_of(&view);
         expect_match(
             &v["opponent"]["units"][0],
             json!({ "defId": their_unit.def_id, "attack": 3, "health": 3, "buried": 0 }),
@@ -414,7 +403,7 @@ mod view_for_10_8_m3_t6 {
             }
         );
         expect_match(
-            &to_json(&their_view)["you"]["backrow"][0],
+            &json_of(&their_view)["you"]["backrow"][0],
             json!({ "faceDown": false, "defId": d.secret_trap.id }),
         );
     }
@@ -429,7 +418,7 @@ mod view_for_10_8_m3_t6 {
 
         let view = view_for(&state, PlayerId::P1);
         expect_match(
-            &to_json(own_hand(&view)),
+            &json_of(own_hand(&view)),
             json!([
                 { "instanceId": mine[0].id, "defId": plain.id, "radiant": false, "cost": 1 },
                 { "instanceId": mine[1].id, "defId": plain.id, "radiant": true, "cost": 1 },
@@ -443,7 +432,7 @@ mod view_for_10_8_m3_t6 {
                 count: theirs.len() as i32
             }
         );
-        assert_eq!(keys_of(&to_json(&view.opponent.hand)), vec!["count".to_string()]);
+        assert_eq!(keys_of(&json_of(&view.opponent.hand)), vec!["count".to_string()]);
     }
 
     #[test]
@@ -507,11 +496,11 @@ mod view_for_10_8_m3_t6 {
                 (&view.opponent, &view.you)
             };
             expect_match(
-                &to_json(&own.graveyard),
+                &json_of(&own.graveyard),
                 json!([{ "instanceId": my_grave.id, "defId": my_grave.def_id, "radiant": false, "cost": 1 }]),
             );
             expect_match(
-                &to_json(&own.exile),
+                &json_of(&own.exile),
                 json!([{ "instanceId": my_exile.id, "defId": my_exile.def_id, "radiant": false, "cost": 1 }]),
             );
             // The opponent's piles too: nothing about a graveyard or an exile pile is hidden.
@@ -557,8 +546,8 @@ mod view_for_10_8_m3_t6 {
             Default::default(),
         );
 
-        let mine = to_json(view_for(&state, PlayerId::P1));
-        let theirs = to_json(view_for(&state, PlayerId::P2));
+        let mine = json_of(view_for(&state, PlayerId::P1));
+        let theirs = json_of(view_for(&state, PlayerId::P2));
         // The opponent reads the cost and nothing else; the controller reads the same number.
         let cost = effective_cost(&state, live(&state, &trap.id), Default::default());
         assert_eq!(
@@ -573,11 +562,11 @@ mod view_for_10_8_m3_t6 {
         live_mut(&mut state, &trap.id).cost_mod = 2;
         let cost = effective_cost(&state, live(&state, &trap.id), Default::default());
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][0],
+            json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][0],
             json!({ "faceDown": true, "cost": cost })
         );
         expect_match(
-            &to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][0],
+            &json_of(view_for(&state, PlayerId::P2))["you"]["backrow"][0],
             json!({ "cost": cost }),
         );
 
@@ -585,17 +574,17 @@ mod view_for_10_8_m3_t6 {
         expect_match(&theirs["you"]["backrow"][1], json!({ "unrevealed": true }));
         live_mut(&mut state, &field_trap.id).face_up = Some(true);
         assert!(
-            to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][1]
+            json_of(view_for(&state, PlayerId::P2))["you"]["backrow"][1]
                 .get("unrevealed")
                 .is_none()
         );
         expect_match(
-            &to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
+            &json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
             json!({ "faceDown": false, "defId": d.secret_field_trap.id }),
         );
         // A Field Spell is public to both from the start, so it is never unrevealed.
         assert!(
-            to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][2]
+            json_of(view_for(&state, PlayerId::P2))["you"]["backrow"][2]
                 .get("unrevealed")
                 .is_none()
         );
@@ -627,7 +616,7 @@ mod view_for_10_8_m3_t6 {
         live_mut(&mut state, &trap.id).counters.grade = Some(2);
 
         let mine = view_for(&state, PlayerId::P1);
-        let mine_json = to_json(&mine);
+        let mine_json = json_of(&mine);
         expect_match(
             &mine_json["opponent"]["backrow"][0],
             json!({
@@ -658,7 +647,7 @@ mod view_for_10_8_m3_t6 {
         assert!(mine.opponent.backrow[3].is_none());
 
         // Their controller reads both, with the grade counter a Combo-Index trap carries (§10.1).
-        let theirs = to_json(view_for(&state, PlayerId::P2));
+        let theirs = json_of(view_for(&state, PlayerId::P2));
         expect_match(
             &theirs["you"]["backrow"][1],
             json!({
@@ -694,11 +683,11 @@ mod view_for_10_8_m3_t6 {
 
         // Before the steal: p2 controls it and reads it; p1 sees a marker and the id never travels.
         expect_match(
-            &to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][0],
+            &json_of(view_for(&state, PlayerId::P2))["you"]["backrow"][0],
             json!({ "faceDown": false, "defId": d.secret_trap.id }),
         );
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][0],
+            json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][0],
             json!({ "faceDown": true, "cost": 1 })
         );
         assert!(!serialized(&view_for(&state, PlayerId::P1)).contains(&quoted(&d.secret_trap.id)));
@@ -718,11 +707,11 @@ mod view_for_10_8_m3_t6 {
         assert_eq!(stolen.owner, PlayerId::P2);
         assert_eq!(stolen.face_up, None);
         expect_match(
-            &to_json(view_for(&state, PlayerId::P1))["you"]["backrow"][0],
+            &json_of(view_for(&state, PlayerId::P1))["you"]["backrow"][0],
             json!({ "faceDown": false, "instanceId": hidden.id, "defId": d.secret_trap.id }),
         );
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P2))["opponent"]["backrow"][0],
+            json_of(view_for(&state, PlayerId::P2))["opponent"]["backrow"][0],
             json!({ "faceDown": true, "cost": 1 })
         );
         // The previous controller stops seeing it entirely, even though it still owns the card.
@@ -741,7 +730,7 @@ mod view_for_10_8_m3_t6 {
             Default::default(),
         );
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
+            json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
             json!({ "faceDown": true, "cost": 1 })
         );
 
@@ -749,7 +738,7 @@ mod view_for_10_8_m3_t6 {
         live_mut(&mut state, &fired.id).face_up = Some(true);
 
         expect_match(
-            &to_json(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
+            &json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][1],
             json!({
                 "faceDown": false,
                 "instanceId": fired.id,
@@ -758,7 +747,7 @@ mod view_for_10_8_m3_t6 {
             }),
         );
         expect_match(
-            &to_json(view_for(&state, PlayerId::P2))["you"]["backrow"][1],
+            &json_of(view_for(&state, PlayerId::P2))["you"]["backrow"][1],
             json!({ "faceDown": false, "defId": d.secret_field_trap.id }),
         );
     }
@@ -805,7 +794,7 @@ mod view_for_10_8_m3_t6 {
         assert_eq!(own_pending.max, 1);
         assert_eq!(own_pending.prompt, "Put a card from your library into your hand");
         assert_eq!(
-            to_json(&own_pending.options),
+            json_of(&own_pending.options),
             json!([{
                 "key": format!("instance:{}", revealed.id),
                 "label": "a card",
@@ -821,7 +810,7 @@ mod view_for_10_8_m3_t6 {
         // The opponent learns that a prompt is open and whose, and nothing else (§10.6, R81).
         let theirs = view_for(&state, PlayerId::P2);
         assert_eq!(
-            to_json(&theirs.pending),
+            json_of(&theirs.pending),
             json!({ "forYou": false, "pendingFor": "p1" })
         );
         let text = serialized(&theirs);
@@ -861,7 +850,7 @@ mod view_for_10_8_m3_t6 {
                 &view.opponent
             };
             expect_match(
-                &to_json(&side.units[0]),
+                &json_of(&side.units[0]),
                 json!({ "instanceId": top.id, "defId": d.stack_top.id, "buried": 1, "attack": 1 }),
             );
             // The buried card is not on the field (R13), so neither player is told what it is.
@@ -890,8 +879,8 @@ mod view_for_10_8_m3_t6 {
         assert_eq!(view.turn, 3);
         assert_eq!(view.active, PlayerId::P1);
         assert_eq!(view.phase, Phase::Main);
-        expect_match(&to_json(&view.you.hero), json!({ "health": 12, "armor": 3 }));
-        expect_match(&to_json(&view.opponent.hero), json!({ "health": 21, "armor": 0 }));
+        expect_match(&json_of(&view.you.hero), json!({ "health": 12, "armor": 3 }));
+        expect_match(&json_of(&view.opponent.hero), json!({ "health": 21, "armor": 0 }));
         // Mana is the pair a player spends from; the two modifiers behind it are bookkeeping (§2.3).
         assert_eq!(view.you.mana, ManaView { current: 2, max: 4 });
         assert_eq!(view.opponent.fatigue_count, 2);
@@ -908,7 +897,7 @@ mod view_for_10_8_m3_t6 {
 
         state.result = Some(json_as(json!({ "winner": "p1", "reason": "hero-death" })));
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P1).result),
+            json_of(view_for(&state, PlayerId::P1).result),
             json!({ "winner": "p1", "reason": "hero-death" })
         );
     }
@@ -949,11 +938,11 @@ mod view_for_10_8_m3_t6 {
             events: vec![event(json!({ "type": "turnStarted", "player": "p2", "turn": 4 }))],
         }];
         assert_eq!(
-            to_json(&view_for(&state, PlayerId::P1).events),
+            json_of(&view_for(&state, PlayerId::P1).events),
             json!([{ "type": "turnStarted", "player": "p2", "turn": 4 }])
         );
         state.applied = vec![];
-        assert_eq!(to_json(&view_for(&state, PlayerId::P1).events), json!([]));
+        assert_eq!(json_of(&view_for(&state, PlayerId::P1).events), json!([]));
     }
 
     #[test]
@@ -1017,7 +1006,7 @@ mod view_for_10_8_m3_t6 {
             .iter()
             .find(|event| matches!(event, GameEvent::Drawn { player: drawer, .. } if *drawer == player));
         match found {
-            Some(found) => to_json(found),
+            Some(found) => json_of(found),
             None => panic!("no {player} draw in {viewer}'s view"),
         }
     }
@@ -1093,11 +1082,11 @@ mod view_for_10_8_m3_t6 {
             }))],
         }];
         assert_eq!(
-            to_json(&view_for(&state, PlayerId::P1).events[0]),
+            json_of(&view_for(&state, PlayerId::P1).events[0]),
             json!({ "type": "bounced", "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "owner": "p2" })
         );
         expect_match(
-            &to_json(&view_for(&state, PlayerId::P2).events[0]),
+            &json_of(&view_for(&state, PlayerId::P2).events[0]),
             json!({ "instanceId": theirs.id }),
         );
     }
@@ -1136,8 +1125,8 @@ mod view_for_10_8_m3_t6 {
             // §9.1 hides library order without qualifying by player, so the slot is blanked for both.
             assert_ne!(position, 3);
         }
-        let as_owner = to_json(&view_for(&state, PlayerId::P1).events[0]);
-        let as_opponent = to_json(&view_for(&state, PlayerId::P2).events[0]);
+        let as_owner = json_of(&view_for(&state, PlayerId::P1).events[0]);
+        let as_opponent = json_of(&view_for(&state, PlayerId::P2).events[0]);
         assert_eq!(as_owner, as_opponent);
     }
 
@@ -1163,7 +1152,7 @@ mod view_for_10_8_m3_t6 {
         });
 
         assert_eq!(
-            to_json(&view_for(&state, PlayerId::P1).pending),
+            json_of(&view_for(&state, PlayerId::P1).pending),
             json!({ "forYou": false, "pendingFor": "p2" })
         );
         assert_eq!(
@@ -1274,7 +1263,7 @@ mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
 
         // `{ id, label }` and no more: no kind, no amount, no expiry, no source.
         for modifier in view.you.modifiers.iter().chain(view.opponent.modifiers.iter()) {
-            let mut keys = keys_of(&to_json(modifier));
+            let mut keys = keys_of(&json_of(modifier));
             keys.sort();
             assert_eq!(keys, vec!["id".to_string(), "label".to_string()]);
         }

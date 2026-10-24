@@ -18,7 +18,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
+    events_json, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, anti_greed, cast_spell, cast_unit, draw_two, log_card, notes, palantir, plain,
@@ -105,15 +105,6 @@ impl Bench {
     }
 }
 
-/// `eventsOfType(events, type)`, each event as its JSON, so a test reads its fields by TS's names and
-/// TS's `toEqual` literals compare key for key.
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
-}
-
 /// A view's events as JSON.
 fn view_events(state: &GameState, viewer: PlayerId) -> Vec<Value> {
     view_for(state, viewer)
@@ -149,7 +140,7 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
         // p2's second draw found an empty library: a fatigue draw, and a draw that happened.
         assert_eq!(state.players.p2.fatigue_count, 1);
         assert_eq!(draws_this_turn(&state, PlayerId::P2), 2);
-        let numbered: Vec<Value> = of_type(&bench.events, GameEventType::Drawn)
+        let numbered: Vec<Value> = events_json(&bench.events, GameEventType::Drawn)
             .iter()
             .map(|event| json!([event["player"], event["turnDraw"]]))
             .collect();
@@ -160,9 +151,9 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
     fn r457_r225_setup_is_no_players_turn_the_opening_deal_and_the_mulligan_count_nothing_and_number_no_draw()
     {
         let opened = begin_game(&new_game("draw-limit-setup", None));
-        assert!(!of_type(&opened.events, GameEventType::Drawn).is_empty());
+        assert!(!events_json(&opened.events, GameEventType::Drawn).is_empty());
         assert!(
-            of_type(&opened.events, GameEventType::Drawn)
+            events_json(&opened.events, GameEventType::Drawn)
                 .iter()
                 .all(|event| event.get("turnDraw").is_none())
         );
@@ -203,7 +194,7 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
         let (after, events) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(draws_this_turn(&after, PlayerId::P2), 1);
-        let theirs: Vec<Value> = of_type(&events, GameEventType::Drawn)
+        let theirs: Vec<Value> = events_json(&events, GameEventType::Drawn)
             .iter()
             .filter(|event| event["player"] == "p2")
             .map(|event| event["turnDraw"].clone())
@@ -237,7 +228,7 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
             &started,
             json!({ "type": "play", "instanceId": two.id, "playerId": "p2" }),
         );
-        let numbers: Vec<Value> = of_type(&events, GameEventType::Drawn)
+        let numbers: Vec<Value> = events_json(&events, GameEventType::Drawn)
             .iter()
             .map(|event| event["turnDraw"].clone())
             .collect();
@@ -276,9 +267,12 @@ mod r457_b5_e3_draw_limits {
             Some(DrawOutcome::Limited)
         );
         assert_eq!(ids(&state.players.p2.library), ids(&theirs));
-        assert_eq!(of_type(&bench.events, GameEventType::Stolen), Vec::<Value>::new());
         assert_eq!(
-            of_type(&bench.events, GameEventType::DrawLimited),
+            events_json(&bench.events, GameEventType::Stolen),
+            Vec::<Value>::new()
+        );
+        assert_eq!(
+            events_json(&bench.events, GameEventType::DrawLimited),
             vec![json!({ "type": "drawLimited", "player": "p1" })]
         );
     }
@@ -312,7 +306,7 @@ mod r457_b5_e3_draw_limits {
         assert_eq!(notes(&state), Vec::<String>::new());
         assert_eq!(draws_this_turn(&state, PlayerId::P2), 1);
         assert_eq!(
-            of_type(&bench.events, GameEventType::DrawLimited),
+            events_json(&bench.events, GameEventType::DrawLimited),
             vec![json!({ "type": "drawLimited", "player": "p2" })]
         );
 
@@ -324,7 +318,7 @@ mod r457_b5_e3_draw_limits {
         );
         assert_eq!(state.players.p2.fatigue_count, 0);
         assert_eq!(
-            of_type(&bench.events, GameEventType::Fatigue),
+            events_json(&bench.events, GameEventType::Fatigue),
             Vec::<Value>::new()
         );
     }
@@ -350,7 +344,7 @@ mod r457_b5_e3_draw_limits {
             json!({ "type": "play", "instanceId": two.id, "playerId": "p2" }),
         );
         assert_eq!(
-            of_type(&events, GameEventType::DrawLimited),
+            events_json(&events, GameEventType::DrawLimited),
             vec![
                 json!({ "type": "drawLimited", "player": "p2" }),
                 json!({ "type": "drawLimited", "player": "p2" }),
@@ -415,7 +409,7 @@ mod r457_b5_e3_draw_limits {
         (draw_from_library(json_as(json!({ "instanceId": first }))).apply)(&mut ctx);
         assert_eq!(ids(&ctx.state.players.p2.library), vec![first.clone()]);
         assert_eq!(
-            of_type(ctx.events.as_slice(), GameEventType::DrawLimited).len(),
+            events_json(ctx.events.as_slice(), GameEventType::DrawLimited).len(),
             1
         );
         drop(ctx);
@@ -449,7 +443,7 @@ mod r457_b5_e3_draw_limits {
         assert_eq!(notes(&state), strings(&["cast-spell"]));
         assert_eq!(def_ids(&state.players.p1.library), vec![plain().id]);
         assert_eq!(
-            of_type(&bench.events, GameEventType::DrawLimited),
+            events_json(&bench.events, GameEventType::DrawLimited),
             vec![json!({ "type": "drawLimited", "player": "p1" })]
         );
     }
@@ -628,7 +622,7 @@ mod r459_b5_e39_and_classic_plus_26_cast_on_draw {
         assert!(ids(&state.players.p1.hand).contains(&unit.id));
         assert_eq!(notes(&state), Vec::<String>::new());
         assert_eq!(
-            of_type(&bench.events, GameEventType::CardPlayed),
+            events_json(&bench.events, GameEventType::CardPlayed),
             Vec::<Value>::new()
         );
 

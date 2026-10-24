@@ -33,8 +33,9 @@ fn states() -> Vec<(GameState, PlayerId)> {
         .collect()
 }
 
-/// Today's expansion, written out: the first `width` candidates that are not End Turn, then End Turn
-/// when it is one.
+/// Today's expansion, written out: the first `width` candidates that are not End Turn, then the first
+/// `AI_SEARCH.position_switches` stand-downs among those the cut left out (R1759000), then End Turn when
+/// it is one.
 fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
     let candidates = candidate_actions(state, seat);
     let mut moves: Vec<ActionBody> = candidates
@@ -43,6 +44,13 @@ fn todays(state: &GameState, seat: PlayerId, width: usize) -> Vec<ActionBody> {
         .take(width)
         .cloned()
         .collect();
+    let left_out: Vec<ActionBody> = candidates
+        .iter()
+        .filter(|action| stands_down(state, action) && !moves.contains(action))
+        .take(AI_SEARCH.position_switches.max(0) as usize)
+        .cloned()
+        .collect();
+    moves.extend(left_out);
     if candidates.contains(&ActionBody::EndTurn) {
         moves.push(ActionBody::EndTurn);
     }
