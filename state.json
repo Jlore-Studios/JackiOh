@@ -13868,6 +13868,13 @@
     "1774": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-24T07:12:12Z",
+        "difficulty": "easy",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "line 8 (no decisions left) was the closest call: the packs read feeds both the card-packs and pity places, and the plan settles it by giving each place its own Try again bound to the shared read; it is 2 web files and about 70 lines"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
