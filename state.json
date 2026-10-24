@@ -13898,6 +13898,8 @@
       "run_id": "40073350398",
       "started_at": "2026-10-24T07:14:23Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 0
