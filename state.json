@@ -12816,7 +12816,7 @@
       "planned_tier": "medium",
       "provider": "claude-4",
       "round_tier": "medium",
-      "run_id": "pending:80032c23-1792885972",
+      "run_id": "40144519507",
       "started_at": "2026-10-24T23:53:00Z",
       "stop_requested": false,
       "taken_asks": [],
