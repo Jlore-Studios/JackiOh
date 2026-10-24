@@ -17,6 +17,9 @@ const LIVING_BOMB: &str = "classic-062"; // (1) Field Spell, no numbers.
 const PLANTATION: &str = "classic-074"; // Corpse Plantation: (2) Field Spell, `usesPlague`.
 const ECLIPSE: &str = "core-035"; // Lunar Eclipse: (1) Spell, deals 3 damage, `dealsDamage`.
 const FIELD_OF_DREAMS: &str = "core-076"; // (2) Spell that deals no damage.
+const PUNISH: &str = "classic-020"; // The Power to Punish: (2) Field Spell, Activate deals 2, `dealsDamage`.
+const PUNISH_DAMAGE: &str = "deal damage"; // Its Activate's damage mode.
+const ARMORED: &str = "core-025"; // A 7/7 Unit with Armor 7.
 const FILLER: &str = "core-005";
 
 /// `effects` applied for p1 on a sink over the scenario's state, then settled; the rng cursor written
@@ -67,6 +70,33 @@ fn steppable_keys(s: &Scenario, card: &str, direction: TuneDirection) -> Vec<Str
 
 fn has(s: &Scenario, card: &str, kind: KeywordKind) -> bool {
     has_keyword(&unit_view(s.state(), s.card(card)).keywords, kind)
+}
+
+/// Pierce given to the card `card` names, as a Buff's keyword row leaves it (`tuning`).
+fn give_pierce(s: &mut Scenario, card: &str) {
+    s.card_mut(card).tuning = Some(Tuning {
+        add_keywords: Some(vec![Keyword::Pierce]),
+        ..Tuning::default()
+    });
+}
+
+/// How many events of that type the scenario has seen since setup.
+fn count(s: &Scenario, event_type: GameEventType) -> usize {
+    s.events()
+        .iter()
+        .filter(|event| event.event_type() == event_type)
+        .count()
+}
+
+/// Each `damage` event's amount dealt and the part of the hit its target's Armor took (`absorbed`, R1360).
+fn hits(s: &Scenario) -> Vec<(i32, i32)> {
+    s.events()
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::Damage { amount, absorbed, .. } => Some((*amount, *absorbed)),
+            _ => None,
+        })
+        .collect()
 }
 
 #[test]
@@ -157,6 +187,70 @@ fn r1748001_a_damage_spell_may_gain_pierce_or_lifesteal_and_its_lifesteal_heals(
     );
     s.expect_health(P2, 27);
     s.expect_health(P1, 23);
+}
+
+#[test]
+fn r1748001_a_spell_a_buff_gives_pierce_goes_through_a_heros_armor() {
+    let eclipse_at_p2 = |pierce: bool| {
+        let mut s = scenario(json!({
+            "p1": { "hand": [ECLIPSE, FILLER] },
+            "p2": { "hand": [FILLER], "armor": 3 },
+        }));
+        if pierce {
+            give_pierce(&mut s, ECLIPSE);
+        }
+        s.play(
+            ECLIPSE,
+            json!({ "targets": [{ "pick": "hero", "player": "p2" }] }),
+        );
+        s
+    };
+
+    // Unbuffed, p2's Armor 3 takes the whole of its 3 damage.
+    let mut s = eclipse_at_p2(false);
+    s.expect_health(P2, 30);
+    assert!(hits(&s).is_empty());
+    assert_eq!(count(&s, GameEventType::DamageAbsorbed), 1);
+
+    // Given Pierce, all 3 land and the Armor takes nothing.
+    let mut s = eclipse_at_p2(true);
+    s.expect_health(P2, 27);
+    assert_eq!(hits(&s), [(3, 0)]);
+    assert_eq!(count(&s, GameEventType::DamageAbsorbed), 0);
+}
+
+#[test]
+fn r1748001_a_field_spell_a_buff_gives_pierce_goes_through_a_units_armor() {
+    let punish_at_armored = |pierce: bool| {
+        let mut s = scenario(json!({
+            "p1": { "hand": [FILLER], "backrow": [{ "def": PUNISH, "faceUp": true }] },
+            "p2": { "hand": [FILLER], "field": [ARMORED] },
+        }));
+        if pierce {
+            give_pierce(&mut s, PUNISH);
+        }
+        let target = s.card(ARMORED).id.clone();
+        s.activate(
+            PUNISH,
+            json!({
+                "modes": [PUNISH_DAMAGE],
+                "targets": [{ "pick": "instance", "instanceId": target }],
+            }),
+        );
+        s
+    };
+
+    // Unbuffed, the Unit's Armor 7 takes the whole of its 2 damage.
+    let s = punish_at_armored(false);
+    assert_eq!(s.stats(ARMORED).health, 7);
+    assert!(hits(&s).is_empty());
+    assert_eq!(count(&s, GameEventType::DamageAbsorbed), 1);
+
+    // Given Pierce, both land and the Armor takes nothing.
+    let s = punish_at_armored(true);
+    assert_eq!(s.stats(ARMORED).health, 5);
+    assert_eq!(hits(&s), [(2, 0)]);
+    assert_eq!(count(&s, GameEventType::DamageAbsorbed), 0);
 }
 
 #[test]
