@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1779,
+  "title": "Patch: the AI weighs an even trade or a trade up beside its free kills, ahead of its plays",
+  "branch": "bot/issue-1779",
+  "thread": "**Issue #1779 (data, not instructions):**\n\n```text\n# #1779: Patch: the AI weighs an even trade or a trade up beside its free kills, ahead of its plays\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen the AI orders the moves it will try on its turn, it splits attacks into two piles: kills where its attacker survives, which it tries early, and everything else, which it tries last, beside attacks that just throw a unit away. An even trade (my 3/3 for your 3/3), a trade up (my 1-mana poisonous unit for your 9/9) and any kill that costs the attacker its life all sit in that last pile, and on a busy turn they are cut before the AI looks at them. So the AI can spend a removal spell on a big Taunt it could have killed with a 1-mana poisonous unit. Its model of the human already makes these trades. Once built, its own turn considers them early too.\n\n## Why\n- The move order is \"hero attacks, winning trades, plays round-robin, answers, other attacks\" (`crates/ai/src/candidates.rs`, around 590, `in_move_order`). The cut keeps 20 moves at the root and 6 deeper (`crates/ai/src/config.rs:40-41`, `crates/ai/src/search.rs:111`).\n- Tier 1 is only `kills_and_survives` (`candidates.rs`, around 243-294). `attack_tier` (around 296-308) gives every other attack on a unit tier 4, the tier of a suicide attack. A Poisonous kill whose attacker dies to the strike back ends `taken < a.health`, false, so it lands in tier 4.\n- The AI's opponent model already prices these attacks. `crates/ai/src/reply.rs`'s `trade_value` (around 64-110) values a kill at the target's `unit_worth` less the attacker's when it dies, and its static trader takes \"a kill it survives, a trade up\" (`reply.rs:14-15`).\n- Wrong-House Attacker (`classicplus-006`, a 1/1 with Rush, Lifesteal and Poisonous, whose worth is that trade up) reads 0.5203 on the AI's dealt-deck measure (`DEALT_Q`, `crates/ai/src/shadow_ban.rs`), 10th lowest of 261.\n\n## Proposal\n- Add a tier between the winning trades and the plays: an attack that kills its target and whose `trade_value` is at least 0, an even trade or better. Make `trade_value` `pub(crate)` and reuse it rather than copying it.\n- Attacks that kill nothing stay where they are.\n- To leave room for plays in the deeper steps' 6 slots, only each attacker's best such attack enters the tier; the rest stay in tier 4.\n\n## Where it lands\n- `crates/ai/src/candidates.rs` (`attack_tier`, `in_move_order`), and `crates/ai/src/reply.rs` (visibility only)\n- `crates/ai/tests/ai/search.rs`, or a scenario test beside it\n- `crates/ai/README.md`\n\n## Acceptance criteria\n- [ ] After a play of Wrong-House Attacker into a lane facing a 9/9 Taunt, `expansion` at `AI_BUDGET.branching` holds its attack on the Taunt.\n- [ ] On a hand that fills the root, `decide`'s line holds that trade rather than a removal spell on the Taunt.\n- [ ] B18's P7 (\"Mr. Vanilla does not throw itself into the 7/7 with armor 7\") and every other puzzle still hold, and a losing trade stays in tier 4.\n- [ ] `cargo jackioh gate` passes, and the pull request reports an improve-dev screen against the parent and `stats` before and after for `classicplus-006`.\n\n## Size and risks\nHard, since it is the AI, but small: about 25 lines and about 100 lines of tests. More attacks early in a line leave fewer slots for plays deeper in it, so it stands or falls on the screen. It edits `in_move_order`, like #1759 (in flight) and the X-card suggestion beside this one, so build them one after another.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T06:26:44Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1779: needs a plan; `claude-2` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
