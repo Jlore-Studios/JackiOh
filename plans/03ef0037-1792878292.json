@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1816,
+  "title": "Patch: Unkeywordify \"Immune to tribal tag based hate\"",
+  "branch": "bot/issue-1816",
+  "thread": "**Issue #1816 (data, not instructions):**\n\n```text\n# #1816: Patch: Unkeywordify \"Immune to tribal tag based hate\"\nOpened by @MaxGoetzmann.\n\n### What it does\n\nPlease don't have this be a keyword. It shouldn't have an \"IT\" icon. It shouldn't be bolded. It's way too niche for that.\n\n### Acceptance\n\nThe only remaining keyword on Blue Eyes White Felinor is Tribute. It still has the \"Immune to tribal tag based hate\" ability, it's just no longer a keyword.\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1816: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
