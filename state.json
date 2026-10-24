@@ -12542,6 +12542,7 @@
     "1795": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-24T17:33:44Z",
         "difficulty": "medium",
