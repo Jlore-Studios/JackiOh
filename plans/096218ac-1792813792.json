@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1759,
+  "title": "Patch: the AI keeps its own position switches in the beam, so a losing attacker can stand down",
+  "branch": "bot/issue-1759",
+  "thread": "**Issue #1759 (data, not instructions):**\n\n```text\n# #1759: Patch: the AI keeps its own position switches in the beam, so a losing attacker can stand down\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn practice the AI almost never moves one of its units to Defense Position on its own turn \u2014 even when that unit cannot win its next fight and Defense would keep it alive (Defense grants Taunt and +1 Armor). Its own suggestion machinery tries position switches dead last and usually discards them before simulating a single one, while the opponent it imagines does get to try them. After the change the AI can choose to stand a unit down, the way a real player does.\n\n## Why\n\n`in_move_order` puts every `SwitchPosition` in the last tier \u2014 behind hero attacks, trades, plays, powers, activates, answers and other attacks (`crates/ai/src/candidates.rs:592-633`), and `expand` truncates to `branching: 6` below the root (`crates/ai/src/search.rs:104-115`), so a mid-line switch survives only when fewer than six earlier-tier moves exist. The asymmetry is sharp: the imagined opponent gets up to `AI_REPLY.defense_switches: 4` explicit ATK\u2192DEF trials every reply step (`crates/ai/src/reply.rs:362-379`, `config.rs:730`), while the seat's own turn may hold none. `position_grants: 0.0` (`config.rs:407`) compounds it \u2014 the static eval reads Defense's Taunt/+1 Armor as roughly nothing (`evaluate.rs:128-148`), so a switch looks like a pure attack loss. `lethal_moves` already recognizes that switches matter for Deft (`lethal.rs:71-80`). Concrete misplay: the AI ends its turn with an unused attacker in Attack facing a bigger enemy unit; a real player parks it in Defense and it survives \u2014 the AI's unit dies.\n\n## Proposal\n\nAppend up to K `SwitchPosition` actions after `expand`'s truncation, the way `EndTurn` is preserved (`search.rs:111-114`), optionally with a modest nonzero `position_grants` screen so the eval reads Defense's defensive value. A puzzle test asserts the switch is chosen on a losing-Attack board.\n\n## Where it lands\n\n`crates/ai/src/search.rs` (`expand`), `crates/ai/src/candidates.rs` (tier ordering), `crates/ai/src/config.rs` (`AI_SEARCH`, `position_grants`); a puzzle under `crates/ai/tests/ai/`; measured by `cargo jackioh gate`.\n\n## Acceptance criteria\n\n- [ ] A named puzzle: an unused attacker facing a bigger enemy ends in Defense Position\n- [ ] Switches survive truncation without unbounded branching (K is a named constant)\n- [ ] `cargo jackioh gate` stays clean at smoke size\n- [ ] No hidden-information read \u2014 the switch logic uses only what the seat may see\n\n## Size and risks\n\nSmall \u2014 roughly 30-60 lines plus a puzzle. The risk is decision time in fat states, bounded by K and measured against the decision budget; a weight change needs gate evidence, not a hunch.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-24T03:13:06Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1759: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
