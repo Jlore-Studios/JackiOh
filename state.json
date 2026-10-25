@@ -1210,15 +1210,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/03-zones.md"
+          ],
+          "from": "99c30eed8a14f28dbe9be57e3abc8104b39f710a",
+          "main": "a128d139ebce150396c636c3d23861e04ce19d0f"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40200766079",
+            "run": "40209942978",
             "tier": "strong"
           }
         ],
-        "sha": "99c30eed8a14f28dbe9be57e3abc8104b39f710a",
+        "sha": "7c42974c577a8e1292a90d3668c18f310671cae3",
         "tiers": {
           "claude": "strong"
         }
