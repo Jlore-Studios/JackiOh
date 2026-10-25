@@ -353,7 +353,7 @@
       "started_at": "2026-10-25T21:12:42Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1841": {
       "action": "build",
