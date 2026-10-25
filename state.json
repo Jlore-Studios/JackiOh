@@ -924,6 +924,15 @@
       "failures": 0,
       "feedback_since": "2026-10-25T14:06:12Z",
       "forced": false,
+      "handoff": {
+        "at": "2026-10-25T20:06:17Z",
+        "family": "muse",
+        "kind": "work",
+        "notes": "",
+        "provider": "muse",
+        "reason": "the muse CLI failed at once: muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1908 (explicit)\nmuse: workspace trust: trusted source=run-flag\nmuse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-1908/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\nagent loop failed: model failed: API error 429 [request_id=3d89f09f-2173-4c69-",
+        "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1908 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-1908/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- agent loop failed: model failed: API error 429 [request_id=3d89f09f-2173-4c69-831a-f82e08ccc26b]: Subscription quota exhausted. Your usage window resets at 2026-10-26T00:00:00Z. (rate_limit_error)"
+      },
       "interruptions": 0,
       "issue": 1803,
       "kind": "revise",
