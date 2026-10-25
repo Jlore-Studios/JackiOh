@@ -168,7 +168,10 @@ string_union! {
     /// Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
     /// game another way, R1420's set); the Meditative+ set adds Potion (its #11, #12 and #13 Living
     /// Potions and the potions its #16 Jazakus crafts, R1178000), which no rule reads and two pools
-    /// name (M+ #14, #15).
+    /// name (M+ #14, #15). Ahead of the Stinkyscape set, #1837 adds Terminus (Core #100 Ceaseless
+    /// Void), Quest (Classic #90 In Too Deep), Otherworldly (Classic+ #32 Otherworldly Removal),
+    /// Other-Origins (its three tokens, #32.1 to #32.3) and Jelly Bean (Core #26 to #29, the Glowy
+    /// Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -187,6 +190,11 @@ string_union! {
         Acclaimed = "Acclaimed",
         Wincon = "Wincon",
         Potion = "Potion",
+        Terminus = "Terminus",
+        Quest = "Quest",
+        Otherworldly = "Otherworldly",
+        OtherOrigins = "Other-Origins",
+        JellyBean = "Jelly Bean",
         Token = "Token",
     }
 }

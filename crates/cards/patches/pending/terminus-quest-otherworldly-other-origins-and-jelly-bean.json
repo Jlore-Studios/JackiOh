@@ -1,0 +1,40 @@
+{
+  "title": "Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean tags on shipped cards, and Felinor and Fruit off four",
+  "sources": "#1837",
+  "notes": "R1837000: ahead of the Stinkyscape set, Terminus on core-100, Quest on classic-090 (beside its Quickdraw), Otherworldly on classicplus-032, Other-Origins on its tokens classicplus-032-1 to -3, and a new Jelly Bean tag on core-026 to core-029: family tags, not tribes (no TRIBAL_TAGS), and no pool by them takes tokens (no POOL_TOKEN_TAGS); the server admits them from migration 0058. classic-032 and core-062 lose Felinor, so Tatches the Totem answers neither; classicplus-063 and classicplus-068 lose Fruit, so no Fruit pool holds a Field Spell, Mulch Muncher counts neither and Organic Produce's aura makes neither Radiant. A play records its card's tags (playedByTag), so the golden traces were re-blessed: of 240, 104 are unchanged, 115 replay the same actions with new hashes (the tag record, fused cards' tags, the tags a view shows), and 21 play differently from the first random Fruit drawn without the two Field Spells (Fruit Basket, Fruit Tree, Organic Produce, Call to Chaos (Classic+ Edition), Heroic Power) or Organic Produce's aura; the hotseat fixture's log stands and its hash moves from 8784adae to 7044d528 (its last play, Friend of Felinors, records no Felinor). The practice claim fixture is recorded again for the same reason.",
+  "player": {
+    "title": "Five new tags, and four cards lose one",
+    "new": [
+      "The Terminus tag, on Ceaseless Void.",
+      "The Quest tag, on In Too Deep.",
+      "The Otherworldly tag, on Otherworldly Removal.",
+      "The Other-Origins tag, on Execute, Brawl and Blade Storm, the cards Otherworldly Removal adds.",
+      "The Jelly Bean tag, on Glowy Jelly Bean, Blood Ridden Glowy Jelly Bean, Knockoff Temu Glowy Jelly Bean and GIGA Glowy Jelly Bean."
+    ],
+    "balance": [],
+    "changes": [
+      "Felinor Feelings and Friend of Felinors lose the Felinor tag; the Felinor Tokens they summon keep it.",
+      "Fruit Tree and Organic Produce lose the Fruit tag, so a random Fruit is never one of them.",
+      "Mulch Muncher no longer costs less for Fruit Tree or Organic Produce, and Organic Produce no longer makes them Radiant.",
+      "Tatches the Totem no longer summons itself when you play Felinor Feelings or Friend of Felinors."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "core-026",
+    "core-027",
+    "core-028",
+    "core-029",
+    "core-062",
+    "core-100",
+    "classic-032",
+    "classic-090",
+    "classicplus-032",
+    "classicplus-032-1",
+    "classicplus-032-2",
+    "classicplus-032-3",
+    "classicplus-063",
+    "classicplus-068"
+  ]
+}

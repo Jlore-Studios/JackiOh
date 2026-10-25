@@ -399,7 +399,7 @@ mod tests {
 
         let whole = inspect(&input, None, None, false).unwrap();
         assert_eq!(whole.at, input.log.len());
-        assert_eq!(whole.hash, "8784adae");
+        assert_eq!(whole.hash, "7044d528");
         assert!(whole.result.is_some());
         assert_eq!(whole.reason, None);
         assert!(render(&whole).contains("decision none"));
@@ -443,7 +443,7 @@ mod tests {
         let input: ReplayInput = serde_json::from_value(value).unwrap();
         let found = inspect(&input, None, None, false).unwrap();
         assert_eq!(found.fold_errors, vec!["refused-1".to_string()]);
-        assert_eq!(found.hash, "8784adae");
+        assert_eq!(found.hash, "7044d528");
         assert!(render(&found).contains("foldErrors 1: refused-1"));
     }
 
