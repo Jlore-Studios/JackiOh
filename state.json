@@ -24,6 +24,17 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1824": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "claude-3",
+      "run_id": "pending:30441230-1792920194",
+      "started_at": "2026-10-25T09:24:04Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1828": {
       "action": "build",
       "asks": [],
@@ -174,9 +185,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:23:03Z",
+    "at": "2026-10-25T09:24:04Z",
     "url": "",
-    "what": "build #1818 on agy"
+    "what": "build #1824 on claude-3"
   },
   "loop_deliveries": {
     "40175181653": {
