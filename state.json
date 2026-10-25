@@ -379,6 +379,9 @@
       "CLAUDE_CODE_OAUTH_TOKEN_SQUISHY"
     ]
   },
+  "statistics": {
+    "at": "2026-10-25T09:30:59Z"
+  },
   "suggest": {
     "last_run": null,
     "requested": false
