@@ -409,7 +409,15 @@
       "feedback_since": "2026-10-25T09:25:06Z",
       "issue": 1803,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gpt",
+        "rejections": [],
+        "reviews": [],
+        "sha": "8edd52e416353d0ab22b4fad609fd14f0f097899",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
