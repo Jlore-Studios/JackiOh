@@ -267,7 +267,7 @@
       "verdict_rounds": 1
     },
     "1831": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "handoff": {
@@ -287,8 +287,8 @@
       "planned_tier": "strong",
       "provider": "claude-8",
       "round_tier": "",
-      "run_id": "40186305685",
-      "started_at": "2026-10-25T10:48:47Z",
+      "run_id": "pending:bdc33c0b-1792955608",
+      "started_at": "2026-10-25T19:14:04Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -1444,9 +1444,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T19:13:18Z",
+    "at": "2026-10-25T19:14:04Z",
     "url": "",
-    "what": "build #1850 on claude-3"
+    "what": "build #1831 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-25T18:59:12Z",
