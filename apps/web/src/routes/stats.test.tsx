@@ -1514,3 +1514,141 @@ describe("R1935000 the Daily runs tab", () => {
     expect(await screen.findByText("No daily runs yet.", undefined, SLOW)).toBeInTheDocument();
   });
 });
+
+describe("R1943000 the Sets tab", () => {
+  /** A card row: `wins` of `games`, in `set`. */
+  function row(id: string, name: string, set: string, wins: number, games: number) {
+    return {
+      ...MOCK_CARD_STATS_PROVISIONAL.cards[0]!,
+      id,
+      name,
+      set,
+      games,
+      winRate: wins / games,
+      hasEnoughGames: games >= 20,
+    };
+  }
+
+  const NOW = {
+    ...MOCK_CARD_STATS_PROVISIONAL,
+    patch: "0.2.0",
+    previousPatch: "0.1.0",
+    cards: [
+      row("core-001", "Spark Pup", "Core", 700, 1200), // 58.3%: 5.8 standard errors over 50%
+      row("core-002", "Lava Hound", "Core", 450, 1000), // 45%: 3.2 under
+      row("classic-001", "Palantir", "Classic", 520, 1000),
+      row("classic-002", "Counterspell", "Classic", 480, 1000),
+    ],
+  };
+  const BEFORE = {
+    ...NOW,
+    patch: "0.1.0",
+    previousPatch: null,
+    cards: [row("core-001", "Spark Pup", "Core", 500, 1000), row("classic-001", "Palantir", "Classic", 550, 1000)],
+  };
+
+  /** Answers the card statistics of patch 0.1.0 with `BEFORE`, any other with `NOW` (or `answer`'s), and a card's details with Spark Pup's. */
+  function serveSets(answer: () => Response = () => new Response(JSON.stringify(NOW), { status: 200 })): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_DRILL_DOWN), { status: 200 }));
+        }
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        if (url.searchParams.get("patch") === "0.1.0") {
+          return Promise.resolve(new Response(JSON.stringify(BEFORE), { status: 200 }));
+        }
+        return Promise.resolve(answer());
+      }),
+    );
+  }
+
+  it("R1943000 ranks each set by its pooled win rate, with its mean, median, change since the previous patch, best and worst card", async () => {
+    serveSets();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    await user.click(screen.getByTestId(statsTestid.tabSets));
+    const table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(window.location.search).toBe("?tab=sets");
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows.map((r) => r.getAttribute("data-set"))).toEqual(["Core", "Classic"]);
+    const [core, classic] = [rows[0]!, rows[1]!];
+    // Core pools 1,150 wins of 2,200 card-games (52.3%); its two cards' mean and median are 51.7%.
+    expect(core).toHaveTextContent("2,200");
+    expect(core).toHaveTextContent("52.3%");
+    expect(core).toHaveTextContent("51.7%");
+    // Since 0.1.0: Core from 50% to 52.3%, Classic from 55% to 50%.
+    expect(within(table).getByRole("columnheader", { name: "Since 0.1.0" })).toBeInTheDocument();
+    expect(core).toHaveTextContent("+2.3%");
+    expect(classic).toHaveTextContent("-5.0%");
+    expect(within(core).getByRole("button", { name: "Spark Pup 58.3%" })).toBeInTheDocument();
+    expect(within(core).getByRole("button", { name: "Lava Hound 45.0%" })).toBeInTheDocument();
+    expect(within(classic).getByRole("button", { name: "Palantir 52.0%" })).toBeInTheDocument();
+
+    const best = screen.getByTestId(statsTestid.setsLeaders);
+    expect(best).toHaveTextContent("Highest win rateCore");
+    expect(best).toHaveTextContent("Highest mean cardCore");
+    expect(best).toHaveTextContent("Highest median cardCore");
+
+    // Spark Pup is 5.8 standard errors over 50% and Lava Hound 3.2 under; the Classic cards are nearer.
+    const far = screen.getByTestId(statsTestid.setsOutliers);
+    const strongest = within(far).getByRole("region", { name: "Strongest cards" });
+    const weakest = within(far).getByRole("region", { name: "Weakest cards" });
+    expect(within(strongest).getAllByRole("listitem").map((li) => li.getAttribute("data-card-id"))).toEqual(["core-001"]);
+    expect(strongest).toHaveTextContent("Core · 58.3% over 1,200 games · +5.8 standard errors");
+    expect(within(weakest).getAllByRole("listitem").map((li) => li.getAttribute("data-card-id"))).toEqual(["core-002"]);
+
+    // A card opens its details, as a row of the Cards tab does.
+    await user.click(within(strongest).getByRole("button", { name: "Spark Pup" }));
+    expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R1943000 reads every set's cards whatever the Cards tab filters, on the patch and match type it shows", async () => {
+    serveSets();
+    at("/stats?set=core&rarity=Rare&cost=2&mode=bo1");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    const asked = requested("/api/stats/cards").filter((url) => !url.searchParams.has("set"));
+    expect(asked.map((url) => [url.searchParams.get("patch"), url.searchParams.get("mode")])).toEqual([
+      [null, "bo1"],
+      ["0.1.0", "bo1"],
+    ]);
+    expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
+  });
+
+  it("R1943000 a read that fails shows Retry, which asks again", async () => {
+    let up = false;
+    serveSets(() =>
+      up
+        ? new Response(JSON.stringify(NOW), { status: 200 })
+        : new Response(JSON.stringify({ error: { code: "unavailable", message: "down" } }), { status: 503 }),
+    );
+    at("/stats?tab=sets");
+    render(<StatsRoute />);
+    const retry = await screen.findByTestId(statsTestid.setsRetry, undefined, SLOW);
+    expect(screen.getByText("Failed to load the set statistics.")).toBeInTheDocument();
+    up = true;
+    fireEvent.click(retry);
+    expect(await screen.findByTestId(statsTestid.setsTable, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R1943000 says so when the patch has no games, and when no card is far from 50%", async () => {
+    serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: [] }), { status: 200 }));
+    at("/stats?tab=sets");
+    render(<StatsRoute />);
+    expect(await screen.findByText("No games on patch 0.2.0 yet.", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: NOW.cards.slice(2) }), { status: 200 }));
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    expect(within(table).getByRole("columnheader", { name: "Change" })).toBeInTheDocument();
+    expect(within(screen.getByTestId(statsTestid.setsOutliers)).getAllByText("No card is 3 standard errors from 50% yet.")).toHaveLength(2);
+  });
+});

@@ -16,6 +16,8 @@
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 //  - Daily runs tab (R1935000): the daily super run's last runs on main, read live from GitHub by the server and
 //    asked for again every `CI_RUNS_CACHE_TTL_SECONDS` while the tab is open.
+//  - Sets tab (R1943000): each set's cards on the patch, pooled, by mean and by median, the change since the
+//    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -40,8 +42,9 @@ import {
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { ciInsights } from "../stats/ciInsights.ts";
-import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
+import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS, SET_STATS_DIGITS, SET_STATS_OUTLIER_Z } from "../stats/config.ts";
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
+import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { usePlayerStats } from "../stats/store.ts";
 import { statsTestid } from "../stats/testids.ts";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -53,6 +56,9 @@ const CATALOG = catalogJson as unknown as CardDefs;
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
+
+/** Unit conversion, not configuration: a rate as a percentage has two more decimal places than as a fraction. */
+const PERCENT_PLACES = 2;
 
 /** How much of a commit's hash a daily run shows, as GitHub shortens one. */
 const SHORT_COMMIT = 7;
@@ -111,6 +117,16 @@ function faceRate(
  * `{token}`s, and each token is replaced by the node given for it, so a language may order them as it
  * needs and English reads as it always did.
  */
+/** R1943000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
+function setPercent(rate: number, signed = false): string {
+  return formatNumber(rate, {
+    style: "percent",
+    minimumFractionDigits: SET_STATS_DIGITS,
+    maximumFractionDigits: SET_STATS_DIGITS,
+    signDisplay: signed ? "exceptZero" : "auto",
+  });
+}
+
 function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>): ReactNode[] {
   return sentence.split(/(\{\w+\})/).map((part, index) => {
     const token = /^\{(\w+)\}$/.exec(part)?.[1];
@@ -118,7 +134,7 @@ function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>)
   });
 }
 
-type TabKey = "cards" | "players" | "ci";
+type TabKey = "cards" | "sets" | "players" | "ci";
 type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
@@ -173,7 +189,7 @@ export default function StatsRoute(): ReactElement {
 
   const [tab, setTab] = useState<TabKey>(() => {
     const asked = initialParams.get("tab");
-    return asked === "players" || asked === "ci" ? asked : "cards";
+    return asked === "sets" || asked === "players" || asked === "ci" ? asked : "cards";
   });
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
@@ -236,6 +252,13 @@ export default function StatsRoute(): ReactElement {
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
+
+  // R1943000: the Sets tab's patch, every set's cards unfiltered, and its previous patch's for the change.
+  const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
+  const [setsPrevious, setSetsPrevious] = useState<PublicStatsCardsResponse | null>(null);
+  const [setsError, setSetsError] = useState(false);
+  // Bumped by the Sets tab's Retry, as `cardStatsAttempt` is by the table's.
+  const [setsAttempt, setSetsAttempt] = useState(0);
 
   // R1935000: the daily runs, null until the first answer; a failed refresh keeps the runs shown.
   const [ciRuns, setCiRuns] = useState<CiRun[] | null>(null);
@@ -371,6 +394,31 @@ export default function StatsRoute(): ReactElement {
     };
   }, [tab, ciAttempt]);
 
+  // R1943000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
+  // patch's for each set's change; a previous patch that fails to load only leaves the change out.
+  useEffect(() => {
+    if (tab !== "sets") return;
+    setSetsError(false);
+    const controller = new AbortController();
+    getCardStats({ patch: patch ? patch : undefined, mode: mode ? mode : undefined, signal: controller.signal })
+      .then((res) => {
+        if (controller.signal.aborted) return;
+        setSetsData(res);
+        setSetsPrevious(null);
+        if (!res.previousPatch) return;
+        getCardStats({ patch: res.previousPatch, mode: mode ? mode : undefined, signal: controller.signal })
+          .then((previous) => {
+            if (!controller.signal.aborted) setSetsPrevious(previous);
+          })
+          .catch(() => undefined);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setSetsError(true);
+      });
+    return () => controller.abort();
+  }, [tab, patch, mode, setsAttempt]);
+
   // Fetch card drill-down
   useEffect(() => {
     if (!cardDrillDownId) {
@@ -440,6 +488,19 @@ export default function StatsRoute(): ReactElement {
   }, [drillDownOpen]);
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
+
+  // R1943000: the Sets tab's figures, off the cards it read.
+  const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
+  const sets = useMemo(() => (setsData ? setRows(setsData.cards, setsMinSample) : []), [setsData, setsMinSample]);
+  const setLeaders = useMemo(() => leaders(sets), [sets]);
+  const setChanges = useMemo(
+    () => changes(sets, setsPrevious ? setRows(setsPrevious.cards, setsPrevious.minSample) : []),
+    [sets, setsPrevious],
+  );
+  const setOutliers = useMemo(
+    () => (setsData ? outliers(setsData.cards, setsMinSample) : { strongest: [], weakest: [] }),
+    [setsData, setsMinSample],
+  );
 
   const keywordOptions = useMemo(() => {
     const present = new Set<KeywordKind>();
@@ -651,6 +712,18 @@ export default function StatsRoute(): ReactElement {
             onClick={() => setTab("cards")}
           >
             {t("Cards")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="stats-tab-sets"
+            aria-selected={tab === "sets"}
+            aria-controls="stats-panel-sets"
+            className={`stats-tab ${tab === "sets" ? "stats-tab--active" : ""}`}
+            data-testid={statsTestid.tabSets}
+            onClick={() => setTab("sets")}
+          >
+            {t("Sets")}
           </button>
           <button
             type="button"
@@ -1274,6 +1347,187 @@ export default function StatsRoute(): ReactElement {
                   </tbody>
                 </table>
               </div>
+            )}
+          </section>
+        )}
+
+        {/* SETS TAB (R1943000) */}
+        {tab === "sets" && (
+          <section id="stats-panel-sets" role="tabpanel" aria-labelledby="stats-tab-sets" className="stats-panel one-screen__body">
+            {setsError ? (
+              <div className="stats-error">
+                <p>{t("Failed to load the set statistics.")}</p>
+                <button
+                  type="button"
+                  className="stats-retry-btn"
+                  data-testid={statsTestid.setsRetry}
+                  onClick={() => setSetsAttempt((attempt) => attempt + 1)}
+                >
+                  {t("Retry")}
+                </button>
+              </div>
+            ) : setsData === null ? (
+              <p className="stats-loading">{t("Loading set statistics…")}</p>
+            ) : sets.length === 0 ? (
+              <p className="stats-empty">{t("No games on patch {patch} yet.", { patch: setsData.patch })}</p>
+            ) : (
+              <>
+                <p className="stats-player-note">
+                  {t(
+                    "How each set's cards do on patch {patch}, in decks that mix every set. A set's win rate pools its cards' games; its mean and median are over its cards with {minSample} games or more.",
+                    { patch: setsData.patch, minSample: setsMinSample },
+                  )}
+                </p>
+                <section className="stats-summary-tiles stats-sets-leaders" data-testid={statsTestid.setsLeaders} aria-label={t("Best sets")}>
+                  <div className="stats-summary-tile">
+                    <span className="stats-summary-label">{t("Highest win rate")}</span>
+                    <span className="stats-summary-value">{setLeaders.pooled ? t(setLeaders.pooled) : "—"}</span>
+                  </div>
+                  <div className="stats-summary-tile">
+                    <span className="stats-summary-label">{t("Highest mean card")}</span>
+                    <span className="stats-summary-value">{setLeaders.mean ? t(setLeaders.mean) : "—"}</span>
+                  </div>
+                  <div className="stats-summary-tile">
+                    <span className="stats-summary-label">{t("Highest median card")}</span>
+                    <span className="stats-summary-value">{setLeaders.median ? t(setLeaders.median) : "—"}</span>
+                  </div>
+                </section>
+                <div className="stats-table-wrapper">
+                  <table className="stats-table" data-testid={statsTestid.setsTable}>
+                    <thead>
+                      <tr>
+                        <th scope="col" className="stats-th">{t("Set")}</th>
+                        <th scope="col" className="stats-th">{t("Cards")}</th>
+                        <th scope="col" className="stats-th">{t("Card-games")}</th>
+                        <th scope="col" className="stats-th">{t("Win rate")}</th>
+                        <th scope="col" className="stats-th">{t("Mean")}</th>
+                        <th scope="col" className="stats-th">{t("Median")}</th>
+                        <th scope="col" className="stats-th">
+                          {setsData.previousPatch ? t("Since {patch}", { patch: setsData.previousPatch }) : t("Change")}
+                        </th>
+                        <th scope="col" className="stats-th">{t("Best card")}</th>
+                        <th scope="col" className="stats-th">{t("Worst card")}</th>
+                        <th scope="col" className="stats-th">{t("Strong")}</th>
+                        <th scope="col" className="stats-th">{t("Weak")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sets.map((row) => {
+                        // Rounded first, so a change too small to show reads 0.0% and takes no colour.
+                        const changed = setChanges.get(row.set);
+                        const change = changed === undefined ? undefined : Number(changed.toFixed(SET_STATS_DIGITS + PERCENT_PLACES));
+                        const cardCell = (card: RatedCard | null): ReactNode =>
+                          card === null ? (
+                            <span className="stats-not-enough">{t("not enough games")}</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="link-button stats-card-name-link"
+                              onClick={(e) => openDrillDown(card.id, e.currentTarget)}
+                            >
+                              {shownName(card.id, card.name)} <span className="stats-sample-hint">{setPercent(card.winRate)}</span>
+                            </button>
+                          );
+                        return (
+                          <tr key={row.set} className="stats-tr" data-set={row.set}>
+                            <th scope="row" className="stats-td stats-td--name">
+                              {t(row.set)}
+                              {row.set === setLeaders.pooled && (
+                                <span className="stats-sets-leader" aria-hidden="true">
+                                  {" ★"}
+                                </span>
+                              )}
+                            </th>
+                            <td className="stats-td">
+                              {formatNumber(row.rated)}
+                              {row.rated !== row.cards && (
+                                <span className="stats-sample-hint"> {t("of {cards}", { cards: row.cards })}</span>
+                              )}
+                            </td>
+                            <td className="stats-td">{formatNumber(row.games)}</td>
+                            <td className="stats-td stats-td--winrate">
+                              {row.pooled === null ? (
+                                "—"
+                              ) : (
+                                <>
+                                  <span className="stats-winrate-text">{setPercent(row.pooled)}</span>
+                                  {row.error !== null && (
+                                    <span className="stats-sample-hint"> ±{setPercent(row.error)}</span>
+                                  )}
+                                </>
+                              )}
+                            </td>
+                            <td className="stats-td">{row.mean === null ? "—" : setPercent(row.mean)}</td>
+                            <td className="stats-td">{row.median === null ? "—" : setPercent(row.median)}</td>
+                            <td className="stats-td">
+                              {change === undefined ? (
+                                "—"
+                              ) : (
+                                <span className={`stats-sets-change stats-sets-change--${change > 0 ? "up" : change < 0 ? "down" : "flat"}`}>
+                                  {setPercent(change, true)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="stats-td">{cardCell(row.best)}</td>
+                            <td className="stats-td">{cardCell(row.worst)}</td>
+                            <td className="stats-td">{formatNumber(row.strong)}</td>
+                            <td className="stats-td">{formatNumber(row.weak)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="stats-sets-outliers" data-testid={statsTestid.setsOutliers}>
+                  {(
+                    [
+                      ["strongest", t("Strongest cards"), setOutliers.strongest],
+                      ["weakest", t("Weakest cards"), setOutliers.weakest],
+                    ] as const
+                  ).map(([key, title, list]) => (
+                    <section key={key} className="stats-sets-outlier-list" aria-label={title}>
+                      <h2 className="stats-sets-outlier-title">{title}</h2>
+                      {list.length === 0 ? (
+                        <p className="stats-empty-sub">
+                          {t("No card is {z} standard errors from 50% yet.", { z: SET_STATS_OUTLIER_Z })}
+                        </p>
+                      ) : (
+                        <ol className="stats-sets-outlier-cards">
+                          {list.map((card) => (
+                            <li key={card.id} data-card-id={card.id}>
+                              <button
+                                type="button"
+                                className="link-button stats-card-name-link"
+                                onClick={(e) => openDrillDown(card.id, e.currentTarget)}
+                              >
+                                {shownName(card.id, card.name)}
+                              </button>{" "}
+                              <span className="stats-sample-hint">
+                                {t("{set} · {rate} over {games} games · {z} standard errors", {
+                                  set: t(card.set),
+                                  rate: setPercent(card.winRate),
+                                  games: formatNumber(card.games),
+                                  z: formatNumber(card.z, {
+                                    minimumFractionDigits: SET_STATS_DIGITS,
+                                    maximumFractionDigits: SET_STATS_DIGITS,
+                                    signDisplay: "exceptZero",
+                                  }),
+                                })}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </section>
+                  ))}
+                </div>
+                <p className="stats-sample-hint stats-sets-note">
+                  {t(
+                    "★ marks the highest win rate. ± is one standard error, counted as if every card-game were independent; they are not, so sets less than two or three of it apart are within noise. Strong and weak cards are {z} or more standard errors over or under 50%.",
+                    { z: SET_STATS_OUTLIER_Z },
+                  )}
+                </p>
+              </>
             )}
           </section>
         )}

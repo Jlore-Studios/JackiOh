@@ -9,6 +9,12 @@ export const statsTestid = {
   ciTable: "stats-ci-table",
   ciRetry: "stats-ci-retry",
   ciSummary: "stats-ci-summary",
+  /** R1943000: the Sets tab, its leaders, its table, its strongest and weakest cards and its Retry. */
+  tabSets: "stats-tab-sets",
+  setsLeaders: "stats-sets-leaders",
+  setsTable: "stats-sets-table",
+  setsOutliers: "stats-sets-outliers",
+  setsRetry: "stats-sets-retry",
   summaryTiles: "stats-summary-tiles",
   summaryTotalGames: "stats-summary-total-games",
   provisionalBanner: "stats-provisional-banner",
