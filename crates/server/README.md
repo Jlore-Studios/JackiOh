@@ -36,7 +36,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
-| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, and the hero cards' full arts, one per card) and its check: no id twice, ids a settings text can carry, one default per kind a player picks, a full art naming its own card and no default (R1295000, R1297000, R1313000), and an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000); `is_id_of` checks a deck's pick, and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001) |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the hero cards' full arts, one per card, and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card and no default (R1295000, R1297000, R1313000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` whether an account owns a portrait, and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla on the shipped registry |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
@@ -196,7 +196,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
-| `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
+| `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
@@ -850,6 +850,16 @@ btree index leading with its columns, whole or partial only on one of them `is n
 keys into the catalog (`cards`, `cosmetics`), whose rows the server never deletes. A new foreign key
 brings its index in the same migration.
 
+Migration 0057 makes the hero portraits account cosmetics (R1827000). It writes the six `portrait-*`
+rows of `public.cosmetics` as `cosmetics.json` has them, since `release` migrates before
+`seed-catalog` writes the registry, and then gives every person's profile then signed up, whatever its
+status and a ladder bot's passed over (R1454), the five that are not starters: an
+`account_cosmetics` row each, with its `cosmetic_grants` row on no card, reason `launch` and ref
+`launch:0057`, so an account that existed keeps every portrait it could pick. It runs once:
+`app.settings.portraits_granted` marks it done. An account made after it owns `portrait-vanilla`
+alone, a starter with no row, and a deck's save refuses a portrait its account does not own
+(`api/decks.rs`).
+
 ## Tests
 
 ```
@@ -881,7 +891,7 @@ real Postgres, so only the three Docker suites check them (CI's `db` job).
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
 `tests/export_cosmetics.rs` writes `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json`,
-the card and deck slot cosmetics and the full arts, the registry `src/cosmetics.rs` checks (R1295000, R1297000, R1313000); CI fails when a run changes it too.
+the card and deck slot cosmetics, the full arts and the portraits, the registry `src/cosmetics.rs` checks (R1295000, R1297000, R1313000, R1827000); CI fails when a run changes it too.
 
 ## Conventions
 
