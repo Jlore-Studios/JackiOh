@@ -654,6 +654,16 @@ pub(crate) fn forget_summoned_token_face(instance: &mut CardInstance) {
     instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY);
 }
 
+/// R781003, R1185002: Set Stats took a token's buffs and the stat half of its `tuning` and left, on a face
+/// that wears its X/X doubled (R349), the difference that makes it wear the set stats. That difference
+/// goes with the set: a token that returns to the face it was summoned with (R175, R444) carries none of
+/// it, or a Radiant Ghoul would come back at the set stats less its doubling. A token never set is as it was.
+pub(crate) fn forget_set_stats(instance: &mut CardInstance) {
+    if instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY).is_some() {
+        crate::effects::transform::to_printed_stats(instance);
+    }
+}
+
 /// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (TS `{ stack? }`, which a
 /// test builds with `json_as`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -1805,6 +1815,7 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     // R444, R175: an X/X token's summoned face survives the reset; R1185002's later Set Stats does not.
     let token_face = summoned_token_face(state, &current);
     if let Some(live) = find_instance_mut(state, &current.id) {
+        forget_set_stats(live);
         reset_instance(live);
         if let Some(face) = token_face {
             live.stats_override = face.stats_override;

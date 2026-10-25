@@ -5,7 +5,7 @@
 // never reopens it, opens again `WATCH_RECONNECT_MS` after an unexpected close up to
 // `WATCH_RECONNECT_ATTEMPTS` times and offers Reconnect now, while one waits (#1691) and once they run
 // out, whose click opens it again with the attempts started over (#1570), and does not reopen a
-// finished game.
+// finished game. The board's rail offers the newest view's live modifiers in full (R169).
 //
 // The socket is a fake `WebSocket` the test drives frame by frame; the friends list and the catalog are
 // a stubbed `fetch` (`test/stubServer.ts`). Under fake timers `waitFor` hangs, so those tests advance
@@ -18,11 +18,12 @@ import { registeredCatalog } from "@jackioh/engine";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import { SILENT_SOCKET_MS, WAKE_PROBE_MS } from "../game/net.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import type { Friend } from "../net/social.ts";
-import { baseView, card, emptySide } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, yourModifiers } from "../test/fixtures.ts";
 import { must, signIn, stubServer } from "../test/stubServer.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { WatchRoute } from "./WatchRoute.tsx";
@@ -562,5 +563,65 @@ describe("B50 the watch screen", () => {
     expect(panel).toContainElement(back);
     expect(back).toHaveAttribute("href", "/together");
     expect(panel).toContainElement(screen.getByTestId("watch-reconnect"));
+  });
+});
+
+describe("R169 the modifier list on the watch screen", () => {
+  /** The panel's headings, in order: who each group of labels belongs to. */
+  function headings(panel: HTMLElement): (string | null)[] {
+    return Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent);
+  }
+
+  it("R169 a view with live modifiers shows the chip, which opens every label under You and Opponent", () => {
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({
+      type: "view",
+      view: baseView({
+        viewer: "p1",
+        you: emptySide("p1", { modifiers: yourModifiers }),
+        opponent: emptySide("p2", { hand: { count: 4 }, modifiers: opponentModifiers }),
+      }),
+      legal: [],
+    });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", String(yourModifiers.length + opponentModifiers.length));
+
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of yourModifiers) {
+      expect(panel.querySelector('[data-side="you"]')).toHaveTextContent(modifier.label);
+    }
+    for (const modifier of opponentModifiers) {
+      expect(panel.querySelector('[data-side="opponent"]')).toHaveTextContent(modifier.label);
+    }
+    expect(headings(panel)).toEqual(["You", "Opponent"]);
+  });
+
+  it("R169 the chip follows the newest view and goes once a view lists no modifier", () => {
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({
+      type: "view",
+      view: baseView({ viewer: "p1", opponent: emptySide("p2", { hand: { count: 4 }, modifiers: opponentModifiers }) }),
+      legal: [],
+    });
+    expect(screen.getByTestId(modifierListTestid.chip)).toHaveAttribute("data-count", "1");
+
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+  });
+
+  it("R169 shows no chip while the view lists no modifier", () => {
+    watch();
+    const socket = latest();
+    socket.emit("open");
+    socket.frame({ type: "view", view: baseView({ viewer: "p1" }), legal: [] });
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
   });
 });

@@ -1,10 +1,11 @@
 //! C #80 BOOM! Big Max (SPEC §8.6 row 80). (4) Unit, Legendary, 13/8 → 26/16.
-//!   Base:    "Tribute 3, Rush, Trample, Indestructible"
-//!   Radiant: "Tribute 3, Charge, Trample, Indestructible"
+//!   Base:    "Tribute 3, Rush, Trample, Indestructible, Crater"
+//!   Radiant: "Tribute 3, Charge, Trample, Indestructible, Crater"
 //!   Engine:  "Keywords only. Tribute 3 (§6.3, R101) may pay for its own zone (R391, §3.2);
 //!            Indestructible gives no Taunt (R347). Balance patch 1 set the base attack to 13, so the
 //!            Radiant 26 doubles it exactly (R275) with no exception left, and the Radiant face trades
-//!            Rush for Charge to meet the keyword half. Tunes: none."
+//!            Rush for Charge to meet the keyword half. Crater (since issue #1828) Locks its unit zone
+//!            as it arrives (R783010). Tunes: none."
 //!
 //! The one thing the script carries is the Tribute cost, §6.3's `staticFlags.tribute` (as #66 The Rock
 //! carries its own): the play validator (`playChoices`) refuses the play when the board cannot pay 3
@@ -15,6 +16,8 @@
 //!   Trample         — §4.4 step 9, R63: the excess over the defender's health hits that side's hero.
 //!   Indestructible  — §4.4 step 4 (it takes no damage), §4.5 and R46 (a destroy knocks it into Attack
 //!                     Position), R347 (never Taunt), R69 (it still dies if its max health reaches 0).
+//!   Crater          — §6.1, R783010: the engine Locks the unit zone it arrives in, any way it arrives,
+//!                     before its Cry; the Lock outlasts it (R688).
 
 use jackioh_engine::prelude::*;
 
@@ -39,8 +42,9 @@ pub fn script() -> CardScripts {
 }
 
 // C #80 BOOM! Big Max (SPEC §8.6 row 80; BUILD M9 row C 80). (4) Unit, Legendary, 13/8 → 26/16:
-// Tribute 3, Rush, Trample, Indestructible; Radiant: Tribute 3, Charge, Trample, Indestructible. Balance
-// patch 1 set the base attack to 13, so the Radiant 26 doubles it exactly (R275) with no exception left.
+// Tribute 3, Rush, Trample, Indestructible, Crater; Radiant: Tribute 3, Charge, Trample, Indestructible,
+// Crater. Balance patch 1 set the base attack to 13, so the Radiant 26 doubles it exactly (R275) with no
+// exception left.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -82,6 +86,27 @@ mod tests {
             }
         }
         merged
+    }
+
+    /// R783010: played on `radiant`'s face into zone 4, its Tribute paid by a Timmy and a Sheep, it Locks
+    /// that zone as it arrives, and only that one.
+    fn craters(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [{ "def": BOOM, "radiant": radiant }, STOCKPILE],
+                "field": [TIMMY, SHEEP, VANILLA],
+                "library": spare_library()
+            },
+            "p2": spare()
+        }));
+        assert_eq!(s.state().players.p1.locks.units, vec![false; 5]);
+        s.play(BOOM, json!({ "zone": 4, "tributes": [TIMMY, SHEEP] }));
+        assert_eq!(s.unit(P1, 4).map(|card| card.def_id), Some(BOOM.to_string()));
+        assert_eq!(s.state().players.p1.locks.units, vec![false, false, false, true, false]);
+        assert!(s.last_events().iter().any(|event| matches!(
+            event,
+            GameEvent::Locked { player: PlayerId::P1, row: Row::Units, lane: 4 }
+        )));
     }
 
     /// The `play` actions `legalActions` offers p1 for BOOM!, as JSON.
@@ -183,6 +208,12 @@ mod tests {
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(BOOM.to_string()));
         }
 
+        /// R783010 Crater: it Locks the zone it arrives in
+        #[test]
+        fn r783010_crater_locks_the_zone_it_arrives_in() {
+            craters(false);
+        }
+
         /// §4.1, R63 Rush and Trample: it attacks a Unit the turn it enters, the excess over the defender's health hitting their hero
         #[test]
         fn s4_1_r63_rush_and_trample_it_attacks_a_unit_the_turn_it_enters_the_excess_over_the_defender_s_health_hitting_their_hero()
@@ -230,6 +261,12 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        /// R783010 Crater: the Radiant face Locks the zone it arrives in too
+        #[test]
+        fn r783010_crater_locks_the_zone_it_arrives_in() {
+            craters(true);
+        }
 
         /// §8.6 26/16 Charge: it may attack the hero the turn it enters
         #[test]

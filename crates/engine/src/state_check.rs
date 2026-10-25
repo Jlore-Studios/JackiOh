@@ -796,7 +796,9 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 id: card.unit.id.clone(),
                 at,
                 token: if card.token {
-                    Some(card.snapshot.clone())
+                    let mut body = card.snapshot.clone();
+                    crate::zones::forget_set_stats(&mut body);
+                    Some(body)
                 } else {
                     None
                 },

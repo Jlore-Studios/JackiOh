@@ -127,9 +127,9 @@ pub fn script() -> CardScripts {
     scripts(true)
 }
 
-/// R767000: v0.4.9 and every version before it made Shadowstep's hand card from only its definition
+/// R767000: v0.4.10 and every version before it made Shadowstep's hand card from only its definition
 /// and Radiant flag; `KEPT_SCRIPTS` folds those replays under that script.
-pub fn script_v0_4_9() -> CardScripts {
+pub fn script_v0_4_10() -> CardScripts {
     scripts(false)
 }
 
@@ -533,8 +533,8 @@ mod tests {
     }
 
     #[test]
-    fn r767000_v0_4_9_kept_script_uses_the_old_definition_copy() {
-        crate::under_kept(SHADOWSTEP, script_v0_4_9(), || {
+    fn r767000_v0_4_10_kept_script_uses_the_old_definition_copy() {
+        crate::under_kept(SHADOWSTEP, script_v0_4_10(), || {
             let mut s = wipe(true, json!([RUSH_TOKEN]), json!({}));
             let source = s.card(RUSH_TOKEN).id.clone();
             s.card_mut(&source).stats_override = Some(AttackHealth { attack: 4, health: 4 });

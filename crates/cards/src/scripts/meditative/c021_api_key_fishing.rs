@@ -1,7 +1,8 @@
 //! M #21 API Key Fishing (SPEC §8.8 row 21, BUILD M10 row M 21). (0, embiggen 1) Spell, Rare.
-//!   Base and Radiant: "{chance}% chance: Steal your opponent's hand.
-//!   Embiggened (1): {paidChance}% instead.
-//!   End of turn: Add an API Key Fishing to your hand." (2/5; 5/12 step 2)
+//!   Base:    "{chance}% chance: Steal your opponent's hand.
+//!            Embiggened (1): {paidChance}% instead.
+//!            End of turn: Add an API Key Fishing to your hand." (2; 5 step 2)
+//!   Radiant: the same, but "End of turn: Add a Radiant API Key Fishing to your hand." (4; 10 step 2)
 //!
 //! `cost: { base: 0, embiggen: 1 }` (§2.3; the script reads `ctx.embiggened`). At resolution the hook
 //! draws one `ctx.rng.chance(p / 100)`; on success it runs `give_from_hand { from: enemy, cards:
@@ -11,9 +12,11 @@
 //!
 //! The `end_of_turn` hook works from the graveyard on the turn the card was played (the return flag,
 //! R153, R155): `add_to_hand { defId: "meditative-021" }` adds a fresh card, while this one stays in
-//! the graveyard. The added card is a new, base API Key Fishing, even from the Radiant face (a
-//! generated card isn't Radiant unless said, §5.2; R805). Both numbers are declared and read
-//! through `param` (R386).
+//! the graveyard. The added card is a new API Key Fishing: a base one from the base face (a generated
+//! card isn't Radiant unless said, §5.2; R805), and since issue #1828 a Radiant one from the Radiant
+//! face, whose text says so (R1828000). Both numbers are declared and read through `param` (R386).
+//! Through v0.4.9 the Radiant face added a base copy; `script_v0_4_9` keeps that for those versions'
+//! replays (R767000).
 
 use jackioh_engine::effects::{add_to_hand, give_from_hand};
 use jackioh_engine::prelude::*;
@@ -35,8 +38,9 @@ fn returns_this_turn(ctx: &EffectContext<'_>) -> bool {
     was_played_this_turn(&*ctx.state, self_.controller, self_)
 }
 
-pub fn script() -> CardScripts {
-    let base = Script {
+/// The script of a face whose end-of-turn copy is Radiant when `adds_radiant` is.
+fn fishing(adds_radiant: bool) -> Script {
+    Script {
         cry: Some(hook(|ctx| {
             // R129: with no hand to steal, there is nothing to roll for.
             if zone_count(&*ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) == 0 {
@@ -50,26 +54,39 @@ pub fn script() -> CardScripts {
                 vec![]
             }
         })),
-        end_of_turn: Some(hook(|ctx| {
+        end_of_turn: Some(hook(move |ctx| {
             if returns_this_turn(ctx) {
-                vec![add_to_hand(json_as(json!({ "defId": ID })))]
+                vec![add_to_hand(json_as(json!({ "defId": ID, "radiant": adds_radiant })))]
             } else {
                 vec![]
             }
         })),
         ..Script::default()
-    };
-
-    // The same script: the Radiant face differs only in its declared numbers, read through `param`.
-    let radiant = base.clone();
-
-    CardScripts { base, radiant }
+    }
 }
 
-// M #21 API Key Fishing — SPEC §8.8 row 21, BUILD M10 row M 21: "A {chance}% roll steals the whole
-// hand (paid (1): {paidChance}%); at end of turn a new base copy is added and the card stays in the
-// graveyard (R805, R153); nothing on later turns; the Radiant still adds a base copy; an empty hand
-// rolls nothing (R129); its tuned numbers read through `param()` (R386)".
+pub fn script() -> CardScripts {
+    // R1828000: the Radiant face adds a Radiant copy; its numbers are read through `param`.
+    CardScripts {
+        base: fishing(false),
+        radiant: fishing(true),
+    }
+}
+
+/// R767000: through v0.4.9 the Radiant face added a base copy; `KEPT_SCRIPTS` keeps it.
+pub fn script_v0_4_9() -> CardScripts {
+    CardScripts {
+        base: fishing(false),
+        radiant: fishing(false),
+    }
+}
+
+// M #21 API Key Fishing — SPEC §8.8 row 21, BUILD M10 row M 21: "At (0) one 2% roll, paid (1) 5% (§2.3): a
+// success moves every card of the opponent's hand into yours as your cards (R12), the hand cap burning the
+// overflow into your graveyard, the opponent learning only how many; a failure takes nothing; at your end of
+// turn, on the turn it was played, it adds a new base API Key Fishing to your hand from the graveyard
+// (MD-A25) while this one stays there; not on later turns; the chances read through `param()`; radiant 4% and
+// paid 10%, and the card added is a Radiant API Key Fishing (R1828000)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,6 +100,16 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell.
     const VANILLA: &str = "core-008"; // (1) Unit.
     const TIMMY: &str = "core-011"; // (1) Unit.
+
+    /// p1 holds a Radiant API Key Fishing, against a hand to take.
+    fn radiant_return() -> Scenario {
+        crate::register_all();
+        scenario(json!({
+            "seed": "meditative-021-radiant-return",
+            "p1": { "hand": [{ "def": FISHING, "radiant": true }, TIMMY], "field": [TIMMY] },
+            "p2": { "hand": [FILLER], "field": [TIMMY] },
+        }))
+    }
 
     /// p1's hand defs of `def`, with radiance.
     fn hand_copies(s: &Scenario, def: &str) -> Vec<bool> {
@@ -207,17 +234,55 @@ mod tests {
         }
 
         #[test]
-        fn r805_radiant_still_adds_a_base_copy() {
-            crate::register_all();
-            let mut s = scenario(json!({
-                "seed": "meditative-021-radiant-return",
-                "p1": { "hand": [{ "def": FISHING, "radiant": true }, TIMMY], "field": [TIMMY] },
-                "p2": { "hand": [FILLER], "field": [TIMMY] },
-            }));
+        fn r1828000_the_radiant_face_adds_a_radiant_copy_and_stays_in_the_graveyard() {
+            let mut s = radiant_return();
+            let played = s.card(FISHING).id.clone();
             s.play(FISHING, json!({}));
             s.end_turn();
 
-            assert_eq!(hand_copies(&s, FISHING), vec![false]);
+            assert_eq!(hand_copies(&s, FISHING), vec![true]);
+            assert!(s.hand(P1).iter().all(|card| card.id != played));
+            s.expect_in_zone(&played, "graveyard");
+        }
+
+        /// R1828000: the Radiant face rolls 4%, and 10% Embiggened. Each roll is pinned to a cursor whose
+        /// draw lands in the band named, `[lo, hi)`, the play drawing nothing before the roll.
+        #[test]
+        fn r1828000_the_radiant_face_rolls_4_and_10_embiggened() {
+            const SEED: &str = "meditative-021-radiant-odds";
+            let band = |lo: f64, hi: f64| {
+                cursor_where(SEED, |cursor| {
+                    Rng::new(SEED, cursor).chance(hi) && !Rng::new(SEED, cursor).chance(lo)
+                })
+            };
+            let takes = |cursor: u32, embiggen: bool| {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": SEED,
+                    "p1": { "hand": [{ "def": FISHING, "radiant": true }, TIMMY], "mana": 9, "field": [TIMMY] },
+                    "p2": { "hand": [FILLER, VANILLA], "field": [TIMMY] },
+                }));
+                s.state_mut().rng_cursor = cursor;
+                s.play(FISHING, json!({ "embiggen": embiggen }));
+                s.hand(P2).is_empty()
+            };
+            assert!(takes(band(0.0, 0.04), false));
+            assert!(!takes(band(0.04, 0.05), false), "v0.4.9's 5% is gone");
+            assert!(takes(band(0.05, 0.10), true));
+            assert!(!takes(band(0.10, 0.12), true), "v0.4.9's 12% is gone");
+        }
+
+        /// R767000: a game on v0.4.9 folds under the kept script, whose Radiant face added a base copy.
+        #[test]
+        fn r767000_r1828000_a_game_on_v0_4_9_folds_under_the_kept_script_the_radiant_face_adds_a_base_copy() {
+            crate::register_all();
+            jackioh_engine::with_shipped(crate::catalog_at("v0.4.9"), || {
+                let mut s = radiant_return();
+                s.play(FISHING, json!({}));
+                s.end_turn();
+
+                assert_eq!(hand_copies(&s, FISHING), vec![false]);
+            });
         }
 
         #[test]
