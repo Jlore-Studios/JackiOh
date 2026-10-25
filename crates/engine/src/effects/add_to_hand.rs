@@ -45,6 +45,8 @@ struct HandRiders {
     /// ME-SECRET, R862: what the new card remembers from the start (Mind Games' link rides the
     /// Fortify Mind it hands the opponent).
     memory: Option<IndexMap<String, Value>>,
+    /// R1848003: an X-cost card reaches the hand with its X set at this.
+    fixed_x: Option<i32>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -117,6 +119,15 @@ fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders:
     let _ = crate::draw::add_to_hand(ctx, &mut card);
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
+    }
+    // R1848003: "their prices are set at 1, 2, 3, 4" — a price for the card in the hand, as the other
+    // cost riders are, and only an X-cost card has an X to set.
+    if reaches_hand
+        && let Some(fixed) = riders.fixed_x
+        && find_instance(&*ctx.state, &card.id).is_some_and(|live| crate::mana::is_x_cost(&*ctx.state, live))
+        && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id)
+    {
+        live.fixed_x = Some(fixed.max(0));
     }
     // R1704003: "it costs (1) more (up to (4))" — the raise is taken back as far as it went past the
     // cap, and whole from an X-cost card, whose X is no cost a number may move (R65).
@@ -192,6 +203,11 @@ pub struct AddToHandArgs {
     /// ME-SECRET, R862: what the new card remembers from the start.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<IndexMap<String, Value>>,
+    /// R1848003 (Stinkyscape #102 Book of Nono-Words, "their prices are set at 1, 2, 3, 4"): an X-cost
+    /// card reaches the hand with its X set at this (`CardInstance.fixed_x`), so it is played for that X
+    /// and costs it. Nothing on a card that has no X, or one a full hand burns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_x: Option<i32>,
 }
 
 impl AddToHandArgs {
@@ -207,6 +223,7 @@ impl AddToHandArgs {
             chinese: self.chinese,
             lucky: self.lucky,
             memory: self.memory.clone(),
+            fixed_x: self.fixed_x,
         }
     }
 }
@@ -319,6 +336,7 @@ impl AddRandomFromCatalogArgs {
             chinese: self.chinese,
             lucky: self.lucky,
             memory: None,
+            fixed_x: None,
         }
     }
 }

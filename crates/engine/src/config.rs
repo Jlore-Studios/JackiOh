@@ -549,6 +549,23 @@ pub const FROZEN_MARK: MarkSpec = MarkSpec {
     color: "cyan",
 };
 
+// ---- Stinkyscape's spell verbs (issue #1848, R1848000–R1848006) ----
+
+/// R1848000 (Stinkyscape #2 Absolute Zero, "Freeze a Unit forever"): the thaw a forever freeze is
+/// stamped with (`CardInstance.frozen`), a turn no game reaches (R2's cap is `TURN_CAP_PLAYER_TURNS`),
+/// so no cleanup ever thaws it; only leaving the field and a Vanilla take it off.
+pub const FROZEN_FOREVER: i32 = i32::MAX;
+/// R1848005 (Stinkyscape #120 Wild System, "max 20 attacks"): the most attacks one melee makes.
+pub const MELEE_MAX_ATTACKS: i32 = 20;
+/// R1848006 (Stinkyscape #153 Stimmycheck): the printed chance, in percent, that Inflation hits a card.
+pub const INFLATION_CHANCE: i32 = 15;
+/// R1848006: how much a Stimmycheck's chance grows on the copy it makes ("+10% chance at Inflation").
+pub const INFLATION_CHANCE_STEP: i32 = 10;
+/// R1848006: the sides of an Inflation roll: a chance is in percent, so a roll is one of 100.
+pub const INFLATION_ROLL_SIDES: i32 = 100;
+/// R1848006: what Inflation adds to a card's price when it hits ("cost (1) more").
+pub const INFLATION_COST: i32 = 1;
+
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // generation (E19, E23–E25), below A6a's prompts constants:

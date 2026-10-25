@@ -76,6 +76,9 @@ export const BERSERK_WORDS = "Berserk: at the start and end of its controller's 
 /** R1174000, §6.1: what a Frozen unit's badge says. */
 export const FROZEN_WORDS = "Frozen: can't attack or switch position; it thaws at the end of the turn it could have acted in";
 
+/** R1848000, §6.1: what the badge of a unit Frozen forever says. */
+export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack or switch position, and never thaws";
+
 /** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's colour. */
 export const FROZEN_GLYPH = "\u2744\uFE0E";
 
@@ -170,7 +173,9 @@ export function stateBadges(face: FaceModel): StateBadge[] {
   }
   // R1174000: a Frozen unit, the frost badge.
   if (face.frozen === true) {
-    badges.push({ kind: "frozen", text: FROZEN_GLYPH, icon: null, words: t(FROZEN_WORDS), data: { "data-frozen": "true" } });
+    // R1848000: one Frozen forever says it never thaws.
+    const words = face.frozenForever === true ? FROZEN_FOREVER_WORDS : FROZEN_WORDS;
+    badges.push({ kind: "frozen", text: FROZEN_GLYPH, icon: null, words: t(words), data: { "data-frozen": face.frozenForever === true ? "forever" : "true" } });
   }
   // MD-B6, R943: a Created card, made during the game.
   if (face.created === true) {

@@ -174,6 +174,12 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub copies: Option<CopiedTextView>,
+    /// R1848003: the X an X-cost card is set at (`CardInstance.fixed_x`), which is its price (`cost`)
+    /// and the X it is played for, so the face prints the number where it would print X. Only on a
+    /// card the viewer may read; absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fixed_x: Option<i32>,
 }
 
 /// One reward on offer, or one aura held, as `QuestView` lists it: `{ id, text }`.
@@ -487,6 +493,11 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub frozen: Option<bool>,
+    /// R1848000: the unit is Frozen forever (Stinkyscape #2 Absolute Zero), so it never thaws; public
+    /// as `frozen` is. Absent otherwise. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub frozen_forever: Option<bool>,
     /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
     /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
     /// Only ever `Some(true)`.

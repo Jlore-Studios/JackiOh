@@ -95,6 +95,10 @@ pub fn may_attack_again(args: MayAttackAgainArgs) -> Effect {
 #[serde(rename_all = "camelCase")]
 pub struct FreezeArgs {
     pub target: TargetSpec,
+    /// R1848000 (Stinkyscape #2 Absolute Zero): "Freeze a Unit forever" — the freeze never thaws
+    /// (`freeze::freeze_unit_forever`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub forever: Option<bool>,
 }
 
 /// R1174000: whether the card is a Unit on the field a freeze can land on — in a unit zone, standing
@@ -106,13 +110,18 @@ fn freezable(state: &crate::state::GameState, card: &crate::state::CardInstance)
 /// §6.3 Freeze (R1174000): the Unit `target` names is Frozen, losing its next attack or position
 /// switch (`freeze::freeze_unit`, which stamps its thaw). A hero, a card that is not a Unit on the
 /// field, and a Unit a Spell may not affect (Immune to Spells, `instance_of`) are passed by; an
-/// Immutable Unit is not, since a status is not text.
+/// Immutable Unit is not, since a status is not text. R1848000: with `forever` it never thaws.
 pub fn freeze(args: FreezeArgs) -> Effect {
     Effect::new("freeze", move |ctx| {
         let Some(unit) = instance_of(ctx, &args.target) else {
             return;
         };
-        if freezable(ctx.state, &unit) {
+        if !freezable(ctx.state, &unit) {
+            return;
+        }
+        if args.forever == Some(true) {
+            crate::freeze::freeze_unit_forever(&mut ctx.sink, &unit.id);
+        } else {
             crate::freeze::freeze_unit(&mut ctx.sink, &unit.id);
         }
     })

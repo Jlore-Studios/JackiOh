@@ -685,7 +685,10 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
     if crate::subsystems::copied_text::copies_text(instance) {
         return crate::subsystems::copied_text::copied_chooses_x(state, instance);
     }
-    crate::mana::is_x_cost(state, instance) && crate::scripts::script_of(state, instance).cost.is_none()
+    // R1848003: nor one whose X is set (`fixed_x`): it is played for that X.
+    crate::mana::is_x_cost(state, instance)
+        && instance.fixed_x.is_none()
+        && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
 /// §2.3, R348: why this X is not one the player may choose for this card, or `Ok` when it is —
@@ -2639,6 +2642,13 @@ fn refuse_x(
         return match x {
             None => Ok(()),
             Some(_) => refuse(format!("{name} does not cost X")),
+        };
+    }
+    // R1848003: a set X is the play's; the action may name it or leave it out, and names no other.
+    if let Some(fixed) = card.fixed_x {
+        return match x {
+            Some(other) if other != fixed => refuse(format!("{name}'s X is set at {fixed}")),
+            _ => Ok(()),
         };
     }
     // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the

@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
+// R1848001: where a stated Trample's excess goes, as a card names it.
+pub use crate::damage::TrampleOnto;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, resolve_target, sides_of};
 use crate::script::Effect;
 use crate::wire::TargetAim;
@@ -28,6 +30,11 @@ pub struct DamageFlagArgs {
     /// Spell's printed Trample is read off it while it resolves too; stating it keeps it on a repeat.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample: Option<bool>,
+    /// R1848001 (Stinkyscape #3 Meteor): this damage tramples onto the Units adjacent to its target
+    /// (`adjacent`), and on to its controller's hero after them (`adjacentAndHero`), instead of onto
+    /// that hero alone (`damage::trample_onto_adjacent`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trample_onto: Option<TrampleOnto>,
 }
 
 /// `damage`'s argument: `{ to; amount } & DamageFlagArgs`.
@@ -55,6 +62,7 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
         },
         poisonous: None,
         attacking: None,
+        trample_onto: args.trample_onto,
     }
 }
 

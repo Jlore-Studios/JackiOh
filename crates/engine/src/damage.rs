@@ -75,6 +75,22 @@ pub struct DamageFlags {
     /// `trample` do not need it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attacking: Option<bool>,
+    /// R1848001 (Stinkyscape #3 Meteor, "Tramples onto adjacent Units"): the hit tramples, and its
+    /// excess goes onto the Units adjacent to its target instead of its controller's hero
+    /// (`trample_onto_adjacent`), on to that hero after them where it says so.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trample_onto: Option<TrampleOnto>,
+}
+
+/// R1848001: where a hit's Trample excess goes when it is not §4.4 step 9's hero: onto the Units
+/// adjacent to its target (Stinkyscape #3 Meteor's base face), or onto them and then the target's
+/// controller's hero (its Radiant face, "Tramples onto adjacent Units and the enemy hero").
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum TrampleOnto {
+    Adjacent,
+    AdjacentAndHero,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -413,11 +429,32 @@ fn land_hit(
     redirects: u32,
     caught: &[String],
 ) -> i32 {
+    land(sink, args, amount_in, redirects, caught, false).dealt
+}
+
+/// What one instance did: what it dealt, and, for a hit that holds its Trample excess (R1848001's
+/// hits on a target's neighbours), the excess it did not send on.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct Landed {
+    dealt: i32,
+    held: i32,
+}
+
+/// `land_hit`, with `hold` set for a hit whose Trample excess goes back to its caller instead of on to
+/// a hero (`Landed::held`), as R1848001 carries a Meteor's excess from one neighbour to the next.
+fn land(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    amount_in: i32,
+    redirects: u32,
+    caught: &[String],
+    hold: bool,
+) -> Landed {
     let source = args.source.as_ref();
     let target = &args.target;
     let flags = args.flags.as_ref();
     if amount_in <= 0 {
-        return 0;
+        return Landed::default();
     }
     // §4: damage is a unit's on the field — it stays there between turns and leaving the field takes
     // it off (R78). A card that has left the field, or lies dormant under a Stack (R13), is no unit to
@@ -426,10 +463,10 @@ fn land_hit(
     let unit: Option<CardInstance> = match target {
         DamageTarget::Unit { instance } => {
             let Some(live) = find_instance(sink.state, &instance.id).cloned() else {
-                return 0;
+                return Landed::default();
             };
             if !crate::zones::acts_on_field(sink.state, &live) {
-                return 0;
+                return Landed::default();
             }
             Some(live)
         }
@@ -446,7 +483,7 @@ fn land_hit(
             sink.events.push(GameEvent::DivineShieldLost {
                 instance_id: live.id.clone(),
             });
-            return 0;
+            return Landed::default();
         }
     }
 
@@ -490,7 +527,7 @@ fn land_hit(
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
         if let Some(LethalHitTo::Cancelled) = to {
             // R1704001: a cancelled hit deals nothing, and emits no damage event.
-            return 0;
+            return Landed::default();
         }
         if let Some(LethalHitTo::Target(to)) = to {
             let to = *to;
@@ -505,7 +542,7 @@ fn land_hit(
                 target: to,
                 ..args.clone()
             };
-            return land_hit(sink, &redirected, amount_in, redirects + 1, &next_caught);
+            return land(sink, &redirected, amount_in, redirects + 1, &next_caught, hold);
         }
     }
 
@@ -525,7 +562,7 @@ fn land_hit(
             let at = sink.events.len() - 1;
             crate::triggers::withhold_report(sink, at);
         }
-        return 0;
+        return Landed::default();
     }
 
     // Step 4: Indestructible units take nothing, and emit no damage event.
@@ -535,7 +572,7 @@ fn land_hit(
             KeywordKind::Indestructible,
         )
     {
-        return 0;
+        return Landed::default();
     }
 
     // ME-LETHALGUARD (R1204): §4.4 step 4a opens for Units too. A hit that alone would leave a Unit
@@ -552,7 +589,7 @@ fn land_hit(
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
         if let Some(LethalHitTo::Cancelled) = to {
-            return 0;
+            return Landed::default();
         }
         if let Some(LethalHitTo::Target(to)) = to {
             let to = *to;
@@ -564,7 +601,7 @@ fn land_hit(
                 target: to,
                 ..args.clone()
             };
-            return land_hit(sink, &redirected, amount_in, redirects + 1, &next_caught);
+            return land(sink, &redirected, amount_in, redirects + 1, &next_caught, hold);
         }
     }
 
@@ -576,7 +613,8 @@ fn land_hit(
         // E6: a Spell's printed Trample is read off it while it resolves, as a unit's is, or stated.
         // R1750000: a Unit's own Trample is for the hits of its attack only, never for a strike back
         // or for the damage of its text.
-        let trample = flags.is_some_and(|flags| flags.trample == Some(true))
+        // R1848001: a hit whose excess goes onto its target's neighbours tramples, stated.
+        let trample = flags.is_some_and(|flags| flags.trample == Some(true) || flags.trample_onto.is_some())
             || (source_has(sink.state, source, KeywordKind::Trample)
                 && (flags.is_some_and(|flags| flags.attacking == Some(true))
                     || crate::restrictions::is_spell_source(sink.state, source)));
@@ -592,18 +630,8 @@ fn land_hit(
     // instance: no `damage` event, no `lastDamagedBy`, and none of steps 6 to 8. Step 9 still runs,
     // with the whole amount, because the excess beyond that unit's health is all of it.
     if dealt <= 0 {
-        if trample_excess > 0 {
-            let excess = DamageArgs {
-                source: args.source.clone(),
-                target: DamageTarget::Hero {
-                    player: controller_of_now(&unit, target),
-                },
-                amount: trample_excess,
-                flags: args.flags,
-            };
-            land_hit(sink, &excess, trample_excess, 0, caught);
-        }
-        return 0;
+        let held = send_excess(sink, args, &unit, trample_excess, caught, hold);
+        return Landed { dealt: 0, held };
     }
 
     // R42: whether something had killed the unit before this hit, which then kills nothing.
@@ -671,21 +699,115 @@ fn land_hit(
         heal_hero(sink, source_card.controller, dealt);
     }
 
-    // Step 9: Trample sends the excess to the target's controller's hero as its own instance — of the
-    // same hit, so not raised again by Spell Damage. R1204: the excess keeps the hit's catchers.
-    if trample_excess > 0 {
-        let excess = DamageArgs {
+    // Step 9: Trample sends the excess on (`send_excess`).
+    let held = send_excess(sink, args, &unit, trample_excess, caught, hold);
+    Landed { dealt, held }
+}
+
+/// §4.4 step 9: a Trample excess goes on as its own instance — of the same hit, so not raised again
+/// by Spell Damage, and keeping the hit's catchers (R1204) — to the target's controller's hero; or,
+/// R1848001, onto the target's neighbours (`trample_onto_adjacent`); or, from a hit that holds it, back
+/// to its caller untouched. Returns what is held: the excess for a hit that holds it, else 0.
+fn send_excess(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    unit: &Option<CardInstance>,
+    excess: i32,
+    caught: &[String],
+    hold: bool,
+) -> i32 {
+    if excess <= 0 {
+        return 0;
+    }
+    if hold {
+        return excess;
+    }
+    if let (Some(onto), Some(struck)) = (args.flags.and_then(|flags| flags.trample_onto), unit) {
+        trample_onto_adjacent(sink, args, struck, excess, onto, caught);
+        return 0;
+    }
+    let to_hero = DamageArgs {
+        source: args.source.clone(),
+        target: DamageTarget::Hero {
+            player: controller_of_now(unit, &args.target),
+        },
+        amount: excess,
+        flags: args.flags,
+    };
+    land_hit(sink, &to_hero, excess, 0, caught);
+    0
+}
+
+/// R1848001 (Stinkyscape #3 Meteor, "Tramples onto adjacent Units", Radiant "and the enemy hero"): a
+/// hit's Trample excess carried onto the Units adjacent to its target — §3.1's neighbours in its row
+/// on its side, as Cleave's are (`zones::adjacent`, R1081000), a Unit a Spell may not affect passed by
+/// (R81) — and with `AdjacentAndHero` on to the target's controller's hero. The excess goes to one
+/// neighbour first, drawn from the match rng when there are two (Hearthstone's Rolling Fireball, whose
+/// excess rolls left or right at random), as a new instance of the same hit that counts only up to
+/// that Unit's health; what passes it goes to the other neighbour the same way, and what passes both
+/// to the hero. A neighbour that takes the hit whole (its Divine Shield, its Armor, Indestructible)
+/// stops the rest, as a target that takes a Trample hit whole sends nothing on.
+fn trample_onto_adjacent(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    struck: &CardInstance,
+    excess: i32,
+    onto: TrampleOnto,
+    caught: &[String],
+) {
+    let mut neighbours = adjacent_units_of(sink.state, struck, args.source.as_ref());
+    if neighbours.len() == 2 && sink.rng.int(2) == 1 {
+        neighbours.reverse();
+    }
+    let mut left = excess;
+    for neighbour in neighbours {
+        if left <= 0 {
+            return;
+        }
+        let hit = DamageArgs {
+            source: args.source.clone(),
+            target: DamageTarget::Unit { instance: neighbour },
+            amount: left,
+            flags: Some(DamageFlags {
+                trample: Some(true),
+                trample_onto: None,
+                ..args.flags.unwrap_or_default()
+            }),
+        };
+        left = land(sink, &hit, left, 0, caught, true).held;
+    }
+    if onto == TrampleOnto::AdjacentAndHero && left > 0 {
+        let to_hero = DamageArgs {
             source: args.source.clone(),
             target: DamageTarget::Hero {
-                player: controller_of_now(&unit, target),
+                player: struck.controller,
             },
-            amount: trample_excess,
+            amount: left,
             flags: args.flags,
         };
-        land_hit(sink, &excess, trample_excess, 0, caught);
+        land_hit(sink, &to_hero, left, 0, caught);
     }
+}
 
-    dealt
+/// R1848001: the Units acting beside `struck` now, lane order (its lower lane first), that a hit from
+/// `source` may reach.
+fn adjacent_units_of(
+    state: &GameState,
+    struck: &CardInstance,
+    source: Option<&CardInstance>,
+) -> Vec<CardInstance> {
+    let Some(at) = crate::zones::slot_of(state, struck) else {
+        return Vec::new();
+    };
+    crate::zones::adjacent(at)
+        .into_iter()
+        .filter_map(|slot| crate::zones::card_at(state, slot).cloned())
+        .filter(|neighbour| {
+            neighbour.id != struck.id
+                && crate::zones::is_adjacent_card(state, struck, neighbour)
+                && !crate::restrictions::spell_cannot_reach(state, source, neighbour)
+        })
+        .collect()
 }
 
 /// `controllerOf(target)` on TS's live object: the unit's controller as it stands now.

@@ -163,6 +163,7 @@ pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32,
 }
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).
+/// R1848003: an X-cost card whose X is set (`fixed_x`) costs that X wherever it is.
 pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
     let script = crate::scripts::script_of(state, instance);
     if let Some(cost) = script.cost.as_ref() {
@@ -171,7 +172,7 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
 
     let cost: CardCost = def_of(Some(state), &instance.def_id).cost;
     match cost {
-        CardCost::X => instance.x.unwrap_or(0).max(0),
+        CardCost::X => instance.x.or(instance.fixed_x).unwrap_or(0).max(0),
         CardCost::Fixed(n) => n,
         CardCost::Embiggen { base, embiggen } => {
             if instance.embiggened == Some(true) {
@@ -500,10 +501,11 @@ pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
 pub fn cost_now(state: &GameState, card: &CardInstance) -> i32 {
     let floor = cost_floor_of(card);
     if is_x_cost(state, card) {
+        // R1848003: a set X is the card's price anywhere, the field's chosen X first.
         let x = if matches!(card.zone, Zone::Field { .. }) {
-            card.x.unwrap_or(0)
+            card.x.or(card.fixed_x).unwrap_or(0)
         } else {
-            0
+            card.fixed_x.unwrap_or(0)
         };
         return 0.max(x).max(floor);
     }

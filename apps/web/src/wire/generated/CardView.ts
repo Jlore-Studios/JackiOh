@@ -141,4 +141,10 @@ quest?: QuestView,
  * on its owner's view of it in hand, and on both views while it resolves (its play is public). The
  * card keeps its own name, cost and type; absent when it copies nothing.
  */
-copies?: CopiedTextView, };
+copies?: CopiedTextView, 
+/**
+ * R1848003: the X an X-cost card is set at (`CardInstance.fixed_x`), which is its price (`cost`)
+ * and the X it is played for, so the face prints the number where it would print X. Only on a
+ * card the viewer may read; absent on every other card.
+ */
+fixedX?: number, };

@@ -29,7 +29,7 @@ import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
-import { BERSERK_WORDS, FROZEN_GLYPH, FROZEN_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
+import { BERSERK_WORDS, FROZEN_FOREVER_WORDS, FROZEN_GLYPH, FROZEN_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
 import { markColorOf, markWords } from "./marks.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
@@ -611,6 +611,31 @@ describe("R1174000 Frozen: a frost badge on a Frozen unit, on either seat", () =
     // The same words announce the freeze and its thaw (`marked`, "frozen"), in the engine's "cyan".
     expect(markWords("frozen").text).toBe(FROZEN_WORDS);
     expect(markColorOf("cyan")).toBe("cyan");
+  });
+});
+
+/* ----------------------------------------------------------------------------- R1848000 Frozen forever */
+
+describe("R1848000 Frozen forever: the frost badge says it never thaws, on either seat", () => {
+  it("R1848000 a unit Frozen forever wears the frost badge in its own words; one Frozen until it thaws keeps the old ones", () => {
+    vi.useFakeTimers();
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", defId: "core-008", frozen: true, frozenForever: true }), unit("p1", { instanceId: "u2", defId: "core-008", frozen: true }), null, null, null],
+        }),
+        opponent: emptySide("p2", {
+          units: [unit("p2", { instanceId: "u3", defId: "core-008", frozen: true, frozenForever: true }), null, null, null, null],
+        }),
+      }),
+    );
+    const forever = screen.getByTestId(testid.card("u1")).querySelector('.cf-state[data-state="frozen"]');
+    expect(forever?.getAttribute("aria-label")).toBe(FROZEN_FOREVER_WORDS);
+    expect(forever?.textContent).toBe(FROZEN_GLYPH);
+    const thawing = screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="frozen"]');
+    expect(thawing?.getAttribute("aria-label")).toBe(FROZEN_WORDS);
+    const theirs = screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="frozen"]');
+    expect(theirs?.getAttribute("aria-label")).toBe(FROZEN_FOREVER_WORDS);
   });
 });
 

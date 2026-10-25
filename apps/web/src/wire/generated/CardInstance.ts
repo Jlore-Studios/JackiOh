@@ -161,4 +161,12 @@ grantedTags?: Array<Tag>,
  * R78's reset takes them off with the card leaving the field; an instance copy keeps them, a
  * Fuse unites them, a Transform drops them — as `granted_tags` above.
  */
-grants?: Array<Grant>, };
+grants?: Array<Grant>, 
+/**
+ * R1848003 (Stinkyscape #102 Book of Nono-Words, "their prices are set at 1, 2, 3, 4"): the X an
+ * X-cost card is set at, so its player chooses none: it is played for this X, which is its price
+ * (R65: exactly X, no modifier reaching it) and what its text reads. A price, so it rides a hand,
+ * a library and a bounce as `costOverride` does and R766 takes it off a card reaching a graveyard
+ * or an exile pile; a copy is a new card without it (R57). Absent on every other card.
+ */
+fixedX?: number, };

@@ -127,6 +127,13 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
+    // R1848001–R1848006: Stinkyscape's spell verbs, which no card prints until the set ships; its card
+    // parts make a term of any its texts bold (Inflation).
+    "Trample onto adjacent Units",
+    "Next Spell keyword",
+    "Set X",
+    "Melee",
+    "Inflation",
   ],
 };
 
