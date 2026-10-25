@@ -1244,6 +1244,14 @@
     "at": "2026-10-25T12:56:18Z"
   },
   "suggest": {
+    "declined": [
+      {
+        "at": "2026-10-25T13:04:17Z",
+        "number": 1897,
+        "title": "Patch: an under-age answer retries the owed account deletion",
+        "why": "rejected by @MaxGoetzmann"
+      }
+    ],
     "idle_since": "2026-10-25T12:45:12Z",
     "last_run": null,
     "requested": false
