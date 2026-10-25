@@ -422,13 +422,21 @@
       }
     },
     "1908": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-25T09:25:06Z",
       "issue": 1803,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-10-25T12:03:44Z",
+      "run_id": "pending:86785dd3-1792929911",
       "self_check_findings": [],
+      "started_at": "2026-10-25T12:05:54Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gpt",
@@ -441,9 +449,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T12:04:59Z",
+    "at": "2026-10-25T12:05:54Z",
     "url": "",
-    "what": "plan #1826 on gpt"
+    "what": "review #1908 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-25T11:50:45Z",
