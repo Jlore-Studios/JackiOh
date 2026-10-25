@@ -6,8 +6,9 @@ night box: one virtual machine on AWS, where each subscription in
 (Codex, agy, Muse and Devin) has a Linux user of its own and a GitHub runner of its own per lane.
 The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
 public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
-GitHub write token. A second box, the training box (below), runs the two AI training lanes,
-outside the harness.
+GitHub write token. A second box, the training box (below), ran the two LLM training lanes
+outside the harness until #1677 stopped them on 2026-10-25; it now runs `gather` alone, and what it
+becomes next is #1677's to decide.
 
 **After the v0.3.0 cutover (#306), run `setup.sh` on the night box again, once**, with the same
 ids as before (Building it, step 2). The repository's checks are Rust now, and that run gives every
@@ -116,6 +117,14 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## The training box
 
+**Since 2026-10-25 only `jackioh-train@gather` runs here.** #682's audit
+(`reviews/2026-10-22-issue-682-subscriptions.md`) found that the two LLM lanes made no fair promotion
+in about 427 hours, and that on Muse's plan they spent most of the night bot's week. So
+`jackioh-train@improve` and `@unban` are disabled (`disabled; inactive (dead)`), and `setup.sh
+--training` keeps their users and checkouts but starts neither again. The AI improves through the
+`learn` lane on the owner's PC instead (The local runner, below). Whether this box becomes a second
+night box or is stopped is #1677.
+
 The AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
 is always on: `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, three systemd
 services that run `training/loop.sh <lane>` forever, each as its own user with its own checkout and
@@ -131,7 +140,7 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
 | CLIs | `muse` (as on the night box; #1272 moved the lanes from Devin, whose plan ends on 2026-11-02), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Muse run the web's tests that play the AI before a promotion goes up |
-| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; all three enabled, so they start at boot |
+| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; only `gather` enabled since #1677, so it alone starts at boot |
 | Idle stop | none: the box never powers itself off, and no starter wakes it |
 
 Build it once, after the cutover has put `training/loop.sh` on `main` (a lane runs whatever `main`
