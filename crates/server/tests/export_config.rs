@@ -321,6 +321,8 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::GLOBAL_COSMETIC_FLOOR_RARITY),
         ),
         // ---- end the collection economy ----
+        // R1935000: how often `/stats`'s open Daily runs tab asks for the daily runs again.
+        ("CI_RUNS_CACHE_TTL_SECONDS", json!(c::CI_RUNS_CACHE_TTL_SECONDS)),
     ]
 }
 
