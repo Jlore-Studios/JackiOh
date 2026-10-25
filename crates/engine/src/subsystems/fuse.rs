@@ -1970,6 +1970,9 @@ fn keep_instance(
         live.armor_override = None;
     }
 
+    // R1086, R1829000: an Equip card standing on its host uncovers it as it ceases to exist, but the
+    // host is the kept card and never left: it keeps the turn it arrived.
+    let arrived = find_instance(state, &kept.id).and_then(|card| card.summoned_turn);
     // R77 and R86: an ingredient that is not kept ceases to exist — no graveyard, no exile pile, no
     // Death trigger and nothing destroyed — and one that stood on the field has left it (R174).
     for card in ingredients {
@@ -1977,6 +1980,9 @@ fn keep_instance(
             continue;
         }
         crate::zones::cease_to_exist(state, &mut card.clone());
+    }
+    if let Some(live) = find_instance_mut(state, &kept.id) {
+        live.summoned_turn = arrived;
     }
     find_instance(state, &kept.id)
         .cloned()

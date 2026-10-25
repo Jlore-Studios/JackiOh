@@ -138,6 +138,11 @@
   aspect-ratio: 1;
 }
 
+/* R1833000: any other cosmetic's look, under its name, at a token row's preview size. */
+.cosmetic-packs-panel .pack-slot .cosmetic-look {
+  max-width: 11rem;
+}
+
 /* R1580000: the page never scrolls; the board shrinks and the body scrolls inside it (as R1579000). */
 .tavern.app-shell.shop-screen {
   height: 100vh;
