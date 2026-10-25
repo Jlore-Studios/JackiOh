@@ -1777,6 +1777,22 @@ pub const PATCH_MIN_CARDS: usize = 10;
 /// previous window; the previous window short too, and AI development games pad the current one.
 pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 
+// ---------------------------------------------------------------------------------------------
+// The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
+// ---------------------------------------------------------------------------------------------
+
+/// R1841000: how many of its user's own turns an ability that "has an extra turn cooldown" sits out
+/// after a use (`subsystems::activate`).
+pub const ACTIVATE_COOLDOWN_TURNS: i32 = 1;
+
+/// R1841001: "deals half damage to heroes": a hit on a hero is divided by this, rounded down, before
+/// Armor (§4.4 step 2).
+pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
+
+/// R1841003: "Float reduces Tribute requirement by 1": what each of its owner's Floats takes off the
+/// card's Tribute X, whatever the Float's size (`float::float_lowers_tribute`).
+pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
+
 #[cfg(test)]
 mod tests {
     use super::*;

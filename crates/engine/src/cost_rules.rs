@@ -32,7 +32,7 @@ use indexmap::IndexSet;
 use crate::config::GLITCH_DEF_ID;
 use crate::script::{CostAura, CostAuraWhose, HookArgs};
 use crate::state::{CardInstance, CostRule, GameState, ModifierExpiry, ModifierKind, PlayerModifier};
-use crate::wire::{CardType, Enchantment, PLAYER_IDS, PlayerId, Row, opponent_of};
+use crate::wire::{CardType, Enchantment, PLAYER_IDS, PlayerId, opponent_of};
 
 /// A `costRule` modifier (`state.rs`), named so the readers here can take one: the modifier's id, its
 /// expiry and the rule it carries (TS `Extract<PlayerModifier, { kind: "costRule" }>`, whose `rule`
@@ -98,29 +98,22 @@ fn whose_reaches(whose: CostAuraWhose, source: PlayerId, player: PlayerId) -> bo
 }
 
 /// Every card acting on the field, both sides, in R68's walk (the active side first, units by lane,
-/// then the backrow by lane): the tops of the unit piles and the backrow cards. A card dormant under a
-/// Stack pile is not on the field for effects (§3.2, R13), so its aura is off, as §10.4 layer 5 reads,
-/// and so is a face-down card's (R1487000).
+/// the Units its carriers hold, then the backrow by lane; `zones::acting_on`): the tops of the unit
+/// piles, a Unit a carrier holds (R446, R1824000) and the backrow cards. A card dormant under a Stack
+/// pile is not on the field for effects (§3.2, R13), so its aura is off, as §10.4 layer 5 reads, and so
+/// is a face-down card's (R1487000).
 fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
     let order: [PlayerId; 2] = if state.active == PlayerId::P1 {
         PLAYER_IDS
     } else {
         [PLAYER_IDS[1], PLAYER_IDS[0]]
     };
-    let mut out: Vec<&CardInstance> = Vec::new();
-    for player in order {
-        for row in [Row::Units, Row::Backrow] {
-            for slot in crate::zones::slots_of(player, row) {
-                // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-                if let Some(card) = crate::zones::card_at(state, slot)
-                    && !crate::preview::lasting_text_dormant(state, card)
-                {
-                    out.push(card);
-                }
-            }
-        }
-    }
-    out
+    order
+        .into_iter()
+        .flat_map(|player| crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane))
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        .filter(|card| !crate::preview::lasting_text_dormant(state, card))
+        .collect()
 }
 
 /// E15: the aura rules on the field that reach a card `player` would play, in R68's walk. A Vanilla

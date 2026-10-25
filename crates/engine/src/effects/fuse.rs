@@ -30,19 +30,20 @@ use serde_json::Value;
 
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, query};
 use crate::config::FUSE_MIN_INGREDIENTS;
+use crate::effects::choose::{DiscoverFromCatalogArgs, chosen_options, discover_from_catalog};
 use crate::effects::move_::{ExileArgs, exile};
-use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
+use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, self_on_its_stay};
 use crate::faces::card_type_of;
 use crate::layers::unit_has;
 use crate::prompts::{
     AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, why_answer_refused,
 };
-use crate::script::{Effect, EffectContext, EngineSink};
+use crate::script::{Effect, EffectContext, EngineSink, Hook, hook};
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
-use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, PromptKind, Row, Selection, Zone, ZoneName};
+use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, PromptKind, Selection, Zone, ZoneName};
 use crate::work::{begin_work_cascade, drain_work};
-use crate::zones::{card_at, is_buried, slots_of};
+use crate::zones::{StandingAt, acting_on, is_buried};
 
 /// R77 and R86: an ingredient that is only a definition. It is created in `{ z: "gone" }` — in no
 /// pile, so no zone event fires, nothing can target it and nothing can bring it back — which is the
@@ -498,6 +499,161 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
     })
 }
 
+// ---------------------------------------------------------------------------------------------
+// The weapon kit: Equip from a pick (#1841, R1841002; SPEC §6.1 Equip).
+// ---------------------------------------------------------------------------------------------
+
+/// `equipPicks`' `pick`: how each card is picked.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum EquipPick {
+    /// A Discover of `options` cards of the pool ("choose between 2" is 2).
+    #[default]
+    Discover,
+    /// One random card of the pool, with no prompt.
+    Random,
+}
+
+/// `equipPicks`' argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct EquipPicksArgs {
+    /// The pool (§5.1 through `catalog.query`, never the running card, B4.1).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query: Option<CatalogQueryArgs>,
+    /// Default `discover`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick: Option<EquipPick>,
+    /// A Discover's offer, `DISCOVER_OPTIONS` by default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<i32>,
+    /// How many picks, each its own fusion. Default 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub times: Option<i32>,
+    /// Every pick goes in on its Radiant face (R469).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+    /// A Discover's prompt text, `EQUIP_PICK_PROMPT` by default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+/// R1841002: the step an Equip pick's Discover resumes at, the engine's own whatever card asked
+/// (`work::script_step_for`).
+pub const EQUIP_PICK_STEP: &str = "@equipPick";
+/// Where the Discover's resume data carries the `EquipPicksArgs` the answer goes on with.
+const EQUIP_PICKS_KEY: &str = "equipPicks";
+/// The Discover's prompt when the card names none.
+const EQUIP_PICK_PROMPT: &str = "Discover a card to Equip";
+
+/// R1841002 (SPEC §6.1 Equip): Equip straight into this Unit from a pick — a Discover of `options`
+/// cards of the pool ("choose between 2" is 2), or a random card of it — `times` times, never
+/// through a hand. Each pick is a fresh copy fused into the unit running the effect as an Equip play
+/// fuses its card (R77, R1086): the unit is the kept instance, and the fused cost is R77's. It is no
+/// play, so the pick's Cry never runs and nothing that counts plays sees it. Each pick is its own
+/// fusion (R102), and a Discover asks for the next once the last is in. Nothing is offered, drawn or
+/// fused when the unit can take no pick (`equip_pool`) or the pool is empty (R129).
+pub fn equip_picks(args: EquipPicksArgs) -> Effect {
+    Effect::new("equipPicks", move |ctx| {
+        let times = args.times.unwrap_or(1);
+        match args.pick.unwrap_or_default() {
+            EquipPick::Random => {
+                for _ in 0..times {
+                    let Some(query) = equip_pool(ctx, &args) else {
+                        return;
+                    };
+                    let random = fuse_random_into(FuseRandomIntoArgs {
+                        into: FuseInto::Target {
+                            target: TargetSpec::SelfCard,
+                        },
+                        query: Some(query),
+                        radiant: args.radiant,
+                        // R77: the fused cost, as an Equip play's is.
+                        keep_cost: Some(false),
+                    });
+                    (random.apply)(ctx);
+                }
+            }
+            EquipPick::Discover => {
+                if times < 1 {
+                    return;
+                }
+                let Some(query) = equip_pool(ctx, &args) else {
+                    return;
+                };
+                let ask = discover_from_catalog(DiscoverFromCatalogArgs {
+                    step: EQUIP_PICK_STEP.to_string(),
+                    query: Some(query),
+                    count: args.options,
+                    prompt: Some(
+                        args.prompt
+                            .clone()
+                            .unwrap_or_else(|| EQUIP_PICK_PROMPT.to_string()),
+                    ),
+                    data: Some(IndexMap::from([(
+                        EQUIP_PICKS_KEY.to_string(),
+                        serde_json::to_value(&args).unwrap_or_default(),
+                    )])),
+                    ..DiscoverFromCatalogArgs::default()
+                });
+                (ask.apply)(ctx);
+            }
+        }
+    })
+}
+
+/// R1841002: the pool of the next pick, or `None` when the unit can take none — it is off the field
+/// or not on the stay the run began on (R174), buried, or Immutable (R23). B4.1, R387: the pool leaves
+/// out the unit as it stands now, its own card and every card an earlier pick fused into it, so the
+/// picks are different cards.
+fn equip_pool(ctx: &EffectContext<'_>, args: &EquipPicksArgs) -> Option<CatalogQueryArgs> {
+    let host = self_on_its_stay(ctx)?;
+    if host.zone.z() != ZoneName::Field || !keepable(ctx.sink.state, &host) {
+        return None;
+    }
+    Some(excluding_def_id(
+        Some(&*ctx.sink.state),
+        &args.query.clone().unwrap_or_default(),
+        Some(&host.def_id),
+    ))
+}
+
+/// R1841002: the answer to an Equip pick's Discover. The picked card is fused into the unit that
+/// asked, on its Radiant face when the pick was Radiant, and with picks left the next Discover opens.
+pub fn equip_pick_step() -> Hook {
+    hook(|ctx| {
+        let Some(pick) = chosen_options(ctx).into_iter().next() else {
+            return Vec::new();
+        };
+        let Some(host) = self_on_its_stay(ctx) else {
+            return Vec::new();
+        };
+        let Some(args) = ctx
+            .data
+            .get(EQUIP_PICKS_KEY)
+            .and_then(|raw| serde_json::from_value::<EquipPicksArgs>(raw.clone()).ok())
+        else {
+            return Vec::new();
+        };
+        let mut out = vec![fuse_cards(FuseCardsArgs {
+            def_ids: Some(vec![pick]),
+            target_instance_id: Some(host.id),
+            radiant_ingredients: args.radiant.filter(|radiant| *radiant),
+            ..FuseCardsArgs::default()
+        })];
+        let left = args.times.unwrap_or(1) - 1;
+        if left > 0 {
+            out.push(equip_picks(EquipPicksArgs {
+                times: Some(left),
+                ..args
+            }));
+        }
+        out
+    })
+}
+
 /// `fuseGenerated`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
@@ -633,10 +789,10 @@ fn compare_text(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 /// The controller's cards of the ingredient's type, in the piles named: the field in lane order
-/// (units, then backrow; the top of a pile only, R13), the hand in hand order, and the library in an
-/// order its cards alone decide — name, definition, face, id — never its own, which is hidden from
-/// everyone (§9.1, R310). An Immutable card is never a Fuse target (R23), and the ingredient itself is
-/// not one of its own candidates.
+/// (units, the carried Units, then backrow, `zones::acting_on`; the top of a pile only, R13, R446,
+/// R1824000), the hand in hand order, and the library in an order its cards alone decide — name,
+/// definition, face, id — never its own, which is hidden from everyone (§9.1, R310). An Immutable card
+/// is never a Fuse target (R23), and the ingredient itself is not one of its own candidates.
 fn fuse_candidates(
     state: &GameState,
     player: PlayerId,
@@ -651,16 +807,12 @@ fn fuse_candidates(
     };
     let mut out: Vec<CardInstance> = Vec::new();
     if piles.contains(&FuseOntoPile::Field) {
-        for row in [Row::Units, Row::Backrow] {
-            for slot in slots_of(player, row) {
-                if let Some(card) = card_at(state, slot) {
-                    let card: &CardInstance = card;
-                    if fits(card) {
-                        out.push(card.clone());
-                    }
-                }
-            }
-        }
+        out.extend(
+            acting_on(state, player, StandingAt::ItsLane)
+                .into_iter()
+                .filter(|card| fits(card))
+                .cloned(),
+        );
     }
     let side = &state.players[player];
     if piles.contains(&FuseOntoPile::Hand) {

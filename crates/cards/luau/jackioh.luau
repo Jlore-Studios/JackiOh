@@ -13,6 +13,7 @@ tribute: number?,
 tributeSelf: boolean?,
 tributeExcludesSelf: boolean?,
 eitherPlayer: boolean?,
+extraTurnCooldown: boolean?,
 }
 
 export type ActivationUses = number | "unlimited"
@@ -517,6 +518,7 @@ ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
 trample: boolean?,
+halfToHeroes: boolean?,
 side: ScopeSide?,
 rows: {Row}?,
 types: {CardType}?,
@@ -532,6 +534,7 @@ ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
 trample: boolean?,
+halfToHeroes: boolean?,
 }
 
 export type DamageEnemyOrHealFriendArgs = {
