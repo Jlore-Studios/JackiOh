@@ -477,6 +477,11 @@
     "1909": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-25T13:30:08Z",
+        "by": "`gpt` (medium), `claude` (strong)",
+        "sha": "34a6c45d018fc623fc69fc786964c6b29fc09d9a"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
