@@ -648,6 +648,12 @@ pub(crate) fn remember_summoned_token_face(state: &GameState, instance: &mut Car
     );
 }
 
+/// R77: Fuse folds a token's current face into a new transient definition, which becomes its printed
+/// face. The pre-Fuse face saved for an R78 reset no longer describes that card.
+pub(crate) fn forget_summoned_token_face(instance: &mut CardInstance) {
+    instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY);
+}
+
 /// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (TS `{ stack? }`, which a
 /// test builds with `json_as`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]

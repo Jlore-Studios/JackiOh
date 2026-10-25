@@ -596,6 +596,7 @@ mod r1242_the_hand_fusion {
             live.chinese = Some(true);
             live.granted_tags = Some(vec![Tag::Cn]);
             live.stats_override = Some(AttackHealth { attack: 7, health: 9 });
+            live.armor_override = Some(4);
             live.tuning = Some(Tuning {
                 attack: Some(2),
                 ..Tuning::default()
@@ -619,6 +620,7 @@ mod r1242_the_hand_fusion {
         assert_eq!(made.chinese, Some(true));
         assert_eq!(made.granted_tags, Some(vec![Tag::Cn]));
         assert_eq!(made.stats_override, before.stats_override);
+        assert_eq!(made.armor_override, before.armor_override);
         assert_eq!(made.tuning, before.tuning);
         // The price is the copy's own rider, not the source's.
         assert_eq!(made.cost_mod, 0);

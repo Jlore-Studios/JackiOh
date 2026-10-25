@@ -465,15 +465,20 @@ mod tests {
         }
 
         #[test]
-        fn r57_a_token_copy_keeps_stats_override_and_armor_override() {
+        fn r57_a_token_copy_keeps_stats_override_armor_override_and_tuning() {
             let mut s = wipe(true, json!([{ "def": RUSH_TOKEN }]), json!({}));
             let rush_id = s.card(RUSH_TOKEN).id.clone();
             s.card_mut(&rush_id).stats_override = Some(AttackHealth { attack: 4, health: 4 });
             s.card_mut(&rush_id).armor_override = Some(2);
+            s.card_mut(&rush_id).tuning = Some(Tuning {
+                attack: Some(1),
+                ..Tuning::default()
+            });
             s.play(BIG_FELINOR, json!({}));
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == RUSH_TOKEN).expect("copy in hand");
             assert_eq!(copy.stats_override, Some(AttackHealth { attack: 4, health: 4 }));
             assert_eq!(copy.armor_override, Some(2));
+            assert_eq!(copy.tuning, Some(Tuning { attack: Some(1), ..Tuning::default() }));
             assert_eq!(copy.cost_override, Some(0));
         }
 

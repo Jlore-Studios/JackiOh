@@ -9,6 +9,7 @@
 use jackioh_engine::effects::flicker::{flicker, flicker_card};
 use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::effects::steal::steal;
+use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
@@ -250,6 +251,52 @@ mod b5_e22_flicker {
         let view = jackioh_engine::layers::unit_view(&state, flickered);
         assert_eq!(view.attack, 5);
         assert_eq!(view.health, 5);
+    }
+
+    #[test]
+    fn r444_r77_r175_a_flickered_fused_token_keeps_the_fused_face_not_an_ingredients_saved_face() {
+        let mut state = playing("flicker-fused-token-face");
+        let target = put(
+            &mut state,
+            "fx-token-rush",
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let food = put(
+            &mut state,
+            "fx-token-rush",
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        live_mut(&mut state, &target.id).stats_override = Some(AttackHealth { attack: 4, health: 4 });
+        let mut sink = sink_for(&state);
+        sink.apply(
+            &mut state,
+            set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))),
+            PlayerId::P1,
+        );
+        let target = by_id(&state, &target.id).clone();
+        let food = by_id(&state, &food.id).clone();
+        let fused = fuse(
+            &mut sink.on(&mut state),
+            json_as::<FuseArgs>(json!({
+                "ingredients": [target, food],
+                "target": target,
+            })),
+        )
+        .expect("the two unit tokens fuse");
+        assert!(jackioh_engine::catalog::def_of(Some(&state), &fused.def_id).token);
+        let view = jackioh_engine::layers::unit_view(&state, by_id(&state, &fused.id));
+        assert_eq!((view.attack, view.health), (6, 6));
+
+        assert!(sink.flicker_card(&mut state, &fused.id));
+        let flickered = by_id(&state, &fused.id);
+        assert_eq!(
+            flickered.stats_override, None,
+            "R77: the transient definition, not the target token's former 4/4 face, is layer 1"
+        );
+        let view = jackioh_engine::layers::unit_view(&state, flickered);
+        assert_eq!((view.attack, view.health), (6, 6));
     }
 
     #[test]
