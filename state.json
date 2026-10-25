@@ -14308,6 +14308,14 @@
       "queued_at": "2026-10-25T05:29:15Z",
       "requested_by": "squishy-squooby",
       "stop_requested": false
+    },
+    "1887": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-25T03:20:46Z",
+      "issue": 1827,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
