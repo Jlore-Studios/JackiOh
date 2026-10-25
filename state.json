@@ -618,10 +618,12 @@
     "what": "build #1829 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-25T13:29:06Z",
+    "at": "2026-10-25T13:42:03Z",
     "notes": [
-      "delivered review #1909 on claude-6 (run 40197279577): reviewed",
-      "could not start review #1910 on claude-6: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 500: Failed to run workflow dispatch"
+      "started review #1910 on claude-3 (run 40198956725)",
+      "started build #1824 on claude-6 (run 40199028425)",
+      "started build #1829 on claude-3 (run 40199108234)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-10-25T14:00:00Z; it can start a build or a plan again in 13m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-10-25T14:40:00Z; it can start a build or a plan again in 53m; `claude-1` is busy; `claude-4` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-10-25T14:00:00Z; it can start a build or a plan again in 13m; `claude-6` is busy; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 19h 13m; `muse` its last run could not work, 4 times in a row (the muse CLI failed at once: muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-1826 (explici); it is left alone until 2026-10-25T19:52:03Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 128h 13m; `gpt` is busy; `claude-2` 5-hour usage is 95%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-25T14:00:00Z; it can start a build or a plan again in 13m; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -879,7 +881,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-25T13:29:06Z",
+  "loop_tick": "2026-10-25T13:42:03Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-25T13:02:56Z",
