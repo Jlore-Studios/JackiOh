@@ -1221,7 +1221,15 @@
       "feedback_since": "2026-10-25T15:53:20Z",
       "issue": 1898,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "cognition",
+        "rejections": [],
+        "reviews": [],
+        "sha": "b2fa586efea4ad829992a83afe862348ef22710b",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
