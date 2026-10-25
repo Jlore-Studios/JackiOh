@@ -13398,6 +13398,13 @@
     "1822": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T04:40:30Z",
+        "difficulty": "medium",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "Easy rule 5 fails because the change is in crates/ai/src/duos.rs. It is not hard: it touches the Duos pass filter beside the AI's search, not the search itself, stays in one crate at about 150 lines, and the planner already ran the exact diff to green"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
