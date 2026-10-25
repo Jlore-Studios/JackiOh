@@ -18,7 +18,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult, Rng,
     TurnLog, active_units_of, effective_life, find_instance, legal_actions, max_mana_for, opponent_of,
-    owed_mana_of, reduce_unpiloted, self_def_ids, subsystems, unit_view,
+    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -832,8 +832,8 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
 /// every backrow card (`card_signature`, whether face up or revealed), the seat's hand (`card_signature`)
 /// and mana, and the enemy hand size; then, each only when it is not the default, both sides' other
 /// state (`push_side_parts`), the seat's debt (R1224), and the game's delayed effects and marks (#898).
-/// A unit's lane is left out, so the two lanes `candidate_actions` keeps for one play stay one
-/// position.
+/// A unit's lane is left out, so the lethal solver's two lanes of one play stay one position; the beam
+/// reads it beside `unit_lanes`, to tell a lane variant from its position's first line (#1797).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
@@ -936,4 +936,22 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         parts.push(format!("K{marks}"));
     }
     parts.join("|")
+}
+
+/// Every active unit's lane, each side's in `active_units_of` order, the sides in `PLAYER_IDS` order
+/// (#1797): what `search_signature` leaves out. The beam's duplicate check reads the two together, so
+/// two placements of one play that differ only in lane stay two positions, while two orders of the
+/// same moves into the same lanes stay one.
+pub fn unit_lanes(state: &GameState) -> String {
+    PLAYER_IDS
+        .into_iter()
+        .map(|player| {
+            active_units_of(state, player)
+                .into_iter()
+                .map(|unit| slot_of(state, unit).map_or(0, |slot| slot.lane).to_string())
+                .collect::<Vec<_>>()
+                .join(",")
+        })
+        .collect::<Vec<_>>()
+        .join("/")
 }
