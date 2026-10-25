@@ -13321,6 +13321,13 @@
     "1818": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T03:59:58Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Rule 1 ('small, with room to spare') is the line I was least sure of: it is one app, ~150 lines, unit-tested with nothing left to decide, but 8 files is close to the 10-file limit and one step adds a CSS layout rule, so medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
