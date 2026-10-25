@@ -1,5 +1,5 @@
-//! Meditative+ #4 Supply Drop (SPEC §8.9 row 4, BUILD M11 row M+ 4, R1181000, R1181001, R81, R1431):
-//! (2, Embiggened 4) Spell, Jlockeed, Epic.
+//! Meditative+ #4 Jlockeed's Supply Drop (SPEC §8.9 row 4, BUILD M11 row M+ 4, R1181000, R1181001, R81,
+//! R1431): (2, Embiggened 4) Spell, Jlockeed, Epic. Named Supply Drop before issue #1828.
 //!   Base:    "Choose one: In {turns} turns, deal {damage} damage to each enemy, with Pierce and
 //!            Lifesteal; or in {turns} turns, add {cards} random Radiant Jlockeed cards to your hand,
 //!            and each costs ({suppliesCost}). / Embiggened (4): In {embiggenedTurns} turns instead;
@@ -140,13 +140,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-// Meditative+ #4 Supply Drop — SPEC §8.9 row 4, BUILD M11 row M+ 4: "Combat: nothing on the next two
-// of your turns, then at the start of your third, before the draw, 4 Pierce damage to the enemy hero
-// (through Armor) and each enemy Unit, healing your hero 4 per hit, one state check; the countdown is
-// public on your side; an extra turn counts; Supplies: at the same moment a random non-token Jlockeed
-// card, Radiant, costing (2), never Supply Drop; Embiggened at (4): after 5 turns, 9 damage or 5
-// cards; every number reads through `param()`; radiant Combat 9 (Embiggened 15), Supplies 2 cards at
-// (0) (Embiggened: as many as fill your hand)".
+// Meditative+ #4 Jlockeed's Supply Drop — SPEC §8.9 row 4, BUILD M11 row M+ 4: "Combat: nothing on the next
+// two of your turns, then at the start of your third, before the draw, 4 Pierce damage to the enemy hero
+// (through Armor) and each enemy Unit, healing your hero 4 per hit, your Spell Damage raising each, one state
+// check; the countdown is a public badge on your side; an extra turn counts (R1181000, R1181001); Supplies:
+// at the same moment a random non-token Jlockeed card, Radiant, costing (2), never Jlockeed's Supply Drop;
+// Embiggened at (4): after 5 turns, 9 damage or 5 cards; every number reads through `param()`; radiant Combat
+// 9 (Embiggened 15), Supplies 2 cards at (0) (Embiggened: as many as fill your hand)".
 #[cfg(test)]
 mod tests {
     use super::{COMBAT, ID, SUPPLIES};
@@ -290,13 +290,13 @@ mod tests {
         fn r1181000_the_countdown_is_a_badge_on_the_casters_side_in_both_views() {
             let mut s = game("m+004-badge", false, json!({}), json!({}));
             cast(&mut s, COMBAT, false);
-            let label = "Supply Drop: 4 damage to each enemy in 3 turns".to_string();
+            let label = "Jlockeed's Supply Drop: 4 damage to each enemy in 3 turns".to_string();
             assert_eq!(p1_badges(&s, P1), vec![label.clone()]);
             assert_eq!(p1_badges(&s, P2), vec![label]);
             pass_own_turns(&mut s, 1);
             assert_eq!(
                 p1_badges(&s, P2),
-                vec!["Supply Drop: 4 damage to each enemy in 2 turns".to_string()]
+                vec!["Jlockeed's Supply Drop: 4 damage to each enemy in 2 turns".to_string()]
             );
             pass_own_turns(&mut s, 2);
             assert!(p1_badges(&s, P1).is_empty(), "the badge goes as the effect resolves");
@@ -480,7 +480,7 @@ mod tests {
             cast(&mut s, SUPPLIES, true);
             assert_eq!(
                 p1_badges(&s, P2),
-                vec!["Supply Drop: a hand of Radiant Jlockeed cards in 5 turns".to_string()]
+                vec!["Jlockeed's Supply Drop: a hand of Radiant Jlockeed cards in 5 turns".to_string()]
             );
             pass_own_turns(&mut s, 5);
             // The fill resolves before the draw, so the hand is full and the draw burns.

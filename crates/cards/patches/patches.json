@@ -13408,5 +13408,1165 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.4.5",
+    "date": "2026-10-23",
+    "title": "Standard deck size 25",
+    "source": "#1705",
+    "notes": "R1705000: DECK_SIZE is 25 (§2.6, §9.4 L2 and D2) and a trio needs 75 cards; Medium and Hard AI decks keep their +5 and +10 (30 and 35). R1705001: a saved 20-card deck is a draft that fails L2 at queue; a ladder bot's 20-card decks are dealt again. R1705002: the practice presets hold 25 and STARTER_CARDS gains their eleven new cards, granted to every active account by migration 0055. R1705003: a game made under 20-card decks folds as it was made (SetupKind::Recorded). R1705004: classify reads a base build refusing the head's decks as a rule. R1705005: the tutorial's human seat keeps 20 cards under TUTORIAL_HUMAN. Every game deals 25 cards, so the classifier reads it as a rule every game meets.",
+    "player": {
+      "title": "Decks hold 25 cards",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A deck holds 25 cards, not 20; a deck saved at 20 stays a draft until you add five.",
+        "Practice decks hold 25 and you own their new cards; Medium and Hard AI decks hold 30 and 35."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "a7a107f54f6a78e0b583f23f9f3cbdd691c5948d"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.4.6",
+    "date": "2026-10-24",
+    "title": "Update Buff Priorities",
+    "source": "#1748",
+    "notes": "R1748000: on the field a Nerf or a Buff draws neither the cost row nor a declared number only the card's Cry reads (Param.cry, 64 numbers on 45 cards). R1748001: a Buff's keyword row gives a Field Spell Indestructible and a Spell or Field Spell marked dealsDamage (35 cards) Pierce or Lifesteal. R1748002: on the field a Buff places a Plague Counter on a Field Spell marked usesPlague (Corpse Plantation, The House, Forbiddenous Factory) and a Nerf removes one. R1748003: every Spell and Field Spell audited; eleven declare numbers they printed (Hinder, Reoccurring Dream, Eugenics, Call to Arms, Zao Gao, Outbreak, Claude's Datacenter, CN in a Bottle, H1B Printer, Wondrous Wand, Grubby Gloves), each keeping its v0.4.4b script for replays, and a census test names why the rest stay fixed.",
+    "player": {
+      "title": "Buffs and Nerfs choose better",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Buff or a Nerf on a card on the field no longer changes its cost, nor a number only its Cry uses.",
+        "A Buff can give a Field Spell Indestructible, and a Spell or Field Spell that deals damage Pierce or Lifesteal.",
+        "On the field, a Buff places a Plague Counter on Corpse Plantation, The House or Forbiddenous Factory, and a Nerf removes one.",
+        "Buffs and Nerfs can now change Hinder's discard, Reoccurring Dream's and Eugenics' chances, Call to Arms' Units, Zao Gao's Rush Tokens and Outbreak's draws.",
+        "They can also change the cost CN in a Bottle, Claude's Datacenter, H1B Printer, Wondrous Wand and Grubby Gloves give the cards they add."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "51f86b3430991cdef00f9d1267dca89bb715f247"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-001",
+      "classic-002",
+      "classic-007",
+      "classic-012",
+      "classic-016",
+      "classic-019",
+      "classic-020",
+      "classic-022",
+      "classic-023",
+      "classic-031",
+      "classic-036",
+      "classic-039",
+      "classic-040",
+      "classic-053",
+      "classic-055",
+      "classic-056",
+      "classic-059",
+      "classic-061",
+      "classic-074",
+      "classic-076",
+      "classic-083",
+      "classic-085",
+      "classicplus-007",
+      "classicplus-012",
+      "classicplus-019",
+      "classicplus-020",
+      "classicplus-021",
+      "classicplus-026",
+      "classicplus-032",
+      "classicplus-036",
+      "classicplus-038",
+      "classicplus-059",
+      "classicplus-065",
+      "classicplus-068",
+      "classicplus-075",
+      "classicplus-078",
+      "classicplus-t",
+      "core-004",
+      "core-007",
+      "core-015",
+      "core-021",
+      "core-023",
+      "core-024",
+      "core-031",
+      "core-035",
+      "core-040",
+      "core-042",
+      "core-044",
+      "core-053",
+      "core-054",
+      "core-068",
+      "core-069",
+      "core-070",
+      "core-073",
+      "core-074",
+      "core-075",
+      "core-077",
+      "core-080",
+      "core-093",
+      "core-098",
+      "meditative-001",
+      "meditative-005",
+      "meditative-007",
+      "meditative-008",
+      "meditative-012",
+      "meditative-015",
+      "meditative-022",
+      "meditative-028",
+      "meditative-029",
+      "meditative-037",
+      "meditative-038",
+      "meditative-039",
+      "meditative-045",
+      "meditative-049",
+      "meditative-058",
+      "meditative-073",
+      "meditative-079",
+      "meditative-082",
+      "meditative-088",
+      "meditative-099",
+      "meditativeplus-003",
+      "meditativeplus-004",
+      "meditativeplus-005",
+      "meditativeplus-010",
+      "meditativeplus-017",
+      "meditativeplus-019",
+      "meditativeplus-024"
+    ],
+    "changes": [
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-015",
+        "name": "Me and Mr Token",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-021",
+        "name": "Hinder",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-023",
+        "name": "Reoccurring Dream",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-024",
+        "name": "Efficiency Dividend",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-031",
+        "name": "KY's Math Equation",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-035",
+        "name": "Lunar Eclipse",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-040",
+        "name": "Echoes of the Forgotten",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-042",
+        "name": "Eugenics",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-044",
+        "name": "True Strike",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-053",
+        "name": "Reno",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-054",
+        "name": "Straaza",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-068",
+        "name": "Twisted Sorcerer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-069",
+        "name": "Call to Arms",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-070",
+        "name": "Spiteful Stab",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-074",
+        "name": "Adaptive UI",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-077",
+        "name": "Professor Curvature",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-093",
+        "name": "Combo-Index",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-093-1",
+        "name": "Combo-Fodder",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-001",
+        "name": "Curse of the Forgotten Classic",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-007",
+        "name": "InfiniScepter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-012",
+        "name": "Book of Blood",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-016",
+        "name": "Book of Flame",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-019",
+        "name": "Lizard's Breath",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-020",
+        "name": "The Power to Punish",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-022",
+        "name": "Mid Runner",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-031",
+        "name": "Cookie Guild",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-036",
+        "name": "Burn",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-040",
+        "name": "MC Tech",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-053",
+        "name": "Plague Crawler",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-055",
+        "name": "Book of Wildfire",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-056",
+        "name": "Spell Tyrant",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-061",
+        "name": "Plague Bringer Goliath",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-074",
+        "name": "Corpse Plantation",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "usesPlague"
+        ]
+      },
+      {
+        "id": "classic-076",
+        "name": "Plague Bringer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-083",
+        "name": "Flame Lance",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classic-085",
+        "name": "King Wagtoggle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-007",
+        "name": "The House",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "usesPlague"
+        ]
+      },
+      {
+        "id": "classicplus-012-2",
+        "name": "Death Boil",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-012-4",
+        "name": "Powder Spray",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-019-3",
+        "name": "Mid Loser",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-020",
+        "name": "Mushroom Power",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-021",
+        "name": "Whirlwind",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-036-1",
+        "name": "Bone Storm",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-038-1",
+        "name": "Solarius Prime",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-059",
+        "name": "All Purpose Apple",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-065-2",
+        "name": "Normal Grape",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-065-3",
+        "name": "Large Grape",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-075",
+        "name": "J-lease J-Jungle EX-plorer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-078",
+        "name": "Claude's Datacenter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-t-ai-06",
+        "name": "Datacenter Fire",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditative-001",
+        "name": "Disruptive Disruptor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-005",
+        "name": "Death by 1000 cuts",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditative-007",
+        "name": "Introspection",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditative-008",
+        "name": "Reach the Summit",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditative-012",
+        "name": "Fear Mongerer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-015",
+        "name": "Smelly Steven",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-022",
+        "name": "Mind Games",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditative-028",
+        "name": "Shade-iris",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-029",
+        "name": "Forbiddenous Factory",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "usesPlague"
+        ]
+      },
+      {
+        "id": "meditative-037",
+        "name": "CN in a Bottle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-038",
+        "name": "H1B Printer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-039-3",
+        "name": "Dud",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-045-1",
+        "name": "Knowledge Breaker Prime",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Prime",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-058",
+        "name": "Permanent Underclassman",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-073",
+        "name": "Plate Packer",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-079",
+        "name": "Touched by KY",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-082",
+        "name": "Medina Outfitter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-088",
+        "name": "The True Sheep",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-099",
+        "name": "Paranoia",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-003",
+        "name": "Wondrous Wand",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-004",
+        "name": "Supply Drop",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditativeplus-005",
+        "name": "Spirit Lash",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditativeplus-010",
+        "name": "Medina Grifter",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-017",
+        "name": "Dogpile",
+        "kind": "changed",
+        "fields": [
+          "dealsDamage"
+        ]
+      },
+      {
+        "id": "meditativeplus-019",
+        "name": "Grubby Gloves",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "meditativeplus-024",
+        "name": "Bob, Wisconsin's Strongest Soldier",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.4.7",
+    "date": "2026-10-24",
+    "title": "Trample only works on attack",
+    "source": "#1750",
+    "notes": "R1750000: a unit's Trample applies only to the hits of its own attack, its hit on the defender and its Cleave's, so a defender's strike back and the damage a unit's text deals never trample, and an attack on an ally a Redirect re-aimed still tramples into its own hero; a Spell that prints Trample tramples as before (revises R63 and R176). A game with a Trample unit meets it, so the classifier reads it as a rule every game meets.",
+    "player": {
+      "title": "Trample only works on attack",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Trample sends the excess damage to a hero only when the unit with it is the one attacking.",
+        "A unit with Trample that is attacked strikes back for its full attack and no longer damages the hero of the unit that attacked it."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "1d6f8eb52a3a455234d5e174b035b03ac88649c9"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classicplus-006",
+      "core-008",
+      "core-032",
+      "meditative-091"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.4.8",
+    "date": "2026-10-24",
+    "title": "Update how multiple activates work",
+    "source": "#1751",
+    "notes": "R1751000: each Activate on a card tracks its uses and cooldown on its own (card.memory activations now {turn, count, abilities}), so a fused Activate no longer shares the kept card's count (amends R1087); clicking Activate on a card with several Activates opens a Discover-style ability picker. 18 cards that fuse, copy or refund activations play differently, found by classify.",
+    "player": {
+      "title": "Fused Activates work separately",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Each Activate on a card with several now has its own uses and cooldown, so using one leaves the others ready the same turn.",
+        "Clicking Activate on a card with several Activates opens a panel to choose which one to use."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "d7fa6dccdcd1e1e5176ae60f5c01837055f41741"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-015",
+      "classic-021",
+      "classic-042",
+      "classic-064",
+      "classic-078",
+      "classic-081",
+      "classicplus-031",
+      "classicplus-042",
+      "classicplus-060",
+      "classicplus-076",
+      "meditative-047",
+      "meditative-054",
+      "meditative-069",
+      "meditative-075",
+      "meditative-101",
+      "meditativeplus-011",
+      "meditativeplus-012",
+      "meditativeplus-013"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.4.9",
+    "date": "2026-10-25",
+    "title": "Unkeywordify \"Immune to tribal tag based hate\"",
+    "source": "#1816",
+    "notes": "R940: Immune to tribal tag based hate on Blue-Eyes White Felinor is no longer a keyword but `static_flags.immune_to_tribal_hate` on both faces: its text prints it as an ability line, the board shows no keyword mark for it, and a Nerf, which draws among keyword rows, can no longer take it away. The keyword kind is retired, not deleted: the shipped catalogs that printed it still read, and the AI's feature layout keeps its length. The classifier's unforced games diverge wherever a Felinor's keywords or text show, so it names the four cards in `plays` and a rule every game meets.",
+    "player": {
+      "title": "Immune to tribal tag based hate is an ability",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Blue-Eyes White Felinor keeps its immunity to tribal tag based hate, now printed as an ability line instead of a keyword: no bold, no icon on the board.",
+        "As it is no longer a keyword, a Nerf can no longer take the immunity away."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7197c600cb4ab5a4842f85130252fa55219d3938"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classicplus-048",
+      "classicplus-077",
+      "core-055",
+      "meditative-025",
+      "meditativeplus-016"
+    ],
+    "changes": [
+      {
+        "id": "meditative-025",
+        "name": "Blue-Eyes White Felinor",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.4.10",
+    "date": "2026-10-25",
+    "title": "Meditative+ balance changes III",
+    "source": "#1828",
+    "notes": "R1828000: API Key Fishing's Radiant face adds a Radiant copy, at 4% (Embiggened 10%); R1828001: AI Slop fuses (1) Cost AI generated cards; R1828002: KY's Empty Notebook shuffles 3 random KY cards into your deck; R1828003: Shrinking Felinor is 9/9 (18/18), both faces shrinking 3/3 into a base body; Jungle Loser has Can't attack and a 100% end-of-turn attack; Bauble Bubble has Brittle 1, BOOM! Big Max Crater, Book Worm the Plague tag; Felinor Fuser is 1/1 (2/2); Supply Drop is renamed Jlockeed's Supply Drop. plays: the families classify's stage 2 names in its unforced games with these cards (pools they join or leave, Devin Bot's 1/1 pool and Permanent Upperclassman's (4) Cost pool among them, and the views those games show). rule: no rule changes; stage 2 finds divergences that name no card, a library view ordered by name putting the renamed Jlockeed's Supply Drop in a new place and a fused BOOM! Big Max whose Crater Lock outlasts it, so the claim matches classify (R1370000).",
+    "player": {
+      "title": "Meditative+ balance changes III",
+      "new": [],
+      "balance": [
+        "Shrinking Felinor is 9/9, down from 9/11, and 18/18 on its Radiant face, down from 18/22.",
+        "Shrinking Felinor's Radiant face shrinks by 3/3, up from 2/3.",
+        "Felinor Fuser is 1/1, down from 3/3, and 2/2 on its Radiant face, down from 6/6.",
+        "API Key Fishing's Radiant face has a 4% chance, down from 5%, and 10% Embiggened, down from 12%.",
+        "Jungle Loser attacks at the end of every turn of yours, up from a 25% chance (50% on its Radiant face).",
+        "Jungle Loser has Can't attack.",
+        "Bauble Bubble has Brittle 1.",
+        "BOOM! Big Max has Crater."
+      ],
+      "changes": [
+        "AI Slop fuses only (1) Cost AI generated cards.",
+        "KY's Empty Notebook shuffles 3 random KY cards into your deck instead of drawing, Radiant ones on its Radiant face.",
+        "API Key Fishing's Radiant face adds a Radiant API Key Fishing to your hand.",
+        "Shrinking Felinor's Radiant face summons a base Shrinking Felinor.",
+        "Book Worm is a Plague card.",
+        "Devin Bot can summon Felinor Fuser, now a 1/1."
+      ],
+      "text": [
+        "Supply Drop is renamed Jlockeed's Supply Drop."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "b17db12b222559a0db18945c3ee54073448cb56d"
+    ],
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-040",
+      "classic-041",
+      "classic-080",
+      "classicplus-019",
+      "classicplus-020",
+      "classicplus-030",
+      "classicplus-031",
+      "classicplus-038",
+      "classicplus-039",
+      "classicplus-040",
+      "classicplus-061",
+      "classicplus-077",
+      "core-007",
+      "core-012",
+      "core-047",
+      "core-051",
+      "core-055",
+      "meditative-021",
+      "meditative-034",
+      "meditative-039",
+      "meditative-051",
+      "meditative-059",
+      "meditative-067",
+      "meditative-082",
+      "meditative-091",
+      "meditative-094",
+      "meditative-095",
+      "meditativeplus-010"
+    ],
+    "changes": [
+      {
+        "id": "core-051-1",
+        "name": "KY's Empty Notebook",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-019-2",
+        "name": "Jungle Loser",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-030",
+        "name": "Felinor Fuser",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-039",
+        "name": "Book Worm",
+        "kind": "changed",
+        "fields": [
+          "tags"
+        ]
+      },
+      {
+        "id": "classicplus-043",
+        "name": "AI Slop",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-061",
+        "name": "Bauble Bubble",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-021",
+        "name": "API Key Fishing",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-094",
+        "name": "Shrinking Felinor",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.health",
+          "radiant.health",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-004",
+        "name": "Jlockeed's Supply Drop",
+        "kind": "changed",
+        "fields": [
+          "name"
+        ]
+      }
+    ]
   }
 ]

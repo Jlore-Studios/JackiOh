@@ -209,8 +209,10 @@ WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
   # A lane already running keeps its Muse session; it reads a changed unit at its next restart
-  # (`systemctl restart jackioh-train@<lane>`).
-  systemctl enable --now jackioh-train@improve jackioh-train@unban jackioh-train@gather
+  # (`systemctl restart jackioh-train@<lane>`). Only gather starts: #682's audit stopped the two
+  # LLM lanes on 2026-10-25 (#1677), and setup keeps their users and checkouts but never starts
+  # them again. Starting one is a person's `systemctl enable --now` of its unit.
+  systemctl enable --now jackioh-train@gather
   apt-get clean
 
   for lane in $TRAIN_LANES; do

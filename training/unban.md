@@ -1,5 +1,12 @@
 # Standing prompt: the unban lane
 
+> **Stopped since 2026-10-25.** #682's audit (`reviews/2026-10-22-issue-682-subscriptions.md`) found that the
+> two LLM lanes made no fair promotion in about 427 hours, so `jackioh-train@unban` is disabled on the
+> training box and `setup.sh --training` no longer starts it (#1677). Bans are now measured by a sweep of record
+> (#1675's took 16 of the 17 off, `training/history/sweep-2026-10-22.md`) and fixed through issues,
+> one per cause (#1889). This prompt
+> is kept for the record, and for a person who starts the lane again by hand.
+
 You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comments of
 `crates/ai/src/`) so that it plays well with fewer shadow-banned cards. The shadow ban (R186,
 `crates/ai/src/shadow_ban.rs`) lists the cards the AI never deals into its own decks, because it

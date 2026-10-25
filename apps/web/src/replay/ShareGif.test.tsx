@@ -185,6 +185,8 @@ describe("Share as GIF", () => {
     exporting.mockRejectedValue(new Error("the raster fell over"));
     await make();
     expect(await screen.findByTestId(gifTestid.failed)).toHaveTextContent("the raster fell over");
+    expect(screen.queryByTestId(gifTestid.retry)).toBeNull();
+    expect(screen.getByTestId(gifTestid.make)).toBeEnabled();
   });
 
   it("Cancel aborts the export", async () => {
@@ -248,5 +250,26 @@ describe("Share as GIF", () => {
     fireEvent.click(screen.getByTestId(gifTestid.share));
     await waitFor(() => expect(shareGif).toHaveBeenCalledTimes(3));
     expect(screen.queryByTestId(gifTestid.failed)).toBeNull();
+  });
+
+  it("a share that fails offers Try again, which shares the made GIF again without drawing it anew", async () => {
+    await open();
+    exporting.mockResolvedValue(READY);
+    vi.mocked(canShareFile).mockReturnValue(true);
+    vi.mocked(shareGif).mockRejectedValueOnce(new Error("the share sheet fell over")).mockResolvedValueOnce("shared");
+    await make();
+    fireEvent.click(await screen.findByTestId(gifTestid.share));
+
+    expect(await screen.findByTestId(gifTestid.failed)).toHaveTextContent("the share sheet fell over");
+    expect(screen.queryByTestId(gifTestid.share)).toBeNull();
+
+    click(gifTestid.retry);
+
+    expect(shareGif).toHaveBeenCalledTimes(2);
+    expect(shareGif).toHaveBeenLastCalledWith(GIF_FILE);
+    expect(exporting).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByTestId(gifTestid.failed)).toBeNull());
+    expect(screen.queryByTestId(gifTestid.retry)).toBeNull();
+    expect(screen.getByTestId(gifTestid.share)).toHaveTextContent("Share");
   });
 });

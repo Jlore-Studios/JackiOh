@@ -1,9 +1,10 @@
 // `/decks`: §9.4's gate, its reads, and R256 writes.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_AUTOSAVE_DEBOUNCE_MS } from "@jackioh/server-config";
+import { PORTRAIT_IDS } from "@jackioh/shared";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import {
   fixtureCardId,
@@ -15,7 +16,15 @@ import {
 import { mirrorKey } from "../game/deckbuilder/sync.ts";
 import { DECKBUILDER_RETRY, poolCardId } from "../game/deckbuilder/testids.ts";
 import { decksResponse, savedDeck, savedTrio } from "../game/deckbuilder/testkit.ts";
-import { ApiRequestError, getCollection, getDecks, getMe, putDeck, type DecksResponse } from "../net/api.ts";
+import {
+  ApiRequestError,
+  getCollection,
+  getDecks,
+  getMe,
+  getOwnedCosmetics,
+  putDeck,
+  type DecksResponse,
+} from "../net/api.ts";
 import { GATE_RATE_LIMITED_MESSAGE } from "../net/gate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import DecksRoute from "./decks.tsx";
@@ -28,6 +37,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getMe: vi.fn(),
     getDecks: vi.fn(),
     getCollection: vi.fn(),
+    getOwnedCosmetics: vi.fn(),
     putDeck: vi.fn(),
     deleteDeck: vi.fn(),
     putTrio: vi.fn(),
@@ -286,6 +296,43 @@ describe("what the screen opens with", () => {
       expect(screen.getByTestId("workshop")).toBeInTheDocument();
     });
     expect(screen.getByTestId("settings-open-nav"), "the workshop's own gear").toBeInTheDocument();
+  });
+});
+
+// The portraits the picker offers (R1827000)
+
+describe("the portrait picker's offer (R1827000)", () => {
+  /** A new deck's editor, its picker opened: the tiles it offers, in order. */
+  async function offeredOnANewDeck(): Promise<(string | null)[]> {
+    await waitFor(() => {
+      expect(screen.getByTestId("workshop")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId("deck-new"));
+    fireEvent.click(screen.getByTestId("portrait-current"));
+    const menu = screen.getByRole("dialog", { name: "Choose a hero portrait" });
+    const grid = within(menu).getByRole("listbox", { name: "Portraits" });
+    return [...grid.querySelectorAll(".portrait-tile")].map((tile) => tile.getAttribute("data-portrait"));
+  }
+
+  it("R1827000 while ownership decides, the picker offers the starters and the owned portraits", async () => {
+    vi.mocked(getOwnedCosmetics).mockResolvedValue({ cards: [], account: ["portrait-gary", "table-felt"] });
+    render(<DecksRoute portraitsGated />);
+    expect(await offeredOnANewDeck()).toEqual(["vanilla", "gary"]);
+    expect(getOwnedCosmetics).toHaveBeenCalledWith(TOKEN);
+    cleanup();
+    window.localStorage.removeItem(mirrorKey(PROFILE));
+
+    // A read that fails offers the starters alone; the workshop still opens.
+    vi.mocked(getOwnedCosmetics).mockRejectedValue(new TypeError("Failed to fetch"));
+    render(<DecksRoute portraitsGated />);
+    expect(await offeredOnANewDeck()).toEqual(["vanilla"]);
+  });
+
+  it("R1827000 with ownership not deciding nothing is read and every portrait is offered", async () => {
+    vi.mocked(getOwnedCosmetics).mockResolvedValue({ cards: [], account: [] });
+    render(<DecksRoute portraitsGated={false} />);
+    expect(await offeredOnANewDeck()).toEqual([...PORTRAIT_IDS]);
+    expect(getOwnedCosmetics).not.toHaveBeenCalled();
   });
 });
 

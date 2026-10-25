@@ -1,23 +1,46 @@
-//! #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Draw; R4, R11, R50, R58, R60).
+//! #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Shuffle into; R11, R50, R60, R80, R1828002).
 //! Spell token, cost 1, tags KY + Token. The only generator is #51 KY's Private Tutor's
 //! "No match at all → add a KY's Empty Notebook".
-//!   Base:    "Draw 1"
-//!   Radiant: "Draw 2" — §8 Conventions: a cell that changes only a number changes only that number.
+//!   Base:    "Shuffle {cards|random KY card|random KY cards} into your deck." — cards 3
+//!   Radiant: "Shuffle {cards|random Radiant KY card|random Radiant KY cards} into your deck." — cards 3
 //!
-//! The whole card is one Draw. Everything §2.4 hangs off a draw — cast-on-draw, fatigue, the hand
-//! cap of 10 (R4) and R58's chain cap — belongs to the draw pipeline, so neither face counts cards.
+//! The whole card is one `shuffleRandomFromCatalog` (R1828002): `cards` independent picks (repeats
+//! allowed, R60) from the KY cards, each Radiant on the Radiant face, shuffled into the caster's deck at
+//! uniformly random places, R80's cap turning the rest away. The pool is the text's "KY card", which
+//! names no token, so §5.1 keeps the KY tokens out: this card, KY's Gift, Knowledge Breaker Prime and
+//! Lil' Kenny.
 //!
 //! Being a token is data (§7): §5.1's one query keeps Token-tagged cards out of every random pool
 //! unless the card names the pool itself; the tests prove it against `crates/cards/src/query.rs`.
 //! R11: a SPELL token goes to the GY like any spell (§3.2), so Discover can find it (R50, #72 Reminisce).
+//!
+//! Through v0.4.9 it was "Draw {draw}." (1, and 2 on the Radiant face); `script_v0_4_9` keeps that for
+//! those versions' replays (R767000).
 
+use jackioh_engine::effects::shuffle_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-051-1";
 
-/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `run_hook`. §8: base
-/// draws 1, radiant draws 2 — the declared number `draw` (R386), read off the face that is running.
+/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `run_hook`. R1828002: the
+/// declared number `cards` (R386) of random non-token KY cards (§5.1), Radiant on the Radiant face, into
+/// the caster's deck.
 fn notebook() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![shuffle_random_from_catalog(json_as(json!({
+                "query": { "tags": ["KY"] },
+                "count": param(&*ctx, "cards"),
+                "radiant": ctx.radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+/// Through v0.4.9: base draws 1, radiant draws 2, the declared number `draw` read off the face that is
+/// running.
+fn notebook_v0_4_9() -> Script {
     Script {
         cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
         ..Script::default()
@@ -30,8 +53,18 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Draw; R4, R11, R50, R60).
-// BUILD M4-T4 row 51.1: "Draw 1; radiant 2; absent from every random pool".
+/// R767000: through v0.4.9 the card drew; `KEPT_SCRIPTS` keeps it.
+pub fn script_v0_4_9() -> CardScripts {
+    let base = notebook_v0_4_9();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+// #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Shuffle into; R11, R50, R60, R1828002).
+// BUILD M4-T4 row 51.1: "Shuffles 3 random non-token KY cards of any set into your deck (R1828002; repeats
+// allowed, R60), each at a random place, a full deck turning the rest away (R80); never a KY token; the
+// count reads through `param()`; radiant the 3 are Radiant; the Notebook itself absent from every random
+// pool".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -39,7 +72,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// Two ordinary library cards, top first, so a draw is visible as an id moving to the hand.
+    /// Three ordinary library cards, top first, so a draw is visible as an id moving to the hand.
     const LIBRARY: [&str; 3] = ["core-005", "core-016", "core-010"];
 
     /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell and therefore always an affordable
@@ -52,19 +85,34 @@ mod tests {
         defs.iter().map(|def| <T as std::borrow::Borrow<CardDef>>::borrow(def).id.clone()).collect()
     }
 
+    /// The non-token KY cards, the pool the Notebook shuffles from (§5.1).
+    fn ky_pool() -> Vec<String> {
+        ids(crate::query::query(&json_as(json!({ "tags": ["KY"] }))))
+    }
+
+    /// p1 plays the Notebook on `radiant`'s face, its `cards` stepped `step` times, with `seed`, and
+    /// returns the scenario and the cards its play put in the library.
+    fn shuffled(seed: &str, radiant: bool, step: i32) -> (Scenario, Vec<CardInstance>) {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [{ "def": "core-051-1", "radiant": radiant }, ANCHOR], "library": LIBRARY },
+        }));
+        let before: Vec<String> = s.pile(P1, "library").iter().map(|card| card.id.clone()).collect();
+        for _ in 0..step.abs() {
+            step_param(s.card_mut("core-051-1"), "cards", step.signum());
+        }
+        s.play("core-051-1", json!({}));
+        let added = s.pile(P1, "library").into_iter().filter(|card| !before.contains(&card.id)).collect();
+        (s, added)
+    }
+
     #[test]
-    fn r386_an_upgrade_draws_2_and_a_radiant_degrade_1() {
-        for (radiant, upgrade, draws) in [(false, true, 2), (true, false, 1)] {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": [{ "def": "core-051-1", "radiant": radiant }, ANCHOR], "library": LIBRARY } }));
-            let moved = if upgrade {
-                crate::upgrade_number(&mut s, "core-051-1", "draw")
-            } else {
-                crate::degrade_number(&mut s, "core-051-1", "draw")
-            };
-            assert_eq!(moved, draws);
-            s.play("core-051-1", json!({}));
-            assert_eq!(s.state().players.p1.library.len(), LIBRARY.len() - draws as usize);
+    fn r386_an_upgrade_shuffles_4_and_a_degrade_2() {
+        for (step, count) in [(1, 4), (-1, 2)] {
+            let (s, added) = shuffled("notebook-tuned", false, step);
+            assert_eq!(added.len(), count);
+            assert_eq!(s.pile(P1, "library").len(), LIBRARY.len() + count);
         }
     }
 
@@ -72,19 +120,57 @@ mod tests {
         use super::*;
 
         #[test]
-        fn draws_1_the_top_library_card_moves_to_hand() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": ["core-051-1"], "library": LIBRARY } }));
-            let top = s.pile(P1, "library").first().cloned();
-
-            s.play("core-051-1", json!({}));
-
-            assert_eq!(s.state().players.p1.library.len(), 2);
-            assert!(top.is_some());
-            if let Some(top) = top {
-                s.expect_in_zone(&top, "hand");
+        fn r1828002_shuffles_3_random_non_token_ky_cards_into_your_deck() {
+            let (mut s, added) = shuffled("notebook-base", false, 0);
+            assert_eq!(added.len(), 3);
+            for card in &added {
+                assert!(ky_pool().contains(&card.def_id), "{} is no non-token KY card", card.def_id);
+                assert!(!card.radiant);
             }
-            s.expect_events(json!(["cardPlayed", "drawn"]));
+            // Nothing is drawn: the hand holds the anchor and nothing else.
+            assert_eq!(def_ids(&s.pile(P1, "hand")), vec![ANCHOR.to_string()]);
+            s.expect_in_zone("core-051-1", "graveyard");
+        }
+
+        /// R80: a card shuffled into a full library is not created, so a deck one short of its cap takes one.
+        #[test]
+        fn r1828002_a_deck_one_short_of_its_cap_takes_one_and_turns_the_rest_away() {
+            crate::register_all();
+            let cap = usize::try_from(jackioh_engine::config::LIBRARY_CAP).unwrap_or(usize::MAX);
+            let mut s = scenario(json!({
+                "seed": "notebook-cap",
+                "p1": { "hand": ["core-051-1", ANCHOR], "library": vec![LIBRARY[0]; cap - 1] },
+            }));
+            s.play("core-051-1", json!({}));
+            assert_eq!(s.pile(P1, "library").len(), cap);
+            let shuffled = s
+                .events()
+                .iter()
+                .filter(|event| event.event_type() == GameEventType::ShuffledIn)
+                .count();
+            assert_eq!(shuffled, 1);
+        }
+
+        #[test]
+        fn r1828002_across_30_seeds_no_ky_token_is_shuffled_in() {
+            let tokens = ids(crate::query::query(&json_as(json!({ "tags": ["KY", "Token"] }))));
+            assert_eq!(
+                tokens,
+                ["core-051-1", "classicplus-042-1", "meditative-045-1", "meditativeplus-020-1"].map(String::from)
+            );
+            let mut seen: Vec<String> = Vec::new();
+            for n in 0..30 {
+                let (_, added) = shuffled(&format!("notebook-pool-{n}"), false, 0);
+                for card in added {
+                    assert!(!tokens.contains(&card.def_id), "{} is a KY token", card.def_id);
+                    assert!(ky_pool().contains(&card.def_id));
+                    if !seen.contains(&card.def_id) {
+                        seen.push(card.def_id);
+                    }
+                }
+            }
+            // R60: the picks reach across the pool.
+            assert!(seen.len() > 3);
         }
 
         #[test]
@@ -97,79 +183,39 @@ mod tests {
             let graveyard = def_ids(&s.pile(P1, "graveyard"));
             assert!(graveyard.contains(&"core-051-1".to_string()));
         }
-
-        #[test]
-        fn s2_4_an_empty_library_draws_nothing_but_fatigue_and_the_token_still_counts_as_played() {
-            crate::register_all();
-            // The anchor keeps the turn alive. Without it the Notebook empties p1's hand, §2.5 auto-ends
-            // the turn under the assertions, p2 takes one off an empty library too, and `start_turn`
-            // clears `turn_log` before `cards_played` is read. The tell is a `turnAutoEnded` followed by
-            // a fatigue `damage`.
-            let mut s = scenario(json!({ "p1": { "hand": ["core-051-1", ANCHOR], "library": [] } }));
-
-            s.play("core-051-1", json!({}));
-
-            // Still p1's own turn, so every number below belongs to the play above (§2.5).
-            assert_eq!(s.state().active, P1);
-            // Nothing was drawn: the hand holds the anchor and nothing else.
-            let hand = def_ids(&s.pile(P1, "hand"));
-            assert_eq!(hand, vec![ANCHOR.to_string()]);
-            assert_eq!(s.state().players.p1.turn_log.cards_played, 1);
-            // §2.4/R3: no card is drawn, so no `drawn` event — the fatigue damage instance is what happened.
-            assert_eq!(
-                s.events().iter().filter(|event| event.event_type() == GameEventType::Drawn).count(),
-                0
-            );
-            s.expect_health(P1, 29).expect_events(json!(["damage"]));
-        }
     }
 
     mod n51_1_ky_s_empty_notebook_radiant {
         use super::*;
 
         #[test]
-        fn s8_conventions_only_the_number_changes_so_it_draws_2() {
-            crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": ["core-051-1"], "library": LIBRARY } }));
-            // HARNESS GAP (reported): `SideSetup.hand` takes no `{ def, radiant }` form.
-            s.card_mut("core-051-1").radiant = true;
-
-            s.play("core-051-1", json!({}));
-
-            assert_eq!(s.state().players.p1.library.len(), 1);
-            assert_eq!(s.state().players.p1.hand.len(), 2);
-            let hand = def_ids(&s.pile(P1, "hand"));
-            assert_eq!(hand, vec!["core-005".to_string(), "core-016".to_string()]);
+        fn r1828002_shuffles_3_random_radiant_ky_cards_into_your_deck() {
+            let (s, added) = shuffled("notebook-radiant", true, 0);
+            assert_eq!(added.len(), 3);
+            for card in &added {
+                assert!(ky_pool().contains(&card.def_id), "{} is no non-token KY card", card.def_id);
+                assert!(card.radiant);
+            }
+            assert_eq!(def_ids(&s.pile(P1, "hand")), vec![ANCHOR.to_string()]);
         }
+    }
+
+    /// R767000: the script kept for the replays of v0.4.9 and before, which drew 1, or 2 on the Radiant
+    /// face.
+    mod v0_4_9 {
+        use super::*;
 
         #[test]
-        fn r4_the_hand_caps_at_10_so_the_second_draw_of_a_nine_card_hand_is_burned() {
+        fn r767000_r1828002_a_game_on_v0_4_9_folds_under_the_kept_script_it_draws_1_and_2_radiant() {
             crate::register_all();
-            // Nine other cards plus the Notebook is a full hand (HAND_CAP 10); playing it leaves nine, so the
-            // first draw fills the tenth slot and the second is burned to the graveyard (R4).
-            let mut s = scenario(json!({
-                "p1": {
-                    "hand": [
-                        "core-051-1",
-                        "core-001",
-                        "core-002",
-                        "core-003",
-                        "core-004",
-                        "core-005",
-                        "core-006",
-                        "core-007",
-                        "core-008",
-                        "core-009",
-                    ],
-                    "library": LIBRARY,
-                },
-            }));
-            s.card_mut("core-051-1").radiant = true;
-
-            s.play("core-051-1", json!({}));
-
-            assert_eq!(s.state().players.p1.hand.len(), 10);
-            s.expect_events(json!(["burned"]));
+            jackioh_engine::with_shipped(crate::catalog_at("v0.4.9"), || {
+                for (radiant, draws) in [(false, 1), (true, 2)] {
+                    let (s, added) = shuffled("notebook-kept", radiant, 0);
+                    assert!(added.is_empty());
+                    assert_eq!(s.pile(P1, "library").len(), LIBRARY.len() - draws);
+                    assert_eq!(s.pile(P1, "hand").len(), 1 + draws);
+                }
+            });
         }
     }
 

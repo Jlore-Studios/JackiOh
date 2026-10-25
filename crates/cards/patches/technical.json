@@ -898,5 +898,165 @@
     "pr": 1801,
     "title": "the AI tries an X card at its biggest X, an Embiggened price, an Equip and a face-down set before a second lane of its cheapest play",
     "kind": "ai"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "633568b997c0c127c198f6eb2f08c2647d042481",
+    "title": "Merge pull request #1789 from Jlore-Studios/bot/issue-1775",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "56a0b3d5546531aac8e9c5ac4933ff0f5a81a2a3",
+    "pr": 1805,
+    "title": "patches log: e9b88bd..36ac34b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "db8d97fad993ff1eb4a01566c0d7de262b7bbe09",
+    "pr": 1806,
+    "title": "the browser tab says it is your move during the mulligan and when a prompt waits on you, not only on your turn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "6c53eaae2ea415c98e2f5be9089b8a1f3aa203c5",
+    "pr": 1808,
+    "title": "a held backrow zone says it waits for an animated card's return, not a Reborn unit, when that is why",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "0694cfd8ec6745e9223f25a69f69212af3e535a1",
+    "pr": 1810,
+    "title": "the deck list marks each card that keeps the deck from being queued",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "52b2951bd981e3120f82c51549d01ed69e260214",
+    "pr": 1807,
+    "title": "the online and co-op tables can open the full list of live modifiers, as practice and lessons already can",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "87ad7b9d754116dc69b32649ff738ab7f00e3774",
+    "pr": 1811,
+    "title": "clicking another attacker while one is picked switches the attack to it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "106a26e6d7f93c50bc369906f7acf614bdac746a",
+    "pr": 1813,
+    "title": "the AI's trade reckoning counts a Reborn unit's return, so killing one is not priced as removing it",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "1dc2aa529dca7b5a32abcf598ca3123f46f499f6",
+    "pr": 1814,
+    "title": "the web's tests take their stub-server, sign-in and fake audio helpers from one place instead of dozens of private copies",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "9efdb26dc237d521583d7d18305939688add3783",
+    "pr": 1809,
+    "title": "bot: build pass 1 for #1800",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "2bcd74f934d625f9090bfb912bbb9e27e5f67f68",
+    "pr": 1812,
+    "title": "the card scripts' tests read def ids through the crate's one helper instead of about 130 hand-written copies",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "03e2df32aff01b2dfe2aeee69741cd10104933a2",
+    "pr": 1815,
+    "title": "the AI's search keeps a play's placements apart when they differ only in lane, so trying every lane is not undone",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "c291f24e929e4827633ed5d790f01721464a5037",
+    "pr": 1835,
+    "title": "the replays list, the share button and the shared list stop reading whole action logs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "d228a62797fcd7f825d14206838c878a773fbca9",
+    "pr": 1887,
+    "title": "bot: build pass 1 for #1827",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "49b6b994d5d9dbec82125f1c69138c2751b794a9",
+    "pr": 1891,
+    "title": "the docs and the status issue say the two LLM training lanes are stopped",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "526e98112369f544582929fb80589ed830236fe6",
+    "pr": 1832,
+    "title": "patches ship: v0.4.5, v0.4.6, v0.4.7, v0.4.8, v0.4.9",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "a2a53daac0d5d2599486bcf51a1524caa503453d",
+    "pr": 1892,
+    "title": "a patches ship promotion still red 2 hours on opens a hard issue for the night bot",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "41fe673f4bfc7818f815c12a753cdd09b6bc8b0c",
+    "pr": 1894,
+    "title": "patches log: 36ac34b..526e981",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "86430e35493dc2a7026b206e3ece57fd070e96f7",
+    "pr": 1905,
+    "title": "the training box becomes the Muse box, one Muse runner on each box (#1677)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "2d780934c526d247cb0a42816ee79608bbac4f47",
+    "pr": 1906,
+    "title": "the AI's decisions stay under 2 s on a state made wide by a many-ingredient fused card (The Maestro)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "c786880ac495f29361b09310295a17a59789d044",
+    "pr": 1909,
+    "title": "the watch and replay tables can open the full list of live modifiers, as the others do",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "876a4c9a81287d5ebd176f1e1388cd76db7d2bbe",
+    "pr": 1912,
+    "title": "patches ship: v0.4.10",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "09360eea5db769681177f2e13d5b080ef6c2fc74",
+    "pr": 1910,
+    "title": "the card sheet's statistics, the creator's script check and a finished GIF's share offer a way on after a failure",
+    "kind": "app"
   }
 ]

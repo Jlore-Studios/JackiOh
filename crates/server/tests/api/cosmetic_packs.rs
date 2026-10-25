@@ -19,7 +19,7 @@ use jackioh_server::config::{
     CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY,
     COSMETIC_PACK_SLOTS, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
+use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, portrait_of, shipped};
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
     CosmeticHoldings, CosmeticOpeningLog, CosmeticSlotGrant, OpenedCosmeticPack, buy_chase,
@@ -340,10 +340,14 @@ async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
         CosmeticSlotGrant::Cosmetic { cosmetic_rarity, .. } => {
             assert!(*cosmetic_rarity >= CosmeticRarity::Epic, "{:?}", pack.slots[0]);
         }
-        CosmeticSlotGrant::Bars => panic!("the shipped full arts are Epic and open: {:?}", pack.slots[0]),
+        CosmeticSlotGrant::Bars => panic!(
+            "the shipped full arts and portraits are Epic and open: {:?}",
+            pack.slots[0]
+        ),
     }
     // Every cosmetic granted is owned, on its card or the account; the shipped registry's
-    // droppable ones are the six Epic full arts.
+    // droppable ones are the six Epic full arts, each on its card, and the five Epic portraits, on
+    // the account (R1827000).
     for slot in &pack.slots {
         if let CosmeticSlotGrant::Cosmetic {
             cosmetic_id,
@@ -353,7 +357,7 @@ async fn r1306000_a_cosmetic_pack_opens_its_slots_one_epic_or_better() {
         } = &slot.grant
         {
             assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic, "{slot:?}");
-            assert!(card_id.is_some(), "{slot:?}");
+            assert_eq!(card_id.is_some(), portrait_of(cosmetic_id).is_none(), "{slot:?}");
             assert!(
                 owns_cosmetic(&app, card_id.as_deref(), cosmetic_id).await,
                 "{slot:?}"

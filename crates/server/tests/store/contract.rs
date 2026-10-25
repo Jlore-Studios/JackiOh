@@ -9475,6 +9475,35 @@ mod economy {
         assert_eq!(rest, EconomyLedger::default());
     }
 
+    /// R1827000: a portrait is an account cosmetic. An account made after migration 0057's grant
+    /// owns none, vanilla being a starter that needs no row, until one is granted on no card, which
+    /// writes its ledger row like any account cosmetic.
+    async fn r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({ "cards": [], "account": [] })
+        );
+        assert!(
+            q!(harness, t => t.economy_cosmetics_grant(&cosmetic(&profile.id, None, "portrait-gary", 1, now)))
+        );
+        assert!(
+            !q!(harness, t => t.economy_cosmetics_grant(&cosmetic(&profile.id, None, "portrait-gary", 1, now)))
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({ "cards": [], "account": ["portrait-gary"] })
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let rows: Vec<(Option<String>, String, i64)> = ledger
+            .cosmetics
+            .iter()
+            .map(|row| (row.card_id.clone(), row.cosmetic_id.clone(), row.delta))
+            .collect();
+        assert_eq!(rows, vec![(None, "portrait-gary".to_string(), 1)]);
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -9489,6 +9518,7 @@ mod economy {
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+        r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
     );
 }
 

@@ -2,8 +2,9 @@
 //! (R253, R257, R264).
 //!
 //! A profile keeps up to `MAX_SAVED_DECKS` named decks and `MAX_SAVED_TRIOS` trios, both DRAFTS
-//! (R250, R252): a save checks structure only — D1–D5 for a deck (D5 is the portrait's, R641;
-//! its playmat, backdrop and card back are checked against the cosmetics registry, R1297000),
+//! (R250, R252): a save checks structure only — D1–D5 for a deck (D5 is the portrait's, R641,
+//! and on top of it the portrait must be one the account owns, R1827000; its playmat, backdrop and
+//! card back are checked against the cosmetics registry, R1297000),
 //! T1–T3 for a trio — and legality is judged at queue (R253). The save routes never call the L1–L6
 //! validator; the queue-time helpers at the bottom always do.
 //!
@@ -26,7 +27,7 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 
 use jackioh_engine::validator;
-use jackioh_engine::wire::emotes::is_portrait_id;
+use jackioh_engine::wire::emotes::{is_portrait_id, portrait_or_default};
 use jackioh_engine::{LeanPick, SHIPPED_SETS, SetName};
 
 use crate::api::collection::{caller_profile, owned_in};
@@ -135,6 +136,10 @@ fn deck_cosmetic(body: &Value, key: &str, kind: CosmeticKind) -> Result<Option<S
         pick => Ok(pick),
     }
 }
+
+/// R1827000: the D5 issue of a portrait the account does not own, naming the field as D5's own
+/// sentence does.
+const UNOWNED_PORTRAIT: &str = "\"portrait\" is a portrait this account does not own.";
 
 /// A trio's three slots, in slot order.
 fn slots_in(slots: &TrioSlots) -> Vec<Option<String>> {
@@ -464,7 +469,7 @@ pub async fn list_decks(app: &Arc<App>, req: Req) -> ApiResult {
 }
 
 /// `PUT /api/decks/:id`. R250, R256: create or replace one deck. D1–D5 only: a draft may be
-/// incomplete or unowned.
+/// incomplete or unowned, though its portrait must be owned (R1827000).
 pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let id = path_id_of(req.params.get("id"), "deck")?;
@@ -485,6 +490,18 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
 
     let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // R1827000: on top of D5, a portrait the account does not own is refused, in D5's shape.
+    if let Some(picked) = portrait.as_deref() {
+        let owned = tx.economy_cosmetics_get(&profile.id).await?;
+        if !cosmetics::owns_portrait(portrait_or_default(Some(picked)), &owned.account) {
+            let issues = issues_json(&[validator::DraftIssue {
+                rule: validator::DraftRule::D5,
+                message: UNOWNED_PORTRAIT.to_string(),
+                card_id: None,
+            }])?;
+            return Err(draft_refused(UNOWNED_PORTRAIT, &issues));
+        }
+    }
     // `created_at` is only read on a create; an update keeps the stored one (the store's contract).
     let outcome = tx
         .decks_upsert(
