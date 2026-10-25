@@ -1099,6 +1099,18 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    /// R1838000: how many Trades this player has made on turn `turn`, kept as `draws` is: a count kept
+    /// for an earlier turn reads as 0 (`trade::trades_this_turn`). Absent until their first Trade, so a
+    /// game nobody trades in hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades: Option<DrawCount>,
+    /// R1838000: the Trades this player may make each turn, once an effect has set a figure of their
+    /// own; absent means `TRADES_PER_TURN` (`trade::trades_per_turn_of`), so a game that never sets
+    /// one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades_per_turn: Option<i32>,
     // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
     /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
     /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -1710,6 +1722,8 @@ pub fn create_player_state() -> PlayerState {
         duos: None,
         autopilot: None,
         answer_chain: None,
+        trades: None,
+        trades_per_turn: None,
     }
 }
 

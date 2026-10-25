@@ -1709,6 +1709,22 @@ impl Scenario {
         self
     }
 
+    /// R1838000: Trade a Tradable card from its owner's hand — into their deck at a random position, a
+    /// card drawn — as the `trade` action. Panics when `reduce` refuses it, like every other step.
+    pub fn trade(&mut self, card: impl Into<CardRef>) -> &mut Scenario {
+        let id = or_fail(self.resolve(&card.into(), Where::Hand, "trade"));
+        let traded = self.live(&id).clone();
+        let what = format!("trade {}", describe_instance(&self.current, &traded));
+        self.action(
+            ActionBody::Trade {
+                instance_id: traded.id.clone(),
+            },
+            traded.owner,
+            &what,
+        );
+        self
+    }
+
     /// `opts`: `json!({ "targets"?, "ability"?, "modes"?, "tributes"? })`.
     pub fn activate(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: ActivateOptions = options_of(opts, "activate");

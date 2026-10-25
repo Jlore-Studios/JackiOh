@@ -71,6 +71,18 @@ gameLog?: GameLog,
  */
 draws?: DrawCount, 
 /**
+ * R1838000: how many Trades this player has made on turn `turn`, kept as `draws` is: a count kept
+ * for an earlier turn reads as 0 (`trade::trades_this_turn`). Absent until their first Trade, so a
+ * game nobody trades in hashes as it did before this field existed (D14).
+ */
+trades?: DrawCount, 
+/**
+ * R1838000: the Trades this player may make each turn, once an effect has set a figure of their
+ * own; absent means `TRADES_PER_TURN` (`trade::trades_per_turn_of`), so a game that never sets
+ * one hashes as it did before this field existed (D14).
+ */
+tradesPerTurn?: number, 
+/**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did

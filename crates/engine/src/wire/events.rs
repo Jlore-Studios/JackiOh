@@ -905,6 +905,13 @@ pub enum GameEvent {
         player: PlayerId,
         turn: i32,
     },
+    /// R1838000, R1838001: `player` Traded a Tradable card from their hand. Public, and it names no
+    /// card: the card going into the deck is the `shuffledIn` after it and the card coming out the
+    /// `drawn` after that, each hidden per zone (R97), so the other player learns that a card was
+    /// traded and not which.
+    Traded {
+        player: PlayerId,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1039,6 +1046,7 @@ string_union! {
         ScriptFailed = "scriptFailed",
         CurveDrawn = "curveDrawn",
         AutopilotEngaged = "autopilotEngaged",
+        Traded = "traded",
     }
 }
 
@@ -1206,6 +1214,7 @@ impl GameEvent {
             GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
+            GameEvent::Traded { .. } => GameEventType::Traded,
         }
     }
 }
@@ -1278,8 +1287,8 @@ mod tests {
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
-        // `autopilotEngaged` (R1183002).
-        assert_eq!(GAME_EVENT_TYPES.len(), 79);
+        // `autopilotEngaged` (R1183002); and Tradable one, `traded` (R1838001).
+        assert_eq!(GAME_EVENT_TYPES.len(), 80);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

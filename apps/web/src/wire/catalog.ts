@@ -159,7 +159,9 @@ export type Keyword =
   /** #783, R783010: Locks its zone as it arrives as a Unit, or as it is revealed as a Trap. */
   | { kind: "Crater" }
   /** #783, R783012: may be played from its owner's graveyard once, at its cost. */
-  | { kind: "Flashback" };
+  | { kind: "Flashback" }
+  /** R1838000: may be Traded from its owner's hand: into the deck at random for a draw, at no mana, one a turn. */
+  | { kind: "Tradable" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -197,6 +199,7 @@ export const KEYWORD_KINDS = [
   "Cloaked",
   "Crater",
   "Flashback",
+  "Tradable",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

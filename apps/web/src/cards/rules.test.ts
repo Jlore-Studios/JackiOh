@@ -234,6 +234,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Cloaked: "CK",
   Crater: "CR",
   Flashback: "FB",
+  Tradable: "TD",
 };
 
 type Term = { text: string; term: GlossaryTermId };

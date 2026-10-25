@@ -55,3 +55,4 @@ pub mod skill;
 pub mod style;
 pub mod support;
 pub mod surface;
+pub mod tradable;

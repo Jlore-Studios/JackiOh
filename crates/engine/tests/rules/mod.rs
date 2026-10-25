@@ -213,6 +213,7 @@ pub mod statecheck;
 pub mod stays;
 pub mod targeting;
 pub mod temporary;
+pub mod tradable;
 pub mod transform_riders;
 pub mod transform_variants;
 pub mod trap_cardresolved;

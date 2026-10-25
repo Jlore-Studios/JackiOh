@@ -115,6 +115,12 @@ export const testid = {
    * action layer can light the pile (B5 E11) without importing the animation table.
    */
   graveyard: (side: Side): string => `graveyard-${side}`,
+  /**
+   * R1838000: the Trade control on the viewer's own Tradable hand card (TradeControl.tsx), in its bar
+   * over the card on a 1v1 board (`tradeBar`) or in the Duos card bar.
+   */
+  trade: (instanceId: string): string => `trade-${instanceId}`,
+  tradeBar: "trade-bar",
 } as const;
 
 /**

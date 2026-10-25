@@ -95,6 +95,7 @@ export type { SpawnZone } from "./generated/SpawnZone.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
+export type { TradesView } from "./generated/TradesView.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { TuningChange } from "./generated/TuningChange.ts";
 export type { UnitView } from "./generated/UnitView.ts";
@@ -205,6 +206,8 @@ export const GAME_EVENT_TYPES = [
   "curveDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
   "autopilotEngaged",
+  // Issue #1838's Trade (R1838001).
+  "traded",
 ] as const satisfies readonly GameEventType[];
 
 /**

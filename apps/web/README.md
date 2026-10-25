@@ -131,6 +131,14 @@ cost) ask for them after the target, in the `hand` picker; plays that differ by 
 Tribute and its zone are narrowed together as whole candidates (R391), so a Tribute onto its own
 zone is picked by clicking the unit or its zone.
 
+**The Trade** (SPEC §6.1, §10.10, R1838000). A hand card of the viewer's that `legal` lists a `trade`
+for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
+(`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
+`trade-<instanceId>`, "Trade" with the price and the Trades left from the view's `trades`. It is live
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
+reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+Game's own bar is off (`tradeBar={false}`).
+
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
 graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Play"
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the

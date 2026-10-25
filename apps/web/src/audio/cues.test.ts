@@ -232,6 +232,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
+  // Issue #1838 (Tradable, R1838001).
+  traded: { type: "traded", player: "p1" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -321,6 +323,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   scriptFailed: "notify",
   curveDrawn: "whoosh",
   autopilotEngaged: "notify",
+  traded: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -348,6 +351,8 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "attackCancelled",
   "turnAutoEnded",
   "autopilotEngaged",
+  // R1838001: a Trade's whoosh, whatever the seat.
+  "traded",
   "countered",
   "stolen",
   "unlocked",

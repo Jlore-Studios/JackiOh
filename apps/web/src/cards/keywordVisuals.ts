@@ -291,6 +291,14 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-flashback-rewind", when: "always" },
     numbered: false,
   },
+  // R1838000: a hand keyword; a Unit that prints it carries it onto the field, where it does nothing.
+  Tradable: {
+    layer: "glyph",
+    priority: 33,
+    shape: "two arrows passing each other, one in and one out",
+    motion: { keyframes: "kw-trade-swap", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

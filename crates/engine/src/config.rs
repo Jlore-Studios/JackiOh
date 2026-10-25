@@ -144,6 +144,12 @@ pub const FATIGUE_DAMAGE: fn(i32) -> i32 = |n| n;
 pub const DRAW_OFFERS_PER_TURN: i32 = 1;
 /// §2.5, R36: a declined offer blocks that player for this many of their turns.
 pub const DRAW_OFFER_BLOCK_TURNS: i32 = 3;
+
+/// §6.1 Tradable, R1838000: the Trades a player may make each turn, counted over all their Tradable
+/// cards. A player's own figure, once an effect sets one, is read in its place (`trade::trades_per_turn_of`).
+pub const TRADES_PER_TURN: i32 = 1;
+/// §6.1 Tradable, R1838000: the mana a Trade costs — none, as the designer wrote the keyword.
+pub const TRADE_COST: i32 = 0;
 /// §2.5, R79: the most prompts one `timeout` answers for the active player. A chain of prompts is a
 /// handful (KY's Private Tutor asks three times), after which the turn ends. This only bounds a card
 /// that would keep asking, so one `timeout` always returns: if a prompt is still open after this many

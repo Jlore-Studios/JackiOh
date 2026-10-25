@@ -68,8 +68,9 @@ less the body it comes back as, #1796), and once none is worth making the switch
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
-opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the other
-attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
+opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
+of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
+other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
@@ -235,7 +236,8 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
 - **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
   side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
   hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
-  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
+  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind
+  (bar Tradable, a hand keyword newer than the layout, so the fitted weights still read it, R1838000),
   the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
   and how many of its cards are Radiant (R1012004).
 - **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can

@@ -14043,12 +14043,20 @@
     "cost": 1,
     "loc": 83,
     "base": {
-      "keywords": [],
-      "text": "De-Radiant a Radiant card on the field or in your hand. The next card you play this turn becomes Radiant."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nDe-Radiant a Radiant card on the field or in your hand. The next card you play this turn becomes Radiant."
     },
     "radiant": {
-      "keywords": [],
-      "text": "De-Radiant every enemy card on the field. The next card you play this turn becomes Radiant."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nDe-Radiant every enemy card on the field. The next card you play this turn becomes Radiant."
     }
   },
   "meditative-054": {
@@ -16444,12 +16452,20 @@
     ],
     "loc": 154,
     "base": {
-      "keywords": [],
-      "text": "Choose an empty lane. Lock every other lane until the start of your next turn."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nChoose an empty lane. Lock every other lane until the start of your next turn."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Choose an empty lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nChoose an empty lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
     }
   },
   "meditative-099": {

@@ -30,6 +30,7 @@
 //!                      to that pipeline's answerer (R122)
 //!   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
 //!   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
+//!   trade            → `trade.apply_trade`, listed and refused by `trade.why_trade_refused` (R1838000)
 //!   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
 //!   sandbox          → `sandbox.apply_sandbox`, refused by `sandbox.why_sandbox_refused`; accepted
 //!                      only by a sandbox game and never listed (R923000–R923003)
@@ -366,6 +367,8 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
             end_turn(sink);
             Ok(())
         }
+        // R1838000: `trade.rs` owns the rule; its refusal is the one `legal_actions` and the view read.
+        ActionBody::Trade { instance_id } => crate::trade::apply_trade(sink, action.player_id, instance_id),
         ActionBody::SetAutoEndTurn { enabled } => {
             // R345: a preference, not a move. It emits nothing, and `maybeAutoEndTurn` reads it after
             // this reduction as after every other, so turning it back on with nothing left to do ends the
@@ -984,6 +987,16 @@ pub(crate) fn each_legal_action(
             for activation in activation_actions(state, player, card) {
                 visit(activation)?;
             }
+        }
+    }
+
+    // R1838000: a Trade of each Tradable hand card, in hand order, while `trade.why_trade_refused`
+    // passes it — the refusal the reducer gives and the view's `tradeReason` reads.
+    for card in &side.hand {
+        if crate::trade::why_trade_refused(state, player, &card.id).is_ok() {
+            visit(ActionBody::Trade {
+                instance_id: card.id.clone(),
+            })?;
         }
     }
 

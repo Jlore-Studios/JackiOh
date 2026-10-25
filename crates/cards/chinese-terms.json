@@ -66,7 +66,8 @@
     "Flying": "飞行",
     "Cloaked": "隐匿",
     "Crater": "陨坑",
-    "Flashback": "闪回"
+    "Flashback": "闪回",
+    "Tradable": "可交易"
   },
   "labels": {
     "Cry:": "战吼：",
@@ -120,6 +121,7 @@
     "Cloaked": { "label": "隐匿", "rule": "可以作为陷阱背面打出。激活：揭示" },
     "Crater": { "label": "陨坑", "rule": "作为单位进入场上时，或作为陷阱被揭示时，锁定其所在区域" },
     "Flashback": { "label": "闪回", "rule": "可以从你的墓地以其法力值消耗打出一次" },
+    "Tradable": { "label": "可交易", "rule": "在你的主要阶段，将其从你的手牌洗入你的牌库并抽一张牌，不消耗法力值。每回合一次交易" },
     "Can't be in Defense Position": { "label": "无法成为守备表示", "rule": "永远不会切换为守备表示" },
     "Can't be attacked": { "label": "无法被攻击", "rule": "任何攻击都不能以其为目标" },
     "Only Units in this lane can attack this": { "label": "只有这一纵列的单位可以攻击这个单位", "rule": "只有从其所在纵列的敌方单位区发起的攻击才是合法的" },

@@ -1,6 +1,6 @@
 //! M #98 Showdown (SPEC §8.8 row 98): (1) Spell, Rare — the designer's first #28.
 //!
-//! Base:    "Choose an empty lane. Lock every other lane until the start of your next turn."
+//! Base:    "Tradable / Choose an empty lane. Lock every other lane until the start of your next turn."
 //! Radiant: the same, plus " This turn, after you put a card into that lane, cast Book of Buff on
 //!           it."
 //! Engine:
@@ -17,6 +17,8 @@
 //!   theirs — the caster casts a new C+ #71 Book of Buff (its base face, Buff 4 times) aimed at it,
 //!   a play (R70) that goes to the caster's graveyard (R87). A move (an animate, a steal, a
 //!   rotation) is not putting a card there: only a resolution and a summon answer.
+//! - **Tradable** (both faces, R1838000): catalog data the engine reads in the hand (`trade.rs`), so
+//!   nothing here runs for it.
 
 use jackioh_engine::effects::{
     LockArgs, UnlockArgs, WatchLaneArgs, ZoneSpec, cast_new, chosen_options, delay, lock, unlock,
@@ -497,6 +499,79 @@ mod tests {
             let s = crowded(false);
             let empty: Vec<i32> = (1..=5).filter(|lane| lane_is_empty(s.state(), *lane)).collect();
             assert_eq!(empty, vec![1, 4]);
+        }
+    }
+
+    /// R1838000: Showdown is Tradable on both faces — Traded from the hand into the deck for a draw,
+    /// at no mana, one Trade a turn over all the player's Tradable cards.
+    mod r1838000_tradable {
+        use super::*;
+
+        /// p1 holds two Showdowns on one face and a Stockpile over the six-card library.
+        fn holding_two(radiant: bool) -> Scenario {
+            crate::register_all();
+            scenario(json!({
+                "seed": "showdown-trade",
+                "p1": {
+                    "hand": [
+                        { "def": SHOWDOWN, "radiant": radiant },
+                        { "def": SHOWDOWN, "radiant": radiant },
+                        FILLER,
+                    ],
+                    "library": library(),
+                },
+                "p2": { "hand": [FILLER], "library": library() },
+            }))
+        }
+
+        fn trade_of(id: &str) -> ActionBody {
+            ActionBody::Trade {
+                instance_id: id.to_string(),
+            }
+        }
+
+        #[test]
+        fn r1838000_both_faces_trade_into_the_deck_for_a_draw_at_no_mana_once_a_turn() {
+            for radiant in [false, true] {
+                let mut s = holding_two(radiant);
+                let showdowns: Vec<CardInstance> =
+                    s.hand(P1).into_iter().filter(|card| card.def_id == SHOWDOWN).collect();
+                let (first, second) = (showdowns[0].clone(), showdowns[1].clone());
+                assert!(is_tradable(s.state(), &first), "radiant {radiant}: the face prints Tradable");
+                let legal = legal_actions(s.state(), P1);
+                assert!(legal.contains(&trade_of(&first.id)) && legal.contains(&trade_of(&second.id)));
+                let (hand, deck, mana) = (
+                    s.hand(P1).len(),
+                    s.pile(P1, "library").len(),
+                    s.state().players.p1.mana.current,
+                );
+                s.trade(&first.id);
+                s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+                assert_eq!(s.hand(P1).len(), hand, "one card went in and one came out");
+                assert_eq!(s.pile(P1, "library").len(), deck);
+                assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
+                assert_eq!(s.card(&first.id).radiant, radiant, "the card keeps its face");
+                // The turn's one Trade is made: the other Showdown is neither offered nor taken.
+                assert!(!legal_actions(s.state(), P1)
+                    .iter()
+                    .any(|action| matches!(action, ActionBody::Trade { .. })));
+                s.expect_refused_with(|s| s.trade(&second.id), "this turn's 1 Trade");
+            }
+        }
+
+        #[test]
+        fn r1838000_both_faces_still_play_as_they_print_after_a_trade_back() {
+            for radiant in [false, true] {
+                let mut s = holding_two(radiant);
+                let second = s.hand(P1).into_iter().filter(|card| card.def_id == SHOWDOWN).nth(1);
+                let first = s.card(SHOWDOWN).id.clone();
+                s.trade(&first);
+                // The Showdown left in hand is played as it prints, the Trade being no play of it.
+                let second = second.expect("a second Showdown");
+                s.play(&second.id, json!({ "modes": ["lane-1"] }));
+                assert!(locked(&s, P2, Row::Units, 2), "radiant {radiant}: the other lanes are Locked");
+                assert!(!locked(&s, P1, Row::Units, 1));
+            }
         }
     }
 }

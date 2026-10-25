@@ -10,7 +10,8 @@
 //! - **dense**: integers named by `dense_names`, in one fixed order: the turn and who acts, then for
 //!   each side (the seat's own first, the enemy's second) its hero's `effective_life` and armor, its
 //!   mana, its hand, library and backrow, its units through §10.4's layers (`unit_view`) in
-//!   aggregate, one count per keyword kind, the face damage its board threatens (`face_threat`) and
+//!   aggregate, one count per keyword kind (`counted_keywords`: all but Tradable, a hand keyword newer
+//!   than the layout), the face damage its board threatens (`face_threat`) and
 //!   what it has banked; then the seat's own hand cards by cost, and how many of them are Radiant
 //!   (R1012004).
 //! - **sparse**: `(key, count)` pairs, the key `<zone>:<side>:<card id>` for a card on the board
@@ -79,6 +80,19 @@ const SIDE_FIELDS: &[&str] = &[
 /// The two sides, the seat's own first.
 const SIDES: [&str; 2] = ["own", "enemy"];
 
+/// The keyword kinds no count reads: a hand keyword newer than the layout, which does nothing on the
+/// field where the counts are taken (R1838000's Tradable). Left out, so the layout stays the one
+/// `FEATURES_VERSION` names and the weights fitted on it still read it (R1010000).
+const UNCOUNTED_KEYWORDS: &[KeywordKind] = &[KeywordKind::Tradable];
+
+/// The keyword kinds the layout counts, one dense feature a side each, in `KeywordKind::ALL`'s order.
+fn counted_keywords() -> impl Iterator<Item = KeywordKind> {
+    KeywordKind::ALL
+        .iter()
+        .copied()
+        .filter(|kind| !UNCOUNTED_KEYWORDS.contains(kind))
+}
+
 /// A position as the learned evaluation reads it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub struct Features {
@@ -95,7 +109,7 @@ pub fn dense_names() -> Vec<String> {
         for field in SIDE_FIELDS {
             names.push(format!("{side}.{field}"));
         }
-        for kind in KeywordKind::ALL {
+        for kind in counted_keywords() {
             names.push(format!("{side}.kw.{}", kind.as_str()));
         }
     }
@@ -110,7 +124,7 @@ pub fn dense_names() -> Vec<String> {
 /// How many dense features there are (`dense_names().len()`), without building the names.
 pub fn dense_len() -> usize {
     GLOBAL_FIELDS.len()
-        + SIDES.len() * (SIDE_FIELDS.len() + KeywordKind::ALL.len())
+        + SIDES.len() * (SIDE_FIELDS.len() + counted_keywords().count())
         + HAND_COST_BINS as usize
         + 1
 }
@@ -189,7 +203,7 @@ fn side_fields(view: &GameState, public: &GameState, player: PlayerId, seat: Pla
     let mut unit_armor = 0;
     let mut damaged = 0;
     let mut radiant = 0;
-    let mut keywords = vec![0; KeywordKind::ALL.len()];
+    let mut keywords = vec![0; counted_keywords().count()];
     for unit in &units {
         let shown = unit_view(public, unit);
         let swings = !has_keyword(&shown.keywords, KeywordKind::CantAttack) && !cannot_attack(public, unit);
@@ -208,7 +222,7 @@ fn side_fields(view: &GameState, public: &GameState, player: PlayerId, seat: Pla
         damaged += i32::from(shown.health < shown.max_health);
         radiant += i32::from(unit.radiant);
         for keyword in &shown.keywords {
-            if let Some(at) = KeywordKind::ALL.iter().position(|kind| *kind == keyword.kind()) {
+            if let Some(at) = counted_keywords().position(|kind| kind == keyword.kind()) {
                 keywords[at] += keyword_weight(keyword);
             }
         }
