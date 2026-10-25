@@ -117,8 +117,8 @@ export function lockWords(): string {
 /**
  * R1579000: the cosmetics the account owns, in the registry's order. Every account owns the
  * starters, on every card (§14.2), so each shows once but for the defaults; the server lists the
- * rest (R1313000), a per-card one once for each card it sits on. An id this client does not know is
- * not shown.
+ * rest (R1313000), a per-card one once for each card it sits on, an account one (a portrait,
+ * R1827000) once on no card. An id this client does not know is not shown.
  */
 export function ownedCosmetics(owned: OwnedCosmeticsResponse): { cosmetic: Cosmetic; cardId: string | null }[] {
   const out: { cosmetic: Cosmetic; cardId: string | null }[] = [];
@@ -152,6 +152,8 @@ export function cosmeticKindWords(kind: Cosmetic["kind"]): string {
       return t("Card back");
     case "fullArt":
       return t("Full art");
+    case "portrait":
+      return t("Portrait");
   }
 }
 

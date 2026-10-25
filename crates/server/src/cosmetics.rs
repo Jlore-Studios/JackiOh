@@ -19,14 +19,22 @@
 //! no default, and the check refuses a full art with no card, a card with two, a default one and a
 //! card named by any other kind.
 //!
-//! R1661000: every account cosmetic (a playmat, a backdrop, a card back) but its kind's default is
-//! `GLOBAL_COSMETIC_FLOOR_RARITY` or better, the floor of a duplicate's global roll
-//! ([`global_cosmetics`], R1661001), and the check refuses one below it.
+//! R1661000: every account cosmetic (a playmat, a backdrop, a card back, a hero portrait) but its
+//! kind's default is `GLOBAL_COSMETIC_FLOOR_RARITY` or better, the floor of a duplicate's global
+//! roll ([`global_cosmetics`], R1661001), and the check refuses one below it.
+//!
+//! R1827000: the hero portraits (R641) are account cosmetics, one `portrait-<id>` entry per
+//! `PortraitId`, `portrait-vanilla` the kind's default and a starter and the other five owned, so
+//! they are what the global roll drops. The check refuses a portrait entry missing, extra or a
+//! default other than vanilla, and a deck's save refuses a portrait its account does not own
+//! ([`owns_portrait`]).
 
 use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+
+use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId};
 
 use crate::config::{GLOBAL_COSMETIC_FLOOR_RARITY, PLAYER_SETTINGS_TEXT_MAX_LENGTH};
 
@@ -35,8 +43,9 @@ pub const COSMETICS_JSON: &str = include_str!("../cosmetics.json");
 
 /// The slot a cosmetic fills: on a card, a foil over the art, a finish on the print and a border
 /// round the frame (R1295000); on a deck, the playmat (`Table`), the ambient backdrop behind the
-/// board (`Field`) and the back of its face-down cards and deck (`CardBack`) (R1297000); and a
-/// hero portrait's card's full-art face (`FullArt`), owned on its card and never picked (R1313000).
+/// board (`Field`) and the back of its face-down cards and deck (`CardBack`) (R1297000); a hero
+/// portrait's card's full-art face (`FullArt`), owned on its card and never picked (R1313000); and
+/// the deck's hero portrait (`Portrait`), an account cosmetic (R641, R1827000).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CosmeticKind {
@@ -47,11 +56,13 @@ pub enum CosmeticKind {
     Field,
     CardBack,
     FullArt,
+    Portrait,
 }
 
 impl CosmeticKind {
-    /// The kinds a player picks one of, in the order the settings list them, each with exactly one
-    /// default; `FullArt` is none (R1313000).
+    /// The kinds a player picks one of in the settings, in the order they list them, each with
+    /// exactly one default; `FullArt` is none (R1313000), and `Portrait` is a deck's pick alone
+    /// (R1827000).
     pub const PICKED: [Self; 6] = [
         Self::Foil,
         Self::Finish,
@@ -61,8 +72,20 @@ impl CosmeticKind {
         Self::CardBack,
     ];
 
+    /// The kinds with exactly one default: those of [`Self::PICKED`], then `Portrait`, whose
+    /// default is `portrait-vanilla` (R641, R1827000).
+    pub const DEFAULTED: [Self; 7] = [
+        Self::Foil,
+        Self::Finish,
+        Self::Border,
+        Self::Table,
+        Self::Field,
+        Self::CardBack,
+        Self::Portrait,
+    ];
+
     /// A per-card kind, owned for one card (§14.2): a foil, a finish, a border or a full art
-    /// (R1313000). The deck slots' kinds are account cosmetics.
+    /// (R1313000). The deck slots' kinds and the hero portrait are account cosmetics (R1827000).
     pub fn is_per_card(self) -> bool {
         matches!(self, Self::Foil | Self::Finish | Self::Border | Self::FullArt)
     }
@@ -244,8 +267,28 @@ pub fn problems(cosmetics: &[Cosmetic]) -> Vec<String> {
                 "the id {id:?} is longer than a setting's {PLAYER_SETTINGS_TEXT_MAX_LENGTH} characters (R633)"
             ));
         }
+        // R1827000: a portrait entry names a portrait id, and is the default exactly for vanilla.
+        if cosmetic.kind == CosmeticKind::Portrait {
+            if portrait_of(id).is_none() {
+                out.push(format!("the portrait {id:?} names no portrait id (R641)"));
+            } else if cosmetic.default != (id == portrait_cosmetic_id(DEFAULT_PORTRAIT)) {
+                out.push(format!(
+                    "the portrait {id:?} is a default exactly when it is \"portrait-vanilla\""
+                ));
+            }
+        }
     }
-    for kind in CosmeticKind::PICKED {
+    // R1827000: every portrait id has its entry.
+    for portrait in PORTRAIT_IDS {
+        let id = portrait_cosmetic_id(*portrait);
+        if !cosmetics
+            .iter()
+            .any(|cosmetic| cosmetic.kind == CosmeticKind::Portrait && cosmetic.id == id)
+        {
+            out.push(format!("the portrait {portrait} has no {id:?} entry (R641)"));
+        }
+    }
+    for kind in CosmeticKind::DEFAULTED {
         let defaults = cosmetics
             .iter()
             .filter(|cosmetic| cosmetic.kind == kind && cosmetic.default)
@@ -284,10 +327,11 @@ pub fn pack_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
         .collect()
 }
 
-/// The account cosmetics a duplicate's global roll may drop (R1661001): the playmats, backdrops and
-/// card backs that are neither a default nor a starter, in the registry's order. Every one is
-/// `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000); the shipped registry has none
-/// yet, every account cosmetic being a starter.
+/// The account cosmetics a duplicate's global roll may drop (R1661001): the playmats, backdrops,
+/// card backs and hero portraits that are neither a default nor a starter, in the registry's order.
+/// Every one is `GLOBAL_COSMETIC_FLOOR_RARITY` or better ([`problems`], R1661000); on the shipped
+/// registry they are the five portraits but vanilla, every other account cosmetic being a starter
+/// (R1827000).
 pub fn global_cosmetics(cosmetics: &[Cosmetic]) -> Vec<Cosmetic> {
     cosmetics
         .iter()
@@ -317,6 +361,36 @@ pub fn is_id_of(kind: CosmeticKind, id: &str) -> bool {
     })
 }
 
+/// What a portrait's registry id starts with: `portrait-` and its `PortraitId` (R1827000).
+pub const PORTRAIT_ID_PREFIX: &str = "portrait-";
+
+/// The registry id of `portrait`'s cosmetic (`portrait-gary`, R1827000).
+pub fn portrait_cosmetic_id(portrait: PortraitId) -> String {
+    format!("{PORTRAIT_ID_PREFIX}{}", portrait.as_str())
+}
+
+/// The portrait a registry id names, or none when it is no `portrait-<id>` of a `PortraitId`.
+pub fn portrait_of(id: &str) -> Option<PortraitId> {
+    let rest = id.strip_prefix(PORTRAIT_ID_PREFIX)?;
+    PORTRAIT_IDS
+        .iter()
+        .copied()
+        .find(|portrait| portrait.as_str() == rest)
+}
+
+/// R1827000: whether an account whose owned account cosmetics are `account` (its ledger's rows)
+/// owns `portrait`: it holds the portrait's id, or the shipped registry makes it a starter, as it
+/// does vanilla, which every account owns with no row (§14.2).
+pub fn owns_portrait(portrait: PortraitId, account: &[String]) -> bool {
+    let id = portrait_cosmetic_id(portrait);
+    account.contains(&id)
+        || shipped().is_ok_and(|cosmetics| {
+            cosmetics
+                .iter()
+                .any(|cosmetic| cosmetic.id == id && cosmetic.starter)
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,16 +408,37 @@ mod tests {
         }
     }
 
-    /// One default per kind, and nothing else.
+    /// R1827000: one entry per portrait id, vanilla the default and the other five at the global
+    /// roll's floor, each a starter as [`entry`] makes it, so they drop nowhere.
+    fn portraits() -> Vec<Cosmetic> {
+        PORTRAIT_IDS
+            .iter()
+            .map(|portrait| {
+                let default = *portrait == DEFAULT_PORTRAIT;
+                Cosmetic {
+                    rarity: if default {
+                        CosmeticRarity::Common
+                    } else {
+                        GLOBAL_COSMETIC_FLOOR_RARITY
+                    },
+                    ..entry(&portrait_cosmetic_id(*portrait), CosmeticKind::Portrait, default)
+                }
+            })
+            .collect()
+    }
+
+    /// One default per kind, and the portraits the check asks for, and nothing else.
     fn defaults() -> Vec<Cosmetic> {
-        vec![
+        let mut cosmetics = vec![
             entry("foil-none", CosmeticKind::Foil, true),
             entry("finish-plain", CosmeticKind::Finish, true),
             entry("border-standard", CosmeticKind::Border, true),
             entry("table-tavern", CosmeticKind::Table, true),
             entry("field-none", CosmeticKind::Field, true),
             entry("card-back-standard", CosmeticKind::CardBack, true),
-        ]
+        ];
+        cosmetics.extend(portraits());
+        cosmetics
     }
 
     #[test]
@@ -533,7 +628,13 @@ mod tests {
             {"id":"finish-plain","kind":"finish","name":"Plain","rarity":"Common","default":true},
             {"id":"table-tavern","kind":"table","name":"Tavern table","rarity":"Common","default":true},
             {"id":"field-none","kind":"field","name":"No backdrop","rarity":"Common","default":true},
-            {"id":"card-back-standard","kind":"cardBack","name":"Standard back","rarity":"Common","default":true}
+            {"id":"card-back-standard","kind":"cardBack","name":"Standard back","rarity":"Common","default":true},
+            {"id":"portrait-vanilla","kind":"portrait","name":"Vanilla","rarity":"Common","default":true},
+            {"id":"portrait-gary","kind":"portrait","name":"Gary","rarity":"Epic","default":false},
+            {"id":"portrait-timmy","kind":"portrait","name":"Timmy","rarity":"Epic","default":false},
+            {"id":"portrait-dfender","kind":"portrait","name":"D-fender","rarity":"Epic","default":false},
+            {"id":"portrait-felinors","kind":"portrait","name":"Felinors","rarity":"Epic","default":false},
+            {"id":"portrait-shredder","kind":"portrait","name":"Shredder","rarity":"Epic","default":false}
         ]}"#;
         assert_eq!(
             parse(json),
@@ -636,8 +737,9 @@ mod tests {
         ]);
         assert!(problems(&fine).is_empty(), "{:?}", problems(&fine));
 
-        // The shipped file passes: each account kind's default is Common, its three items are Epic
-        // and every one is a starter, owned by every account, so the global roll has none to drop.
+        // The shipped file passes: each deck slot kind's default is Common, its three items are Epic
+        // and every one is a starter, owned by every account, so what the global roll drops is the
+        // portraits (R1827000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         for kind in [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack] {
             for cosmetic in cosmetics.iter().filter(|cosmetic| cosmetic.kind == kind) {
@@ -650,7 +752,11 @@ mod tests {
                 assert!(cosmetic.starter, "{}", cosmetic.id);
             }
         }
-        assert!(global_cosmetics(&cosmetics).is_empty());
+        assert!(
+            global_cosmetics(&cosmetics)
+                .iter()
+                .all(|cosmetic| cosmetic.kind == CosmeticKind::Portrait)
+        );
     }
 
     #[test]
@@ -764,14 +870,15 @@ mod tests {
     }
 
     #[test]
-    fn r1301002_every_shipped_cosmetic_but_the_full_arts_is_a_starter() {
+    fn r1301002_every_shipped_cosmetic_but_the_full_arts_and_five_portraits_is_a_starter() {
         // R1295000 and R1297000 unlock every item they shipped for every account (§14.2), so no
-        // pack drops one; the six full arts are owned (R1313000), so they are all a pack drops.
+        // pack drops one; the six full arts are owned (R1313000), so they are all a pack drops, and
+        // the portraits but vanilla are owned too, on the account (R1827000).
         let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         assert!(
-            cosmetics
-                .iter()
-                .all(|cosmetic| cosmetic.starter == (cosmetic.kind != CosmeticKind::FullArt)),
+            cosmetics.iter().all(|cosmetic| cosmetic.starter
+                == !(cosmetic.kind == CosmeticKind::FullArt
+                    || (cosmetic.kind == CosmeticKind::Portrait && !cosmetic.default))),
             "{cosmetics:?}"
         );
         let full_arts: Vec<Cosmetic> = cosmetics
@@ -785,5 +892,175 @@ mod tests {
         let unmarked = r#"{"cosmetics":[{"id":"foil-none","kind":"foil","name":"No foil","rarity":"Common","default":true}]}"#;
         let file: RegistryFile = serde_json::from_str(unmarked).unwrap_or_else(|error| panic!("{error}"));
         assert!(!file.cosmetics[0].starter);
+    }
+
+    #[test]
+    fn r1827000_the_shipped_portraits_are_one_per_portrait_id_vanilla_the_starter_default_and_five_epic() {
+        let cosmetics = shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
+        let portraits: Vec<&Cosmetic> = cosmetics
+            .iter()
+            .filter(|cosmetic| cosmetic.kind == CosmeticKind::Portrait)
+            .collect();
+        assert_eq!(
+            portraits
+                .iter()
+                .map(|cosmetic| portrait_of(&cosmetic.id))
+                .collect::<Vec<_>>(),
+            PORTRAIT_IDS.iter().copied().map(Some).collect::<Vec<_>>()
+        );
+        for cosmetic in &portraits {
+            let vanilla = cosmetic.id == "portrait-vanilla";
+            assert_eq!(cosmetic.default, vanilla, "{}", cosmetic.id);
+            assert_eq!(cosmetic.starter, vanilla, "{}", cosmetic.id);
+            let rarity = if vanilla {
+                CosmeticRarity::Common
+            } else {
+                CosmeticRarity::Epic
+            };
+            assert_eq!(cosmetic.rarity, rarity, "{}", cosmetic.id);
+            assert!(!cosmetic.chase && cosmetic.card.is_none(), "{}", cosmetic.id);
+        }
+        // The global roll drops exactly the five, in registry order; a cosmetic pack may drop them
+        // too, and a duplicate's per-card roll never does.
+        let ids = |list: Vec<Cosmetic>| list.into_iter().map(|cosmetic| cosmetic.id).collect::<Vec<_>>();
+        assert_eq!(
+            ids(global_cosmetics(&cosmetics)),
+            [
+                "portrait-gary",
+                "portrait-timmy",
+                "portrait-dfender",
+                "portrait-felinors",
+                "portrait-shredder"
+            ]
+        );
+        let in_packs = ids(cosmetic_pack_cosmetics(&cosmetics));
+        assert!(
+            ids(global_cosmetics(&cosmetics))
+                .iter()
+                .all(|id| in_packs.contains(id)),
+            "{in_packs:?}"
+        );
+        assert!(
+            pack_cosmetics(&cosmetics)
+                .iter()
+                .all(|cosmetic| cosmetic.kind != CosmeticKind::Portrait)
+        );
+        // An account kind with a default, picked on a deck and not in the settings.
+        assert!(CosmeticKind::DEFAULTED.contains(&CosmeticKind::Portrait));
+        assert!(!CosmeticKind::PICKED.contains(&CosmeticKind::Portrait));
+        assert!(!CosmeticKind::Portrait.is_per_card());
+        assert_eq!(
+            serde_json::to_string(&CosmeticKind::Portrait).unwrap(),
+            "\"portrait\""
+        );
+        assert_eq!(portrait_of("portrait-gary"), Some(PortraitId::Gary));
+        assert_eq!(portrait_cosmetic_id(PortraitId::Gary), "portrait-gary");
+        assert_eq!(portrait_of("portrait-ulfric"), None);
+        assert_eq!(portrait_of("table-wood"), None);
+        assert_eq!(portrait_of("gary"), None);
+    }
+
+    #[test]
+    fn r1827000_the_check_holds_one_entry_per_portrait_id_and_no_other() {
+        assert!(problems(&defaults()).is_empty(), "{:?}", problems(&defaults()));
+
+        let mut missing = defaults();
+        missing.retain(|cosmetic| cosmetic.id != "portrait-timmy");
+        assert_eq!(
+            problems(&missing),
+            vec!["the portrait timmy has no \"portrait-timmy\" entry (R641)".to_owned()]
+        );
+
+        let mut extra = defaults();
+        extra.push(Cosmetic {
+            rarity: CosmeticRarity::Epic,
+            ..entry("portrait-ulfric", CosmeticKind::Portrait, false)
+        });
+        assert_eq!(
+            problems(&extra),
+            vec!["the portrait \"portrait-ulfric\" names no portrait id (R641)".to_owned()]
+        );
+
+        // R1661000's floor holds a portrait too.
+        let mut rare = defaults();
+        for cosmetic in rare.iter_mut().filter(|cosmetic| cosmetic.id == "portrait-gary") {
+            cosmetic.rarity = CosmeticRarity::Rare;
+        }
+        assert_eq!(
+            problems(&rare),
+            vec![format!(
+                "the account cosmetic \"portrait-gary\" is Rare, below GLOBAL_COSMETIC_FLOOR_RARITY's {GLOBAL_COSMETIC_FLOOR_RARITY}, which only its kind's default may be"
+            )]
+        );
+
+        // Vanilla alone is the default: another one is refused, and so is vanilla without it.
+        let mut two = defaults();
+        for cosmetic in two.iter_mut().filter(|cosmetic| cosmetic.id == "portrait-gary") {
+            cosmetic.default = true;
+        }
+        assert_eq!(
+            problems(&two),
+            vec![
+                "the portrait \"portrait-gary\" is a default exactly when it is \"portrait-vanilla\""
+                    .to_owned(),
+                "the kind Portrait has 2 defaults, not one".to_owned(),
+            ]
+        );
+        let mut none = defaults();
+        for cosmetic in none
+            .iter_mut()
+            .filter(|cosmetic| cosmetic.id == "portrait-vanilla")
+        {
+            cosmetic.default = false;
+        }
+        // A Common vanilla that is no default is below the floor as well.
+        assert_eq!(
+            problems(&none),
+            vec![
+                format!(
+                    "the account cosmetic \"portrait-vanilla\" is Common, below GLOBAL_COSMETIC_FLOOR_RARITY's {GLOBAL_COSMETIC_FLOOR_RARITY}, which only its kind's default may be"
+                ),
+                "the portrait \"portrait-vanilla\" is a default exactly when it is \"portrait-vanilla\""
+                    .to_owned(),
+                "the kind Portrait has 0 defaults, not one".to_owned(),
+            ]
+        );
+
+        // A portrait id under another kind is no portrait entry.
+        let mut other_kind = defaults();
+        other_kind.retain(|cosmetic| cosmetic.id != "portrait-shredder");
+        other_kind.push(Cosmetic {
+            rarity: GLOBAL_COSMETIC_FLOOR_RARITY,
+            ..entry("portrait-shredder", CosmeticKind::Table, false)
+        });
+        assert_eq!(
+            problems(&other_kind),
+            vec!["the portrait shredder has no \"portrait-shredder\" entry (R641)".to_owned()]
+        );
+    }
+
+    #[test]
+    fn r1827000_owns_portrait_counts_the_starter_and_the_ledger_s_rows() {
+        // Vanilla is a starter: owned with no row.
+        assert!(owns_portrait(PortraitId::Vanilla, &[]));
+        for portrait in PORTRAIT_IDS
+            .iter()
+            .copied()
+            .filter(|portrait| *portrait != DEFAULT_PORTRAIT)
+        {
+            assert!(!owns_portrait(portrait, &[]), "{portrait}");
+            assert!(
+                owns_portrait(portrait, &[portrait_cosmetic_id(portrait)]),
+                "{portrait}"
+            );
+            // Another cosmetic's row, or the bare portrait id, owns nothing.
+            assert!(
+                !owns_portrait(portrait, &["table-wood".to_owned(), portrait.as_str().to_owned()]),
+                "{portrait}"
+            );
+        }
+        let gary = [portrait_cosmetic_id(PortraitId::Gary)];
+        assert!(owns_portrait(PortraitId::Gary, &gary));
+        assert!(!owns_portrait(PortraitId::Timmy, &gary));
     }
 }

@@ -1162,12 +1162,16 @@ mod tests {
             assert_eq!(roll_opening(&pool, &holdings, &starters, &seed), today);
             assert_eq!(roll_opening(&pool, &holdings, &below_floor, &seed), today);
         }
-        // The shipped registry leaves no account cosmetic to drop: on a pool with no full art's
-        // card, every slot a duplicate takes its tier's, its card's and its cosmetic tier's three
-        // draws, as before.
+        // On the shipped registry, an account owning every portrait (R1827000) has no account
+        // cosmetic left to drop: on a pool with no full art's card, every slot a duplicate takes
+        // its tier's, its card's and its cosmetic tier's three draws, as before.
         let shipped = crate::cosmetics::shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let all = Holdings {
             owned: owning(&ids),
+            account_cosmetics: global_cosmetics(&shipped)
+                .into_iter()
+                .map(|cosmetic| cosmetic.id)
+                .collect(),
             ..Holdings::default()
         };
         for seed in 0..50 {

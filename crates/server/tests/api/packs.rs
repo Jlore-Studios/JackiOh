@@ -5,7 +5,8 @@
 //! Every request goes through the whole app over an empty fake store (`deps::empty_test_app`), as
 //! the active account `p1`. An opening the test must steer (a registry with cosmetics a pack may
 //! drop, R1301002) calls `open_pack` with that registry; the route opens over the shipped one,
-//! whose every entry but the six full arts is a starter (R1313000).
+//! whose every entry but the six full arts (R1313000) and the five portraits but vanilla
+//! (R1827000) is a starter.
 
 use std::sync::Arc;
 
@@ -24,7 +25,9 @@ use jackioh_server::config::{
     PACK_PRICE_JLORE, PACK_SLOTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
     TIER_WEIGHT_TOTAL,
 };
-use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, pack_cosmetics, shipped};
+use jackioh_server::cosmetics::{
+    Cosmetic, CosmeticKind, CosmeticRarity, global_cosmetics, pack_cosmetics, portrait_of, shipped,
+};
 use jackioh_server::db::store::{CollectionEntry, StoreError};
 use jackioh_server::economy::math::PityCounters;
 use jackioh_server::economy::packs::{BarSettle, BarsSettled, OpenedPack, PACK_GRANT_REASON, open_pack};
@@ -771,7 +774,11 @@ async fn r1301003_an_opening_replays_from_its_stored_seed() {
     assert_eq!(log.pack, "Core");
     assert_eq!(log.catalog, app.catalog.version);
     assert_eq!(log.seed.len(), 32, "16 bytes as hex: {}", log.seed);
-    assert_eq!(log.cosmetics, pack_cosmetics(&shipped().expect("the registry")));
+    let registry = shipped().expect("the registry");
+    assert_eq!(
+        log.cosmetics,
+        [pack_cosmetics(&registry), global_cosmetics(&registry)].concat()
+    );
     // The result is logged with the grants (§14.11).
     assert_eq!(log.slots, opened.slots);
     assert_eq!(log.pity, opened.pity);
@@ -1180,6 +1187,112 @@ async fn r1661001_an_account_cosmetic_a_duplicate_drops_is_owned_on_no_card_and_
     .expect("the opening");
     assert_eq!(spent(&opened.slots), PACK_SLOTS as i64);
     assert_eq!(last_log(&app).await.draws as usize, 3 * PACK_SLOTS);
+}
+
+#[tokio::test]
+async fn r1827000_a_duplicate_drops_a_portrait_on_no_card_until_all_five_are_owned() {
+    let (app, token) = setup().await;
+    grant_entire_catalog(&app, PROFILE, None)
+        .await
+        .expect("R111's grant");
+    // The shipped registry, whose global roll drops the five portraits but vanilla: every slot a
+    // duplicate, so each takes the global draw while one is left unowned.
+    let registry = shipped().expect("the registry");
+    let portraits: Vec<String> = global_cosmetics(&registry)
+        .into_iter()
+        .map(|cosmetic| cosmetic.id)
+        .collect();
+    assert_eq!(portraits.len(), 5);
+    assert!(portraits.iter().all(|id| portrait_of(id).is_some()));
+    let pool = pack_pool(defs(&app), PackKind::Set(SetName::Core));
+    let mut dropped = 0;
+    for at in 0..100 {
+        let before = holdings(&app).await;
+        if portraits.iter().all(|id| before.account_cosmetics.contains(id)) {
+            break;
+        }
+        buy(&app, &token, "Core").await;
+        let seed = format!("r1827000-{at}");
+        let opened = open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &registry, &seed)
+            .await
+            .expect("the opening");
+        // The log holds the per-card cosmetics, then the global ones, and replays (R1301003).
+        let log = last_log(&app).await;
+        assert_eq!(
+            log.cosmetics,
+            [pack_cosmetics(&registry), global_cosmetics(&registry)].concat()
+        );
+        let replayed = roll_opening(&pool, &before, &log.cosmetics, &log.seed).expect("the replay");
+        assert_eq!(replayed.slots, opened.slots);
+        assert_eq!(replayed.draws, log.draws);
+        let after = holdings(&app).await;
+        for slot in &opened.slots {
+            let SlotGrant::Cosmetic {
+                cosmetic_id,
+                cosmetic_rarity,
+            } = &slot.grant
+            else {
+                continue;
+            };
+            if portrait_of(cosmetic_id).is_none() {
+                continue;
+            }
+            // An Epic portrait, owned on the account and on no card.
+            dropped += 1;
+            assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic, "{slot:?}");
+            assert!(after.account_cosmetics.contains(cosmetic_id), "{slot:?}");
+            assert!(
+                !before.account_cosmetics.contains(cosmetic_id),
+                "{cosmetic_id} drops once"
+            );
+            assert!(
+                after
+                    .cosmetics
+                    .iter()
+                    .all(|held| &held.cosmetic_id != cosmetic_id),
+                "{slot:?}"
+            );
+        }
+    }
+    assert_eq!(dropped, portraits.len());
+
+    // All five owned, each by one `pack_open` row on no card.
+    let mut tx = app.db.begin(Some(PROFILE)).await.expect("a transaction");
+    let cosmetics = tx.economy_cosmetics_get(PROFILE).await.expect("the cosmetics");
+    let ledger = tx.economy_ledger_get(PROFILE).await.expect("the ledger");
+    tx.commit().await.expect("the commit");
+    let mut owned: Vec<&String> = cosmetics
+        .account
+        .iter()
+        .filter(|id| portrait_of(id).is_some())
+        .collect();
+    owned.sort();
+    let mut expected: Vec<&String> = portraits.iter().collect();
+    expected.sort();
+    assert_eq!(owned, expected);
+    for id in &portraits {
+        let rows: Vec<_> = ledger
+            .cosmetics
+            .iter()
+            .filter(|row| &row.cosmetic_id == id)
+            .map(|row| (row.card_id.clone(), row.delta, row.reason))
+            .collect();
+        assert_eq!(rows, vec![(None, 1, EconomyReason::PackOpen)], "{id}");
+    }
+
+    // Nothing is left to own: a later duplicate takes no global draw, so an opening rolls as it
+    // would over the per-card cosmetics alone (R1661001).
+    for at in 0..3 {
+        buy(&app, &token, "Core").await;
+        let before = holdings(&app).await;
+        let seed = format!("r1827000-owned-{at}");
+        let opened = open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &registry, &seed)
+            .await
+            .expect("the opening");
+        let alone = roll_opening(&pool, &before, &pack_cosmetics(&registry), &seed).expect("the roll");
+        assert_eq!(opened.slots, alone.slots, "{seed}");
+        assert_eq!(last_log(&app).await.draws, alone.draws, "{seed}");
+    }
 }
 
 #[tokio::test]

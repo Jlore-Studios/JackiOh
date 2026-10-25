@@ -34,6 +34,7 @@ import { packName } from "../packs/packs.ts";
 import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import AccountCosmeticTiles from "./AccountCosmeticTiles.tsx";
+import OwnedCosmetics from "./CosmeticsPanel.tsx";
 import OwnedCards from "./OwnedCards.tsx";
 import TracksPanel from "./TracksPanel.tsx";
 import WalletPanel from "./WalletPanel.tsx";
@@ -44,13 +45,15 @@ import {
   cardStrip,
   collectionSectionOf,
   collectionTestid as T,
+  cosmeticKindWords,
   ownedCosmetics,
   setCompletions,
 } from "./collection.ts";
 import { collectionOwning, fullCollection, track, tracksOf } from "./fixtures.ts";
 
 // R1655000: the account's cosmetics, a table past the registry's that no account owns yet, so a locked
-// tile has something to show. The registry's own account cosmetics are every one a starter (§14.2).
+// tile has something to show. The registry's own playmats, backdrops and card backs are every one a
+// starter (§14.2); its portraits past vanilla are not (R1827000), but no tile shows a portrait.
 vi.mock("../cards/cosmetics.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../cards/cosmetics.ts")>();
   const future = {
@@ -303,6 +306,32 @@ describe("R1579000 the Collection's cosmetics and sections", () => {
     expect(collectionSectionOf("?section=shop")).toBeNull();
     expect(collectionSectionOf("?section=Cards")).toBeNull();
     expect(collectionSectionOf("?other=cards")).toBeNull();
+  });
+});
+
+describe("R1827000 the owned portraits", () => {
+  it("R1827000 ownedCosmetics lists owned portraits on no card, never vanilla, as Portrait", () => {
+    const portraitsOf = (owned: Parameters<typeof ownedCosmetics>[0]) =>
+      ownedCosmetics(owned)
+        .filter((entry) => entry.cosmetic.kind === "portrait")
+        .map((entry) => [entry.cosmetic.id, entry.cardId]);
+    // `vanilla` is a default every account owns with no row, so it is never listed, even when a row names it.
+    expect(portraitsOf({ cards: [], account: [] })).toEqual([]);
+    const owned = ownedCosmeticsOf({ account: ["portrait-shredder", "portrait-vanilla", "portrait-gary", "portrait-ulfric"] });
+    // The registry's order, on no card; an id this client does not know is not shown.
+    expect(portraitsOf(owned)).toEqual([
+      ["portrait-gary", null],
+      ["portrait-shredder", null],
+    ]);
+
+    expect(cosmeticKindWords("portrait")).toBe("Portrait");
+    render(<OwnedCosmetics owned={owned} />);
+    expect(screen.getByTestId(T.ownedCosmetic("portrait-gary", null))).toHaveTextContent("Gary the Gambler portrait · Portrait · Epic");
+    expect(screen.getByTestId(T.ownedCosmetic("portrait-shredder", null))).toHaveTextContent(
+      "Jlockeed Shredder-10 portrait · Portrait · Epic",
+    );
+    expect(screen.queryByTestId(T.ownedCosmetic("portrait-vanilla", null))).toBeNull();
+    expect(screen.queryByTestId(T.ownedCosmetic("portrait-timmy", null))).toBeNull();
   });
 });
 

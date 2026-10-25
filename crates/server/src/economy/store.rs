@@ -62,8 +62,8 @@ pub enum EconomyReason {
     TokenRedeem,
     ChaseShard,
     Dev,
-    /// Migration 0050's reset of every existing account's economy (R1310002); no server path
-    /// writes it.
+    /// Migration 0050's reset of every existing account's economy (R1310002), and migration
+    /// 0057's grant of the portraits (R1827000); no server path writes it.
     Launch,
 }
 

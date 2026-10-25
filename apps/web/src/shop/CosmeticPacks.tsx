@@ -17,6 +17,8 @@ import { BURST_MS, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
+import { portraitOfCosmetic } from "../emotes/ownedPortraits.ts";
+import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   buyChase,
@@ -213,24 +215,29 @@ export default function CosmeticPacks({
           )}
           {opened === null ? null : (
             <div className="pack-slots" data-testid={shopTestid.reveal}>
-              {opened.slots.map((slot, index) => (
-                <div
-                  key={index}
-                  className="pack-slot"
-                  data-testid={shopTestid.slot(index)}
-                  data-rarity={slot.rarity}
-                  data-grant={slot.grant.kind}
-                  data-revealed="true"
-                >
-                  <p className="pack-slot__outcome">{cosmeticSlotOutcome(slot)}</p>
-                  {slot.grant.kind === "cosmetic" && slot.grant.cardId !== null ? (
-                    <p className="pack-slot__card">
-                      {t("On {card}", { card: cardName(slot.grant.cardId) })}
-                      {slot.grant.cardGranted ? ` · ${t("Its card was granted too")}` : null}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
+              {opened.slots.map((slot, index) => {
+                // R1827000: a portrait is an account cosmetic, on no card, and shows its art.
+                const portrait = slot.grant.kind === "cosmetic" ? portraitOfCosmetic(slot.grant.cosmeticId) : null;
+                return (
+                  <div
+                    key={index}
+                    className="pack-slot"
+                    data-testid={shopTestid.slot(index)}
+                    data-rarity={slot.rarity}
+                    data-grant={slot.grant.kind}
+                    data-revealed="true"
+                  >
+                    <p className="pack-slot__outcome">{cosmeticSlotOutcome(slot)}</p>
+                    {portrait === null ? null : <PortraitArt portrait={portrait} className="pack-slot__portrait" />}
+                    {slot.grant.kind === "cosmetic" && slot.grant.cardId !== null ? (
+                      <p className="pack-slot__card">
+                        {t("On {card}", { card: cardName(slot.grant.cardId) })}
+                        {slot.grant.cardGranted ? ` · ${t("Its card was granted too")}` : null}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           )}
           {opened === null ? null : <OpeningBars bars={opened.bars} testid={shopTestid.openingBars} />}
