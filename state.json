@@ -520,6 +520,17 @@
       "verdict_rounds": 1
     },
     "1895": {
+      "asks": [
+        "c:6398774904"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-25T14:19:00Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "1896": {
