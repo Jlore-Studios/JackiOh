@@ -750,12 +750,12 @@
   "loop_tick": "2026-10-25T13:01:23Z",
   "machine_disk": {
     "reading": {
-      "at": "2026-10-25T12:38:08Z",
-      "free": 80256729088,
+      "at": "2026-10-25T13:02:56Z",
+      "free": 80233021440,
       "percent": 35,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40192855516",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40194384770",
     "runner": "night-vm-gpt"
   },
   "machine_memory": [
