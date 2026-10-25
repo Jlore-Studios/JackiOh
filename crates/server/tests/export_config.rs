@@ -351,10 +351,10 @@ fn every_name_is_listed_once() {
         // less #1339's PACK_BASE_RATES, PACK_TARGET_RATES, PACK_RATE_TOLERANCE and
         // COSMETIC_PACK_RATES), its ECONOMY_LIVE switch (R1313000), the pack roll's one (#1301, less
         // #1339's two rates), the cosmetic pack's one (#1306, less #1339's guaranteed rates), the
-        // going live's starter cards (R1310000), #1339's tiered roll's six (R1339000) and #1661's
-        // global cosmetic roll's two (R1661001).
+        // going live's starter cards (R1310000), #1339's tiered roll's six (R1339000), #1661's
+        // global cosmetic roll's two (R1661001) and the Daily runs tab's refresh (R1935000).
         listed,
-        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2,
+        88 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -369,8 +369,8 @@ fn every_name_is_listed_once() {
          pack roll's GLOBAL_PACK_NAME (#1301), the cosmetic pack's COSMETIC_PACK_CARD_WEIGHTS \
          (#1306), STARTER_CARDS (R1310000), and #1339's TIER_WEIGHT_TOTAL, CARD_TIER_WEIGHTS, \
          COSMETIC_TIER_WEIGHTS, PACK_FLOORED_SLOT, PACK_FLOOR_RARITY and COSMETIC_PACK_FLOOR_RARITY \
-         (R1339000), and #1661's GLOBAL_COSMETIC_ROLL_WEIGHT and GLOBAL_COSMETIC_FLOOR_RARITY \
-         (R1661001)"
+         (R1339000), #1661's GLOBAL_COSMETIC_ROLL_WEIGHT and GLOBAL_COSMETIC_FLOOR_RARITY \
+         (R1661001), and CI_RUNS_CACHE_TTL_SECONDS (R1935000)"
     );
 }
 
