@@ -57,6 +57,13 @@
     "1823": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T11:40:29Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the rule's hard line for 'the AI's search (crates/ai/src/)': this changes the lethal solver's best-first ordering (ready_gap) and damage_past_taunts in crates/ai/src. It is small (3 files) and was tried in a scratch copy, but the rule puts crates/ai/src at hard and a tie goes up"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-6",
