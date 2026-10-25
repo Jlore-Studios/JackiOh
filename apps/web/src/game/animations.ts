@@ -850,6 +850,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "brand" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
+  // R1838001: a Trade. The trader's deck pulses as a card back goes from their hand into it; the
+  // `shuffledIn` and `drawn` after it move the cards, backs for a seat that may not read them.
+  traded: {
+    animation: "jk-shuffle-in",
+    durationMs: 300,
+    testid: "library-<side>",
+    fx: { recipe: "shuffle" },
+    target: (e, view) => animTestid.library(sideOf(view, e.player)),
+  },
 };
 
 /**

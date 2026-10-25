@@ -503,6 +503,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "awakened":
       // R1839002: a Dormant card awakened, its countdown run out or an effect's doing.
       return t("{card} awakened", { card: name.def(event.defId) });
+    case "traded":
+      // R1838001: a Trade names its player alone; the card going in and the one drawn log as their own.
+      return t("{seat} traded a card", { seat: name.seat(event.player) });
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

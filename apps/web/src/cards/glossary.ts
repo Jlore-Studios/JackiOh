@@ -236,6 +236,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Cloaked: keyword("Cloaked", "Can be played face-down as a Trap. Activate: Reveal"),
   Crater: keyword("Crater", "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap"),
   Flashback: keyword("Flashback", "Can be played from your graveyard once, at its cost"),
+  // Issue #1838 (R1838000): Tradable, Meditative #53 and #98's keyword, Stinkyscape's too.
+  Tradable: keyword(
+    "Tradable",
+    "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
+  ),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -419,4 +424,5 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Cloaked: "CK",
   Crater: "CR",
   Flashback: "FB",
+  Tradable: "TD",
 };

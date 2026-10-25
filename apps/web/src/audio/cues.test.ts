@@ -234,6 +234,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   // Stinkyscape's Dormant (R1839002).
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  // Issue #1838 (Tradable, R1838001).
+  traded: { type: "traded", player: "p1" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -324,6 +326,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   curveDrawn: "whoosh",
   autopilotEngaged: "notify",
   awakened: "radiant",
+  traded: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -352,6 +355,8 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "turnAutoEnded",
   "autopilotEngaged",
   "awakened",
+  // R1838001: a Trade's whoosh, whatever the seat.
+  "traded",
   "countered",
   "stolen",
   "unlocked",

@@ -140,6 +140,8 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Cloaked" },
   { kind: "Crater" },
   { kind: "Flashback" },
+  // Issue #1838's keyword (R1838000).
+  { kind: "Tradable" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

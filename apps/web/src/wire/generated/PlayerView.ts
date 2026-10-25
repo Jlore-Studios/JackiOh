@@ -8,6 +8,7 @@ import type { PendingView } from "./PendingView";
 import type { Phase } from "./Phase";
 import type { PlayerId } from "./PlayerId";
 import type { SideView } from "./SideView";
+import type { TradesView } from "./TradesView";
 
 export type PlayerView = { viewer: PlayerId, turn: number, active: PlayerId, phase: Phase, you: SideView, opponent: SideView, pending: PendingView | null, 
 /**
@@ -62,4 +63,10 @@ randomTargets?: true,
  * MD-D29, R1127: an acting card of the opponent hears emotes, so the client's emote layer sends
  * them as `Emote` actions. Only ever `Some(true)`.
  */
-emotesHeard?: true, };
+emotesHeard?: true, 
+/**
+ * R1838000: the viewer's own Trades, while their hand holds a Tradable card, so the Trade control
+ * can say its price and how many are left; which Trades are offered stays `legal_actions`' answer.
+ * Only ever the viewer's own (CLAUDE.md rule 7). Absent while their hand holds no Tradable card.
+ */
+trades?: TradesView, };

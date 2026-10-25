@@ -178,6 +178,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  traded: { type: "traded", player: "p1" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -309,6 +310,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   autopilotEngaged: "banner",
   // R1839002: a Dormant card awakens with the brand flourish.
   awakened: "brand",
+  // Issue #1838 (R1838001): a Trade sends a card back from the hand into the deck.
+  traded: "shuffle",
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -434,13 +437,14 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   curveDrawn: ["jk-curve-drawn", 700, "board"],
   autopilotEngaged: ["jk-banner", 600, "turn-banner"],
   awakened: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  traded: ["jk-shuffle-in", 300, "library-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 60 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002) and the awakening (R1839002) carry fx with the listed recipe and the other 20 carry none", () => {
+  it("B1 exactly the 61 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002) and the Trade (R1838001) carry fx with the listed recipe and the other 20 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(60);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(61);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

@@ -142,7 +142,9 @@ Every rules number is a named constant in `src/config.rs` (BUILD §2), the "deci
 R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
 `TRAINING_UNBAN`: each lane's games, pairing and wins) and Duos's team rules (§13.4, §13.7:
 `DUOS_OWN_HEALTH`, `DUOS_POOL_HEALTH`, `DUOS_POOL_HEALTH_HARD`, `DUOS_PASS_COST`, `DUOS_PASS_CAP`,
-`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`). The ones the web reads are written to
+`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`) and the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
+R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
+`trade::trades_per_turn_of`). The ones the web reads are written to
 `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript

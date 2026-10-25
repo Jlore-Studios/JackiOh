@@ -99,6 +99,13 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub play_reason: Option<String>,
+    /// R1838000, §10.8: why the viewer's own Tradable hand card cannot be Traded now
+    /// (`trade::why_trade_refused`), as `play_reason` is for a play. Set only on those cards while the
+    /// viewer may act (their turn, the main phase, no prompt open) and `legal_actions` lists no `trade`
+    /// of the card. Absent otherwise, never empty, so a view with no Tradable card is what it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trade_reason: Option<String>,
     /// #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
     /// dropped some of the choice combinations they are built from, so the list is a slice whose first
     /// plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on
@@ -1206,6 +1213,21 @@ pub struct DrawOfferView {
     pub by: PlayerId,
 }
 
+/// R1838000, §10.8: the viewer's own Trades — what one costs and how many they have left this turn.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TradesView {
+    /// `TRADE_COST`, in mana.
+    pub cost: i32,
+    /// The Trades a turn less those made this turn (`trade::trades_left`).
+    pub left: i32,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1271,6 +1293,12 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub emotes_heard: Option<bool>,
+    /// R1838000: the viewer's own Trades, while their hand holds a Tradable card, so the Trade control
+    /// can say its price and how many are left; which Trades are offered stays `legal_actions`' answer.
+    /// Only ever the viewer's own (CLAUDE.md rule 7). Absent while their hand holds no Tradable card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades: Option<TradesView>,
 }
 
 #[cfg(test)]

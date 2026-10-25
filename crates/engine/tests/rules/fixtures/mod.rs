@@ -45,6 +45,7 @@ pub mod rng_child;
 pub mod scripts;
 pub mod slumber;
 pub mod spell_power;
+pub mod tradable;
 pub mod trigger_multipliers;
 pub mod turn;
 pub mod twice_forward;

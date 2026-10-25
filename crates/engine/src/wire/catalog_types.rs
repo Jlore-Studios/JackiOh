@@ -517,6 +517,9 @@ pub enum Keyword {
     Crater,
     /// R783012: a card that may be played once from its owner's graveyard, at its cost.
     Flashback,
+    /// R1838000: a card its owner may Trade from their hand in their main phase — put into their deck
+    /// at a random position for a draw, at `TRADE_COST` — up to their Trades a turn (`trade.rs`).
+    Tradable,
 }
 
 string_union! {
@@ -560,6 +563,8 @@ string_union! {
         Cloaked = "Cloaked",
         Crater = "Crater",
         Flashback = "Flashback",
+        /// R1838000: the Trade's keyword (`trade.rs`).
+        Tradable = "Tradable",
     }
 }
 
@@ -611,6 +616,7 @@ impl Keyword {
             Keyword::Cloaked => KeywordKind::Cloaked,
             Keyword::Crater => KeywordKind::Crater,
             Keyword::Flashback => KeywordKind::Flashback,
+            Keyword::Tradable => KeywordKind::Tradable,
         }
     }
 
@@ -662,6 +668,7 @@ impl Keyword {
             KeywordKind::Cloaked => Keyword::Cloaked,
             KeywordKind::Crater => Keyword::Crater,
             KeywordKind::Flashback => Keyword::Flashback,
+            KeywordKind::Tradable => Keyword::Tradable,
         }
     }
 }

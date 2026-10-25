@@ -95,6 +95,7 @@ export type { SpawnZone } from "./generated/SpawnZone.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
+export type { TradesView } from "./generated/TradesView.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { TuningChange } from "./generated/TuningChange.ts";
 export type { UnitView } from "./generated/UnitView.ts";
@@ -207,6 +208,8 @@ export const GAME_EVENT_TYPES = [
   "autopilotEngaged",
   // Stinkyscape's Dormant: a Dormant card awakened (issue #1839, R1839002).
   "awakened",
+  // Issue #1838's Trade (R1838001).
+  "traded",
 ] as const satisfies readonly GameEventType[];
 
 /**

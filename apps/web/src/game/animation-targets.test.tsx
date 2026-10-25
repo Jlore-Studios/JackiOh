@@ -157,6 +157,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
     autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
     awakened: { type: "awakened", player: "p1", instanceId: unit, defId: "core-008" },
+    traded: { type: "traded", player: "p1" },
   };
 }
 

@@ -1,9 +1,9 @@
 //! M #53 Prestige (SPEC §8.8 row 53): (1) Spell, Common.
 //!
-//! Base:    "De-Radiant a Radiant card on the field or in your hand. The next card you play this turn
+//! Base:    "Tradable / De-Radiant a Radiant card on the field or in your hand. The next card you play
+//! this turn becomes Radiant."
+//! Radiant: "Tradable / De-Radiant every enemy card on the field. The next card you play this turn
 //! becomes Radiant."
-//! Radiant: "De-Radiant every enemy card on the field. The next card you play this turn becomes
-//! Radiant."
 //! Engine: MD-D6 — De-Radiant is Make Radiant reversed (`clearRadiant`), §5.2's exception: the face
 //! swaps back while damage, buffs and tuning stay. The base face clears the chosen card, if any
 //! (R90 already allows the play with nothing to choose, MD-D7): a Radiant Unit or face-up backrow card
@@ -11,7 +11,8 @@
 //! opponent's field (MD-D8). Both faces then add a this-turn `radiantNextPlay` modifier (R831005): the
 //! next card its player plays, a cast included (R70), becomes Radiant as it is played (§10.5 step 3)
 //! and spends it. Patch v0.3.10 (#831): both faces added AI generated cards instead (R1421), and the
-//! Radiant face cleared the opponent's hand and deck too.
+//! Radiant face cleared the opponent's hand and deck too. Both faces are Tradable (R1838000), catalog
+//! data the engine reads in the hand (`trade.rs`), so nothing here runs for it.
 
 use jackioh_engine::prelude::*;
 
@@ -497,6 +498,45 @@ mod tests {
             s.play(PRESTIGE, json!({}));
             assert!(next_play_radiant(&s));
             assert!(play_one(&mut s, FILLER));
+        }
+    }
+
+    /// R1838000: Prestige is Tradable on both faces — Traded from the hand into the deck for a draw,
+    /// at no mana, one Trade a turn — and a Trade is no play of it (R1838002).
+    mod r1838000_tradable {
+        use super::*;
+
+        #[test]
+        fn r1838000_both_faces_trade_into_the_deck_for_a_draw_at_no_mana() {
+            for radiant in [false, true] {
+                let mut s = casting("prestige-trade", radiant);
+                let prestige = s.card(PRESTIGE).clone();
+                assert!(is_tradable(s.state(), &prestige), "radiant {radiant}: the face prints Tradable");
+                let (hand, deck, mana) = (
+                    s.hand("p1").len(),
+                    s.pile("p1", "library").len(),
+                    s.state().players.p1.mana.current,
+                );
+                s.trade(&prestige.id);
+                s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+                assert_eq!(s.hand("p1").len(), hand, "one card went in and one came out");
+                assert_eq!(s.pile("p1", "library").len(), deck);
+                assert_eq!(s.state().players.p1.mana.current, mana, "at no mana");
+                assert_eq!(s.card(&prestige.id).radiant, radiant, "the card keeps its face");
+                assert_eq!(trades_left(s.state(), PlayerId::P1), 0, "the turn's one Trade is made");
+            }
+        }
+
+        #[test]
+        fn r1838002_a_trade_is_no_play_nothing_is_cleared_and_no_next_play_is_made_radiant() {
+            for radiant in [false, true] {
+                let mut s = casting("prestige-trade-play", radiant);
+                let prestige = s.card(PRESTIGE).clone();
+                s.trade(&prestige.id);
+                assert!(!next_play_radiant(&s), "radiant {radiant}: no Cry ran");
+                assert!(must_unit(&s, "p1", 1).radiant && must_unit(&s, "p2", 1).radiant);
+                assert_eq!(s.state().players.p1.turn_log.cards_played, 0);
+            }
         }
     }
 }

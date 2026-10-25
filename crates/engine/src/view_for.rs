@@ -509,6 +509,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         condition_active: None,
         countered_on_play: None,
         play_reason: None,
+        trade_reason: None,
         choices_truncated: None,
         preview: None,
         type_: None,
@@ -684,6 +685,47 @@ fn with_play_reason(
         view.play_reason = Some(reason);
     }
     view
+}
+
+/// R1838000: why the viewer's own Tradable hand card cannot be Traded now, or no key at all — never
+/// empty, so a view with no Tradable card looks exactly as it did before. Only while the viewer may act
+/// (their turn, the main phase, no prompt open), and only on a card `trade::why_trade_refused` refuses,
+/// which is exactly a card `legal_actions` lists no `trade` of. Nothing else calls this, so the
+/// opponent's hand and post-game hands carry no key.
+fn with_trade_reason(
+    mut view: CardView,
+    state: &GameState,
+    card: &CardInstance,
+    viewer: PlayerId,
+) -> CardView {
+    if state.result.is_some() || state.phase != crate::wire::Phase::Main {
+        return view;
+    }
+    if state.pending.is_some() || state.active != viewer {
+        return view;
+    }
+    if !crate::trade::is_tradable(state, card) {
+        return view;
+    }
+    if let Err(refusal) = crate::trade::why_trade_refused(state, viewer, &card.id)
+        && !refusal.message.is_empty()
+    {
+        view.trade_reason = Some(refusal.message);
+    }
+    view
+}
+
+/// R1838000: the viewer's own Trades while their hand holds a Tradable card in a live game, or nothing.
+fn trades_view(state: &GameState, viewer: PlayerId) -> Option<crate::wire::TradesView> {
+    let holds = state.result.is_none()
+        && state.players[viewer]
+            .hand
+            .iter()
+            .any(|card| crate::trade::is_tradable(state, card));
+    holds.then(|| crate::wire::TradesView {
+        cost: crate::config::TRADE_COST,
+        left: crate::trade::trades_left(state, viewer),
+    })
 }
 
 /// R280, §10.8: what a card's formula comes to now rides on its view as `preview`, or not at all —
@@ -1315,23 +1357,28 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             side.hand
                 .iter()
                 .map(|card| {
-                    with_choices_truncated(
-                        with_preview(
-                            with_play_reason(
-                                with_counter_warning(
-                                    with_condition(
-                                        with_embiggen_cost(hand_card_view(state, card), state, card),
-                                        condition_active(state, card, viewer, ConditionZone::Hand),
+                    with_trade_reason(
+                        with_choices_truncated(
+                            with_preview(
+                                with_play_reason(
+                                    with_counter_warning(
+                                        with_condition(
+                                            with_embiggen_cost(hand_card_view(state, card), state, card),
+                                            condition_active(state, card, viewer, ConditionZone::Hand),
+                                        ),
+                                        countered.contains(&card.id),
                                     ),
-                                    countered.contains(&card.id),
+                                    state,
+                                    card,
+                                    viewer,
                                 ),
-                                state,
-                                card,
-                                viewer,
+                                preview_of(state, card, viewer, ConditionZone::Hand),
                             ),
-                            preview_of(state, card, viewer, ConditionZone::Hand),
+                            hand_play_choices_truncated(state, viewer, card),
                         ),
-                        hand_play_choices_truncated(state, viewer, card),
+                        state,
+                        card,
+                        viewer,
                     )
                 })
                 .collect(),
@@ -2291,7 +2338,9 @@ fn redact_event(
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
         // R1183002: the autopilot names a player and a turn.
-        | GameEventType::AutopilotEngaged => event.clone(),
+        | GameEventType::AutopilotEngaged
+        // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
+        | GameEventType::Traded => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 
@@ -2636,6 +2685,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         } else {
             None
         },
+        // R1838000: the viewer's own Trades, while their hand holds a Tradable card.
+        trades: trades_view(state, player_id),
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

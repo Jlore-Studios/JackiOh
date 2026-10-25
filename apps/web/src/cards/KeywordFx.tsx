@@ -395,6 +395,17 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  Tradable: () => (
+    <Part className="kw-glyph-art kw-trade" anim fit="contain">
+      <path d="M14 34 H74" stroke="#0b0d12" strokeWidth="10" strokeLinecap="round" />
+      <path d="M14 34 H74" stroke="#9fe0a8" strokeWidth="5" strokeLinecap="round" />
+      <path d="M66 18 L88 34 L66 50 Z" fill="#9fe0a8" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M86 66 H26" stroke="#0b0d12" strokeWidth="10" strokeLinecap="round" />
+      <path d="M86 66 H26" stroke="#9fe0a8" strokeWidth="5" strokeLinecap="round" />
+      <path d="M34 50 L12 66 L34 82 Z" fill="#9fe0a8" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">
