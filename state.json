@@ -321,10 +321,10 @@
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-8",
       "round_tier": "strong",
-      "run_id": "40199403828",
-      "started_at": "2026-10-25T13:49:44Z",
+      "run_id": "pending:c81392e8-1792944748",
+      "started_at": "2026-10-25T16:12:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -1198,9 +1198,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T16:04:33Z",
+    "at": "2026-10-25T16:12:58Z",
     "url": "",
-    "what": "revise #1924 on claude-2"
+    "what": "build #1833 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-25T16:02:37Z",
