@@ -1593,6 +1593,50 @@ pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstan
         .collect()
 }
 
+/// Where `acting_on` lists a Unit standing in a backrow zone (R1081000).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StandingAt {
+    /// Among the side's Units, after its carriers' (R68's trigger order, `triggers::holder_sites`).
+    AmongUnits,
+    /// At its own backrow lane: the slot order a count, a pick or an offer has always walked.
+    ItsLane,
+}
+
+/// R68, R446, R1081000, R1824000: every card acting on `player`'s side of the field, each once: each unit
+/// zone's top in lane order, then the Units its carriers hold in backrow lane order, then each backrow
+/// zone's top in lane order, a Unit standing there where `standing` puts it. Never a card dormant
+/// beneath a pile (§3.2, R13). It reads no text: each caller drops what its rule says sleeps
+/// (`preview::lasting_text_dormant`, `preview::is_face_down`). `layers::aura_sources` walks the same
+/// `ItsLane` order straight off the rows (#188).
+pub fn acting_on(state: &GameState, player: PlayerId, standing: StandingAt) -> Vec<&CardInstance> {
+    let side = &state.players[player];
+    let among_units = standing == StandingAt::AmongUnits;
+    let mut out: Vec<&CardInstance> = Vec::new();
+    for lane in 1..=UNIT_ZONES {
+        if let Some(top) = lane_index(lane)
+            .and_then(|index| side.units.get(index))
+            .and_then(Option::as_ref)
+            .and_then(|pile| pile.first())
+        {
+            out.push(top);
+        }
+    }
+    out.extend(side.carried.iter().flatten().filter_map(Option::as_ref));
+    if among_units {
+        out.extend(standing_units_of(state, player));
+    }
+    for lane in 1..=BACKROW_ZONES {
+        if let Some(top) = lane_index(lane)
+            .and_then(|index| side.backrow.get(index))
+            .and_then(Option::as_ref)
+            && !(among_units && is_standing_unit(state, top))
+        {
+            out.push(top);
+        }
+    }
+    out
+}
+
 /// §3.2, R13: the Units dormant beneath the tops of `player`'s piles: a unit zone's, lane by lane, then
 /// a backrow zone's, where a Unit that stood there lies once a Stack card is played onto it (R1081000).
 pub fn dormant_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {

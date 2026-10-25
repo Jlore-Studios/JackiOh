@@ -304,23 +304,16 @@ fn count_draw(state: &mut GameState, player: PlayerId) -> Option<i32> {
     Some(count)
 }
 
-/// The cards whose static text is in force: the top of each unit pile and each backrow card, both
-/// sides — the cards an aura is read from (§10.4 layer 5). A Vanilla card carries no text (§6.3), and
-/// a face-down card's sleeps (R1487000).
+/// The cards whose static text is in force on `player`'s side: the top of each unit pile, the Units its
+/// carriers hold and each backrow card, each once (`zones::acting_on`): a Unit standing in the backrow
+/// among the Units (R1081000, R1824000) — the cards an aura is read from (§10.4 layer 5). A Vanilla card
+/// carries no text (§6.3), and a face-down card's sleeps (R1487000).
 fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
-    let mut out: Vec<&CardInstance> = Vec::new();
-    for unit in crate::zones::active_units_of(state, player) {
-        out.push(unit);
-    }
-    for slot in crate::zones::slots_of(player, Row::Backrow) {
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
+        .into_iter()
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if let Some(card) = crate::zones::card_at(state, slot)
-            && !crate::preview::lasting_text_dormant(state, card)
-        {
-            out.push(card);
-        }
-    }
-    out
+        .filter(|card| !crate::preview::lasting_text_dormant(state, card))
+        .collect()
 }
 
 fn limit_binds(limit: &DrawLimit, controller: PlayerId, player: PlayerId) -> bool {

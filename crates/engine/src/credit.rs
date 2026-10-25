@@ -9,7 +9,7 @@
 
 use crate::catalog::def_of;
 use crate::state::{CardInstance, EngineError, GameState, PlayerState};
-use crate::wire::{PlayerId, Row};
+use crate::wire::PlayerId;
 
 /// What a credit line offers: the most its controller may owe at once, and how many instalments
 /// one turn's debt is split into.
@@ -19,31 +19,27 @@ pub struct CreditTerms {
     pub instalments: i32,
 }
 
-/// R1223: the credit line acting on this player's field, if any. The limit is the largest declared
-/// `credit` among the acting lenders; the instalments the most among them (never the first in slot
-/// order). Read through `declared_or` so Degrade and Upgrade move the numbers.
+/// R1223: the credit line acting on this player's field, if any — a Unit a carrier holds lends as any
+/// acting card does (R446, R1824000). The limit is the largest declared `credit` among the acting
+/// lenders; the instalments the most among them (never the first in slot order). Read through
+/// `declared_or` so Degrade and Upgrade move the numbers.
 pub fn credit_terms(state: &GameState, player: PlayerId) -> Option<CreditTerms> {
     let mut limit: Option<i32> = None;
     let mut instalments: Option<i32> = None;
-    for row in [Row::Units, Row::Backrow] {
-        for slot in crate::zones::slots_of(player, row) {
-            let Some(card) = crate::zones::card_at(state, slot) else {
-                continue;
-            };
-            if !crate::subsystems::activate::is_acting_on_field(state, card) {
-                continue;
-            }
-            let flags = crate::scripts::flags_of(state, card);
-            let Some(line) = flags.credit_line else {
-                continue;
-            };
-            let line = crate::params::declared_or(state, card, "credit", line);
-            limit = Some(limit.unwrap_or(line).max(line));
-            let parts =
-                crate::params::declared_or(state, card, "instalments", flags.credit_instalments.unwrap_or(1))
-                    .max(1);
-            instalments = Some(instalments.unwrap_or(parts).max(parts));
+    for card in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
+        if !crate::subsystems::activate::is_acting_on_field(state, card) {
+            continue;
         }
+        let flags = crate::scripts::flags_of(state, card);
+        let Some(line) = flags.credit_line else {
+            continue;
+        };
+        let line = crate::params::declared_or(state, card, "credit", line);
+        limit = Some(limit.unwrap_or(line).max(line));
+        let parts =
+            crate::params::declared_or(state, card, "instalments", flags.credit_instalments.unwrap_or(1))
+                .max(1);
+        instalments = Some(instalments.unwrap_or(parts).max(parts));
     }
     match (limit, instalments) {
         (Some(limit), Some(instalments)) => Some(CreditTerms { limit, instalments }),
@@ -190,20 +186,16 @@ pub fn credit_lapsing(state: &GameState, player: PlayerId) -> Vec<String> {
     lapsing_faces(state, player)
 }
 
-/// The ids of the acting `credit_lapses` cards on this player's field, in slot order.
+/// The ids of the acting `credit_lapses` cards on this player's field, a Unit a carrier holds among
+/// them (R446, R1824000), in `zones::acting_on`'s order.
 fn lapsing_faces(state: &GameState, player: PlayerId) -> Vec<String> {
     let mut out = Vec::new();
-    for row in [Row::Units, Row::Backrow] {
-        for slot in crate::zones::slots_of(player, row) {
-            let Some(card) = crate::zones::card_at(state, slot) else {
-                continue;
-            };
-            if !crate::subsystems::activate::is_acting_on_field(state, card) {
-                continue;
-            }
-            if crate::scripts::flags_of(state, card).credit_lapses == Some(true) {
-                out.push(card.id.clone());
-            }
+    for card in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
+        if !crate::subsystems::activate::is_acting_on_field(state, card) {
+            continue;
+        }
+        if crate::scripts::flags_of(state, card).credit_lapses == Some(true) {
+            out.push(card.id.clone());
         }
     }
     out

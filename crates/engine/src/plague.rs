@@ -12,17 +12,17 @@
 //!     #74 Corpse Plantation's tokens spent as mana, paid through this. It carries no `placed`;
 //!   - the reads (`plague_on`, `plague_on_field`, `permanents_on_field`), re-exported by `query.rs`.
 //!
-//! Only a permanent on the field carries tokens: the top of a unit pile or a backrow card, face-down
-//! ones included (R471), never a card dormant under a Stack (R13) or one in a hand, deck or pile. The
-//! two writers take the card as the caller holds it and write the counter on the card as it stands in
-//! the state (found by id).
+//! Only a permanent on the field carries tokens: the top of a unit pile, a Unit a carrier holds, or a
+//! backrow card, face-down ones included (R471, R446, R1824000), never a card dormant under a Stack (R13)
+//! or one in a hand, deck or pile. The two writers take the card as the caller holds it and write the
+//! counter on the card as it stands in the state (found by id).
 
 use crate::config::PLAGUE_MULTIPLIER_NONE;
 use crate::script::{EngineSink, HookArgs};
 use crate::scripts::script_of;
 use crate::state::{CardInstance, GameState, find_instance_mut};
-use crate::wire::{CounterKind, GameEvent, PlayerId, Row, ZoneName, opponent_of};
-use crate::zones::{card_at, is_buried, slots_of};
+use crate::wire::{CounterKind, GameEvent, PlayerId, ZoneName, opponent_of};
+use crate::zones::{StandingAt, acting_on, is_buried};
 
 /// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter).
 pub fn plague_on(card: &CardInstance) -> i32 {
@@ -30,22 +30,15 @@ pub fn plague_on(card: &CardInstance) -> i32 {
 }
 
 /// Every permanent on the field in R68's order — the given side first (the active player's when
-/// `first` is `None`), units lane 1 upward then the backrow lane 1 upward, then the other side: the
-/// top of each unit pile only (R13), and every backrow card, face-down or not.
+/// `first` is `None`), units lane 1 upward, the Units its carriers hold, then the backrow lane 1 upward,
+/// then the other side (`zones::acting_on`): the top of a unit pile only (R13), a Unit a carrier holds
+/// (R446, R1824000), and every backrow card, face-down or not.
 pub fn permanents_on_field(state: &GameState, first: impl Into<Option<PlayerId>>) -> Vec<&CardInstance> {
     let first = first.into().unwrap_or(state.active);
-    let sides = [first, opponent_of(first)];
-    let mut out: Vec<&CardInstance> = Vec::new();
-    for player in sides {
-        for row in [Row::Units, Row::Backrow] {
-            for slot in slots_of(player, row) {
-                if let Some(card) = card_at(state, slot) {
-                    out.push(card);
-                }
-            }
-        }
-    }
-    out
+    [first, opponent_of(first)]
+        .into_iter()
+        .flat_map(|player| acting_on(state, player, StandingAt::ItsLane))
+        .collect()
 }
 
 /// Classic #59 Plague Doctor: "the number of Plague Counters on the field" — every token on every

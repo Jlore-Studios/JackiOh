@@ -145,32 +145,28 @@ pub fn cloak_hand_aura(type_: CardType) -> AuraHook {
 
 /// R1045: the Echo every card acting on this player's field adds to a Spell they reveal now — the
 /// largest any of them gives (`Script::reveal_echo`, Radiant Paranoia's "Spells you reveal have Echo
-/// +{echo}"), 0 with none. Read as the Spell reveals, so a Paranoia that left before then adds none.
+/// +{echo}"), 0 with none; a Unit a carrier holds is one of them (R446, R1824000). Read as the Spell
+/// reveals, so a Paranoia that left before then adds none.
 pub fn reveal_echo_bonus(state: &GameState, player: PlayerId) -> i32 {
     let mut out = 0;
-    for row in [Row::Units, Row::Backrow] {
-        for slot in crate::zones::slots_of(player, row) {
-            let Some(source) = crate::zones::card_at(state, slot) else {
-                continue;
-            };
-            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-            if source.controller != player
-                || source.vanilla
-                || is_dormant(source)
-                || crate::preview::lasting_text_dormant(state, source)
-            {
-                continue;
-            }
-            let script = crate::scripts::script_of(state, source);
-            let Some(hook) = script.reveal_echo.as_ref() else {
-                continue;
-            };
-            out = out.max(hook(HookArgs {
-                state,
-                self_: source,
-                radiant: source.radiant,
-            }));
+    for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if source.controller != player
+            || source.vanilla
+            || is_dormant(source)
+            || crate::preview::lasting_text_dormant(state, source)
+        {
+            continue;
         }
+        let script = crate::scripts::script_of(state, source);
+        let Some(hook) = script.reveal_echo.as_ref() else {
+            continue;
+        };
+        out = out.max(hook(HookArgs {
+            state,
+            self_: source,
+            radiant: source.radiant,
+        }));
     }
     out
 }
