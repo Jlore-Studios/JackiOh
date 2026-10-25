@@ -933,12 +933,22 @@
       "taken_asks": [],
       "verdict_rounds": 2,
       "votes": {
-        "approvals": [],
-        "builder": "gpt",
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
         "rejections": [],
-        "reviews": [],
-        "sha": "8edd52e416353d0ab22b4fad609fd14f0f097899",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40200665548",
+            "tier": "strong"
+          }
+        ],
+        "sha": "c189986b058983c3f31c23e035e5f84ae0389eeb",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "1909": {
