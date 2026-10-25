@@ -211,7 +211,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
-      "run_id": "pending:88a280b3-1792921355",
+      "run_id": "40181812822",
       "started_at": "2026-10-25T09:43:16Z",
       "stop_requested": false,
       "taken_asks": []
