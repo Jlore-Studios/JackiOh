@@ -14427,10 +14427,8 @@
     "what": "plan #1833 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-25T06:14:21Z",
-    "notes": [
-      "delivered plan #1833 on claude-1 (run 40167990036): interrupted"
-    ],
+    "at": "2026-10-25T06:21:52Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -15135,7 +15133,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-25T06:14:21Z",
+  "loop_tick": "2026-10-25T06:21:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
