@@ -598,6 +598,7 @@ mod generator {
             TuneMultiplier,
             SpellDamageAura,
             StaticFlags,
+            SlumberText,
             ActivationCost,
             ActivationUses,
             GameEventType,
