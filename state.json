@@ -1309,7 +1309,7 @@
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-10-25T17:26:18Z",
-      "run_id": "pending:02afd405-1792951047",
+      "run_id": "40218989039",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-25T17:58:05Z",
