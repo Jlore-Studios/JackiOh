@@ -275,7 +275,9 @@
     "1831": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-25T20:07:06Z",
         "family": "muse",
