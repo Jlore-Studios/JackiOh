@@ -6,12 +6,18 @@
 // Cards section's card view); the playmat, backdrop and card back are preview tiles
 // (`AccountCosmeticTiles.tsx`). The list renders `GET /api/cosmetics` and decides nothing (CLAUDE.md
 // rule 7); `collection.ts` holds what it lists and the words it says.
+//
+// R1833000: a per-card cosmetic is owned on one card, so while ownership decides the defaults offer
+// only what every account owns on every card, the kind's default and its starters; a card wears an
+// earned one by its own pick, in the Cards section.
 
-import type { ReactElement } from "react";
+import { useContext, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
 import {
+  DEFAULT_CARD_COSMETICS,
+  OwnershipContext,
   cosmeticsOf,
   resolveCosmetic,
   useCosmetics,
@@ -33,27 +39,33 @@ const COSMETIC_ROWS: readonly { kind: CardSlotKind; label: string; hint: string 
 ];
 
 /**
- * R1295000, R1655000: the defaults your own cards wear in a game, every one unlocked, until a card
- * picks its own in the Cards section. A pick this client does not know (a newer client's) shows as
- * its kind's default, which is what it draws.
+ * R1295000, R1655000: the defaults your own cards wear in a game, until a card picks its own in the
+ * Cards section. R1833000: while ownership decides, each offers its kind's default and starters, and
+ * every entry where it does not. A pick this client does not know (a newer client's), or one it does
+ * not offer, shows as its kind's default, which is what it draws.
  */
 export function CardCosmeticsControls(): ReactElement {
   const picks = useCosmetics();
+  const owned = useContext(OwnershipContext);
   return (
     <>
-      {COSMETIC_ROWS.map((row) => (
-        <SelectRow
-          key={row.kind}
-          label={t(row.label)}
-          hint={t(row.hint)}
-          testId={collectionTestid.equip(row.kind)}
-          value={resolveCosmetic(row.kind, picks[row.kind])}
-          options={cosmeticsOf(row.kind).map((cosmetic) => ({ value: cosmetic.id, label: cosmetic.name }))}
-          onChange={(value) => {
-            writeCosmetics({ [row.kind]: value });
-          }}
-        />
-      ))}
+      {COSMETIC_ROWS.map((row) => {
+        const offered = cosmeticsOf(row.kind).filter((cosmetic) => owned === "every" || cosmetic.default || cosmetic.starter);
+        const pick = resolveCosmetic(row.kind, picks[row.kind]);
+        return (
+          <SelectRow
+            key={row.kind}
+            label={t(row.label)}
+            hint={t(row.hint)}
+            testId={collectionTestid.equip(row.kind)}
+            value={offered.some((cosmetic) => cosmetic.id === pick) ? pick : DEFAULT_CARD_COSMETICS[row.kind]}
+            options={offered.map((cosmetic) => ({ value: cosmetic.id, label: cosmetic.name }))}
+            onChange={(value) => {
+              writeCosmetics({ [row.kind]: value });
+            }}
+          />
+        );
+      })}
     </>
   );
 }

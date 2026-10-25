@@ -7,16 +7,20 @@
  *
  * A border is three trim colours, none in the Radiant gold (cosmetics.test.tsx holds them out of
  * it), drawn as the full face's edge and the art's bezel, and on the board minion, whose panel
- * covers its edge, as a ring over the panel painted with that same edge. A finish is the print: a linen weave over the face,
- * a panel in black ink, or a gold hairline round the edge. A foil is a sheen over the art window
- * only. Each foil's still version comes first; it moves only inside the motion gate below, and
- * only on a face that holds one of COSMETIC_FOIL_ANIMATED_MAX slots (`data-cosmetic-motion`), by
- * transform or opacity alone. Under reduced motion (the media query, or the settings' Reduce
- * motion on <html>) every foil holds its still version.
+ * covers its edge, as a ring over the panel painted with that same edge. The two chase borders
+ * (#1833) add a ring of their own inside it. A finish is the print: a weave, fibres or fine lines
+ * over the face, a panel in black ink, steel, velvet or obsidian, leaded panes, a starred midnight,
+ * or a gold hairline round the edge. A foil is a sheen over the art window only, two of them with a
+ * second layer under it.
  *
- * R1297000: the card backs, at the end. A back is one `data-card-back` look on the viewer's own
+ * Every look comes first as its still version. The moving ones move only inside the one motion gate
+ * at the end, by transform or opacity alone, and a face's foil, finish or border only while the face
+ * holds one of COSMETIC_FOIL_ANIMATED_MAX slots (`data-cosmetic-motion`). Under reduced motion (the
+ * media query, or the settings' Reduce motion on <html>) every look holds its still version.
+ *
+ * R1297000: the card backs, after the foils. A back is one `data-card-back` look on the viewer's own
  * face-down cards and deck pile, the same for every card of the seat; the default adds no attribute.
- * No look has text, and the emblem and cost gem stay.
+ * No look has text, and the emblem and cost gem stay; the chase backs recolour the emblem and move it.
  */
 
 /* ---------------------------------------------------------------------------- borders --- */
@@ -39,6 +43,42 @@
   --trim-3: #5a3a22;
 }
 
+.cf[data-frame="border-stone"] {
+  --trim-1: #b4b0a6;
+  --trim-2: #85817a;
+  --trim-3: #55524d;
+}
+
+.cf[data-frame="border-copper"] {
+  --trim-1: #f0a878;
+  --trim-2: #b8693a;
+  --trim-3: #6e3518;
+}
+
+.cf[data-frame="border-vines"] {
+  --trim-1: #9fd67a;
+  --trim-2: #4f8f3a;
+  --trim-3: #24461d;
+}
+
+.cf[data-frame="border-runes"] {
+  --trim-1: #8fd8ff;
+  --trim-2: #2f5fae;
+  --trim-3: #101c3c;
+}
+
+.cf[data-frame="border-filigree"] {
+  --trim-1: #f4f6fb;
+  --trim-2: #c3c8d4;
+  --trim-3: #7c8496;
+}
+
+.cf[data-frame="border-celestial"] {
+  --trim-1: #c9b8ff;
+  --trim-2: #6a4bd6;
+  --trim-3: #1b1240;
+}
+
 .cf[data-frame] {
   --cf-edge: linear-gradient(150deg, var(--trim-1), var(--trim-2) 40%, var(--trim-3));
   --cf-bezel: var(--trim-2);
@@ -50,6 +90,47 @@
 
 .cf[data-frame="border-wood"] {
   --cf-edge: repeating-linear-gradient(100deg, var(--trim-3) 0 2px, transparent 2px 7px), linear-gradient(150deg, var(--trim-1), var(--trim-2));
+}
+
+/* An edge is images only, with no size or position, since the minion's ring paints it as a
+   `background-image`. Stone is flecked light and dark, copper polished in bands, vines wound round
+   it, runes cut in pairs of glowing dashes; Filigree is platinum in bright bands and Celestial a
+   violet sown with stars. */
+.cf[data-frame="border-stone"] {
+  --cf-edge:
+    repeating-conic-gradient(from 0deg at 23% 37%, #ffffff24 0 1deg, transparent 1deg 3.7deg),
+    repeating-conic-gradient(from 0deg at 81% 64%, #00000033 0 1.3deg, transparent 1.3deg 4.1deg),
+    linear-gradient(150deg, var(--trim-1), var(--trim-2) 45%, var(--trim-3));
+}
+
+.cf[data-frame="border-copper"] {
+  --cf-edge: linear-gradient(150deg, var(--trim-1), var(--trim-2) 28%, #e7915a 48%, var(--trim-3) 72%, #a85a2c);
+  --cf-bezel: #c97a46;
+}
+
+.cf[data-frame="border-vines"] {
+  --cf-edge:
+    repeating-conic-gradient(from 0deg at 37% 61%, #c8f09a 0 1.6deg, transparent 1.6deg 11deg),
+    repeating-linear-gradient(45deg, var(--trim-1) 0 2px, var(--trim-2) 2px 5px, var(--trim-3) 5px 7px);
+}
+
+.cf[data-frame="border-runes"] {
+  --cf-edge:
+    repeating-conic-gradient(from 4deg at 50% 50%, var(--trim-1) 0 2deg, transparent 2deg 5deg, var(--trim-1) 5deg 6deg, transparent 6deg 15deg),
+    linear-gradient(150deg, var(--trim-2), var(--trim-3) 60%, #0a1228);
+  --cf-bezel: #4a86d8;
+}
+
+.cf[data-frame="border-filigree"] {
+  --cf-edge: linear-gradient(135deg, var(--trim-3), var(--trim-1) 16%, var(--trim-2) 30%, #ffffff 44%, var(--trim-3) 58%, #e6e9f0 76%, #9aa1b0);
+  --cf-bezel: #e6e9f0;
+}
+
+.cf[data-frame="border-celestial"] {
+  --cf-edge:
+    repeating-conic-gradient(from 2deg at 50% 50%, #ffffff 0 0.6deg, transparent 0.6deg 9deg),
+    linear-gradient(160deg, var(--trim-1), var(--trim-2) 38%, var(--trim-3) 70%, #8f74ff);
+  --cf-bezel: #b7a4ff;
 }
 
 /* The minion's panel fills its root and covers the edge, so its border is a ring laid over the panel:
@@ -68,6 +149,50 @@
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
   pointer-events: none;
+}
+
+/* A chase border's own ring, on the panel's rim inside the edge (over the minion's ring, which shows
+   through as it dims): Filigree's platinum, beaded, its corners lit; Celestial's violet, a star at
+   each corner and side. Over the art, under the gems. It glints or twinkles in the motion gate. */
+.cf[data-frame="border-filigree"] .cf-scale::after,
+.cf[data-frame="border-celestial"] .cf-scale::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  padding: 2.4cqmin;
+  border-radius: inherit;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.cf[data-frame="border-filigree"] .cf-scale::after {
+  background:
+    radial-gradient(circle at 0 0, #ffffff 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 100% 0, #ffffff 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 0 100%, #ffffff 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 100% 100%, #ffffff 0 4cqmin, transparent 9cqmin),
+    repeating-conic-gradient(from 0deg at 50% 50%, #ffffffcc 0 1.2deg, transparent 1.2deg 5deg),
+    linear-gradient(135deg, #e6e9f0, #9aa1b0 30%, #ffffff 50%, #7c8496 72%, #f4f6fb);
+  box-shadow: inset 0 0 0 0.5cqmin #ffffff;
+}
+
+.cf[data-frame="border-celestial"] .cf-scale::after {
+  background:
+    radial-gradient(circle at 50% 0, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 0 50%, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 100% 50%, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 50% 100%, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 0 0, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    radial-gradient(circle at 100% 0, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    radial-gradient(circle at 0 100%, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    radial-gradient(circle at 100% 100%, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    repeating-conic-gradient(from 7deg at 50% 50%, #ffffff 0 0.7deg, transparent 0.7deg 13deg),
+    linear-gradient(160deg, #8f74ff, #2b1d6e 45%, #6a4bd6 75%, #c9b8ff);
+  box-shadow: inset 0 0 0 0.4cqmin #c9b8ff;
 }
 
 /* --------------------------------------------------------------------------- finishes --- */
@@ -96,6 +221,133 @@
   box-shadow:
     inset 0 0 0 1px #e0b84f,
     inset 0 0 0 2px #0000004d;
+}
+
+/* Parchment warms the print, its fibres faint and its edge aged; brushed steel lays fine lines and
+   a sheen over a steel panel; velvet is a crimson panel with a soft nap. */
+.cf[data-finish="finish-parchment"]::before {
+  background:
+    repeating-linear-gradient(8deg, #6b4a2014 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(-71deg, #6b4a200f 0 1px, transparent 1px 7px),
+    radial-gradient(120% 90% at 50% 42%, #f6e6c440 55%, #9a6a3866);
+  mix-blend-mode: multiply;
+}
+
+.cf[data-finish="finish-brushed-steel"] {
+  --cf-frame: color-mix(in srgb, var(--cf-type) 30%, #7d848e);
+}
+
+.cf[data-finish="finish-brushed-steel"]::before {
+  background:
+    repeating-linear-gradient(0deg, #ffffff12 0 1px, transparent 1px 2px, #0000001a 2px 3px, transparent 3px 4px),
+    linear-gradient(100deg, transparent 25%, #ffffff26 42%, transparent 58%);
+  mix-blend-mode: overlay;
+}
+
+.cf[data-finish="finish-velvet"] {
+  --cf-frame: color-mix(in srgb, var(--cf-type) 25%, #7a1028);
+}
+
+.cf[data-finish="finish-velvet"]::before {
+  background:
+    radial-gradient(130% 90% at 28% 12%, #ff8fae2e, transparent 55%),
+    radial-gradient(120% 80% at 78% 96%, #2a000c66, transparent 65%);
+  box-shadow: inset 0 0 0.9em #3a001259;
+  mix-blend-mode: soft-light;
+}
+
+/* Stained glass is the panel itself: jewel-coloured panes, lit from above and leaded, round the
+   art and the rules text, which keeps its own plate and is never crossed. A face that prints no
+   rules text (a minion, a full art) is leaded over its picture as well. */
+.cf[data-finish="finish-stained-glass"] {
+  --cf-frame: #2a1d3c;
+}
+
+.cf[data-finish="finish-stained-glass"] .cf-scale {
+  background:
+    linear-gradient(62deg, transparent 49.2%, #120c18 49.4% 50.6%, transparent 50.8%),
+    linear-gradient(-48deg, transparent 38.2%, #120c18 38.4% 39.6%, transparent 39.8%),
+    linear-gradient(8deg, transparent 70.2%, #120c18 70.4% 71.4%, transparent 71.6%),
+    linear-gradient(-82deg, transparent 22.2%, #120c18 22.4% 23.4%, transparent 23.6%),
+    linear-gradient(28deg, transparent 84.2%, #120c18 84.4% 85.4%, transparent 85.6%),
+    radial-gradient(120% 70% at 50% 18%, #ffffff40, transparent 70%),
+    conic-gradient(from 20deg at 46% 54%, #b8304a 0 70deg, #d0902c 0 140deg, #2f8f50 0 200deg, #2a5cb0 0 270deg, #7a36b0 0);
+}
+
+.cf[data-finish="finish-stained-glass"]::before {
+  box-shadow:
+    inset 0 0 0 1px #120c18,
+    inset 0 0 0 2px #f2e6c44d;
+}
+
+.cf:is([data-layout="minion"], [data-full-art="true"])[data-finish="finish-stained-glass"]::before {
+  background:
+    linear-gradient(62deg, transparent 49.5%, #120c18a6 49.6% 50.4%, transparent 50.5%),
+    linear-gradient(-48deg, transparent 38.5%, #120c18a6 38.6% 39.4%, transparent 39.5%),
+    linear-gradient(8deg, transparent 70.5%, #120c18a6 70.6% 71.2%, transparent 71.3%),
+    conic-gradient(from 20deg at 46% 54%, #e2405a66 0 70deg, #f0a83a59 0 140deg, #4ac06a66 0 200deg, #3a7be066 0 270deg, #a04ae066 0);
+  mix-blend-mode: overlay;
+}
+
+/* Obsidian is a panel of black volcanic glass: a hard specular streak and two softer reflections
+   over a violet depth, its rim lit by a pale hairline, under a gloss. The gloss layer is three faces
+   wide and leans, so its sweep (the motion gate) starts and ends off the face, which clips it;
+   still, it rests mid-face. It blends nothing, as a layer the compositor moves must not (#1700). */
+.cf[data-finish="finish-obsidian"] {
+  --cf-frame: #120f18;
+  overflow: clip;
+}
+
+.cf[data-finish="finish-obsidian"] .cf-scale {
+  box-shadow:
+    inset 0 0 0 1px #000000,
+    inset 0 0 0 2px #d8ceff66,
+    inset 0 3px 0 2px #ffffff26,
+    inset 0 -12px 18px #00000080;
+  background:
+    linear-gradient(118deg, transparent 6.5%, #ffffff59 8%, #ffffff1a 9.5%, transparent 11%),
+    linear-gradient(118deg, transparent 16%, #ffffff2e 21%, transparent 27%, transparent 63%, #ffffff1a 67%, transparent 72%),
+    radial-gradient(90% 60% at 28% 0%, #7b5ce047, transparent 70%),
+    radial-gradient(80% 50% at 82% 100%, #2a7bd633, transparent 70%),
+    linear-gradient(172deg, #2e2838, #0a0810 45%, #020203);
+}
+
+.cf[data-finish="finish-obsidian"]::before {
+  inset: 0 auto 0 -100%;
+  width: 300%;
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent 41%, #b9a6ff14 44%, #ffffff38 49%, #9fe3ff12 52%, transparent 56%);
+  transform: skewX(-18deg);
+}
+
+/* Starlit is a midnight panel full of still stars; a brighter few round the margins, on the finish
+   layer, twinkle in the motion gate. */
+.cf[data-finish="finish-starlit"] {
+  --cf-frame: #1b2456;
+}
+
+.cf[data-finish="finish-starlit"] .cf-scale {
+  background:
+    radial-gradient(circle, #ffffffd9 0 0.5px, transparent 1px) 0 0 / 13px 17px,
+    radial-gradient(circle, #cfdcffb3 0 0.6px, transparent 1.2px) 6px 9px / 19px 23px,
+    radial-gradient(circle, #ffffff 0 0.8px, transparent 1.6px) 3px 4px / 31px 37px,
+    radial-gradient(70% 45% at 72% 30%, #6a4bd640, transparent 70%),
+    radial-gradient(60% 40% at 25% 75%, #2f6bd833, transparent 70%),
+    linear-gradient(172deg, #2a3878, #141c48 40%, #070a20);
+}
+
+.cf[data-finish="finish-starlit"]::before {
+  background:
+    radial-gradient(circle at 5% 24%, #ffffff 0 0.8px, #c9d6ff99 1.4px, transparent 3.4px),
+    radial-gradient(circle at 95% 38%, #ffffff 0 0.8px, #c9d6ff99 1.4px, transparent 3.4px),
+    radial-gradient(circle at 4% 62%, #ffffff 0 0.7px, #e3d6ff99 1.2px, transparent 3px),
+    radial-gradient(circle at 96% 79%, #ffffff 0 0.9px, #c9d6ff99 1.6px, transparent 3.8px),
+    radial-gradient(circle at 12% 96%, #ffffff 0 0.7px, #e3d6ff99 1.2px, transparent 3px),
+    radial-gradient(circle at 88% 4%, #ffffff 0 0.9px, #c9d6ff99 1.6px, transparent 3.8px),
+    radial-gradient(circle at 50% 98%, #ffffff 0 0.7px, #c9d6ff99 1.2px, transparent 3px);
+  box-shadow:
+    inset 0 0 0 1px #c9d6ff40,
+    inset 0 0 1.2em #5b6cff2e;
 }
 
 /* ------------------------------------------------------------------------------ foils --- */
@@ -128,50 +380,94 @@
     linear-gradient(160deg, #bfe8ff33, #ffffff14);
 }
 
-/* The holo band crosses the window and leaves it; the rainbow drifts one period of its stripes, so
-   the loop has no seam; the cracked ice glints in place. */
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-holo-sweep"][data-cosmetic-motion="animated"] .cf-art::after {
-    will-change: transform;
-    animation: cosmetic-foil-sweep 7s linear infinite;
-  }
-
-  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-rainbow"][data-cosmetic-motion="animated"] .cf-art::after {
-    will-change: transform;
-    animation: cosmetic-foil-drift 9s linear infinite;
-  }
-
-  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-cracked-ice"][data-cosmetic-motion="animated"] .cf-art::after {
-    will-change: opacity;
-    animation: cosmetic-foil-glint 3s ease-in-out infinite alternate;
-  }
+/* Glitter is three grids of white flecks; sunburst warm rays from below the window; aurora green
+   and violet curtains, fading downward, one period of which drifts by. */
+.cf[data-cosmetic-foil="foil-glitter"] .cf-art::after {
+  background:
+    radial-gradient(circle, #ffffff 0 0.9px, #ffffff66 1.4px, transparent 2.6px) 19px 9px / 41px 37px,
+    radial-gradient(circle, #ffffff 0 0.6px, transparent 1.2px) 3px 5px / 17px 23px,
+    radial-gradient(circle, #e6f2ffd9 0 0.5px, transparent 1.1px) 11px 2px / 23px 13px,
+    radial-gradient(circle, #fff3d1d9 0 0.7px, transparent 1.4px) 7px 13px / 29px 19px,
+    radial-gradient(circle, #f0e6ffcc 0 0.5px, transparent 1px) 2px 17px / 13px 31px;
 }
 
-@keyframes cosmetic-foil-sweep {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(100%);
-  }
+.cf[data-cosmetic-foil="foil-sunburst"] .cf-art::after {
+  background:
+    radial-gradient(90% 70% at 50% 110%, #ffe2a666, transparent 70%),
+    repeating-conic-gradient(from 0deg at 50% 110%, #ffc46b4d 0 5deg, transparent 5deg 12deg);
 }
 
-@keyframes cosmetic-foil-drift {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-25%);
-  }
+.cf[data-cosmetic-foil="foil-aurora"] .cf-art::after {
+  width: 200%;
+  background: repeating-linear-gradient(90deg, #3dffb000 0%, #3dffb059 5%, #46d9ff47 10%, #a66bff40 16%, #3dffb000 25%);
+  -webkit-mask-image: linear-gradient(180deg, #000 10%, #0009 55%, transparent 95%);
+  mask-image: linear-gradient(180deg, #000 10%, #0009 55%, transparent 95%);
 }
 
-@keyframes cosmetic-foil-glint {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
-  }
+/* Galaxy and void shimmer turn, so their layer is a square wider than the window's diagonal on any
+   face, centred on it, and its mask a circle, which turning leaves where it was. Galaxy is a core
+   and three arms of nebula sown with stars, fading out from the middle. */
+.cf[data-cosmetic-foil="foil-galaxy"] .cf-art::after {
+  top: 50%;
+  bottom: auto;
+  left: 50%;
+  width: 260%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background:
+    radial-gradient(circle, #ffffff 0 0.8px, transparent 1.6px) 13px 7px / 53px 47px,
+    radial-gradient(circle, #ffffffd9 0 0.6px, transparent 1.2px) 3px 11px / 23px 19px,
+    radial-gradient(circle, #d8c8ffb3 0 0.5px, transparent 1.1px) 17px 2px / 37px 31px,
+    radial-gradient(circle closest-side, #fff0fa66 0 4%, #c86bff40 12%, transparent 30%),
+    repeating-conic-gradient(from 0deg, #7b5cff40 0 30deg, #ff5fd22e 60deg, #3fb2ff2e 90deg, #7b5cff40 120deg);
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 18%, #0008 50%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, #000 18%, #0008 50%, transparent 100%);
+}
+
+/* Molten gold is gold flowing down the window in bands, one period of which the motion gate moves,
+   over hot spots that throb (`.cf-art::before`). Void shimmer darkens the window's edge to a
+   violet-black that pulses, and a cyan and magenta shimmer turns round it. */
+.cf[data-cosmetic-foil="foil-molten-gold"] .cf-art::after {
+  top: -100%;
+  bottom: auto;
+  height: 200%;
+  background:
+    repeating-linear-gradient(90deg, #ff8a0014 0 7%, transparent 7% 16%, #ffd56b14 16% 21%, transparent 21% 31%),
+    repeating-linear-gradient(180deg, #ffb30000 0%, #ffc94a4d 4%, #fff1b38c 7%, #ff9a1f40 11%, #ffb30000 16%, #ffb3001a 25%),
+    linear-gradient(#ffb02e26, #ffb02e26);
+}
+
+.cf[data-cosmetic-foil="foil-void-shimmer"] .cf-art::after {
+  top: 50%;
+  bottom: auto;
+  left: 50%;
+  width: 260%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: conic-gradient(from 0deg, #00e5ff80, #7b2cff33 25%, #ff3dc880 50%, #2a00ff33 75%, #00e5ff80);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #000 44%);
+  mask-image: radial-gradient(circle closest-side, transparent 20%, #000 44%);
+}
+
+.cf[data-cosmetic-foil="foil-molten-gold"] .cf-art::before,
+.cf[data-cosmetic-foil="foil-void-shimmer"] .cf-art::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cf[data-cosmetic-foil="foil-molten-gold"] .cf-art::before {
+  background:
+    radial-gradient(circle at 22% 72%, #fff6d0b3 0 3%, #ff9a1f80 9%, transparent 20%),
+    radial-gradient(circle at 76% 28%, #fff6d099 0 2.5%, #ff7a1a66 8%, transparent 18%),
+    radial-gradient(circle at 58% 90%, #ffe9a080 0 2%, #ff6a0066 7%, transparent 16%);
+  mix-blend-mode: screen;
+}
+
+.cf[data-cosmetic-foil="foil-void-shimmer"] .cf-art::before {
+  background: radial-gradient(ellipse at 50% 50%, transparent 32%, #2a0a4a99 70%, #0a0014e6 100%);
 }
 
 /* -------------------------------------------------------------------------- card backs --- */
@@ -205,12 +501,430 @@
     linear-gradient(90deg, rgb(255 255 255 / 0.18) 1px, transparent 1px) 0 0 / 10px 10px, #1f5fa8;
 }
 
-.cf-back:is([data-card-back="card-back-lacquer"], [data-card-back="card-back-starfield"], [data-card-back="card-back-blueprint"]) {
+/* Crimson damask: tone-on-tone medallions on a diamond ground. Tidal: rows of wave scallops. Tarot:
+   a framed indigo night with a sun above and a moon below. */
+.cf-back[data-card-back="card-back-crimson-damask"],
+.pile[data-card-back="card-back-crimson-damask"] {
+  --card-back-look:
+    radial-gradient(circle at 30% 20%, #ffffff1f, transparent 45%),
+    radial-gradient(ellipse 6px 9px at 50% 50%, #c23a52 0 35%, #9a1c34 40% 75%, transparent 80%) 0 0 / 24px 30px,
+    radial-gradient(ellipse 3px 4px at 50% 50%, #b02a44 0 60%, transparent 75%) 12px 15px / 24px 30px,
+    conic-gradient(from 45deg at 50% 50%, #7a1024 0 25%, #680c1e 0 50%, #7a1024 0 75%, #680c1e 0) 0 0 / 24px 30px,
+    #6e0c20;
+}
+
+.cf-back[data-card-back="card-back-tidal"],
+.pile[data-card-back="card-back-tidal"] {
+  --card-back-look:
+    radial-gradient(circle at 50% 100%, #0e4f73 0 22%, #5fb3cf 22% 27%, #13668f 27% 45%, #5fb3cf 45% 50%, #0b3f5e 50% 68%, #83c7dc 68% 72%, transparent 72%) 0 0 / 28px 14px,
+    radial-gradient(circle at 50% 100%, #0e4f73 0 22%, #5fb3cf 22% 27%, #13668f 27% 45%, #5fb3cf 45% 50%, #0b3f5e 50% 68%, #83c7dc 68% 72%, transparent 72%) 14px 7px / 28px 14px,
+    #0b3f5e;
+}
+
+.cf-back[data-card-back="card-back-tarot"],
+.pile[data-card-back="card-back-tarot"] {
+  --card-back-look:
+    linear-gradient(#e2c27a, #e2c27a) 50% 5% / 80% 1px no-repeat,
+    linear-gradient(#e2c27a, #e2c27a) 50% 95% / 80% 1px no-repeat,
+    linear-gradient(#e2c27a, #e2c27a) 8% 50% / 1px 88% no-repeat,
+    linear-gradient(#e2c27a, #e2c27a) 92% 50% / 1px 88% no-repeat,
+    radial-gradient(circle at 50% 50%, #f3d98c 0 14%, transparent 16%) 50% 2% / 30% 20% no-repeat,
+    repeating-conic-gradient(from 0deg at 50% 50%, #e2c27a66 0 6deg, transparent 6deg 30deg) 50% 2% / 30% 20% no-repeat,
+    radial-gradient(circle at 44% 50%, #1d1145 0 13%, transparent 14%) 50% 98% / 30% 20% no-repeat,
+    radial-gradient(circle at 50% 50%, #ece4cc 0 14%, transparent 15%) 50% 98% / 30% 20% no-repeat,
+    radial-gradient(1.5px 1.5px at 22% 30%, #ffffff, transparent),
+    radial-gradient(1px 1px at 76% 26%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 18% 70%, #ffffff, transparent),
+    radial-gradient(1px 1px at 82% 74%, #ffffff, transparent),
+    linear-gradient(180deg, #2d1b5c, #170d36 60%, #1f1247);
+}
+
+/* The chase backs. Dragon scale: emerald scales rimmed in bronze round an ember emblem. Clockwork:
+   a plate of brass gears round an emblem cut to a cog. Nebula: clouds of magenta, cyan and violet
+   round a star-bright emblem. Each emblem moves in the motion gate. */
+.cf-back[data-card-back="card-back-dragon-scale"],
+.pile[data-card-back="card-back-dragon-scale"] {
+  --card-back-look:
+    radial-gradient(circle at 50% 46%, #ff8a3d38, transparent 55%),
+    radial-gradient(circle at 50% 0, #46c27e 0 14%, #1f7a48 32%, #0f3f26 52%, #c99a4a 52% 58%, transparent 58%) 0 0 / 18px 18px,
+    radial-gradient(circle at 50% 0, #46c27e 0 14%, #1f7a48 32%, #0f3f26 52%, #c99a4a 52% 58%, transparent 58%) 9px 9px / 18px 18px,
+    #0a2416;
+}
+
+.cf-back[data-card-back="card-back-clockwork"],
+.pile[data-card-back="card-back-clockwork"] {
+  --card-back-look:
+    radial-gradient(circle at 50% 50%, transparent 40%, #0e0904b3 100%),
+    radial-gradient(circle, #1d140b 0 9%, transparent 10%) 0 0 / 40px 40px,
+    radial-gradient(circle, #a8783a 0 26%, #7a5426 27% 29%, transparent 30%) 0 0 / 40px 40px,
+    radial-gradient(circle, transparent 0 38%, #2a1d0f 39%) 0 0 / 40px 40px,
+    repeating-conic-gradient(#b8863f 0 11.25deg, transparent 11.25deg 22.5deg) 0 0 / 40px 40px,
+    #2a1d0f;
+}
+
+.cf-back[data-card-back="card-back-nebula"],
+.pile[data-card-back="card-back-nebula"] {
+  --card-back-look:
+    radial-gradient(circle, #ffffffe6 0 0.7px, transparent 1.3px) 0 0 / 17px 19px,
+    radial-gradient(circle, #cfe3ffb3 0 0.6px, transparent 1.2px) 8px 11px / 23px 29px,
+    radial-gradient(60% 45% at 28% 30%, #ff5fd259, transparent 70%),
+    radial-gradient(55% 50% at 74% 62%, #3fc8ff4d, transparent 70%),
+    radial-gradient(70% 40% at 50% 86%, #7b4bff59, transparent 72%),
+    radial-gradient(circle at 50% 50%, #2a1260, #0a0620 75%);
+}
+
+.cf-back:is(
+    [data-card-back="card-back-lacquer"],
+    [data-card-back="card-back-starfield"],
+    [data-card-back="card-back-blueprint"],
+    [data-card-back="card-back-crimson-damask"],
+    [data-card-back="card-back-tidal"],
+    [data-card-back="card-back-tarot"],
+    [data-card-back="card-back-dragon-scale"],
+    [data-card-back="card-back-clockwork"],
+    [data-card-back="card-back-nebula"]
+  ) {
   background: var(--card-back-look);
 }
 
-.pile:is([data-card-back="card-back-lacquer"], [data-card-back="card-back-starfield"], [data-card-back="card-back-blueprint"]) {
+.pile:is(
+    [data-card-back="card-back-lacquer"],
+    [data-card-back="card-back-starfield"],
+    [data-card-back="card-back-blueprint"],
+    [data-card-back="card-back-crimson-damask"],
+    [data-card-back="card-back-tidal"],
+    [data-card-back="card-back-tarot"],
+    [data-card-back="card-back-dragon-scale"],
+    [data-card-back="card-back-clockwork"],
+    [data-card-back="card-back-nebula"]
+  ) {
   background:
     linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)),
     var(--card-back-look);
+}
+
+/* The chase backs' emblems, recoloured (CSS outranks the SVG's own fill and stroke): the star, its
+   dark heart, the centre and the two rings, in order. */
+.cf-back[data-card-back="card-back-dragon-scale"] .cf-back-emblem {
+  filter: drop-shadow(0 0 0.35em #ff6a1a99);
+}
+
+.cf-back[data-card-back="card-back-dragon-scale"] .cf-back-emblem path:first-of-type {
+  fill: #ff7a2a;
+  fill-opacity: 0.85;
+  stroke: #ffd08a;
+}
+
+.cf-back[data-card-back="card-back-dragon-scale"] .cf-back-emblem circle:last-of-type {
+  fill: #fff0a8;
+}
+
+.cf-back[data-card-back="card-back-dragon-scale"] .cf-back-emblem circle:not(:last-of-type) {
+  stroke: #c99a4a;
+}
+
+/* A dash as long as its gap and as wide as the ring cuts the outer ring into 35 teeth. */
+.cf-back[data-card-back="card-back-clockwork"] .cf-back-emblem circle:first-of-type {
+  stroke: #d9a54a;
+  stroke-opacity: 1;
+  stroke-width: 7;
+  stroke-dasharray: 4.6 3.3;
+}
+
+.cf-back[data-card-back="card-back-clockwork"] .cf-back-emblem circle:nth-of-type(2) {
+  stroke: #e8c27a;
+}
+
+.cf-back[data-card-back="card-back-clockwork"] .cf-back-emblem path:first-of-type {
+  fill: #b8863f;
+  fill-opacity: 0.9;
+  stroke: #f0d090;
+}
+
+.cf-back[data-card-back="card-back-clockwork"] .cf-back-emblem circle:last-of-type {
+  fill: #3a2814;
+}
+
+.cf-back[data-card-back="card-back-nebula"] .cf-back-emblem {
+  filter: drop-shadow(0 0 0.4em #8f6bffb3);
+}
+
+.cf-back[data-card-back="card-back-nebula"] .cf-back-emblem path:first-of-type {
+  fill: #9be8ff;
+  fill-opacity: 0.7;
+  stroke: #ff9ae8;
+}
+
+.cf-back[data-card-back="card-back-nebula"] .cf-back-emblem circle:last-of-type {
+  fill: #ffffff;
+}
+
+.cf-back[data-card-back="card-back-nebula"] .cf-back-emblem circle:not(:last-of-type) {
+  stroke: #c9a8ff;
+}
+
+/* ----------------------------------------------------------------------------- motion --- */
+
+/* The one gate every look moves in. The holo band crosses the window and leaves it; the rainbow and
+   the aurora drift one period of their stripes, and molten gold flows one of its bands, so no loop
+   has a seam; the cracked ice, the glitter, the sunburst and the gold's hot spots glint in place;
+   the galaxy and the void's shimmer turn, and the void's edge pulses. Obsidian's gloss crosses the
+   face and rests off it; Starlit's stars and Celestial's ring twinkle; Filigree's ring glints. The
+   chase backs' emblems breathe, turn and orbit: a back has no motion slot, only this gate. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-holo-sweep"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-sweep 7s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-rainbow"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-drift 9s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-cracked-ice"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: opacity;
+    animation: cosmetic-foil-glint 3s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-glitter"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: opacity;
+    animation: cosmetic-foil-glint 1.6s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-sunburst"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: opacity;
+    animation: cosmetic-foil-glint 3.4s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-aurora"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-drift 16s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-galaxy"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-spin 60s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-molten-gold"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-flow 5s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-molten-gold"][data-cosmetic-motion="animated"] .cf-art::before {
+    will-change: opacity;
+    animation: cosmetic-foil-glint 2.2s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-void-shimmer"][data-cosmetic-motion="animated"] .cf-art::after {
+    will-change: transform;
+    animation: cosmetic-foil-spin 9s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-cosmetic-foil="foil-void-shimmer"][data-cosmetic-motion="animated"] .cf-art::before {
+    will-change: transform, opacity;
+    animation: cosmetic-foil-pulse 2.6s ease-in-out infinite alternate;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-finish="finish-obsidian"][data-cosmetic-motion="animated"]::before {
+    will-change: transform;
+    animation: cosmetic-finish-gloss 8s ease-in-out infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-finish="finish-starlit"][data-cosmetic-motion="animated"]::before {
+    will-change: opacity;
+    animation: cosmetic-finish-twinkle 5s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-frame="border-filigree"][data-cosmetic-motion="animated"] .cf-scale::after {
+    will-change: opacity;
+    animation: cosmetic-border-glint 3.6s ease-in-out infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf[data-frame="border-celestial"][data-cosmetic-motion="animated"] .cf-scale::after {
+    will-change: opacity;
+    animation: cosmetic-border-twinkle 4.8s ease-in-out infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-back[data-card-back="card-back-dragon-scale"] .cf-back-emblem {
+    will-change: transform, opacity;
+    animation: cosmetic-back-breathe 4s ease-in-out infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-back[data-card-back="card-back-clockwork"] .cf-back-emblem {
+    will-change: transform;
+    animation: cosmetic-back-turn 20s linear infinite;
+  }
+
+  :root:not([data-reduce-motion="true"]) .cf-back[data-card-back="card-back-nebula"] .cf-back-emblem {
+    will-change: transform, opacity;
+    animation: cosmetic-back-orbit 14s linear infinite;
+  }
+}
+
+@keyframes cosmetic-foil-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes cosmetic-foil-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-25%);
+  }
+}
+
+@keyframes cosmetic-foil-glint {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cosmetic-foil-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A quarter of the layer is one band's period, so the loop has no seam. */
+@keyframes cosmetic-foil-flow {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(25%);
+  }
+}
+
+@keyframes cosmetic-foil-pulse {
+  from {
+    transform: scale(1.15);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* A third of the layer is one face: the band enters from the left, leaves to the right and rests. */
+@keyframes cosmetic-finish-gloss {
+  0% {
+    transform: translateX(-33.4%) skewX(-18deg);
+  }
+  65%,
+  100% {
+    transform: translateX(33.4%) skewX(-18deg);
+  }
+}
+
+@keyframes cosmetic-finish-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  18% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.5;
+  }
+  52% {
+    opacity: 0.95;
+  }
+  64% {
+    opacity: 0.3;
+  }
+  82% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes cosmetic-border-glint {
+  0%,
+  40%,
+  62%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes cosmetic-border-twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  12% {
+    opacity: 1;
+  }
+  22% {
+    opacity: 0.55;
+  }
+  38% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  66% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 0.5;
+  }
+  90% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes cosmetic-back-breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+@keyframes cosmetic-back-turn {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cosmetic-back-orbit {
+  0% {
+    transform: rotate(0deg) scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) scale(0.95);
+    opacity: 0.8;
+  }
 }
