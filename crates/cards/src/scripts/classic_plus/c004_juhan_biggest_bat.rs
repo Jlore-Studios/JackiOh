@@ -196,6 +196,31 @@ mod tests {
             s.expect_stats(&next, json!({ "attack": 9, "health": 6 }));
         }
 
+        // R1829000 (issue #1829): the copy that resumes on a later turn of its controller's is summoning
+        // sick then, as a card that entered the field on that turn is, so it does not attack at once.
+        #[test]
+        fn r1829000_the_juhan_beneath_resumes_summoning_sick_when_the_top_dies_on_a_later_turn() {
+            crate::register_all();
+            let mut s = setup(
+                json!({ "hand": [{ "def": JUHAN }, HIT_JOB, FILLER], "field": [VANILLA] }),
+                false,
+                json!({}),
+            );
+            let top = s.card(JUHAN).clone();
+            s.play(&top, json!({ "zone": 1 }));
+            let copy = beneath(&s).first().cloned().expect("a Juhan beneath");
+            s.end_turn();
+            s.end_turn();
+
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": top.id }] }));
+
+            let resumed = s.unit(P1, 1).expect("the copy resumed");
+            assert_eq!(resumed.id, copy.id);
+            assert_eq!(resumed.def_id, JUHAN);
+            assert!(is_sick(s.state(), &resumed));
+            assert!(attack_targets(s.state(), &resumed).is_empty());
+        }
+
         #[test]
         fn played_onto_an_empty_zone_it_transforms_nothing() {
             crate::register_all();

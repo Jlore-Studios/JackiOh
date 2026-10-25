@@ -638,10 +638,11 @@ def bot_section(ctx: Context) -> str:
 
 
 def block(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
-          extra: tuple[str, ...] = ()) -> str:
+          extra: tuple[str, ...] = (), cards: str = "") -> str:
     """The statistics block of the status issue, between its markers: the four windows side by
-    side, the last two weeks, each window folded, the merged pull requests folded, and the other
-    bots' sections (`extra`, `bot_section`) folded at the end."""
+    side, the last two weeks, which set's cards win most (`cards`, `cardsets.section`), each
+    window folded, the merged pull requests folded, and the other bots' sections (`extra`,
+    `bot_section`) folded at the end."""
     now = ctx.now()
     who = credits(facts.events, facts.pulls)
     windows = [window(name, span, now, facts) for name, span in WINDOWS]
@@ -661,6 +662,8 @@ def block(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
              f"{', '.join(f'{k} {v}' for k, v in ended.most_common()) or 'none yet'}._", ""]
     lines += ["### The four windows", ""] + summary(windows) + [""]
     lines += ["### The last two weeks", ""] + over_time(ctx, windows[-1])
+    if cards:
+        lines += [cards.strip(), ""]
     lines += ["### Per window", "",
               "<sub>Runs, outcomes and who did what come from the bot's comments; lines, files "
               "and commits from its merged pull requests; model time, tokens and cost from the "

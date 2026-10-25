@@ -9,10 +9,10 @@
 use crate::config::SETUP_TURN;
 use crate::script::EngineSink;
 use crate::state::{
-    DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier, Resume,
-    find_instance,
+    CardInstance, DelayedAt, DelayedEffect, GameState, ModifierExpiry, ModifierKind, Phase, PlayerModifier,
+    Resume, find_instance,
 };
-use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, Row, ZoneName};
+use crate::wire::{GameEvent, PLAYER_IDS, PlayerId, ZoneName};
 
 /// `"sourceId" in mod ? mod.sourceId : undefined`: the permanent a modifier belongs to (#79
 /// Twinspell's rider is the one kind that carries one).
@@ -131,41 +131,40 @@ pub fn end_orphaned_modifiers(sink: &mut EngineSink<'_>) {
 /// (`moveSourcedModifiers`), and the one it finds on its new controller's side is that same rider.
 pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
     for player in PLAYER_IDS {
-        for row in [Row::Units, Row::Backrow] {
-            for lane in 1..=crate::zones::row_size(row) {
-                let Some(card) =
-                    crate::zones::card_at(sink.state, crate::wire::ZoneRef { player, row, lane }).cloned()
-                else {
-                    continue;
-                };
-                // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-                if crate::preview::lasting_text_off(sink.state, &card) {
-                    continue;
-                }
-                let amount = crate::scripts::flags_of(sink.state, &card)
-                    .echo_grant
-                    .unwrap_or(0)
-                    .max(0);
-                if amount <= 0 {
-                    continue;
-                }
-                let owned = sink.state.players[player].mods.iter().any(|modifier| {
-                    matches!(&modifier.kind, ModifierKind::EchoNextSpell { source_id: Some(source), .. } if *source == card.id)
-                });
-                if owned {
-                    continue;
-                }
-                add_modifier(
-                    sink,
-                    player,
-                    // §2.2: not turn-scoped — it survives cleanup and waits for a Spell (R30).
-                    ModifierExpiry::Used,
-                    ModifierKind::EchoNextSpell {
-                        amount,
-                        source_id: Some(card.id.clone()),
-                    },
-                );
+        // R446, R1824000: a Unit a carrier holds stands there too. Copied, since the walk adds riders.
+        let cards: Vec<CardInstance> =
+            crate::zones::acting_on(sink.state, player, crate::zones::StandingAt::ItsLane)
+                .into_iter()
+                .cloned()
+                .collect();
+        for card in cards {
+            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+            if crate::preview::lasting_text_off(sink.state, &card) {
+                continue;
             }
+            let amount = crate::scripts::flags_of(sink.state, &card)
+                .echo_grant
+                .unwrap_or(0)
+                .max(0);
+            if amount <= 0 {
+                continue;
+            }
+            let owned = sink.state.players[player].mods.iter().any(|modifier| {
+                matches!(&modifier.kind, ModifierKind::EchoNextSpell { source_id: Some(source), .. } if *source == card.id)
+            });
+            if owned {
+                continue;
+            }
+            add_modifier(
+                sink,
+                player,
+                // §2.2: not turn-scoped — it survives cleanup and waits for a Spell (R30).
+                ModifierExpiry::Used,
+                ModifierKind::EchoNextSpell {
+                    amount,
+                    source_id: Some(card.id.clone()),
+                },
+            );
         }
     }
 }

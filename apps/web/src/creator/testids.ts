@@ -66,6 +66,7 @@ export const creatorTestid = {
   scriptProblems: "creator-script-problems",
   scriptProblem: "creator-script-problem",
   checking: "creator-checking",
+  checkRetry: "creator-check-retry",
   preview: "creator-preview",
   previewRadiant: "creator-preview-radiant",
   save: "creator-save",

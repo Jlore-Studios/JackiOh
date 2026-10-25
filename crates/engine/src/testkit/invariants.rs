@@ -5,7 +5,8 @@
 //! bounds, §13.4, §13.6), and the edge-case hunters reuse it.
 //!
 //! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED. It never reads `summonedTurn` to decide who is
-//! sick. It keeps a shadow built only from the event stream:
+//! sick, but to settle what its shadow can only bound (`readied`, an uncovering inside one action). It
+//! keeps a shadow built only from the event stream and the Stack piles of the states it reads:
 //!   - `turn` and the player whose turn it is, from `turnStarted`;
 //!   - `entered`, the turn of each instance's latest entry, and `stint`, how many entries it has had.
 //!     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
@@ -14,8 +15,14 @@
 //!     that side since the turn began: that enters nothing, R1062; one animating on the other
 //!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters, and so does one
 //!     that fired as a trap this turn, animating as its firing's last step), or a
-//!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
-//!     side or a Stack card resuming emits nothing and changes nothing;
+//!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77),
+//!     and a move along one side emits nothing and changes nothing. A card a Stack pile uncovers has
+//!     entered (R1829000) with no event (R212): one dormant in the last state read (`dormant`) that
+//!     acts now, on a side no `rolledBack` restored and not the card a `fused` kept, entered inside the
+//!     action, its stint kept, on the turn of the action its `summonedTurn` names (the last when it
+//!     names none); one that may have been uncovered inside the action (dormant before, or in a zone
+//!     an entry event or a `cardAnnounced` named) takes `summonedTurn`'s word when it names a turn of
+//!     the action, as a `readied` stint does;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
 //!     pre-recorded with no attacks counted when its attack action is chosen, so a substitute
 //!     barred from the target reads as this stint's spend (R1202);
@@ -133,7 +140,7 @@ use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
     Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
     Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, Phase, PlagueSpend, PlayerId, PlayerView,
-    PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, ZoneChoice, ZoneName,
+    PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName,
     has_keyword, opponent_of,
 };
 
@@ -1384,6 +1391,29 @@ fn field_cards(state: &GameState) -> Vec<&CardInstance> {
     out
 }
 
+/// R1829000: the cards dormant beneath the top of a unit pile or a backrow pile (§3.2, R13).
+fn dormant_cards(state: &GameState) -> IndexSet<String> {
+    let mut out = IndexSet::new();
+    for player in PLAYER_IDS {
+        let side = &state.players[player];
+        out.extend(
+            side.units
+                .iter()
+                .flatten()
+                .flat_map(|pile| pile.iter().skip(1))
+                .map(|card| card.id.clone()),
+        );
+        out.extend(
+            side.backrow_piles
+                .iter()
+                .flatten()
+                .flatten()
+                .map(|card| card.id.clone()),
+        );
+    }
+    out
+}
+
 fn name_of(card: &CardInstance) -> String {
     format!("{} ({}, {}'s)", card.id, card.def_id, card.controller)
 }
@@ -1426,6 +1456,8 @@ pub struct InvariantMonitor {
     attack: Option<ShadowAttack>,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
+    /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
+    dormant: IndexSet<String>,
 }
 
 /// SURFACE §8's name for the monitor (`testkit::invariants::Monitor`).
@@ -1450,6 +1482,7 @@ impl InvariantMonitor {
             readied: IndexSet::new(),
             attack: None,
             resets: start.resets,
+            dormant: dormant_cards(start),
         }
     }
 
@@ -1506,6 +1539,75 @@ impl InvariantMonitor {
             return false;
         };
         at < self.turn && has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn)
+    }
+
+    /// R1829000: the entries one action made by uncovering cards in their Stack piles, which no event
+    /// reports (R212). A card dormant in the last state read that acts now entered inside the action,
+    /// on a turn from `began_on` to the action's last: `summonedTurn` says which, and when it names none
+    /// of them the entry is the last, so I4 reports it. Not on a side a `rolledBack` restored (R566),
+    /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
+    /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
+    /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
+    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
+        let mut restored: Vec<PlayerId> = Vec::new();
+        let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
+        let mut kept: Vec<&str> = Vec::new();
+        for event in events {
+            match event {
+                GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
+                GameEvent::Summoned {
+                    player, row, lane, ..
+                } => landed.push((*player, *row, *lane)),
+                GameEvent::ControlChanged {
+                    controller,
+                    row,
+                    lane,
+                    ..
+                } => landed.push((*controller, *row, *lane)),
+                GameEvent::Animated {
+                    player, unit_lane, ..
+                } => landed.push((*player, Row::Units, *unit_lane)),
+                GameEvent::Deanimated {
+                    player, backrow_lane, ..
+                } => landed.push((*player, Row::Backrow, *backrow_lane)),
+                GameEvent::CardAnnounced {
+                    player,
+                    row: Some(row),
+                    lane: Some(lane),
+                    ..
+                } => landed.push((*player, *row, *lane)),
+                GameEvent::Fused {
+                    result_instance_id, ..
+                } => kept.push(result_instance_id),
+                _ => {}
+            }
+        }
+        let now = self.turn;
+        for card in field_cards(state) {
+            let Zone::Field { player, row, lane } = card.zone else {
+                continue;
+            };
+            // I3 reports a card with no entry, which only an event gives it.
+            if !self.entered.contains_key(&card.id) {
+                continue;
+            }
+            let was_dormant = self.dormant.contains(&card.id);
+            let uncovered = was_dormant
+                && !restored.contains(&player)
+                && !kept.contains(&card.id.as_str())
+                && crate::zones::acts_on_field(state, card);
+            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
+            let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
+            let at = match during {
+                Some(turn) if may_have_been => Some(turn),
+                None if uncovered => Some(now),
+                _ => None,
+            };
+            if let Some(at) = at {
+                self.entered.insert(card.id.clone(), at);
+            }
+        }
     }
 
     /// I1 for one unit and one would-be target set.
@@ -1704,6 +1806,8 @@ impl InvariantMonitor {
     /// Feeds one action's events into the shadow, then I2, I4, I5, I7 and I9 against the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
+        // R1829000: the turn the action began on; an uncovering inside it happened on a turn from here on.
+        let began_on = self.turn;
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
         // record holds from an earlier action readies nothing (a later Transmogulate of that unit is not it).
         self.attack = None;
@@ -1919,6 +2023,12 @@ impl InvariantMonitor {
         let reset = state.resets != self.resets;
         self.resets = state.resets;
         found.extend(InvariantMonitor::announced_state(events, state, reset));
+
+        // R1829000: a card a Stack pile uncovers has entered, though no event says so (R212).
+        if !reset {
+            self.note_uncoverings(events, state, began_on);
+        }
+        self.dormant = dormant_cards(state);
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {

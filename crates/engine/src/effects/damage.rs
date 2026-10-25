@@ -35,6 +35,9 @@ pub struct DamageFlagArgs {
     /// that hero alone (`damage::trample_onto_adjacent`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample_onto: Option<TrampleOnto>,
+    /// R1841001: "deals half damage to heroes": a hit on a hero is halved, rounded down, before Armor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub half_to_heroes: Option<bool>,
 }
 
 /// `damage`'s argument: `{ to; amount } & DamageFlagArgs`.
@@ -63,6 +66,11 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
         poisonous: None,
         attacking: None,
         trample_onto: args.trample_onto,
+        half_to_heroes: if args.half_to_heroes == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
     }
 }
 

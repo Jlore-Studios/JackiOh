@@ -50,7 +50,10 @@
 #                            CATALOG_VERSION. Render deploys crates/server from main on every push and
 #                            the bundle compiles the catalog version in, so a catalog left a day
 #                            behind would refuse every deck save and queue in production (SPEC §9.4,
-#                            R105). It ignores the hold and leaves the countdown's time alone.
+#                            R105). It ignores the hold and leaves the countdown's time alone. It
+#                            waits, as the scheduled merge does, while the live server (SERVER_URL)
+#                            serves another catalog than the one it would bring: a client ahead of a
+#                            server Render could not deploy refuses as much (`server_behind`).
 #   workflow_dispatch        by hand, for INPUT_TARGET: production (the default) merges the newest green
 #                            commit of main, or INPUT_SHA, at once, hold or no hold, and when it merged
 #                            something the countdown starts over; vercel fast-forwards Vercel, past its
@@ -111,6 +114,9 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 : "${VERCEL_ENVIRONMENT:=Production}"
 : "${VERCEL_BOT:=vercel[bot]}"
 : "${VERCEL_DEPLOY_HOOK_URL:=}"
+# The live server, whose GET /api/catalog (R163) says the catalog it serves (`server_behind`); empty
+# skips that check.
+: "${SERVER_URL:=}"
 REPO=$GITHUB_REPOSITORY
 SUMMARY=${GITHUB_STEP_SUMMARY:-/dev/null}
 
@@ -186,6 +192,27 @@ must_wait() {
   echo "::notice::Not merging ${1:0:12} yet: main has changed .github/workflows since it (newest $(git rev-parse --short origin/main)), and GitHub refuses this token a push of workflow files that differ from main's. When CI passes on main's newest commit, that run merges it."
 }
 
+# The catalog version the live server serves, or "" when it does not answer. A sleeping free
+# Render instance takes about 50 s to wake, hence the minute.
+served_catalog() {
+  curl -fsS -m 60 "$SERVER_URL/api/catalog" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || true
+}
+# True (and RESULT=waiting) when commit $1 would move production to a catalog the live server does not
+# serve yet. The bundle compiles its catalog version in and the server refuses a deck save or a queue
+# from a client on another (SPEC §9.4, R105), so a client ahead of a server Render has not deployed
+# (out of build pipeline minutes, a failed build or boot: deploy-watch.yml's issue) would refuse every
+# one. The next check tries again. A run by hand merges anyway: it is the way past this.
+server_behind() {
+  local want served
+  [ -n "$SERVER_URL" ] && [ "$EVENT" != workflow_dispatch ] || return 1
+  want=$(catalog "$1")
+  [ "$want" != "$(catalog origin/production)" ] || return 1
+  served=$(served_catalog)
+  [ "$served" != "$want" ] || return 1
+  RESULT=waiting
+  echo "::warning::Not merging ${1:0:12} yet: it moves production to catalog $want, and the live server ($SERVER_URL) serves ${served:-nothing (it did not answer)}. Render has not deployed it: deploy-watch.yml's issue says why. The first check after the server serves $want merges it; running promote production by hand merges it now."
+}
+
 # Merges commit $1 of main into production. $2 says why (for the pull request and the issue's
 # comment). Sets RESULT to merged, created, uptodate or waiting, and for a merge PR_NUMBER, COUNT, CANDIDATE,
 # CATALOG and WHY.
@@ -209,6 +236,7 @@ promote() {
     return 0
   fi
   must_wait "$cand" && return 0
+  server_behind "$cand" && return 0
   base=$(git merge-base "$current" "$cand") || fail "production and $cand share no history."
   git diff --quiet "$base" "$current" || fail "production has diverged: it carries changes that are not on main (git diff ${base:0:12} ${current:0:12}). Not merging; see docs/deploy-cloudflare.md, 'production has diverged'."
 
@@ -519,7 +547,7 @@ TEXT
   printf '\nThe title counts down: every check (hourly, and on every green CI run on `main`) brings its hours, and the queue, up to date.\n'
   cat <<'TEXT'
 
-This issue stays open: when a merge goes out it says so below and counts down to the next. A change to the card catalog (`CATALOG_VERSION` in `render.yaml`) is the exception: the server already runs it, so it merges as soon as CI passes and a hold does not stop it. For anything else urgent, comment `/fast-forward`, or run *promote production* from the Actions tab: either merges the newest green commit at once.
+This issue stays open: when a merge goes out it says so below and counts down to the next. A change to the card catalog (`CATALOG_VERSION` in `render.yaml`) is the exception: the server already runs it, so it merges as soon as CI passes and the live server serves it, and a hold does not stop it. For anything else urgent, comment `/fast-forward`, or run *promote production* from the Actions tab: either merges the newest green commit at once.
 
 Plan: `docs/deploy-cloudflare.md`. Written by `scripts/promote-production.sh`; the first line is its state, so leave it be.
 TEXT

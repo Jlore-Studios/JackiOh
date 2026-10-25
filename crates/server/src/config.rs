@@ -914,6 +914,30 @@ pub const PLAY_RATES_REFRESH_SECONDS: i64 = 3600;
 /// SPEC §11 R1583000: the human live seats that must have held a card before its play rate is listed.
 pub const PLAY_RATES_MIN_GAMES: i64 = 20;
 
+/// SPEC §11 R1935000: the workflow whose runs `/stats`'s Daily runs tab lists (`GET /api/stats/ci`),
+/// the daily super run, read in `GITHUB_ISSUES_REPO`'s repository.
+pub const CI_RUNS_WORKFLOW: &str = "super.yml";
+
+/// SPEC §11 R1935000: the branch whose runs of `CI_RUNS_WORKFLOW` the tab lists.
+pub const CI_RUNS_BRANCH: &str = "main";
+
+/// SPEC §11 R1935000: how many runs the tab lists, newest first: two weeks of daily runs.
+pub const CI_RUNS_LISTED: usize = 14;
+
+/// SPEC §11 R1935000: how long the server keeps what GitHub answered before asking again, the
+/// `Cache-Control` max-age it answers with and how often the open tab asks again, in seconds. Without
+/// a token GitHub allows one address 60 requests an hour, and this reads the runs at most 30 times.
+pub const CI_RUNS_CACHE_TTL_SECONDS: i64 = 120;
+
+/// SPEC §11 R1935000: the most jobs one read of a run attempt takes, GitHub's largest page.
+pub const CI_RUNS_JOBS_PAGE: usize = 100;
+
+/// GitHub's REST API, which the daily runs are read through.
+pub const CI_RUNS_API_URL: &str = BUG_REPORT_API_URL;
+
+/// How long one request to GitHub for the daily runs may take before the read fails.
+pub const CI_RUNS_TIMEOUT_MS: u64 = 10_000;
+
 /// R1044000: how many game records one transaction folds into the totals, both when `stats-import`
 /// writes a run's file and when `stats-fold` (or the retention loop) folds the records written
 /// before the totals. A batch rewrites each card row it touches once, so a bigger one rewrites

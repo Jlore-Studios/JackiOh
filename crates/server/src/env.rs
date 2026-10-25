@@ -89,9 +89,11 @@ pub struct Env {
     pub ladder_bots: bool,
     /// `CREATE_ISSUES_TOKEN`: a token that may open issues in `github_issues_repo`, with which the
     /// server files a report of a match its own log does not reproduce (`bug_reports.rs`). Unset,
-    /// a finding is only logged. Secret.
+    /// a finding is only logged. It also reads the daily runs for `/stats` (`api/ci_runs.rs`,
+    /// R1935000), which are read without a token when it is unset. Secret.
     pub github_issues_token: Option<String>,
-    /// `GITHUB_ISSUES_REPO`: the `owner/name` a report is filed in; `BUG_REPORT_REPO_DEFAULT` unset.
+    /// `GITHUB_ISSUES_REPO`: the `owner/name` a report is filed in and the daily runs are read from;
+    /// `BUG_REPORT_REPO_DEFAULT` unset.
     pub github_issues_repo: String,
     /// R1300000: `DEV_PROFILE_IDS`, the profile ids of the dev accounts (SPEC §14.10), each a UUID
     /// in its canonical lower-case hyphenated form. Empty when unset: no dev accounts.

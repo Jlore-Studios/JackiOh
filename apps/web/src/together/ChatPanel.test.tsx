@@ -3,6 +3,7 @@
 // typed as `POST /api/chat/:friendId {body}`, and shows a refusal (B53: empty, too long, not friends,
 // rate-limited) in the server's words without adding a message. `InMatchChat` is the board rail's
 // toggle listing online friends, each opening this panel.
+// #1898: a failed read says why with Try again; a read that answers, or Try again, clears it.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -326,6 +327,83 @@ describe("B58 polling while open", () => {
     const before = server.to("GET", `/api/chat/${ANN.profileId}`).length;
     await settle(CHAT_POLL_MS * 3);
     expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(before);
+  });
+});
+
+describe("#1898 a failed read of the conversation", () => {
+  /** The newest page's read is refused while `refused.read` holds; a test turns it off. */
+  function serveRefusing(messages: ChatMessage[], refused: { read: boolean }): StubServer {
+    return serve(messages, (call) =>
+      refused.read && call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`
+        ? refusal(500, "internal", "Something went wrong.")
+        : undefined,
+    );
+  }
+
+  it("#1898 a failed first read says why and offers Try again, and never says the conversation is empty", async () => {
+    vi.useFakeTimers();
+    serveRefusing([], { read: true });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+
+    expect(screen.getByTestId("chat-read-error")).toHaveTextContent("Something went wrong.");
+    expect(screen.getByTestId("chat-retry")).toBeEnabled();
+    expect(screen.queryByText("No messages yet. Say hello!")).toBeNull();
+    expect(shown()).toHaveLength(0);
+
+    await settle(CHAT_POLL_MS);
+    expect(screen.getByTestId("chat-read-error")).toHaveTextContent("Something went wrong.");
+    expect(screen.queryByText("No messages yet. Say hello!")).toBeNull();
+  });
+
+  it("#1898 a later poll that answers clears the failure and shows the conversation", async () => {
+    vi.useFakeTimers();
+    const refused = { read: true };
+    serveRefusing(conversation(), refused);
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+    expect(screen.getByTestId("chat-read-error")).toBeInTheDocument();
+
+    refused.read = false;
+    await settle(CHAT_POLL_MS);
+    expect(screen.queryByTestId("chat-read-error")).toBeNull();
+    expect(screen.queryByTestId("chat-retry")).toBeNull();
+    expect(shown()).toHaveLength(2);
+  });
+
+  it("#1898 Try again reads the conversation at once and clears the failure", async () => {
+    vi.useFakeTimers();
+    const refused = { read: true };
+    const server = serveRefusing([], refused);
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await opened();
+    const before = server.to("GET", `/api/chat/${ANN.profileId}`).length;
+
+    refused.read = false;
+    fireEvent.click(screen.getByTestId("chat-retry"));
+    await settle();
+    expect(server.to("GET", `/api/chat/${ANN.profileId}`)).toHaveLength(before + 1);
+    expect(screen.queryByTestId("chat-read-error")).toBeNull();
+    expect(screen.getByText("No messages yet. Say hello!")).toBeInTheDocument();
+  });
+
+  it("#1898 a read that answers leaves a refused send's words on screen", async () => {
+    const words = "You are sending messages too fast.";
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    serve(conversation(), (call) => (call.method === "POST" ? refusal(429, "rate_limited", words) : undefined));
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+    type("hello again");
+    send();
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-error")).toHaveTextContent(words);
+    }, SLOW);
+
+    await settle(CHAT_POLL_MS + 1);
+    expect(screen.getByTestId("chat-error")).toHaveTextContent(words);
+    expect(screen.queryByTestId("chat-read-error")).toBeNull();
   });
 });
 

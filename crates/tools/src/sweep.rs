@@ -27,6 +27,7 @@
 //! cargo jackioh sweep --write [reports …]          rewrite shadow_ban.rs's header block and tables from
 //!                                                  the reports of record (default: its header's)
 //! cargo jackioh sweep --check [reports …]          fail with a diff unless the file is what they dictate
+//! cargo jackioh sweep --due [REV]                  the ids a sweep is due over since REV (R1678000)
 //! ```
 //!
 //! Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
@@ -47,17 +48,19 @@ use serde_json::Value;
 
 use jackioh_ai::{
     AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH, SlowDecision, SweepFlag,
-    SweepOptions, SweepPass2, SweepResult, SweepStats, at_risk_ids, pass2_keep_out, pass2_stats,
-    sweep_at_risk, sweep_card, sweep_verdict,
+    SweepOptions, SweepPass2, SweepResult, SweepStats, ai_generation, at_risk_ids, pass2_keep_out,
+    pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::testkit::preview_every_set;
-use jackioh_engine::wire::SetName;
+use jackioh_engine::wire::{SHIPPED_SETS, SetName};
 use jackioh_engine::{CardInstance, PlayerId, legal_actions};
 
 use crate::arena::utc_date;
+use crate::classify::{SETS_PATH, shipped_sets, show};
 use crate::gate::{MS_PER_SECOND, literal, time_decision, yardstick_ms};
 use crate::patches::repo_root;
+use crate::promote::GENERATION_PATH;
 
 /// The mean evaluate change per play, and each card's seconds, printed to this many decimals.
 const DECIMALS: usize = 1;
@@ -130,6 +133,11 @@ pub struct Args {
     /// its header block's).
     #[arg(long, num_args = 0.., value_name = "REPORT")]
     pub check: Option<Vec<String>>,
+    /// R1678000: print, as one JSON line, the ids a sweep is due over since the commit REV: the AI's
+    /// bans and its watched Meditative and Meditative+ cards when its generation moved, and every
+    /// non-token card of a set that ships now and did not. No REV: those of the AI as it is.
+    #[arg(long, num_args = 0..=1, default_missing_value = "", value_name = "REV")]
+    pub due: Option<String>,
     /// Card ids to sweep (default every non-token card).
     pub ids: Vec<String>,
 }
@@ -1043,6 +1051,97 @@ fn run_check(reports: &[String]) -> Result<()> {
     Ok(())
 }
 
+/// R1678000: the ids a sweep is due over. When the AI changed (`ai_changed`), every card `ban` holds
+/// and every card of `BAN_SETS` that `watch` holds: the cards a sweep may ban, or take off the ban,
+/// whose rows the AI that wrote them no longer plays. And every non-token card of each of
+/// `new_sets`, the sets that ship now and did not. Sorted, each once.
+fn due_ids(
+    ai_changed: bool,
+    ban: &[(&str, &str)],
+    watch: &[(&str, &str)],
+    new_sets: &[SetName],
+) -> Vec<String> {
+    let in_ban_sets = |id: &str| {
+        jackioh_cards::CATALOG
+            .get(id)
+            .is_some_and(|def| BAN_SETS.contains(&def.set))
+    };
+    let ai = ban
+        .iter()
+        .chain(watch)
+        .map(|(id, _)| *id)
+        .filter(|id| ai_changed && in_ban_sets(id))
+        .map(str::to_string);
+    let sets = jackioh_cards::CATALOG
+        .values()
+        .filter(|def| !def.token && new_sets.contains(&def.set))
+        .map(|def| def.id.clone());
+    sorted_unique(ai.chain(sets))
+}
+
+/// R1678000: what `--due` found since its base.
+#[derive(serde::Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct Due {
+    /// The commit it read the base from ("" with none).
+    base: String,
+    /// The base's AI generation (`crates/ai/generation.json`), where it has one.
+    base_generation: Option<i64>,
+    /// This build's.
+    generation: Option<i64>,
+    /// The sets this build ships and the base did not.
+    new_sets: Vec<String>,
+    /// The ids due (`due_ids`).
+    ids: Vec<String>,
+}
+
+/// R1678000: `--due`'s answer from the base's `generation.json` and `catalog_types.rs` texts (`None`
+/// with no base, which counts the AI as changed), against this build's generation and shipped sets.
+fn due_since(
+    base: &str,
+    base_texts: Option<(Option<&str>, &str)>,
+    generation: Option<i64>,
+    shipped: &[SetName],
+) -> Result<Due> {
+    let (base_generation, base_sets) = match base_texts {
+        None => (None, shipped.to_vec()),
+        Some((generation_json, sets_source)) => (
+            generation_json
+                .and_then(|text| serde_json::from_str::<Value>(text).ok())
+                .and_then(|record| record.get("generation").and_then(Value::as_i64)),
+            shipped_sets(sets_source).context("the base's SHIPPED_SETS")?,
+        ),
+    };
+    let ai_changed = base_texts.is_none() || base_generation != generation;
+    let new_sets: Vec<SetName> = shipped
+        .iter()
+        .filter(|set| !base_sets.contains(set))
+        .copied()
+        .collect();
+    Ok(Due {
+        base: base.to_string(),
+        base_generation,
+        generation,
+        new_sets: new_sets.iter().map(|set| set.as_str().to_string()).collect(),
+        ids: due_ids(ai_changed, SHADOW_BAN, SHADOW_WATCH, &new_sets),
+    })
+}
+
+/// `--due`.
+fn run_due(base: &str) -> Result<()> {
+    let generation = ai_generation().map(i64::from);
+    let due = if base.is_empty() {
+        due_since(base, None, generation, &SHIPPED_SETS)?
+    } else {
+        let root = repo_root();
+        let sets = show(&root, base, SETS_PATH).with_context(|| format!("{base} has no {SETS_PATH}"))?;
+        let record = show(&root, base, GENERATION_PATH);
+        due_since(base, Some((record.as_deref(), &sets)), generation, &SHIPPED_SETS)?
+    };
+    println!("{}", serde_json::to_string(&due)?);
+    Ok(())
+}
+
 fn read_lines(files: &[String]) -> Result<Vec<Value>> {
     let mut lines: Vec<Value> = Vec::new();
     for file in files {
@@ -1102,6 +1201,9 @@ pub fn run(args: Args) -> Result<()> {
     }
     if let Some(reports) = &args.check {
         return run_check(reports);
+    }
+    if let Some(base) = &args.due {
+        return run_due(base);
     }
 
     // R1420: as `fuzz` does, every set is previewed, so a set that has not shipped yet is swept
@@ -1777,5 +1879,124 @@ mod tests {
         let owned = |rows: &[(&str, &str)]| rows.iter().map(|(id, why)| pair(id, why)).collect::<Vec<_>>();
         assert_eq!(record.ban, owned(SHADOW_BAN));
         assert_eq!(record.watch, owned(SHADOW_WATCH));
+    }
+
+    #[test]
+    fn r1678000_an_ai_change_is_due_its_bans_and_its_watched_cards_of_the_sets_that_may_hold_bans() {
+        jackioh_cards::register_all();
+        let ban = [("meditative-069", "timeout: hard: fixture")];
+        let watch = [
+            ("classic-006", "at risk: hard: fixture"),
+            ("meditative-011", "at risk: easy: fixture"),
+            ("meditativeplus-008", "at risk: hard: fixture"),
+        ];
+        // Classic's row is watched but can never be banned (R732000), so it is not due.
+        assert_eq!(
+            due_ids(true, &ban, &watch, &[]),
+            ["meditative-011", "meditative-069", "meditativeplus-008"].map(String::from)
+        );
+        assert!(due_ids(false, &ban, &watch, &[]).is_empty());
+        // The live tables: every ban is due, and every due id is one a sweep may ban.
+        let due = due_ids(true, SHADOW_BAN, SHADOW_WATCH, &[]);
+        for (id, _) in SHADOW_BAN {
+            assert!(due.contains(&id.to_string()), "{id}");
+        }
+        for id in &due {
+            let set = jackioh_cards::CATALOG[id.as_str()].set;
+            assert!(BAN_SETS.contains(&set), "{id}: {set:?}");
+        }
+        assert!(due.windows(2).all(|pair| pair[0] < pair[1]), "{due:?}");
+    }
+
+    #[test]
+    fn r1678000_a_set_that_ships_is_due_every_one_of_its_non_token_cards() {
+        jackioh_cards::register_all();
+        let due = due_ids(false, &[], &[], &[SetName::MeditativePlus]);
+        let cards: Vec<String> = jackioh_cards::CATALOG
+            .values()
+            .filter(|def| def.set == SetName::MeditativePlus && !def.token)
+            .map(|def| def.id.clone())
+            .collect();
+        assert_eq!(due.len(), cards.len());
+        assert!(!due.is_empty());
+        for id in &due {
+            let def = &jackioh_cards::CATALOG[id.as_str()];
+            assert!(def.set == SetName::MeditativePlus && !def.token, "{id}");
+        }
+        // With the AI changed too, the two lists join, each id once.
+        let both = due_ids(
+            true,
+            &[("meditativeplus-008", "timeout: hard: fixture")],
+            &[],
+            &[SetName::MeditativePlus],
+        );
+        assert_eq!(both, due);
+    }
+
+    #[test]
+    fn r1678000_the_base_says_whether_the_ai_moved_and_which_sets_ship_now_that_did_not() {
+        jackioh_cards::register_all();
+        let sets = |names: &str| format!("pub const SHIPPED_SETS: [SetName; 2] = [\n{names}];\n");
+        let base_sets = sets("    SetName::Core,\n    SetName::Meditative,\n");
+        let shipped = [SetName::Core, SetName::Meditative, SetName::MeditativePlus];
+        let generation = |n: i64| format!("{{\"generation\": {n}, \"lane\": \"learn\"}}");
+
+        // The AI moved and a set shipped: both lists.
+        let moved = due_since(
+            "abc",
+            Some((Some(&generation(12)), &base_sets)),
+            Some(13),
+            &shipped,
+        )
+        .unwrap();
+        assert_eq!((moved.base_generation, moved.generation), (Some(12), Some(13)));
+        assert_eq!(moved.new_sets, ["Meditative+"]);
+        assert_eq!(
+            moved.ids,
+            due_ids(true, SHADOW_BAN, SHADOW_WATCH, &[SetName::MeditativePlus])
+        );
+
+        // The same generation, the same sets: nothing is due (the sweep's own pull request changes
+        // `shadowBan` in generation.json, never `generation`, so it starts no sweep of its own).
+        let same = due_since(
+            "abc",
+            Some((
+                Some(&generation(13)),
+                &sets("SetName::Core, SetName::Meditative, SetName::MeditativePlus"),
+            )),
+            Some(13),
+            &shipped,
+        )
+        .unwrap();
+        assert!(same.ids.is_empty() && same.new_sets.is_empty(), "{same:?}");
+
+        // A base without generation.json counts as a change; no base at all is the AI as it is.
+        let unread = due_since("abc", Some((None, &base_sets)), Some(13), &[SetName::Core]).unwrap();
+        assert_eq!(unread.ids, due_ids(true, SHADOW_BAN, SHADOW_WATCH, &[]));
+        let none = due_since("", None, Some(13), &shipped).unwrap();
+        assert_eq!((none.base_generation, none.new_sets.len()), (None, 0));
+        assert_eq!(none.ids, due_ids(true, SHADOW_BAN, SHADOW_WATCH, &[]));
+
+        assert!(due_since("abc", Some((None, "no list")), Some(13), &shipped).is_err());
+        let line = serde_json::to_string(&moved).unwrap();
+        assert!(line.starts_with("{\"base\":\"abc\",\"baseGeneration\":12,\"generation\":13,\"newSets\":[\"Meditative+\"],\"ids\":["), "{line}");
+    }
+
+    #[test]
+    fn r1678000_due_takes_a_base_or_none() {
+        use clap::Parser;
+        #[derive(Parser)]
+        struct Cli {
+            #[command(flatten)]
+            args: Args,
+        }
+        let parse =
+            |words: &[&str]| Cli::try_parse_from(std::iter::once("sweep").chain(words.iter().copied()));
+        assert_eq!(parse(&["--due"]).unwrap().args.due, Some(String::new()));
+        assert_eq!(
+            parse(&["--due", "abc123"]).unwrap().args.due,
+            Some("abc123".to_string())
+        );
+        assert!(parse(&[]).unwrap().args.due.is_none());
     }
 }
