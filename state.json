@@ -1784,12 +1784,27 @@
   "planning": null,
   "providers": {
     "agy": {
+      "spent": [
+        {
+          "at": "2026-10-25T16:40:16Z",
+          "minutes": 4.4
+        }
+      ],
+      "tokens_spent": [
+        {
+          "at": "2026-10-25T16:40:16Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 126135,
+          "output": 19074
+        }
+      ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-25T14:24:15Z",
-          "utilization": 0.0
+          "resets_at": "2026-10-25T21:30:36Z",
+          "utilization": 0.01
         },
-        "observed_at": "2026-10-25T09:37:19Z",
+        "observed_at": "2026-10-25T16:40:16Z",
         "seven_day": {
           "resets_at": "2026-10-30T22:00:08Z",
           "utilization": 0.99
