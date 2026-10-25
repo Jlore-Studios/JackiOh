@@ -14,7 +14,7 @@
 use crate::config::TRIGGER_EXTRA_NONE;
 use crate::script::{HookArgs, Script, TriggerExtraHook};
 use crate::state::GameState;
-use crate::wire::{PlayerId, Row};
+use crate::wire::PlayerId;
 
 /// Which of a player's hooks a multiplier reaches.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,15 +35,11 @@ impl Multiplied {
 }
 
 /// R820: the extra runs `player`'s hooks of `kind` get now — the highest any card acting on their side
-/// of the field gives (the top of each unit pile, then each backrow card that is not face-down,
-/// R1487000), or `TRIGGER_EXTRA_NONE` when none does.
+/// of the field gives (`zones::acting_on`, each once: the top of each unit pile, the Units its carriers
+/// hold, a Unit standing in the backrow among them, R1081000, R1824000, then each backrow card that is
+/// not face-down, R1487000), or `TRIGGER_EXTRA_NONE` when none does.
 pub fn extra_runs(state: &GameState, player: PlayerId, kind: Multiplied) -> i32 {
-    let mut cards = crate::zones::active_units_of(state, player);
-    for slot in crate::zones::slots_of(player, Row::Backrow) {
-        if let Some(card) = crate::zones::card_at(state, slot) {
-            cards.push(card);
-        }
-    }
+    let cards = crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits);
     let mut highest = TRIGGER_EXTRA_NONE;
     for card in cards {
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.

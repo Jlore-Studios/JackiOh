@@ -1441,8 +1441,8 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
 /// R1829000 (issue #1829): a card a Stack pile uncovers has entered the field on that turn, though no
 /// event says so (R212). The monitor reads the uncovering off the piles of the states it is shown, a
 /// card dormant in the last one that acts now, and takes `summonedTurn`'s word only where an uncovering
-/// inside the one action was possible: a fusion's kept card keeps its turn (R77, R1086), and a card of
-/// a player who played a card may have been covered and uncovered inside that action.
+/// inside the one action was possible: a fusion's kept card keeps its turn (R77, R1086), and a card in
+/// the zone a play was announced into may have been covered and uncovered inside that action.
 mod r1829000_a_card_uncovered_beneath_a_stack {
     use super::*;
 
@@ -1482,7 +1482,10 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
     fn r1829000_i4_stays_clean_as_a_unit_uncovered_on_a_later_turn_enters_again() {
         let (mut g, mut monitor, vanilla, fiender, _) = covered_on_an_earlier_turn();
 
-        g.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }));
+        g.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+        );
 
         assert_eq!(unit_at(&g, PlayerId::P1, 1, "the Vanilla resumed").id, vanilla.id);
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
@@ -1491,7 +1494,10 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
     #[test]
     fn r1829000_i4_fires_on_an_uncovered_unit_left_with_the_turn_it_was_played() {
         let (mut g, mut monitor, vanilla, fiender, played_on) = covered_on_an_earlier_turn();
-        g.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }));
+        g.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+        );
         find_instance_mut(g.state_mut(), &vanilla.id)
             .expect("the Vanilla")
             .summoned_turn = Some(played_on);
@@ -1523,7 +1529,8 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
 
     /// A Stack card played onto a unit and destroyed inside the same action (a trap answering its
     /// summon, the autopilot's turn) uncovers the unit with nothing on the piles between actions to
-    /// show it: a play by the unit's controller is what makes it possible.
+    /// show it: a play announced into the unit's zone is what makes it possible, and one announced into
+    /// another zone does not.
     #[test]
     fn r1829000_i4_takes_the_turn_of_a_unit_a_play_may_have_covered_and_uncovered_inside_one_action() {
         let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
@@ -1531,14 +1538,19 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         find_instance_mut(g.state_mut(), &fiender.id)
             .expect("the Fiender")
             .summoned_turn = Some(now);
-        let played = event(json!({
-            "type": "cardPlayed", "player": "p1", "instanceId": "a-stack-card", "defId": FIENDER, "costPaid": 2,
-        }));
+        let announced = |lane: i32| {
+            event(json!({
+                "type": "cardAnnounced", "player": "p1", "instanceId": "a-stack-card", "defId": FIENDER,
+                "cardType": "Unit", "costPaid": 2, "targets": [], "row": "units", "lane": lane,
+            }))
+        };
 
-        assert_eq!(monitor.clone().after(&[played], g.state()), no_violations());
-        let found = monitor.clone().after(&[], g.state());
-        let mismatches = entry_mismatches(&found);
-        assert_eq!(mismatches.len(), 1, "{found:?}");
-        assert!(mismatches[0].contains(&fiender.id), "{found:?}");
+        assert_eq!(monitor.clone().after(&[announced(1)], g.state()), no_violations());
+        for events in [vec![], vec![announced(2)]] {
+            let found = monitor.clone().after(&events, g.state());
+            let mismatches = entry_mismatches(&found);
+            assert_eq!(mismatches.len(), 1, "{found:?}");
+            assert!(mismatches[0].contains(&fiender.id), "{found:?}");
+        }
     }
 }

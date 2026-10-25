@@ -1,7 +1,7 @@
 //! R1829000 (issue #1829): a card a Stack pile uncovers, as the cards above it leave, is summoning sick
-//! as a card that entered the field on that turn is (§3.2, §4.1, R83): Rush lets it attack a unit,
-//! nothing lets it attack the hero, it keeps the exertion it spent before it was covered, and it
-//! attacks freely on its controller's next turn.
+//! as a card that entered the field on that turn is (§3.2, §4.1, R83): Rush lets it attack a unit and
+//! not the hero, it keeps the exertion it spent before it was covered, and it attacks freely on its
+//! controller's next turn.
 
 mod r1829000_a_card_a_stack_pile_uncovers_is_summoning_sick {
     use jackioh_engine::effects::move_::bounce_card;
@@ -46,7 +46,15 @@ mod r1829000_a_card_a_stack_pile_uncovers_is_summoning_sick {
     fn r1829000_a_unit_uncovered_as_the_top_of_its_pile_dies_attacking_is_summoning_sick() {
         let mut s = board("r1829000-dies", json!([]), pile(&plain.id));
         let stack = top(&s, P1, 1);
-        let under = beneath_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 1 })[0].clone();
+        let under = beneath_at(
+            s.state(),
+            ZoneSlot {
+                player: P1,
+                row: Row::Units,
+                lane: 1,
+            },
+        )[0]
+        .clone();
         let enemy = top(&s, P2, 5);
         assert!(!is_sick(s.state(), &under));
 
@@ -64,7 +72,15 @@ mod r1829000_a_card_a_stack_pile_uncovers_is_summoning_sick {
     fn r1829000_a_unit_uncovered_on_the_opponents_turn_may_attack_on_its_controllers_next_turn() {
         let mut s = board("r1829000-their-turn", json!([]), pile(&plain.id));
         let stack = top(&s, P1, 1);
-        let under = beneath_at(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 1 })[0].clone();
+        let under = beneath_at(
+            s.state(),
+            ZoneSlot {
+                player: P1,
+                row: Row::Units,
+                lane: 1,
+            },
+        )[0]
+        .clone();
         s.end_turn();
         let enemy = top(&s, P2, 5);
 

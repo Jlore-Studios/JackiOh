@@ -20,9 +20,9 @@
 //!     entered (R1829000) with no event (R212): one dormant in the last state read (`dormant`) that
 //!     acts now, on a side no `rolledBack` restored and not the card a `fused` kept, entered inside the
 //!     action, its stint kept, on the turn of the action its `summonedTurn` names (the last when it
-//!     names none); one that may have been uncovered inside the action (dormant before, in a zone an
-//!     entry event named, or on the side of a player who played a card) takes `summonedTurn`'s word
-//!     when it names a turn of the action, as a `readied` stint does;
+//!     names none); one that may have been uncovered inside the action (dormant before, or in a zone
+//!     an entry event or a `cardAnnounced` named) takes `summonedTurn`'s word when it names a turn of
+//!     the action, as a `readied` stint does;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack,
 //!     pre-recorded with no attacks counted when its attack action is chosen, so a substitute
 //!     barred from the target reads as this stint's spend (R1202);
@@ -1396,8 +1396,20 @@ fn dormant_cards(state: &GameState) -> IndexSet<String> {
     let mut out = IndexSet::new();
     for player in PLAYER_IDS {
         let side = &state.players[player];
-        out.extend(side.units.iter().flatten().flat_map(|pile| pile.iter().skip(1)).map(|card| card.id.clone()));
-        out.extend(side.backrow_piles.iter().flatten().flatten().map(|card| card.id.clone()));
+        out.extend(
+            side.units
+                .iter()
+                .flatten()
+                .flat_map(|pile| pile.iter().skip(1))
+                .map(|card| card.id.clone()),
+        );
+        out.extend(
+            side.backrow_piles
+                .iter()
+                .flatten()
+                .flatten()
+                .map(|card| card.id.clone()),
+        );
     }
     out
 }
@@ -1534,29 +1546,37 @@ impl InvariantMonitor {
     /// on a turn from `began_on` to the action's last: `summonedTurn` says which, and when it names none
     /// of them the entry is the last, so I4 reports it. Not on a side a `rolledBack` restored (R566),
     /// nor for the card a fusion kept (R77, R1086). A card that may have been uncovered inside the action
-    /// without that showing on the piles (dormant before, in a zone an entry event named, or on the side
-    /// of a player who played a card, which a Stack, Equip or stack-base play covers and the rest of the
-    /// action may uncover) takes `summonedTurn`'s word only when it names a turn of the action.
+    /// without that showing on the piles (dormant before, or in a zone an entry event named or a play
+    /// was announced into, which a Stack, Equip or stack-base play covers and the rest of the action may
+    /// uncover) takes `summonedTurn`'s word only when it names a turn of the action.
     fn note_uncoverings(&mut self, events: &[GameEvent], state: &GameState, began_on: i32) {
         let mut restored: Vec<PlayerId> = Vec::new();
         let mut landed: Vec<(PlayerId, Row, i32)> = Vec::new();
-        let mut played: Vec<PlayerId> = Vec::new();
         let mut kept: Vec<&str> = Vec::new();
         for event in events {
             match event {
                 GameEvent::RolledBack { sides, .. } => restored.extend(sides.iter().copied()),
-                GameEvent::Summoned { player, row, lane, .. } => landed.push((*player, *row, *lane)),
+                GameEvent::Summoned {
+                    player, row, lane, ..
+                } => landed.push((*player, *row, *lane)),
                 GameEvent::ControlChanged {
                     controller,
                     row,
                     lane,
                     ..
                 } => landed.push((*controller, *row, *lane)),
-                GameEvent::Animated { player, unit_lane, .. } => landed.push((*player, Row::Units, *unit_lane)),
+                GameEvent::Animated {
+                    player, unit_lane, ..
+                } => landed.push((*player, Row::Units, *unit_lane)),
                 GameEvent::Deanimated {
                     player, backrow_lane, ..
                 } => landed.push((*player, Row::Backrow, *backrow_lane)),
-                GameEvent::CardPlayed { player, .. } => played.push(*player),
+                GameEvent::CardAnnounced {
+                    player,
+                    row: Some(row),
+                    lane: Some(lane),
+                    ..
+                } => landed.push((*player, *row, *lane)),
                 GameEvent::Fused {
                     result_instance_id, ..
                 } => kept.push(result_instance_id),
@@ -1577,7 +1597,7 @@ impl InvariantMonitor {
                 && !restored.contains(&player)
                 && !kept.contains(&card.id.as_str())
                 && crate::zones::acts_on_field(state, card);
-            let may_have_been = was_dormant || landed.contains(&(player, row, lane)) || played.contains(&player);
+            let may_have_been = was_dormant || landed.contains(&(player, row, lane));
             let during = card.summoned_turn.filter(|turn| (began_on..=now).contains(turn));
             let at = match during {
                 Some(turn) if may_have_been => Some(turn),
