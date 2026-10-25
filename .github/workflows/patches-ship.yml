@@ -178,8 +178,9 @@ jobs:
   # issue holds the escalations: the first opens it (bot:build, difficulty:hard, assigned to the
   # night bot), a later one while it is open comments on it, each promotion once, which its
   # `promotion #N` marker records. Once no such issue is open, a promotion it named that is still
-  # stuck is shipped again from the newer main, unless main has not moved or a ship is already on its
-  # way. A promotion still running its checks, or green and only waiting to merge, is left alone.
+  # stuck is shipped again from the newer main, unless main has not moved or a ship from it is on its
+  # way or already ran. A promotion still running its checks, or green and only waiting to merge, is
+  # left alone.
   watch:
     name: escalate a stuck promotion
     if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_run' }}
@@ -224,7 +225,8 @@ jobs:
                 continue
               fi
 
-              marker="promotion #$number"
+              # Whole, so promotion #18's marker is not found in #1832's.
+              marker="<!-- promotion #$number -->"
               issues=$(gh issue list --repo "$REPO" --state all --search "in:title \"$TITLE\"" --limit 50 \
                 --json number,title,state,body,comments \
                 --jq "[.[] | select(.title == \"$TITLE\")]")
@@ -233,7 +235,7 @@ jobs:
 
               if [ "$named" -eq 0 ]; then
                 note=$(printf '%s\n' \
-                  "<!-- $marker -->" \
+                  "$marker" \
                   "The card-patch promotion $url (\`patches ship\`, R646) has been open over 2 hours and did not merge itself: these checks are red on its head." \
                   "" \
                   "$failed" \
@@ -265,10 +267,12 @@ jobs:
                 echo "#$number: stuck, its issue closed, but main has not moved since it shipped"
                 continue
               fi
+              # Once per main: a ship refused there (its own issue above) is not dispatched again on
+              # every CI run until main moves.
               active=$(gh run list --repo "$REPO" --workflow patches-ship.yml --event workflow_dispatch --limit 20 \
-                --json status --jq '[.[] | select(.status != "completed")] | length')
+                --json status,headSha | jq --arg main "$main" '[.[] | select(.status != "completed" or .headSha == $main)] | length')
               if [ "$active" -gt 0 ]; then
-                echo "#$number: stuck, its issue closed; a ship is already on its way"
+                echo "#$number: stuck, its issue closed; a ship from main at $main is on its way or already ran"
                 continue
               fi
               gh workflow run patches-ship.yml --repo "$REPO" --ref main
