@@ -667,6 +667,13 @@
     "1904": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T15:14:24Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 2 fails: besides crates/luau it regenerates crates/cards/luau/jackioh.luau and edits docs/v0.4.0/api-gaps.md; the design is settled and was prototyped green"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
