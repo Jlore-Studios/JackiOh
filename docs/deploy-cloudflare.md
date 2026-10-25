@@ -266,7 +266,8 @@ job's `check the live site` step reads it.
   (`uri_allow_list`) and are changed there (`infra/README.md`): `https://<cloudflare-domain>/login`
   is on it. Emailed links (sign-up confirmation, password reset) are built from the page's own origin
   (`auth.ts` `authRedirectUrl`), and Supabase silently replaces any `redirect_to` that is not on this
-  list with the Site URL. Keep the Vercel entry for staging.
+  list with the Site URL. Staging's `https://jackioh.vercel.app/login` is not on it, so staging's
+  emailed links land on jackioh.com.
 - **Supabase Site URL:** `site_url` in the same file. It moves to the Cloudflare domain at cut-over
   (step 6), not before.
 - **`TRUSTED_PROXY_HOPS` on Render does not change.** Browsers talk to Render directly; Cloudflare
