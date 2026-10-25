@@ -5,24 +5,25 @@
 //! Engine:
 //! - **Tribute 2** is `static_flags.tribute: 2`, paid at play time through the play validator
 //!   (§6.3 Tribute X). R391 lets the zone the Tribute empties take the card.
-//! - **"Immune to tribal tag based hate"** is the ME-TRIBAL keyword (MD-B1, R940): read through
-//!   the layers as Immune to Spells is, protecting the card only while it acts on the field. A
+//! - **"Immune to tribal tag based hate"** is the ME-TRIBAL ability (MD-B1, R940): read through
+//!   static flags, protecting the card only while it acts on the field. A
 //!   harmful effect whose card filter names a tribal tag in `tags` or `notTags` can neither pick
 //!   it (a declaration or prompt of `aim: harm`, R656) nor reach it through a board or card scope.
 //!   Helpful tag-filtered effects still reach it. The Radiant face adds Immutable (R23, R386).
-//! - The keywords live in the catalog; there is nothing to run.
+//! - Tribute and tribal immunity are static flags; Immutable lives in the catalog.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-025";
 
-/// Tribute 2 on both faces; the keywords come from the catalog.
+/// Tribute 2 and tribal immunity on both faces; Immutable comes from the catalog.
 const TRIBUTE_COST: i32 = 2;
 
 pub fn script() -> CardScripts {
     let base = Script {
         static_flags: Some(StaticFlags {
             tribute: Some(TRIBUTE_COST),
+            immune_to_tribal_hate: Some(true),
             ..StaticFlags::default()
         }),
         ..Script::default()
@@ -64,6 +65,7 @@ mod tests {
 
     use jackioh_engine::effects::{degrade, transform, upgrade, vanilla};
     use jackioh_engine::resolve::{HookOptions, make_context};
+    use jackioh_engine::subsystems::{self, FuseArgs};
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER])
@@ -234,7 +236,7 @@ mod tests {
 
     #[test]
     fn r940_a_vanilla_takes_the_immunity() {
-        // A Vanilla removes the keyword with the rest of the text: Bigot's sweep then hits it.
+        // A Vanilla removes the ability with the rest of the text: Bigot's sweep then hits it.
         let mut s = hunting("felinor-vanilla", BIGOT, true, json!([]));
         let felinor = felinor_id(&s);
         s.card_mut(felinor).vanilla = true;
@@ -325,30 +327,61 @@ mod tests {
     }
 
     #[test]
-    fn r940_a_nerf_can_take_the_keyword() {
-        // A Nerf draws one row at random; on a seed where it takes the keyword, Bigot's sweep hits it.
-        let mut found = false;
-        for cursor in 0..64 {
+    fn r940_a_nerf_does_not_remove_the_immunity() {
+        // A Nerf draws one row at random, and the immunity is no keyword row: whichever it draws, Bigot's
+        // Radiant destroy still passes the Nerfed Felinor by.
+        for cursor in 0..16 {
             let mut s = hunting("felinor-nerfed", BIGOT, true, json!([]));
             let felinor = felinor_id(&s);
             s.state_mut().rng_cursor = cursor;
             run_as(&mut s, degrade(json_as(json!({ "instanceId": felinor }))), P1);
-            let removed = s
-                .card(&felinor)
-                .tuning
-                .as_ref()
-                .and_then(|tuning| tuning.remove_keywords.clone())
-                .unwrap_or_default();
-            if !removed.contains(&KeywordKind::ImmuneToTribalHate) {
-                continue;
-            }
-            assert!(!s.stats(&felinor).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::ImmuneToTribalHate));
+            assert!(s.card(&felinor).tuning.is_some(), "cursor {cursor}: it is Nerfed");
             s.play(BIGOT, json!({}));
-            assert!(s.unit(P2, 1).is_none(), "Nerfed out of its keyword, it is no longer immune");
-            found = true;
-            break;
+            assert_eq!(
+                s.unit(P2, 1).expect("stands").id,
+                felinor,
+                "cursor {cursor}: the Nerfed Felinor remains immune"
+            );
         }
-        assert!(found, "some Nerf takes the keyword");
+    }
+
+    #[test]
+    fn r940_a_card_fused_onto_it_keeps_the_immunity() {
+        // R77: a Fuse combines its ingredients' static flags, so the fused Felinor is as immune as it was.
+        let mut s = hunting("felinor-fused", BIGOT, true, json!([]));
+        let felinor = s.card(felinor_id(&s)).clone();
+        let mut events: Vec<GameEvent> = vec![];
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        let fused = {
+            let state = s.state_mut();
+            let other = new_instance(&mut *state, VANILLA, P2, Zone::Gone { player: P2 });
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let args = FuseArgs {
+                ingredients: vec![felinor.clone(), other],
+                target: Some(felinor),
+                ..FuseArgs::default()
+            };
+            subsystems::fuse(&mut sink, args)
+        }
+        .expect("the fused card");
+        s.state_mut().rng_cursor = rng.cursor();
+        assert_ne!(fused.def_id, FELINOR, "its definition is the fusion's own");
+        assert!(immune_to_tribal_hate(s.state(), s.card(&fused.id)));
+        s.play(BIGOT, json!({}));
+        assert_eq!(s.unit(P2, 1).expect("stands").id, fused.id, "Bigot's destroy passes it by");
+    }
+
+    #[test]
+    fn r940_static_flags_carry_immunity() {
+        let scripts = script();
+        for face in [&scripts.base, &scripts.radiant] {
+            assert_eq!(
+                face.static_flags
+                    .as_ref()
+                    .and_then(|flags| flags.immune_to_tribal_hate),
+                Some(true)
+            );
+        }
     }
 
     #[test]
@@ -391,8 +424,7 @@ mod tests {
             [Some(12), Some(9), Some(24), Some(18)]
         );
         let kinds = |face: &CardFace| face.keywords.iter().map(|keyword| keyword.kind()).collect::<Vec<_>>();
-        assert!(kinds(&def.base).contains(&KeywordKind::ImmuneToTribalHate));
-        assert!(kinds(&def.radiant).contains(&KeywordKind::ImmuneToTribalHate));
-        assert!(kinds(&def.radiant).contains(&KeywordKind::Immutable));
+        assert!(kinds(&def.base).is_empty());
+        assert_eq!(kinds(&def.radiant), vec![KeywordKind::Immutable]);
     }
 }
