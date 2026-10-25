@@ -145,11 +145,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-25T12:21:27Z",
+        "at": "2026-10-25T13:56:53Z",
         "difficulty": "hard",
-        "provider": "gpt",
-        "tier": "medium",
-        "why": "121 files, far past the 'about 40 files or more' line; it also adds to crates/engine/src/testkit and spans four crates"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "121 files, far past the 'about 40 files or more' line, across four crates and crates/engine/src/testkit; no line of the easy rule holds"
       },
       "handoff": {
         "at": "2026-10-25T12:14:45Z",
