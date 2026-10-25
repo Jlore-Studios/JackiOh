@@ -24,10 +24,9 @@
 #
 # A failed run on the default branch hands the issue to the night bot (.harness/config.json's
 # bot_login), as ci-duration.yml hands over its report: a new issue is assigned to it and queued with
-# bot:build and priority:high (the night bot's first pickup tier), and an open one nobody is assigned
-# to is handed over the same way, so main's red run is worked on first without anyone asking. A
-# dispatched run on any other branch tests that branch's change, so it is reported but never handed
-# over, and its report says the branch's author owns it.
+# bot:build, and an open one nobody is assigned to is handed over the same way, so main's red run is
+# worked on without anyone asking. A dispatched run on any other branch tests that branch's change,
+# so it is reported but never handed over, and its report says the branch's author owns it.
 #
 # The release binaries and the built client travel between jobs as artifacts, built once per run by
 # the same steps ci.yml uses (its `rust-build` and `wasm` jobs).
@@ -491,16 +490,15 @@ jobs:
             "---" \
             "_Posted by \`.github/workflows/super.yml\`._")
 
-          # Hands the issue to the night bot: assigned to it, queued and put in the high priority
-          # tier, as a person assigning it would, for a red run on the default branch only. A
-          # failure here leaves the report standing for a person.
+          # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
+          # would, for a red run on the default branch only. A failure here leaves the report
+          # standing for a person.
           hand_over() {
             if [ "$REF" != "$DEFAULT_BRANCH" ]; then
               echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"
               return 0
             fi
             gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
-              --add-label "priority:high" \
               && echo "handed #$1 to @$BOT_LOGIN" \
               || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
           }
