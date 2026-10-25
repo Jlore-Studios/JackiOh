@@ -1087,51 +1087,62 @@ pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
 // ---------------------------------------------------------------------------------------------
 
-/// A promotion gate (SURFACE §14.2): the games `cargo jackioh promote` plays against the parent, the
-/// AI on `main`, how they are seated, and the wins out of them a candidate needs (a draw is not a
-/// win). The lanes play no games against SPEC §10.7's random policy: they dropped them once
-/// generation 9, the first AI dealt the Meditative set (issue #732), had beaten random in at least 90
-/// of 100 (R732001). The daily quality gates (`cargo jackioh gate --full`) still hold every AI on
-/// `main` to their floor against random.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+/// R1679000: a training lane's promotion gate (SURFACE §14.2), a sequential probability ratio test
+/// on paired hold-out deals. `cargo jackioh promote` plays deal after deal against the parent, the AI
+/// on `main`, each twice with the seats swapped (R850000), and reads each deal's edge for the
+/// candidate: its wins less the parent's over the two games, halved, from −1 to 1 (a draw, or a game
+/// without a result, is nobody's win). The test weighs H0, a true mean edge of `edge_h0` (a successor
+/// no stronger than its parent), against H1, `edge_h1` (the smallest gain worth banking), by the log
+/// of their likelihood ratio, read as two normal laws with the deals' own variance: after `n` deals of
+/// edges summing to `S`, `(edge_h1 − edge_h0) · (S − n · (edge_h0 + edge_h1) / 2) / σ²`, the
+/// variance `σ²` the deals' own, never below `variance_floor`. From deal `min_deals` on it stops at
+/// the first deal whose ratio reaches `ln((1 − beta) / alpha)`, a pass, or falls to
+/// `ln(beta / (1 − alpha))`, a fail; one still between the two at `max_deals` fails. So an equal
+/// successor passes about `alpha` of the time and one at H1 fails about `beta` of it, and a clear
+/// loser stops early. The deals are played `batch_deals` at a time and read in deal order, so where it
+/// stops never depends on the thread count, and CI's `promote --verify` plays the same deals again.
+///
+/// The lanes play no games against SPEC §10.7's random policy: they dropped them once generation 9,
+/// the first AI dealt the Meditative set (issue #732), had beaten random in at least 90 of 100
+/// (R732001). The daily quality gates (`cargo jackioh gate --full`) still hold every AI on `main` to
+/// their floor against random.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TrainingGate {
-    pub games: i32,
-    /// R850000: the games are deals, each played twice with the seats swapped: deal `d` is game
-    /// `2d − 1`, the candidate on p1, and game `2d`, the candidate on p2, both on deal `d`'s seed.
-    /// Otherwise every game has its own seed and the candidate sits p1 on odd games.
-    pub paired: bool,
-    pub vs_parent: i32,
+    /// The deals the test reads before it may stop: the variance it reads needs this many.
+    pub min_deals: i32,
+    /// The most deals it plays; a test undecided at the last one fails.
+    pub max_deals: i32,
+    /// The deals played at once (on rayon's pool) before the test reads them.
+    pub batch_deals: i32,
+    /// H0's mean edge: a successor no stronger than its parent.
+    pub edge_h0: f64,
+    /// H1's mean edge: the gain the gate is built to bank, +0.06 (a 53% win rate, about +21 Elo).
+    pub edge_h1: f64,
+    /// The chance it promotes a successor at H0.
+    pub alpha: f64,
+    /// The chance it fails one at H1.
+    pub beta: f64,
+    /// The least variance the ratio divides by: deals that all come out alike (an AI against
+    /// itself splits every deal) have none.
+    pub variance_floor: f64,
 }
 
-/// SURFACE §14.2: the `improve` lane's gate, 220 of 400 games on 200 deals each played twice with
-/// the seats swapped (R850000). A successor no stronger than its parent wins about 200 of 400, with
-/// a standard deviation of 10 if the games were independent, so 220 is two deviations out; pairing
-/// cancels much of the deal's luck, which lowers the chance further. It was 85, then 75, then 65 of
-/// 100 (R732001), a bar no change of the lane's sessions came near: the gain the lane can bank is a
-/// few points at a time.
-pub const TRAINING_IMPROVE: TrainingGate = TrainingGate {
-    games: 400,
-    paired: true,
-    vs_parent: 220,
-};
-/// R1012000: the `learn` lane's gate, the learned evaluation's (#466, #1012; `training/learn.md`):
-/// the improve lane's bar, 220 of 400 games on 200 deals each played twice with the seats swapped,
-/// on the lane's own hold-out deals (`learn:<tree>:<d>`). A retrained network beats its parent by
-/// the same margin a hand-tuned change must; no LLM chooses it (`docs/learned-eval.md` D2).
-pub const TRAINING_LEARN: TrainingGate = TrainingGate {
-    games: 400,
-    paired: true,
-    vs_parent: 220,
-};
-/// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent). Its bar
-/// against the parent is lower than improve's was, since unbanning cards is its gain: 60 is two
-/// deviations above an equal successor's 50 of 100. It was 75, then 65 (R732001), and R850000 left it
-/// as it was, unpaired.
-pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
-    games: 100,
-    paired: false,
-    vs_parent: 60,
+/// R1679000: every lane's gate, the `improve`, `unban` and `learn` lanes' alike (the unban lane adds
+/// strictly fewer shadow bans than the parent's). On #1058's paired deals, whose edges had a variance
+/// of about 0.27 (of 200 deals, 25 won twice, 146 split and 29 lost twice), it promotes an equal
+/// successor about 4.5% of the time and one that truly wins 52%, 53% or 55% about 60%, 91% or all of
+/// it, where 220 of 400 (R850000) let those through about 6%, 15% and 53% of the time; it averages
+/// about 800 games at H0 and H1, 1,050 between them, and 300 for a clear loser, never more than 2,000.
+pub const TRAINING_GATE: TrainingGate = TrainingGate {
+    min_deals: 100,
+    max_deals: 1000,
+    batch_deals: 100,
+    edge_h0: 0.0,
+    edge_h1: 0.06,
+    alpha: 0.05,
+    beta: 0.05,
+    variance_floor: 0.01,
 };
 
 // ---------------------------------------------------------------------------------------------

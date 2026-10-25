@@ -1082,29 +1082,36 @@ over `games`) with its 95% Wilson interval `aLow` and `aHigh`, then, for a paire
 1), with its 95% interval `edgeLow` and `edgeHigh` (the mean ± 1.96 standard errors), each share
 rounded to three decimals.
 
-`promote` plays the lane's `games` against the parent, seats alternating (candidate `p1` on odd
-games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
-committing `generation.json` does not change the seeds), each seat's deck `build_ai_deck` over every
-set that ships minus **its own** AI's shadow-ban list, no handicap (Easy both). A paired gate's `k` is
-a deal, played twice with the seats swapped as `arena --paired` plays one, and its deals are the lane's
-hold-out set, read only by the committed AI they are named for: its dry run refuses uncommitted
-changes in `crates/ai/src`, as a promotion and a verification do (R850001). It promotes when:
+`promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
+`git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each
+deal played twice with the seats swapped as `arena --paired` plays one (candidate `p1` in its first
+game), each seat's deck `build_ai_deck` over every set that ships minus **its own** AI's shadow-ban
+list, no handicap (Easy both). The deals are the lane's hold-out set, read only by the committed AI
+they are named for: a dry run refuses uncommitted changes in `crates/ai/src`, as a promotion and a
+verification do (R850001). Every lane's gate is the sequential test `TRAINING_GATE` (R1679000): the
+deals are played `batch_deals` (100) at a time and read in deal order as the candidate's edge, and from
+deal `min_deals` (100) on it stops at the first whose log-likelihood ratio, H0 a mean edge of
+`edge_h0` (0) against H1 `edge_h1` (+0.06) with errors `alpha` and `beta` (5% each), reaches
+`ln((1 − β) / α)` (a pass) or falls to `ln(β / (1 − α))` (a fail); undecided at `max_deals` (1,000)
+it fails. A promotion's `vsParent` is the wins out of the games of the deals it read. It promotes when:
 
-| Lane | games | vs parent | shadow bans |
-|---|---|---|---|
-| `improve` | `TRAINING_IMPROVE.games` = 400, `paired`: 200 deals | ≥ `TRAINING_IMPROVE.vs_parent` = 220 | — |
-| `unban` | `TRAINING_UNBAN.games` = 100, unpaired | ≥ `TRAINING_UNBAN.vs_parent` = 60 | strictly fewer than the parent's |
+| Lane | vs parent | shadow bans |
+|---|---|---|
+| `improve` | the test passes | — |
+| `unban` | the test passes | strictly fewer than the parent's |
+| `learn` | the test passes, on deals of its own (R1012000) | — |
 
-The improve lane's bar was 65 of 100 until issue #850 (R732001, R850000).
+The improve lane's bar was 65 of 100 until issue #850 (R732001), then 220 of 400 paired games until
+issue #1679 (R850000), and the unban lane's 60 of 100 unpaired games.
 
 It played 100 more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
 needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
 90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
 The daily quality gates (`cargo jackioh gate --full`) still play random.
 
-A draw is not a win. `TRAINING_IMPROVE` and `TRAINING_UNBAN` (`TrainingGate { games, paired,
-vs_parent }`) are constants in `crates/engine/src/config.rs` next to `AI_GATE` (CLAUDE.md rule 9;
-part 1 writes them). Without
+A draw is not a win. `TRAINING_GATE` (`TrainingGate { min_deals, max_deals, batch_deals, edge_h0,
+edge_h1, alpha, beta, variance_floor }`) is a constant in `crates/engine/src/config.rs` next to
+`AI_GATE` (CLAUDE.md rule 9; part 1 wrote its predecessors, `TRAINING_IMPROVE` and `TRAINING_UNBAN`). Without
 `--dry-run` or `--verify`, a pass writes `crates/ai/generation.json` and appends the same object to
 `training/history/<lane>.jsonl`:
 

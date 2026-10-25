@@ -47,9 +47,13 @@ it (one run at a time). Each run:
    again to read better (`improve.md`, How you measure). It goes on only when `edgeLow` is above zero.
 5. **Gates** on `main` as it is now, with `training/ml/learn-promote.sh`: the network goes onto
    `origin/main` as fetched (with that `main`'s AI built again as the parent, and the AI's tests run
-   again with the network when `main` moved since the screen), then `promote --lane learn`, the improve
-   lane's bar (`TRAINING_LEARN`, 220 of 400 paired games) on the lane's own hold-out deals,
-   `learn:<tree>:<d>` (R1012000, R850001), and the practice-claim fixture recorded again by the new AI.
+   again with the network when `main` moved since the screen), then `promote --lane learn`, every
+   lane's gate (`TRAINING_GATE`, R1679000) on the lane's own hold-out deals, `learn:<tree>:<d>`
+   (R1012000, R850001), and the practice-claim fixture recorded again by the new AI. The gate is a
+   sequential test: it plays deals 100 at a time, each twice with the seats swapped, and stops as soon
+   as the evidence is clear, a pass when the candidate looks a 53% AI (an edge of +0.06, about +21 Elo)
+   and a fail when it looks no stronger than its parent, each wrong about 5% of the time; a test still
+   undecided at 1,000 deals fails. It plays about 800 games, 2,000 at most: under an hour on the PC.
    A gate that does not pass ends the run.
 6. **Delivers** a pass as `AI gen <N> (learn): the learned evaluation, retrained on <games> games`: the
    weights, the switch, `crates/ai/generation.json`, a line of `training/history/learn.jsonl` and the
@@ -106,7 +110,8 @@ this repository alone, and save it as the repository secret `LEARN_LANE_TOKEN` (
 and variables → Actions). A pull request opened with a run's own token would start no CI. Without
 the secret, or once it has expired, a passing run fails in red at its deliver step and stops at its
 artifact (`promotion.patch`), which a person can push. A fine-grained token expires on the date it was
-given: renew it before then.
+given: renew it before then. The shadow-ban sweep that follows each promotion
+(`.github/workflows/sweep.yml`, R1678000) opens its pull request with the same token.
 
 To run it now: `gh workflow run learn.yml` (`-f games=… -f shards=… -f screen=800`). `-f
 export_run=<run id>` plays no export and retrains on that earlier run's, kept 30 days: a change to

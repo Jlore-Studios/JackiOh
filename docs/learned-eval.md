@@ -415,7 +415,9 @@ before any shipping work (part 6):
    cost after 2026-10-16.
 3. **The tutorial (D9).** Only if the lesson tests reject the network: whether the tutorial may keep
    the hand eval, which changes R290.
-4. **The bars.** #466 leaves them to a person. Since #850 they are 220 of 400 paired games, about a
-   55% true win rate, low enough that a learned evaluation's first real gain can pass.
+4. **The bars.** #466 leaves them to a person. Since #850 they were 220 of 400 paired games, about a
+   55% true win rate, low enough that a learned evaluation's first real gain can pass. Since #1679
+   every lane's gate is a sequential test on paired deals (R1679000), which banks a 53% gain about
+   nine times in ten.
 5. **Who builds the code parts** (#1006, #1009 to #1012): label one `bot:build` for the night bot
    (`difficulty:hard`, so Opus only), or run it in a session a person watches. None is queued.
