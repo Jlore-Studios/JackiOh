@@ -23,6 +23,7 @@ import type { PlayerId } from "@jackioh/shared";
 import {
   resolveCosmetic,
   useCosmetics,
+  useOwnsAccountCosmetic,
   wornDeckCosmetics,
   type CardCosmetics,
   type CosmeticId,
@@ -92,18 +93,20 @@ export function useTheirLoadout(owner: PlayerId | null | undefined): SeatLoadout
 
 /**
  * R1297000, R1834004: the deck slots `seat`'s half wears: the wearer's the deck's picks, else the
- * account's, else the defaults; every other seat its loadout's (`theirLoadout`), else the defaults.
- * A null seat (a back that names none) wears the defaults.
+ * account's, else the defaults, each one `owns` refuses (one the viewer does not own, R1833000) the
+ * default; every other seat its loadout's (`theirLoadout`), which the server judged (R1834001), else
+ * the defaults. A null seat (a back that names none) wears the defaults.
  */
 export function seatDeckCosmetics(
   seat: PlayerId | null,
   wear: Wear,
   account: CardCosmetics,
   showOpponents: boolean,
+  owns: (cosmeticId: string) => boolean = () => true,
 ): Record<DeckSlotKind, CosmeticId> {
   const own = seat !== null && seat === wear.seat;
   const loadout = own ? null : theirLoadout(seat, wear, showOpponents);
-  if (loadout === null) return wornDeckCosmetics(own, wear.deck, account);
+  if (loadout === null) return wornDeckCosmetics(own, wear.deck, account, owns);
   return {
     table: resolveCosmetic("table", loadout.seat.table),
     field: resolveCosmetic("field", loadout.seat.field),
@@ -111,9 +114,10 @@ export function seatDeckCosmetics(
   };
 }
 
-/** R1834004: `seatDeckCosmetics` on this board, under the viewer's own setting. Its hooks run on every call. */
+/** R1834004: `seatDeckCosmetics` on this board, under the viewer's own setting and ownership. Its hooks run on every call. */
 export function useSeatDeckCosmetics(seat: PlayerId | null): Record<DeckSlotKind, CosmeticId> {
   const wear = useContext(WearContext);
   const account = useCosmetics();
-  return seatDeckCosmetics(seat, wear, account, useCardSettings().opponentCosmetics);
+  const owns = useOwnsAccountCosmetic();
+  return seatDeckCosmetics(seat, wear, account, useCardSettings().opponentCosmetics, owns);
 }

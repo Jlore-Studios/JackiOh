@@ -16,9 +16,10 @@
  * board wearing a backdrop hands its surface (`--board-surface`, board.css) to its `::before`, a
  * `z-index: -1` layer that comes first in tree order: the surface, then the backdrop over it, then
  * everything the board holds.
- * Each field's still version comes first, particles at their places; it moves only inside the
- * motion gate below, by transform and opacity alone. Under reduced motion (the media query, or
- * the settings' Reduce motion on <html>) every field holds its still version.
+ * Each field's and table's still version comes first, particles at their places; it moves only
+ * inside the one motion gate at the end, by transform and opacity alone: every field's particles,
+ * and the chase tables' (#1833) unit pads. Under reduced motion (the media query, or the settings'
+ * Reduce motion on <html>) every field and table holds its still version.
  *
  * R1834004: an online board's other half wears its seat's frozen loadout the same way: a second
  * backdrop behind the upper half (`data-their-backdrop` on the board, `data-half="theirs"` on the
@@ -105,58 +106,197 @@
   opacity: 0.85;
 }
 
-/* Embers rise and burn out, rain falls past the lanes, fireflies drift and blink. */
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-embers"] .board-backdrop-particle {
-    will-change: transform, opacity;
-    animation: backdrop-rise 7s ease-in infinite;
-    animation-delay: var(--delay);
-  }
+/* The new fields' washes reach every corner of the layer, never fading to nothing, for the same
+   painted-share gate. Each field varies its particles by `:nth-child()`: size, colour, pace. */
 
-  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-rain"] .board-backdrop-particle {
-    will-change: transform, opacity;
-    animation: backdrop-fall 1.8s linear infinite;
-    animation-delay: var(--delay);
-  }
-
-  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
-    will-change: transform, opacity;
-    animation: backdrop-drift 6s ease-in-out infinite alternate;
-    animation-delay: var(--delay);
-  }
+/* Snow: a cold haze, whiter near the ground, and flakes of three sizes. */
+.board-backdrop[data-backdrop="field-snow"] {
+  background: linear-gradient(180deg, rgb(170 196 236 / 12%), rgb(214 230 255 / 22%) 70%, rgb(236 244 255 / 30%));
 }
 
-@keyframes backdrop-rise {
-  from {
-    transform: translateY(0);
-    opacity: 0.9;
-  }
-  to {
-    transform: translateY(-90px);
-    opacity: 0;
-  }
+.board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f4f8ff;
+  box-shadow: 0 0 4px 1px rgb(244 248 255 / 55%);
+  opacity: 0.85;
 }
 
-@keyframes backdrop-fall {
-  from {
-    transform: translateY(-24px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(72px);
-    opacity: 0.7;
-  }
+.board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle:nth-child(3n) {
+  width: 3px;
+  height: 3px;
+  opacity: 0.6;
 }
 
-@keyframes backdrop-drift {
-  from {
-    transform: translate(0, 0);
-    opacity: 0.15;
-  }
-  to {
-    transform: translate(18px, -14px);
-    opacity: 1;
-  }
+.board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle:nth-child(3n + 1) {
+  width: 7px;
+  height: 7px;
+}
+
+/* Cherry blossoms: a pink light from above and petals, pale and deep. */
+.board-backdrop[data-backdrop="field-cherry-blossoms"] {
+  background:
+    radial-gradient(80% 70% at 15% 0%, rgb(255 200 225 / 18%), transparent 70%),
+    linear-gradient(180deg, rgb(255 170 205 / 12%), rgb(255 150 190 / 24%));
+}
+
+.board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle {
+  width: 9px;
+  height: 6px;
+  border-radius: 80% 0;
+  background: linear-gradient(135deg, #ffe0ec, #f78fb3);
+  opacity: 0.9;
+}
+
+.board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle:nth-child(2n) {
+  width: 7px;
+  height: 5px;
+  background: linear-gradient(135deg, #fff2f7, #f4a6c4);
+}
+
+.board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle:nth-child(5n) {
+  width: 11px;
+  height: 7px;
+  background: linear-gradient(135deg, #ffc2d8, #e0668f);
+}
+
+/* Autumn leaves: an amber light and leaves in four colours of the season. */
+.board-backdrop[data-backdrop="field-autumn-leaves"] {
+  background:
+    radial-gradient(90% 80% at 80% 0%, rgb(255 170 60 / 14%), transparent 70%),
+    linear-gradient(180deg, rgb(150 80 30 / 14%), rgb(200 100 30 / 26%));
+}
+
+.board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle {
+  width: 10px;
+  height: 10px;
+  border-radius: 0 100%;
+  background: linear-gradient(135deg, #f0a040, #c4521f);
+  opacity: 0.9;
+}
+
+.board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle:nth-child(4n + 1) {
+  background: linear-gradient(135deg, #e86a3a, #9e2f16);
+}
+
+.board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle:nth-child(4n + 2) {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #f2cf5a, #c08a22);
+}
+
+.board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle:nth-child(4n + 3) {
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, #b8632e, #6e3416);
+}
+
+/* Aurora: a sky of green, blue and violet, and tall streaks in the upper part of it, which shimmer
+   from their tops. */
+.board-backdrop[data-backdrop="field-aurora"] {
+  background:
+    radial-gradient(90% 60% at 30% 0%, rgb(60 255 170 / 16%), transparent 70%),
+    linear-gradient(180deg, rgb(40 210 150 / 20%), rgb(40 120 200 / 14%) 50%, rgb(120 70 210 / 22%));
+}
+
+.board-backdrop[data-backdrop="field-aurora"] .board-backdrop-particle {
+  top: calc(var(--y) * 0.45);
+  width: 16px;
+  height: 140px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, transparent, rgb(90 255 190 / 50%) 35%, rgb(80 200 255 / 26%) 70%, transparent);
+  transform-origin: 50% 0;
+  opacity: 0.6;
+}
+
+.board-backdrop[data-backdrop="field-aurora"] .board-backdrop-particle:nth-child(3n) {
+  width: 22px;
+  height: 170px;
+  background: linear-gradient(180deg, transparent, rgb(150 110 255 / 42%) 40%, rgb(90 255 190 / 22%) 75%, transparent);
+}
+
+.board-backdrop[data-backdrop="field-aurora"] .board-backdrop-particle:nth-child(3n + 1) {
+  width: 10px;
+  height: 110px;
+  background: linear-gradient(180deg, transparent, rgb(120 255 220 / 55%) 30%, transparent);
+}
+
+/* Lightning storm: storm cloud, slanting rain, and three bolts, each in a flash of its own light. */
+.board-backdrop[data-backdrop="field-lightning-storm"] {
+  background:
+    radial-gradient(90% 55% at 60% 0%, rgb(160 180 235 / 32%), transparent 72%),
+    linear-gradient(180deg, rgb(70 86 132 / 46%), rgb(28 34 64 / 54%));
+}
+
+.board-backdrop[data-backdrop="field-lightning-storm"] .board-backdrop-particle {
+  width: 1px;
+  height: 18px;
+  background: linear-gradient(180deg, transparent, #b8c8ec);
+  opacity: 0.65;
+  rotate: 12deg;
+}
+
+.board-backdrop[data-backdrop="field-lightning-storm"] .board-backdrop-particle:nth-child(6n + 2) {
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(closest-side, rgb(180 206 255 / 38%), transparent);
+  opacity: 0.8;
+  rotate: none;
+  translate: -50% -20%;
+}
+
+.board-backdrop[data-backdrop="field-lightning-storm"] .board-backdrop-particle:nth-child(6n + 2)::before {
+  content: "";
+  position: absolute;
+  top: 6%;
+  left: 43%;
+  width: 16px;
+  height: 72px;
+  background: linear-gradient(180deg, #ffffff, #cfe0ff);
+  clip-path: polygon(40% 0, 78% 0, 54% 38%, 82% 38%, 20% 100%, 40% 52%, 14% 52%);
+}
+
+/* Cosmic drift: violet and blue nebulae, stars of three sizes and one small world, each circling a
+   point of its own. */
+.board-backdrop[data-backdrop="field-cosmic-drift"] {
+  background:
+    radial-gradient(70% 90% at 30% 70%, rgb(156 84 240 / 46%), transparent 72%),
+    radial-gradient(60% 80% at 80% 30%, rgb(50 124 244 / 38%), transparent 72%),
+    linear-gradient(180deg, rgb(38 26 100 / 38%), rgb(14 8 50 / 50%));
+}
+
+.board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px 1px rgb(200 210 255 / 70%);
+  transform-origin: -40px 18px;
+  opacity: 0.9;
+}
+
+.board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle:nth-child(3n + 1) {
+  width: 2px;
+  height: 2px;
+  background: #cfe0ff;
+  transform-origin: 26px 12px;
+}
+
+.board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle:nth-child(3n) {
+  width: 5px;
+  height: 5px;
+  background: #ffe6fa;
+  box-shadow: 0 0 10px 2px rgb(255 190 240 / 60%);
+  transform-origin: 64px -26px;
+}
+
+.board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle:nth-child(2) {
+  width: 22px;
+  height: 22px;
+  background: radial-gradient(circle at 35% 35%, #d8c2ff, #6a3fc8 55%, #2a1260);
+  box-shadow: 0 0 14px 3px rgb(150 110 255 / 45%);
+  transform-origin: 90px 40px;
 }
 
 /* ------------------------------------------------------------------------------ tables --- */
@@ -229,6 +369,136 @@
     linear-gradient(180deg, #0b1230, #050920);
 }
 
+/* Marble: a pale stone veined in grey, its pads and lines in dark ink to read on it. */
+.field[data-table="table-marble"],
+.field[data-their-table="table-marble"] .zone[data-side="opponent"] {
+  --table-line: rgb(60 58 66 / 32%);
+  --table-lane: rgb(70 66 76 / 60%);
+  --table-zone: rgb(30 28 34 / 16%);
+  --table-slot: rgb(24 22 28 / 42%);
+  --table-mark: rgb(60 56 66 / 38%);
+}
+
+.field[data-table="table-marble"]::before,
+.field[data-their-table="table-marble"] > .field-their-mat {
+  background:
+    linear-gradient(180deg, transparent 45%, rgb(0 0 0 / 22%)),
+    linear-gradient(118deg, transparent 31%, rgb(92 88 96 / 38%) 31.2%, transparent 31.6%),
+    linear-gradient(104deg, transparent 52%, rgb(120 112 120 / 30%) 52.15%, transparent 52.7%),
+    linear-gradient(141deg, transparent 66%, rgb(84 80 90 / 32%) 66.1%, transparent 66.4%),
+    radial-gradient(140% 90% at 10% 130%, transparent 60%, rgb(110 104 112 / 30%) 60.3%, transparent 60.9%),
+    radial-gradient(120% 110% at 95% -30%, transparent 64%, rgb(120 114 124 / 26%) 64.2%, transparent 64.8%),
+    radial-gradient(60% 80% at 20% 30%, rgb(255 255 255 / 30%), transparent 70%),
+    radial-gradient(50% 70% at 78% 70%, rgb(200 196 204 / 35%), transparent 70%),
+    linear-gradient(160deg, #d8d5cf, #bdb8b0 45%, #cfcbc4);
+}
+
+/* Chessboard: ivory and walnut squares, shaded toward the viewer. */
+.field[data-table="table-chessboard"],
+.field[data-their-table="table-chessboard"] .zone[data-side="opponent"] {
+  --table-line: rgb(20 14 10 / 45%);
+  --table-lane: rgb(240 226 196 / 70%);
+  --table-zone: rgb(16 10 6 / 30%);
+  --table-slot: rgb(16 10 6 / 52%);
+  --table-mark: rgb(240 226 196 / 32%);
+}
+
+.field[data-table="table-chessboard"]::before,
+.field[data-their-table="table-chessboard"] > .field-their-mat {
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 12%), rgb(0 0 0 / 32%)),
+    conic-gradient(#cdb88f 0 25%, #3d2a1c 0 50%, #cdb88f 0 75%, #3d2a1c 0) 0 0 / 64px 64px,
+    #3d2a1c;
+}
+
+/* Desert sand: dunes rippled by the wind, a warm light on their crests. */
+.field[data-table="table-desert-sand"],
+.field[data-their-table="table-desert-sand"] .zone[data-side="opponent"] {
+  --table-line: rgb(110 70 30 / 35%);
+  --table-lane: rgb(255 236 196 / 65%);
+  --table-zone: rgb(255 230 180 / 12%);
+  --table-slot: rgb(90 54 20 / 35%);
+  --table-mark: rgb(255 240 210 / 36%);
+}
+
+.field[data-table="table-desert-sand"]::before,
+.field[data-their-table="table-desert-sand"] > .field-their-mat {
+  background:
+    linear-gradient(180deg, transparent 40%, rgb(80 40 10 / 25%)),
+    repeating-radial-gradient(160% 60% at 30% 140%, transparent 0 18px, rgb(140 90 40 / 18%) 18px 20px, transparent 20px 34px),
+    repeating-radial-gradient(140% 70% at 85% -40%, transparent 0 22px, rgb(255 230 180 / 14%) 22px 24px, transparent 24px 40px),
+    radial-gradient(80% 90% at 60% 30%, #e6bf82, #c9955a 60%, #a8723f);
+}
+
+/* Obsidian slab: black volcanic glass, two reflections across it and a violet depth; its pads glint
+   in the motion gate. */
+.field[data-table="table-obsidian-slab"],
+.field[data-their-table="table-obsidian-slab"] .zone[data-side="opponent"] {
+  --table-line: rgb(170 150 220 / 22%);
+  --table-lane: rgb(200 190 255 / 60%);
+  --table-zone: rgb(255 255 255 / 4%);
+  --table-slot: rgb(0 0 0 / 45%);
+  --table-mark: rgb(214 204 255 / 45%);
+}
+
+.field[data-table="table-obsidian-slab"]::before,
+.field[data-their-table="table-obsidian-slab"] > .field-their-mat {
+  background:
+    linear-gradient(115deg, transparent 22%, rgb(255 255 255 / 9%) 30%, transparent 38%, transparent 62%, rgb(255 255 255 / 6%) 68%, transparent 74%),
+    radial-gradient(70% 90% at 50% 0%, rgb(120 90 200 / 18%), transparent 70%),
+    linear-gradient(170deg, #1b1724, #0a0910 55%, #15121c);
+}
+
+/* Ancient map: parchment, its edge burnt, with islands, a graticule and a compass rose whose rhumb
+   lines cross the sea; its pads pulse in the motion gate. */
+.field[data-table="table-ancient-map"],
+.field[data-their-table="table-ancient-map"] .zone[data-side="opponent"] {
+  --table-line: rgb(90 56 24 / 40%);
+  --table-lane: rgb(120 62 20 / 70%);
+  --table-zone: rgb(120 80 30 / 10%);
+  --table-slot: rgb(90 56 24 / 28%);
+  --table-mark: rgb(110 64 24 / 48%);
+}
+
+.field[data-table="table-ancient-map"]::before,
+.field[data-their-table="table-ancient-map"] > .field-their-mat {
+  background:
+    radial-gradient(130% 110% at 50% 50%, transparent 55%, rgb(70 40 14 / 45%)),
+    radial-gradient(circle at 86% 58%, rgb(110 60 22 / 85%) 0 3px, transparent 3.5px 16px, rgb(110 60 22 / 60%) 16px 17.5px, transparent 18.5px 30px, rgb(110 60 22 / 45%) 30px 31px, transparent 32px),
+    conic-gradient(from -4deg, rgb(110 60 22 / 80%) 0 8deg, transparent 8deg 90deg, rgb(110 60 22 / 80%) 90deg 98deg, transparent 98deg 180deg, rgb(110 60 22 / 80%) 180deg 188deg, transparent 188deg 270deg, rgb(110 60 22 / 80%) 270deg 278deg, transparent 278deg) 86% 58% / 60px 60px no-repeat,
+    repeating-conic-gradient(from 0deg at 86% 58%, rgb(110 60 22 / 22%) 0 0.4deg, transparent 0.4deg 22.5deg),
+    radial-gradient(ellipse 7% 20% at 22% 64%, rgb(132 88 40 / 72%) 0 90%, rgb(92 50 16 / 75%) 91% 96%, transparent 98%),
+    radial-gradient(ellipse 11% 26% at 14% 42%, rgb(132 88 40 / 72%) 0 91%, rgb(92 50 16 / 75%) 92% 97%, transparent 99%),
+    radial-gradient(ellipse 6% 14% at 50% 84%, rgb(132 88 40 / 66%) 0 89%, rgb(92 50 16 / 70%) 90% 95%, transparent 97%),
+    radial-gradient(ellipse 4% 9% at 56% 72%, rgb(132 88 40 / 66%) 0 88%, rgb(92 50 16 / 70%) 89% 94%, transparent 96%),
+    linear-gradient(rgb(110 70 30 / 12%) 1px, transparent 1px) 0 0 / 100% 48px,
+    linear-gradient(90deg, rgb(110 70 30 / 12%) 1px, transparent 1px) 0 0 / 64px 100%,
+    linear-gradient(165deg, #e2c893, #d0ad6e 50%, #bf975a);
+}
+
+/* Astral: deep space, stars of three sizes, two nebulae and a band of the galaxy; its pads twinkle
+   in the motion gate. */
+.field[data-table="table-astral"],
+.field[data-their-table="table-astral"] .zone[data-side="opponent"] {
+  --table-line: rgb(150 170 255 / 25%);
+  --table-lane: rgb(190 200 255 / 70%);
+  --table-zone: rgb(120 140 255 / 6%);
+  --table-slot: rgb(4 4 20 / 55%);
+  --table-mark: rgb(206 214 255 / 48%);
+}
+
+.field[data-table="table-astral"]::before,
+.field[data-their-table="table-astral"] > .field-their-mat {
+  background:
+    radial-gradient(circle, rgb(255 255 255 / 90%) 0 1px, transparent 1.6px) 0 0 / 53px 41px,
+    radial-gradient(circle, rgb(200 214 255 / 70%) 0 0.8px, transparent 1.3px) 17px 23px / 37px 29px,
+    radial-gradient(circle, rgb(255 236 250 / 85%) 0 1.4px, transparent 2.2px) 31px 7px / 97px 71px,
+    linear-gradient(160deg, transparent 35%, rgb(180 170 255 / 10%) 45%, rgb(255 255 255 / 6%) 50%, transparent 60%),
+    radial-gradient(50% 80% at 25% 60%, rgb(120 60 200 / 30%), transparent 70%),
+    radial-gradient(45% 70% at 75% 35%, rgb(40 120 220 / 26%), transparent 70%),
+    linear-gradient(180deg, #0c0a26, #050414);
+}
+
 /* The viewer's zones, and the other seat's on its own mat: the line between the sides (on the edge of
    each side's unit row that faces it), the unit pads and the backrow slots. */
 .field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow]),
@@ -258,4 +528,334 @@
 .field[data-table] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow])::before,
 .field[data-their-table] .zone[data-side="opponent"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
   background: radial-gradient(closest-side, var(--table-mark), transparent);
+}
+
+/* ----------------------------------------------------------------------------- motion --- */
+
+/* The one gate. Embers rise and burn out, rain falls past the lanes, fireflies drift and blink;
+   snow falls and sways, petals and leaves tumble down, the aurora's streaks stretch and shimmer,
+   the storm's rain slants down its own line while its bolts strike in steps, and the cosmos'
+   stars and world circle. A negative delay starts each new field's particle part-way through its
+   loop, so the field is alive at once. The chase tables' empty unit pads glint, pulse or twinkle,
+   lane by lane; a pad mid-animation (`data-animating`: a summon's landing) keeps its own. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-embers"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-rise 7s ease-in infinite;
+    animation-delay: var(--delay);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-rain"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-fall 1.8s linear infinite;
+    animation-delay: var(--delay);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-drift 6s ease-in-out infinite alternate;
+    animation-delay: var(--delay);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-snowfall 10s linear infinite;
+    animation-delay: calc(var(--delay) * -1);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle:nth-child(3n) {
+    animation-duration: 14s;
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle:nth-child(3n + 1) {
+    animation-duration: 7.5s;
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-petal 9s ease-in-out infinite;
+    animation-delay: calc(var(--delay) * -1);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle:nth-child(2n) {
+    animation-duration: 11s;
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-leaf 8s ease-in-out infinite;
+    animation-delay: calc(var(--delay) * -1);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle:nth-child(3n) {
+    animation-duration: 10.5s;
+    animation-direction: reverse;
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-aurora"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-aurora 6s ease-in-out infinite alternate;
+    animation-delay: calc(var(--delay) * -1);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-aurora"] .board-backdrop-particle:nth-child(2n) {
+    animation-duration: 8.5s;
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-lightning-storm"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-fall 1.1s linear infinite;
+    animation-delay: calc(var(--delay) * -1);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-lightning-storm"] .board-backdrop-particle:nth-child(6n + 2) {
+    will-change: opacity;
+    animation: backdrop-bolt 6.4s steps(1, end) infinite;
+    animation-delay: calc(var(--delay) * -1.3);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle {
+    will-change: transform, opacity;
+    animation: backdrop-orbit 36s linear infinite;
+    animation-delay: calc(var(--delay) * -3);
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle:nth-child(3n + 1) {
+    animation-duration: 24s;
+    animation-direction: reverse;
+  }
+
+  :root:not([data-reduce-motion="true"]) .board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle:nth-child(3n) {
+    animation-duration: 52s;
+  }
+
+  :root:not([data-reduce-motion="true"]) .field[data-table="table-obsidian-slab"] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before,
+  :root:not([data-reduce-motion="true"]) .field[data-their-table="table-obsidian-slab"] .zone[data-side="opponent"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before {
+    will-change: opacity;
+    animation: table-glint 4.2s ease-in-out infinite;
+    animation-delay: var(--pad-delay, 0s);
+  }
+
+  :root:not([data-reduce-motion="true"]) .field[data-table="table-ancient-map"] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before,
+  :root:not([data-reduce-motion="true"]) .field[data-their-table="table-ancient-map"] .zone[data-side="opponent"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before {
+    will-change: transform, opacity;
+    animation: table-pulse 3.2s ease-in-out infinite alternate;
+    animation-delay: var(--pad-delay, 0s);
+  }
+
+  :root:not([data-reduce-motion="true"]) .field[data-table="table-astral"] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before,
+  :root:not([data-reduce-motion="true"]) .field[data-their-table="table-astral"] .zone[data-side="opponent"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before {
+    will-change: opacity;
+    animation: table-twinkle 3.8s linear infinite;
+    animation-delay: var(--pad-delay, 0s);
+  }
+
+  /* The lanes' pads keep out of step; only the pad rules above read it. */
+  :root:not([data-reduce-motion="true"]) .field[data-table] .lane:nth-child(2n),
+  :root:not([data-reduce-motion="true"]) .field[data-their-table] .lane:nth-child(2n) {
+    --pad-delay: -1.1s;
+  }
+
+  :root:not([data-reduce-motion="true"]) .field[data-table] .lane:nth-child(3n),
+  :root:not([data-reduce-motion="true"]) .field[data-their-table] .lane:nth-child(3n) {
+    --pad-delay: -2.3s;
+  }
+}
+
+@keyframes backdrop-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(-90px);
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-fall {
+  from {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(72px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes backdrop-drift {
+  from {
+    transform: translate(0, 0);
+    opacity: 0.15;
+  }
+  to {
+    transform: translate(18px, -14px);
+    opacity: 1;
+  }
+}
+
+@keyframes backdrop-snowfall {
+  0% {
+    transform: translate(0, -40px);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(14px, 50px);
+  }
+  88% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-8px, 140px);
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-petal {
+  0% {
+    transform: translate(0, -30px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate(26px, 60px) rotate(170deg);
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(44px, 150px) rotate(330deg);
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-leaf {
+  0% {
+    transform: translate(0, -30px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  30% {
+    transform: translate(-16px, 30px) rotate(90deg);
+  }
+  60% {
+    transform: translate(12px, 80px) rotate(220deg);
+  }
+  90% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-6px, 150px) rotate(380deg);
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-aurora {
+  0% {
+    transform: translateX(0) scaleY(0.7);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translateX(10px) scaleY(1.15);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(-6px) scaleY(0.85);
+    opacity: 0.4;
+  }
+}
+
+/* Stepped, so each flash is a hard cut: dark, a strike, a flicker, a second strike, dark. */
+@keyframes backdrop-bolt {
+  0%,
+  58% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.25;
+  }
+  64% {
+    opacity: 0.95;
+  }
+  70%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes backdrop-orbit {
+  0% {
+    transform: rotate(0deg);
+    opacity: 0.55;
+  }
+  25% {
+    opacity: 1;
+  }
+  50% {
+    transform: rotate(180deg);
+    opacity: 0.6;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg);
+    opacity: 0.55;
+  }
+}
+
+@keyframes table-glint {
+  0%,
+  62%,
+  90%,
+  100% {
+    opacity: 0.55;
+  }
+  76% {
+    opacity: 1;
+  }
+}
+
+@keyframes table-pulse {
+  from {
+    transform: scale(0.94);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+}
+
+@keyframes table-twinkle {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  14% {
+    opacity: 1;
+  }
+  26% {
+    opacity: 0.6;
+  }
+  48% {
+    opacity: 0.95;
+  }
+  62% {
+    opacity: 0.45;
+  }
+  80% {
+    opacity: 0.9;
+  }
 }

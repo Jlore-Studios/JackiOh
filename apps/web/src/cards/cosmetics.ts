@@ -11,6 +11,13 @@
 // account's, else the kind's default (`wornDeckCosmetics`), and an id this client does not know
 // draws as the default.
 //
+// R1833000: the account's playmats, backdrops and card backs are no longer all starters, so a pick
+// of one is worn only where the viewer owns it (`ownsAccountCosmetic`: a default or a starter counts,
+// and so does a row of `GET /api/cosmetics`' account list), or where every cosmetic counts as owned
+// (practice, hotseat, R1310004's builds: no `AccountCosmeticsOwned` above it). A stored pick the
+// account does not own, one synced from another device say, draws as its kind's default, and the
+// account-wide foil, finish and border picks are worn on a card only where the viewer owns them there.
+//
 // The picks never reach the engine, an action, `PlayerView` or the log, and a face wears them only
 // where the board says it is the viewer's own card in a game (`worn`, game/wearer.ts). R1834004: an
 // opponent's side, and every side of a watched or replayed online game, wears instead the loadout
@@ -35,9 +42,20 @@
 // An id this client does not know (one a newer client wrote to the account) is kept in the store,
 // so this device never overwrites it, and drawn as its kind's default, never an error. A cosmetic
 // foil moves only while one of COSMETIC_FOIL_ANIMATED_MAX slots is the face's; the others wear its
-// still version, as every face does under reduced motion (cosmetics.css).
+// still version, as every face does under reduced motion (cosmetics.css). R1833000: so does a moving
+// finish or border (`MOVING_FINISHES_AND_BORDERS`), which shares the foil's slot.
 
-import { createContext, useCallback, useContext, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 
 import { COSMETIC_ID_MAX_LENGTH, COSMETIC_KINDS, COSMETICS } from "../wire/generated/cosmetics.ts";
 import { COSMETIC_FOIL_ANIMATED_MAX } from "./constants.ts";
@@ -426,7 +444,9 @@ export function wornCosmetics(
   }
   const pickOf = (kind: CardSlotKind): string => {
     const own = card[kind];
-    return own !== undefined && owns(own) ? own : picks[kind];
+    if (own !== undefined && owns(own)) return own;
+    // R1833000: the account's pick too is worn only where it is owned on this card.
+    return owns(picks[kind]) ? picks[kind] : DEFAULT_CARD_COSMETICS[kind];
   };
   return {
     foil: foilFor(face, true) === "none" ? resolveCosmetic("foil", pickOf("foil")) : DEFAULT_CARD_COSMETICS.foil,
@@ -489,30 +509,68 @@ export function deckCosmeticPatch(kind: DeckSlotKind, id: string | null): DeckCo
 
 /**
  * `kind`'s id to draw: the deck's pick when it has one (even an unknown id, which then draws as
- * the default: the deck's word is final), else the account's, else the default.
+ * the default: the deck's word is final), else the account's, else the default. R1833000: a pick
+ * `owns` refuses (one the account does not own) draws as the default too.
  */
 export function resolveDeckCosmetic(
   kind: DeckSlotKind,
   deck: DeckCosmetics | null | undefined,
   account: CardCosmetics,
+  owns: (cosmeticId: string) => boolean = () => true,
 ): CosmeticId {
-  return resolveCosmetic(kind, deck?.[kind] ?? account[kind]);
+  const id = resolveCosmetic(kind, deck?.[kind] ?? account[kind]);
+  return owns(id) ? id : DEFAULT_CARD_COSMETICS[kind];
 }
 
-/** The deck slots a side wears: the defaults when `worn` is false (a side with no loadout to wear, game/wearer.ts). */
+/** The deck slots a side wears: the defaults when `worn` is false (a side with no loadout to wear, game/wearer.ts), and each pick `owns` refuses. */
 export function wornDeckCosmetics(
   worn: boolean,
   deck: DeckCosmetics | null | undefined,
   account: CardCosmetics,
+  owns: (cosmeticId: string) => boolean = () => true,
 ): Record<DeckSlotKind, CosmeticId> {
   if (!worn) {
     return { table: DEFAULT_CARD_COSMETICS.table, field: DEFAULT_CARD_COSMETICS.field, cardBack: DEFAULT_CARD_COSMETICS.cardBack };
   }
   return {
-    table: resolveDeckCosmetic("table", deck, account),
-    field: resolveDeckCosmetic("field", deck, account),
-    cardBack: resolveDeckCosmetic("cardBack", deck, account),
+    table: resolveDeckCosmetic("table", deck, account, owns),
+    field: resolveDeckCosmetic("field", deck, account, owns),
+    cardBack: resolveDeckCosmetic("cardBack", deck, account, owns),
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1833000: the account cosmetics the viewer owns. While ownership decides (`FULL_ART_GATED`),
+// ownedFullArt.ts mounts `AccountCosmeticsOwned` over every gated screen from `GET /api/cosmetics`'
+// account list; with none above it (practice, hotseat, R1310004's builds) every one counts as owned.
+// ---------------------------------------------------------------------------------------------
+
+/** What the pickers and sides below an `AccountCosmeticsOwned` own: `"every"`, or the account cosmetic ids its ledger lists. */
+export type AccountOwnership = "every" | ReadonlySet<string>;
+
+const AccountOwnershipContext = createContext<AccountOwnership>("every");
+
+/** R1833000: the pickers and sides below it own the account cosmetics `owned` holds; `"every"` with none above it. */
+export function AccountCosmeticsOwned({ owned, children }: { owned: AccountOwnership; children?: ReactNode }): ReactElement {
+  return createElement(AccountOwnershipContext.Provider, { value: owned }, children);
+}
+
+/**
+ * Whether the viewer owns the account cosmetic `id`: every one does where `owned` is `"every"`; else
+ * a default or a starter does (every account owns them, §14.2), and so does one `owned` lists. An id
+ * the registry does not know never does.
+ */
+export function ownsAccountCosmetic(owned: AccountOwnership, id: string): boolean {
+  if (owned === "every") return true;
+  const found = COSMETICS.find((cosmetic) => cosmetic.id === id);
+  if (found === undefined) return false;
+  return found.default || found.starter || owned.has(id);
+}
+
+/** R1833000: whether the viewer owns an account cosmetic, as the `AccountCosmeticsOwned` above it says. */
+export function useOwnsAccountCosmetic(): (id: string) => boolean {
+  const owned = useContext(AccountOwnershipContext);
+  return useCallback((id) => ownsAccountCosmetic(owned, id), [owned]);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -553,6 +611,17 @@ function subscribeSlots(listener: () => void): () => void {
   };
 }
 
+/**
+ * R1833000: the finishes and borders that move (cosmetics.css), each taking a foil's slot: the
+ * Legendary and Mythic ones.
+ */
+export const MOVING_FINISHES_AND_BORDERS: ReadonlySet<string> = new Set([
+  "finish-obsidian",
+  "finish-starlit",
+  "border-filigree",
+  "border-celestial",
+]);
+
 /** Whether this face's foil may move now: it wants to, and holds one of the slots. */
 function useFoilSlot(wanted: boolean): boolean {
   const [token] = useState(() => Symbol("cosmetic-foil"));
@@ -584,8 +653,8 @@ export type CosmeticAttributes = {
  * card's own picks (R1655000) over the account's where the viewer owns them. R1834004: a face that
  * is not `worn` below a `TheirCopy` wears that seat's loadout, its card's picks over the seat's,
  * every one owned (the server checked, R1834001), under the same rarity rules. `animatedFoil` is the
- * card settings' switch, which stills a cosmetic foil as it does the rarity foil. Its hooks run on
- * every face, worn or not.
+ * card settings' switch, which stills a cosmetic foil as it does the rarity foil, and a moving finish
+ * or border with it (R1833000). Its hooks run on every face, worn or not.
  */
 export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
   const picks = useCosmetics();
@@ -597,9 +666,11 @@ export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFo
       ? wornCosmetics(face, theirs.seat, theirs.cards[face.defId])
       : wornCosmetics(face, worn ? picks : null, card, (id) => ownsCosmetic(owned, face.defId, id));
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
-  const moves = useFoilSlot(foiled && animatedFoil);
+  const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
+  const moves = useFoilSlot(animates && animatedFoil);
   return {
-    ...(foiled ? { "data-cosmetic-foil": wears.foil, "data-cosmetic-motion": moves ? "animated" : "static" } : {}),
+    ...(foiled ? { "data-cosmetic-foil": wears.foil } : {}),
+    ...(animates ? { "data-cosmetic-motion": moves ? "animated" : "static" } : {}),
     ...(wears.finish === DEFAULT_CARD_COSMETICS.finish ? {} : { "data-finish": wears.finish }),
     ...(wears.border === DEFAULT_CARD_COSMETICS.border ? {} : { "data-frame": wears.border }),
   };

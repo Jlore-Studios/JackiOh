@@ -248,12 +248,17 @@ impl Ctx {
 
 /// R1827000: `profile` owns `portrait` on its account, as a pack's drop would leave it.
 async fn own_portrait(app: &App, profile: &str, portrait: PortraitId) {
+    own_account_cosmetic(app, profile, &portrait_cosmetic_id(portrait)).await;
+}
+
+/// R1833000: `profile` owns the account cosmetic `id`, as a pack's drop would leave it.
+async fn own_account_cosmetic(app: &App, profile: &str, id: &str) {
     let mut tx = app.db.begin(Some(profile)).await.expect("a transaction");
     let granted = tx
         .economy_cosmetics_grant(&CosmeticGrant {
             profile_id: profile.to_string(),
             card_id: None,
-            cosmetic_id: portrait_cosmetic_id(portrait),
+            cosmetic_id: id.to_owned(),
             delta: 1,
             reason: EconomyReason::PackOpen,
             reference: None,
@@ -262,7 +267,7 @@ async fn own_portrait(app: &App, profile: &str, portrait: PortraitId) {
         })
         .await
         .expect("the grant");
-    assert!(granted, "{portrait} was already owned");
+    assert!(granted, "{id} was already owned");
     tx.commit().await.expect("the commit");
 }
 
@@ -970,9 +975,8 @@ mod the_deck_s_cosmetics_r1297000 {
     }
 
     /// R1834001: a slot's pick is also one the account owns, since a match shows it to the other
-    /// seat. Every deck kind shipped so far is a default or a starter, which every account owns with
-    /// no ledger row; the refusal of a non-starter the account lacks is `check_pick`'s own test, in
-    /// `src/cosmetics.rs`.
+    /// seat: a default or a starter needs no ledger row, and a non-starter the account lacks is
+    /// refused (R1833000's module below, which goes through the same `check_pick`).
     #[tokio::test(start_paused = true)]
     async fn r1834001_a_full_art_in_a_deck_slot_is_refused_and_a_starter_needs_no_ledger_row() {
         let ctx = setup().await;
@@ -1013,6 +1017,83 @@ mod the_deck_s_cosmetics_r1297000 {
                 assert!(row.get(key).is_none(), "an imported deck has no {key}: {row}");
             }
         }
+    }
+}
+
+/// R1833000: a saved deck's playmat, backdrop and card back are ones its account owns: a default, a
+/// starter, or one it holds a cosmetics ledger row for, on no card. #1833's are none of them starters.
+mod r1833000_a_deck_s_slots_are_ones_the_account_owns {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1833000_refuses_an_unowned_playmat_backdrop_or_card_back_and_writes_nothing() {
+        let ctx = setup().await;
+        for (key, id) in [
+            ("tableCosmetic", "table-marble"),
+            ("fieldCosmetic", "field-snow"),
+            ("cardBackCosmetic", "card-back-nebula"),
+        ] {
+            let (status, body) = ctx
+                .put_deck(deck_body(json!({ key: id })), &uuid(1), &ctx.token)
+                .await;
+            assert_eq!(status, 400, "{key}: {body}");
+            assert_eq!(*error_code(&body), json!("bad_request"), "{key}");
+            assert_eq!(
+                body["error"]["message"],
+                json!(format!("\"{key}\" is a cosmetic this account does not own")),
+                "{key}"
+            );
+            assert!(ctx.decks_table().await.is_empty(), "{key} wrote a deck");
+        }
+
+        // One another account owns is not this one's; one unowned pick refuses the whole save.
+        own_account_cosmetic(&ctx.app, OTHER, "table-astral").await;
+        let body = deck_body(json!({ "tableCosmetic": "table-astral", "fieldCosmetic": "field-rain" }));
+        let (status, _) = ctx.put_deck(body, &uuid(1), &ctx.token).await;
+        assert_eq!(status, 400);
+        assert!(ctx.decks_table().await.is_empty());
+        let (status, saved) = ctx
+            .put_deck(
+                deck_body(json!({ "tableCosmetic": "table-astral" })),
+                &uuid(2),
+                &ctx.other_token,
+            )
+            .await;
+        assert_eq!(status, 200, "{saved}");
+        assert_eq!(saved["deck"]["tableCosmetic"], json!("table-astral"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1833000_saves_the_defaults_the_starters_and_an_owned_one() {
+        let ctx = setup().await;
+        own_account_cosmetic(&ctx.app, PROFILE, "card-back-nebula").await;
+        for (index, picks) in [
+            json!({ "tableCosmetic": "table-tavern", "fieldCosmetic": "field-none", "cardBackCosmetic": "card-back-standard" }),
+            json!({ "tableCosmetic": "table-neon-grid", "fieldCosmetic": "field-embers", "cardBackCosmetic": "card-back-lacquer" }),
+            json!({ "tableCosmetic": "table-felt", "cardBackCosmetic": "card-back-nebula" }),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (status, saved) = ctx
+                .put_deck(deck_body(picks.clone()), &uuid(10 + index), &ctx.token)
+                .await;
+            assert_eq!(status, 200, "{picks}: {saved}");
+            for (key, id) in picks.as_object().expect("an object") {
+                assert_eq!(saved["deck"][key], *id, "{key}");
+            }
+        }
+        assert_eq!(ctx.decks_table().await.len(), 3);
+        // Owning Nebula owns no other new card back.
+        let (status, _) = ctx
+            .put_deck(
+                deck_body(json!({ "cardBackCosmetic": "card-back-clockwork" })),
+                &uuid(20),
+                &ctx.token,
+            )
+            .await;
+        assert_eq!(status, 400);
+        assert_eq!(ctx.decks_table().await.len(), 3);
     }
 }
 

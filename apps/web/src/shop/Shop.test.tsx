@@ -34,6 +34,7 @@ import {
   walletInfo,
 } from "./fixtures.ts";
 import {
+  REGISTRY,
   SHOP_FLY_MS,
   chaseCandidates,
   cosmeticSlotOutcome,
@@ -355,10 +356,10 @@ describe("#1309 the cosmetic packs", () => {
     expect(screen.queryByTestId(T.shardEmpty)).toBeNull();
     cleanup();
 
-    // Full, with every Legendary and Mythic already owned (the shipped registry's are all
-    // starters): the empty sentence, and still no choice.
+    // Full, with every Legendary and Mythic already owned (a registry whose chases are all
+    // starters, as the shipped one's were before R1833000): the empty sentence, and still no choice.
     cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
-    render(<CosmeticPacks token={TOKEN} />);
+    render(<CosmeticPacks token={TOKEN} registry={REGISTRY.filter((cosmetic) => !cosmetic.chase || cosmetic.starter)} />);
     expect(await screen.findByTestId(T.shardBar)).toHaveTextContent("20 / 20");
     expect(screen.queryByTestId(T.shardChoice)).toBeNull();
     expect(screen.getByTestId(T.shardEmpty)).toHaveTextContent("Nothing to buy yet");
@@ -474,6 +475,65 @@ describe("#1309 the cosmetic packs", () => {
     expect(outcome?.nextElementSibling).toBe(art);
     // Every other slot shows none.
     expect(screen.getByTestId(T.slot(1)).querySelector("[data-portrait-art]")).toBeNull();
+  });
+
+  it("R1833000 an opened cosmetic pack's new chase shows its name, rarity and look", async () => {
+    const opened = openedCosmeticPack();
+    cosmeticServer({
+      open: {
+        status: 200,
+        body: {
+          ...opened,
+          slots: [
+            {
+              rarity: "Mythic",
+              grant: { kind: "cosmetic", cosmeticId: "field-cosmic-drift", cosmeticRarity: "Mythic", cardId: null, cardGranted: false },
+            },
+            {
+              rarity: "Legendary",
+              grant: { kind: "cosmetic", cosmeticId: "border-filigree", cosmeticRarity: "Legendary", cardId: "core-004", cardGranted: false },
+            },
+            ...opened.slots.slice(2),
+          ],
+        },
+      },
+    });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    // A Mythic backdrop, on the account: a mini board on the default playmat, after the outcome's words.
+    const drift = screen.getByTestId(T.slot(0));
+    expect(drift).toHaveAttribute("data-rarity", "Mythic");
+    expect(drift).toHaveTextContent("New cosmetic: Cosmic drift");
+    expect(drift).not.toHaveTextContent("On ");
+    const look = drift.querySelector(".cosmetic-look");
+    expect(drift.querySelector(".pack-slot__outcome")?.nextElementSibling).toBe(look);
+    expect(look?.querySelector(".board-backdrop")).toHaveAttribute("data-backdrop", "field-cosmic-drift");
+    // A Legendary border, on its card's face.
+    const filigree = screen.getByTestId(T.slot(1));
+    expect(filigree).toHaveAttribute("data-rarity", "Legendary");
+    expect(filigree).toHaveTextContent("New cosmetic: Filigree");
+    expect(filigree.querySelector(".cosmetic-look .cf")).toHaveAttribute("data-frame", "border-filigree");
+    expect(filigree).toHaveTextContent("On ");
+  });
+
+  it("R1833000 a full Chase Shard bar offers the new chases with their names, rarities and looks", async () => {
+    cosmeticServer({ packs: { status: 200, body: cosmeticPacksFull() } });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.shardChoice);
+    // The shipped registry's chases the fixture account does not own, a per-card one for a card it owns.
+    const astral = screen.getByTestId(T.chasePick("table-astral")).closest(".token-row");
+    expect(astral).toHaveAttribute("data-rarity", "Mythic");
+    expect(astral).toHaveTextContent("Astral · Mythic · Chase");
+    expect(screen.getByTestId(T.chasePreview("table-astral")).querySelector(".collection-miniboard")).toHaveAttribute("data-table", "table-astral");
+    const molten = screen.getByTestId(T.chasePick("foil-molten-gold")).closest(".token-row");
+    expect(molten).toHaveTextContent("Molten gold · Legendary · Chase");
+    expect(screen.getByTestId(T.chasePreview("foil-molten-gold")).querySelector(".cf")).toHaveAttribute("data-cosmetic-foil", "foil-molten-gold");
+    expect(screen.getByTestId(T.chasePreview("card-back-nebula")).querySelector(".cf-back")).toHaveAttribute("data-card-back", "card-back-nebula");
+    // A starter chase is owned by every account already: not offered.
+    expect(screen.queryByTestId(T.chasePick("foil-cracked-ice"))).toBeNull();
   });
 
   it("R1579000 an opened cosmetic pack links to the Collection's cosmetics", async () => {

@@ -536,8 +536,12 @@ fn wear(fit: &CosmeticFit) -> Worn {
 
 /// The share of bots `fit` gives `cosmetic` in its slot, as `CosmeticFit` says: its listed share
 /// when the fit lists its kind (none when it lists the kind and not it), else the prior's split,
-/// `BOT_COSMETIC_PRIOR_DEFAULT_SHARE` to the default and the rest evenly among the starters.
+/// `BOT_COSMETIC_PRIOR_DEFAULT_SHARE` to the default and the rest evenly among the starters. `wear`
+/// draws from an empty wardrobe, so a non-starter (#1833's, R1833000) is worn at a share of none.
 fn slot_share(fit: &CosmeticFit, cosmetic: &Cosmetic) -> f64 {
+    if !cosmetic.default && !cosmetic.starter {
+        return 0.0;
+    }
     let registry = registry();
     let of_kind = |id: &str| {
         registry

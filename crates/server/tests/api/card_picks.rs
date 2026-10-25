@@ -189,7 +189,7 @@ async fn r1834001_refuses_another_kind_and_an_unowned_full_art() {
         // A full art the account does not own.
         (
             json!({ "cardId": CARD, "fullArt": true }),
-            "\"fullArt\" is not a cosmetic the account owns",
+            "\"fullArt\" is a cosmetic this account does not own",
         ),
     ] {
         assert_eq!(refusal(put(&app, TOKEN, body.clone()).await), message, "{body}");
@@ -223,6 +223,25 @@ async fn r1834001_refuses_another_kind_and_an_unowned_full_art() {
     assert_eq!(
         body["cards"][0],
         json!({ "cardId": PLAIN_CARD, "fullArt": false })
+    );
+
+    // R1833000's foils are no starters: one owned on another card is not owned on this one, and
+    // owned here it is taken.
+    own(&app, &profile, PLAIN_CARD, "foil-glitter").await;
+    let glitter = json!({ "cardId": CARD, "foil": "foil-glitter" });
+    assert_eq!(
+        refusal(put(&app, TOKEN, glitter.clone()).await),
+        "\"foil\" is a cosmetic this account does not own"
+    );
+    own(&app, &profile, CARD, "foil-glitter").await;
+    let (status, body) = put(&app, TOKEN, glitter).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body["cards"],
+        json!([
+            { "cardId": PLAIN_CARD, "fullArt": false },
+            { "cardId": CARD, "foil": "foil-glitter", "fullArt": true },
+        ])
     );
 }
 

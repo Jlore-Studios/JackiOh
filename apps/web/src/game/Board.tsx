@@ -68,7 +68,7 @@ import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
 import { WearerProvider, seatDeckCosmetics, useSeatDeckCosmetics, type Wear } from "./wearer.ts";
 import Backdrop from "./Backdrop.tsx";
-import { DEFAULT_CARD_COSMETICS, useCosmetics } from "../cards/cosmetics.ts";
+import { DEFAULT_CARD_COSMETICS, useCosmetics, useOwnsAccountCosmetic } from "../cards/cosmetics.ts";
 import { useCardSettings } from "../cards/settings.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7); table.css restyles
@@ -642,12 +642,14 @@ export default function Board({
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
   // R1297000: the playmat and backdrop the viewer's half wears; R1834004: and the other half, from its
-  // seat's loadout. A default adds no attribute and no element.
+  // seat's loadout. A default adds no attribute and no element. R1833000: an unowned pick of the
+  // viewer's own draws as the default.
   const wear: Wear = { seat: wearCosmetics ? view.viewer : null, deck: deckCosmetics, loadouts, viewer: view.viewer };
   const account = useCosmetics();
+  const owns = useOwnsAccountCosmetic();
   const { opponentCosmetics } = useCardSettings();
-  const slots = seatDeckCosmetics(view.you.player, wear, account, opponentCosmetics);
-  const theirSlots = seatDeckCosmetics(view.opponent.player, wear, account, opponentCosmetics);
+  const slots = seatDeckCosmetics(view.you.player, wear, account, opponentCosmetics, owns);
+  const theirSlots = seatDeckCosmetics(view.opponent.player, wear, account, opponentCosmetics, owns);
   const backdrop = slots.field === DEFAULT_CARD_COSMETICS.field ? undefined : slots.field;
   const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
   const theirBackdrop = theirSlots.field === DEFAULT_CARD_COSMETICS.field ? undefined : theirSlots.field;

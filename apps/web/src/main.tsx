@@ -78,7 +78,7 @@ import ConsentPrompt from "./auth/ConsentPrompt.tsx";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
 import { useCardPicksAccountSync } from "./cards/cardPicksSync.ts";
-import { ViewerFullArt } from "./cards/ownedFullArt.ts";
+import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
@@ -560,9 +560,13 @@ export function Gated({ allowPending = false, consentExempt = false, children }:
   }
 
   // R1313000: the screen's own copies print the full arts the account owns, once ownership decides;
-  // a pending account owns none and reads nothing.
+  // a pending account owns none and reads nothing. R1833000: and its pickers and the viewer's side
+  // offer and wear the account cosmetics it owns.
+  const ownershipToken = status === "active" ? account.token : null;
   return (
-    <ViewerFullArt token={status === "active" ? account.token : null}>{children({ token: account.token, me: account.me })}</ViewerFullArt>
+    <ViewerFullArt token={ownershipToken}>
+      <ViewerAccountCosmetics token={ownershipToken}>{children({ token: account.token, me: account.me })}</ViewerAccountCosmetics>
+    </ViewerFullArt>
   );
 }
 

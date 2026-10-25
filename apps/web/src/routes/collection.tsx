@@ -242,7 +242,7 @@ function CosmeticsSection({ token }: { token: string }): ReactElement {
               "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
             )}
           </p>
-          <AccountCosmeticTiles owned={owned.kind === "ready" ? owned.value : null} />
+          <AccountCosmeticTiles />
         </section>
         <section className="collection-section">
           <h3 className="account-heading">{t("Defaults for every card")}</h3>

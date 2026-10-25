@@ -183,14 +183,14 @@ describe("R1297000 the board's deck slots and the device's cosmetics", () => {
 
   it("R1297000 a deck's unknown pick draws the default, and the opponent's side is the default either way", () => {
     writeCosmetics({ table: TABLE, field: FIELD, cardBack: BACK });
-    const deck = deckCosmeticsOf({ tableCosmetic: "table-marble", fieldCosmetic: "field-snow", cardBackCosmetic: "card-back-gold" });
+    const deck = deckCosmeticsOf({ tableCosmetic: "table-unknown", fieldCosmetic: "field-unknown", cardBackCosmetic: "card-back-gold" });
     render(<Board view={fullBoardView()} wearCosmetics deckCosmetics={deck} />);
 
     expect(document.querySelector(".field")?.hasAttribute("data-table")).toBe(false);
     expect(document.querySelector(".board-backdrop")).toBeNull();
     expect(document.querySelector(".board")?.hasAttribute("data-backdrop")).toBe(false);
     expect(document.querySelectorAll("[data-card-back]")).toHaveLength(0);
-    expect(DEFAULT_CARD_COSMETICS.table).not.toBe("table-marble");
+    expect(DEFAULT_CARD_COSMETICS.table).not.toBe("table-unknown");
   });
 
   it("R1297000 the deck sheet's cards the viewer was never shown wear the viewer's card back", () => {
