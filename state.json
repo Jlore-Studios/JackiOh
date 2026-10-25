@@ -4,6 +4,14 @@
   },
   "halt": {},
   "halted": false,
+  "handled": {
+    "c:6397994671": {
+      "at": "2026-10-25T13:04:15Z",
+      "lines": [
+        "Reject"
+      ]
+    }
+  },
   "items": {
     "1803": {
       "action": "build",
