@@ -1651,11 +1651,8 @@
     "what": "revise #1945 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-25T22:08:52Z",
-    "notes": [
-      "delivered build #1849 on claude-3 (run 40235304436): interrupted",
-      "delivered build #1850 on claude-3 (run 40224990817): interrupted"
-    ],
+    "at": "2026-10-25T22:17:32Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -2262,7 +2259,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-25T22:08:52Z",
+  "loop_tick": "2026-10-25T22:17:32Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-25T20:07:06Z",
