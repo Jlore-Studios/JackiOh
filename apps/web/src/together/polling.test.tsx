@@ -1,8 +1,8 @@
 // #936 review (finding 8): how often the social screens ask the server again. The friends list is the
 // social layer's dearest read, so it is read again only every FRIENDS_POLL_MS (a heartbeat, the pace a
-// status changes at), and on a match screen only while the board rail's chat list is open; the unread
-// counts and the challenges every SOCIAL_POLL_MS; an open conversation keeps CHAT_POLL_MS
-// (`ChatPanel.test.tsx`).
+// status changes at), and on any other screen only while its friends panel is open (#1831); the unread
+// counts and the challenges every SOCIAL_POLL_MS, one read of each per tab however many screens show
+// them; an open conversation keeps CHAT_POLL_MS (`ChatPanel.test.tsx`).
 //
 // The server is a stubbed `fetch` (`test/stubServer.ts`) and time is vitest's fake clock.
 
@@ -16,8 +16,9 @@ import type { Friend } from "../net/social.ts";
 import { stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
-import { InMatchChat } from "./InMatchChat.tsx";
+import { FriendsButton } from "./FriendsButton.tsx";
 import { TogetherRoute } from "./TogetherRoute.tsx";
+import { friendsTestid } from "./testids.ts";
 
 const ANN: Friend = {
   profileId: "f-ann",
@@ -110,28 +111,50 @@ describe("#936 the social reads' cadences", () => {
     expect(reads(server).friends).toBe(first.friends + 1);
   });
 
-  it("the match board's chat toggle reads no friends list while closed, and reads it only while its list is open", async () => {
+  it("#1831 a friends button reads the friends list only while its panel is open", async () => {
     const server = serve();
-    render(<InMatchChat />);
+    render(
+      <>
+        <ChallengeToast />
+        <FriendsButton placement="game" />
+      </>,
+    );
     await settle();
     const closed = reads(server);
     expect(closed.unread).toBe(1);
+    expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
 
     await settle(FRIENDS_POLL_MS * 2);
     expect(reads(server).friends, "a board being played asks for no friends list").toBe(0);
     expect(reads(server).unread).toBe(closed.unread + Math.floor((FRIENDS_POLL_MS * 2) / SOCIAL_POLL_MS));
 
-    fireEvent.click(screen.getByRole("button", { name: /chat/i }));
+    fireEvent.click(screen.getByTestId(friendsTestid.button));
     await settle();
     expect(reads(server).friends).toBe(1);
     await settle(SOCIAL_POLL_MS);
-    expect(reads(server).friends, "the open list keeps the heartbeat's pace").toBe(1);
+    expect(reads(server).friends, "the open panel keeps the heartbeat's pace").toBe(1);
     await settle(FRIENDS_POLL_MS - SOCIAL_POLL_MS);
     expect(reads(server).friends).toBe(2);
 
-    fireEvent.click(screen.getByRole("button", { name: /chat/i }));
+    fireEvent.click(screen.getByTestId(friendsTestid.close));
+    expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
     await settle(FRIENDS_POLL_MS * 2);
     expect(reads(server).friends, "closed again, the list is not read").toBe(2);
+  });
+
+  it("#1831 the toast and Play together share one challenges and one unread read per SOCIAL_POLL_MS", async () => {
+    const server = serve();
+    render(
+      <>
+        <ChallengeToast />
+        <TogetherRoute />
+      </>,
+    );
+    await settle();
+    expect(reads(server)).toMatchObject({ challenges: 1, unread: 1 });
+
+    await settle(SOCIAL_POLL_MS);
+    expect(reads(server)).toMatchObject({ challenges: 2, unread: 2 });
   });
 
   it("the challenge toast reads the challenges every SOCIAL_POLL_MS, not at the chat's pace", async () => {

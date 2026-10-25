@@ -7,6 +7,7 @@ import LanguageButton from "../i18n/LanguageButton.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { SettingsButton } from "../settings/index.ts";
+import { FriendsButton } from "../together/FriendsButton.tsx";
 
 export const navTestid = {
   back: "nav-back",
@@ -64,6 +65,8 @@ export function BackLink({
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
       {showSettings && showWallet && onPress === undefined ? <JlorePill /> : null}
+      {/* #1831: friends are one press away on every signed-in screen, as the pill and settings are. */}
+      {showSettings && showWallet ? <FriendsButton placement="nav" /> : null}
       {showSettings ? <LanguageButton placement="nav" /> : null}
       {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>

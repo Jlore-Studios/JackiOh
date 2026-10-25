@@ -1477,6 +1477,12 @@
   min-width: 0;
 }
 
+/* The Friends button (together/FriendsButton.tsx, #1831), as the language button before it: a button
+   of the bar at its natural size. */
+.board .control-bar .friends-button--game {
+  flex: 0 0 auto;
+}
+
 /* Route controls, alerts and series information are hardware in the same rail as End turn, not
    page chrome above the table. Their source components retain their existing test ids and actions. */
 .board-rail,
@@ -2438,6 +2444,38 @@
     --card-h: clamp(44px, calc((100cqh - 312px - var(--board-rail-phone-h)) / 5.24), 90px);
   }
 
+  /* The Friends button (#1831) is one more 44px control. An online match's rail row, which has room,
+     holds it at its end (the rail gives up the width it takes); every other bar tightens to take it,
+     as the narrow phone's does below. */
+  .board .control-bar:has(> .board-rail) > .board-rail {
+    order: -2;
+    flex-basis: calc(100% - 50px);
+  }
+
+  .board .control-bar:has(> .board-rail) > .friends-button--game {
+    order: -1;
+  }
+
+  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) {
+    gap: 4px;
+  }
+
+  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) .control {
+    padding-inline: 6px;
+  }
+
+  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) [data-testid="settings-open-game"] {
+    padding-inline: 10px;
+  }
+
+  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) .control-offer-draw,
+  .board .control-bar:has(> .friends-button--game):not(:has(> .board-rail)) .control-concede {
+    flex-shrink: 1;
+    min-width: min-content;
+    line-height: 1.1;
+    white-space: normal;
+  }
+
   .board .control-bar .control {
     padding-inline: 10px;
     white-space: nowrap;
@@ -2535,6 +2573,13 @@
     min-width: min-content;
     line-height: 1.1;
     white-space: normal;
+  }
+
+  /* The dev hotseat's bar holds a seat's controls and nothing else, and has no room at this width for
+     the Friends button (#1831); the practice table's, which tightens to take it above, and every rail
+     (the button sits in its row) keep it. */
+  :not(.practice-table) > .game > .board > .control-bar:not(:has(> .board-rail)) > .friends-button--game {
+    display: none;
   }
 }
 
