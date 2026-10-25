@@ -7,7 +7,7 @@ itself, retrains the learned evaluation on those games, and gates the result aga
 (`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
 they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
 generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
-17 cards to 1, and fixed through ordinary issues (#1889).
+17 cards to 1 and #1889's to none, and fixed through ordinary issues.
 
 The lanes below improve JackiOh's AI (`crates/ai/`, SPEC §9.9), each gated by a fixed number of
 games against the AI on `main`, and nothing else: since generation 9 they play no games against
