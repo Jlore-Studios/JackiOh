@@ -87,7 +87,14 @@
       "taken_asks": []
     },
     "1849": {
+      "action": "plan",
       "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "claude-5",
+      "run_id": "pending:b5e0da7b-1792919798",
+      "started_at": "2026-10-25T09:17:20Z",
+      "stop_requested": false,
       "taken_asks": []
     },
     "1889": {
@@ -107,9 +114,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:16:27Z",
+    "at": "2026-10-25T09:17:20Z",
     "url": "",
-    "what": "plan #1847 on claude-4"
+    "what": "plan #1849 on claude-5"
   },
   "loop_deliveries": {
     "40175181653": {
