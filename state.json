@@ -13506,6 +13506,13 @@
     "1824": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T05:30:12Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "engine rules work in crates/engine/src across 15 read sites plus a new ruling; the hard line (engine rules) holds outright, so no doubt between medium and hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
