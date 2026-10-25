@@ -13899,11 +13899,11 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-6",
       "queued_at": "2026-10-25T05:18:18Z",
       "requested_by": "squishy-squooby",
-      "run_id": "40165883996",
-      "started_at": "2026-10-25T05:31:59Z",
+      "run_id": "pending:88bce644-1792917331",
+      "started_at": "2026-10-25T08:36:19Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -14438,9 +14438,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-25T08:27:24Z",
+    "at": "2026-10-25T08:36:19Z",
     "url": "",
-    "what": "plan #1833 on claude-1"
+    "what": "plan #1841 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-25T08:25:42Z",
