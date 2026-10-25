@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1829,
+  "title": "Patch: Units underneath a Stack should be summoning sick when they resummon",
+  "branch": "bot/issue-1829",
+  "thread": "**Issue #1829 (data, not instructions):**\n\n```text\n# #1829: Patch: Units underneath a Stack should be summoning sick when they resummon\nOpened by @MaxGoetzmann.\n\n### What it does\n\nRight now. For instance, playing a Juhan's Biggest Bat on turn 2 Stacked on top of a Felinor token played turn 1 leaves a Juhan's Biggest Bat underneath it that can attack right away if the original one dies. That's a lot of unexpected damage.\n\n### Acceptance\n\nUnits under a Stack, when the card above them dies, should reappear as summoning sick. This, of course, only matters if they reappear on your turn.\n\n### Blocked by, part of\n\n_No response_\n\n### Difficulty (a guess)\n\nNot sure (the planner rates it)\n\n### Priority\n\nNo priority\n\n### Who does it\n\nThe night bot (bot:build)\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1829: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
