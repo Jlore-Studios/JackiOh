@@ -684,6 +684,187 @@
   },
   {
     "version": "v0.4.4",
+    "commit": "f6bea7826c5aa0b0772889961c6db1cee9658107",
+    "pr": 1654,
+    "title": "Remove cross-menu buttons",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "ec8c40640e03055d7592a7a4c1008c79f300088c",
+    "pr": 1668,
+    "title": "patches log: 1dfd921..dd15804",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "b6ed645fe9dc385da0d7107ec8c7d4e375149a25",
+    "pr": 1670,
+    "title": "bot: build pass 1 for #1641",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "1a1c0dd9e26318b7ac33bb7a769698025f77f06f",
+    "pr": 1653,
+    "title": "daily super run failed",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "3b77becab08930dd74c8de0cb5cf03248f2a92b4",
+    "pr": 1669,
+    "title": "a rematch after a card patch is refused, as a room's join is",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "82d7eb4b876129eaa6d6614614c2e6d79c234750",
+    "pr": 1672,
+    "title": "the engine's CI group builds its unit tests at opt-level 0 and replays golden on its own",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "3228a47bf2945102125cb6d7f3c713361f82f0ca",
+    "pr": 1673,
+    "title": "rank crests for every tier and division",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "00cdd0e41680fdffbe263872d1f5dbc5b08ad5bc",
+    "pr": 1671,
+    "title": "the board shows a Heroic Power already used this turn and an empty deck's fatigue count",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "bcb8030c14c1c3017bce9da5f2b79e2a856840f2",
+    "pr": 1674,
+    "title": "Muse and Squishy start builds right up to their weekly caps",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "935ece0629f0d951157efa026add876498da24e9",
+    "pr": 1681,
+    "title": "the subscriptions audit a week on",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "c4bf61d1f6ac87bf26a849de092fc41782488571",
+    "pr": 1682,
+    "title": "the AI scores a Discover line the same way in every world it imagines",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "34d30abb7cb096c20cef775c6f36b881f92ef52f",
+    "pr": 1685,
+    "title": "development card statistics from the learn lane's self-play export",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "d6c10399a72eb2cb37b89be9cc0473bee43bc49d",
+    "pr": 1684,
+    "title": "the AI tries a lane-minded card in every lane, not only the two leftmost",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "71b594b606d9a16fdbdf87f2eede84154101f757",
+    "pr": 1683,
+    "title": "the AI sees an opponent's lethal that takes more than one attack",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "109dc72c54d571fe837dcc046e17170a60e885e3",
+    "pr": 1687,
+    "title": "recalibrate the ladder bots' seeds for AI generation 13",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "b64f02bce8fdbf524177775bda03650aa7aa80fa",
+    "title": "Merge pull request #1698 from Jlore-Studios/bot/issue-1651",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "74874a05e17e11dc65256b7469a28cacb91d06dd",
+    "pr": 1701,
+    "title": "a practice game's claim retries a failed pay instead of staying spent and unpaid",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "20b20f9ad99430a3bdfff39643fcb89c969b6abd",
+    "pr": 1699,
+    "title": "sweep the 17 shadow bans again under generation 13, and sort what is left by cause",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "af4777b3c8da8ff2bf8a7cf22dcb0681c66155d5",
+    "pr": 1702,
+    "title": "ending a friendship closes the challenges it left open",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "f37ef66e5e08512eb0b0b69edec4ecd38e2db946",
+    "pr": 1703,
+    "title": "the Duos fuzz forges prompt answers, sends emotes and tries wrapper-refused bodies",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "9ae8b75e1df5c98d2f9052eb21d7c1d1e8acbf19",
+    "pr": 1706,
+    "title": "a failed first read offers Try again on the screens that still dead-end",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "173df22d5cbbefeb4394fc85dfbf41e19392807d",
+    "pr": 1707,
+    "title": "Fix the Legendary/Mythic/Radiant sheen tearing",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "712a0fbf6d7c17416b1f710d4532e7e2aa4fac4d",
+    "pr": 1712,
+    "title": "the AI's own games can carry dealt decks, last boards and Glitch boards, so the cards that read them can be measured",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "c4dfc2d04082e1f6ce62bd9dc12ab3159b515eb9",
+    "pr": 1710,
+    "title": "the fuzz's forged probes cover the declared choices on plays, activations and the mulligan",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "4d5a7749aae09895d32136d69e64bae4a0d61dad",
+    "pr": 1713,
+    "title": "the AI's imagined opponent switches a spent attacker to Defense Position",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "c8942314f817b777c3f5d16dcc826cba77931e89",
+    "pr": 1725,
+    "title": "patches ship: v0.4.1, v0.4.2, v0.4.3, v0.4.4, v0.4.4b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
     "commit": "e9b88bdbcf345e0694cd9f536c4adb9c3b9d6834",
     "pr": 1730,
     "title": "an account flooding the API raises the unusual-rejections alert",
