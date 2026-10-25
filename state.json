@@ -1227,9 +1227,12 @@
         "sha": "b2fa586efea4ad829992a83afe862348ef22710b"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-25T15:53:20Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1898,
       "kind": "review",
       "pending_request": false,
