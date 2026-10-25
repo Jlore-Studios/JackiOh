@@ -982,7 +982,7 @@
       "queued_at": "2026-10-25T22:37:07Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "pending:7136397e-1792971855",
+      "run_id": "40246171427",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-25T23:45:10Z",
