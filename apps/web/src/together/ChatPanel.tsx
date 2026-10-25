@@ -1,6 +1,7 @@
 // A conversation with one friend (#936, B53, B58): the newest page of it, read again every
 // `CHAT_POLL_MS` while the panel is open (a read marks it read), earlier pages on request, each by the
 // cursor the page after it answered (R1384000), a reply box, and a report on each of the friend's messages.
+// A read that fails says why with Try again until a read answers, and never passes for an empty conversation (#1898).
 //
 // CLAUDE.md rule 7: the box keeps a draft to `CHAT_MAX_CHARS` and will not send an empty one, as
 // UX; what a message may say, how many may be sent, and the word filter are the server's, and its
@@ -10,7 +11,9 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type R
 
 import { CHAT_MAX_CHARS, CHAT_POLL_MS } from "@jackioh/server-config";
 
+import { TryAgainButton } from "../auth/AccountError.tsx";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
+import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { getChat, reportMessage, sendChat, type ChatMessage, type PlayerRef } from "../net/social.ts";
 import { attempt, messageOf } from "./session.ts";
 import { chatTestid } from "./testids.ts";
@@ -53,6 +56,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   useLocale();
   const titleId = useId();
   const [messages, setMessages] = useState<readonly ChatMessage[]>([]);
+  /** A read of the newest page has answered: before one has, no messages is no empty conversation (#1898). */
   const [loaded, setLoaded] = useState(false);
   /** The cursor of the page before the oldest held (R1384000); null when nothing older is left. */
   const [earlier, setEarlier] = useState<string | null>(null);
@@ -60,11 +64,15 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** The newest page's read failed and none has answered since (#1898); a refused send or report is `error`'s. */
+  const [readFailure, setReadFailure] = useState<ReadFailure | null>(null);
   const [reporting, setReporting] = useState<string | null>(null);
   const [reason, setReason] = useState<ReportReason>("harassment");
   const [reported, setReported] = useState<ReadonlySet<string>>(() => new Set());
   const list = useRef<HTMLOListElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  /** The poll's read, for Try again to make at once (#1898). */
+  const readNow = useRef<() => void>(() => undefined);
   const friendId = friend.profileId;
 
   // The newest page now and every CHAT_POLL_MS while open (B58).
@@ -79,14 +87,16 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
           if (first) setEarlier(page.nextCursor);
           first = false;
           setLoaded(true);
+          setReadFailure(null);
         },
         (cause: unknown) => {
           if (cancelled) return;
-          setError(messageOf(cause));
-          setLoaded(true);
+          // The failure first shown stays until a read answers, so a wait it stated is counted once.
+          setReadFailure((shown) => shown ?? readFailureOf(cause));
         },
       );
     };
+    readNow.current = read;
     read();
     const handle = window.setInterval(read, CHAT_POLL_MS);
     return () => {
@@ -158,6 +168,11 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
     );
   };
 
+  const retryRead = (): void => {
+    setReadFailure(null);
+    readNow.current();
+  };
+
   return (
     <section
       className="chat-panel"
@@ -189,7 +204,7 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
             </button>
           </li>
         ) : null}
-        {loaded && messages.length === 0 ? <li className="chat-panel__empty">{t("No messages yet. Say hello!")}</li> : null}
+        {loaded && readFailure === null && messages.length === 0 ? <li className="chat-panel__empty">{t("No messages yet. Say hello!")}</li> : null}
         {messages.map((message) => {
           const yours = message.from !== friendId;
           return (
@@ -262,6 +277,13 @@ export function ChatPanel({ friend, onClose }: { friend: PlayerRef; onClose: () 
           );
         })}
       </ol>
+
+      {readFailure === null ? null : (
+        <p className="notice chat-panel__error" data-testid={chatTestid.readError} role="alert">
+          {t(readFailure.message)}{" "}
+          <TryAgainButton retryAfterMs={readFailure.retryAfterMs} onRetry={retryRead} testId={chatTestid.retry} className="link-button" />
+        </p>
+      )}
 
       {error === null ? null : (
         <p className="notice chat-panel__error" data-testid={chatTestid.error} role="alert">

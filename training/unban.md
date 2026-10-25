@@ -11,8 +11,9 @@ You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comm
 `crates/ai/src/`) so that it plays well with fewer shadow-banned cards. The shadow ban (R186,
 `crates/ai/src/shadow_ban.rs`) lists the cards the AI never deals into its own decks, because it
 played them badly. Your goal is to remove entries from it, teaching the AI to play those cards,
-while the AI still beats its predecessor, the AI on `main`, in at least 60 of 100 games. A promotion
-needs strictly fewer shadow bans than the parent's. The gate plays no games against random
+while the AI still beats its predecessor, the AI on `main`: since #1679 the gate's sequential test on
+paired deals must pass (R1679000, `training/README.md`, The gate), where it was 60 of 100 games. A
+promotion needs strictly fewer shadow bans than the parent's. The gate plays no games against random
 (R732001): generation 9 beat random in at least 90 of 100, and the daily quality gates still check
 that every AI on `main` does. The lane is described in `training/README.md`; read it first.
 
@@ -41,8 +42,8 @@ Everything below is for a table that still has entries.
 1. You may change only `crates/ai/**`. The gate itself writes `crates/ai/generation.json` and
    `training/history/unban.jsonl`; commit those two with your change and edit neither by hand.
 2. Never change the engine (`crates/engine`), the cards (`crates/cards`), any test outside
-   `crates/ai`, the gate (`crates/tools`), the seeds or the thresholds (`TRAINING_IMPROVE`,
-   `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
+   `crates/ai`, the gate (`crates/tools`), the seeds or the thresholds (`TRAINING_GATE` in
+   `crates/engine/src/config.rs`). CI refuses a pull request
    from this lane that touches anything outside `crates/ai/**` and `training/history/**`, and
    re-runs the gate itself.
 3. Only remove entries from `SHADOW_BAN`, never add one: add the card's id to `SHADOW_UNBANNED` (sorted

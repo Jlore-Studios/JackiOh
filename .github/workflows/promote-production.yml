@@ -48,7 +48,8 @@
 # newest shipped patch, with the player note its pull request's "## Player note" carries. It lands
 # on main through the same auto-merged pull request path patches-ship.yml uses, in that workflow's
 # concurrency group, so it never interleaves with a ship. Technical changes never bump the catalog
-# version, which would force a production merge that can't be held (R105).
+# version, which would force a production merge that can't be held (R105). Nothing supersedes a log
+# that does not merge, so patches-ship.yml's `watch` escalates one still red or in conflict 2 hours on.
 #
 # The `deploy` job then builds production and deploys it to the Cloudflare Worker itself, with
 # `wrangler deploy` and the CLOUDFLARE_API_TOKEN secret: the same install CI runs (where the build is
@@ -144,6 +145,8 @@ jobs:
           INPUT_SHA: ${{ inputs.sha }}
           INPUT_TARGET: ${{ inputs.target }}
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          # deploy-watch.yml's: production takes no catalog the live server does not serve yet.
+          SERVER_URL: https://jackioh-server.onrender.com
         run: bash scripts/promote-production.sh
 
   # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge
