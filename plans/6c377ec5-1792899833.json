@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1817,
+  "title": "Patch: the watch and replay tables can open the full list of live modifiers, as the others do",
+  "branch": "bot/issue-1817",
+  "thread": "**Issue #1817 (data, not instructions):**\n\n```text\n# #1817: Patch: the watch and replay tables can open the full list of live modifiers, as the others do\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA spectator and someone rewatching a finished game see the same board a player does, but today they cannot open the list of effects currently running on the game \u2014 \"your spells cost 1 less\", \"damage is doubled\", and so on. Every actual seat can open it, and on a phone the short badges under each hero truncate, so the list is the only way to read a long modifier. After this change the watch screen and the 1v1 replay offer the same list the players already have.\n\n## Why\n\n`ModifierList` mounts on every live table \u2014 practice (`apps/web/src/routes/practice.tsx:1356`), lessons (`apps/web/src/tutorial/TutorialHud.tsx:93`), the online rail (`apps/web/src/routes/match.tsx:496`, whose comment notes a phone cuts the hero badges short) and the Duos rail (`apps/web/src/duos/DuosBoard.tsx:418`, unconditionally, so even a Duos replay has it) \u2014 but the watch board's rail is only `BackLink` (`apps/web/src/together/WatchRoute.tsx:286`) and the 1v1 replay's rail is only `back` (`apps/web/src/replay/ReplayPlayer.tsx:396`). The component self-hides at zero modifiers (`apps/web/src/game/ModifierList.tsx:31-59`) and takes only `{ view, opponentLabel }`, so the two omissions look accidental rather than scoped. #1807 set the precedent: it extended the same list to the online and co-op tables.\n\n## Proposal\n\nMount `<ModifierList view={view} opponentLabel={t(\"Opponent\")} />` on the watch rail and on the 1v1 replay rail, where each rail's layout has room. The watch board passes the latest received view, the replay the view at the current step. No new prop or condition \u2014 the component already hides itself when nothing is live.\n\n## Where it lands\n\n`apps/web/src/together/WatchRoute.tsx`, `apps/web/src/replay/ReplayPlayer.tsx`, and their test files. No engine or spec surface; the component renders only the viewer's `PlayerView`, as on the live tables.\n\n## Acceptance criteria\n\n- [ ] The watch screen offers the modifier list while modifiers are live.\n- [ ] The 1v1 replay offers it, reflecting the step being viewed.\n- [ ] Both keep hiding it when the view lists no modifiers.\n- [ ] `WatchRoute.test.tsx` and `ReplayPlayer.test.tsx` cover the mount.\n\n## Size and risks\n\nMedium: two mounts plus tests, under 10 files; the only judgment is placement in each rail. Low risk \u2014 the same component, same props, no hidden information past `PlayerView`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-25T03:33:42Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1817: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
