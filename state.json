@@ -51,6 +51,10 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong"
     },
+    "1849": {
+      "asks": [],
+      "taken_asks": []
+    },
     "1889": {
       "handoff": {
         "at": "2026-10-25T09:07:29Z",
