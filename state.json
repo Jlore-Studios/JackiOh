@@ -604,6 +604,13 @@
     "1899": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T15:49:30Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 1: 9 files is close to the 10-file limit, and it is player-visible UI across two routes plus the co-op board's chrome"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
