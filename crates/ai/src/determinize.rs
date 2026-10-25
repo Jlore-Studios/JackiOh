@@ -14,7 +14,7 @@ use indexmap::IndexSet;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
     CardInstance, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PerPlayer, PlayerId, RevealAt, Rng,
-    SecretChoice, SetAs, active_units_of, effective_cost, query, scripts_for, unit_view,
+    SecretChoice, SetAs, active_units_of, effective_cost, query, resource_def_ids, scripts_for, unit_view,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -40,6 +40,8 @@ fn all_cards(state: &GameState) -> Vec<&CardInstance> {
             out.extend(pile.iter());
         }
         out.extend(side.carried.iter().flatten().flatten());
+        // R1840000: a Resource in a Resource tray.
+        out.extend(side.resource_tray.iter().flatten());
     }
     out
 }
@@ -443,6 +445,20 @@ pub fn determinize_on(
     for at in 0..next.players[opp].library.len() {
         if is_placeholder(&next.players[opp].library[at]) {
             next.players[opp].library[at].def_id = sample_def(pool, seen, &mut sampled, rng);
+        }
+    }
+    // R1840000: then its Resource tray, each placeholder a Resource of the catalog's, uniformly. A tray
+    // is there only in a game that gains Resources, so any other game draws nothing more here.
+    if next.players[opp].resource_tray.is_some() {
+        let resources = resource_def_ids();
+        if resources.is_empty() {
+            next.players[opp].resource_tray = None;
+        } else if let Some(tray) = next.players[opp].resource_tray.as_mut() {
+            for card in tray.iter_mut().filter(|card| is_placeholder(card)) {
+                if let Some(def_id) = rng.pick(&resources) {
+                    card.def_id = def_id.clone();
+                }
+            }
         }
     }
 

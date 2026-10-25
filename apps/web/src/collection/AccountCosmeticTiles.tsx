@@ -6,7 +6,10 @@
 // Clicking an owned tile equips it as the select it replaced did: `writeCosmetics`, the same store
 // and `cosmetics` group (R633, `cards/cosmetics.ts`, `settings/groups.ts`), and no request. A tile
 // the account does not own is locked and greyed with its rarity, and equips nothing. `GET
-// /api/cosmetics` says what the account owns (`accountTiles`); this decides nothing (CLAUDE.md rule 7).
+// /api/cosmetics` says what the account owns, through the `AccountCosmeticsOwned` main.tsx mounts
+// while ownership decides (R1833000, `useOwnsAccountCosmetic`); with none above it every tile is
+// owned. A stored pick the account does not own shows as the kind's default, which is what the
+// board draws. This decides nothing (CLAUDE.md rule 7).
 //
 // Every animation is a transform or opacity (the backdrops' particles, game/table.css) and holds still
 // under reduced motion; a tile's particles move only while it is the equipped one, hovered or focused
@@ -19,14 +22,14 @@ import {
   DEFAULT_CARD_COSMETICS,
   resolveCosmetic,
   useCosmetics,
+  useOwnsAccountCosmetic,
   writeCosmetics,
   type CosmeticId,
   type DeckSlotKind,
 } from "../cards/cosmetics.ts";
-import Backdrop from "../game/Backdrop.tsx";
 import { t } from "../i18n/i18n.ts";
-import type { OwnedCosmeticsResponse } from "../net/api.ts";
 import { accountTiles, collectionTestid as T, cosmeticKindWords, type AccountTile } from "./collection.ts";
+import { MiniBoard } from "./CosmeticLook.tsx";
 
 import "../game/table.css";
 import "../settings/settings.css";
@@ -37,25 +40,6 @@ const TILE_ROWS: readonly { kind: DeckSlotKind; hint: string }[] = [
   { kind: "field", hint: "The backdrop behind your side. Reduce motion holds it still." },
   { kind: "cardBack", hint: "The back of your own face-down cards and your deck." },
 ];
-
-/** A playmat and a backdrop, drawn together: the mat under the viewer's half, the backdrop over it, a lane of pads each side. */
-function MiniBoard({ table, field }: { table: CosmeticId; field: CosmeticId }): ReactElement {
-  return (
-    <div className="collection-miniboard" data-table={table} aria-hidden="true">
-      {field === DEFAULT_CARD_COSMETICS.field ? null : <Backdrop field={field} />}
-      <span className="collection-miniboard__pads collection-miniboard__pads--them">
-        <span />
-        <span />
-        <span />
-      </span>
-      <span className="collection-miniboard__pads collection-miniboard__pads--you">
-        <span />
-        <span />
-        <span />
-      </span>
-    </div>
-  );
-}
 
 function TilePicture({ kind, id, equipped }: { kind: DeckSlotKind; id: CosmeticId; equipped: Record<DeckSlotKind, CosmeticId> }): ReactElement {
   if (kind === "cardBack") {
@@ -119,19 +103,21 @@ function TileRow({
 
 /**
  * R1297000, R1655000: the playmat, backdrop and card back your own side wears in a game. A deck's
- * own pick, set in the deck builder, beats these. `owned` is null until `GET /api/cosmetics` answers.
+ * own pick, set in the deck builder, beats these. R1833000: what the account owns is
+ * `useOwnsAccountCosmetic`'s, and an unowned pick is equipped as its kind's default.
  */
-export default function AccountCosmeticTiles({ owned }: { owned: OwnedCosmeticsResponse | null }): ReactElement {
+export default function AccountCosmeticTiles(): ReactElement {
   const picks = useCosmetics();
-  const equipped: Record<DeckSlotKind, CosmeticId> = {
-    table: resolveCosmetic("table", picks.table),
-    field: resolveCosmetic("field", picks.field),
-    cardBack: resolveCosmetic("cardBack", picks.cardBack),
+  const owns = useOwnsAccountCosmetic();
+  const wornOf = (kind: DeckSlotKind): CosmeticId => {
+    const id = resolveCosmetic(kind, picks[kind]);
+    return owns(id) ? id : DEFAULT_CARD_COSMETICS[kind];
   };
+  const equipped: Record<DeckSlotKind, CosmeticId> = { table: wornOf("table"), field: wornOf("field"), cardBack: wornOf("cardBack") };
   return (
     <>
       {TILE_ROWS.map(({ kind, hint }) => (
-        <TileRow key={kind} kind={kind} hint={hint} tiles={accountTiles(kind, owned)} equipped={equipped} />
+        <TileRow key={kind} kind={kind} hint={hint} tiles={accountTiles(kind, owns)} equipped={equipped} />
       ))}
     </>
   );

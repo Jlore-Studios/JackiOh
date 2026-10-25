@@ -207,11 +207,16 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Acclaimed",
       "Wincon",
       "Potion",
+      "Terminus",
+      "Quest",
+      "Otherworldly",
+      "Jelly Bean",
     ]);
-    // Only the ten AI tokens carry "AI" and the Prime tokens "Prime", and the pool never offers a
-    // Token.
+    // Only the ten AI tokens carry "AI", the Prime tokens "Prime" and Otherworldly Removal's three
+    // tokens "Other-Origins" (R1837000), and the pool never offers a Token.
     expect(FILTER_TAGS).not.toContain("AI");
     expect(FILTER_TAGS).not.toContain("Prime");
+    expect(FILTER_TAGS).not.toContain("Other-Origins");
     expect([...FILTER_RARITIES]).toEqual(["Common", "Rare", "Epic", "Legendary", "Mythic"]);
     expect(FILTER_TAGS).not.toContain("Token");
     expect(FILTER_RARITIES).not.toContain("Token");
@@ -762,8 +767,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));

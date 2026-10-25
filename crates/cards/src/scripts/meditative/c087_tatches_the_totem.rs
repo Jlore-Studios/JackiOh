@@ -106,7 +106,8 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Human Unit: a tribal play.
     const STATELESS: &str = "classic-041"; // (1) Unit with no tribal tag.
     const GROOM: &str = "classicplus-002"; // (3) Trap with the Felinor tag.
-    const FILL_BOARD: &str = "core-062"; // (3) Felinor Spell: fills your board.
+    const FEELINGS: &str = "classic-032"; // (2) Spell, Felinor Feelings; no tag since #1837.
+    const BEAN: &str = "core-028"; // (2) Spell, Knockoff Temu Glowy Jelly Bean: Jelly Bean, no tribe.
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt Unit.
     const FILLER: &str = "core-005";
 
@@ -215,11 +216,34 @@ mod tests {
 
             #[test]
             fn with_no_open_zone_it_stays_in_the_deck() {
-                // Friend of Felinors fills the board and is itself the tribal play.
-                let mut s = decked("tatches-full", json!([FILL_BOARD]));
-                s.play(FILL_BOARD, json!({}));
-                assert_eq!((1..=5).filter(|lane| s.unit(P1, *lane).is_some()).count(), 5);
+                // Four lanes are taken, so the Human Vanilla, a tribal play, takes the last one.
+                crate::register_all();
+                let field: Vec<Value> = (1..=4).map(|lane| json!({ "def": MENACE, "lane": lane })).collect();
+                let mut s = scenario(json!({
+                    "seed": "tatches-full",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [VANILLA],
+                        "field": field,
+                        "library": [FILLER, TATCHES, FILLER],
+                    },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                s.play(VANILLA, json!({}));
+                assert_eq!(s.unit(P1, 5).map(|card| card.def_id), Some(VANILLA.to_string()));
                 assert!(in_deck(&s));
+            }
+
+            #[test]
+            fn r1837000_felinor_feelings_and_a_jelly_bean_are_no_tribal_plays() {
+                // Felinor Feelings, a Felinor until #1837, with nothing to steal fizzles (R90); the
+                // Jelly Bean is a family tag. The board stays empty, so a summon would show in lane 1.
+                for (seed, card) in [("tatches-feelings", FEELINGS), ("tatches-bean", BEAN)] {
+                    let mut s = decked(seed, json!([card, FILLER]));
+                    s.play(card, json!({}));
+                    assert!(in_deck(&s), "{card}");
+                    assert!(s.unit(P1, 1).is_none(), "{card}");
+                }
             }
 
             #[test]
@@ -328,6 +352,28 @@ mod tests {
                 assert_eq!(upgraded_for(s.events(), &one), 1);
                 assert_eq!(upgraded_for(s.events(), &three), 1);
                 assert_eq!(upgraded_for(s.events(), &five), 0, "lane 5 is untouched");
+            }
+
+            #[test]
+            fn r1837000_a_radiant_tatches_skips_felinor_feelings_and_a_jelly_bean_and_answers_a_human() {
+                for (seed, card, summoned) in [
+                    ("rtatches-feelings", FEELINGS, false),
+                    ("rtatches-bean", BEAN, false),
+                    ("rtatches-human", VANILLA, true),
+                ] {
+                    crate::register_all();
+                    let mut s = scenario(json!({
+                        "seed": seed,
+                        "p1": {
+                            "mana": 10,
+                            "hand": [card, FILLER],
+                            "library": [FILLER, { "def": TATCHES, "radiant": true }, FILLER],
+                        },
+                        "p2": { "hand": [FILLER], "library": filler(4) },
+                    }));
+                    s.play(card, json!({}));
+                    assert_eq!(!in_deck(&s), summoned, "{card}");
+                }
             }
         }
     }

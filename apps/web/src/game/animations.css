@@ -952,7 +952,7 @@
   animation-duration: calc(250ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
-/* --- shuffledIn: card flies into the library, library pulses (300 ms) ----------------- */
+/* --- shuffledIn: card flies into the library, library pulses (300 ms); traded likewise (R1838001) */
 
 @keyframes jk-shuffle-in {
   0% {
@@ -966,7 +966,8 @@
   }
 }
 
-[data-animating="shuffledIn"] {
+[data-animating="shuffledIn"],
+[data-animating="traded"] {
   animation-name: jk-shuffle-in;
   animation-duration: calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }

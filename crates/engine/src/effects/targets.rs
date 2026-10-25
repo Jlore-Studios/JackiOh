@@ -64,7 +64,10 @@ pub fn player_of(ctx: &EffectContext<'_>, spec: PlayerSpec) -> PlayerId {
 pub fn resolve_target(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<DamageTarget> {
     let index = match spec {
         TargetSpec::SelfCard => {
-            return self_on_its_stay(ctx).map(|instance| DamageTarget::Unit { instance });
+            // R1839000: "this" is passed by as well while it is Dormant (a Cry it runs as it is played).
+            return self_on_its_stay(ctx)
+                .filter(|instance| !crate::slumber::is_slumbering(instance))
+                .map(|instance| DamageTarget::Unit { instance });
         }
         TargetSpec::SelfHero => {
             return Some(DamageTarget::Hero {

@@ -500,6 +500,30 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "autopilotEngaged":
       // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
       return t("The AI plays the rest of {whose} turn", { whose: name.whose(event.player) });
+    case "awakened":
+      // R1839002: a Dormant card awakened, its countdown run out or an effect's doing.
+      return t("{card} awakened", { card: name.def(event.defId) });
+    case "traded":
+      // R1838001: a Trade names its player alone; the card going in and the one drawn log as their own.
+      return t("{seat} traded a card", { seat: name.seat(event.player) });
+    case "resourceGained":
+      // R1840000: the other seat's view names no card, so the line names none for either.
+      return t("{seat} gained a Resource", { seat: name.seat(event.player) });
+    case "resourceSold":
+      // R1840001: a Resource gained past the cap is sold at once, as R317's burned card is named.
+      return capitalised(
+        t("{whose} Resource tray is full: {card} sold for {credits} Credits", {
+          whose: name.whose(event.player),
+          card: named(event.defId),
+          credits: event.credits,
+        }),
+      );
+    case "resourceDiscarded":
+      // R1840004: a tray discard reads as a hand's.
+      return t("{seat} discarded {card}", { seat: name.seat(event.player), card: name.def(event.defId) });
+    case "marketCreditsChanged":
+      // R1840005: Credits are public.
+      return capitalised(t("{whose} Credits are {value}", { whose: name.whose(event.player), value: event.value }));
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

@@ -1944,6 +1944,10 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
             ActionBody::AnswerDraw { accept: true },
             ActionBody::Concede,
             ActionBody::EndTurn,
+            // R1838000: a Trade of a Tradable hand card.
+            ActionBody::Trade {
+                instance_id: "c7".to_string(),
+            },
             ActionBody::SetAutoEndTurn { enabled: false },
         ]
     }

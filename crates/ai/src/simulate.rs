@@ -18,7 +18,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameEvent, GameState, PLAYER_IDS, Phase, PlayerId, ReduceResult, Rng,
     TurnLog, active_units_of, effective_life, find_instance, legal_actions, max_mana_for, opponent_of,
-    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view,
+    owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, subsystems, unit_view, units_on_field_of,
 };
 use serde::{Deserialize, Serialize};
 
@@ -877,6 +877,13 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 unit.position.map_or("ATK", |position| position.as_str()),
                 unit_play_signature(state, unit),
             ));
+        }
+        // R1839000: a Dormant card is no active unit, yet it fills its zone and counts down: it is part of
+        // the position, said only when there is one, so every other signature stays as it was.
+        for unit in units_on_field_of(state, player) {
+            if let Some(slumber) = unit.slumber {
+                parts.push(format!("z{}:{:?}", unit.id, slumber.turns));
+            }
         }
         let backrow = state.players[player]
             .backrow

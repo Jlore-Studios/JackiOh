@@ -78,6 +78,10 @@ const PINNED: &[(&str, &str)] = &[
     ("0055_deck_size_25.sql", "783027c7"),
     ("0056_foreign_key_indexes.sql", "6df3b0c2"),
     ("0057_portrait_cosmetics.sql", "ca135dd9"),
+    (
+        "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql",
+        "972e8478",
+    ),
 ];
 
 /// `PINNED[name]`.

@@ -88,8 +88,11 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.animated !== undefined) inPlay.animated = unit.animated;
   // B5 E35: a Berserk unit.
   if (unit?.berserk === true) inPlay.berserk = true;
-  // R1174000: a Frozen unit.
+  // R1174000: a Frozen unit; R1848000: one Frozen forever.
   if (unit?.frozen === true) inPlay.frozen = true;
+  // R1839000, R1839001: a Dormant card, with its countdown.
+  if (unit?.slumber !== undefined) inPlay.dormant = { turns: unit.slumber.turns ?? null };
+  if (unit?.frozenForever === true) inPlay.frozenForever = true;
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
   // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
@@ -120,6 +123,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
     liveCost: card.cost,
     // R1181003: the second badge is the view's price for the Embiggened version, where it has one.
     ...(card.embiggenCost === undefined ? {} : { liveEmbiggenCost: card.embiggenCost }),
+    // R1848003: an X card whose X is set prints it on its gem.
+    ...(card.fixedX === undefined ? {} : { fixedX: card.fixedX }),
     ...(unit === undefined
       ? {}
       : { live: { attack: unit.attack, health: unit.health, maxHealth: unit.maxHealth, keywords: unit.keywords } }),

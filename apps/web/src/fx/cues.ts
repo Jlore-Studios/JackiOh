@@ -705,6 +705,15 @@ const handGlint: Recipe = (event, p) => {
 };
 
 const shuffle: Recipe = (event, p) => {
+  // R1838001: a Trade: a card back from the trader's hand into their deck, whichever seat watches.
+  if (event.type === "traded") {
+    const side = sideOf(p.view, event.player);
+    const library = animTestid.library(side);
+    return [
+      ghost(p.D, anchor(animTestid.hand(side)), anchor(library)),
+      burst(p.env.intensity, "arcane", anchor(library), "point", p.D, "shuffleArcane"),
+    ];
+  }
   if (event.type !== "shuffledIn") return [];
   const library = animTestid.library(sideOf(p.view, event.player));
   return [

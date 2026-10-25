@@ -20,7 +20,16 @@ import type { FaceModel } from "./model.ts";
 import { CHINESE_TERMS, readerTerms } from "./chinese.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
-export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk" | "frozen" | "created";
+export type StateBadgeKind =
+  | "brittle"
+  | "quest"
+  | "tuned"
+  | Enchantment["kind"]
+  | "animated"
+  | "berserk"
+  | "frozen"
+  | "dormant"
+  | "created";
 
 export type StateBadge = {
   kind: StateBadgeKind;
@@ -76,8 +85,28 @@ export const BERSERK_WORDS = "Berserk: at the start and end of its controller's 
 /** R1174000, §6.1: what a Frozen unit's badge says. */
 export const FROZEN_WORDS = "Frozen: can't attack or switch position; it thaws at the end of the turn it could have acted in";
 
+/** R1848000, §6.1: what the badge of a unit Frozen forever says. */
+export const FROZEN_FOREVER_WORDS = "Frozen forever: can't attack or switch position, and never thaws";
+
 /** R1174000: the frost badge's glyph, drawn in text presentation (U+FE0E) so it takes the badge's colour. */
 export const FROZEN_GLYPH = "\u2744\uFE0E";
+
+/** R1839000, §6.1: what a Dormant card's badge says when no countdown will wake it. */
+export const DORMANT_WORDS = "Dormant: it can't attack or be attacked and nothing reaches it, until an effect awakens it";
+
+/** R1839001: what a Dormant card's badge says on the last turn of its countdown. */
+export const DORMANT_NEXT_TURN_WORDS =
+  "Dormant: it awakens at the start of its controller's next turn; until then nothing reaches it";
+
+/** R1839000: the Dormant badge's glyph, a crescent moon in text presentation (U+FE0E). */
+export const DORMANT_GLYPH = "\u263E\uFE0E";
+
+/** R1839000, R1839001: a Dormant card's badge words, with its countdown when it has one. */
+export function dormantWords(turns: number | null): string {
+  if (turns === null) return t(DORMANT_WORDS);
+  if (turns <= 1) return t(DORMANT_NEXT_TURN_WORDS);
+  return t("Dormant: it awakens {n} of its controller's turns from now; until then nothing reaches it", { n: turns });
+}
 
 const ENCHANTMENT_ICON: Readonly<Record<Enchantment["kind"], IconName>> = {
   returnAfterResolve: "returnHand",
@@ -170,7 +199,20 @@ export function stateBadges(face: FaceModel): StateBadge[] {
   }
   // R1174000: a Frozen unit, the frost badge.
   if (face.frozen === true) {
-    badges.push({ kind: "frozen", text: FROZEN_GLYPH, icon: null, words: t(FROZEN_WORDS), data: { "data-frozen": "true" } });
+    // R1848000: one Frozen forever says it never thaws.
+    const words = face.frozenForever === true ? FROZEN_FOREVER_WORDS : FROZEN_WORDS;
+    badges.push({ kind: "frozen", text: FROZEN_GLYPH, icon: null, words: t(words), data: { "data-frozen": face.frozenForever === true ? "forever" : "true" } });
+  }
+  // R1839000, R1839001: a Dormant card, its countdown beside the moon when it has one.
+  const dormant = face.dormant;
+  if (dormant !== undefined && dormant !== null) {
+    badges.push({
+      kind: "dormant",
+      text: dormant.turns === null ? DORMANT_GLYPH : `${DORMANT_GLYPH}${String(dormant.turns)}`,
+      icon: null,
+      words: dormantWords(dormant.turns),
+      data: { "data-dormant": dormant.turns === null ? "true" : String(dormant.turns) },
+    });
   }
   // MD-B6, R943: a Created card, made during the game.
   if (face.created === true) {

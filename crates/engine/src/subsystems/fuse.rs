@@ -57,10 +57,10 @@ use crate::config::{
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
-    SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, PlayAllowedHook, QuestBook, Script,
+    SetStat, SetStatHook, SpellDamageAura, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef,
     TriggerExtraHook, TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook,
-    condition_hook, hook, mode_allowed_hook, read_hook, target_check, would_counter_hook,
+    condition_hook, hook, mode_allowed_hook, play_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -541,6 +541,7 @@ fn build_def(
         params: None,
         deals_damage: None,
         uses_plague: None,
+        resource: None,
         loc,
         radiant_fallback: None,
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from
@@ -1148,6 +1149,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 doubles_healing: flags(|f| f.doubles_healing),
                 answers_targeted_spells: flags(|f| f.answers_targeted_spells),
                 embiggen_garden: least_number(defined.iter().map(|f| f.embiggen_garden)),
+                // R1839000: a card fused from a Dormant ingredient prints the first ingredient's Dormant.
+                slumber: defined.iter().find_map(|f| f.slumber.clone()),
             })
         }
     }
@@ -1227,6 +1230,7 @@ fn combine_objects(records: &[Script]) -> Script {
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
         mode_allowed: fused_mode_allowed(records),
+        play_allowed: fused_play_allowed(records),
         // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
         secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
@@ -1272,6 +1276,21 @@ fn fused_mode_allowed(records: &[Script]) -> Option<ModeAllowedHook> {
     }
     Some(mode_allowed_hook(move |state, player, option| {
         checks.iter().all(|check| check(state, player, option))
+    }))
+}
+
+/// R1851002: a fusion may be played only while every ingredient's play gate holds, as it needs every
+/// ingredient's needed pick (R703, whose declarations it carries in order).
+fn fused_play_allowed(records: &[Script]) -> Option<PlayAllowedHook> {
+    let gates: Vec<PlayAllowedHook> = records
+        .iter()
+        .filter_map(|record| record.play_allowed.clone())
+        .collect();
+    if gates.is_empty() {
+        return None;
+    }
+    Some(play_allowed_hook(move |state, player| {
+        gates.iter().all(|gate| gate(state, player))
     }))
 }
 

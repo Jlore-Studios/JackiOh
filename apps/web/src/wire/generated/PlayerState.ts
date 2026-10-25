@@ -71,6 +71,18 @@ gameLog?: GameLog,
  */
 draws?: DrawCount, 
 /**
+ * R1838000: how many Trades this player has made on turn `turn`, kept as `draws` is: a count kept
+ * for an earlier turn reads as 0 (`trade::trades_this_turn`). Absent until their first Trade, so a
+ * game nobody trades in hashes as it did before this field existed (D14).
+ */
+trades?: DrawCount, 
+/**
+ * R1838000: the Trades this player may make each turn, once an effect has set a figure of their
+ * own; absent means `TRADES_PER_TURN` (`trade::trades_per_turn_of`), so a game that never sets
+ * one hashes as it did before this field existed (D14).
+ */
+tradesPerTurn?: number, 
+/**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
@@ -120,4 +132,16 @@ autopilot?: Autopilot,
  * player's Spells and how many answers led to it. Absent but while one is, so a game without an
  * answering card hashes as before this field existed (D9).
  */
-answerChain?: AnswerChain, };
+answerChain?: AnswerChain, 
+/**
+ * R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
+ * at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
+ * `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
+ */
+resourceTray?: Array<CardInstance>, 
+/**
+ * R1840005: this player's Credits, public, gained by selling Resources and spent at the
+ * Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+ * Absent until first gained, so a game without Credits hashes as it did before this field existed.
+ */
+marketCredits?: number, };

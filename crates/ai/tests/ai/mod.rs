@@ -52,6 +52,8 @@ pub mod search;
 pub mod secrets;
 pub mod sim_panics;
 pub mod skill;
+pub mod slumber;
 pub mod style;
 pub mod support;
 pub mod surface;
+pub mod tradable;
