@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { CATALOG } from "@jackioh/cards";
 
 import { CardFace, faceModel } from "../cards/index.ts";
+import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import FillBar from "../economy/FillBar.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
@@ -303,7 +304,12 @@ function TokenBody({
               <span>
                 {cosmetic.name} · {t(cosmetic.rarity)}
               </span>
-              {chosen !== undefined && CATALOG[chosen] !== undefined ? (
+              {/* R1833000: the cosmetic's look, a per-card one on the card it would go on; else that card. */}
+              {hasLook(cosmetic.id, chosen ?? null) ? (
+                <div className="token-preview" data-testid={shopTestid.cosmeticPreview(cosmetic.id)}>
+                  <CosmeticLook id={cosmetic.id} cardId={chosen ?? null} />
+                </div>
+              ) : chosen !== undefined && CATALOG[chosen] !== undefined ? (
                 <div className="token-preview" data-testid={shopTestid.cosmeticPreview(cosmetic.id)}>
                   <CardFace face={faceModel({ defId: chosen, def: CATALOG[chosen], radiant: false })} />
                 </div>
