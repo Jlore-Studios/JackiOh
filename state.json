@@ -92,7 +92,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-5",
-      "run_id": "pending:b5e0da7b-1792919798",
+      "run_id": "40180022645",
       "started_at": "2026-10-25T09:17:20Z",
       "stop_requested": false,
       "taken_asks": []
