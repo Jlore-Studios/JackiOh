@@ -31,7 +31,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
+use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HALF_DAMAGE_TO_HEROES_DIVISOR, HERO_ARMOR};
 use crate::replacements::LethalHitTo;
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
@@ -75,6 +75,11 @@ pub struct DamageFlags {
     /// `trample` do not need it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attacking: Option<bool>,
+    /// #1841, R1841001: "deals half damage to heroes": a hit on a hero is divided by
+    /// `HALF_DAMAGE_TO_HEROES_DIVISOR`, rounded down, before Armor (step 2); a Unit takes it whole.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub half_to_heroes: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -457,15 +462,21 @@ fn land_hit(
     // Step 3 on a hero, with E6's divisors between the two: `hero_hit_amount`.
     // R1360: `absorbed` is what the Armor took off the hit at step 2, and nothing after it — not a
     // hero's divisors or cap — so a hit that pierces has none.
+    // R1841001: `struck` is the hit as it meets Armor — a hit that deals half damage to heroes is
+    // halved on a hero here, rounded down, and whole on a Unit.
+    let mut struck = amount_in;
     let mut amount = amount_in;
     let mut absorbed = 0;
     match (target, &unit) {
         (DamageTarget::Hero { player }, _) => {
+            if flags.is_some_and(|flags| flags.half_to_heroes == Some(true)) {
+                struck = amount_in / HALF_DAMAGE_TO_HEROES_DIVISOR;
+            }
             let pierce = pierces(sink.state, source, flags);
             if !pierce {
-                absorbed = hero_armor_of(sink.state, *player).clamp(0, amount_in);
+                absorbed = hero_armor_of(sink.state, *player).clamp(0, struck);
             }
-            amount = hero_hit_amount(sink.state, *player, amount, pierce);
+            amount = hero_hit_amount(sink.state, *player, struck, pierce);
         }
         (DamageTarget::Unit { .. }, Some(live)) => {
             if !pierces(sink.state, source, flags) {
@@ -515,7 +526,7 @@ fn land_hit(
     // The rule stands before step 4, as §4.4 orders it, so an Indestructible unit's Armor that takes
     // a hit whole reports it like any other unit's.
     if amount <= 0 {
-        if absorbed > 0 && absorbed >= amount_in {
+        if absorbed > 0 && absorbed >= struck {
             sink.events.push(GameEvent::DamageAbsorbed {
                 source_id: source.map(|card| card.id.clone()),
                 target_id: target_id(target),

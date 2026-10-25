@@ -45,7 +45,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::config::ACTIVATE_UNLIMITED_CAP;
+use crate::config::{ACTIVATE_COOLDOWN_TURNS, ACTIVATE_UNLIMITED_CAP};
 use crate::effects::move_::discard_random_cards;
 use crate::layers::unit_view;
 use crate::mana::{mana_event, push_mana_spent};
@@ -275,6 +275,11 @@ fn hand_picks(targets: &[Selection]) -> Vec<String> {
 /// R384, SPEC §6.2: where an instance counts its uses — `{ turn, count }` for the turn it names.
 pub const ACTIVATIONS_MEMORY_KEY: &str = "activations";
 
+/// R1841000, SPEC §6.2: where an instance keeps the cooldowns of its abilities that have an extra
+/// turn cooldown — `{ <ability>: { player, turn } }`, `turn` being the user's `turns_started` at the
+/// use. R78's reset clears it with the rest of `memory` when the card leaves the field.
+pub const COOLDOWNS_MEMORY_KEY: &str = "cooldowns";
+
 /// `{ turn, count }`, as numbers came back through JSON (TS's `typeof … === "number"`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct UsesRecord {
@@ -359,6 +364,50 @@ fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
     if let Some(card) = find_instance_mut(state, card_id) {
         card.memory.insert(ACTIVATIONS_MEMORY_KEY.to_string(), record);
     }
+}
+
+/// R1841000: the ability "has an extra turn cooldown".
+fn has_cooldown(decl: &ActivationDecl) -> bool {
+    decl.cost
+        .is_some_and(|cost| cost.extra_turn_cooldown == Some(true))
+}
+
+/// R1841000: a use of an ability with an extra turn cooldown starts it, on its user's turn count.
+fn start_cooldown(state: &mut GameState, card_id: &str, ability: &str, player: PlayerId) {
+    let turns = state.players[player].turns_started;
+    let Some(card) = find_instance_mut(state, card_id) else {
+        return;
+    };
+    let mut cooldowns = card
+        .memory
+        .get(COOLDOWNS_MEMORY_KEY)
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    cooldowns.insert(ability.to_string(), json!({ "player": player, "turn": turns }));
+    card.memory
+        .insert(COOLDOWNS_MEMORY_KEY.to_string(), Value::Object(cooldowns));
+}
+
+/// R1841000: whether the ability sits out this turn — it is the turn of the player who last used it,
+/// one of the `ACTIVATE_COOLDOWN_TURNS` of theirs after the use (an extra turn counts as one).
+fn cooling_down(state: &GameState, card: &CardInstance, ability: &str) -> bool {
+    let Some(record) = card
+        .memory
+        .get(COOLDOWNS_MEMORY_KEY)
+        .and_then(|cooldowns| cooldowns.get(ability))
+    else {
+        return false;
+    };
+    let by = record
+        .get("player")
+        .and_then(|player| serde_json::from_value::<PlayerId>(player.clone()).ok());
+    let (Some(by), Some(turn)) = (by, record.get("turn").and_then(Value::as_i64)) else {
+        return false;
+    };
+    state.active == by
+        && (1..=i64::from(ACTIVATE_COOLDOWN_TURNS))
+            .contains(&(i64::from(state.players[by].turns_started) - turn))
 }
 
 /// R757, R1751000: the record with one use of `ability` given back, or `None` when the card has none
@@ -455,6 +504,10 @@ fn why_ability_unusable(
         } else {
             EngineError::new(format!("that ability has been used {allowed} times this turn"))
         });
+    }
+    // R1841000: an extra turn cooldown sits out its user's next turn.
+    if has_cooldown(decl) && cooling_down(state, card, &decl.id) {
+        return Err("that ability is cooling down this turn".into());
     }
     if let Some(can_activate) = &decl.can_activate
         && !can_activate(ConditionContext {
@@ -1028,6 +1081,9 @@ pub fn activate_ability(
         return Ok(());
     }
     mark_use(sink.state, &card.id, &decl.id);
+    if has_cooldown(&decl) {
+        start_cooldown(sink.state, &card.id, &decl.id, player);
+    }
     sink.events.push(GameEvent::Activated {
         player,
         instance_id: card.id.clone(),

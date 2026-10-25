@@ -1167,6 +1167,10 @@ pub struct ActivationCost {
     /// their own main phase, paying from their own mana. Absent: the controller's alone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub either_player: Option<bool>,
+    /// R1841000: "has an extra turn cooldown": the ability can't be used on its user's next turn
+    /// after a use. Absent: no cooldown.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extra_turn_cooldown: Option<bool>,
     /// The declared number (`params`) the mana price reads, so a Buffed price reaches the cost
     /// (B3.4). Skipped in serialization: data, never JSON. Absent: the price is `mana` as written.
     #[serde(skip)]

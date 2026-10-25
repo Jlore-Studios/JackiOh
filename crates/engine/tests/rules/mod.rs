@@ -232,5 +232,6 @@ pub mod validator_drafts;
 pub mod view_for;
 pub mod view_hidden_ids;
 pub mod view_marks;
+pub mod weapon_kit;
 pub mod windfury;
 pub mod zones;
