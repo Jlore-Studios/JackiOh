@@ -197,7 +197,8 @@ pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: Exe
 
 /// §4.1: a unit that entered the field this turn is summoning sick. A unit that enters again, a
 /// Reborn body included, entered it on that turn like any other (R83), and so does a unit whose
-/// controller changed this turn (R171, through `enter_new_side` below), so this is the one comparison.
+/// controller changed this turn (R171, through `enter_new_side` below), and a card a Stack pile
+/// uncovers is sick in the same way (R1829000, `zones::remove_from_field`), so this is the one comparison.
 pub fn is_sick(state: &GameState, unit: &CardInstance) -> bool {
     unit.summoned_turn == Some(state.turn)
 }
