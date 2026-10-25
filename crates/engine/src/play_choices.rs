@@ -18,7 +18,8 @@
 //! in order, each taking its own minimum and the last one the remainder; one declaration may not
 //! name the same card twice while two declarations may both name the same card; a declaration the
 //! board cannot satisfy does not refuse the play, it fizzles on resolution — unless the play needs it
-//! (`required`, R703), and then the play is neither offered nor accepted. §9.1 is why a `hand` pick
+//! (`required`, R703), and then the play is neither offered nor accepted, as it is while a card's
+//! own play gate does not hold (`play_allowed`, R1851000). §9.1 is why a `hand` pick
 //! only ever offers the chooser's own hand, and R13 is why a unit pick only offers the top of a
 //! Stack pile.
 //!
@@ -202,6 +203,18 @@ pub fn mode_option_allowed(state: &GameState, player: PlayerId, card: &CardInsta
         .mode_allowed
         .as_ref()
         .is_none_or(|allowed| allowed(state, player, option))
+}
+
+/// R1851000: whether this player may play this card now (`Script.play_allowed`; Meditative #53
+/// Prestige's Radiant face: a Radiant enemy card on the field). `card` is the face the play resolves
+/// (`resolving_face`), so a copier answers with its copied face's gate (R399, R1851002). The one check
+/// `listed_play_choices` offers by and `why_choices_refused` refuses by; a cast never asks it (R70,
+/// R1851001). A card with no gate allows it.
+pub fn play_allowed(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    crate::scripts::script_of(state, card)
+        .play_allowed
+        .as_ref()
+        .is_none_or(|allowed| allowed(state, player))
 }
 
 /// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that
@@ -685,7 +698,10 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
     if crate::subsystems::copied_text::copies_text(instance) {
         return crate::subsystems::copied_text::copied_chooses_x(state, instance);
     }
-    crate::mana::is_x_cost(state, instance) && crate::scripts::script_of(state, instance).cost.is_none()
+    // R1848003: nor one whose X is set (`fixed_x`): it is played for that X.
+    crate::mana::is_x_cost(state, instance)
+        && instance.fixed_x.is_none()
+        && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
 /// §2.3, R348: why this X is not one the player may choose for this card, or `Ok` when it is —
@@ -1767,6 +1783,13 @@ pub fn listed_play_choices(
         Some(declared) => declared.modes.clone(),
         None => declared_modes(state, card),
     };
+    // R1851000: a play gate that does not hold leaves no combination, so the card is not offered.
+    if declared.is_none() && !play_allowed(state, player, card) {
+        return ListedChoices {
+            combos: Vec::new(),
+            truncated: false,
+        };
+    }
     if target_decls.is_empty() && mode_decls.is_empty() {
         return ListedChoices {
             combos: vec![PlayChoices::default()],
@@ -2214,9 +2237,9 @@ fn why_unplayable(
             .map(|error| error.message);
     }
     // (e) Choices: the resolving face at the cheapest price declares something the board cannot
-    // answer — a needed pick (R703) or a mode with no allowed option (R831008). The probe is the
-    // listing's default (this price, its zone, its first Tribute set, no picks), so the refusal is
-    // the one §10.5 step 1 gives that play.
+    // answer — a needed pick (R703), a mode with no allowed option (R831008) or a play gate that does
+    // not hold (R1851000). The probe is the listing's default (this price, its zone, its first
+    // Tribute set, no picks), so the refusal is the one §10.5 step 1 gives that play.
     let face = resolving_face(
         state,
         player,
@@ -2392,6 +2415,8 @@ pub fn priced_play_actions(
 ) -> Vec<PlayAction> {
     let mut out: Vec<PlayAction> = Vec::new();
     let tribute_sets = legal_tribute_sets(state, player, card);
+    // R1200: read once, at the first action listed: no Tribute set, zone or choice changes it.
+    let mut random: Option<bool> = None;
 
     for PlayPrice {
         x,
@@ -2407,6 +2432,10 @@ pub fn priced_play_actions(
         // R214: the choices of the face step 5 will resolve, which this price decides (#64, R1181002).
         let face = resolving_face(state, player, &stamped_with_embiggen(state, card, embiggen), cost);
         let bound = declares_bound_tribute(state, &face);
+        // #1889: the price's choices whose targets' discard cost can be paid, listed once the price
+        // offers a zone: neither reads the Tribute set or the zone, so a wide hand of many Tribute
+        // sets and zones lists them once, not once per pairing.
+        let mut payable: Option<Vec<PlayChoices>> = None;
         for tributes in &tribute_sets {
             // R1086: the plain zones first, then the Equip host zones after them (D14: a game that
             // never plays Equip lists what it listed before).
@@ -2428,24 +2457,12 @@ pub fn priced_play_actions(
                 vec![(None, None)]
             };
             for (zone, equip) in &zones {
-                for choices in play_choice_combinations(state, player, &face, None) {
+                let listed = payable.get_or_insert_with(|| payable_play_choices(state, player, card, &face));
+                for choices in listed.iter() {
                     let targets: &[Selection] = choices.targets.as_deref().unwrap_or(&[]);
                     let modes: &[String] = choices.modes.as_deref().unwrap_or(&[]);
                     // R123: the declared Tribute's pick names the units this play tributes, and no others.
                     if bound && !tribute_picks_agree(state, player, &face, targets, modes, tributes) {
-                        continue;
-                    }
-                    // B5 E5, R450, R682: the targets' discard cost is random at pay time, so it lists no
-                    // paying sets — one action, offered only when the cost can be paid at all.
-                    let owed = targeting_discards_required(state, player, &face, targets, modes, None);
-                    if crate::targeting::why_targeting_discards_unpayable(
-                        state,
-                        player,
-                        owed,
-                        &play_uses(card, targets),
-                    )
-                    .is_err()
-                    {
                         continue;
                     }
                     for payment in &paid {
@@ -2468,7 +2485,7 @@ pub fn priced_play_actions(
                         // R1200: while a Mayor acts the play carries no declared targets — the
                         // reducer draws them — so collapsed choices list one action, not one per
                         // target set.
-                        if crate::random_targets::targets_random(state) {
+                        if *random.get_or_insert_with(|| crate::random_targets::targets_random(state)) {
                             pushed.targets = without_target_picks(
                                 state,
                                 player,
@@ -2488,6 +2505,27 @@ pub fn priced_play_actions(
         }
     }
     out
+}
+
+/// B5 E5, R450, R682: `face`'s choice combinations (R90) whose targets' discard cost can be paid. The
+/// discards are random at pay time, so a play lists no paying sets — one action per combination,
+/// offered only when the cost can be paid at all. `card` is the card played, which pays no cost.
+fn payable_play_choices(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    face: &CardInstance,
+) -> Vec<PlayChoices> {
+    play_choice_combinations(state, player, face, None)
+        .into_iter()
+        .filter(|choices| {
+            let targets: &[Selection] = choices.targets.as_deref().unwrap_or(&[]);
+            let modes: &[String] = choices.modes.as_deref().unwrap_or(&[]);
+            let owed = targeting_discards_required(state, player, face, targets, modes, None);
+            crate::targeting::why_targeting_discards_unpayable(state, player, owed, &play_uses(card, targets))
+                .is_ok()
+        })
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -2643,6 +2681,13 @@ fn refuse_x(
         return match x {
             None => Ok(()),
             Some(_) => refuse(format!("{name} does not cost X")),
+        };
+    }
+    // R1848003: a set X is the play's; the action may name it or leave it out, and names no other.
+    if let Some(fixed) = card.fixed_x {
+        return match x {
+            Some(other) if other != fixed => refuse(format!("{name}'s X is set at {fixed}")),
+            _ => Ok(()),
         };
     }
     // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the
@@ -2955,6 +3000,14 @@ pub fn why_choices_refused(
         &stamped,
         cost_with(state, card, action.x, action.embiggen),
     );
+    // R1851000: a play gate that does not hold refuses the play whatever it carried, as the listing
+    // offers none of it.
+    if !play_allowed(state, player, &face) {
+        return refuse(format!(
+            "{} cannot be played without something to act on",
+            name_of(state, &face.def_id)
+        ));
+    }
     let targets: &[Selection] = action.targets.as_deref().unwrap_or(&[]);
     let modes: &[String] = action.modes.as_deref().unwrap_or(&[]);
     refuse_targets(state, player, &face, targets, modes, None)?;

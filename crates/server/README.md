@@ -860,6 +860,11 @@ status and a ladder bot's passed over (R1454), the five that are not starters: a
 alone, a starter with no row, and a deck's save refuses a portrait its account does not own
 (`api/decks.rs`).
 
+Migration 0058 only widens the `cards` tag check again, as 0043 did with Potion: it admits the five
+tags #1837 puts on shipped cards, Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean
+(R1837000), so `seed-catalog` can write Core #26 to #29, #100, Classic #90 and Classic+ #32 and its
+tokens with them. No row is rewritten; the seed writes each card's tags as the catalog holds them.
+
 ## Tests
 
 ```

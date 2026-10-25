@@ -366,7 +366,7 @@ const CORE: &[SpecRow] = &[
         "Glowy Jelly Bean",
         c(3),
         T::Spell,
-        &[],
+        &[G::JellyBean],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -376,7 +376,7 @@ const CORE: &[SpecRow] = &[
         "Blood Ridden Glowy Jelly Bean",
         c(1),
         T::Spell,
-        &[],
+        &[G::JellyBean],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -386,7 +386,7 @@ const CORE: &[SpecRow] = &[
         "Knockoff Temu Glowy Jelly Bean",
         c(2),
         T::Spell,
-        &[],
+        &[G::JellyBean],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -396,7 +396,7 @@ const CORE: &[SpecRow] = &[
         "GIGA Glowy Jelly Bean",
         c(7),
         T::Spell,
-        &[],
+        &[G::JellyBean],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -727,7 +727,7 @@ const CORE: &[SpecRow] = &[
         "Friend of Felinors",
         c(1),
         T::Spell,
-        &[G::Felinor],
+        &[],
         R::Common,
         NO_STATS,
         NO_STATS,
@@ -1129,7 +1129,7 @@ const CORE: &[SpecRow] = &[
         "Ceaseless Void",
         c(100),
         T::Unit,
-        &[],
+        &[G::Terminus],
         R::Mythic,
         st(10, 10),
         st(20, 20),
@@ -1476,7 +1476,7 @@ const CLASSIC: &[SpecRow] = &[
         "Felinor Feelings",
         c(2),
         T::Spell,
-        &[G::Felinor],
+        &[],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -2002,7 +2002,7 @@ const CLASSIC: &[SpecRow] = &[
         "In Too Deep",
         c(1),
         T::FieldSpell,
-        &[G::Quickdraw],
+        &[G::Quickdraw, G::Quest],
         R::Mythic,
         NO_STATS,
         NO_STATS,
@@ -2448,7 +2448,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Otherworldly Removal",
         c(2),
         T::Spell,
-        &[],
+        &[G::Otherworldly],
         R::Epic,
         NO_STATS,
         NO_STATS,
@@ -2458,7 +2458,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Execute",
         c(1),
         T::Spell,
-        &[G::Token],
+        &[G::OtherOrigins, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -2468,7 +2468,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Brawl",
         c(3),
         T::Spell,
-        &[G::Token],
+        &[G::OtherOrigins, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -2478,7 +2478,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Blade Storm",
         c(1),
         T::Spell,
-        &[G::Token],
+        &[G::OtherOrigins, G::Token],
         R::Token,
         NO_STATS,
         NO_STATS,
@@ -2828,7 +2828,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Fruit Tree",
         c(3),
         T::FieldSpell,
-        &[G::Fruit],
+        &[],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -2928,7 +2928,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Organic Produce",
         c(4),
         T::FieldSpell,
-        &[G::Fruit],
+        &[],
         R::Epic,
         NO_STATS,
         NO_STATS,
@@ -4792,8 +4792,9 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::MeditativePlus, MEDITATIVE_PLUS),
 ];
 
-/// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague and patch v0.2.Y's Catalyst, Prime and
-/// Acclaimed: the only tags any entry may carry.
+/// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague, patch v0.2.Y's Catalyst, Prime and
+/// Acclaimed, the Meditative set's Wincon, the Meditative+ set's Potion and #1837's Terminus, Quest,
+/// Otherworldly, Other-Origins and Jelly Bean (R1837000): the only tags any entry may carry.
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -4812,6 +4813,11 @@ const ALLOWED_TAGS: &[&str] = &[
     "Acclaimed",
     "Wincon",
     "Potion",
+    "Terminus",
+    "Quest",
+    "Otherworldly",
+    "Other-Origins",
+    "Jelly Bean",
     "Token",
 ];
 
@@ -6126,6 +6132,89 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 "meditative-049",
                 "meditative-049-1",
             ])
+        );
+    }
+}
+
+mod the_tags_issue_1837_moves_r1837000 {
+    use super::*;
+
+    fn tagged(tag: Tag) -> Vec<String> {
+        let mut ids: Vec<String> = entries()
+            .into_iter()
+            .filter(|entry| entry.tags.contains(&tag))
+            .map(|entry| entry.id.clone())
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    #[test]
+    fn r1837000_tags_core_100_terminus_classic_90_quest_classic_plus_32_otherworldly_its_three_tokens_other_origins_and_core_26_to_29_jelly_bean_and_no_other_entry()
+     {
+        assert_eq!(tagged(Tag::Terminus), strings(&["core-100"]));
+        assert_eq!(tagged(Tag::Quest), strings(&["classic-090"]));
+        assert_eq!(tagged(Tag::Otherworldly), strings(&["classicplus-032"]));
+        assert_eq!(
+            tagged(Tag::OtherOrigins),
+            strings(&["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"])
+        );
+        assert_eq!(
+            tagged(Tag::JellyBean),
+            strings(&["core-026", "core-027", "core-028", "core-029"])
+        );
+        // A Jelly Bean is a card named one, and the Other-Origins cards are the three tokens
+        // Otherworldly Removal adds, every one a token it names.
+        let mut beans: Vec<String> = entries()
+            .into_iter()
+            .filter(|entry| entry.name.ends_with("Jelly Bean"))
+            .map(|entry| entry.id.clone())
+            .collect();
+        beans.sort();
+        assert_eq!(beans, tagged(Tag::JellyBean));
+        let removal = CATALOG.get("classicplus-032").expect("C+ #32");
+        for id in tagged(Tag::OtherOrigins) {
+            assert_eq!(
+                CATALOG.get(id.as_str()).map(|entry| entry.token),
+                Some(true),
+                "{id}"
+            );
+            assert!(
+                removal.refs.as_ref().is_some_and(|refs| refs.contains(&id)),
+                "{id}"
+            );
+        }
+        // In Too Deep keeps its Quickdraw beside its Quest.
+        assert_eq!(
+            CATALOG.get("classic-090").map(|entry| entry.tags.clone()),
+            Some(vec![Tag::Quickdraw, Tag::Quest])
+        );
+    }
+
+    #[test]
+    fn r1837000_felinor_feelings_and_friend_of_felinors_are_no_felinors_and_no_field_spell_is_a_fruit() {
+        for id in ["classic-032", "core-062", "classicplus-063", "classicplus-068"] {
+            assert_eq!(
+                CATALOG.get(id).map(|entry| entry.tags.clone()),
+                Some(Vec::new()),
+                "{id}"
+            );
+        }
+        // The two Field Spells that make Fruit were the only Field Spells tagged Fruit, so a random
+        // Fruit is never a Field Spell now; the Felinor Token both Spells summon is still a Felinor.
+        let fruit_field_spells: Vec<String> = tagged(Tag::Fruit)
+            .into_iter()
+            .filter(|id| {
+                CATALOG
+                    .get(id.as_str())
+                    .is_some_and(|entry| entry.type_ == T::FieldSpell)
+            })
+            .collect();
+        assert_eq!(fruit_field_spells, Vec::<String>::new());
+        assert!(
+            CATALOG
+                .get("core-t-felinor")
+                .is_some_and(|entry| entry.tags.contains(&Tag::Felinor))
         );
     }
 }

@@ -736,9 +736,13 @@ pub fn validate_play(
     // read as the Spell reveals (R1045), so none is stamped.
     let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> =
         action.face_down.map(|reveal| (reveal, sink.state.turn, None));
+    // R1848003: an X-cost card whose X is set is played for that X, which the play names (`cardPlayed`).
+    let fixed_x = card.fixed_x.filter(|_| is_x_cost(sink.state, &card));
     if let Some(stamped) = find_instance_mut(sink.state, &card.id) {
         if chooses {
             stamped.x = Some(action.x.unwrap_or(0));
+        } else if let Some(fixed) = fixed_x {
+            stamped.x = Some(fixed);
         }
         if embiggens {
             stamped.embiggened = Some(action.embiggen == Some(true));
@@ -1879,6 +1883,9 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // E39 (Classic+ #14): "the next Spell you play gains …" is gained as it is played, as Echo is (R178).
     let card = live(sink.state, &card);
     stamp_next_spell(sink, &card, run.player);
+    // R1848002: "your next Spell this turn has Poisonous" is had as it is played, as Forever&'s is.
+    let card = live(sink.state, &card);
+    give_next_spell_keywords(sink, &card, run.player);
     true
 }
 
@@ -1957,6 +1964,46 @@ fn stamp_next_spell(sink: &mut EngineSink<'_>, card: &CardInstance, player: Play
             let mut list = stamped.enchantments.clone().unwrap_or_default();
             list.push(enchantment.clone());
             stamped.enchantments = Some(list);
+        }
+        remove_modifier(sink, player, &modifier.id);
+    }
+}
+
+/// R1848002 (Stinkyscape #13 Asphyxiants Cloud): every live `keywordNextSpell` modifier of the player
+/// gives its keyword to the Spell being played face-up and is spent — "your next Spell this turn has
+/// Poisonous". The keyword is a granted one, read through the layers wherever the Spell's keywords are
+/// (§4.4 step 7's Poisonous, R346), and R78's reset takes it off as the Spell lands from the resolving
+/// zone once its Echo repeats are done, so it lasts this resolution alone. A cast is a play (R70); a
+/// Spell set face-down is a Trap until it resolves (R783005) and a countered play never reaches step 4,
+/// so both leave it waiting.
+fn give_next_spell_keywords(sink: &mut EngineSink<'_>, card: &CardInstance, player: PlayerId) {
+    if card_type_of(sink.state, card) != CardType::Spell || card.set_as.is_some() {
+        return;
+    }
+    let mods = sink.state.players[player].mods.clone();
+    for modifier in &mods {
+        let ModifierKind::KeywordNextSpell { keyword } = &modifier.kind else {
+            continue;
+        };
+        if !modifier_is_live(sink.state, modifier) {
+            continue;
+        }
+        let given = find_instance_mut(sink.state, &card.id).is_some_and(|stamped| {
+            let had = stamped
+                .granted_keywords
+                .iter()
+                .any(|held| held.kind() == keyword.kind());
+            if !had {
+                stamped.granted_keywords.push(keyword.clone());
+            }
+            !had
+        });
+        if given {
+            sink.events.push(GameEvent::KeywordGranted {
+                instance_id: card.id.clone(),
+                keyword: keyword.clone(),
+                lost: None,
+            });
         }
         remove_modifier(sink, player, &modifier.id);
     }

@@ -96,6 +96,7 @@ chinese: boolean?,
 lucky: number?,
 copyOf: string?,
 memory: {[string]: JsonValue}?,
+fixedX: number?,
 }
 
 export type AfterStateCheckArgs = {
@@ -517,6 +518,7 @@ ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
 trample: boolean?,
+trampleOnto: TrampleOnto?,
 side: ScopeSide?,
 rows: {Row}?,
 types: {CardType}?,
@@ -532,6 +534,7 @@ ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
 trample: boolean?,
+trampleOnto: TrampleOnto?,
 }
 
 export type DamageEnemyOrHealFriendArgs = {
@@ -900,6 +903,7 @@ spec: TargetSpec,
 
 export type FreezeArgs = {
 target: TargetSpec,
+forever: boolean?,
 }
 
 export type FuseCardsArgs = {
@@ -1856,6 +1860,10 @@ expiry: ModifierExpiry,
 ["kind"]: "healthPrice",
 multiple: number,
 echo: number?,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "keywordNextSpell",
+keyword: Keyword,
 }
 
 export type PlayerSpec = "self" | "enemy"
@@ -2325,7 +2333,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,
@@ -2399,6 +2407,8 @@ index: number?,
 }
 
 export type TargetedWhat = "attack" | "target"
+
+export type TrampleOnto = "adjacent" | "adjacentAndHero"
 
 export type TransformArgs = {
 defId: string,

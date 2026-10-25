@@ -396,14 +396,29 @@ describe("R503 one distinct picture per catalog entry", () => {
 describe("R503 Core keeps the pictures v0.1 gave it", () => {
   type Recorded = readonly [ArtThemeId, string, number, number];
   const recorded = CORE_V01 as unknown as Readonly<Record<string, Recorded>>;
+  /**
+   * R1837000: the Core cards a later patch re-tagged, and the theme their tags give now. A theme is read
+   * off the tags, so #62 Friend of Felinors, no Felinor since #1837, wears the plain Spell's; every other
+   * Core card keeps v0.1's picture.
+   */
+  const RETAGGED: Readonly<Record<string, ArtThemeId>> = { "core-062": "spell" };
+  const kept = Object.entries(recorded).filter(([id]) => !(id in RETAGGED));
 
   it("R503 the fixture covers every Core entry", () => {
     const core = DEFS.filter((card) => card.set === "Core").map((card) => card.id);
     expect(Object.keys(recorded).sort()).toEqual(core.sort());
   });
 
+  it("R1837000 a Core card a patch re-tagged wears the theme its tags give now, on both faces", () => {
+    for (const [id, theme] of Object.entries(RETAGGED)) {
+      expect(recorded[id]?.[0], id).not.toBe(theme);
+      expect(faceSpec(def(id), false).theme, id).toBe(theme);
+      expect(faceSpec(def(id), true).theme, id).toBe(theme);
+    }
+  });
+
   it("R503 every Core card keeps its theme, layout, backdrop and sky, and its emblem unless its motif became it", () => {
-    for (const [id, [theme, picture]] of Object.entries(recorded)) {
+    for (const [id, [theme, picture]] of kept) {
       const spec = faceSpec(def(id), false);
       const [layout, backdrop, sky, emblem] = picture.split("|");
       expect(spec.theme, id).toBe(theme);
@@ -417,7 +432,7 @@ describe("R503 Core keeps the pictures v0.1 gave it", () => {
 
   it("R503 a Core card whose name calls up no motif draws exactly the picture it drew in v0.1, on both faces", () => {
     let unchanged = 0;
-    for (const [id, [, , base, radiant]] of Object.entries(recorded)) {
+    for (const [id, [, , base, radiant]] of kept) {
       const card = def(id);
       if (faceSpec(card, false).motif !== null) continue;
       expect(hashId(artDataUri(faceSpec(card, false))), id).toBe(base);

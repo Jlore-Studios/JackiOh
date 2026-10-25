@@ -74,7 +74,15 @@ function rowNames(section: TableSection): string[] {
  * glossary, or the first B11 test fails.
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
-  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds", "Luck-based", "Luck X"],
+  "§6.1": [
+    "Can't attack or be attacked",
+    "A keyword while a condition holds",
+    "Luck-based",
+    "Luck X",
+    // R1846000: card metrics no shipped card prints yet; the Stinkyscape cards that name them bring their terms.
+    "BUSTED",
+    "Complicated",
+  ],
   "§6.2": [
     "Cry and Death",
     "After this is attacked",
@@ -127,6 +135,13 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
+    // R1848001–R1848006: Stinkyscape's spell verbs, which no card prints until the set ships; its card
+    // parts make a term of any its texts bold (Inflation).
+    "Trample onto adjacent Units",
+    "Next Spell keyword",
+    "Set X",
+    "Melee",
+    "Inflation",
     // R1840000–R1840006: Stinkyscape's Resources and Credits, explained on the cards that use them.
     "Gain a Resource",
     "Credits",

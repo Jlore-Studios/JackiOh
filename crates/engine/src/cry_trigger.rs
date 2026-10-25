@@ -167,8 +167,12 @@ pub fn trigger_cry_of(sink: &mut EngineSink, card: &CardInstance, controller: Pl
 }
 
 /// ME-ALTPLAY, R1044, R1045: resolve a set Spell from the backrow with `repeats` Echo repeats.
-/// R703 is read as it reveals: a required declaration the board cannot satisfy fizzles the reveal.
+/// R703 is read as it reveals: a required declaration the board cannot satisfy fizzles the reveal, as
+/// a play gate that does not hold does (R1851001).
 pub fn reveal_set_spell(sink: &mut EngineSink, card: &CardInstance, controller: PlayerId, repeats: u32) {
+    if !crate::play_choices::play_allowed(sink.state, controller, card) {
+        return;
+    }
     for decl in crate::play_choices::declared_targets(sink.state, card) {
         let offered = crate::play_choices::legal_selections_for(sink.state, controller, card, &decl);
         if crate::play_choices::unmet_requirement(&decl, offered.len()) {

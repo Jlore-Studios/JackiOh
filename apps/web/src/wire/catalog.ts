@@ -40,6 +40,11 @@ export type Tag =
   | "Acclaimed"
   | "Wincon"
   | "Potion"
+  | "Terminus"
+  | "Quest"
+  | "Otherworldly"
+  | "Other-Origins"
+  | "Jelly Bean"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */

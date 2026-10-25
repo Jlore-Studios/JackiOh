@@ -925,6 +925,16 @@ pub fn mode_allowed_hook(
     Arc::new(f)
 }
 
+/// R1851000, `Script.play_allowed`: whether this player may play the card now.
+pub type PlayAllowedHook = Arc<dyn Fn(&GameState, PlayerId) -> bool + Send + Sync>;
+
+/// Builds a `PlayAllowedHook`.
+pub fn play_allowed_hook(
+    f: impl Fn(&GameState, PlayerId) -> bool + Send + Sync + 'static,
+) -> PlayAllowedHook {
+    Arc::new(f)
+}
+
 /// `ActivationDecl.has`: whether the card has this ability now.
 pub type HasHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
@@ -968,6 +978,14 @@ pub struct Script {
     /// the board, asked by `legalActions`, the play's refusal and a cast's own pick alike
     /// (Meditative #98 Showdown: only an empty lane). Absent allows every option.
     pub mode_allowed: Option<ModeAllowedHook>,
+    /// R1851000: whether the card may be played now, for a card whose play needs something on the
+    /// board to act on though it declares no target its play needs (R703; Meditative #53 Prestige's
+    /// Radiant face: a Radiant enemy card on the field). A pure read of what its player may see
+    /// (§9.1), asked off the face the play resolves (R214, R399) by `legalActions`, the play's refusal
+    /// and the view's `playReason` through one check (`play_choices::play_allowed`), and by a set
+    /// Spell's Reveal (R783006); never by a cast, an Echo repeat or a random cast (R70, R1851001). A
+    /// fusion holds every ingredient's (R1851002). Absent allows the play.
+    pub play_allowed: Option<PlayAllowedHook>,
     /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
     /// play's events, and blanked from an in-flight play the other seat reads.
     pub secret_modes: bool,

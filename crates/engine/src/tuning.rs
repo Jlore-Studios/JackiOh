@@ -70,8 +70,9 @@ pub fn tuned_count_with_min(instance: &CardInstance, key: &str, printed: i32, mi
 /// B2.7, B3.4: the X an X-cost card counts on the field and as it resolves — the X it was played for
 /// moved by its X steps, never below 1 (R348's floor) — and 0 for a card that has no chosen X (a
 /// Recruit, a copy, a card outside a play), as R65 reads an X card's cost off the field.
+/// R1848003: a card whose X is set (`fixed_x`) counts that X wherever no play chose one.
 pub fn x_of(instance: &CardInstance) -> i32 {
-    match instance.x {
+    match instance.x.or(instance.fixed_x) {
         None => 0,
         Some(x) => tuned_count(instance, X_KEY, x),
     }

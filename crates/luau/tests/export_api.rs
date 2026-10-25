@@ -677,6 +677,7 @@ mod generator {
             ForcedAttackerFilter,
             ForcedSide,
             ForcedTarget,
+            TrampleOnto,
             GiveFromHandCards,
             RewardOption,
             CellScope,

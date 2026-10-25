@@ -171,7 +171,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 | Binary | Path | What |
 | --- | --- | --- |
 | `rules` | `tests/rules.rs`, `tests/rules/<x>.rs` | one module per rule area; needs `--features testkit` |
-| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash through `testkit::golden` (as `cargo jackioh golden check` replays them), and the hotseat fixture's fold to `8784adae`; needs `--features testkit` |
+| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash through `testkit::golden` (as `cargo jackioh golden check` replays them), and the hotseat fixture's fold to `7044d528`; needs `--features testkit` |
 | `export_config` | `tests/export_config.rs` | writes `engineConfig.ts` |
 
 A test that proves a ruling is named after it: `fn r58_…` (CLAUDE.md rule 3).

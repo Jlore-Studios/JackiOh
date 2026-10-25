@@ -1198,6 +1198,8 @@ pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
     instance.embiggen_cost_override = None;
+    // R1848003: and so does a set X, which is the card's price.
+    instance.fixed_x = None;
 }
 
 /// R174: drop the delayed effects aimed at a card that is leaving the field (`DelayedEffect.watch`).

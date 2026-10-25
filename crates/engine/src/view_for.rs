@@ -524,6 +524,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         activations: None,
         quest: None,
         copies: None,
+        fixed_x: None,
     }
 }
 
@@ -555,6 +556,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     view.chinese = card.chinese;
     // MD-B6, R943: Created is public the same way.
     view.created = card.created;
+    // R1848003: a set X is the card's price, read where the card is.
+    view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
     view
 }
 
@@ -848,6 +851,8 @@ fn unit_view_of(
         frozen: top.frozen.map(|_| true),
         // R1839000: a status, public on the field like the unit itself, its countdown included.
         slumber: top.slumber,
+        // R1848000: and whether it never thaws, public the same way.
+        frozen_forever: crate::freeze::frozen_forever(top).then_some(true),
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
@@ -1205,6 +1210,11 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
             ),
             _ => format!("Your next Spell costs health equal to {multiple} times its cost instead of mana"),
         },
+        // R1848002: Stinkyscape #13 Asphyxiants Cloud's "your next Spell this turn has Poisonous".
+        ModifierKind::KeywordNextSpell { keyword } => format!(
+            "Your next Spell this turn has {}",
+            crate::wire::keyword_key(keyword)
+        ),
     }
 }
 
