@@ -550,6 +550,7 @@
         "by": "`gpt` (medium), `claude` (strong)",
         "sha": "04173a57b413f5c531d44f1ebf9e5aedd84cd883"
       },
+      "closed_at": "2026-10-25T13:49:02Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -559,6 +560,7 @@
       "interruptions": 0,
       "issue": 1818,
       "kind": "review",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-25T13:09:48Z",
