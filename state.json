@@ -249,7 +249,9 @@
     "1829": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-25T14:43:23Z",
         "family": "claude",
