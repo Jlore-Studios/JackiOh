@@ -675,6 +675,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   curveDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1183002: the AI takes the rest of the turn.
   autopilotEngaged: { sfx: "notify", cues: () => [sfx("notify")] },
+  // R1850003: a permanent held beneath a card leaves the board as an exiled card does.
+  held: { sfx: "poof", cues: () => [sfx("poof")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

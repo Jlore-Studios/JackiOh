@@ -1004,6 +1004,11 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         if sink.state.result.is_some() {
             return;
         }
+        // R1850003, R1850002, R1850005: the card-on-card verbs' standing rules, each a whole step that
+        // the check starts over after when it changed something.
+        if crate::card_on_card::release_held(sink) || crate::card_on_card::standing_text(sink) {
+            continue;
+        }
 
         let order = active_first(sink.state);
         let units: Vec<CardInstance> = order

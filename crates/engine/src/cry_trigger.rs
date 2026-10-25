@@ -337,7 +337,10 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
         // R452: a random cast's caster is never asked; its picks are drawn at random, each aimed by its
         // declaration when the cast targets enemies (R656), as `play_steps::cast_target_options` aims them.
         if let Some(cast) = random_cast_of(sink.state, run.controller) {
-            let pool = if cast.target_enemies {
+            let pool = if cast.friends_only == Some(true) && decl.kind == PromptKind::Target {
+                // R1850004: a cast for its caster's own side picks there alone.
+                crate::random_cast::friends_only(sink.state, run.controller, &options, Selection::clone)
+            } else if cast.target_enemies {
                 let required = decl.min.min(options.len() as i32);
                 if crate::targeting::target_aim(decl) == TargetAim::Help {
                     prefer_friends(sink.state, run.controller, &options, Selection::clone, required)

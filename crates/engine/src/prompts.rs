@@ -296,7 +296,7 @@ pub fn resume_self(ctx: &EffectContext<'_>, step: &str, data: IndexMap<String, V
         def_id: ctx
             .def_id
             .clone()
-            .or_else(|| self_.map(|card| card.def_id.clone()))
+            .or_else(|| self_.map(|card| crate::subsystems::unit_text::text_def_of(card).0.to_string()))
             .unwrap_or_default(),
         step: step.to_string(),
         hook: None,
@@ -1212,11 +1212,13 @@ pub struct HookInstance {
 
 impl From<&CardInstance> for HookInstance {
     fn from(card: &CardInstance) -> HookInstance {
+        // R1850000: a copier's hooks are the copied text's, and their continuations name it.
+        let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(card);
         HookInstance {
             id: card.id.clone(),
-            def_id: card.def_id.clone(),
+            def_id: def_id.to_string(),
             controller: card.controller,
-            radiant: card.radiant,
+            radiant,
         }
     }
 }
@@ -1377,7 +1379,20 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     };
     let max = clamp(args.max.unwrap_or(1), 0, args.options.len() as i32);
     let required = clamp(args.min.unwrap_or(1), 0, max);
-    let options: Vec<PromptOption> = if mode.target_enemies {
+    let options: Vec<PromptOption> = if mode.friends_only && args.kind == PromptKind::Target {
+        // R1850004: a cast for its caster's own side offers its targets there alone; with nothing
+        // there the question is passed, as a declaration with no legal option is.
+        let friends = crate::random_cast::friends_only(
+            sink.state,
+            args.player,
+            &args.options,
+            |option: &PromptOption| option.selection.clone(),
+        );
+        if friends.is_empty() {
+            return None;
+        }
+        friends
+    } else if mode.target_enemies {
         if args.aim == Some(TargetAim::Help) {
             crate::random_cast::prefer_friends(
                 sink.state,

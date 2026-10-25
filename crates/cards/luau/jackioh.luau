@@ -232,6 +232,7 @@ targetEnemies: boolean?,
 aimAt: string?,
 aimOnly: boolean?,
 afterward: CastAfterward?,
+friendsOnly: boolean?,
 }
 
 export type CastDef = {
@@ -246,6 +247,7 @@ targetEnemies: boolean?,
 aimAt: string?,
 aimOnly: boolean?,
 afterward: CastAfterward?,
+friendsOnly: boolean?,
 }
 
 export type CastNewArgs = {
@@ -256,6 +258,7 @@ targetEnemies: boolean?,
 aimAt: string?,
 aimOnly: boolean?,
 afterward: CastAfterward?,
+friendsOnly: boolean?,
 }
 
 export type CastNewDef = string | CastDef
@@ -421,6 +424,11 @@ export type ControlHow = "steal" | "give"
 
 export type ConvertHealingArgs = {
 player: PlayerSpec?,
+}
+
+export type CopyUnitTextArgs = {
+target: TargetSpec?,
+radiant: boolean?,
 }
 
 export type CostAura = {
@@ -712,6 +720,10 @@ export type DrawWhileCheapArgs = {
 maxCost: number,
 repeats: number,
 player: PlayerId?,
+}
+
+export type DuoRadiantArgs = {
+target: TargetSpec?,
 }
 
 export type DyingUnit = {
@@ -1415,9 +1427,15 @@ cells: {ZoneRef},
 ["type"]: "autopilotEngaged",
 player: PlayerId,
 turn: number,
+} | {
+["type"]: "held",
+player: PlayerId,
+instanceId: string,
+defId: string,
+holderId: string,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "held"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect"
 
@@ -1517,6 +1535,14 @@ export type HeroGuard = {
 cap: number?,
 divisor: number?,
 }
+
+export type HoldArgs = {
+target: TargetSpec?,
+release: HoldRelease?,
+holder: NewHolder?,
+}
+
+export type HoldRelease = "itsController" | "holdersController"
 
 export type InsteadDamage = "pierce"
 
@@ -1669,6 +1695,11 @@ fromTurn: number,
 ["until"]: "used",
 } | {
 ["until"]: "never",
+}
+
+export type NewHolder = {
+defId: string,
+player: PlayerSpec?,
 }
 
 export type NextTurnManaArgs = {
@@ -3424,6 +3455,10 @@ function J.convert_healing(args: ConvertHealingArgs): EffectCall
 	return { verb = "convert_healing", args = args :: any }
 end
 
+function J.copy_unit_text(args: CopyUnitTextArgs): EffectCall
+	return { verb = "copy_unit_text", args = args :: any }
+end
+
 function J.counter(args: CounterArgs): EffectCall
 	return { verb = "counter", args = args :: any }
 end
@@ -3562,6 +3597,10 @@ end
 
 function J.draw_while_cheap(args: DrawWhileCheapArgs): EffectCall
 	return { verb = "draw_while_cheap", args = args :: any }
+end
+
+function J.duo_radiant(args: DuoRadiantArgs): EffectCall
+	return { verb = "duo_radiant", args = args :: any }
 end
 
 function J.enchant(args: EnchantArgs): EffectCall
@@ -3748,6 +3787,10 @@ function J.heal(args: HealArgs): EffectCall
 	return { verb = "heal", args = args :: any }
 end
 
+function J.hold_beneath(args: HoldArgs): EffectCall
+	return { verb = "hold_beneath", args = args :: any }
+end
+
 function J.keep_secret(args: KeepSecretArgs): EffectCall
 	return { verb = "keep_secret", args = args :: any }
 end
@@ -3922,6 +3965,10 @@ end
 
 function J.shuffle_random_from_catalog(args: ShuffleRandomFromCatalogArgs): EffectCall
 	return { verb = "shuffle_random_from_catalog", args = args :: any }
+end
+
+function J.squad_radiant(args: any?): EffectCall
+	return { verb = "squad_radiant", args = args :: any }
 end
 
 function J.steal(args: StealTarget): EffectCall

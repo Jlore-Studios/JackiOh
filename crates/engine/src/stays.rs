@@ -102,7 +102,9 @@ pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) ->
         match event {
             GameEvent::Destroyed { instance_id: id, .. }
             | GameEvent::Bounced { instance_id: id, .. }
-            | GameEvent::Exiled { instance_id: id, .. } => {
+            | GameEvent::Exiled { instance_id: id, .. }
+            // R1850003: a card held beneath another has left the field.
+            | GameEvent::Held { instance_id: id, .. } => {
                 if id == instance_id {
                     return true;
                 }
@@ -200,6 +202,7 @@ fn removals_in(event: &GameEvent) -> Vec<String> {
         | GameEvent::Exiled { instance_id, .. }
         | GameEvent::Bounced { instance_id, .. }
         | GameEvent::ShuffledIn { instance_id, .. }
+        | GameEvent::Held { instance_id, .. }
         | GameEvent::ControlChanged { instance_id, .. } => vec![instance_id.clone()],
         // R316: an existing card a full library refused left where it was, like a `shuffledIn`; a copy
         // that was never created left nothing.
@@ -269,7 +272,8 @@ fn moved_by(event: &GameEvent) -> Vec<String> {
         | GameEvent::Discarded { instance_id, .. }
         | GameEvent::Drawn { instance_id, .. }
         | GameEvent::AddedToHand { instance_id, .. }
-        | GameEvent::ShuffledIn { instance_id, .. } => vec![instance_id.clone()],
+        | GameEvent::ShuffledIn { instance_id, .. }
+        | GameEvent::Held { instance_id, .. } => vec![instance_id.clone()],
         // R316: as in `removals_in`, an existing card a full library refused has moved; a copy never
         // created has not.
         GameEvent::LibraryOverflow {

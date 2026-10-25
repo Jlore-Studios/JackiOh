@@ -842,6 +842,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R1850003: a permanent goes beneath the card that holds it, fading off the board as an exiled card
+  // does. Pre-update it is still on the board; the holder's own arrival, when it is new, is `summoned`.
+  held: {
+    animation: "jk-exile-fade",
+    durationMs: 350,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
 };
 
 /**

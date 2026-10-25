@@ -550,10 +550,13 @@ pub fn queue_trigger(
         instance_id: holder.card.id.clone(),
         hook: def.id.clone(),
         resume: Resume {
-            def_id: holder.card.def_id.clone(),
+            // R1850000: a copier's trigger is the copied text's, re-entered under that definition.
+            def_id: crate::subsystems::unit_text::text_def_of(&holder.card)
+                .0
+                .to_string(),
             hook: def.id.clone(),
             step: TRIGGER_STEP.to_string(),
-            radiant: holder.card.radiant,
+            radiant: crate::subsystems::unit_text::text_def_of(&holder.card).1,
             instance_id: Some(holder.card.id.clone()),
             data,
         },
@@ -585,10 +588,12 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
         instance_id: holder.card.id.clone(),
         hook: hook.as_str().to_string(),
         resume: Resume {
-            def_id: holder.card.def_id.clone(),
+            def_id: crate::subsystems::unit_text::text_def_of(&holder.card)
+                .0
+                .to_string(),
             hook: hook.as_str().to_string(),
             step: TRIGGER_STEP.to_string(),
-            radiant: holder.card.radiant,
+            radiant: crate::subsystems::unit_text::text_def_of(&holder.card).1,
             instance_id: Some(holder.card.id.clone()),
             data,
         },
@@ -1135,11 +1140,12 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     // and a paused list goes on in the list it began, so its tail is rebuilt from that same face and
     // definition — not the ones the entry recorded when it was queued, which an earlier trigger in the
     // same queue can have made Radiant since.
+    let (text_def_id, text_radiant) = crate::subsystems::unit_text::text_def_of(&card);
     let plan = crate::work::WorkPlan::new(
         Resume {
             hook: def.id.clone(),
-            def_id: card.def_id.clone(),
-            radiant: card.radiant,
+            def_id: text_def_id.to_string(),
+            radiant: text_radiant,
             ..entry.resume.clone()
         },
         controller,

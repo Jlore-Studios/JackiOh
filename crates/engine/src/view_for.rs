@@ -2289,7 +2289,9 @@ fn redact_event(
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
         // R1183002: the autopilot names a player and a turn.
-        | GameEventType::AutopilotEngaged => event.clone(),
+        | GameEventType::AutopilotEngaged
+        // R1850003: only a face-up card is held, beneath a card on the board, so both are public.
+        | GameEventType::Held => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

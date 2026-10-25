@@ -439,6 +439,9 @@ pub struct PlayRun {
     /// E12, E39, R452: its target picks narrow to enemies when one is legal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_enemies: Option<bool>,
+    /// R1850004: a cast whose target picks are its caster's own side alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub friends_only: Option<bool>,
     /// E12, R453: a cast Field Spell, Trap or Field Trap that found no zone. It still counts as played
     /// (R70, R138), nothing of its text resolves, and step 7 puts it in its owner's graveyard.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -549,6 +552,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         flashback: None,
         random: None,
         target_enemies: None,
+        friends_only: None,
         fizzled: None,
         mana_before: None,
         cast_x: None,
@@ -2403,6 +2407,13 @@ fn cast_target_options(
     decl: &TargetDecl,
 ) -> Vec<Selection> {
     let options = legal_selections_for(state, run.player, card, decl);
+    // R1850004: a cast for its caster's own side picks its targets there alone, or passes the
+    // declaration; a pick from a hand, a pile or a zone is no target and stays as it is.
+    if run.friends_only == Some(true) && decl.kind == PromptKind::Target {
+        return crate::random_cast::friends_only(state, run.player, &options, |selection: &Selection| {
+            selection.clone()
+        });
+    }
     if run.target_enemies != Some(true) {
         return options;
     }
@@ -2970,7 +2981,9 @@ fn drive(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 
 /// R452: the mode a run's steps run under, or null for a play and an ordinary cast.
 fn cast_mode_of(run: &PlayRun) -> Option<CastMode> {
-    if run.cast != Some(true) || (run.random != Some(true) && run.target_enemies != Some(true)) {
+    if run.cast != Some(true)
+        || (run.random != Some(true) && run.target_enemies != Some(true) && run.friends_only != Some(true))
+    {
         return None;
     }
     Some(CastMode {
@@ -2979,6 +2992,7 @@ fn cast_mode_of(run: &PlayRun) -> Option<CastMode> {
         random: run.random == Some(true),
         target_enemies: run.target_enemies == Some(true),
         casts: 1,
+        friends_only: run.friends_only,
     })
 }
 
@@ -3171,6 +3185,9 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     }
     if target_enemies {
         run.target_enemies = Some(true);
+    }
+    if options.friends_only == Some(true) {
+        run.friends_only = Some(true);
     }
     // MD-B22, R946: an aimed cast names its first pick.
     run.aim_at = options.aim_at.clone();

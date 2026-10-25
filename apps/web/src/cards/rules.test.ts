@@ -127,6 +127,14 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
+    // R1850000–R1850005: #1850's card-on-card verbs, rules vocabulary until Stinkyscape's cards print
+    // them (#1836), which may make a term of one (Duo, Squad).
+    "Copy a Unit's text",
+    "Duo / Squad",
+    "Exile aura",
+    "Hold beneath",
+    "Cast it for yourself",
+    "Radiant at N keywords",
   ],
 };
 

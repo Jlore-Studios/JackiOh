@@ -205,6 +205,8 @@ export const GAME_EVENT_TYPES = [
   "curveDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
   "autopilotEngaged",
+  // #1850's card-on-card verbs: a permanent held beneath a card (R1850003).
+  "held",
 ] as const satisfies readonly GameEventType[];
 
 /**

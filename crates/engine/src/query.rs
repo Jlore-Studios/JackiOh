@@ -616,3 +616,35 @@ pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
             .all(|row| card_at(state, crate::zones::ZoneSlot { player, row, lane }).is_none())
     })
 }
+
+/// R1850004 (Stinkyscape #139 Wormhole, "when your opponent casts a beneficial Spell on themselves or a
+/// permanent they control"): the id of the Spell `event` announces when every target its player chose
+/// is their own hero or a card they control on the field — one it chose none for is not beneficial,
+/// and a card being set face-down announces no Spell. `None` for any other event.
+pub fn beneficial_on_own_side(state: &GameState, event: &GameEvent) -> Option<String> {
+    let GameEvent::CardAnnounced {
+        player,
+        instance_id,
+        card_type,
+        targets,
+        face_down,
+        ..
+    } = event
+    else {
+        return None;
+    };
+    if *card_type != CardType::Spell || *face_down == Some(true) || targets.is_empty() {
+        return None;
+    }
+    let own_hero = format!("hero-{player}");
+    let own_side = |id: &String| {
+        *id == own_hero
+            || find_instance(state, id)
+                .is_some_and(|card| matches!(card.zone, Zone::Field { .. }) && card.controller == *player)
+    };
+    if targets.iter().all(own_side) {
+        Some(instance_id.clone())
+    } else {
+        None
+    }
+}

@@ -42,6 +42,7 @@ pub mod quests;
 pub mod rotation;
 pub mod scorer;
 pub mod twice_forward;
+pub mod unit_text;
 
 pub use activate::*;
 pub use ai_policy::*;
@@ -67,6 +68,7 @@ pub use quests::*;
 pub use rotation::*;
 pub use scorer::*;
 pub use twice_forward::*;
+pub use unit_text::*;
 
 // The numbers these modules stated in TS live in `crate::config` now (CLAUDE.md rule 9, SURFACE
 // §6.4); re-exported here so TS's `subsystems.X` path still names them (a card reads
