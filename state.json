@@ -581,7 +581,9 @@
     },
     "1896": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6398770124"
+      ],
       "difficulty_by": {
         "at": "2026-10-25T16:20:21Z",
         "difficulty": "medium",
@@ -614,9 +616,7 @@
       "started_at": "2026-10-25T15:51:09Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6398770124"
-      ]
+      "taken_asks": []
     },
     "1898": {
       "action": "build",
