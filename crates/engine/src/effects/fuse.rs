@@ -40,9 +40,9 @@ use crate::prompts::{
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance, new_instance};
 use crate::subsystems::fuse::{FuseArgs, HandPrice, fuse};
-use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, PromptKind, Row, Selection, Zone, ZoneName};
+use crate::wire::{CardDef, CardType, KeywordKind, PlayerId, PromptKind, Selection, Zone, ZoneName};
 use crate::work::{begin_work_cascade, drain_work};
-use crate::zones::{card_at, is_buried, slots_of};
+use crate::zones::{StandingAt, acting_on, is_buried};
 
 /// R77 and R86: an ingredient that is only a definition. It is created in `{ z: "gone" }` — in no
 /// pile, so no zone event fires, nothing can target it and nothing can bring it back — which is the
@@ -633,10 +633,10 @@ fn compare_text(a: &str, b: &str) -> std::cmp::Ordering {
 }
 
 /// The controller's cards of the ingredient's type, in the piles named: the field in lane order
-/// (units, then backrow; the top of a pile only, R13), the hand in hand order, and the library in an
-/// order its cards alone decide — name, definition, face, id — never its own, which is hidden from
-/// everyone (§9.1, R310). An Immutable card is never a Fuse target (R23), and the ingredient itself is
-/// not one of its own candidates.
+/// (units, the carried Units, then backrow, `zones::acting_on`; the top of a pile only, R13, R446,
+/// R1824000), the hand in hand order, and the library in an order its cards alone decide — name,
+/// definition, face, id — never its own, which is hidden from everyone (§9.1, R310). An Immutable card
+/// is never a Fuse target (R23), and the ingredient itself is not one of its own candidates.
 fn fuse_candidates(
     state: &GameState,
     player: PlayerId,
@@ -651,16 +651,12 @@ fn fuse_candidates(
     };
     let mut out: Vec<CardInstance> = Vec::new();
     if piles.contains(&FuseOntoPile::Field) {
-        for row in [Row::Units, Row::Backrow] {
-            for slot in slots_of(player, row) {
-                if let Some(card) = card_at(state, slot) {
-                    let card: &CardInstance = card;
-                    if fits(card) {
-                        out.push(card.clone());
-                    }
-                }
-            }
-        }
+        out.extend(
+            acting_on(state, player, StandingAt::ItsLane)
+                .into_iter()
+                .filter(|card| fits(card))
+                .cloned(),
+        );
     }
     let side = &state.players[player];
     if piles.contains(&FuseOntoPile::Hand) {

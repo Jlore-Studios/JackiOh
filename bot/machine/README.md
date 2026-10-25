@@ -220,7 +220,8 @@ secret can carry onto GitHub's runners, which is why both boxes are AWS's.
 | Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
 
 Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
-runner's `-b2` says which box a run, or its memory reading, came from.
+runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
+line gives each box its own verdict.
 
 **Building it**, once, from the repository's root, with the AWS CLI signed in and `gh` as a
 repository admin:
@@ -405,7 +406,7 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   kernel's memory stall time (`/proc/pressure/memory`), its swapping (`/proc/vmstat`) and the
   memory available (`/proc/meminfo`) as it starts, after each model call and check run, and as
   it ends; the deliver job keeps the last 60 runs' figures, and the status issue says, for the
-  last 24 hours, whether the box had memory to spare or ran short (a run stalled on memory for
+  last 24 hours, whether each box had memory to spare or ran short (a run stalled on memory for
   5 s or more), with the least memory available and how many runs swapped
   ([`harness/memory.py`](../harness/memory.py)). After a busy day, read it beside CPU and decide
   `machine_parallel`: fewer lanes if the box ran short or swapped, the same if it had memory to
