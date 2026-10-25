@@ -1985,13 +1985,13 @@
   "loop_tick": "2026-10-25T19:57:12Z",
   "machine_disk": {
     "reading": {
-      "at": "2026-10-25T16:34:59Z",
-      "free": 85476065280,
+      "at": "2026-10-25T20:07:06Z",
+      "free": 85282381824,
       "percent": 31,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40211981519",
-    "runner": "night-vm-agy"
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40228743222",
+    "runner": "night-vm-muse"
   },
   "machine_memory": [
     {
