@@ -442,7 +442,7 @@
       }
     },
     "1908": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
@@ -458,13 +458,13 @@
       "issue": 1803,
       "kind": "revise",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "gpt",
       "queued_at": "2026-10-25T12:33:27Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "40191640242",
+      "run_id": "pending:2fee04ed-1792933825",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-25T12:05:54Z",
+      "started_at": "2026-10-25T13:11:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -533,9 +533,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T12:43:28Z",
+    "at": "2026-10-25T13:11:19Z",
     "url": "",
-    "what": "build #1818 on gpt"
+    "what": "revise #1908 on gpt"
   },
   "last_sweep": {
     "at": "2026-10-25T13:01:23Z",
