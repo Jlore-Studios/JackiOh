@@ -594,8 +594,11 @@ fn turn_cut_due(state: &GameState) -> Option<TurnEndsRider> {
 /// R1183002: first of all, a turn the autopilot owes is played (`run_autopilot`), which ends it or
 /// leaves it waiting on the other player's answer. `drive_autopilot` is off inside the autopilot's
 /// own steps, so it never plays one turn twice over, and in a search's world (`reduce_unpiloted`).
+/// R1844000: before that, an aura's spent count hands the turn back, whoever's answer closed the
+/// last prompt its actions opened.
 fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
     for _guard in 0..=TURN_CAP_PLAYER_TURNS {
+        crate::subsystems::autopilot::release_spent_aura(sink.state);
         if drive_autopilot && let Some(player) = crate::subsystems::autopilot::due(sink.state) {
             run_autopilot(sink, player);
             continue;
@@ -625,7 +628,8 @@ fn end_due_turns(sink: &mut EngineSink<'_>, drive_autopilot: bool) {
 /// one at a time, each through the reducer's own step (`autopilot_step`), while it is due. At
 /// `AUTOPILOT_MAX_ACTIONS`, or should an action it chose be refused, the rest of the turn is a
 /// timeout's (R79): the player's open prompts answered by the random policy, then the turn ended.
-/// Returns once the turn has ended, the game is over or the other player owes an answer.
+/// Returns once the turn has ended, the game is over or the other player owes an answer. R1844000:
+/// or an aura's count is spent, its last action's prompts answered.
 fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
     let turn = sink.state.turn;
     while sink.state.turn == turn && crate::subsystems::autopilot::due(sink.state) == Some(player) {
@@ -642,8 +646,15 @@ fn run_autopilot(sink: &mut EngineSink<'_>, player: PlayerId) {
             let _ = timeout(sink, &Action::new(ActionBody::Timeout, player, nonce));
             return;
         };
+        let kind = body.action_type();
         if let Some(status) = sink.state.players[player].autopilot.as_mut() {
             status.actions += 1;
+            // R1844000: an aura's count takes R456's actions; an answer is part of the one that asked.
+            if let Some(taken) = status.aura_actions.as_mut()
+                && TURN_ACTION_TYPES.contains(&kind)
+            {
+                *taken += 1;
+            }
         }
         if autopilot_step(sink, &Action::new(body, player, nonce.clone())).is_err() {
             let _ = timeout(sink, &Action::new(ActionBody::Timeout, player, nonce));

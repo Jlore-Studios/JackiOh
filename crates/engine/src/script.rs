@@ -682,6 +682,20 @@ pub struct StaticFlags {
     /// where it declares it, else this; two Gardens apply the least.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_garden: Option<i32>,
+    // ---- Stinkyscape (issue #1844) ----
+    /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
+    /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands
+    /// the turn back (`subsystems::autopilot::aura_reach`); several take the largest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pilots_actions: Option<i32>,
+    /// R1844000 (Stinkyscape #47 Circadian Fullcycler): while this card acts on the field, the
+    /// autopilot plays each of its controller's turns whole, as Cognitive Offloading does.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pilots_turn: Option<bool>,
+    /// R1844001 (Stinkyscape #147.2 Wardrum Blob): while this card acts on the field, its controller
+    /// is shown the Pareto hint on each of their turns (`subsystems::pareto::pareto_hint_ids`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hints_plays: Option<bool>,
 }
 
 /// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the

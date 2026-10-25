@@ -89,6 +89,13 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub countered_on_play: Option<bool>,
+    /// R1844001, §10.8: the Pareto hint (Stinkyscape #147 IN33DH3). Present, and `true`, only on the
+    /// viewer's own hand card that the judge would call optimal to play now while the viewer is shown
+    /// the hint (`pareto::pareto_hint_ids`). Absent otherwise: never `false`, never on the opponent's
+    /// cards.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub pareto_optimal: Option<bool>,
     /// R979000, §10.8: why the viewer's own hand card cannot be played now
     /// (`play_choices::why_hand_card_unplayable`), as `UnitView.attack_reason` (R849000) is for an
     /// attack; R1571000: and why a card in the viewer's own graveyard that a permission admits

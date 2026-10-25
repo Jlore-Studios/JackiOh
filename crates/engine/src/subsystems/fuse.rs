@@ -1148,6 +1148,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 doubles_healing: flags(|f| f.doubles_healing),
                 answers_targeted_spells: flags(|f| f.answers_targeted_spells),
                 embiggen_garden: least_number(defined.iter().map(|f| f.embiggen_garden)),
+                pilots_actions: numbers(|f| f.pilots_actions),
+                pilots_turn: flags(|f| f.pilots_turn),
+                hints_plays: flags(|f| f.hints_plays),
             })
         }
     }

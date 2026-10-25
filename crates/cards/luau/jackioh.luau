@@ -2212,6 +2212,9 @@ spellDamageAura: SpellDamageAura?,
 doublesHealing: boolean?,
 answersTargetedSpells: boolean?,
 embiggenGarden: number?,
+pilotsActions: number?,
+pilotsTurn: boolean?,
+hintsPlays: boolean?,
 }
 
 export type StealAllArgs = {
