@@ -471,9 +471,10 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             prepare_body(card, entry);
         }
         // R175: a unit that died on top of a Stack pile left the card beneath to resume in its zone
-        // (§3.2), and that card did not enter anything, so the zone is still the one R64 reserved. The
-        // body returns on top of the pile, and the card beneath goes dormant again. With no pile the
-        // zone is empty, which `stack` never changes: every other card was kept out by the reservation.
+        // (§3.2), and that card never left the zone (sick though it is, R1829000), so the zone is still
+        // the one R64 reserved. The body returns on top of the pile, and the card beneath goes dormant
+        // again. With no pile the zone is empty, which `stack` never changes: every other card was kept
+        // out by the reservation.
         let slot = ZoneSlot {
             player: entry.at.player,
             row: entry.at.row,

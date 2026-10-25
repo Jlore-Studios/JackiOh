@@ -998,9 +998,10 @@ pub struct RemoveFromFieldOptions {
 }
 
 /// Take a card off the field; the card beneath a Stack resumes acting (§3.2), which is noted against
-/// the card that left (`stays::note_uncovered`, R212): no event reports a resume. `with_pile` is for a
-/// move that lifts whole piles and sets each down whole elsewhere (#87's board swap, #52's rotation):
-/// its cards come off one at a time, but nothing beneath any of them resumes, so no resume is noted.
+/// the card that left (`stays::note_uncovered`, R212): no event reports a resume. The resume is an
+/// entry, summoning sick (R1829000, `stamp_uncovered`). `with_pile` is for a move that lifts whole
+/// piles and sets each down whole elsewhere (#87's board swap, #52's rotation): its cards come off one
+/// at a time, but nothing beneath any of them resumes, so no resume is noted or stamped.
 pub fn remove_from_field(
     state: &mut GameState,
     instance: &CardInstance,
@@ -1027,6 +1028,9 @@ pub fn remove_from_field(
                 None
             };
             state.players[player].units[i] = if rest.is_empty() { None } else { Some(rest) };
+            if let Some(id) = &resumed {
+                stamp_uncovered(state, id);
+            }
             note_uncovered(state, &instance.id, resumed.as_deref());
             return true;
         }
@@ -1054,6 +1058,9 @@ pub fn remove_from_field(
                 side.backrow[i] = resumed;
                 set_beneath(side, lane, beneath);
                 let noted = if with_pile { None } else { resumed_id };
+                if let Some(id) = &noted {
+                    stamp_uncovered(state, id);
+                }
                 note_uncovered(state, &instance.id, noted.as_deref());
                 return true;
             }
@@ -1082,6 +1089,26 @@ pub fn remove_from_field(
         }
     }
     false
+}
+
+/// R1829000: a card a pile uncovers, as the cards above it leave, is summoning sick as a card that
+/// entered the field on this turn is (§4.1, as a Reborn body is, R83): it takes the turn as its
+/// `summoned_turn` and keeps its exertion. It never left its zone (R175). No event reports it (R212).
+fn stamp_uncovered(state: &mut GameState, instance_id: &str) {
+    let turn = state.turn;
+    if let Some(card) = find_instance_mut(state, instance_id) {
+        card.summoned_turn = Some(turn);
+    }
+}
+
+/// R1829000: the card directly beneath `card` when `card` tops a unit pile or a backrow pile; `None`
+/// otherwise, a Unit a carrier holds included (R446).
+fn next_beneath(state: &GameState, card: &CardInstance) -> Option<String> {
+    let at = slot_of(state, card)?;
+    if card_at(state, at).is_none_or(|top| top.id != card.id) {
+        return None;
+    }
+    beneath_at(state, at).first().map(|below| below.id.clone())
 }
 
 /// The off-field zones a card can be moved to (TS `OffFieldZone`: "hand" | "library" | "graveyard" |
@@ -1783,6 +1810,8 @@ pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl 
     if from.player != to.player || !acts_on_field(state, &moving) || !takes_move(state, to) {
         return false;
     }
+    // R1829000: the card beneath it in its pile is uncovered as it steps out alone.
+    let uncovered = next_beneath(state, &moving);
     remove_from_field(
         state,
         &moving,
@@ -1790,6 +1819,9 @@ pub fn step_into_unit_zone(state: &mut GameState, card: &CardInstance, to: impl 
             with_pile: Some(true),
         },
     );
+    if let Some(id) = &uncovered {
+        stamp_uncovered(state, id);
+    }
     place_on_field(state, &mut moving, to, PlaceOnFieldOptions::default())
 }
 
@@ -1824,6 +1856,8 @@ pub fn step_into_backrow(
     if !takes {
         return false;
     }
+    // R1829000: the card beneath it in its pile is uncovered as it steps out alone.
+    let uncovered = next_beneath(state, &moving);
     remove_from_field(
         state,
         &moving,
@@ -1831,6 +1865,9 @@ pub fn step_into_backrow(
             with_pile: Some(true),
         },
     );
+    if let Some(id) = &uncovered {
+        stamp_uncovered(state, id);
+    }
     place_on_field(state, &mut moving, to, PlaceOnFieldOptions { stack: Some(stack) })
 }
 

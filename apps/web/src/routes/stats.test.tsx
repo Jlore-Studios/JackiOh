@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { CI_RUNS_CACHE_TTL_SECONDS } from "@jackioh/server-config";
 import { SHIPPED_SETS } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1371,5 +1372,145 @@ describe("the drill-down's card preview", () => {
     render(<StatsRoute />);
     await screen.findByRole("dialog", undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.drillDownTokens)).toBeNull();
+  });
+});
+
+describe("R1935000 the Daily runs tab", () => {
+  /** How long the open tab waits before it asks again, in ms. */
+  const REFRESH_MS = CI_RUNS_CACHE_TTL_SECONDS * 1000;
+
+  const RUNS = {
+    runs: [
+      {
+        id: 3,
+        url: "https://github.com/o/r/actions/runs/3",
+        startedAt: "2026-10-25T07:17:00Z",
+        commit: "abcdef0123456789",
+        result: "running",
+        failedJobs: [],
+      },
+      {
+        id: 2,
+        url: "https://github.com/o/r/actions/runs/2",
+        startedAt: "2026-10-24T07:17:00Z",
+        commit: "1d6ec71fedcba987",
+        result: "failed",
+        failedJobs: [
+          { name: "fuzz (2/4)", url: "https://github.com/o/r/job/1", conclusion: "failure" },
+          { name: "fuzz (4/4)", url: "https://github.com/o/r/job/2", conclusion: "cancelled" },
+        ],
+      },
+      {
+        id: 1,
+        url: "https://github.com/o/r/actions/runs/1",
+        startedAt: "2026-10-23T07:17:00Z",
+        commit: "0123456789abcdef",
+        result: "passed",
+        failedJobs: [],
+      },
+    ],
+  };
+
+  /** Answers `GET /api/stats/ci` with what `answer` makes at the time, anything else with the card statistics. */
+  function serveCi(answer: () => Response): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/ci") return Promise.resolve(answer());
+        return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+      }),
+    );
+  }
+
+  it("R1935000 lists each run newest first with its result, a failed run's jobs that did not pass, each linking to GitHub", async () => {
+    serveCi(() => new Response(JSON.stringify(RUNS), { status: 200 }));
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    // Not asked for before the tab opens.
+    expect(requested("/api/stats/ci")).toEqual([]);
+
+    await user.click(screen.getByTestId(statsTestid.tabCi));
+    const table = await screen.findByTestId(statsTestid.ciTable, undefined, SLOW);
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows.map((row) => row.getAttribute("data-result"))).toEqual(["running", "failed", "passed"]);
+    const [running, failed, passed] = [rows[0]!, rows[1]!, rows[2]!];
+    expect(running).toHaveTextContent("Running");
+    expect(failed).toHaveTextContent("Failed");
+    expect(passed).toHaveTextContent("Passed");
+    expect(within(failed).getByText("1d6ec71")).toBeInTheDocument();
+    expect(within(running).getAllByRole("link")[0]).toHaveAttribute("href", "https://github.com/o/r/actions/runs/3");
+    expect(within(failed).getByRole("link", { name: "fuzz (2/4)" })).toHaveAttribute("href", "https://github.com/o/r/job/1");
+    expect(within(failed).getByRole("link", { name: "fuzz (4/4)" })).toHaveAttribute("href", "https://github.com/o/r/job/2");
+    expect(failed).toHaveTextContent("(cancelled)");
+    expect(within(passed).queryByRole("list")).toBeNull();
+    expect(window.location.search).toBe("?tab=ci");
+
+    // The summary reads the finished runs alone: one of two passed, the newest failed, and of the
+    // failed run's two jobs the one listed first is named.
+    const summary = screen.getByTestId(statsTestid.ciSummary);
+    expect(summary).toHaveTextContent("1 of 2");
+    expect(summary).toHaveTextContent("Failed in a row1");
+    expect(summary).toHaveTextContent("fuzz (2/4)");
+    expect(summary).toHaveTextContent("in 1 of 2 runs");
+  });
+
+  it("R1935000 the open tab asks again every CI_RUNS_CACHE_TTL_SECONDS, and stops once another tab is chosen", async () => {
+    serveCi(() => new Response(JSON.stringify(RUNS), { status: 200 }));
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    at("/stats?tab=ci");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.ciTable, undefined, SLOW);
+    expect(requested("/api/stats/ci")).toHaveLength(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REFRESH_MS - 1);
+    });
+    expect(requested("/api/stats/ci")).toHaveLength(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(requested("/api/stats/ci")).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 3);
+    });
+    expect(requested("/api/stats/ci")).toHaveLength(2);
+  });
+
+  it("R1935000 a read that fails shows Retry, which asks again, and a failed refresh keeps the runs shown", async () => {
+    let up = false;
+    serveCi(() =>
+      up
+        ? new Response(JSON.stringify(RUNS), { status: 200 })
+        : new Response(JSON.stringify({ error: { code: "unavailable", message: "GitHub" } }), { status: 503 }),
+    );
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    at("/stats?tab=ci");
+    render(<StatsRoute />);
+    const retry = await screen.findByTestId(statsTestid.ciRetry, undefined, SLOW);
+    expect(screen.getByText("Failed to load the daily runs.")).toBeInTheDocument();
+
+    up = true;
+    fireEvent.click(retry);
+    await screen.findByTestId(statsTestid.ciTable, undefined, SLOW);
+    expect(requested("/api/stats/ci")).toHaveLength(2);
+
+    up = false;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    });
+    expect(requested("/api/stats/ci")).toHaveLength(3);
+    expect(screen.getByTestId(statsTestid.ciTable)).toBeInTheDocument();
+    expect(screen.queryByTestId(statsTestid.ciRetry)).toBeNull();
+  });
+
+  it("R1935000 says so when GitHub lists no daily run", async () => {
+    serveCi(() => new Response(JSON.stringify({ runs: [] }), { status: 200 }));
+    at("/stats?tab=ci");
+    render(<StatsRoute />);
+    expect(await screen.findByText("No daily runs yet.", undefined, SLOW)).toBeInTheDocument();
   });
 });

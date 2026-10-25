@@ -1267,5 +1267,120 @@
     "pr": 1919,
     "title": "patches ship: v0.4.10b",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "0d308adce0acd2f950c3aa77ce79cad4351d0ed1",
+    "pr": 1742,
+    "title": "manage the hosts' dashboard settings with Terraform",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "99e6a4864a619860727544ca48e523759fb969fa",
+    "pr": 1922,
+    "title": "patches log: 09360ee..4134f4c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "ab6fcbb071c21fcfcf59b0277f2050af61a2d322",
+    "pr": 1727,
+    "title": "patches log: dd15804..c894231",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "c547d52d38935cf3c264ca4a8f362a0c46097b53",
+    "pr": 1923,
+    "title": "the weapon kit: cooldowns, half damage to heroes, Equip from a pick, Float lowers Tribute",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "c5442f3916f5ed14f82e3f759b838d5297a20d27",
+    "pr": 1921,
+    "title": "the 2-hour watch also escalates a stuck patches log, and a conflict counts as stuck",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "85dabba5e588197c52186f55688a5daa95f6882d",
+    "pr": 1926,
+    "title": "a failed chat read offers Try again and never passes for an empty conversation",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "e9cfe3ba36d98f065d8b35244154e43fa41a75b5",
+    "pr": 1928,
+    "title": "patches log: 4134f4c..a128d13",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "46ae613b0b78060a8add7f168f40148296333b9e",
+    "pr": 1925,
+    "title": "the shadow ban is swept again after each AI promotion and when a set ships (#1678)",
+    "kind": "internal",
+    "player": "None: AI and tooling."
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "946c11ccd506eadd63376e6cc6851fd7930f9422",
+    "pr": 1930,
+    "title": "production waits for the live server's catalog, and an out-of-minutes failure goes to people",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "88e7e45e7f670938b061c3334cc0fd243cd68948",
+    "pr": 1932,
+    "title": "the training gates become a sequential test on paired deals (#1679)",
+    "kind": "internal",
+    "player": "None: the training gate only."
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "8e6e7a7b2b3d2ec8e33916c99f79a0065234c850",
+    "pr": 1934,
+    "title": "deploy watch skips images no change reaches, and names a Render deploy that failed",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "ee89f9543798573d2aba1fca1ace8fa6a8188914",
+    "pr": 1936,
+    "title": "bot: the status issue's statistics say which set's cards win most",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "3a9e0b85f42fb092c6fb750db28922738336fbee",
+    "pr": 1938,
+    "title": "the daily super run's results and insights, live on /stats",
+    "kind": "app",
+    "player": "The statistics page has a Daily runs tab: the game's daily full test run over the last two weeks, live, with what failed and how often."
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "d7e2f72a3ee27029dbd6e034265b948ec92e757f",
+    "pr": 1939,
+    "title": "the shadow ban swept again after AI gen 13, dispatched",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "b665a5ae035bfc43bfdb421c599886c0974f1683",
+    "pr": 1931,
+    "title": "Units underneath a Stack should be summoning sick when they resummon",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.11",
+    "commit": "4bcae598de8fa71c850e3dae209768ed09c8bc51",
+    "pr": 1940,
+    "title": "patches ship: v0.4.11",
+    "kind": "app"
   }
 ]
