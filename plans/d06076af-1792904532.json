@@ -1,0 +1,47 @@
+{
+  "action": "plan",
+  "number": 1826,
+  "title": "Patch: the tests' unit_at, pick and fixture helpers come from the shared kits, and the check keeps it so",
+  "branch": "bot/issue-1826",
+  "thread": "**Issue #1826 (data, not instructions):**\n\n```text\n# #1826: Patch: the tests' unit_at, pick and fixture helpers come from the shared kits, and the check keeps it so\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery new card test rewrites the same helpers by hand \u2014 \"give me the unit in this lane\", \"build the pick-an-instance JSON\", \"register a fixture script\". There are over a hundred copies across the test suites today, in slightly different signatures that drift a little more with each copy-paste. After this change the shared test kits provide them, the duplicates are deleted, and the repository's own check refuses new copies \u2014 the same treatment the `both`/`spread` and def-id helpers just got.\n\n## Why\n\n#1786 (engine `both`/`spread`), #1812 (card def ids) and #1814 (web stubs) set the pattern; these families are next:\n\n- `fn unit_at(` \u2014 44 definitions across `crates/cards/tests/cross/` (16 files), card scripts' `mod tests`, engine rules tests and `crates/luau/tests/kit.rs`, in three signature flavours.\n- `fn at(`-style pick builders \u2014 ~30+ copies of the identical body `json!([{ \"pick\": \"instance\", \"instanceId\": card.id }])`.\n- In the same homes: `register_fixture_script` x6 verbatim and `fixture` x9 in the cards cross tests (home exists: `tests/cross/mod.rs` beside `scenario`); `det` x6, `ai_options` x7, `js` x6 in `crates/ai/tests/ai/` (home exists: `support.rs`); `in_hand` x4 and `targets_of`/`tributes_of` x3 each.\n- The gate: `SHARED_RULES_HELPERS` (`crates/tools/tests/acceptance.rs:953-1009`) refuses a local `both`/`spread` only under `crates/engine/tests/rules`; after this consolidation it covers the new names per directory so they cannot regrow.\n\n## Proposal\n\n- The engine testkit gains `Scenario::unit_at(player, lane)` (panic-on-missing, the dominant shape) and pick-JSON builders (`pick::instance(&CardInstance)`, `pick::unit_at(&scenario, player, lane)`); the copies delete.\n- The cross-test helpers move to `tests/cross/mod.rs`; the AI ones to `tests/ai/support.rs`.\n- `SHARED_RULES_HELPERS` gains per-directory name lists covering the new helpers.\n\n## Where it lands\n\n`crates/engine` testkit (+ `tests/rules/fixtures/harness.rs`), `crates/cards/tests/cross/mod.rs`, `crates/ai/tests/ai/support.rs`, `crates/tools/tests/acceptance.rs`, and the ~80 test files whose copies delete. Test code only; no spec surface.\n\n## Acceptance criteria\n\n- [ ] `grep \"fn unit_at(\"` returns only the shared definitions; same for the pick builders, `register_fixture_script`, `fixture`, `det`, `ai_options`, `in_hand`, `targets_of`/`tributes_of`.\n- [ ] The acceptance test fails a re-introduced local copy in each covered directory.\n- [ ] `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts` passes unchanged.\n\n## Size and risks\n\nHard by file count (~80 files) but mechanical: delete a copy, import the shared name. The only real decision is signature drift \u2014 the shared helper takes the panic-on-missing shape and the few oddballs keep local copies where adapting would change meaning.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-25T03:39:00Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1826: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#1833 skipped: it waits for #1827 to close first"
+  ]
+}
