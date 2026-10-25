@@ -293,6 +293,9 @@ withTokens: boolean?,
 defId: (string | {string})?,
 token: boolean?,
 tribute: boolean?,
+busted: boolean?,
+complicated: boolean?,
+everySet: boolean?,
 }
 
 export type CellScope = {

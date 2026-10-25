@@ -21,8 +21,9 @@ crates/cards
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
 │                       win_rates/ (each patch's win-rate table, R1329000), shipped.json, index.json,
 │                       and pending/ (one fragment per patch being built)
-├── build.rs            generates the registry from src/scripts/**, compiles the catalog version in, and
-│                       cuts every card's code block from its script (R1183004)
+├── build.rs            generates the registry from src/scripts/**, compiles the catalog version in,
+│                       cuts every card's code block from its script (R1183004), and counts every
+│                       script's code lines into the BUSTED and complicated lists (R1846000)
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
@@ -223,7 +224,10 @@ Field Trap counts as a Trap, pass `TRAP_TYPES`.
 `REGISTRY` (id → `script`) into `$OUT_DIR/registry.rs`, and every card's code block but a token's
 into `$OUT_DIR/code_blocks.rs` (`CODE_BLOCKS`, R1183004: its script's lines of code less its `ID`
 line, cut to the engine's `CODE_BLOCK_MAX_LINES`, which `register_all` hands to the engine for
-Meditative+ #25's code Discover). There is nothing to wire and nothing to
+Meditative+ #25's code Discover), and the card metrics into `$OUT_DIR/card_metrics.rs` (R1846000:
+`CODE_LINES`, every script's lines above its tests that hold code, comments and blank lines left out;
+`BUSTED`, the ids over the engine's `BUSTED_CODE_LINES`, and `COMPLICATED`, over its
+`COMPLICATED_CODE_LINES`, which the catalog query's `busted` and `complicated` read). There is nothing to wire and nothing to
 regenerate by hand: drop the file in its folder and build. The build fails, naming the path, on a file
 without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outside a set folder, a
 file name that is not a Rust identifier, a file outside its `ID`'s set's folder or named for another

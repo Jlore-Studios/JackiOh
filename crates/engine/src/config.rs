@@ -72,6 +72,14 @@ pub const CN_TECH_MIN_GAMES: i32 = 20;
 /// first lines of code. `crates/cards/build.rs` reads this line to cut the blocks it compiles in.
 pub const CODE_BLOCK_MAX_LINES: usize = 12;
 
+/// R1846000: a card is BUSTED when its script has more code lines than this, the designer's number
+/// (Stinkyscape #109 xxFreshJack's pool). `crates/cards/build.rs` reads this line to compile the list in.
+pub const BUSTED_CODE_LINES: usize = 100;
+
+/// R1846000: a card is complicated when its script has more code lines than this (Stinkyscape #111
+/// Shockwave447's pool). `crates/cards/build.rs` reads this line to compile the list in.
+pub const COMPLICATED_CODE_LINES: usize = 60;
+
 /// R1183003 (Meditative+ #18 Cognitive Offloading): the most actions the autopilot takes in one turn,
 /// a prompt's answer counted as one. Past it, the rest of the turn is a timeout's (R79): its open
 /// prompts answered by the random policy, then the turn ended. A turn rarely takes a third of it; the
