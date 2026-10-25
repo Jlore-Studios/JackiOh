@@ -243,7 +243,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #1 Bob's Plan.
         Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1),
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
-        // Supply Drop (the designer's "Jlockheed").
+        // Jlockeed's Supply Drop (the designer's "Jlockheed").
         Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1),
         // Meditative+ #15 Book of Potions.
         Tag::Book => 14 + meditative_plus(1),
@@ -251,8 +251,8 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, #1 Bob's Plan's
         // AI generated helpers.
         Tag::Ai => 10 + meditative_plus(4),
-        // Classic+ #7 The House since #1704.
-        Tag::Plague => 18 + meditative(2),
+        // Classic+ #7 The House since #1704, and #39 Book Worm since #1828.
+        Tag::Plague => 19 + meditative(2),
         // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         Tag::Catalyst => 2 + meditative(3) + meditative_plus(1),

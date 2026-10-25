@@ -1871,7 +1871,7 @@
     "meditativeplus-003": { // Wondrous Wand
       cast: { voice: "sapi-wizard", text: "Twice the wishes, none of the warnings." },
     },
-    "meditativeplus-004": { // Supply Drop
+    "meditativeplus-004": { // Jlockeed's Supply Drop
       cast: { voice: "sapi-hero", text: "Hold tight. The drop is inbound." },
     },
     "meditativeplus-005": { // Spirit Lash

@@ -15,8 +15,9 @@
 // - "clamp": its whole text, cut by the rules box at its last line with "…": seven faces still about
 //   a line over after the cut (Yile's Virus and Knowledge Breaker, and the Radiant faces of KY's Gift,
 //   Feng Shui and Windfast), which a 200 px tile prints whole, three #1563 left a line over
-//   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition), and
-//   one #1704 did (The House's Radiant face, its Cry and its Activate).
+//   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition),
+//   one #1704 did (The House's Radiant face, its Cry and its Activate), and #1828's Can't attack put
+//   both faces of Jungle Loser a line over.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -48,6 +49,7 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "classic-005": { base: 2, radiant: 2 },
   "classic-023": { base: "clamp" },
   "classicplus-007": { radiant: "clamp" },
+  "classicplus-019-2": { base: "clamp", radiant: "clamp" },
   "classicplus-042-1": { radiant: "clamp" },
   "classicplus-073": { base: "colon", radiant: "colon" },
   "meditative-008": { base: 2, radiant: 2 },
