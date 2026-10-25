@@ -1,13 +1,16 @@
 //! C+ #61 Bauble Bubble (SPEC §8.7 row 61). (1) Field Spell, Rare (no Fruit tag since patch v0.3.10).
-//!   Base:    "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)." — cards 2
-//!   Radiant: "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
+//!   Base:    "Brittle 1\nDeath: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)." — cards 2
+//!   Radiant: "Brittle 1\nDeath: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each
+//!            costs (0)."
 //!   Engine:  "A Death on a backrow card (§4.5): it fires when the card goes from the field to a
 //!            graveyard, destroyed or sacrificed, as a Unit's does; not on bounce, exile, transform or
-//!            steal (§6.2). Stockpile is #5; `costOverride` 0; the hand cap burns extras. A bait card:
-//!            nothing until it pops. Tunes: cards 2 ↑."
+//!            steal (§6.2). Stockpile is #5; `costOverride` 0; the hand cap burns extras. Tunes: cards 2 ↑."
 //!
 //! §4.5 step 3 fires a collected backrow card's Death as it does a Unit's (the engine's, proved in
-//! `packages/engine/test/backrow-death.test.ts`), so the card is one Death hook.
+//! `packages/engine/test/backrow-death.test.ts`), so the card is one Death hook. Its Brittle 1 (since
+//! issue #1828) is the printed keyword the engine ticks (§6.1): the count starts as it enters the field,
+//! drops to 0 at its controller's first start of turn after a full turn cycle, and the crumble is a
+//! destroy, so the Death adds the Stockpiles then.
 
 use jackioh_engine::effects::add_to_hand;
 use jackioh_engine::prelude::*;
@@ -37,12 +40,13 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #61 Bauble Bubble — SPEC §8.7 row 61, BUILD M9 Classic+ row C+ 61: "Field Spell with no effect
-// while it sits; its Death fires as it goes from its backrow zone to your graveyard (§4.5: destroyed by
-// Guy Att, Crushing Walls, Twisting Nether) and adds 2 Stockpiles (Core #5) that cost (0) to your hand;
-// exile, a bounce or a Transform adds nothing; Carnivorous Cube can't eat it (R428: Units only); a full
-// hand burns; hidden from the opponent (R97); the count reads through `param()`; radiant the
-// Stockpiles are Radiant".
+// C+ #61 Bauble Bubble — SPEC §8.7 row 61, BUILD M9 Classic+ row C+ 61: "Field Spell with Brittle 1 and no
+// other effect while it sits: it crumbles at its controller's next start of turn, the first after a full turn
+// cycle (R385), and the crumble is a destroy; its Death fires as it goes from its backrow zone to your
+// graveyard (§4.5: crumbled, or destroyed by Guy Att, Crushing Walls, Twisting Nether) and adds 2 Stockpiles
+// (Core #5) that cost (0) to your hand; exile, a bounce or a Transform adds nothing; Carnivorous Cube can't
+// eat it (R428: Units only); a full hand burns; hidden from the opponent (R97); the count reads through
+// `param()`; radiant the Stockpiles are Radiant".
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -92,6 +96,34 @@ mod tests {
         }))
     }
 
+    /// §6.1 Brittle 1: on `radiant`'s face, played from p1's hand, it holds a count of 1, sits through
+    /// p1's turn and p2's, and crumbles at p1's next start of turn, its Death adding 2 Stockpiles at (0).
+    fn crumbles(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": BAUBLE, "radiant": radiant }, FILLER, FILLER], "library": [FILLER, FILLER, FILLER] },
+            "p2": { "hand": [FILLER], "field": [VANILLA], "library": [FILLER, FILLER] },
+        }));
+        let id = s.card(BAUBLE).id.clone();
+        s.play(BAUBLE, json!({ "zone": 1 }));
+        s.expect_in_zone(&id, "field");
+        assert_eq!(active_brittle_count(s.card(&id)), Some(1));
+
+        s.end_turn();
+        s.expect_in_zone(&id, "field");
+        assert!(!any_stockpile_added(&s));
+
+        s.end_turn();
+        s.expect_in_zone(&id, "graveyard");
+        assert!(s.last_events().iter().any(|event| event.event_type() == GameEventType::Crumbled));
+        let added: Vec<CardInstance> = stockpiles(&s).iter().map(|(id, _)| s.card(id).clone()).collect();
+        assert_eq!(added.len(), 2);
+        for card in &added {
+            assert_eq!(card.zone.z(), ZoneName::Hand);
+            assert_eq!(card.cost_override, Some(0));
+            assert_eq!(card.radiant, radiant);
+        }
+    }
+
     fn fillers(count: usize) -> Vec<Value> {
         (0..count).map(|_| json!(FILLER)).collect()
     }
@@ -100,11 +132,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn a_bait_card_nothing_happens_while_it_sits_across_both_players_turns() {
-            let mut s = bubble(false, json!([FILLER]), None, json!([]));
-            s.end_turn().end_turn();
-            assert!(!any_stockpile_added(&s));
-            s.expect_in_zone(BAUBLE, "field");
+        fn s6_1_brittle_1_it_crumbles_at_your_next_start_of_turn_adding_2_stockpiles() {
+            crumbles(false);
         }
 
         #[test]
@@ -269,6 +298,11 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn s6_1_brittle_1_it_crumbles_at_your_next_start_of_turn_adding_2_radiant_stockpiles() {
+            crumbles(true);
+        }
 
         #[test]
         fn r74_its_death_adds_2_radiant_stockpiles_that_cost_0() {

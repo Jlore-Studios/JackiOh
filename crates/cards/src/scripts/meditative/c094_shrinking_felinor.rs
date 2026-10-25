@@ -1,26 +1,28 @@
-//! M #94 Shrinking Felinor (SPEC §8.8 row 94): (4) Unit, Felinor, Rare, 9/11 → 18/22.
+//! M #94 Shrinking Felinor (SPEC §8.8 row 94): (4) Unit, Felinor, Rare, 9/9 → 18/18.
 //!
-//! Base:    "Death: Summon a Shrinking Felinor whose base stats are this one's
-//!           −{shrinkAttack}/−{shrinkHealth}."
-//! Radiant: "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's
-//!           −{shrinkAttack}/−{shrinkHealth}."
+//! Base and Radiant: "Death: Summon a Shrinking Felinor whose base stats are this one's
+//!                   −{shrinkAttack}/−{shrinkHealth}."
 //! Engine:
 //! - **What it reads:** `ctx.self_` is the card as it died, its `statsOverride` still on it (R78), and
 //!   `base_stats_of` reads its §10.4 layer-1 stats off that: the override as its face wears it, else its
 //!   printed stats (R1181). Buffs, tuning, auras and damage are not base stats. Reading the graveyard
-//!   copy instead would restart every chain at 9/11, since R78 clears the override there.
-//! - **What it summons:** a fresh Shrinking Felinor on the same face, not a copy (R57), so no buff, granted
-//!   keyword or tuning carries, into the leftmost open unit zone (R64). Its `statsOverride` is the attack
-//!   less `shrinkAttack` (at least 0) and the health less `shrinkHealth`.
-//! - **The end:** a body whose health would be 0 or less is not summoned, so the chain ends: 9/11, 6/8,
-//!   3/5, 0/2 on the base face and 18/22 down to 4/1 on the Radiant one. Each shrink is a declared
-//!   number (R386) that never tunes below 1, so the chain always ends.
+//!   copy instead would restart every chain at 9/9, since R78 clears the override there.
+//! - **What it summons:** a fresh base Shrinking Felinor, not a copy (R57), so no buff, granted keyword or
+//!   tuning carries, into the leftmost open unit zone (R64). Its `statsOverride` is the attack less
+//!   `shrinkAttack` (at least 0) and the health less `shrinkHealth`, the dying face's numbers. Since
+//!   issue #1828 the Radiant face summons a base body too (R1828003), so its chain goes on on the base face.
+//! - **The end:** a body whose health would be 0 or less is not summoned, so the chain ends: 9/9, 6/6,
+//!   3/3 on the base face, and 18/18, then base bodies of 15/15 down to 3/3, from the Radiant one. Each
+//!   shrink is a declared number (R386) that never tunes below 1, so the chain always ends.
+//!
+//! Through v0.4.9 the Radiant face summoned a Radiant body; `script_v0_4_9` keeps that for those
+//! versions' replays (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-094";
 
-fn shrinking(radiant: bool) -> Script {
+fn shrinking(summons_radiant: bool) -> Script {
     Script {
         death: Some(hook(move |ctx| {
             let Some(this) = ctx.self_.clone() else {
@@ -36,7 +38,7 @@ fn shrinking(radiant: bool) -> Script {
             vec![summon(json_as(json!({
                 "defId": ID,
                 "player": "self",
-                "radiant": radiant,
+                "radiant": summons_radiant,
                 "statsOverride": { "attack": attack, "health": health },
             })))]
         })),
@@ -45,17 +47,26 @@ fn shrinking(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
+    // R1828003: both faces summon a base body; the Radiant face still shrinks by its own numbers.
+    CardScripts {
+        base: shrinking(false),
+        radiant: shrinking(false),
+    }
+}
+
+/// R767000: through v0.4.9 the Radiant face summoned a Radiant body; `KEPT_SCRIPTS` keeps it.
+pub fn script_v0_4_9() -> CardScripts {
     CardScripts {
         base: shrinking(false),
         radiant: shrinking(true),
     }
 }
 
-// M #94 Shrinking Felinor — SPEC §8.8 row 94, BUILD M10 row M 94: "Its Death summons a fresh Shrinking
-// Felinor on its face with base stats 3/3 smaller (attack floored at 0), no buffs or keywords carried
-// (MD-E20): 9/11, 6/8, 3/5, 0/2, then none, since the health would be 0 or less; a full board summons
-// none; the shrink reads through `param()`; radiant 18/22 and a Radiant one 2/3 smaller, eight bodies:
-// 18/22, 16/19, 14/16, 12/13, 10/10, 8/7, 6/4, 4/1".
+// M #94 Shrinking Felinor — SPEC §8.8 row 94, BUILD M10 row M 94: "Its Death summons a fresh base Shrinking
+// Felinor with base stats 3/3 smaller (attack floored at 0), no buffs or keywords carried (MD-E20, R1181):
+// 9/9, 6/6, 3/3, then none, since the health would be 0 or less; a full board summons none; the shrink reads
+// through `param()`; radiant 18/18, also 3/3 smaller, and the body it summons is base (R1828003), six bodies:
+// 18/18, then base 15/15, 12/12, 9/9, 6/6, 3/3".
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -115,15 +126,12 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1181_r78_the_chain_runs_9_11_6_8_3_5_0_2_and_then_ends() {
-                let mut s = game(json!([ID]), 4);
+            fn r1181_r78_r1828003_the_chain_runs_9_9_6_6_3_3_and_then_ends() {
+                let mut s = game(json!([ID]), 3);
                 let start = s.unit(P1, 1).unwrap_or_else(|| panic!("the card"));
-                s.expect_stats(&start, json!({ "attack": 9, "maxHealth": 11 }));
+                s.expect_stats(&start, json!({ "attack": 9, "maxHealth": 9 }));
                 // R78: each body is read off the one that died, its override included, not its printed face.
-                assert_eq!(
-                    run_chain(&mut s),
-                    vec![(6, 8, false), (3, 5, false), (0, 2, false)]
-                );
+                assert_eq!(run_chain(&mut s), vec![(6, 6, false), (3, 3, false)]);
                 assert_eq!(row_defs(&s), vec![None, None, None, None, None]);
             }
 
@@ -134,8 +142,8 @@ mod tests {
                 s.card_mut(id.as_str()).buffs = AttackHealth { attack: 3, health: 3 };
                 s.card_mut(id.as_str()).granted_keywords = vec![Keyword::Taunt];
                 let next = shrink(&mut s).unwrap_or_else(|| panic!("the next body"));
-                // 9/11 less 3/3: the buff's +3/+3 is not a base stat, and Taunt stays on the dead card.
-                s.expect_stats(&next, json!({ "attack": 6, "maxHealth": 8 }));
+                // 9/9 less 3/3: the buff's +3/+3 is not a base stat, and Taunt stays on the dead card.
+                s.expect_stats(&next, json!({ "attack": 6, "maxHealth": 6 }));
                 assert!(keywords_of(s.state(), &next).is_empty());
                 assert_eq!(next.buffs, AttackHealth::default());
             }
@@ -159,7 +167,7 @@ mod tests {
                 let id = unit_id(&s);
                 assert_eq!(crate::upgrade_number(&mut s, &id, "shrinkAttack"), 2);
                 let next = shrink(&mut s).unwrap_or_else(|| panic!("the next body"));
-                s.expect_stats(&next, json!({ "attack": 7, "maxHealth": 8 }));
+                s.expect_stats(&next, json!({ "attack": 7, "maxHealth": 6 }));
             }
         }
 
@@ -167,43 +175,64 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r1181_the_chain_runs_eight_radiant_bodies_down_to_4_1() {
-                let mut s = game(json!([{ "def": ID, "radiant": true }]), 8);
+            fn r1181_r1828003_the_radiant_face_summons_base_bodies_15_15_down_to_3_3() {
+                let mut s = game(json!([{ "def": ID, "radiant": true }]), 6);
                 let start = s.unit(P1, 1).unwrap_or_else(|| panic!("the card"));
-                s.expect_stats(&start, json!({ "attack": 18, "maxHealth": 22 }));
+                s.expect_stats(&start, json!({ "attack": 18, "maxHealth": 18 }));
+                // The Radiant face shrinks 3/3 into a base body, and each base body shrinks 3/3 more.
                 assert_eq!(
                     run_chain(&mut s),
                     vec![
-                        (16, 19, true),
-                        (14, 16, true),
-                        (12, 13, true),
-                        (10, 10, true),
-                        (8, 7, true),
-                        (6, 4, true),
-                        (4, 1, true),
+                        (15, 15, false),
+                        (12, 12, false),
+                        (9, 9, false),
+                        (6, 6, false),
+                        (3, 3, false),
                     ]
                 );
                 assert_eq!(row_defs(&s), vec![None, None, None, None, None]);
             }
 
             #[test]
-            fn r1181_a_radiant_one_keeps_its_override_and_shrinks_by_the_radiant_numbers() {
+            fn r1181_r1828003_a_radiant_one_keeps_its_override_and_shrinks_by_the_radiant_numbers_into_a_base_body() {
                 let mut s = game(
                     json!([{ "def": ID, "radiant": true, "statsOverride": { "attack": 6, "health": 8 } }]),
                     1,
                 );
                 let next = shrink(&mut s).unwrap_or_else(|| panic!("the next body"));
-                assert!(next.radiant);
-                // 6/8 less the Radiant 2/3: the printed 18/22 never enters into it.
-                s.expect_stats(&next, json!({ "attack": 4, "maxHealth": 5 }));
+                assert!(!next.radiant);
+                // 6/8 less the Radiant 3/3: the printed 18/18 never enters into it.
+                s.expect_stats(&next, json!({ "attack": 3, "maxHealth": 5 }));
             }
 
             #[test]
             fn r386_the_radiant_attack_shrink_is_never_tuned_below_1() {
                 let mut s = game(json!([{ "def": ID, "radiant": true }]), 1);
                 let id = unit_id(&s);
+                assert_eq!(crate::upgrade_number(&mut s, &id, "shrinkAttack"), 2);
                 assert_eq!(crate::upgrade_number(&mut s, &id, "shrinkAttack"), 1);
                 assert!(!crate::can_upgrade_number(&s, &id, "shrinkAttack"));
+            }
+        }
+
+        /// R767000: the script kept for the replays of v0.4.9 and before, whose Radiant face summoned a
+        /// Radiant body.
+        mod v0_4_9 {
+            use super::*;
+
+            #[test]
+            fn r767000_r1828003_a_game_on_v0_4_9_folds_under_the_kept_script_the_radiant_face_summons_a_radiant_16_19()
+            {
+                crate::register_all();
+                jackioh_engine::with_shipped(crate::catalog_at("v0.4.9"), || {
+                    let mut s = game(json!([{ "def": ID, "radiant": true }]), 1);
+                    let start = s.unit(P1, 1).unwrap_or_else(|| panic!("the card"));
+                    // v0.4.9's own numbers: 18/22, shrinking 2/3.
+                    s.expect_stats(&start, json!({ "attack": 18, "maxHealth": 22 }));
+                    let next = shrink(&mut s).unwrap_or_else(|| panic!("the next body"));
+                    assert!(next.radiant);
+                    s.expect_stats(&next, json!({ "attack": 16, "maxHealth": 19 }));
+                });
             }
         }
 

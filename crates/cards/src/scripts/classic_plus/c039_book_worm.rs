@@ -1,4 +1,4 @@
-//! C+ #39 Book Worm (SPEC §8.7 row 39): (1) Unit, Common, 1/4 → 2/8.
+//! C+ #39 Book Worm (SPEC §8.7 row 39): (1) Unit, Plague, Common, 1/4 → 2/8.
 //!   Base:    "Start of Turn: Place a Plague Counter on this. Death: Add a random Book to your hand for
 //!            each Plague Counter on this."
 //!   Radiant: the same, the Books Radiant.
@@ -9,7 +9,8 @@
 //!            a full hand burns what doesn't fit (§2.4). Tunes: none."
 //!
 //! The Death's count is the snapshot's own counters (`plagueOn(ctx.self)`), so a bounced worm keeps
-//! nothing (R78) and a worm that died with none adds none.
+//! nothing (R78) and a worm that died with none adds none. Since issue #1828 it carries the Plague tag,
+//! which §5 puts on every card that uses Plague Counters, so a Plague pool holds it.
 
 use jackioh_engine::effects::{add_random_from_catalog, place_plague};
 use jackioh_engine::prelude::*;
@@ -59,12 +60,12 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It starts with no Plague Counters
-// (balance patch 1: no N counter — the tokens stacked on itself are the count); at each start of its
-// controller's turn one Plague Counter is placed on it; Death adds one random non-token Book of any set
-// (R380, repeats allowed) per token, reading the tokens last-known (R78, R89), a full hand burning the
-// rest; bounced and played again it starts at none; the public token count is the preview both players
-// see; no tunable; radiant the Books are Radiant".
+// C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It carries the Plague tag (§5: every
+// card that uses Plague Counters), so a Plague pool holds it; it starts with no Plague Counters and places
+// one on itself at each start of its controller's turn (balance patch 1: no N counter); Death adds that many
+// random non-token Books of any set (R380, repeats allowed), reading the tokens last-known (R78, R89), a full
+// hand burning the rest; bounced and played again it starts at 0; no tuned numbers; radiant the Books are
+// Radiant".
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -111,8 +112,26 @@ mod tests {
         js(&s.view(seat))
     }
 
+    /// §5: on `radiant`'s face on the field, the card carries the Plague tag, and the Plague pool holds it.
+    fn plague_tagged(radiant: bool) {
+        let s = on_field(radiant, &[FILLER]);
+        let worm = s.card(WORM).clone();
+        assert_eq!(worm.radiant, radiant);
+        assert!(def_of(Some(s.state()), &worm.def_id).tags.contains(&Tag::Plague));
+        let pool: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["Plague"] })))
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
+        assert!(pool.contains(&WORM.to_string()));
+    }
+
     mod base {
         use super::*;
+
+        #[test]
+        fn s5_it_carries_the_plague_tag_and_a_plague_pool_holds_it() {
+            plague_tagged(false);
+        }
 
         #[test]
         fn it_starts_with_no_plague_counters_dying_at_once_adds_no_book() {
@@ -271,6 +290,11 @@ mod tests {
 
     mod radiant {
         use super::*;
+
+        #[test]
+        fn s5_it_carries_the_plague_tag_and_a_plague_pool_holds_it() {
+            plague_tagged(true);
+        }
 
         #[test]
         fn the_books_it_adds_are_radiant_one_per_token() {

@@ -1,5 +1,5 @@
 //! C+ #30 Felinor Fuser (SPEC §8.7 row 30; §6.3 Discover and Fuse, R77, R102, R179, R352, R380,
-//! R387, R405). (3) Unit, Felinor, Epic, 3/3 → 6/6.
+//! R387, R405). (3) Unit, Felinor, Epic, 1/1 → 2/2 (3/3 → 6/6 before issue #1828).
 //!   Base:    "Cry: Discover a Felinor Unit, then another. Fuse both into this."
 //!   Radiant: "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
 //!
@@ -164,11 +164,24 @@ mod tests {
         (s, picks)
     }
 
+    /// §8.7 row 30: one Fuser on `radiant`'s face, set on the field, stands at `size`/`size`.
+    fn stands_at(radiant: bool, size: i32) {
+        crate::register_all();
+        let mut s = scenario(json!({ "p1": { "field": [{ "def": FUSER, "radiant": radiant }] } }));
+        let fuser = s.unit(P1, 1).expect("the Fuser in lane 1");
+        s.expect_stats(&fuser, json!({ "attack": size, "health": size, "maxHealth": size }));
+    }
+
     mod c_n30_felinor_fuser {
         use super::*;
 
         mod base {
             use super::*;
+
+            #[test]
+            fn s8_7_it_is_1_1() {
+                stands_at(false, 1);
+            }
 
             #[test]
             fn r405_r387_each_discover_offers_3_different_non_token_felinor_units_of_any_set_never_the_fuser() {
@@ -328,7 +341,12 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r77_discovers_radiant_felinor_units_each_goes_in_on_its_radiant_face_and_the_6_6_sums_the_radiant_faces() {
+            fn s8_7_it_is_2_2() {
+                stands_at(true, 2);
+            }
+
+            #[test]
+            fn r77_discovers_radiant_felinor_units_each_goes_in_on_its_radiant_face_and_the_2_2_sums_the_radiant_faces() {
                 crate::register_all();
                 let (s, picks) = fused(true, None);
                 let kept = s.unit(P1, 2).expect("the Fuser left its zone");

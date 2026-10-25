@@ -1,5 +1,11 @@
-//! C+ #19.2 Jungle Loser (SPEC §8.7 row 19.2): end of turn, {chance}%: a forced attack on a random enemy
-//! Unit; a kill across from your Bot Loser sends it Berserk (Radiant: credits it the kill, R412).
+//! C+ #19.2 Jungle Loser (SPEC §8.7 row 19.2): Can't attack; end of turn, {chance}% (100 on both faces
+//! since issue #1828): a forced attack on a random enemy Unit; a kill across from your Bot Loser sends it
+//! Berserk (Radiant: credits it the kill, R412).
+//!
+//! Can't attack is a printed keyword, so its controller never declares an attack with it. The end-of-turn
+//! attack is a forced one, which skips §4.2 steps 1 to 3, Can't attack's included, and keeps only step 2's
+//! target restrictions (R53): it is the card's only attack. The roll stays, a declared number a Nerf
+//! lowers (R386), so it draws one rng number at 100% too.
 
 use jackioh_engine::prelude::*;
 
@@ -91,14 +97,15 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #19.2 Jungle Loser — SPEC §8.7 row 19.2, BUILD M9 Classic+ row C+ 19.2: "At its controller's end of
-// turn a seeded 25% roll; on success a forced attack (R53: no exertion, sickness ignored, the target
-// strikes back) on a random enemy Unit it may attack under §4.2 step 2 (never a Can't be attacked
-// Unit, a Top Loser only from its lane); an empty enemy board draws no roll (R129); if it destroys
-// (R42) the enemy Unit in your Bot Loser's lane, your Bot Loser goes Berserk, and with no Bot Loser
-// nothing more happens; the chance reads through `param()` (step 10%); radiant 50%, and that kill is
-// credited to your Bot Loser instead: its "Whenever this destroys a Unit" trigger fires and the
-// `destroyed` event names it as the killer".
+// C+ #19.2 Jungle Loser — SPEC §8.7 row 19.2, BUILD M9 Classic+ row C+ 19.2: "Can't attack: it declares no
+// attack, and `legalActions` holds none; at its controller's end of turn a seeded 100% roll, one roll still
+// drawn (a Nerf tunes it to 90%); on success a forced attack (R53: no exertion, sickness ignored, the target
+// strikes back; §4.2 step 1, where Can't attack lives, skipped) on a random enemy Unit it may attack under
+// §4.2 step 2 (never a Can't be attacked Unit, a Top Loser only from its lane); an empty enemy board draws no
+// roll (R129); if it destroys (R42) the enemy Unit in your Bot Loser's lane, your Bot Loser goes Berserk, and
+// with no Bot Loser nothing more happens; the chance reads through `param()` (step 10%); radiant also Can't
+// attack and 100%, and that kill is credited to your Bot Loser instead: its "Whenever this destroys a Unit"
+// trigger fires and the `destroyed` event names it as the killer".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,12 +154,6 @@ mod tests {
         find_instance_mut(s.state_mut(), &id).expect("no Jungle Loser in lane 2")
     }
 
-    /// Make the roll a certainty: the declared chance, tuned to its 100% bound.
-    fn always(mut s: Scenario) -> Scenario {
-        set_param(loser_mut(&mut s), "chance", 100);
-        s
-    }
-
     /// The `attackDeclared` events `id` made: each one's target and whether it was forced.
     fn attacks_by(s: &Scenario, id: &str) -> Vec<(String, bool)> {
         s.events()
@@ -167,6 +168,44 @@ mod tests {
     }
 
     use crate::unit_or_blank;
+
+    /// R53: on `radiant_face`, across 12 seeds, the Loser makes one forced attack at the end of p1's turn
+    /// and a second at the end of p1's next, none at the end of p2's: the 100% roll never misses.
+    fn every_end_of_turn(radiant_face: bool) {
+        for seed in 1..=12 {
+            let mut s = jungle(
+                json!([]),
+                radiant_face,
+                json!({ "field": [{ "def": FELINORS, "lane": 4 }, { "def": FELINORS, "lane": 5 }] }),
+                Some(&format!("jungle-every-{seed}")),
+            );
+            let id = loser(&s).id;
+            s.end_turn();
+            let made = attacks_by(&s, &id);
+            assert_eq!(made.len(), 1, "seed {seed}");
+            assert!(made.iter().all(|(_, forced)| *forced));
+            s.end_turn();
+            assert_eq!(attacks_by(&s, &id).len(), 1, "seed {seed}: not at the end of p2's turn");
+            s.end_turn();
+            let made = attacks_by(&s, &id);
+            assert_eq!(made.len(), 2, "seed {seed}");
+            assert!(made.iter().all(|(_, forced)| *forced));
+        }
+    }
+
+    /// §4.2 step 1, §6.1: on `radiant_face`, its controller can declare no attack with it, by the legal
+    /// actions or by the reducer, while an enemy Unit stands to attack.
+    fn cant_declare(radiant_face: bool) {
+        let mut s = jungle(json!([]), radiant_face, json!({ "field": [{ "def": VANILLA, "lane": 4 }] }), None);
+        let id = loser(&s).id;
+        let declared = legal_actions(s.state(), P1)
+            .into_iter()
+            .filter(|action| matches!(action, ActionBody::Attack { attacker_id, .. } if *attacker_id == id))
+            .count();
+        assert_eq!(declared, 0);
+        let vanilla = unit_or_blank(&s, P2, 4);
+        s.expect_refused_with(|s| s.attack(id.as_str(), vanilla.as_str()), "that unit cannot attack");
+    }
 
     /// TS `toMatchObject({ killerId })` on a `destroyed` event: the killer it names.
     fn killer_of(event: Option<&GameEvent>) -> Option<String> {
@@ -200,7 +239,7 @@ mod tests {
             fn r53_on_a_success_it_makes_a_forced_attack_on_an_enemy_unit_no_exertion_sickness_ignored_the_target_strikes_back(
             ) {
                 // A 3/4: the 4/4 Loser's 4 kills it, and its strike back of 3 leaves the Loser at 1.
-                let mut s = always(jungle(json!([]), false, json!({ "field": [{ "def": FELINORS, "lane": 4 }] }), None));
+                let mut s = jungle(json!([]), false, json!({ "field": [{ "def": FELINORS, "lane": 4 }] }), None);
                 let turn = s.state().turn;
                 loser_mut(&mut s).summoned_turn = Some(turn);
                 let victim = s.unit(P2, 4).expect("setup");
@@ -215,27 +254,13 @@ mod tests {
             }
 
             #[test]
-            fn the_25_roll_across_seeds_it_attacks_on_some_ends_of_turn_and_not_on_others_one_draw_each() {
-                let mut attacked = 0;
-                let tries = 24;
-                for seed in 1..=tries {
-                    let mut s = jungle(
-                        json!([]),
-                        false,
-                        json!({ "field": [{ "def": FELINORS, "lane": 4 }] }),
-                        Some(&format!("jungle-roll-{seed}")),
-                    );
-                    let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
-                    let expected = rng.chance(0.25);
-                    s.end_turn();
-                    let made = !attacks_by(&s, &loser(&s).id).is_empty();
-                    assert_eq!(made, expected);
-                    if made {
-                        attacked += 1;
-                    }
-                }
-                assert!(attacked > 0);
-                assert!(attacked < tries);
+            fn r53_it_attacks_at_every_end_of_its_controllers_turn() {
+                every_end_of_turn(false);
+            }
+
+            #[test]
+            fn s4_2_step_1_it_cant_declare_an_attack() {
+                cant_declare(false);
             }
 
             #[test]
@@ -251,12 +276,12 @@ mod tests {
             #[test]
             fn s4_2_step_2_a_top_loser_is_never_drawn_from_another_lane() {
                 for seed in 1..=10 {
-                    let mut s = always(jungle(
+                    let mut s = jungle(
                         json!([]),
                         false,
                         json!({ "field": [{ "def": TOP, "lane": 1 }, { "def": FELINORS, "lane": 5 }] }),
                         Some(&format!("jungle-top-{seed}")),
-                    ));
+                    );
                     let top = s.unit(P2, 1).map(|unit| unit.id);
                     s.end_turn();
                     for (target, _) in attacks_by(&s, &loser(&s).id) {
@@ -268,12 +293,12 @@ mod tests {
             #[test]
             fn s4_2_step_2_a_unit_that_can_t_be_attacked_is_never_drawn_c_n51_jlockeed_s_j15_fighter() {
                 for seed in 1..=6 {
-                    let mut s = always(jungle(
+                    let mut s = jungle(
                         json!([]),
                         false,
                         json!({ "field": [{ "def": FIGHTER, "lane": 1 }, { "def": FELINORS, "lane": 5 }] }),
                         Some(&format!("jungle-fighter-{seed}")),
-                    ));
+                    );
                     let fighter = s.unit(P2, 1).map(|unit| unit.id);
                     s.end_turn();
                     let targets: Vec<String> =
@@ -296,12 +321,12 @@ mod tests {
 
             #[test]
             fn r42_if_it_destroys_the_enemy_unit_across_from_your_bot_loser_your_bot_loser_goes_berserk() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
                     json!({ "field": [{ "def": FELINORS, "lane": 4 }] }),
                     None,
-                ));
+                );
                 let bot = unit_or_blank(&s, P1, 4);
                 s.end_turn();
                 assert_eq!(s.card(&bot).berserk, Some(true));
@@ -314,12 +339,12 @@ mod tests {
             /// R1081000: an enemy Unit standing in the backrow zone of your Bot Loser's lane is across from it.
             #[test]
             fn r1081000_a_kill_standing_in_the_backrow_across_from_your_bot_loser_sends_it_berserk() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
                     None,
-                ));
+                );
                 let vanilla = s.card(VANILLA).id.clone();
                 crate::stand_in_backrow(&mut s, &vanilla, 4);
                 let bot = unit_or_blank(&s, P1, 4);
@@ -330,12 +355,12 @@ mod tests {
 
             #[test]
             fn a_kill_of_a_unit_in_another_lane_sends_nobody_berserk() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
                     None,
-                ));
+                );
                 s.end_turn();
                 assert!(s.unit(P2, 1).is_none());
                 assert_eq!(s.card(unit_or_blank(&s, P1, 4)).berserk, None);
@@ -343,12 +368,12 @@ mod tests {
 
             #[test]
             fn with_no_bot_loser_nothing_more_happens() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": VANILLA, "lane": 4 }]),
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
                     None,
-                ));
+                );
                 s.end_turn();
                 assert!(s.unit(P2, 4).is_none());
                 assert!(!s.events().iter().any(|event| event.event_type() == GameEventType::Marked));
@@ -356,49 +381,49 @@ mod tests {
 
             #[test]
             fn an_attack_that_leaves_the_unit_across_standing_sends_nobody_berserk() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
                     json!({ "field": [{ "def": "core-019", "lane": 4 }] }),
                     None,
-                ));
+                );
                 s.end_turn();
                 assert_eq!(s.card(unit_or_blank(&s, P1, 4)).berserk, None);
             }
 
             #[test]
-            fn r386_the_chance_reads_through_param_a_degrade_to_15_and_an_upgrade_to_35() {
-                for steps in [-1, 1] {
-                    // Seeds where the tuned chance and the printed 25% disagree: the outcome must follow the tuned one.
-                    let mut differs = 0;
-                    for seed in 1..=40 {
-                        let mut s = jungle(
-                            json!([]),
-                            false,
-                            json!({ "field": [{ "def": FELINORS, "lane": 4 }] }),
-                            Some(&format!("jungle-tuned-{seed}")),
-                        );
-                        step_param(loser_mut(&mut s), "chance", steps);
-                        let (seed_text, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
-                        let expected = Rng::new(&seed_text, cursor).chance(f64::from(25 + 10 * steps) / 100.0);
-                        if expected != Rng::new(&seed_text, cursor).chance(0.25) {
-                            differs += 1;
-                        }
-                        s.end_turn();
-                        assert_eq!(!attacks_by(&s, &loser(&s).id).is_empty(), expected);
+            fn r386_the_chance_reads_through_param_a_nerf_tunes_it_to_90_and_no_buff_passes_100() {
+                // Seeds where the Nerfed 90% misses: the outcome must follow the tuned chance.
+                let mut missed = 0;
+                for seed in 1..=40 {
+                    let mut s = jungle(
+                        json!([]),
+                        false,
+                        json!({ "field": [{ "def": FELINORS, "lane": 4 }] }),
+                        Some(&format!("jungle-tuned-{seed}")),
+                    );
+                    let id = loser(&s).id;
+                    assert!(!crate::can_upgrade_number(&s, &id, "chance"));
+                    step_param(loser_mut(&mut s), "chance", -1);
+                    let (seed_text, cursor) = (s.state().seed.clone(), s.state().rng_cursor);
+                    let expected = Rng::new(&seed_text, cursor).chance(0.9);
+                    if !expected {
+                        missed += 1;
                     }
-                    assert!(differs > 0);
+                    s.end_turn();
+                    assert_eq!(!attacks_by(&s, &id).is_empty(), expected);
                 }
+                assert!(missed > 0);
             }
 
             #[test]
             fn s9_3_the_roll_and_the_random_target_replay_from_a_json_copy_to_the_same_hash() {
-                let s = always(jungle(
+                let s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     false,
                     json!({ "field": [{ "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 1 }] }),
                     Some("jungle-replay"),
-                ));
+                );
                 let action = Action::new(ActionBody::EndTurn, P1, "jungle-replay");
                 let thawed: GameState = serde_json::from_value(js(s.state())).expect("a state");
                 let live = reduce(s.state(), &action);
@@ -414,29 +439,24 @@ mod tests {
             use super::*;
 
             #[test]
-            fn the_50_roll() {
-                for seed in 1..=16 {
-                    let mut s = jungle(
-                        json!([]),
-                        true,
-                        json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
-                        Some(&format!("jungle-radiant-{seed}")),
-                    );
-                    let expected = Rng::new(&s.state().seed, s.state().rng_cursor).chance(0.5);
-                    s.end_turn();
-                    assert_eq!(!attacks_by(&s, &loser(&s).id).is_empty(), expected);
-                }
+            fn r53_it_attacks_at_every_end_of_its_controllers_turn() {
+                every_end_of_turn(true);
+            }
+
+            #[test]
+            fn s4_2_step_1_it_cant_declare_an_attack() {
+                cant_declare(true);
             }
 
             #[test]
             fn r412_the_kill_across_from_your_bot_loser_is_credited_to_it_the_destroyed_event_names_it_and_its_trigger_fires(
             ) {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     true,
                     json!({ "field": [{ "def": VANILLA, "lane": 4 }] }),
                     None,
-                ));
+                );
                 let bot = s.unit(P1, 4).expect("setup");
                 let victim = s.unit(P2, 4).expect("setup");
                 s.end_turn();
@@ -450,12 +470,12 @@ mod tests {
 
             #[test]
             fn r412_a_kill_in_another_lane_stays_the_jungle_loser_s() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     true,
                     json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
                     None,
-                ));
+                );
                 s.end_turn();
                 let death = s.events().iter().find(|event| event.event_type() == GameEventType::Destroyed);
                 assert_eq!(killer_of(death), Some(loser(&s).id));
@@ -465,12 +485,12 @@ mod tests {
 
             #[test]
             fn r42_r412_the_credited_kill_is_the_bot_loser_s_for_every_reader_miss_mrow_s_death_takes_control_of_it() {
-                let mut s = always(jungle(
+                let mut s = jungle(
                     json!([{ "def": BOT, "lane": 4 }]),
                     true,
                     json!({ "field": [{ "def": MROW, "lane": 4 }] }),
                     None,
-                ));
+                );
                 let bot = s.unit(P1, 4).expect("setup");
                 s.end_turn();
                 assert_eq!(s.card(&bot).controller, P2);

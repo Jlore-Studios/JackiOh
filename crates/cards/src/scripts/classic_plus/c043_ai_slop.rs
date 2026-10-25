@@ -1,50 +1,79 @@
-//! C+ #43 AI Slop (SPEC §8.7 row 43, E23, R60, R77, R102, R179, R468, R469, R582). (3) Spell, Legendary.
-//!   Fuse {cards} random AI generated cards and add the result to your hand. It costs (0).
+//! C+ #43 AI Slop (SPEC §8.7 row 43, E23, R60, R77, R102, R179, R468, R469, R582, R1828001). (3) Spell,
+//! Legendary.
+//!   Fuse {cards} random (1) Cost AI generated cards and add the result to your hand. It costs (0).
 //!   Radiant: the AI generated cards are Radiant.
 //!
-//! `fuseGenerated` is the whole fusion: independent picks from the AI generated cards (twelve since Meditative+ shipped, fourteen since #1563) (a pool the
-//! text names, so tokens reach it; repeats allowed, R60), fused with no target (R77, R102: the shared
-//! type, else the first's; a Token with the AI tag; its id names them, R179), into your hand at
-//! `costOverride` 0 (the hand cap burns it). Radiant picks go in on their Radiant face (R469).
-//! R582: tuned down to 1, "fuse 1 card" is no fusion (R77), so that one card is added as it is, at (0).
+//! `fuseGenerated` is the whole fusion: independent picks from the AI generated cards whose printed
+//! cost (R65) is (1), six since issue #1828 (R1828001) (a pool the text names, so tokens reach it;
+//! repeats allowed, R60), fused with no target (R77, R102: the shared type, else the first's; a Token
+//! with the AI tag; its id names them, R179), into your hand at `costOverride` 0 (the hand cap burns
+//! it). Radiant picks go in on their Radiant face (R469). R582: tuned down to 1, "fuse 1 card" is no
+//! fusion (R77), so that one card, from the same pool, is added as it is, at (0).
+//!
+//! Through v0.4.9 the pool was every AI generated card; `script_v0_4_9` keeps that for those
+//! versions' replays (R767000).
 
 use jackioh_engine::effects::{add_random_from_catalog, fuse_generated};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-043";
 
-fn ai_cards() -> Value {
-    json!({ "tags": ["AI"], "token": true })
+/// R1828001: the printed cost (R65) of every card the pool holds, "(1) Cost".
+const POOL_COST: i32 = 1;
+
+/// The AI generated cards, those of printed cost `cost` when it is given.
+fn ai_cards(cost: Option<i32>) -> Value {
+    let mut pool = json!({ "tags": ["AI"], "token": true });
+    if let Some(cost) = cost {
+        pool["cost"] = json!(cost);
+    }
+    pool
 }
 
-pub fn script() -> CardScripts {
-    let base = Script {
-        cry: Some(hook(|ctx| {
+/// The script of a face that fuses from the AI generated cards of printed cost `cost`, or from all of
+/// them when it is `None`.
+fn slop(cost: Option<i32>) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
             let count = param(&*ctx, "cards");
             if count < 2 {
                 vec![add_random_from_catalog(json_as(json!({
-                    "query": ai_cards(),
+                    "query": ai_cards(cost),
                     "count": count,
                     "costOverride": 0,
                     "radiant": ctx.radiant,
                 })))]
             } else {
-                vec![fuse_generated(json_as(json!({ "count": count, "query": ai_cards(), "radiant": ctx.radiant })))]
+                vec![fuse_generated(json_as(json!({ "count": count, "query": ai_cards(cost), "radiant": ctx.radiant })))]
             }
         })),
         ..Script::default()
-    };
-    // The same script: the Radiant face's picks are Radiant through `ctx.radiant`.
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+    }
 }
 
-// C+ #43 AI Slop — SPEC §8.7 row 43, R11, R60, R77, R97, R102, R179, R386, R469, R582, BUILD M9 row
-// C+ 43. The fusion is the engine's `fuseGenerated` (packages/engine/test/fuse-variants.test.ts).
+pub fn script() -> CardScripts {
+    // The same script: the Radiant face's picks are Radiant through `ctx.radiant`.
+    CardScripts {
+        base: slop(Some(POOL_COST)),
+        radiant: slop(Some(POOL_COST)),
+    }
+}
+
+/// R767000: through v0.4.9 the pool was every AI generated card; `KEPT_SCRIPTS` keeps it.
+pub fn script_v0_4_9() -> CardScripts {
+    CardScripts {
+        base: slop(None),
+        radiant: slop(None),
+    }
+}
+
+// C+ #43 AI Slop — SPEC §8.7 row 43, R11, R60, R77, R97, R102, R179, R386, R469, R582, R1828001, BUILD M9
+// row C+ 43. The fusion is the engine's `fuseGenerated` (packages/engine/test/fuse-variants.test.ts).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
+    use super::POOL_COST;
     use crate::events_json;
     use jackioh_engine::testkit::*;
 
@@ -69,6 +98,21 @@ mod tests {
             .map(String::from),
         );
         ids
+    }
+
+    /// R1828001: the (1) Cost AI generated cards, the pool since issue #1828.
+    const ONE_COST: [&str; 6] = [
+        "classicplus-t-ai-01",
+        "classicplus-t-ai-04",
+        "classicplus-t-ai-07",
+        "classicplus-t-ai-08",
+        "classicplus-t-ai-09",
+        "meditativeplus-001-3",
+    ];
+
+    /// Whether `id` is a card of the pool: an AI generated card of printed cost (1).
+    fn in_pool(id: &str) -> bool {
+        ai_ids().iter().any(|ai| ai == id) && query_cost(&crate::card_def(id)) == POOL_COST
     }
 
     use crate::scenario;
@@ -107,12 +151,37 @@ mod tests {
         }
 
         #[test]
+        fn r1828001_the_pool_is_the_six_1_cost_ai_generated_cards() {
+            crate::register_all();
+            let pool: Vec<String> = crate::query::query(&json_as(super::super::ai_cards(Some(POOL_COST))))
+                .iter()
+                .map(|def| def.id.clone())
+                .collect();
+            assert_eq!(pool, ONE_COST.map(String::from).to_vec());
+            assert!(ONE_COST.iter().all(|id| in_pool(id)));
+        }
+
+        #[test]
+        fn r1828001_it_never_fuses_a_card_whose_cost_is_not_1() {
+            let mut seen: BTreeSet<String> = BTreeSet::new();
+            for n in 0..20 {
+                for spec in specs(&played(&format!("slop-cost-{n}"), false, None)) {
+                    assert_eq!(query_cost(&crate::card_def(&spec.def_id)), POOL_COST, "{}", spec.def_id);
+                    seen.insert(spec.def_id);
+                }
+            }
+            // Every pick was a (1) Cost one, and the picks reach across the pool.
+            assert!(seen.len() > 1);
+            assert!(seen.iter().all(|id| in_pool(id)));
+        }
+
+        #[test]
         fn r77_r179_fuses_three_random_ai_generated_cards_into_your_hand_at_0_its_id_names_the_three() {
             let s = played("slop-base", false, None);
             let card = made(&s);
             assert_eq!(specs(&s).len(), 3);
             for spec in specs(&s) {
-                assert!(ai_ids().contains(&spec.def_id));
+                assert!(in_pool(&spec.def_id));
                 assert_eq!(spec.radiant, None);
             }
             assert_eq!(card.cost_override, Some(0));
@@ -224,8 +293,19 @@ mod tests {
             step_param(s.card_mut(SLOP), "cards", -1);
             s.play(SLOP, json!({}));
             let card = made(&s);
-            assert!(ai_ids().contains(&card.def_id));
+            assert!(in_pool(&card.def_id));
             assert_eq!(card.cost_override, Some(0));
+        }
+
+        #[test]
+        fn r582_r1828001_tuned_to_one_card_it_is_a_1_cost_one_on_every_seed() {
+            for n in 0..20 {
+                let mut s = slop(&format!("slop-one-{n}"), false, None);
+                step_param(s.card_mut(SLOP), "cards", -1);
+                step_param(s.card_mut(SLOP), "cards", -1);
+                s.play(SLOP, json!({}));
+                assert!(in_pool(&made(&s).def_id), "{}", made(&s).def_id);
+            }
         }
     }
 
@@ -236,6 +316,17 @@ mod tests {
         fn costs_3_refused_with_2_mana() {
             let mut s = slop("slop-cost", true, None);
             crate::expect_costs(&mut s, SLOP, 3, json!({}));
+        }
+
+        #[test]
+        fn r1828001_it_never_fuses_a_card_whose_cost_is_not_1() {
+            for n in 0..20 {
+                for spec in specs(&played(&format!("slop-radiant-cost-{n}"), true, None)) {
+                    assert_eq!(query_cost(&crate::card_def(&spec.def_id)), POOL_COST, "{}", spec.def_id);
+                    assert!(in_pool(&spec.def_id));
+                    assert_eq!(spec.radiant, Some(true));
+                }
+            }
         }
 
         #[test]
@@ -261,6 +352,28 @@ mod tests {
             step_param(s.card_mut(SLOP), "cards", -1);
             s.play(SLOP, json!({}));
             assert!(made(&s).radiant);
+            assert!(in_pool(&made(&s).def_id));
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.4.9 and before, whose pool was every AI generated
+    /// card.
+    mod v0_4_9 {
+        use super::*;
+
+        #[test]
+        fn r767000_r1828001_a_game_on_v0_4_9_folds_under_the_kept_script_its_pool_holds_every_ai_generated_card() {
+            crate::register_all();
+            jackioh_engine::with_shipped(crate::catalog_at("v0.4.9"), || {
+                let mut costs: BTreeSet<i32> = BTreeSet::new();
+                for n in 0..20 {
+                    for spec in specs(&played(&format!("slop-kept-{n}"), false, None)) {
+                        assert!(ai_ids().contains(&spec.def_id));
+                        costs.insert(query_cost(&crate::card_def(&spec.def_id)));
+                    }
+                }
+                assert!(costs.iter().any(|cost| *cost != POOL_COST), "costs: {costs:?}");
+            });
         }
     }
 }

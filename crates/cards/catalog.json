@@ -1718,9 +1718,9 @@
     "cost": 1,
     "params": [
       {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -1729,11 +1729,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Shuffle {cards|random KY card|random KY cards} into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Shuffle {cards|random Radiant KY card|random Radiant KY cards} into your deck."
     }
   },
   "core-052": {
@@ -6892,9 +6892,12 @@
         },
         {
           "kind": "Indestructible"
+        },
+        {
+          "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Rush, Trample, Indestructible"
+      "text": "Tribute 3, Rush, Trample, Indestructible, Crater"
     },
     "radiant": {
       "attack": 26,
@@ -6908,9 +6911,12 @@
         },
         {
           "kind": "Indestructible"
+        },
+        {
+          "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Charge, Trample, Indestructible"
+      "text": "Tribute 3, Charge, Trample, Indestructible, Crater"
     }
   },
   "classic-081": {
@@ -8302,8 +8308,8 @@
     "params": [
       {
         "key": "chance",
-        "base": 25,
-        "radiant": 50,
+        "base": 100,
+        "radiant": 100,
         "better": "up",
         "step": 10,
         "min": 1,
@@ -8314,14 +8320,22 @@
     "base": {
       "attack": 4,
       "health": 4,
-      "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
-      "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
@@ -8865,14 +8879,14 @@
     "cost": 4,
     "loc": 33,
     "base": {
-      "attack": 3,
-      "health": 3,
+      "attack": 1,
+      "health": 1,
       "keywords": [],
       "text": "Cry: Discover a Felinor Unit, then another. Fuse both into this."
     },
     "radiant": {
-      "attack": 6,
-      "health": 6,
+      "attack": 2,
+      "health": 2,
       "keywords": [],
       "text": "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
     }
@@ -9298,7 +9312,9 @@
     "name": "Book Worm",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "flavor": "Beast",
     "token": false,
@@ -9467,11 +9483,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Fuse {cards|random AI generated card|random AI generated cards} and add the result to your hand. It costs (0)."
+      "text": "Fuse {cards|random (1) Cost AI generated card|random (1) Cost AI generated cards} and add the result to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fuse {cards|random Radiant AI generated card|random Radiant AI generated cards} and add the result to your hand. It costs (0)."
+      "text": "Fuse {cards|random (1) Cost Radiant AI generated card|random (1) Cost Radiant AI generated cards} and add the result to your hand. It costs (0)."
     }
   },
   "classicplus-044": {
@@ -10167,12 +10183,22 @@
     ],
     "loc": 10,
     "base": {
-      "keywords": [],
-      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Brittle 1\nDeath: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Brittle 1\nDeath: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
     }
   },
   "classicplus-062": {
@@ -12301,7 +12327,7 @@
       {
         "key": "chance",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -12310,7 +12336,7 @@
       {
         "key": "paidChance",
         "base": 5,
-        "radiant": 12,
+        "radiant": 10,
         "better": "up",
         "step": 2,
         "min": 1,
@@ -12324,7 +12350,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
     }
   },
   "meditative-022": {
@@ -15753,7 +15779,7 @@
       {
         "key": "shrinkAttack",
         "base": 3,
-        "radiant": 2,
+        "radiant": 3,
         "better": "down",
         "step": 1,
         "min": 1
@@ -15770,15 +15796,15 @@
     "loc": 29,
     "base": {
       "attack": 9,
-      "health": 11,
+      "health": 9,
       "keywords": [],
       "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
     },
     "radiant": {
       "attack": 18,
-      "health": 22,
+      "health": 18,
       "keywords": [],
-      "text": "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+      "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
     }
   },
   "meditative-095": {
@@ -16872,7 +16898,7 @@
   "meditativeplus-004": {
     "id": "meditativeplus-004",
     "index": "4",
-    "name": "Supply Drop",
+    "name": "Jlockeed's Supply Drop",
     "set": "Meditative+",
     "type": "Spell",
     "tags": [
