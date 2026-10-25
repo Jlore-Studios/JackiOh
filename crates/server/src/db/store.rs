@@ -2349,7 +2349,11 @@ impl Tx<'_> {
     }
 
     /// R1834005: the bot's wardrobe and picks, as the pool drew them.
-    pub async fn bots_set_cosmetics(&mut self, profile_id: &str, cosmetics: &BotCosmetics) -> StoreResult<()> {
+    pub async fn bots_set_cosmetics(
+        &mut self,
+        profile_id: &str,
+        cosmetics: &BotCosmetics,
+    ) -> StoreResult<()> {
         dispatch!(self, bots_set_cosmetics(profile_id, cosmetics))
     }
 

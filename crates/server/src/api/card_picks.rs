@@ -96,6 +96,9 @@ pub async fn put_card_pick(app: &Arc<App>, req: Req) -> ApiResult {
     let full_art = change_of(&req.body, FULL_ART_SETTING, Value::as_bool, "a boolean")?;
 
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // The row is read, changed and written back: two devices' writes take turns, so neither's
+    // change is lost.
+    tx.economy_lock_account(&profile.id).await?;
     let owned = tx.economy_cosmetics_get(&profile.id).await?;
     for (kind, change) in &changes {
         if let Some(Some(id)) = change {
@@ -136,7 +139,8 @@ fn is_id_shape(id: &str) -> bool {
 /// One entry of an upload, read whole or refused: a card id, and each pick a well-shaped id or a
 /// boolean for the full art.
 fn upload_entry(entry: &Value) -> Result<CardPicks, ApiError> {
-    let refused = || bad_request("every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt? }");
+    let refused =
+        || bad_request("every entry of \"cards\" must be { cardId, foil?, finish?, border?, fullArt? }");
     let fields: &Map<String, Value> = entry.as_object().ok_or_else(refused)?;
     let card_id = fields
         .get("cardId")
@@ -190,7 +194,9 @@ pub async fn upload_card_picks(app: &Arc<App>, req: Req) -> ApiResult {
     };
     let most = app.catalog.card_ids.len();
     if entries.len() > most {
-        return Err(bad_request(format!("at most {most} cards' picks can be uploaded")));
+        return Err(bad_request(format!(
+            "at most {most} cards' picks can be uploaded"
+        )));
     }
     let uploaded = entries
         .iter()

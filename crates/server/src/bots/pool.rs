@@ -56,9 +56,9 @@ use crate::bots::fallback::{holds_deck_size, holds_decks, holds_trio};
 use crate::bots::names::draw_username;
 use crate::bots::persona::pick_bot_persona;
 use crate::config::{
-    BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN, BOT_COSMETIC_FITS,
-    BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_GRIND_GAP,
-    BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY,
+    BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
+    BOT_COSMETIC_FITS, BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE,
+    BOT_GRIND_GAP, BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY,
     BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
     BOT_POOL_REFRESH_INTERVAL_SECONDS, BOT_SPEED_MAX, BOT_SPEED_MIN, BOT_STALE_START_SECONDS, BOT_STRENGTHS,
     CARD_STATS_MIN_SAMPLE, USERNAME_CHANGE_COOLDOWN_MS,
@@ -616,11 +616,17 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         let mut tx = app.db.begin(None).await?;
         tx.bots_set_cosmetics(&bot.profile_id, &draw.cosmetics).await?;
         if let Some(decks) = &draw.decks {
-            let version = bot.decks_catalog_version.as_deref().unwrap_or(&app.catalog.version);
+            let version = bot
+                .decks_catalog_version
+                .as_deref()
+                .unwrap_or(&app.catalog.version);
             tx.bots_set_decks(&bot.profile_id, decks, version).await?;
         }
         if let Some(trio) = &draw.trio {
-            let version = bot.trio_catalog_version.as_deref().unwrap_or(&app.catalog.version);
+            let version = bot
+                .trio_catalog_version
+                .as_deref()
+                .unwrap_or(&app.catalog.version);
             tx.bots_set_trio(&bot.profile_id, trio, version).await?;
         }
         tx.commit().await?;

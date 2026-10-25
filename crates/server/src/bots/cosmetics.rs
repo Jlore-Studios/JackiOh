@@ -137,7 +137,12 @@ fn ownership_share(fit: &CosmeticFit, (cosmetic_id, card): &Holding) -> f64 {
 
 /// R1834005: a bot's wardrobe, from `seed`: what it `held` that is still eligible, and each other
 /// eligible holding at the fit's share of people that own it, so a bot that ages only gains.
-pub fn draw_wardrobe(seed: &str, fit: &CosmeticFit, eligible: &[Holding], held: &OwnedCosmetics) -> OwnedCosmetics {
+pub fn draw_wardrobe(
+    seed: &str,
+    fit: &CosmeticFit,
+    eligible: &[Holding],
+    held: &OwnedCosmetics,
+) -> OwnedCosmetics {
     let mut rng = Rng::new(&format!("{seed}:cosmetics:wardrobe"), 0);
     let held = holdings(held);
     let kept: BTreeSet<Holding> = eligible
@@ -155,7 +160,12 @@ pub fn draw_wardrobe(seed: &str, fit: &CosmeticFit, eligible: &[Holding], held: 
 /// The weight `fit` gives `cosmetic` in its kind's slot among `candidates`: its share when the fit
 /// lists the kind, else the prior's split (the default `BOT_COSMETIC_PRIOR_DEFAULT_SHARE`, the rest
 /// even among the others).
-fn slot_weight(fit: &CosmeticFit, registry: &[Cosmetic], cosmetic: &Cosmetic, candidates: &[&Cosmetic]) -> f64 {
+fn slot_weight(
+    fit: &CosmeticFit,
+    registry: &[Cosmetic],
+    cosmetic: &Cosmetic,
+    candidates: &[&Cosmetic],
+) -> f64 {
     let listed = |id: &str| fit.slots.iter().find(|(slot_id, _)| *slot_id == id);
     let kind_listed = fit.slots.iter().any(|(id, _)| {
         registry
@@ -219,7 +229,13 @@ fn owned_of_kind<'r>(
 
 /// One slot of `kind`, drawn among what `wardrobe` owns there by `fit`'s shares, the kind's
 /// default when nothing weighs anything.
-fn draw_slot(rng: &mut Rng, registry: &[Cosmetic], fit: &CosmeticFit, wardrobe: &OwnedCosmetics, kind: CosmeticKind) -> String {
+fn draw_slot(
+    rng: &mut Rng,
+    registry: &[Cosmetic],
+    fit: &CosmeticFit,
+    wardrobe: &OwnedCosmetics,
+    kind: CosmeticKind,
+) -> String {
     let candidates = owned_of_kind(registry, wardrobe, kind, None);
     pick_weighted(rng, fit, registry, &candidates)
         .map(|cosmetic| cosmetic.id.clone())
@@ -228,7 +244,12 @@ fn draw_slot(rng: &mut Rng, registry: &[Cosmetic], fit: &CosmeticFit, wardrobe: 
 
 /// R1834005: a bot's account picks from `seed`, as a person's `cosmetics` settings group holds
 /// them: the six kinds, each drawn by `draw_slot`, and the Full-art cards switch on, its default.
-pub fn draw_account(seed: &str, registry: &[Cosmetic], fit: &CosmeticFit, wardrobe: &OwnedCosmetics) -> AccountPicks {
+pub fn draw_account(
+    seed: &str,
+    registry: &[Cosmetic],
+    fit: &CosmeticFit,
+    wardrobe: &OwnedCosmetics,
+) -> AccountPicks {
     let mut rng = Rng::new(&format!("{seed}:cosmetics:account"), 0);
     let mut account = AccountPicks::default();
     for kind in CARD_SLOT_KINDS.into_iter().chain(DECK_SLOT_KINDS) {
@@ -239,7 +260,12 @@ pub fn draw_account(seed: &str, registry: &[Cosmetic], fit: &CosmeticFit, wardro
 }
 
 /// R1834005: one deck's three slots from `seed` (one per deck), each drawn by `draw_slot`.
-pub fn draw_slots(seed: &str, registry: &[Cosmetic], fit: &CosmeticFit, wardrobe: &OwnedCosmetics) -> DeckSlots {
+pub fn draw_slots(
+    seed: &str,
+    registry: &[Cosmetic],
+    fit: &CosmeticFit,
+    wardrobe: &OwnedCosmetics,
+) -> DeckSlots {
     let mut rng = Rng::new(&format!("{seed}:cosmetics:slots"), 0);
     let mut slot = |kind| Some(draw_slot(&mut rng, registry, fit, wardrobe, kind));
     DeckSlots {
@@ -305,7 +331,15 @@ pub fn draw_card_picks(
             }
         }
     }
-    wear_full_arts(seed, registry, fit, wardrobe, &OwnedCosmetics::default(), &mut cards, every);
+    wear_full_arts(
+        seed,
+        registry,
+        fit,
+        wardrobe,
+        &OwnedCosmetics::default(),
+        &mut cards,
+        every,
+    );
     cards.retain(|picks| !picks.is_empty());
     cards.sort_by(|a, b| a.card_id.cmp(&b.card_id));
     cards
@@ -366,7 +400,11 @@ fn decks_of<'b>(decks: &'b [BotDeck], trio: Option<&'b FrozenTrio>) -> Vec<&'b [
         let (a, b, c) = &trio.decks;
         [a.cards.as_slice(), b.cards.as_slice(), c.cards.as_slice()]
     });
-    decks.iter().map(|deck| deck.cards.as_slice()).chain(trio).collect()
+    decks
+        .iter()
+        .map(|deck| deck.cards.as_slice())
+        .chain(trio)
+        .collect()
 }
 
 /// `slots` aged: each slot changes at `BOT_COSMETIC_SLOT_CHANGE_SHARE`, and one the wardrobe no
@@ -455,7 +493,12 @@ pub fn redraw(
         let index = dressed;
         dressed += 1;
         match slots {
-            None => Some(draw_slots(&format!("{seed}:deck:{index}"), registry, fit, &wardrobe)),
+            None => Some(draw_slots(
+                &format!("{seed}:deck:{index}"),
+                registry,
+                fit,
+                &wardrobe,
+            )),
             Some(slots) if ages => {
                 let mut slot = |kind| Some(aged_slot(rng, registry, fit, &wardrobe, kind, slots.get(kind)));
                 Some(DeckSlots {
@@ -511,7 +554,10 @@ pub fn redraw(
                 })
                 .collect();
             // A full art gained as it aged prints at the fit's wear, as a drawn one does.
-            let every: BTreeSet<&str> = played.iter().flat_map(|deck| deck.iter().map(String::as_str)).collect();
+            let every: BTreeSet<&str> = played
+                .iter()
+                .flat_map(|deck| deck.iter().map(String::as_str))
+                .collect();
             wear_full_arts(seed, registry, fit, &wardrobe, &held.wardrobe, &mut cards, every);
             cards.retain(|picks| !picks.is_empty());
             cards.sort_by(|a, b| a.card_id.cmp(&b.card_id));

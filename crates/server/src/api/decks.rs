@@ -38,10 +38,10 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use crate::cosmetics::{self, CosmeticKind};
-use crate::loadout::DeckSlots;
 use crate::db::store::{
     FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
+use crate::loadout::DeckSlots;
 use crate::seats::Seat;
 
 // Ids
@@ -797,7 +797,7 @@ pub enum FrozenChoice {
         deck: FrozenDeck,
     },
     Bo3 {
-        trio: FrozenTrio,
+        trio: Box<FrozenTrio>,
     },
     /// R258: nothing to freeze but the player's lean (R1372, R924000), which waits for the deal
     /// (written only when there is one).
@@ -1089,10 +1089,10 @@ pub async fn freeze_choice(
         )));
     };
     Ok(FrozenChoice::Bo3 {
-        trio: FrozenTrio {
+        trio: Box::new(FrozenTrio {
             name: trio.name.clone(),
             decks: (freeze(first), freeze(second), freeze(third)),
-        },
+        }),
     })
 }
 

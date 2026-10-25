@@ -31,9 +31,11 @@ pub const CARDS_GROUP: &str = "cards";
 pub const FULL_ART_SETTING: &str = "fullArt";
 
 /// The kinds a deck carries a pick of (R1297000), in the registry's order.
-pub const DECK_SLOT_KINDS: [CosmeticKind; 3] = [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack];
+pub const DECK_SLOT_KINDS: [CosmeticKind; 3] =
+    [CosmeticKind::Table, CosmeticKind::Field, CosmeticKind::CardBack];
 /// The kinds a card wears (R1295000), in the registry's order.
-pub const CARD_SLOT_KINDS: [CosmeticKind; 3] = [CosmeticKind::Foil, CosmeticKind::Finish, CosmeticKind::Border];
+pub const CARD_SLOT_KINDS: [CosmeticKind; 3] =
+    [CosmeticKind::Foil, CosmeticKind::Finish, CosmeticKind::Border];
 
 /// The key a kind's pick has in the `cosmetics` settings group: the kind's own camel-case name.
 pub fn setting_key(kind: CosmeticKind) -> &'static str {
@@ -321,9 +323,7 @@ pub fn freeze_loadout(
                 entry.set(kind, Some(worn));
             }
         }
-        let prints = own
-            .and_then(|picks| picks.full_art)
-            .unwrap_or(account.full_art);
+        let prints = own.and_then(|picks| picks.full_art).unwrap_or(account.full_art);
         if prints && full_art_of(registry, card).is_some_and(|full_art| owns(full_art, Some(card), owned)) {
             entry.full_art = Some(true);
         }
@@ -373,7 +373,14 @@ impl SeatPicks {
 
     /// [`freeze_loadout`] against the shipped registry, for the deck `deck` slots and `deck_cards`.
     pub fn freeze(&self, deck: Option<&DeckSlots>, deck_cards: &[String]) -> Loadout {
-        freeze_loadout(registry(), &self.owned, &self.account, deck, &self.cards, deck_cards)
+        freeze_loadout(
+            registry(),
+            &self.owned,
+            &self.account,
+            deck,
+            &self.cards,
+            deck_cards,
+        )
     }
 }
 
@@ -406,11 +413,14 @@ fn shown_cards(side: &SideView) -> impl Iterator<Item = (&str, &str)> {
 }
 
 /// R1834003: the `(seat, card)` pairs `view` shows: each card in it that was dealt from `seat`'s
-/// deck (`dealt`, `actor::engine::dealt_cards`) and still shows as the card it was dealt as. A card
-/// minted later, one that changed hands off the field and one transformed into another card name
-/// no pair, so a pair never says more about a deck than the view it is read from: a card of that
-/// deck, seen.
-pub fn shown_defs(view: &PlayerView, dealt: &BTreeMap<String, (PlayerId, String)>) -> BTreeSet<(PlayerId, String)> {
+/// deck (`dealt`, `actor::engine::dealt_cards`) and still shows as the card it was dealt as,
+/// wherever it is now (a card that changed hands counts for the deck that dealt it). A card minted
+/// later and one transformed into another card name no pair, so a pair never says more about a
+/// deck than the view it is read from: a card of that deck, seen.
+pub fn shown_defs(
+    view: &PlayerView,
+    dealt: &BTreeMap<String, (PlayerId, String)>,
+) -> BTreeSet<(PlayerId, String)> {
     [&view.you, &view.opponent]
         .into_iter()
         .flat_map(shown_cards)
@@ -574,7 +584,9 @@ mod tests {
         };
         let starter = account(&[(CosmeticKind::Table, "table-starter")], true);
         assert_eq!(
-            freeze_loadout(&registry, &none, &starter, Some(&deck), &[], &[]).seat.table,
+            freeze_loadout(&registry, &none, &starter, Some(&deck), &[], &[])
+                .seat
+                .table,
             "table-default"
         );
         // Owned on the account, the same picks are worn.
@@ -583,13 +595,17 @@ mod tests {
             account: vec!["table-earned".to_owned()],
         };
         assert_eq!(
-            freeze_loadout(&registry, &owned, &picks, None, &[], &[]).seat.table,
+            freeze_loadout(&registry, &owned, &picks, None, &[], &[])
+                .seat
+                .table,
             "table-earned"
         );
         // A per-card kind is never owned on the account, so an earned border picked for every card
         // is the default on the seat.
         assert_eq!(
-            freeze_loadout(&registry, &owned, &picks, None, &[], &[]).seat.border,
+            freeze_loadout(&registry, &owned, &picks, None, &[], &[])
+                .seat
+                .border,
             "border-default"
         );
     }
@@ -709,7 +725,10 @@ mod tests {
             COSMETICS_GROUP.to_owned(),
             group(&[
                 ("foil", PlayerSettingValue::Text("foil-starter".to_owned())),
-                ("cardBack", PlayerSettingValue::Text("card-back-starter".to_owned())),
+                (
+                    "cardBack",
+                    PlayerSettingValue::Text("card-back-starter".to_owned()),
+                ),
                 ("border", PlayerSettingValue::Bool(true)),
             ]),
         );
@@ -737,7 +756,8 @@ mod tests {
             engine::deal_random_deck("loadout-test:p2-deck", None),
         );
         let args = engine::create_game_args("loadout-test", &decks, None, None, None);
-        let state = engine::begin_game(Pinned::default(), &engine::create_game(Pinned::default(), &args)).state;
+        let state =
+            engine::begin_game(Pinned::default(), &engine::create_game(Pinned::default(), &args)).state;
         let dealt = engine::dealt_cards(&state);
         // Every card of both decks was dealt, each to its own seat.
         assert_eq!(dealt.len(), decks.0.len() + decks.1.len());
@@ -759,8 +779,10 @@ mod tests {
         assert!(!hand.is_empty());
         let shown = shown_defs(&view, &dealt);
         // p1's hand shows, p2's hand and both libraries do not.
-        let expected: BTreeSet<(PlayerId, String)> =
-            hand.iter().map(|card| (PlayerId::P1, card.def_id.clone())).collect();
+        let expected: BTreeSet<(PlayerId, String)> = hand
+            .iter()
+            .map(|card| (PlayerId::P1, card.def_id.clone()))
+            .collect();
         assert_eq!(shown, expected);
         // A card that shows as something it was not dealt as (a transform), or that was not dealt
         // at all, names nothing.

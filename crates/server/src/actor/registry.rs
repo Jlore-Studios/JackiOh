@@ -313,8 +313,12 @@ impl Registry {
                 .collect()
         };
         match_row.loadouts = Some((
-            picks.0.freeze(first.deck_slots.as_ref(), &deck_cards(PlayerId::P1)),
-            picks.1.freeze(second.deck_slots.as_ref(), &deck_cards(PlayerId::P2)),
+            picks
+                .0
+                .freeze(first.deck_slots.as_ref(), &deck_cards(PlayerId::P1)),
+            picks
+                .1
+                .freeze(second.deck_slots.as_ref(), &deck_cards(PlayerId::P2)),
         ));
 
         one_tx!(app.db, |t| t.matches_create(&match_row).await?)?;
@@ -403,56 +407,57 @@ impl Registry {
         let (row, rows) = (match_row.clone(), log.clone());
         // #1035: the three folds in one job off the runtime, as Duos's rebuild folds: a long log is a
         // long fold. A panic in the first is the rebuild's internal error.
-        let (folded, replayed, bot_turns, from, dealt_cards) = engine::off_runtime(app.engine_thread, move || {
-            let dealt_cards = opening
-                .map(|opening| engine::dealt_cards(&engine::fold(pinned, &opening).state))
-                .unwrap_or_default();
-            // #1169: a checkpoint that passes every check resumes all three folds after its row, and
-            // they fold only the rows after it; any other folds the whole log, as before. `Ok` is the
-            // seq they resumed after, `Err` the refusal of a checkpoint (`None` when there was none).
-            let verified =
-                saved.map(|saved| checkpoint::verify(&saved, &row, &rows).map(|body| (saved.seq, body)));
-            if let Some(Ok((seq, body))) = verified {
-                let tail = &rows[usize::try_from(seq).unwrap_or(rows.len()).min(rows.len())..];
-                let folded = checkpoint::fold_tail(pinned, body.state.clone(), tail);
+        let (folded, replayed, bot_turns, from, dealt_cards) =
+            engine::off_runtime(app.engine_thread, move || {
+                let dealt_cards = opening
+                    .map(|opening| engine::dealt_cards(&engine::fold(pinned, &opening).state))
+                    .unwrap_or_default();
+                // #1169: a checkpoint that passes every check resumes all three folds after its row, and
+                // they fold only the rows after it; any other folds the whole log, as before. `Ok` is the
+                // seq they resumed after, `Err` the refusal of a checkpoint (`None` when there was none).
+                let verified =
+                    saved.map(|saved| checkpoint::verify(&saved, &row, &rows).map(|body| (saved.seq, body)));
+                if let Some(Ok((seq, body))) = verified {
+                    let tail = &rows[usize::try_from(seq).unwrap_or(rows.len()).min(rows.len())..];
+                    let folded = checkpoint::fold_tail(pinned, body.state.clone(), tail);
+                    let replayed = live.then(|| {
+                        std::panic::catch_unwind(AssertUnwindSafe(|| {
+                            telemetry::replay_from(pinned, body.telemetry, body.state.clone(), tail).0
+                        }))
+                        .map_err(panic_text)
+                    });
+                    let bot_turns = (has_bot && live).then(|| {
+                        std::panic::catch_unwind(AssertUnwindSafe(|| {
+                            bot_moved_turns_from(pinned, body.state, tail, body.bot_moved_turn)
+                        }))
+                        .map_err(panic_text)
+                    });
+                    return (folded, replayed, bot_turns, Ok(seq), dealt_cards);
+                }
+                let folded = engine::fold(pinned, &args);
+                // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A
+                // match already finished has none left to write, and is not replayed twice.
                 let replayed = live.then(|| {
                     std::panic::catch_unwind(AssertUnwindSafe(|| {
-                        telemetry::replay_from(pinned, body.telemetry, body.state.clone(), tail).0
+                        telemetry::replay(pinned, &row, &rows, dealt.clone()).0
                     }))
                     .map_err(panic_text)
                 });
+                // R639000: where each bot's turn stands, so a restart mid-turn does not begin it again.
                 let bot_turns = (has_bot && live).then(|| {
-                    std::panic::catch_unwind(AssertUnwindSafe(|| {
-                        bot_moved_turns_from(pinned, body.state, tail, body.bot_moved_turn)
-                    }))
-                    .map_err(panic_text)
+                    std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(pinned, &row, &rows, dealt)))
+                        .map_err(panic_text)
                 });
-                return (folded, replayed, bot_turns, Ok(seq), dealt_cards);
-            }
-            let folded = engine::fold(pinned, &args);
-            // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A
-            // match already finished has none left to write, and is not replayed twice.
-            let replayed = live.then(|| {
-                std::panic::catch_unwind(AssertUnwindSafe(|| {
-                    telemetry::replay(pinned, &row, &rows, dealt.clone()).0
-                }))
-                .map_err(panic_text)
-            });
-            // R639000: where each bot's turn stands, so a restart mid-turn does not begin it again.
-            let bot_turns = (has_bot && live).then(|| {
-                std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(pinned, &row, &rows, dealt)))
-                    .map_err(panic_text)
-            });
-            (
-                folded,
-                replayed,
-                bot_turns,
-                Err(verified.and_then(Result::err)),
-                dealt_cards,
-            )
-        })
-        .await
-        .map_err(RebuildError::Internal)?;
+                (
+                    folded,
+                    replayed,
+                    bot_turns,
+                    Err(verified.and_then(Result::err)),
+                    dealt_cards,
+                )
+            })
+            .await
+            .map_err(RebuildError::Internal)?;
         // #1169: only the reason, never the body, which holds both hands and both libraries.
         if let Err(Some(reason)) = from {
             tracing::warn!(

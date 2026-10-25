@@ -623,3 +623,62 @@ mod r633_the_body_is_checked_before_anything_is_stored {
         );
     }
 }
+
+/// R1834001: the `cosmetics` group's six picks are checked as every write of a pick is, since a
+/// match shows them to the other seat: each, where the body names it, a text naming an id of its
+/// kind the account owns. Every account kind shipped so far is a default or a starter, owned with no
+/// ledger row; the refusal of an unowned non-starter is `check_pick`'s own test, `src/cosmetics.rs`.
+mod r1834001_the_cosmetics_group_holds_owned_ids_of_their_kinds {
+    use super::*;
+
+    #[tokio::test]
+    async fn r1834001_the_cosmetics_group_refuses_another_kind() {
+        let f = setup().await;
+        for (key, value) in [
+            ("foil", json!("border-wood")),
+            ("finish", json!("finish-from-the-future")),
+            ("border", json!("full-art-mr-vanilla")),
+            ("table", json!("field-rain")),
+            ("field", json!("portrait-gary")),
+            ("cardBack", json!(true)),
+        ] {
+            let (status, body) = put(
+                &f.app,
+                json!({ "groups": { "cosmetics": { "at": 1, "values": { key: value } } } }),
+                TOKEN,
+            )
+            .await;
+            assert_eq!(status, 400, "{key}: {body}");
+            assert_eq!(body["error"]["code"], "bad_request");
+            assert_eq!(
+                body["error"]["message"],
+                json!(format!("\"cosmetics.{key}\" is not a cosmetic id of its kind"))
+            );
+        }
+        assert!(stored(&f).await.is_empty());
+
+        // Owned ids of their kinds are kept, beside any other key the client keeps there, and
+        // another group is not checked for picks.
+        let values = json!({
+            "foil": "foil-rainbow",
+            "finish": "finish-plain",
+            "border": "border-circuit",
+            "table": "table-felt",
+            "field": "field-embers",
+            "cardBack": "card-back-starfield",
+            "shown": true,
+        });
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": {
+                    "cosmetics": { "at": 2, "values": values.clone() },
+                    "audio": { "at": 2, "values": { "foil": "anything" } },
+                } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(answer["groups"]["cosmetics"]["values"], values);
+    }
+}

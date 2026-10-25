@@ -35,8 +35,8 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
-| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the hero cards' full arts, one per card, and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card and no default (R1295000, R1297000, R1313000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` whether an account owns a portrait, and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla on the shipped registry |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs`, `cosmetics.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, the strengths' measured seed ratings, and a bot's wardrobe and the loadout it draws from it (R1453, R641000, R1454, R1452, R748000, R1834005) |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json`, `loadout.rs` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the hero cards' full arts, one per card, and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card and no default (R1295000, R1297000, R1313000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` whether an account owns a portrait, and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla on the shipped registry; `check_pick` refuses a pick that is not of its slot's kind or not owned where it is worn (R1834001). `loadout.rs` freezes each seat's loadout as its match starts and says which cards' picks a view makes due (R1834002, R1834003) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
@@ -148,7 +148,7 @@ placeholders (`app::load_server_env`).
 
 `mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-fold`,
-`stats-export`, `balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`stats-export`, `balance-watch` (without `--file`), `timing-backfill`, `timing-fit` and `cosmetics-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -194,9 +194,10 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/practice/seeds` | active | `{ difficulty, humanSeat, deck, catalog }`: a practice game's seed, kept with that setup and the last board the server holds for the caller (R1303003), 201 `{ seed, lastBoard, expiresAt }`; prunes the caller's seeds older than `PRACTICE_SEED_TTL_SECONDS` (R1303001); 409 while the economy is off, for a catalog it cannot fold, or while the caller holds `PRACTICE_SEEDS_OPEN_MAX` unclaimed seeds, which it counts under the account's economy lock and issues nothing for (R1483000) |
 | `POST` | `/api/practice/claims` | active | `{ seed, result, log }`: a finished practice game, folded and its AI moves re-run (R1303002), at most `PRACTICE_VERIFY_CONCURRENCY` at once, the rest waiting; 200 `{ paid: true, jlore, xp, jloreCapped, tracks, quests }` (`jlore` what was paid, short of the game's rate when `jloreCapped` says the day's cap held some back, R1483000; `tracks` each set track the game moved, its level and XP `before` and `after` and every level it reached with its rewards, and `quests` each quest it completed, `economy::rewards::GameEconomy`), or `{ paid: false, reason }` for every refusal; the seed is burned first, so it pays once (R1303001); a pay the store fails is tried again, `PRACTICE_PAY_ATTEMPTS` tries in all, and one that never lands is a 500 that leaves the seed burned (R1688000) |
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
+| `GET`, `PUT`, `POST` | `/api/card-picks`, `/api/card-picks/upload` | active | the caller's own per-card picks (`card_cosmetic_picks`, R1834000): `{ cards }`, each `{ cardId, foil?, finish?, border?, fullArt? }` as written; a `PUT` of one card's, `{ cardId, foil?, finish?, border?, fullArt? }`, a key left out kept and `null` cleared, 400 `bad_request` for a card not in the catalog or a pick not of its kind or not owned on that card (R1834001); the device's one-time upload, `{ cards }`, which never overwrites a card the account holds, keeps an id this build does not know and leaves out one it could never wear. Each answers `{ cards }` |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
-| `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
+| `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) that the account owns (R1834001) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
@@ -208,12 +209,12 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672); 409 `update_required` for a match played on another catalog version (R1638000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
-| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5) |
+| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
-| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) |
 | `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
 | `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, cancels every open challenge between them and frees its room (R1689000), and lets go a watch of either by the other) |
 | `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, letting go a watch of either by the other, and muting the two's emotes in a live match between them, R1351000) and unblock |
@@ -256,8 +257,8 @@ One socket per player per match, at `/ws/match` on the same port. The token come
 none is offered, for the previous day's client); only `jackioh.v1` is echoed, and `/ws/duos` and
 `/ws/watch` read the token the same way. The message union is `actor/protocol.rs`:
 the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, `error`, `prompt` and
-`clock`, and the cosmetic `portraits` (R642), `emote` (R643) and `aim` (R738) frames ride beside them,
-never part of an action or a view. A seat's `view` frames carry `jloreCapped: true` once its match is over and the daily Jlore cap held back that account's Jlore for it (R1483000): read off the ledger after the result lands, sent only to that seat, again on every reconnect and from a rebuilt actor, and left off a frame while false, a watcher's included. Once the result is written they also carry `economy`, what it paid that seat's account (the game's Jlore and XP, each track it moved from before to after with the levels reached, and the quests completed, `economy::rewards::GameEconomy`), so the client fills the track bars without the level curve; only to that seat, again on a reconnect to the same actor, never to a watcher or a bot's side, and not from a rebuilt actor or after a repeated write, which pay nothing and so have nothing to tell. The co-op `/ws/duos` views carry the same `economy` for each human seat. The `portraits` frame also carries the receiving account's own emote
+`clock`, and the cosmetic `portraits` (R642), `loadouts` and `cardLoadouts` (R1834003), `emote` (R643) and `aim` (R738) frames ride beside them,
+never part of an action or a view. `loadouts` (`{ p1, p2 }`, each seat's `{ table, field, cardBack, foil, finish, border }` as `matches.loadouts` froze them, R1834002) goes with `portraits` on every `hello` and attach, before the view; `cardLoadouts` (`{ seat, cards }`) goes after the first view to a socket that shows a card that seat's deck dealt, still as it was dealt, and not again on that socket until its next `hello` or attach (`loadout::shown_defs`, `cards_due`), so no frame names a card the socket's views have not shown. A seat's `view` frames carry `jloreCapped: true` once its match is over and the daily Jlore cap held back that account's Jlore for it (R1483000): read off the ledger after the result lands, sent only to that seat, again on every reconnect and from a rebuilt actor, and left off a frame while false, a watcher's included. Once the result is written they also carry `economy`, what it paid that seat's account (the game's Jlore and XP, each track it moved from before to after with the levels reached, and the quests completed, `economy::rewards::GameEconomy`), so the client fills the track bars without the level curve; only to that seat, again on a reconnect to the same actor, never to a watcher or a bot's side, and not from a rebuilt actor or after a repeated write, which pay nothing and so have nothing to tell. The co-op `/ws/duos` views carry the same `economy` for each human seat. The `portraits` frame also carries the receiving account's own emote
 hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor drops an emote outside
 the sender's hand as silently as a rate-limited one, and relays nothing between two accounts either of which blocks the other (R1351000). A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
 A profile opens it onto the match it is in, or onto a finished match it held a seat in until
@@ -359,7 +360,8 @@ A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchI
 friend's live match, ranked or unranked, whose player allows watching (`profiles.allow_spectators`) and has fewer
 than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`, the friend's seat's
 `view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
-close. Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
+close. It is sent `loadouts` as it attaches and a `cardLoadouts` after each delayed view that newly
+shows a dealt card, by the match sockets' rule (R1834003). Before its hello the socket waits behind the same `actor::guard::HelloGate` as `/ws/duos`: a
 frame that is not the hello is answered `malformed`, past `MALFORMED_FRAMES_PER_WINDOW` of them it is
 closed with 1008, and with no hello within `WS_IDLE_TIMEOUT_SECONDS` it is refused (`forbidden`, 4403)
 (R835002). Once it is in, a later `hello` is answered with the view it was last sent, again (nothing
@@ -636,6 +638,23 @@ series still makes its picks.
   bot is within the gap less `BOT_GRIND_HYSTERESIS` (`bots_set_grinding`). A grinder is on
   `BOT_GRIND_ACTIVE_HOURS` a day (`fallback::scheduled_hours`), and each of its rated wins counts
   toward its next strength (`bots_note_grind_win`, from `api::ranked::commit_ranked_game`).
+  Each refresh also draws the cosmetics of every active bot that holds decks and has drawn none, was
+  dealt a deck since it drew, or drew `BOT_COSMETIC_REDRAW_DAYS` ago (`bots::cosmetics`, R1834005):
+  a wardrobe from its seed (`{seed}:cosmetics:…`) of each cosmetic at least `BOT_COSMETIC_MIN_OWNERS`
+  people own, first granted to a person `BOT_COSMETIC_MIN_AGE_DAYS` ago, at the share of people of
+  its account age that own it (`economy_cosmetic_owners`, a bot's profile never counted), and from it
+  its account picks, each deck's slots and its cards' own picks, all kept on `bots.cosmetics` and
+  never in the ledger. Its seat freezes through `loadout::freeze_loadout` with the wardrobe as what
+  it owns. The shares are `BOT_COSMETIC_FITS`, a row per account-age bucket, pasted from
+  `cosmetics-fit` (below), else `BOT_COSMETIC_PRIOR`.
+- `jackioh-server cosmetics-fit` (`cli/cosmetics_fit.rs`, R1834006) reads the loadouts people's
+  seats froze over `BOT_COSMETIC_FIT_WINDOW_DAYS` (`matches.loadouts`, a bot's seat never one) and
+  what each of those people owns, buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`) and
+  prints a `CosmeticFit` row for each bucket of at least `BOT_COSMETIC_FIT_MIN_SAMPLES` seats, to
+  paste by hand into `BOT_COSMETIC_FITS`, and a comment keeping the prior for the rest: each slot
+  item's share, defaults included, the share of seats with cards of their own picks and their mean
+  number, each full art's wear rate and each non-starter's ownership rate. Aggregates only, no
+  account id or username; it takes no option.
 - `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
   `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
@@ -860,6 +879,17 @@ status and a ladder bot's passed over (R1454), the five that are not starters: a
 `app.settings.portraits_granted` marks it done. An account made after it owns `portrait-vanilla`
 alone, a starter with no row, and a deck's save refuses a portrait its account does not own
 (`api/decks.rs`).
+
+Migration 0058 adds the cosmetic loadouts (#1834) and only adds objects. `card_cosmetic_picks` holds
+an account's per-card picks, one row per account and card (`foil`, `finish`, `border`, `full_art`,
+at least one set), current state with no ledger, each id kept as written with no foreign key into
+the registry or the catalog; RLS lets an account read its own rows, and only the server writes,
+through `/api/card-picks` (R1834000). `tickets.deck_cosmetics`, `matches.room_deck_cosmetics` and
+each deck of `frozen_trio` freeze a deck's three slots with it, as the portrait freezes (R642);
+`matches.loadouts` holds both seats' frozen loadouts, seat order, `NULL` on an older match, which
+every reader takes as all defaults (R1834002); and `bots.cosmetics` a ladder bot's wardrobe and
+picks, never in the ledger (R1834005). Its checks pin a slug of at most 40 characters and the jsonb
+shapes; what an id names is the server's to check, against `cosmetics.json` (R1834001).
 
 ## Tests
 

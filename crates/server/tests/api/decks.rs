@@ -969,6 +969,40 @@ mod the_deck_s_cosmetics_r1297000 {
         assert!(ctx.decks_table().await.is_empty());
     }
 
+    /// R1834001: a slot's pick is also one the account owns, since a match shows it to the other
+    /// seat. Every deck kind shipped so far is a default or a starter, which every account owns with
+    /// no ledger row; the refusal of a non-starter the account lacks is `check_pick`'s own test, in
+    /// `src/cosmetics.rs`.
+    #[tokio::test(start_paused = true)]
+    async fn r1834001_a_full_art_in_a_deck_slot_is_refused_and_a_starter_needs_no_ledger_row() {
+        let ctx = setup().await;
+        for key in ["tableCosmetic", "fieldCosmetic", "cardBackCosmetic"] {
+            let (status, body) = ctx
+                .put_deck(
+                    deck_body(json!({ key: "full-art-mr-vanilla" })),
+                    &uuid(1),
+                    &ctx.token,
+                )
+                .await;
+            assert_eq!(status, 400, "{key}: {body}");
+            assert_eq!(*error_code(&body), json!("bad_request"));
+            assert_eq!(
+                body["error"]["message"],
+                json!(format!("\"{key}\" is not a cosmetic id of its kind"))
+            );
+        }
+        assert!(ctx.decks_table().await.is_empty());
+
+        let body = deck_body(json!({
+            "tableCosmetic": "table-neon-grid",
+            "fieldCosmetic": "field-none",
+            "cardBackCosmetic": "card-back-lacquer",
+        }));
+        let (status, saved) = ctx.put_deck(body, &uuid(1), &ctx.token).await;
+        assert_eq!(status, 200, "{saved}");
+        assert_eq!(saved["deck"]["tableCosmetic"], json!("table-neon-grid"));
+    }
+
     #[tokio::test(start_paused = true)]
     async fn r1297000_a_trio_import_carries_no_picks() {
         let ctx = setup().await;

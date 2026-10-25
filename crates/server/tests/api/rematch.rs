@@ -1413,3 +1413,98 @@ mod r1638000_a_rematch_across_a_patch {
         clear_overrides();
     }
 }
+
+/// R1834002: a Best-of-1 rematch plays the same decks under the deck slots their seats wore, which
+/// its own loadout judges again as it begins; the card slots and the cards' own picks are read from
+/// the accounts again. A finished match from before loadouts has no slots to replay, so its rematch
+/// wears the accounts' picks.
+mod r1834002_a_rematch_keeps_the_slots {
+    use super::*;
+
+    fn seat(table: &str, field: &str, card_back: &str, foil: &str) -> Value {
+        json!({
+            "table": table,
+            "field": field,
+            "cardBack": card_back,
+            "foil": foil,
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_a_rematch_keeps_the_slots() {
+        let app = test_app().await;
+        let (a, b, finished_id) = names("dressed-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(
+            &app,
+            &finished_id,
+            &a,
+            &b,
+            json!({ "loadouts": [
+                { "seat": seat("table-felt", "field-rain", "card-back-lacquer", "foil-rainbow"), "cards": [] },
+                { "seat": seat("table-tavern", "field-none", "card-back-standard", "foil-none"), "cards": [] },
+            ] }),
+        )
+        .await;
+        paired_tickets(&app, &finished_id, [&a, &b], "bo1").await;
+        // Since the game, A's account picked another playmat and another foil.
+        let (status, body) = request(
+            &app,
+            "PUT",
+            "/api/settings",
+            &token_a,
+            Some(json!({ "groups": { "cosmetics": { "at": 1, "values": {
+                "table": "table-wood",
+                "foil": "foil-holo-sweep",
+            } } } })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
+        let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
+        let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
+        let rematch = match_row(&app, &rematch_id).await;
+        assert_eq!(rematch["players"], json!([a, b]));
+        // The deck slots are the finished seat's; the foil is the account's now.
+        assert_eq!(
+            rematch["loadouts"][0]["seat"],
+            seat("table-felt", "field-rain", "card-back-lacquer", "foil-holo-sweep")
+        );
+        assert_eq!(
+            rematch["loadouts"][1]["seat"],
+            seat("table-tavern", "field-none", "card-back-standard", "foil-none")
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_a_rematch_of_a_match_from_before_loadouts_wears_the_accounts_picks() {
+        let app = test_app().await;
+        let (a, b, finished_id) = names("plain-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished_id, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished_id, [&a, &b], "bo1").await;
+        let (status, body) = request(
+            &app,
+            "PUT",
+            "/api/settings",
+            &token_b,
+            Some(json!({ "groups": { "cosmetics": { "at": 1, "values": { "table": "table-wood" } } } })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
+        let (_, created) = offer(&app, &token_b, &finished_id, STAKE_NORMAL).await;
+        let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
+        let rematch = match_row(&app, &rematch_id).await;
+        assert_eq!(
+            rematch["loadouts"][1]["seat"],
+            seat("table-wood", "field-none", "card-back-standard", "foil-none")
+        );
+    }
+}

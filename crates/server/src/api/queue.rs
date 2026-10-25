@@ -301,7 +301,7 @@ async fn enqueue_ticket(
             None,
             None,
         ),
-        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, None, Some(trio), None),
+        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, None, Some(*trio), None),
         // R1372, R924000: the player's lean waits in the ticket for the deal, as a deck would.
         FrozenChoice::Random { lean } => (QueueMode::Random, Vec::new(), None, None, None, lean),
     };

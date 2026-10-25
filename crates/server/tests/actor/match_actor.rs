@@ -58,10 +58,14 @@ use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH, WS_SUBPROTOCOL
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
-    MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START,
-    REJECTION_ALERT_THRESHOLD, REMATCH_OFFER_TTL_MS, TURN_CLOCK_SECONDS,
+    MULLIGAN_CLOCK_SECONDS, PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PROMPT_CLOCK_SECONDS,
+    RATING_DEVIATION_START, RATING_VOLATILITY_START, REJECTION_ALERT_THRESHOLD, REMATCH_OFFER_TTL_MS,
+    TURN_CLOCK_SECONDS,
 };
-use jackioh_server::db::store::{Db, MatchRow, StartMatchInput};
+use jackioh_server::db::store::{
+    Db, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput, StartMatchInput,
+};
+use jackioh_server::economy::store::CardPicks;
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 use serde_json::{Value, json};
 use tracing::subscriber::DefaultGuard;
@@ -540,6 +544,10 @@ struct Options {
     /// R1483000: the economy on (§14.12), which the build leaves off, so an ending pays and the
     /// daily cap can hold its Jlore back.
     economy_live: bool,
+    /// R1834002: each profile's `cosmetics` settings group and its cards' own picks as the match
+    /// starts, which the seat's loadout freezes from.
+    account_picks: Vec<(&'static str, Value)>,
+    card_picks: Vec<(&'static str, Value)>,
 }
 
 impl Default for Options {
@@ -555,6 +563,8 @@ impl Default for Options {
             ratings: [1000.0, 1000.0],
             blocks: Vec::new(),
             economy_live: false,
+            account_picks: Vec::new(),
+            card_picks: Vec::new(),
         }
     }
 }
@@ -708,6 +718,32 @@ async fn harness(options: Options) -> Harness {
     for (blocker, blocked) in &options.blocks {
         let mut tx = app.db.begin(None).await.expect("a store transaction");
         tx.blocks_add(blocker, blocked, now()).await.expect("blocks.add");
+        tx.commit().await.expect("commit");
+    }
+    // R1834002: the picks the seats' loadouts freeze from, as their accounts hold them.
+    for (profile_id, values) in &options.account_picks {
+        let input: PlayerSettingsMergeInput = serde_json::from_value(json!({
+            "profileId": profile_id,
+            "groups": { "cosmetics": { "at": 1, "values": values } },
+            "at": now(),
+        }))
+        .expect("a PlayerSettingsMergeInput");
+        let limits = PlayerSettingsLimits {
+            max_groups: i64::try_from(PLAYER_SETTINGS_GROUPS_MAX).expect("a cap"),
+            max_bytes: i64::try_from(PLAYER_SETTINGS_BYTES_MAX).expect("a cap"),
+        };
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        tx.player_settings_merge(&input, &limits)
+            .await
+            .expect("playerSettings.merge");
+        tx.commit().await.expect("commit");
+    }
+    for (profile_id, picks) in &options.card_picks {
+        let picks: CardPicks = serde_json::from_value(picks.clone()).expect("a CardPicks");
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        tx.economy_card_picks_put(profile_id, &picks, now())
+            .await
+            .expect("economy.cardPicks.put");
         tx.commit().await.expect("commit");
     }
 
@@ -5072,5 +5108,359 @@ mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
                 .is_empty()
         );
         assert!(h.app.matches.has(MATCH_ID));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1834002, R1834003 — the loadouts frames (§14.2, §10.8)
+// ---------------------------------------------------------------------------
+
+/// Both seats' loadouts are the match row's data (R1834002), frozen as it starts: the seat-level
+/// half rides in a `loadouts` frame on attach and on every hello, before the view, and a card's own
+/// picks ride in a `cardLoadouts` frame only after a view to that socket has shown a card of that
+/// seat's deck, once per socket until its next hello or attach (R1834003). None of it is part of
+/// `PlayerView`.
+mod r1834003_the_loadouts_frames {
+    use super::*;
+    use jackioh_server::actor::engine::{Pinned, begin_game, create_game, create_game_args, dealt_cards};
+
+    /// Every kind's default, as the frame spells a seat that froze nothing.
+    fn defaults() -> Value {
+        json!({
+            "table": "table-tavern",
+            "field": "field-none",
+            "cardBack": "card-back-standard",
+            "foil": "foil-none",
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    }
+
+    /// The index of the first frame of `kind` a socket was sent.
+    fn first_of(socket: &Client, kind: &str) -> usize {
+        socket
+            .messages()
+            .iter()
+            .position(|message| message["type"] == kind)
+            .unwrap_or_else(|| panic!("no {kind} frame was sent"))
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_an_old_row_reads_as_defaults() {
+        // A row written before migration 0058 carries no `loadouts`: both seats wear every default,
+        // and no card's picks are ever sent.
+        let (_log, _guard) = Recorder::install();
+        install_test_cards();
+        let app = empty_test_app().await;
+        let now = now();
+        create_match_row(
+            &app,
+            json!({
+                "id": "legacy-loadouts",
+                "seed": "seed-legacy",
+                "players": ["profile-1", "profile-2"],
+                "decks": [fake_deck(&[]), fake_deck(&[])],
+                "catalogVersion": TEST_CATALOG_VERSION,
+                "status": "live",
+                "createdAt": now,
+                "finishedAt": null,
+                "clocks": {
+                    "turnDeadline": null,
+                    "promptDeadline": null,
+                    "graceDeadline": { "p1": null, "p2": null },
+                    "ceilingAt": now + ceiling_ms(),
+                },
+            }),
+        )
+        .await;
+        let socket = Client::new();
+        app.matches
+            .attach(&app, "legacy-loadouts", "profile-1", socket.socket())
+            .await
+            .expect("registry.attach");
+        let actor = app
+            .matches
+            .actor_for(&app, "legacy-loadouts")
+            .await
+            .expect("the actor");
+        settle().await;
+        actor.idle().await;
+        settle().await;
+
+        assert_eq!(
+            socket.of_type("loadouts"),
+            vec![json!({ "type": "loadouts", "p1": defaults(), "p2": defaults() })]
+        );
+        assert!(socket.of_type("cardLoadouts").is_empty());
+        assert!(first_of(&socket, "loadouts") < first_of(&socket, "view"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834003_loadouts_on_attach_and_hello() {
+        let h = harness(Options {
+            account_picks: vec![(
+                "profile-1",
+                json!({ "table": "table-felt", "foil": "foil-rainbow" }),
+            )],
+            card_picks: vec![(
+                "profile-1",
+                json!({ "cardId": "test-prompt-self", "border": "border-bone" }),
+            )],
+            ..Options::default()
+        })
+        .await;
+        let mut p1_seat = defaults();
+        p1_seat["table"] = json!("table-felt");
+        p1_seat["foil"] = json!("foil-rainbow");
+        let frame = json!({ "type": "loadouts", "p1": p1_seat, "p2": defaults() });
+        // PREMISE: the row froze what the frame carries, the card's own pick among it.
+        let row = match_row(&h.app, MATCH_ID).await;
+        assert_eq!(row["loadouts"][0]["seat"], p1_seat);
+        assert_eq!(
+            row["loadouts"][0]["cards"],
+            json!([{ "cardId": "test-prompt-self", "border": "border-bone" }])
+        );
+        let own_card = json!({
+            "type": "cardLoadouts",
+            "seat": "p1",
+            "cards": [{ "cardId": "test-prompt-self", "border": "border-bone" }],
+        });
+
+        for seat in PLAYER_IDS {
+            let socket = h.socket(seat);
+            assert_eq!(socket.of_type("loadouts"), vec![frame.clone()]);
+            assert!(first_of(socket, "loadouts") < first_of(socket, "view"));
+            let view = last_view(socket);
+            assert!(view.get("loadouts").is_none() && view.get("cards").is_none());
+        }
+        // p1's own hand shows its card, so p1 is sent its pick, after the view; p2's view shows only
+        // a count of p1's hand, so p2 is sent nothing of it.
+        assert_eq!(h.p1.of_type("cardLoadouts"), vec![own_card.clone()]);
+        assert!(first_of(&h.p1, "view") < first_of(&h.p1, "cardLoadouts"));
+        assert!(h.p2.of_type("cardLoadouts").is_empty());
+
+        // A reconnect's attach sends both again, as on join.
+        h.p1.drop_transport();
+        h.idle().await;
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        h.idle().await;
+        assert_eq!(revived.of_type("loadouts"), vec![frame.clone()]);
+        assert_eq!(revived.of_type("cardLoadouts"), vec![own_card.clone()]);
+        assert!(first_of(&revived, "loadouts") < first_of(&revived, "view"));
+
+        // A hello on the same socket sends them again too: the page may have lost them.
+        revived.receive_json(json!({ "type": "hello" }));
+        h.idle().await;
+        assert_eq!(revived.of_type("loadouts"), vec![frame.clone(), frame]);
+        assert_eq!(revived.of_type("cardLoadouts"), vec![own_card.clone(), own_card]);
+    }
+
+    /// The row keeps the loadouts, so an actor rebuilt from `(seed, log)` after a crash sends the
+    /// frames the first one did, the cards its deal dealt read off the opening again.
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_a_rebuilt_actor_sends_the_same_loadouts() {
+        let h = harness(Options {
+            account_picks: vec![("profile-2", json!({ "field": "field-embers" }))],
+            card_picks: vec![(
+                "profile-1",
+                json!({ "cardId": "test-prompt-self", "finish": "finish-linen" }),
+            )],
+            ..Options::default()
+        })
+        .await;
+        let loadouts = h.p1.of_type("loadouts");
+        let cards = h.p1.of_type("cardLoadouts");
+        assert_eq!(loadouts.len(), 1);
+        assert_eq!(cards.len(), 1);
+
+        // The crash: the actor leaves memory; the row and the log stay.
+        h.app.matches.stop(MATCH_ID).await;
+        let socket = Client::new();
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", socket.socket())
+            .await
+            .expect("registry.attach");
+        let revived = h
+            .app
+            .matches
+            .actor_for(&h.app, MATCH_ID)
+            .await
+            .expect("the actor");
+        settle().await;
+        revived.idle().await;
+        settle().await;
+        assert_eq!(socket.of_type("loadouts"), loadouts);
+        assert_eq!(socket.of_type("cardLoadouts"), cards);
+    }
+
+    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
+    fn named_cards(view: &Value) -> Vec<(String, String)> {
+        let mut named = Vec::new();
+        let mut stack = vec![view];
+        while let Some(value) = stack.pop() {
+            match value {
+                Value::Object(fields) => {
+                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
+                        (fields.get("instanceId"), fields.get("defId"))
+                    {
+                        named.push((instance.clone(), def.clone()));
+                    }
+                    stack.extend(fields.values());
+                }
+                Value::Array(entries) => stack.extend(entries),
+                _ => {}
+            }
+        }
+        named
+    }
+
+    /// The legal action a seat takes next in the played game below: a prompt's answer or a
+    /// mulligan first, then a card play or an attack (so cards reach the field), else the turn's
+    /// end. Nothing that would end the match early or that only the server sends.
+    fn next_action(legal: &[Value], played_this_turn: usize) -> Option<Value> {
+        const NEVER: &[&str] = &[
+            "concede",
+            "offerDraw",
+            "answerDraw",
+            "timeout",
+            "disconnectExpired",
+            "ceilingReached",
+            "setAutoEndTurn",
+            "emote",
+        ];
+        let kind = |action: &Value| action["type"].as_str().unwrap_or_default().to_string();
+        let open: Vec<&Value> = legal
+            .iter()
+            .filter(|action| !NEVER.contains(&kind(action).as_str()))
+            .collect();
+        let first = |wanted: &dyn Fn(&str) -> bool| {
+            open.iter()
+                .find(|action| wanted(&kind(action)))
+                .map(|a| (*a).clone())
+        };
+        first(&|kind| kind == "answer" || kind == "mulligan")
+            .or_else(|| {
+                (played_this_turn < PLAYS_PER_TURN)
+                    .then(|| first(&|kind| kind.starts_with("play") || kind == "attack"))
+                    .flatten()
+            })
+            .or_else(|| first(&|kind| kind == "endTurn"))
+            .or_else(|| open.first().map(|action| (*action).clone()))
+    }
+
+    /// How many plays and attacks a seat makes in one turn of the played game, so a card that can
+    /// always be activated never holds the turn forever.
+    const PLAYS_PER_TURN: usize = 6;
+    /// The most actions the played game takes.
+    const STEPS: usize = 400;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834003_card_picks_follow_every_view() {
+        let pool = deckable_pool();
+        let decks = decks_the_engine_accepts(&pool, SEED);
+        // Every card of both decks wears a pick of its own: p1's a border, p2's a foil.
+        let picks =
+            |profile: &'static str, cards: &[String], key: &str, id: &str| -> Vec<(&'static str, Value)> {
+                cards
+                    .iter()
+                    .map(|card| (profile, json!({ "cardId": card, key: id })))
+                    .collect()
+            };
+        let mut card_picks = picks("profile-1", &decks.0, "border", "border-bone");
+        card_picks.extend(picks("profile-2", &decks.1, "foil", "foil-rainbow"));
+        let h = harness(Options {
+            card_picks,
+            ..real(decks.clone())
+        })
+        .await;
+        let row = match_row(&h.app, MATCH_ID).await;
+        let frozen = |seat: usize, card: &str| -> Value {
+            row["loadouts"][seat]["cards"]
+                .as_array()
+                .and_then(|cards| cards.iter().find(|entry| entry["cardId"] == card))
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
+        // The cards each deck dealt, read off the same opening the match began from.
+        let opening = begin_game(
+            Pinned::default(),
+            &create_game(
+                Pinned::default(),
+                &create_game_args(SEED, &decks, None, None, None),
+            ),
+        )
+        .state;
+        let dealt = dealt_cards(&opening);
+
+        // Play: whoever has something to do does it, through its socket.
+        let mut played = [0usize; 2];
+        let mut turn = None;
+        for step in 0..STEPS {
+            let at = h.actor.snapshot();
+            if at.result.is_some() {
+                break;
+            }
+            if turn != Some((at.turn, at.active)) {
+                turn = Some((at.turn, at.active));
+                played = [0, 0];
+            }
+            let Some((seat, action)) = PLAYER_IDS.iter().find_map(|seat| {
+                let index = usize::from(*seat == P2);
+                next_action(&legal_of(h.socket(*seat)), played[index]).map(|action| (*seat, action))
+            }) else {
+                break;
+            };
+            let kind = action["type"].as_str().unwrap_or_default().to_string();
+            if kind.starts_with("play") || kind == "attack" {
+                played[usize::from(seat == P2)] += 1;
+            }
+            send(&h, h.socket(seat), &format!("step-{step}"), action).await;
+        }
+
+        let mut opponents_seen = 0;
+        for seat in PLAYER_IDS {
+            let socket = h.socket(seat);
+            let mut view: Option<Value> = None;
+            let mut sent: Vec<(String, String)> = Vec::new();
+            for message in socket.messages() {
+                match message["type"].as_str() {
+                    Some("view") => view = Some(message["view"].clone()),
+                    Some("cardLoadouts") => {
+                        let shown = named_cards(view.as_ref().expect("a view before any card's picks"));
+                        let from = message["seat"].as_str().unwrap_or_default().to_string();
+                        let index = usize::from(from == "p2");
+                        for entry in message["cards"].as_array().into_iter().flatten() {
+                            let card = entry["cardId"].as_str().unwrap_or_default().to_string();
+                            // Shown by the view it follows: a card of that seat's deck, as dealt.
+                            assert!(
+                                shown.iter().any(|(instance, def)| {
+                                    *def == card
+                                        && dealt.get(instance).is_some_and(|(owner, dealt_as)| {
+                                            owner.as_str() == from && *dealt_as == card
+                                        })
+                                }),
+                                "{seat} was sent {from}'s {card} before a view showed it"
+                            );
+                            // Exactly the frozen entry, and once.
+                            assert_eq!(*entry, frozen(index, &card));
+                            assert!(
+                                !sent.contains(&(from.clone(), card.clone())),
+                                "{seat} was sent {from}'s {card} twice"
+                            );
+                            sent.push((from.clone(), card));
+                            if from != seat.as_str() {
+                                opponents_seen += 1;
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            assert!(!sent.is_empty(), "{seat} was sent no card's picks");
+        }
+        // The game showed each seat some of the other's cards, whose picks then followed.
+        assert!(opponents_seen > 0, "no seat was sent a card of the other's deck");
     }
 }

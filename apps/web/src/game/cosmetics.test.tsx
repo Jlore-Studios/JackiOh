@@ -531,6 +531,41 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
     expect(screen.getByTestId(revealTestid.theirHandCard("h1")).querySelector(".cf")?.getAttribute("data-frame")).toBe(THEIR_BORDER);
   });
 
+  it("R1834004 the showcase of the opponent's play wears their loadout, and a card they set their card back", () => {
+    const turn: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
+    const loadouts: SeatLoadouts = { p1: loadout(), p2: loadout({ border: THEIR_BORDER, cardBack: THEIR_BACK }) };
+    const played: GameEvent[] = [
+      { type: "cardPlayed", player: "p2", instanceId: "c7", defId: "core-032", costPaid: 1 },
+      { type: "summoned", player: "p2", instanceId: "c7", defId: "core-032", row: "units", lane: 2 },
+    ];
+    const set: GameEvent[] = [
+      { type: "cardPlayed", player: "p2", instanceId: "hidden", defId: "hidden", costPaid: 1 },
+      { type: "summoned", player: "p2", instanceId: "hidden", defId: "hidden", row: "backrow", lane: 3 },
+    ];
+    const showcased = (events: GameEvent[], testId: string, shownLoadouts: SeatLoadouts | null): HTMLElement => {
+      const tree = (shown: PlayerView): ReactElement => (
+        <CatalogContext.Provider value={lookup}>
+          <WearerProvider seat="p1" loadouts={shownLoadouts} viewer="p1">
+            <CardShowcase view={shown} />
+          </WearerProvider>
+        </CatalogContext.Provider>
+      );
+      const { rerender } = render(tree(withEvents(baseView(), [turn])));
+      rerender(tree(withEvents(baseView(), [turn, ...events])));
+      return screen.getByTestId(testId);
+    };
+
+    expect(showcased(played, showcaseTestid.face, loadouts).querySelector(".cf")?.getAttribute("data-frame")).toBe(THEIR_BORDER);
+    cleanup();
+    expect(backs(showcased(set, showcaseTestid.back, loadouts))).toEqual([THEIR_BACK]);
+    cleanup();
+
+    // Practice and hotseat carry no loadouts: the other seat's play and its back draw the defaults.
+    expect(showcased(played, showcaseTestid.face, null).querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
+    cleanup();
+    expect(backs(showcased(set, showcaseTestid.back, null))).toEqual([null]);
+  });
+
   it("R1834004 Show opponents' cosmetics off draws defaults everywhere but the viewer's own side", () => {
     writeCosmetics({ table: TABLE });
     const loadouts: SeatLoadouts = {

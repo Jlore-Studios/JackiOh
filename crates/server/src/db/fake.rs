@@ -99,6 +99,7 @@ use jackioh_engine::wire::stats::{
 use jackioh_engine::wire::{CustomCard, PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
+use crate::bots::cosmetics::BotCosmetics;
 use crate::config::PersonaName;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
@@ -109,18 +110,17 @@ use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
     CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
     EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase,
-    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
-    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow,
+    MatchClocks, MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
-use crate::bots::cosmetics::BotCosmetics;
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
 use crate::ranked::season::{ResetChange, ResetPlayer};
@@ -1403,7 +1403,9 @@ pub fn matches_loadout_samples(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Loa
     matches.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id)));
     let mut samples = Vec::new();
     for row in matches {
-        let Some((first, second)) = &row.loadouts else { continue };
+        let Some((first, second)) = &row.loadouts else {
+            continue;
+        };
         for (profile_id, deck, loadout) in [
             (&row.players.0, &row.decks.0, first),
             (&row.players.1, &row.decks.1, second),
@@ -3855,7 +3857,11 @@ pub fn bots_set_decks(
     Ok(())
 }
 
-pub fn bots_set_cosmetics(f: &mut FakeTx<'_>, profile_id: &str, cosmetics: &BotCosmetics) -> Result<(), StoreError> {
+pub fn bots_set_cosmetics(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    cosmetics: &BotCosmetics,
+) -> Result<(), StoreError> {
     call(f, "bots.setCosmetics")?;
     bot_row_of(f.tables(), profile_id)?.cosmetics = Some(cosmetics.clone());
     Ok(())

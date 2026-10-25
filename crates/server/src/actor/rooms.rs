@@ -363,7 +363,7 @@ pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, 
                 _ => None,
             },
             host_trio: match &frozen {
-                FrozenChoice::Bo3 { trio } => Some(trio.clone()),
+                FrozenChoice::Bo3 { trio } => Some(trio.as_ref().clone()),
                 _ => None,
             },
             // R1372, R924000: an All Random host's lean waits with the room for the deal at the join.
@@ -510,7 +510,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 },
                 NewSeriesSide {
                     profile_id: profile_id.clone(),
-                    trio: trio.clone(),
+                    trio: trio.as_ref().clone(),
                 },
             ),
             seed_base: seed.clone(),

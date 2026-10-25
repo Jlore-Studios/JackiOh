@@ -1,4 +1,5 @@
 pub mod calibrate;
+pub mod cosmetics;
 pub mod persona;
 pub mod pick;
 pub mod pool;

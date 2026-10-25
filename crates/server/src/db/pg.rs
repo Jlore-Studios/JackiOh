@@ -77,15 +77,14 @@ use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
     CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FoldedRecords,
     FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample,
-    MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
-    Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
-    SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
-    TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
+    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
+    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
+    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput,
+    RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile,
+    SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource,
+    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
     TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
     UsernameClaimOutcome,
 };
@@ -265,9 +264,10 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
         // R1834002: the deck's slots freeze with it the same way; absent stays absent.
         let slots = match entry.get("slots") {
             None | Some(Value::Null) => None,
-            Some(slots) => Some(serde_json::from_value(slots.clone()).map_err(|error| {
-                StoreError::from(format!("expected a frozen deck's slots: {error}"))
-            })?),
+            Some(slots) => Some(
+                serde_json::from_value(slots.clone())
+                    .map_err(|error| StoreError::from(format!("expected a frozen deck's slots: {error}")))?,
+            ),
         };
         frozen.push(FrozenDeck {
             name,

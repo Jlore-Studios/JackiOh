@@ -1363,11 +1363,13 @@ mod pg {
     ) -> Result<(), StoreError> {
         run_as(t, Some(profile_id)).await?;
         if picks.is_empty() {
-            sqlx::query("delete from public.card_cosmetic_picks where profile_id = $1::uuid and card_id = $2::text")
-                .bind(profile_id)
-                .bind(picks.card_id.as_str())
-                .execute(&mut **t)
-                .await?;
+            sqlx::query(
+                "delete from public.card_cosmetic_picks where profile_id = $1::uuid and card_id = $2::text",
+            )
+            .bind(profile_id)
+            .bind(picks.card_id.as_str())
+            .execute(&mut **t)
+            .await?;
             return Ok(());
         }
         sqlx::query(
@@ -2140,7 +2142,9 @@ mod fake {
                 }
             }
         }
-        Ok(sorted_by(out, |row| (row.cosmetic_id.clone(), row.card_id.clone())))
+        Ok(sorted_by(out, |row| {
+            (row.cosmetic_id.clone(), row.card_id.clone())
+        }))
     }
 
     /// The fake's transactions already run one at a time (`db::fake::FakeTx`), so its lock is

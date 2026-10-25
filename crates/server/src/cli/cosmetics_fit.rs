@@ -31,7 +31,9 @@ use anyhow::bail;
 
 use crate::bots::cosmetics::age_bucket;
 use crate::cli::{connect_one, database_url};
-use crate::config::{BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FIT_WINDOW_DAYS};
+use crate::config::{
+    BOT_COSMETIC_AGE_BUCKETS_DAYS, BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FIT_WINDOW_DAYS,
+};
 use crate::cosmetics::{Cosmetic, CosmeticKind, full_art_of, registry};
 use crate::db::store::{Db, LoadoutSample, StoreError};
 use crate::economy::store::OwnedCosmetics;
@@ -46,7 +48,8 @@ const USAGE: &str = "Usage: jackioh-server cosmetics-fit
   DATABASE_URL.";
 
 /// The comment line the printed rows open with.
-const HEADER: &str = "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs";
+const HEADER: &str =
+    "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs";
 
 const MS_PER_DAY: i64 = 86_400_000;
 
@@ -92,7 +95,9 @@ pub fn fit_cosmetics(
 ) -> Vec<BucketCosmetics> {
     let none = OwnedCosmetics::default();
     let owned_by = |profile_id: &str| owned.get(profile_id).unwrap_or(&none);
-    let bucket_of = |sample: &LoadoutSample| age_bucket((sample.match_created_at - sample.account_created_at) / MS_PER_DAY);
+    let bucket_of = |sample: &LoadoutSample| {
+        age_bucket((sample.match_created_at - sample.account_created_at) / MS_PER_DAY)
+    };
     // Each person's bucket: their age at their latest match (the samples come oldest first).
     let mut people: BTreeMap<&str, Option<i64>> = BTreeMap::new();
     for sample in samples {
@@ -101,7 +106,10 @@ pub fn fit_cosmetics(
 
     let mut rows = Vec::new();
     for bucket in buckets() {
-        let seats: Vec<&LoadoutSample> = samples.iter().filter(|sample| bucket_of(sample) == bucket).collect();
+        let seats: Vec<&LoadoutSample> = samples
+            .iter()
+            .filter(|sample| bucket_of(sample) == bucket)
+            .collect();
         if seats.is_empty() {
             continue;
         }
@@ -123,7 +131,14 @@ pub fn fit_cosmetics(
         // The seats with a card of their own picks, and how many cards each holds.
         let picked: Vec<usize> = seats
             .iter()
-            .map(|sample| sample.loadout.cards.iter().filter(|picks| picks_on_the_card(picks)).count())
+            .map(|sample| {
+                sample
+                    .loadout
+                    .cards
+                    .iter()
+                    .filter(|picks| picks_on_the_card(picks))
+                    .count()
+            })
             .filter(|cards| *cards > 0)
             .collect();
         let cards_per_deck_mean = if picked.is_empty() {
@@ -133,7 +148,10 @@ pub fn fit_cosmetics(
         };
         // Each full art: of the seats that own it and play its card, the share that printed it.
         let mut full_art_wear = Vec::new();
-        for full_art in registry.iter().filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt) {
+        for full_art in registry
+            .iter()
+            .filter(|cosmetic| cosmetic.kind == CosmeticKind::FullArt)
+        {
             let Some(card) = full_art.card.as_deref() else {
                 continue;
             };
@@ -200,9 +218,14 @@ pub fn fit_cosmetics(
     // A full art the registry knows of no card (never shipped so) names nothing: `full_art_of`
     // keeps the two in step.
     debug_assert!(rows.iter().all(|row| row.full_art_wear.iter().all(|(id, _)| {
-        registry
-            .iter()
-            .any(|cosmetic| cosmetic.id == *id && cosmetic.card.as_deref().and_then(|card| full_art_of(registry, card)).is_some())
+        registry.iter().any(|cosmetic| {
+            cosmetic.id == *id
+                && cosmetic
+                    .card
+                    .as_deref()
+                    .and_then(|card| full_art_of(registry, card))
+                    .is_some()
+        })
     })));
     rows
 }

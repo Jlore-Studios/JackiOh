@@ -24,17 +24,17 @@ use serde_json::{Value, json};
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of};
 use crate::app::App;
-use crate::cosmetics::{self, PickRefusal};
-use crate::economy::store::OwnedCosmetics;
-use crate::loadout::{CARD_SLOT_KINDS, COSMETICS_GROUP, DECK_SLOT_KINDS, setting_key};
 use crate::config::{
     PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX,
     PLAYER_SETTINGS_NAME_MAX_LENGTH, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
 };
+use crate::cosmetics::{self, PickRefusal};
 use crate::db::store::{
     PlayerSettingValue, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow,
 };
+use crate::economy::store::OwnedCosmetics;
+use crate::loadout::{CARD_SLOT_KINDS, COSMETICS_GROUP, DECK_SLOT_KINDS, setting_key};
 use crate::social::watch::revoke_all_of;
 
 /// R633: a group id is a lower-case slug (`gameplay`, `audio`, `fx`, `cards`).

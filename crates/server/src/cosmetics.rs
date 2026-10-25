@@ -348,7 +348,7 @@ pub fn owns(cosmetic: &Cosmetic, card: Option<&str>, owned: &OwnedCosmetics) -> 
         return true;
     }
     if !cosmetic.kind.is_per_card() {
-        return owned.account.iter().any(|id| *id == cosmetic.id);
+        return owned.account.contains(&cosmetic.id);
     }
     card.is_some_and(|card| {
         owned
@@ -1189,7 +1189,10 @@ mod tests {
         // A default and a starter are every account's, on every card and on the account.
         assert_eq!(check(&none, CosmeticKind::Table, "table-tavern", None), Ok(()));
         assert_eq!(check(&none, CosmeticKind::Table, "table-felt", None), Ok(()));
-        assert_eq!(check(&none, CosmeticKind::Foil, "foil-none", Some("core-002")), Ok(()));
+        assert_eq!(
+            check(&none, CosmeticKind::Foil, "foil-none", Some("core-002")),
+            Ok(())
+        );
         // An id of another kind, an unknown id and a full art of another card are the wrong kind.
         assert_eq!(
             check(&none, CosmeticKind::Field, "table-felt", None),
@@ -1223,10 +1226,18 @@ mod tests {
         };
         assert_eq!(check(&owned, CosmeticKind::Table, "table-velvet", None), Ok(()));
         assert_eq!(
-            check(&owned, CosmeticKind::FullArt, "full-art-dfender", Some("core-001")),
+            check(
+                &owned,
+                CosmeticKind::FullArt,
+                "full-art-dfender",
+                Some("core-001")
+            ),
             Ok(())
         );
-        assert_eq!(check(&owned, CosmeticKind::Foil, "foil-prism", Some("core-002")), Ok(()));
+        assert_eq!(
+            check(&owned, CosmeticKind::Foil, "foil-prism", Some("core-002")),
+            Ok(())
+        );
         // A per-card cosmetic owned on one card is not owned on another, nor on every card.
         assert_eq!(
             check(&owned, CosmeticKind::Foil, "foil-prism", Some("core-003")),
@@ -1244,6 +1255,9 @@ mod tests {
         );
         assert!(full_art_of(&cosmetics, "core-002").is_none());
         // The shipped registry reads once, and passes.
-        assert_eq!(registry().len(), shipped().map(|cosmetics| cosmetics.len()).unwrap_or(0));
+        assert_eq!(
+            registry().len(),
+            shipped().map(|cosmetics| cosmetics.len()).unwrap_or(0)
+        );
     }
 }

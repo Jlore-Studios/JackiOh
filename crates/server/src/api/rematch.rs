@@ -227,10 +227,11 @@ async fn create_rematch(
         if random {
             return None;
         }
-        finished
-            .loadouts
-            .as_ref()
-            .map(|loadouts| (if at == 0 { &loadouts.0 } else { &loadouts.1 }).seat.deck_slots())
+        finished.loadouts.as_ref().map(|loadouts| {
+            (if at == 0 { &loadouts.0 } else { &loadouts.1 })
+                .seat
+                .deck_slots()
+        })
     };
     let seats = (
         MatchSeat {

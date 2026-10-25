@@ -499,7 +499,7 @@ export function resolveDeckCosmetic(
   return resolveCosmetic(kind, deck?.[kind] ?? account[kind]);
 }
 
-/** The deck slots a side wears: the defaults when `worn` is false (the opponent's side). */
+/** The deck slots a side wears: the defaults when `worn` is false (a side with no loadout to wear, game/wearer.ts). */
 export function wornDeckCosmetics(
   worn: boolean,
   deck: DeckCosmetics | null | undefined,
