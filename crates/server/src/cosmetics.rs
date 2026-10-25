@@ -31,7 +31,7 @@
 //!
 //! R1833000: #1833 appends 36 cosmetics, six of each kind a player picks, none a default or a
 //! starter, so every account earns them (§14.12) and none is granted to an account that exists. Its
-//! twelve Legendary and Mythic ones are the first chases and Mythics that can drop: a duplicate's
+//! fifteen Legendary and Mythic ones are the first chases and Mythics that can drop: a duplicate's
 //! global roll, a cosmetic pack slot and the Chase Shard bar reach them, and no token does. A deck's
 //! save refuses a playmat, backdrop or card back its account does not own
 //! ([`owns_account_cosmetic`]), as it does a portrait.
