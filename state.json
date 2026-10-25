@@ -1219,13 +1219,21 @@
       }
     },
     "1926": {
+      "action": "review",
+      "asks": [],
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-25T15:53:20Z",
       "issue": 1898,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-10-25T16:29:10Z",
+      "run_id": "pending:2f723f27-1792945778",
       "self_check_findings": [],
+      "started_at": "2026-10-25T16:30:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "cognition",
@@ -1238,9 +1246,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T16:21:33Z",
+    "at": "2026-10-25T16:30:10Z",
     "url": "",
-    "what": "build #1834 on claude-6"
+    "what": "review #1926 on agy"
   },
   "last_sweep": {
     "at": "2026-10-25T16:19:39Z",
