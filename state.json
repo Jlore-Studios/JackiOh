@@ -37,6 +37,7 @@
     "1817": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-25T11:47:31Z",
         "family": "muse",
@@ -50,13 +51,15 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
+      "pr": 1909,
       "provider": "gpt",
+      "question": "",
       "round_tier": "medium",
       "run_id": "40192855516",
       "started_at": "2026-10-25T12:22:55Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1818": {
       "action": "build",
