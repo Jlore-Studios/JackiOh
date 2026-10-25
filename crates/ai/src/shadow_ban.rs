@@ -70,6 +70,15 @@
 //! holds one row and `SHADOW_WATCH` gains the 5. training/history/sweep-2026-10-22.md has the report
 //! and the slow state.
 //!
+//! Sweep of record for #1889: 2026-10-25 (UTC), `cargo jackioh sweep` on `main` at `86430e3` with
+//! #1889's change to the engine's play listing (`priced_play_actions` checks each price's targeting
+//! discards once, not once per Tribute set and zone), pass 1 over `meditative-069` alone at easy and
+//! hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over it at risk, 24 seeds each
+//! (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET as above, in one lane with no
+//! build or test beside it. It banned none: 069 is watched, at risk by its own numbers at half strength
+//! (R600), so `SHADOW_BAN` is empty and `SHADOW_WATCH` gains its row. training/history/sweep-2026-10-25.md
+//! has the report and where the slow decision's time went.
+//!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
 
@@ -82,6 +91,8 @@
 // Sweep of record: 2026-10-18 (UTC), `cargo jackioh sweep`, pass 1 over 26 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 11 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-22.md
 // Sweep of record: 2026-10-22 (UTC), `cargo jackioh sweep`, pass 1 over 17 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 17 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-25.md
+// Sweep of record: 2026-10-25 (UTC), `cargo jackioh sweep`, pass 1 over 1 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 1 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -277,10 +288,13 @@
 /// strength (R600) and meeting no flag in full. The sixteen are dealt at
 /// stock weight and not in `UNBANNED_PREFER`, on the generations 4–7
 /// precedent.
-pub const SHADOW_BAN: &[(&str, &str)] = &[(
-    "meditative-069",
-    "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-)];
+///
+/// #1889's sweep of 069 banned none. It came off as watched, a watch row
+/// lifting a ban (R1186000): at risk by its own numbers at half strength
+/// (R600) and meeting no flag in full. It is dealt at stock weight and not
+/// in `UNBANNED_PREFER`, on the generations 4–7 precedent, and the table is
+/// empty.
+pub const SHADOW_BAN: &[(&str, &str)] = &[];
 
 /// `Object.keys(SHADOW_BAN)`, sorted. `SHADOW_BAN` is kept sorted by id, so its ids in order are it.
 pub const SHADOW_BAN_IDS: &[&str] = &{
@@ -649,6 +663,10 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     (
         "meditative-060",
         "at risk: hard: pass 1 affordable on 28 turns over 8 games, never played",
+    ),
+    (
+        "meditative-069",
+        "at risk: easy: pass 1 affordable on 4 turns over 8 games, played 1 time(s), mean evaluate change 8.6; hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 6.6",
     ),
     (
         "meditative-075",

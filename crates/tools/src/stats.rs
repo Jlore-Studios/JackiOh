@@ -1930,12 +1930,20 @@ mod tests {
 
     #[test]
     fn r1284000_compare_adds_the_shadow_ban_or_watch_line() {
-        // The ids come from the tables, which every sweep rewrites.
-        let (banned, why_banned) = SHADOW_BAN[0];
-        let compared = compare(&[], &[], banned);
-        assert_eq!(compared.shadow, Some(("SHADOW_BAN", why_banned)));
+        // The ids come from the tables, which every sweep rewrites, and a sweep may leave `SHADOW_BAN`
+        // empty (#1889), so its line is rendered from a comparison that names it.
+        for &(banned, why_banned) in SHADOW_BAN {
+            assert_eq!(compare(&[], &[], banned).shadow, Some(("SHADOW_BAN", why_banned)));
+        }
+        let compared = Comparison {
+            shadow: Some(("SHADOW_BAN", "timeout: hard: 1 decision(s) over 2000 ms")),
+            ..compare(&[], &[], "test-card")
+        };
         let text = render_compare(&compared, None);
-        assert!(text.contains(&format!("{banned} is in SHADOW_BAN (")), "{text}");
+        assert!(
+            text.contains("test-card is in SHADOW_BAN (timeout: hard: "),
+            "{text}"
+        );
         assert!(
             text.ends_with("its figures measure the AI as much as the card"),
             "{text}"
