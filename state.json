@@ -1244,21 +1244,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "spec/03-zones.md",
+            "spec/11-rulings.md"
           ],
-          "from": "e731ae6f03448d8a57f6ea0100011846a0146781",
-          "main": "d7e2f72a3ee27029dbd6e034265b948ec92e757f"
+          "from": "c34c197b1b8a825d8473709d8ae4150a7f5b02e9",
+          "main": "1d390096040bc8335c9fe29c5c3cf31e194512b1"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40224864022",
+            "run": "40230386049",
             "tier": "strong"
           }
         ],
-        "sha": "c34c197b1b8a825d8473709d8ae4150a7f5b02e9",
+        "sha": "7d1781ed6549b5f7141c05d3d94159b9e09fef3a",
         "tiers": {
           "claude": "strong"
         }
