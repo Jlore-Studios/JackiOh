@@ -10,7 +10,33 @@
       "tries": 1
     }
   },
-  "providers": {},
+  "providers": {
+    "claude-3": {
+      "spent": [
+        {
+          "at": "2026-10-25T09:12:16Z",
+          "minutes": 21.3
+        }
+      ],
+      "tokens_spent": [
+        {
+          "at": "2026-10-25T09:12:16Z",
+          "cache": 19505549,
+          "cost": 16.1056,
+          "input": 210,
+          "output": 133774
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T13:40:00Z",
+          "utilization": 0.94
+        },
+        "observed_at": "2026-10-25T09:12:16Z",
+        "status": "allowed_warning"
+      }
+    }
+  },
   "rate_limited_until": null,
   "suggest": {
     "last_run": null,
