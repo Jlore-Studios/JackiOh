@@ -10,7 +10,7 @@
 // The viewer's own face-down trap is a public card to them (R33), and the view marks it
 // `unrevealed` so the face can say the other player sees only a back (R371).
 //
-// B5 E21: a backrow zone may hold a pile, and the view counts the dormant cards under its top
+// B5 E21: a backrow zone may hold a pile, and the view counts the cards beneath its top
 // (`buried`, a count and never an identity, on a face-up card and on a face-down one alike, read
 // defensively as the cost is). The zone shows the depth beside the card, as a unit pile does.
 //

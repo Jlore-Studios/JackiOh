@@ -726,6 +726,9 @@ fn place_with(
     }
     // B3.3 rule 1, R385, R638: a printed Brittle starts as its card enters the field, and a held count starts ticking.
     start_brittle_on_field(state, instance, from_off_field);
+    // R1839000: a Unit printing Dormant enters the field Dormant (a carried Unit included, R446).
+    let as_unit = slot.row == Row::Units || is_unit_face(state, instance);
+    crate::slumber::start_slumber_on_field(state, instance, from_off_field, as_unit);
 
     let placed = instance.clone();
     match landing {
@@ -1167,6 +1170,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.berserk = None;
     // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
     instance.frozen = None;
+    // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
+    instance.slumber = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
 }
@@ -1516,8 +1521,22 @@ pub fn move_to_zone(
 /// Every unit that acts for this player: each unit zone's top card in lane order (§3.2), then the
 /// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446) —
 /// then the Units standing in its backrow zones, in backrow lane order: a Flying Unit there is a Unit
-/// for every rule too (R1081000).
+/// for every rule too (R1081000). A Dormant card is none of them (R1839000): it fills its zone, which
+/// `units_on_field_of` reads, but no rule that reads a player's Units sees it until it awakens.
 pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let mut units = units_on_field_of(state, player);
+    // R1839000: the one walk that drops a Dormant card; nothing is dropped on a board without one.
+    if units.iter().any(|unit| unit.slumber.is_some()) {
+        units.retain(|unit| unit.slumber.is_none());
+    }
+    units
+}
+
+/// R1839000: `active_units_of` with the Dormant cards kept — every Unit that tops a unit zone, is held
+/// by a carrier or stands in a backrow zone, in that order. What a rule reads that sees a Dormant card
+/// where it lies: its countdown (`slumber::awaken_at_turn_start`). A zone's room is read off the zone
+/// itself (`is_open`, `takes_move`), so a Dormant card fills its zone either way.
+pub fn units_on_field_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     // Read straight off the rows, not through `slots_of` and `card_at`: the auras ask for this on every
     // unit read (`layers::aura_sources`), so it builds nothing it does not return (#188).
     let side = &state.players[player];
@@ -1626,9 +1645,10 @@ pub fn is_buried(state: &GameState, instance: &CardInstance) -> bool {
 }
 
 /// §3.2, R446: whether a card acts on the field — the top of a unit pile, the top of a backrow zone, or
-/// a Unit a carrier holds. A dormant card under either kind of pile does not.
+/// a Unit a carrier holds. A dormant card under either kind of pile does not, and neither does a
+/// Dormant card where it lies (R1839000), which acts for its awakening alone (`slumber::acts_to_awaken`).
 pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
-    instance.zone.z() == ZoneName::Field && !is_buried(state, instance)
+    instance.zone.z() == ZoneName::Field && instance.slumber.is_none() && !is_buried(state, instance)
 }
 
 /// R64, R1136000: "fill your board" takes every empty, unreserved unit zone, left to right, a Locked

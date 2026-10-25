@@ -168,9 +168,9 @@ pub fn has_exertion(state: &GameState, unit: &CardInstance, kind: ExertionKind) 
 }
 
 /// `has_exertion` read through a sweep's `AuraTable` (#892). R1174000: a Frozen Unit has neither
-/// half, whatever it spent (`freeze.rs`).
+/// half, whatever it spent (`freeze.rs`); R1839000: nor has a Dormant card, until it awakens.
 pub fn has_exertion_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
-    unit.frozen.is_none() && exertion_unspent_in(auras, unit, kind)
+    unit.frozen.is_none() && unit.slumber.is_none() && exertion_unspent_in(auras, unit, kind)
 }
 
 /// R1174000: the half of the unit's exertion it has not spent this turn, Frozen or not — what a
@@ -282,6 +282,10 @@ pub fn why_cannot_switch_in(
     to: Position,
     spend_exertion: bool,
 ) -> CombatResult {
+    // R1839000: a Dormant card switches by nothing, its own action or an effect.
+    if crate::slumber::is_slumbering(unit) {
+        return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
+    }
     // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
     if spend_exertion && unit.frozen.is_some() {
         return Err(EngineError::new(FROZEN_REFUSAL));
@@ -308,6 +312,10 @@ pub fn switch_position(
     let Some(unit) = live_card(sink.state, unit) else {
         return Err(EngineError::new("that unit is not on the field"));
     };
+    // R1839000: told it is Dormant ahead of "not on the field", which it is (it fills its zone).
+    if crate::slumber::is_slumbering(&unit) {
+        return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
+    }
     if !is_active_on_field(sink.state, &unit) {
         return Err(EngineError::new("that unit is not on the field"));
     }
@@ -352,6 +360,10 @@ pub fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<
 /// `why_cannot_declare` read through a sweep's `AuraTable` (#892).
 pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Result<(), EngineError> {
     let state = auras.state();
+    // R1839000: a Dormant card is on the field and attacks nothing until it awakens.
+    if crate::slumber::is_slumbering(attacker) {
+        return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
+    }
     if !is_active_on_field(state, attacker) {
         return Err(EngineError::new("that unit is not on the field"));
     }
@@ -439,6 +451,10 @@ pub fn why_cannot_attack_in(
         DamageTarget::Unit { instance } => {
             if instance.controller != enemy {
                 return Err(EngineError::new("that target is not an enemy"));
+            }
+            // R1839000: nor is a Dormant card attacked, though it fills its zone.
+            if crate::slumber::is_slumbering(instance) {
+                return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
             }
             if !is_active_on_field(state, instance) {
                 return Err(EngineError::new("that unit is not on the field"));

@@ -133,6 +133,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `unspent_mana_of(state, player)`, `max_mana_of(state, player)` | the mana a player holds now; §2.3's max mana |
 | `played_ids_this_turn`, `played_earlier`, `was_played_this_turn` | the turn's plays, §6.2's Combo count, the one-shot gate of §5.1's "return to hand" spells |
 | `active_units_of`, `dormant_units_of`, `card_at`, `slots_of`, `slot_of` | the field, by lane (§3.2, R13) |
+| `units_on_field_of`, `is_slumbering`, `slumber_turns_of` | the Units filling a side's zones, Dormant ones included, which `active_units_of` leaves out; whether a card is Dormant and its countdown (§6.1, R1839000) |
 | `face_of`, `stats_with_buffs`, `unit_view` | a unit through the §10.4 layers, never off the instance |
 | `def_of`, `printed_cost`, `effective_cost`, `query_cost`, `own_cost`, `cost_now` | a definition and its costs (R65, R386, R396, R455) |
 | `tags_of(state, card)` | the card's tags now — its definition's plus what effects granted (R923); every instance-level tag read goes through it |

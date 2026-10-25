@@ -43,6 +43,7 @@ pub mod prompts;
 pub mod quests;
 pub mod rng_child;
 pub mod scripts;
+pub mod slumber;
 pub mod spell_power;
 pub mod trigger_multipliers;
 pub mod turn;

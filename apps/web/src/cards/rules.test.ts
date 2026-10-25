@@ -153,6 +153,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Quickdraw",
   "Float",
   "Activate",
+  "When this awakens",
 ];
 
 /** R512: §6.1's statuses that are not keyword kinds, which patch v0.2.0's cards print. */
@@ -162,6 +163,7 @@ const STATUSES: readonly StatusTermId[] = [
   "Only Units in this lane can attack this",
   "Berserk",
   "Frozen",
+  "Dormant",
   "Combat keyword",
 ];
 
@@ -190,6 +192,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Look at a hand",
   "Allure",
   "Freeze",
+  "Awaken",
   "Jade Counter",
   "Exile",
   "Hand size",
@@ -752,7 +755,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   it("R512 every new term has at least one catalog text that prints it", () => {
     // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
     // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
-    const unprinted: readonly GlossaryTermId[] = ["Frozen"];
+    // R1839000: and Dormant is a §6.1 status no card prints until Stinkyscape's cards ship.
+    const unprinted: readonly GlossaryTermId[] = ["Frozen", "Dormant"];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
       "Activate",
@@ -934,6 +938,18 @@ describe("R1045000: K-Pop Fanatic Allures the enemy permanent it chooses", () =>
     expect(GLOSSARY.Allure.rule).toContain("permanents");
     // Jade Beauty keeps Allure-ing Units only, as it prints.
     expect(played("meditative-039-5")).toContain("Allure every enemy Unit.");
+  });
+});
+
+describe("R1839000: Dormant, When this awakens and Awaken", () => {
+  it("R1839000 R1839002 Dormant is a §6.1 status, When this awakens a §6.2 trigger and Awaken a §6.3 verb, each bold where a card prints it", () => {
+    expect(GLOSSARY.Dormant.section).toBe("§6.1");
+    expect(GLOSSARY["When this awakens"].section).toBe("§6.2");
+    expect(GLOSSARY.Awaken.section).toBe("§6.3");
+    expect(termsIn("Dormant for 2 turns. When this awakens, deal 3 damage.")).toEqual(["Dormant", "When this awakens"]);
+    expect(termsIn("Activate: Awaken this.")).toEqual(["Activate", "Awaken"]);
+    // A card under a Stack pile's top is buried to a player: plain words, never the keyword.
+    expect(termsIn("the dormant cards beneath it")).toEqual([]);
   });
 });
 

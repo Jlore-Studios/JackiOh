@@ -426,7 +426,7 @@ pub fn granted_combo_live(state: &GameState, player: PlayerId) -> bool {
     }
     let granted = permanents_held_by(state, player).iter().any(|held| {
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if crate::preview::lasting_text_dormant(state, held) {
+        if crate::preview::lasting_text_off(state, held) {
             return false;
         }
         match crate::scripts::flags_of(state, held).quickstriker {

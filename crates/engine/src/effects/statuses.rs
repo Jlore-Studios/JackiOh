@@ -1,5 +1,5 @@
 //! Unit statuses an effect sets (docs/classic-sets.md B5 E35): Berserk, "may attack again", and
-//! Frozen (§6.3 Freeze, R1174000).
+//! Frozen (§6.3 Freeze, R1174000) — and the one an effect takes off, Dormant (§6.3 Awaken, R1839002).
 //!
 //! A status is not text, so neither is a keyword: a Vanilla keeps Berserk (Frozen is the one it
 //! removes, as Hearthstone's Silence does, R1174000), and R78's reset takes either off with the unit
@@ -127,6 +127,37 @@ pub fn freeze_all(args: BoardScope) -> Effect {
             if freezable(ctx.state, &unit) {
                 crate::freeze::freeze_unit(&mut ctx.sink, &unit.id);
             }
+        }
+    })
+}
+
+/// `awaken`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct AwakenArgs {
+    pub target: TargetSpec,
+}
+
+/// §6.3 Awaken (R1839002): the Dormant card `target` names awakens now (`slumber::awaken_card`): its
+/// status comes off, it is not summoning sick, and its "When this awakens" answers the `awakened`. The
+/// one verb that reaches a Dormant card, so it names it without `instance_of`'s reach (which passes a
+/// Dormant card by, R1839000): "this" is the running card as it stands (the Dormant Starship's own
+/// Activate: pay (3) to awaken), an instance its id, a chosen card the selection's. Nothing happens to a
+/// card that is not Dormant, or that lies beneath a Stack pile, where it acts for nothing (R1839003).
+pub fn awaken(args: AwakenArgs) -> Effect {
+    Effect::new("awaken", move |ctx| {
+        let id = match &args.target {
+            TargetSpec::SelfCard => ctx.live_self().map(|card| card.id.clone()),
+            TargetSpec::Instance { instance_id } => Some(instance_id.clone()),
+            TargetSpec::Chosen { index } => match ctx.targets.get(index.unwrap_or(0)) {
+                Some(crate::wire::Selection::Instance { instance_id }) => Some(instance_id.clone()),
+                _ => None,
+            },
+            TargetSpec::SelfHero | TargetSpec::EnemyHero => None,
+        };
+        if let Some(id) = id {
+            crate::slumber::awaken_card(&mut ctx.sink, &id);
         }
     })
 }

@@ -905,6 +905,14 @@ pub enum GameEvent {
         player: PlayerId,
         turn: i32,
     },
+    /// R1839002 (Stinkyscape's Dormant, §6.1): `player`'s Dormant card awakened — its countdown ran
+    /// out at the start of their turn, or an effect awakened it — and is a Unit for every rule from now
+    /// on; its own "When this awakens" answers this (§6.2). Public: the card was face-up on the field.
+    Awakened {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1039,6 +1047,7 @@ string_union! {
         ScriptFailed = "scriptFailed",
         CurveDrawn = "curveDrawn",
         AutopilotEngaged = "autopilotEngaged",
+        Awakened = "awakened",
     }
 }
 
@@ -1206,6 +1215,7 @@ impl GameEvent {
             GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
+            GameEvent::Awakened { .. } => GameEventType::Awakened,
         }
     }
 }
@@ -1278,8 +1288,8 @@ mod tests {
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
-        // `autopilotEngaged` (R1183002).
-        assert_eq!(GAME_EVENT_TYPES.len(), 79);
+        // `autopilotEngaged` (R1183002); and Stinkyscape's Dormant one, `awakened` (R1839002).
+        assert_eq!(GAME_EVENT_TYPES.len(), 80);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

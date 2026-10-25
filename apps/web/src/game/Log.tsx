@@ -500,6 +500,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "autopilotEngaged":
       // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
       return t("The AI plays the rest of {whose} turn", { whose: name.whose(event.player) });
+    case "awakened":
+      // R1839002: a Dormant card awakened, its countdown run out or an effect's doing.
+      return t("{card} awakened", { card: name.def(event.defId) });
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

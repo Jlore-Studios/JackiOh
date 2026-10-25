@@ -61,7 +61,7 @@ pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<Graveyard
                 continue;
             };
             // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-            if source.controller != player || crate::preview::lasting_text_dormant(state, source) {
+            if source.controller != player || crate::preview::lasting_text_off(state, source) {
                 continue;
             }
             let script = crate::scripts::script_of(state, source);

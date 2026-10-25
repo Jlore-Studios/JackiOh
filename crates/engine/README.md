@@ -87,6 +87,12 @@ so a fold of a game played on an older catalog version reads that version's card
   `ai_policy`, the scorer-driven `autopilot` that `reduce` drives through a turn, R1183002, heroic
   power, combo index, Call to Chaos, quests, …), each tested through fixture scripts in
   `tests/rules/fixtures/`.
+- `slumber.rs` is Dormant (§6.1, R1839000–R1839003), a status that keeps a card on the field and out
+  of every rule's reach until it awakens: `zones::active_units_of` and `zones::acts_on_field` leave a
+  Dormant card out, `restrictions::unaffected_by` passes it by for every effect, and
+  `preview::lasting_text_off` turns its text off, so a new rule that reads Units, acting cards or
+  lasting text through them gets Dormant right for nothing. Its identifiers say slumber and awaken,
+  never dormant, which names a card beneath a Stack pile (`zones::dormant_units_of`, R13).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).

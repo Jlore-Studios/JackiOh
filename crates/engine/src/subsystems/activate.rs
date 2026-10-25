@@ -161,6 +161,10 @@ pub fn is_acting_on_field(state: &GameState, card: &CardInstance) -> bool {
     let Some(at) = slot_of(state, card) else {
         return false;
     };
+    // R1839002: a Dormant card acts for its awakening alone (`abilities_of` keeps that ability only).
+    if crate::slumber::acts_to_awaken(state, card) {
+        return true;
+    }
     if !acts_on_field(state, card) {
         return false;
     }
@@ -194,13 +198,25 @@ fn cloaked_reveal_decl() -> ActivationDecl {
 
 /// The abilities the card has now: its running face's (`script_of`, so a Vanilla card has none, §6.3),
 /// ids made unique for a fused card (`script::activation_decls`, R102), less any it does not have on this
-/// instance (`ActivationDecl.has`). A card set by its Cloaked has its Reveal alone (R783006).
+/// instance (`ActivationDecl.has`). A card set by its Cloaked has its Reveal alone (R783006), and a
+/// Dormant card the ability it keeps while it sleeps alone (R1839002).
 pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDecl> {
     if crate::alt_play::is_cloaked_set(card) {
         return vec![cloaked_reveal_decl()];
     }
+    // R1839002: a Dormant card has the one ability it keeps while it sleeps (`wakesBy`), and none if it
+    // keeps none.
+    let wakes_by = if crate::slumber::is_slumbering(card) {
+        match crate::slumber::wakes_by_of(state, card) {
+            Some(id) => Some(id),
+            None => return Vec::new(),
+        }
+    } else {
+        None
+    };
     activation_decls(&crate::scripts::script_of(state, card))
         .into_iter()
+        .filter(|decl| wakes_by.as_ref().is_none_or(|id| &decl.id == id))
         .filter(|decl| {
             decl.has.as_ref().is_none_or(|has| {
                 has(HookArgs {
