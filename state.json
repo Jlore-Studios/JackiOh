@@ -3,7 +3,14 @@
   "halted": false,
   "items": {
     "1817": {
+      "action": "build",
       "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:277bf9b1-1792920076",
+      "started_at": "2026-10-25T09:22:04Z",
+      "stop_requested": false,
       "taken_asks": []
     },
     "1828": {
@@ -156,9 +163,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:21:04Z",
+    "at": "2026-10-25T09:22:04Z",
     "url": "",
-    "what": "build #1889 on claude-6"
+    "what": "build #1817 on muse"
   },
   "loop_deliveries": {
     "40175181653": {
