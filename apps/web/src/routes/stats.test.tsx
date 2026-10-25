@@ -1446,6 +1446,14 @@ describe("R1935000 the Daily runs tab", () => {
     expect(failed).toHaveTextContent("(cancelled)");
     expect(within(passed).queryByRole("list")).toBeNull();
     expect(window.location.search).toBe("?tab=ci");
+
+    // The summary reads the finished runs alone: one of two passed, the newest failed, and of the
+    // failed run's two jobs the one listed first is named.
+    const summary = screen.getByTestId(statsTestid.ciSummary);
+    expect(summary).toHaveTextContent("1 of 2");
+    expect(summary).toHaveTextContent("Failed in a row1");
+    expect(summary).toHaveTextContent("fuzz (2/4)");
+    expect(summary).toHaveTextContent("in 1 of 2 runs");
   });
 
   it("R1935000 the open tab asks again every CI_RUNS_CACHE_TTL_SECONDS, and stops once another tab is chosen", async () => {

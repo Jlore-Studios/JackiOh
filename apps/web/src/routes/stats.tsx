@@ -39,6 +39,7 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
+import { ciInsights } from "../stats/ciInsights.ts";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
@@ -241,6 +242,7 @@ export default function StatsRoute(): ReactElement {
   const [ciError, setCiError] = useState(false);
   // Bumped by the Daily runs tab's Retry, as `cardStatsAttempt` is by the table's.
   const [ciAttempt, setCiAttempt] = useState(0);
+  const ciSummary = useMemo(() => (ciRuns && ciRuns.length > 0 ? ciInsights(ciRuns) : null), [ciRuns]);
 
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
@@ -1395,53 +1397,90 @@ export default function StatsRoute(): ReactElement {
             ) : ciRuns.length === 0 ? (
               <p className="stats-empty">{t("No daily runs yet.")}</p>
             ) : (
-              <div className="stats-table-wrapper">
-                <table className="stats-table" data-testid={statsTestid.ciTable}>
-                  <thead>
-                    <tr>
-                      <th scope="col" className="stats-th">{t("Started")}</th>
-                      <th scope="col" className="stats-th">{t("Commit")}</th>
-                      <th scope="col" className="stats-th">{t("Result")}</th>
-                      <th scope="col" className="stats-th">{t("Jobs that did not pass")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ciRuns.map((run) => (
-                      <tr key={run.id} className="stats-tr" data-result={run.result}>
-                        <td className="stats-td">
-                          <a href={run.url} target="_blank" rel="noopener noreferrer">
-                            {formatDateTime(Date.parse(run.startedAt))}
-                          </a>
-                        </td>
-                        <td className="stats-td">
-                          <code>{run.commit.slice(0, SHORT_COMMIT)}</code>
-                        </td>
-                        <td className="stats-td">
-                          <span className={`stats-ci-result stats-ci-result--${run.result}`}>
-                            {run.result === "passed" ? t("Passed") : run.result === "failed" ? t("Failed") : t("Running")}
-                          </span>
-                        </td>
-                        <td className="stats-td">
-                          {run.failedJobs.length === 0 ? (
-                            "—"
-                          ) : (
-                            <ul className="stats-ci-jobs">
-                              {run.failedJobs.map((job) => (
-                                <li key={job.url}>
-                                  <a href={job.url} target="_blank" rel="noopener noreferrer">
-                                    {job.name}
-                                  </a>{" "}
-                                  ({job.conclusion})
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </td>
+              <>
+                {ciSummary && (
+                  <section
+                    className="stats-summary-tiles stats-ci-summary"
+                    data-testid={statsTestid.ciSummary}
+                    aria-label={t("Daily runs summary")}
+                  >
+                    <div className="stats-summary-tile">
+                      <span className="stats-summary-label">{t("Finished runs that passed")}</span>
+                      <span className="stats-summary-value">
+                        {t("{passed} of {finished}", { passed: ciSummary.passed, finished: ciSummary.finished })}
+                      </span>
+                    </div>
+                    {ciSummary.streak && (
+                      <div className="stats-summary-tile">
+                        <span className="stats-summary-label">
+                          {ciSummary.streak.result === "passed" ? t("Passed in a row") : t("Failed in a row")}
+                        </span>
+                        <span className={`stats-summary-value stats-ci-result--${ciSummary.streak.result}`}>
+                          {formatNumber(ciSummary.streak.runs)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="stats-summary-tile">
+                      <span className="stats-summary-label">{t("Failed most often")}</span>
+                      <span className="stats-summary-value">
+                        {ciSummary.mostFailed ? ciSummary.mostFailed.name : t("Nothing failed")}
+                      </span>
+                      {ciSummary.mostFailed && (
+                        <span className="stats-sample-hint">
+                          {t("in {runs} of {finished} runs", { runs: ciSummary.mostFailed.runs, finished: ciSummary.finished })}
+                        </span>
+                      )}
+                    </div>
+                  </section>
+                )}
+                <div className="stats-table-wrapper">
+                  <table className="stats-table" data-testid={statsTestid.ciTable}>
+                    <thead>
+                      <tr>
+                        <th scope="col" className="stats-th">{t("Started")}</th>
+                        <th scope="col" className="stats-th">{t("Commit")}</th>
+                        <th scope="col" className="stats-th">{t("Result")}</th>
+                        <th scope="col" className="stats-th">{t("Jobs that did not pass")}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {ciRuns.map((run) => (
+                        <tr key={run.id} className="stats-tr" data-result={run.result}>
+                          <td className="stats-td">
+                            <a href={run.url} target="_blank" rel="noopener noreferrer">
+                              {formatDateTime(Date.parse(run.startedAt))}
+                            </a>
+                          </td>
+                          <td className="stats-td">
+                            <code>{run.commit.slice(0, SHORT_COMMIT)}</code>
+                          </td>
+                          <td className="stats-td">
+                            <span className={`stats-ci-result stats-ci-result--${run.result}`}>
+                              {run.result === "passed" ? t("Passed") : run.result === "failed" ? t("Failed") : t("Running")}
+                            </span>
+                          </td>
+                          <td className="stats-td">
+                            {run.failedJobs.length === 0 ? (
+                              "—"
+                            ) : (
+                              <ul className="stats-ci-jobs">
+                                {run.failedJobs.map((job) => (
+                                  <li key={job.url}>
+                                    <a href={job.url} target="_blank" rel="noopener noreferrer">
+                                      {job.name}
+                                    </a>{" "}
+                                    ({job.conclusion})
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </section>
         )}

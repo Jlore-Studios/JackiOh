@@ -507,6 +507,10 @@
   color: var(--accent, #60a5fa);
 }
 
+.stats-ci-summary {
+  margin: 12px 0;
+}
+
 .stats-ci-jobs {
   margin: 0;
   padding-left: 16px;

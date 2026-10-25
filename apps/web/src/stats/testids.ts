@@ -8,6 +8,7 @@ export const statsTestid = {
   tabCi: "stats-tab-ci",
   ciTable: "stats-ci-table",
   ciRetry: "stats-ci-retry",
+  ciSummary: "stats-ci-summary",
   summaryTiles: "stats-summary-tiles",
   summaryTotalGames: "stats-summary-total-games",
   provisionalBanner: "stats-provisional-banner",
