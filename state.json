@@ -485,6 +485,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-25T12:42:07Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40197279577",
       "self_check_findings": [],
       "started_at": "2026-10-25T13:21:59Z",
