@@ -138,8 +138,12 @@ fs.writeFileSync(file, JSON.stringify(st));
 process.stdout.write(printed);
 `;
 
-/** The stand-in for `curl`, which the script calls only for Vercel's deploy hook: it writes down each call. */
+/** The stand-in for `curl`: the live server's GET /api/catalog serves FAKE_SERVED_CATALOG (no answer
+ * when it is empty), and every other call, Vercel's deploy hook, is written down. */
 const FAKE_CURL = `#!/bin/sh
+case "$*" in
+  */api/catalog*) [ -n "$FAKE_SERVED_CATALOG" ] || exit 7; printf '{"version":"%s"}' "$FAKE_SERVED_CATALOG"; exit 0 ;;
+esac
 echo "$*" >> "$FAKE_GH_DIR/curl.log"
 [ -z "$FAKE_CURL_FAIL" ] || exit 22
 `;
@@ -262,6 +266,8 @@ function run(w: World, event: string, now: string, extra: Record<string, string>
       INPUT_TARGET: "",
       VERCEL_DEPLOY_HOOK_URL: "",
       FAKE_CURL_FAIL: "",
+      SERVER_URL: "",
+      FAKE_SERVED_CATALOG: "",
       ...extra,
     },
   });
@@ -301,6 +307,8 @@ const hookCalls = (w: World): string[] => {
   }
 };
 const HOOK = "https://api.vercel.com/v1/integrations/deploy/prj_x/hook";
+/** The live server the catalog gate asks (SERVER_URL); the stand-in `curl` answers for it. */
+const SERVER = "https://server.test";
 
 /** The first check, which opens issue #1 for Oct 5 15:00 UTC; the rest of the cases start from there. */
 function counting(): World {
@@ -870,6 +878,43 @@ describe("the catalog fast path", () => {
     ok(run(w, "schedule", "2026-10-04T17:07:00Z"));
     expect(gh(w).prs).toHaveLength(1);
     expect(issue(w, 1).state).toBe("open");
+  });
+
+  it("waits while the live server serves another catalog, as when Render could not deploy, then merges once it serves the bump", () => {
+    const w = counting();
+    const before = production(w);
+    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1"), "app.txt": "four\n" });
+    const behind = ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump, SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.0b" }));
+    expect(behind.text).toContain(`it moves production to catalog v0.2.1, and the live server (${SERVER}) serves v0.2.0b`);
+    expect(production(w)).toBe(before);
+    expect(gh(w).prs).toEqual([]);
+    expect(behind.output).not.toContain("promoted=true");
+    ok(run(w, "workflow_run", "2026-10-05T11:30:00Z", { RUN_SHA: bump, SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.1" }));
+    expect(tree(w, "production")).toBe(tree(w, bump));
+    expect(issue(w, 1).comments.at(-1)?.body).toContain("Catalog v0.2.1 could not wait");
+  });
+
+  it("waits when the live server does not answer", () => {
+    const w = counting();
+    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
+    const silent = ok(run(w, "workflow_run", "2026-10-05T11:00:00Z", { RUN_SHA: bump, SERVER_URL: SERVER }));
+    expect(silent.text).toContain("serves nothing (it did not answer)");
+    expect(gh(w).prs).toEqual([]);
+  });
+
+  it("holds the scheduled merge of a catalog the server lacks too, but a run by hand merges it", () => {
+    const w = counting();
+    const bump = commit(w, "c4", { "render.yaml": renderYaml("v0.2.1") });
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z", { SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.0b" }));
+    expect(gh(w).prs).toEqual([]);
+    ok(run(w, "workflow_dispatch", "2026-10-05T15:10:00Z", { SERVER_URL: SERVER, FAKE_SERVED_CATALOG: "v0.2.0b" }));
+    expect(tree(w, "production")).toBe(tree(w, bump));
+  });
+
+  it("asks the server nothing for a merge that leaves the catalog as it is", () => {
+    const w = counting();
+    ok(run(w, "schedule", "2026-10-05T15:07:00Z", { SERVER_URL: SERVER }));
+    expect(tree(w, "production")).toBe(tree(w, w.sha.c3 as string));
   });
 });
 

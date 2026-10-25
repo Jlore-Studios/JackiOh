@@ -145,6 +145,8 @@ jobs:
           INPUT_SHA: ${{ inputs.sha }}
           INPUT_TARGET: ${{ inputs.target }}
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          # deploy-watch.yml's: production takes no catalog the live server does not serve yet.
+          SERVER_URL: https://jackioh-server.onrender.com
         run: bash scripts/promote-production.sh
 
   # What went live, onto the technical log (R1369000). Production's tip is the promotion's merge
