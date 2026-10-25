@@ -465,6 +465,14 @@
         "sha": "8edd52e416353d0ab22b4fad609fd14f0f097899",
         "tiers": {}
       }
+    },
+    "1909": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-25T12:22:55Z",
+      "issue": 1817,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
