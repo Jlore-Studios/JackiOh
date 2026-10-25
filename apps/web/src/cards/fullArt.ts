@@ -24,6 +24,11 @@
 // Full-art cards setting where the card has none, always behind ownership. `FullArtOwned` now holds
 // the viewer's ownership of every per-card cosmetic, `NO_FULL_ART` the empty one; the names stay.
 //
+// R1834004: a copy that is not the viewer's own, below a `TheirCopy` (an opponent's, or any seat's on a
+// watched or replayed online game), prints its full art where its owner's loadout says so for that
+// card, which the server checked against the owner's account (R1834001): the client still infers no
+// one's ownership. The viewer's own Full-art cards setting and `FullArtAllowed` hold over it.
+//
 // Presentation only (CLAUDE.md rule 7): the face is drawn differently and plays the same.
 
 import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
@@ -32,7 +37,7 @@ import { ECONOMY_LIVE } from "@jackioh/server-config";
 import { PORTRAITS } from "@jackioh/shared";
 
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
-import { OwnershipContext, ownsCosmetic, useCardPicks, type CardOwnership, type OwnedByCard } from "./cosmetics.ts";
+import { OwnershipContext, TheirCopyContext, ownsCosmetic, useCardPicks, type CardOwnership, type OwnedByCard } from "./cosmetics.ts";
 import type { FaceModel } from "./model.ts";
 import { readCardSettings, useCardSettings } from "./settings.ts";
 import { isGlitch } from "./glitch.ts";
@@ -136,14 +141,17 @@ export function ownsFullArt(owned: FullArtOwnership, defId: string, own: boolean
  * false. R1313000: and off where ownership decides and it is not the viewer's own (`worn`, or below
  * an `OwnCopy`) with its full art owned. R1655000: an own copy's own pick (`writeCardFullArt`)
  * decides first; the Full-art cards setting decides where the card has none, and for every copy
- * that is not the viewer's own.
+ * that is not the viewer's own. R1834004: a copy that is not, below a `TheirCopy`, prints only where
+ * its owner's loadout picks the card's full art, and the setting is on.
  */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
   const { fullArt } = useCardSettings();
   const allowed = useContext(FullArtAllowedContext);
   const owned = useContext(OwnershipContext);
   const ownCopy = useContext(OwnCopyContext);
+  const theirs = useContext(TheirCopyContext);
   const pick = useCardPicks(defId).fullArt;
   const own = worn || ownCopy;
+  if (!own && theirs !== null) return theirs.cards[defId]?.fullArt === true && fullArt && allowed;
   return (own ? (pick ?? fullArt) : fullArt) && allowed && ownsFullArt(owned, defId, own);
 }

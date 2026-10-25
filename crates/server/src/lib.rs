@@ -21,6 +21,8 @@
 //! - `bug_reports`: a match its own log does not reproduce, logged and filed as a GitHub issue for
 //!   the night bot while the match goes on.
 //! - `cosmetics`: the cosmetics registry, `cosmetics.json`, and its check (#1295, R1295000).
+//! - `loadout`: the cosmetics each seat of a match wears, frozen as it starts, and when a card's own
+//!   picks may be sent (#1834, R1834002, R1834003).
 //! - `economy`: the economy's store, migration 0045's holdings and ledgers (SPEC §14.11, #1299),
 //!   its pure math, the set-track level curve and the pity roll (#1298), and the card pack roll,
 //!   buying and opening a pack (#1301).
@@ -42,6 +44,7 @@ pub mod economy;
 pub mod duos;
 // ---- end Duos co-op (#946) ----
 pub mod env;
+pub mod loadout;
 pub mod loops;
 pub mod ranked;
 pub mod seats;

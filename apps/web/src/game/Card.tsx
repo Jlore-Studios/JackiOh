@@ -47,6 +47,10 @@
 // card in the resolving strip, which names no owner, wears the defaults. R1655000: it wears the
 // picks of its own card (cards/cosmetics.ts) over the account's, and so does its hover preview and
 // inspect overlay, which sit below an `OwnCopy` of its `worn`.
+//
+// R1834004: any other card with an owner wears its owner's frozen loadout where the board carries
+// one (game/wearer.ts), its face and overlays below a `TheirCopy`, keyed on the owner as the device's
+// picks are. A back names no card (B16), so it wears its seat's card back alone (`backOf`).
 
 import type { DragEvent, KeyboardEvent, MouseEvent, ReactElement } from "react";
 
@@ -77,13 +81,14 @@ import {
 } from "../cards/index.ts";
 import CardMarks from "../cards/CardMarks.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
+import { TheirCopy } from "../cards/loadouts.ts";
 import { marksOf } from "../cards/marks.ts";
 import ActivateControls from "./ActivateControl.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
-import { useWearerSeat, useWornDeckCosmetics } from "./wearer.ts";
+import { useSeatDeckCosmetics, useTheirLoadout, useWearerSeat } from "./wearer.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
@@ -208,11 +213,14 @@ export type CardProps = {
   controller?: PlayerId;
   /** R1295000: a card in the viewer's own hand, which wears the device's cosmetics: `CardView` names no owner. */
   inOwnHand?: boolean;
+  /** R1834004: the seat whose hand a revealed card lies in (R434), whose loadout it wears: `CardView` names no owner. */
+  inHandOf?: PlayerId;
   /**
-   * R1297000: a back on the viewer's own side, which wears the card back the viewer picked. The
-   * look depends on the seat alone, so every back of a seat is the same (a back names no card).
+   * R1297000, R1834004: the seat whose card back a back wears: the viewer's own pick on the wearer's
+   * side, the seat's loadout elsewhere. The look depends on the seat alone, so every back of a seat
+   * is the same (a back names no card, B16). Absent: the default back.
    */
-  ownBack?: boolean;
+  backOf?: PlayerId;
   /** `gradeLetter` is the letter the view names #93's grade by (R372); the badge prints it. */
   counters?: { plague?: number; grade?: number; gradeLetter?: string };
   /**
@@ -277,7 +285,12 @@ export default function Card(props: CardProps): ReactElement {
   const form = formOf(card, unit, props.type);
   const acting = useActingSeat();
   const wearer = useWearerSeat();
-  const { cardBack } = useWornDeckCosmetics(props.ownBack === true);
+  const { cardBack } = useSeatDeckCosmetics(props.backOf ?? null);
+  // R1295000: the viewer's own card wears the device's cosmetics, on a board that wears them; R1834004:
+  // any other card its owner's loadout, where the board carries one.
+  const owner = props.owner ?? unit?.owner ?? props.inHandOf;
+  const worn = wearer !== null && (props.inOwnHand === true || owner === wearer);
+  const theirs = useTheirLoadout(card === null || worn ? null : owner);
 
   // The card in play: the unit's view when it is one, else the card's own (a hand card's stats and
   // power, a face-up backrow card's power off the hero's list). A back has no face at all.
@@ -445,8 +458,6 @@ export default function Card(props: CardProps): ReactElement {
   const buried = unit?.buried ?? 0;
   const cardType = face.type;
   const spent = unit !== undefined && unit !== null && isSpent(unit, acting);
-  // R1295000: the viewer's own card wears the device's cosmetics, on a board that wears them.
-  const worn = wearer !== null && (props.inOwnHand === true || (props.owner ?? unit?.owner) === wearer);
 
   const root = (
     <div
@@ -584,14 +595,15 @@ export default function Card(props: CardProps): ReactElement {
   // #258: the switch (⟳) is a sibling of the root too, outside the card, so its zone can give it a
   // full 44 px target at its corner (board.css) and a DEF card's rotation never turns it.
   // R1313000, R1655000: the viewer's own card's overlay prints the full art the card does and wears its cosmetics.
+  // R1834004: another seat's card, its face and its overlay alike, wears that seat's loadout.
   return (
-    <>
+    <TheirCopy loadout={theirs}>
       {root}
       {props.switchTarget === true && unit !== undefined && unit !== null && (
         <SwitchButton instanceId={unit.instanceId} highlight={props.highlight} animating={props.animating} onClick={props.onClick} />
       )}
       <OwnCopy own={worn}>{inspect.overlay}</OwnCopy>
-    </>
+    </TheirCopy>
   );
 }
 

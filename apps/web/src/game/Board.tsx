@@ -20,6 +20,11 @@
 //
 // While a hand card of yours is hovered or selected, the field rings the cards its preview names
 // (#991, SPEC §10.10).
+//
+// R1297000: the viewer's half wears the playmat and backdrop the wearer picked. R1834004: an online
+// board's other half wears its seat's frozen loadout (`loadouts`, game/wearer.ts), as a second mat
+// under the opponent's rows (`data-their-table`) and a second backdrop behind them
+// (`data-their-backdrop`); a watched or replayed game's lower half wears its own seat's too.
 
 import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
@@ -61,12 +66,13 @@ import LanguageButton from "../i18n/LanguageButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
-import { WearerProvider, useWornDeckCosmetics } from "./wearer.ts";
+import { WearerProvider, seatDeckCosmetics, useSeatDeckCosmetics, type Wear } from "./wearer.ts";
 import Backdrop from "./Backdrop.tsx";
-import { DEFAULT_CARD_COSMETICS, useCosmetics, wornDeckCosmetics } from "../cards/cosmetics.ts";
+import { DEFAULT_CARD_COSMETICS, useCosmetics } from "../cards/cosmetics.ts";
+import { useCardSettings } from "../cards/settings.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7); table.css restyles
-// the viewer's half of board.css's field and so comes after it (R1297000).
+// both halves of board.css's field and so comes after it (R1297000, R1834004).
 import "./board.css";
 import "./table.css";
 import "./highlights.css";
@@ -444,9 +450,9 @@ function Seat({
   const seat = sideView(view, side);
   // #165: on the opponent's turn a touch hold is the mouse-over the screen lacks.
   const touchHold = touchHoldMode(view);
-  // R1297000: the viewer's deck wears their card back; the opponent's draws the default. A default
-  // back adds no attribute, so a board wearing nothing is the board it was before.
-  const { cardBack } = useWornDeckCosmetics(side === "you");
+  // R1297000: the viewer's deck wears their card back; R1834004: the other seat's its loadout's, else
+  // the default. A default back adds no attribute, so a board wearing nothing is the board it was before.
+  const { cardBack } = useSeatDeckCosmetics(seat.player);
   const back = cardBack === DEFAULT_CARD_COSMETICS.cardBack ? undefined : cardBack;
   // R1639000: the empty deck's resting badge, from the view alone; it stands down while R318's notice
   // is on the pile (the board then shows the view from before the burst, whose count is a draw behind).
@@ -599,6 +605,7 @@ export default function Board({
   emotes,
   wearCosmetics = false,
   deckCosmetics = null,
+  loadouts = null,
 }: BoardProps): ReactElement {
   const pops = popsFrom(view, animating, animated);
   // #1598: the cards losing a keyword, read off the burst as the pops are (keywordLoss.ts).
@@ -634,10 +641,17 @@ export default function Board({
   const ownTurn = view.result === null && view.active === view.viewer;
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
-  // R1297000: the playmat and backdrop the viewer's half wears; a default adds no attribute and no element.
-  const slots = wornDeckCosmetics(wearCosmetics, deckCosmetics, useCosmetics());
+  // R1297000: the playmat and backdrop the viewer's half wears; R1834004: and the other half, from its
+  // seat's loadout. A default adds no attribute and no element.
+  const wear: Wear = { seat: wearCosmetics ? view.viewer : null, deck: deckCosmetics, loadouts, viewer: view.viewer };
+  const account = useCosmetics();
+  const { opponentCosmetics } = useCardSettings();
+  const slots = seatDeckCosmetics(view.you.player, wear, account, opponentCosmetics);
+  const theirSlots = seatDeckCosmetics(view.opponent.player, wear, account, opponentCosmetics);
   const backdrop = slots.field === DEFAULT_CARD_COSMETICS.field ? undefined : slots.field;
   const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
+  const theirBackdrop = theirSlots.field === DEFAULT_CARD_COSMETICS.field ? undefined : theirSlots.field;
+  const theirTable = theirSlots.table === DEFAULT_CARD_COSMETICS.table ? undefined : theirSlots.table;
 
   function pressEndTurn(): void {
     if (needsConfirm && !armed) {
@@ -652,11 +666,12 @@ export default function Board({
 
   // R243: the match-made definitions and field powers this view names, for every card drawn below;
   // #258: and who is acting now, for the units that have no action left (spent.ts); R1295000: and
-  // whose cards wear the device's cosmetics (wearer.ts); R1297000: and the deck's picks; #1598: and which cards are losing a keyword (keywordLoss.ts).
+  // whose cards wear the device's cosmetics (wearer.ts); R1297000: and the deck's picks; R1834004: and
+  // both seats' loadouts; #1598: and which cards are losing a keyword (keywordLoss.ts).
   return (
     <MatchCardsProvider view={view}>
       <ActingProvider view={view}>
-      <WearerProvider seat={wearCosmetics ? view.viewer : null} deck={deckCosmetics}>
+      <WearerProvider seat={wear.seat} deck={deckCosmetics} loadouts={loadouts} viewer={view.viewer}>
       <KeywordLossProvider lost={keywordLosses}>
       <div
         className="board"
@@ -666,11 +681,13 @@ export default function Board({
         data-active={sideOf(view, view.active)}
         data-viewer={view.viewer}
         data-backdrop={backdrop}
+        data-their-backdrop={theirBackdrop}
         data-drag={dragToPlay ? "on" : "off"}
         data-log={logOpen ? "open" : undefined}
         data-random-targets={view.randomTargets === true ? "" : undefined}
       >
         {backdrop === undefined ? null : <Backdrop field={backdrop} />}
+        {theirBackdrop === undefined ? null : <Backdrop field={theirBackdrop} half="theirs" />}
         <Seat
           view={view}
           side="opponent"
@@ -683,9 +700,10 @@ export default function Board({
           emotes={emotes}
         />
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
-        <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
+        <Hand side="opponent" seat={view.opponent.player} hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
-        <div className="field" aria-label={t("Field")} data-table={table} ref={field}>
+        <div className="field" aria-label={t("Field")} data-table={table} data-their-table={theirTable} ref={field}>
+          {theirTable === undefined ? null : <span className="field-their-mat" aria-hidden="true" />}
           <SandSurface field={field} disabled={sandDisabled} />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
@@ -707,7 +725,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
+        <Hand side="you" seat={view.you.player} hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}

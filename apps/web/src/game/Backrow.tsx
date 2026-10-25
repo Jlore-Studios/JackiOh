@@ -16,10 +16,13 @@
 //
 // R471: a face-down card's Plague Counters (`plague`) ride its back; its controller reads them off
 // `counters`, as on any face-up card.
+//
+// R1297000, R1834004: a face-down card's back wears the card back of the seat whose zone it lies in,
+// which is all the view says of it (B16).
 
 import type { ReactElement } from "react";
 
-import type { BackrowView } from "@jackioh/shared";
+import type { BackrowView, PlayerId } from "@jackioh/shared";
 
 import { PileDepth, faceModel } from "../cards/index.ts";
 import { marksOf } from "../cards/marks.ts";
@@ -30,6 +33,8 @@ import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side 
 export type BackrowProps = {
   entry: BackrowView;
   side: Side;
+  /** R1834004: the seat whose zone this is, whose card back a face-down card wears. */
+  seat?: PlayerId;
   lane: number;
   /** #165: what a touch hold on the card opens (contract.ts's `touchHoldMode`). */
   touchHold?: "sheet" | "preview";
@@ -71,7 +76,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
           card={null}
           className="card-backrow"
           touchHold={props.touchHold}
-          ownBack={props.side === "you"}
+          backOf={props.seat}
           faceDown={{
             at: `${props.side}-${String(props.lane)}`,
             ...(cost === undefined ? {} : { cost }),

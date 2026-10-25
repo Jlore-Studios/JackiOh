@@ -4,6 +4,9 @@
 // the field's look from `data-backdrop` and moves the particles only where motion is allowed. It
 // is decoration: aria-hidden, input-transparent and behind everything (CLAUDE.md rule 7: nothing
 // here is state).
+//
+// R1834004: the other seat's backdrop is the same layer behind the opponent's half (`half="theirs"`,
+// `data-half`), from that seat's frozen loadout.
 
 import type { CSSProperties, ReactElement } from "react";
 
@@ -25,9 +28,9 @@ function particleStyle(index: number): ParticleStyle {
   };
 }
 
-export default function Backdrop({ field }: { field: CosmeticId }): ReactElement {
+export default function Backdrop({ field, half }: { field: CosmeticId; half?: "theirs" }): ReactElement {
   return (
-    <div className="board-backdrop" data-backdrop={field} aria-hidden="true">
+    <div className="board-backdrop" data-backdrop={field} data-half={half} aria-hidden="true">
       {Array.from({ length: BACKDROP_PARTICLE_MAX }, (_, index) => (
         <span key={index} className="board-backdrop-particle" style={particleStyle(index)} />
       ))}

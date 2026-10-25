@@ -29,10 +29,13 @@
 // (`data-revealed="true"`; board.css flips it, and under reduced motion it is simply face up). A
 // revealed card is read, never played: it has its own testid (`revealed-hand-card-<id>`), no click
 // and no drag, and a resting mouse or a long-press opens it as any face does.
+//
+// R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a revealed card
+// its seat's loadout, where the board carries one (game/wearer.ts).
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
-import type { CardView } from "@jackioh/shared";
+import type { CardView, PlayerId } from "@jackioh/shared";
 
 import Card, { isSelected } from "./Card.tsx";
 import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side } from "./contract.ts";
@@ -43,6 +46,8 @@ import { t } from "../i18n/i18n.ts";
 
 export type HandProps = {
   side: Side;
+  /** R1834004: the seat whose hand this is, whose card back its backs and whose loadout its revealed cards wear. */
+  seat?: PlayerId;
   hand: CardView[] | { count: number };
   /** R1143: this seat's hand size, once set for the rest of the game (Meditative #79). Shown beside the count. */
   cap?: number | undefined;
@@ -87,15 +92,25 @@ function EmptyHand({ side }: { side: Side }): ReactElement {
  * R434: one of the opponent's cards at the game's end, a back turning over to its face. Both are
  * drawn; board.css shows the back first and flips to the face, and a reduced motion shows the face.
  */
-function RevealedSlot({ card, index, touchHold }: { card: CardView; index: number; touchHold?: "sheet" | "preview" }): ReactElement {
+function RevealedSlot({
+  card,
+  index,
+  seat,
+  touchHold,
+}: {
+  card: CardView;
+  index: number;
+  seat?: PlayerId;
+  touchHold?: "sheet" | "preview";
+}): ReactElement {
   return (
     <div className="hand-slot hand-slot--revealed" style={{ "--i": index } as CSSProperties}>
       <div className="hand-flip">
         <div className="hand-flip-back" aria-hidden="true">
-          <Card card={null} className="card-hand" />
+          <Card card={null} className="card-hand" backOf={seat} />
         </div>
         <div className="hand-flip-face">
-          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" touchHold={touchHold} />
+          <Card testId={revealTestid.handCard(card.instanceId)} card={card} className="card-hand" touchHold={touchHold} inHandOf={seat} />
         </div>
       </div>
     </div>
@@ -144,11 +159,11 @@ export default function Hand(props: HandProps): ReactElement {
   if (!Array.isArray(hand)) {
     cards = Array.from({ length: hand.count }, (_unused, index) => (
       <div key={`back-${index}`} className="hand-slot" style={{ "--i": index } as CSSProperties}>
-        <Card card={null} className="card-hand" />
+        <Card card={null} className="card-hand" backOf={props.seat} />
       </div>
     ));
   } else if (revealed) {
-    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} touchHold={props.touchHold} />);
+    cards = hand.map((card, index) => <RevealedSlot key={card.instanceId} card={card} index={index} seat={props.seat} touchHold={props.touchHold} />);
   } else {
     cards = hand.map((card, index) => {
       const handTestid = testid.handCard(card.instanceId);
