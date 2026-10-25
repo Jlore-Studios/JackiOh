@@ -333,7 +333,7 @@ pub struct CardDrillDownResponse {
     pub co_played: Vec<CoPlayedRate>,
 }
 
-fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
+pub(crate) fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     let mut response = Response::new(Body::from(body.to_string()));
     *response.status_mut() = StatusCode::OK;
     let headers = response.headers_mut();
