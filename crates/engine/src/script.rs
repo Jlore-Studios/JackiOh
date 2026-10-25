@@ -682,6 +682,61 @@ pub struct StaticFlags {
     /// where it declares it, else this; two Gardens apply the least.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_garden: Option<i32>,
+    // ---- Stinkyscape M15 (issue #1849) ----
+    /// R1849000 (Stinkyscape #74 Paragon-X): "Immune to Spell Damage". While this Unit is on the field,
+    /// a hit from a Spell deals it nothing and is no damage instance (§4.4 step 0); Spells may still
+    /// target it and do everything else to it (`restrictions::spell_damage_cannot_reach`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub immune_to_spell_damage: Option<bool>,
+    /// R1849002 (Stinkyscape #105 Disintegrex): "Anytime something would be Destroyed, it is Exiled
+    /// instead". While this card acts on the field, every permanent the state check collects is exiled
+    /// instead (§4.5 step 1, `replacements::destroy_exiles`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub destroyed_exiled: Option<bool>,
+    /// R1849002 (Disintegrex's Radiant face): the same, for the permanents of this card's opponent only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enemy_destroyed_exiled: Option<bool>,
+    /// R1849003 (Stinkyscape #104 Reflective Plating): "Any damage this takes is dealt to the enemy hero"
+    /// — as a new instance from this Unit, after Lifesteal (§4.4 step 8a, `damage::reflect_damage`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reflects_damage: Option<bool>,
+    /// R1849003 (Reflective Plating's Radiant face): "… and the attacker": what an attacker's own strike
+    /// deals this Unit is dealt back to that attacker too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reflects_to_attacker: Option<bool>,
+    /// R1849004 (Stinkyscape #5 Masochism Unmasked): while this card acts on its controller's field, the
+    /// damage their hero would take on their own turn goes to the opponent's hero instead, up to a cap a
+    /// turn (§4.4 step 0a, `damage::own_turn_redirect`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_turn_redirect: Option<OwnTurnRedirect>,
+    /// R1849005 (Stinkyscape #157 The Gauntlet): while this card acts on the field, the Units in the
+    /// unit zones of lanes `GAUNTLET_LANES` attack only one another, and no other Unit attacks them
+    /// (`restrictions::attack_restriction_in`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gauntlet: Option<bool>,
+    /// R1849006 (Stinkyscape #23 Warp Disruptor): "Aura: Units cannot be in Defense Position". While
+    /// this card acts on the field, no Unit on either side may switch to Defense Position, and one in it
+    /// switches to Attack Position at the state check (`restrictions::defense_barred`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub units_never_defense: Option<bool>,
+    /// R1849009 (Stinkyscape #21 Aerelret, #22 Gatinsir): "30% chance to Reveal": the percent chance a
+    /// face-down trap fires when its triggers admit an event, rolled once per firing; a miss leaves it
+    /// set (`traps::chance_admits`). The card's declared number `chance` where it declares it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reveal_chance: Option<i32>,
+}
+
+/// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
+/// opponent (up to 20)". `cap` is how much may be taken off its controller's hero each turn, per card
+/// (its declared number `cap` where it declares it); `multiplier` is how many times what moves is dealt
+/// to the opponent ("and double it", the Radiant face's 2). Absent is 1.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct OwnTurnRedirect {
+    pub cap: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub multiplier: Option<i32>,
 }
 
 /// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the
@@ -1028,6 +1083,16 @@ pub struct Script {
     /// `combat::after_attacked_of`: `{ attackerId, forced, attackerSurvived }`. A whole effect
     /// list, parkable like any (R113).
     pub after_attacked: Option<Hook>,
+    /// R1849001 (Stinkyscape #91 The Propagation's Wasp): "Evolve: X". Run for this Unit when an effect
+    /// evolves it (`effects::evolve`), and never otherwise. A whole effect list, run resumably like a
+    /// fused card's `fusedInto` (`prompts::run_evolve`).
+    pub evolve: Option<Hook>,
+    /// R1849008 (Stinkyscape #14 Arm of the Jempire): "When one of your Units is attacked". Run for each
+    /// card acting on the defender's side once a declared attack on one of its Units has come through
+    /// §4.2 step 4's trap window, before its combat, in R68's order — never for an attack on the hero
+    /// or a forced one (R121). `ctx.data` holds `{ attackerId, defenderId }`, read with
+    /// `combat::ally_attacked_of`. A whole effect list, parkable like any (R113).
+    pub ally_attacked: Option<Hook>,
     // ---- v0.2.0 script hooks, by workstream: prompts and generation (E13, E19, E26) ----
     /// B5 E19, R471: "Plague Counters placed on this are doubled" (Classic #27 Pestilent Slime; tripled on
     /// its Radiant face). What each placement onto this card is multiplied by, asked of the card as it
@@ -1090,7 +1155,7 @@ impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
     /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
     /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack",
-    /// "startOfOpponentTurn".
+    /// "afterAttacked", "evolve", "allyAttacked", "startOfOpponentTurn".
     /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
@@ -1105,6 +1170,8 @@ impl Script {
             "onPlayHook" => self.on_play_hook.as_ref(),
             "afterAttack" => self.after_attack.as_ref(),
             "afterAttacked" => self.after_attacked.as_ref(),
+            "evolve" => self.evolve.as_ref(),
+            "allyAttacked" => self.ally_attacked.as_ref(),
             "startOfOpponentTurn" => self.start_of_opponent_turn.as_ref(),
             _ => None,
         }

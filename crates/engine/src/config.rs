@@ -1804,6 +1804,17 @@ pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
 /// card's Tribute X, whatever the Float's size (`float::float_lowers_tribute`).
 pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
 
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape's combat and replacement verbs (#1849, R1849000–R1849009; SPEC §4.2, §4.4, §6)
+// ---------------------------------------------------------------------------------------------
+
+/// R1849005 (Stinkyscape #157 The Gauntlet): "the middle 3 unit lanes", the 1-based lanes of the
+/// `UNIT_ZONES` whose Units the Gauntlet traps, on both sides.
+pub const GAUNTLET_LANES: [i32; 3] = [2, 3, 4];
+
+/// R1849009: what a chance in percent is out of ("30% chance to Reveal" is 30 of this).
+pub const PERCENT: i32 = 100;
+
 #[cfg(test)]
 mod tests {
     use super::*;

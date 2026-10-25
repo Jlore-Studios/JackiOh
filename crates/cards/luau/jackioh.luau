@@ -878,6 +878,7 @@ export type ForcedAttackerFilter = {
 side: ForcedSide?,
 defId: string?,
 summonedThisScript: boolean?,
+random: boolean?,
 }
 
 export type ForcedAttacksArgs = {
@@ -1696,6 +1697,11 @@ export type NumberedKey = "Armor" | "Lucky" | "Spell Damage" | "Brittle" | "Echo
 
 export type OffFieldZone = "hand" | "library" | "graveyard" | "exile"
 
+export type OwnTurnRedirect = {
+cap: number,
+multiplier: number?,
+}
+
 export type Phase = "setup" | "mulligan" | "start" | "main" | "end" | "over"
 
 export type PickFilter = {
@@ -2212,6 +2218,15 @@ spellDamageAura: SpellDamageAura?,
 doublesHealing: boolean?,
 answersTargetedSpells: boolean?,
 embiggenGarden: number?,
+immuneToSpellDamage: boolean?,
+destroyedExiled: boolean?,
+enemyDestroyedExiled: boolean?,
+reflectsDamage: boolean?,
+reflectsToAttacker: boolean?,
+ownTurnRedirect: OwnTurnRedirect?,
+gauntlet: boolean?,
+unitsNeverDefense: boolean?,
+revealChance: number?,
 }
 
 export type StealAllArgs = {
