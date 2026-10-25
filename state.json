@@ -1333,6 +1333,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1937": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-25T16:12:58Z",
+      "issue": 1833,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
