@@ -1709,6 +1709,12 @@
         "number": 1897,
         "title": "Patch: an under-age answer retries the owed account deletion",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-25T14:17:44Z",
+        "number": 1901,
+        "title": "Patch: the in-memory store refuses the deletes postgres refuses",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
