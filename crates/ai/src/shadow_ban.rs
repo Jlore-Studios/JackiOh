@@ -98,6 +98,8 @@
 // Sweep of record: 2026-10-22 (UTC), `cargo jackioh sweep`, pass 1 over 17 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 17 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // Report of record: training/history/sweep-2026-10-25.md
 // Sweep of record: 2026-10-25 (UTC), `cargo jackioh sweep`, pass 1 over 1 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 1 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
+// Report of record: training/history/sweep-2026-10-25-2.md
+// Sweep of record: 2026-10-25 (UTC), `cargo jackioh sweep`, pass 1 over 27 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 27 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), budget AI_GATE_BUDGET {"nodes":600,"lethalNodes":150,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}.
 // END `cargo jackioh sweep --write`
 
 /// R186: defId → why the AI never deals it to itself. Each reason starts "<SweepFlag>: <tier>: ".
@@ -635,39 +637,27 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
     (
         "meditative-011",
-        "at risk: hard: pass 2 affordable on 33 turns over 24 games, played 1 time(s), mean evaluate change 2.8",
+        "at risk: easy: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change 2.5",
     ),
     (
         "meditative-022",
-        "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change -4.8; hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change -4.8",
-    ),
-    (
-        "meditative-025",
-        "at risk: easy: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 0.9; hard: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 22.3",
+        "at risk: easy: pass 1 affordable on 21 turns over 8 games, never played; hard: pass 1 affordable on 17 turns over 8 games, never played",
     ),
     (
         "meditative-026",
-        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 10.6",
-    ),
-    (
-        "meditative-038",
-        "at risk: hard: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 1.8",
-    ),
-    (
-        "meditative-048",
-        "at risk: hard: pass 1 affordable on 10 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 19 turns over 8 games, never played; hard: pass 1 affordable on 14 turns over 8 games, never played",
     ),
     (
         "meditative-053",
-        "at risk: hard: pass 1 affordable on 21 turns over 8 games, played 1 time(s), mean evaluate change 0.0",
-    ),
-    (
-        "meditative-055",
         "at risk: hard: pass 1 affordable on 12 turns over 8 games, never played",
     ),
     (
+        "meditative-055",
+        "at risk: hard: pass 1 affordable on 14 turns over 8 games, never played",
+    ),
+    (
         "meditative-060",
-        "at risk: hard: pass 1 affordable on 28 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 2.0; hard: pass 1 affordable on 19 turns over 8 games, never played",
     ),
     (
         "meditative-069",
@@ -675,47 +665,31 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
     (
         "meditative-075",
-        "at risk: easy: pass 1 affordable on 8 turns over 8 games, never played",
-    ),
-    (
-        "meditative-077",
-        "at risk: hard: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change 3.3",
-    ),
-    (
-        "meditative-078",
-        "at risk: easy: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 12.1; hard: pass 1 affordable on 12 turns over 8 games, never played",
-    ),
-    (
-        "meditative-088",
-        "at risk: easy: pass 1 affordable on 11 turns over 8 games, played 1 time(s), mean evaluate change -1.3; hard: pass 1 affordable on 6 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 1.5; hard: pass 1 affordable on 3 turns over 8 games, played 1 time(s), mean evaluate change 2.5",
     ),
     (
         "meditative-098",
-        "at risk: easy: pass 1 affordable on 19 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
+        "at risk: easy: pass 1 affordable on 21 turns over 8 games, never played; hard: pass 1 affordable on 5 turns over 8 games, never played",
     ),
     (
         "meditative-099",
-        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 3.0",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 2.8",
     ),
     (
         "meditativeplus-002",
-        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
+        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change 0.0",
     ),
     (
         "meditativeplus-003",
-        "at risk: hard: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change 1.3",
+        "at risk: easy: pass 1 affordable on 10 turns over 8 games, played 1 time(s), mean evaluate change 1.6; hard: pass 1 affordable on 14 turns over 8 games, played 1 time(s), mean evaluate change 1.7",
     ),
     (
         "meditativeplus-004",
-        "at risk: easy: pass 1 affordable on 13 turns over 8 games, played 1 time(s), mean evaluate change -1.6; hard: pass 1 affordable on 21 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 3 turns over 8 games, never played; hard: pass 1 affordable on 11 turns over 8 games, never played",
     ),
     (
         "meditativeplus-005",
-        "at risk: hard: pass 1 affordable on 12 turns over 8 games, played 1 time(s), mean evaluate change 3.1",
-    ),
-    (
-        "meditativeplus-006",
-        "at risk: easy: pass 1 affordable on 7 turns over 8 games, never played",
+        "at risk: easy: pass 1 affordable on 7 turns over 8 games, played 1 time(s), mean evaluate change 2.0",
     ),
     (
         "meditativeplus-013",
@@ -723,23 +697,19 @@ pub const SHADOW_WATCH: &[(&str, &str)] = &[
     ),
     (
         "meditativeplus-014",
-        "at risk: hard: pass 1 affordable on 6 turns over 8 games, played 1 time(s), mean evaluate change 1.3",
+        "at risk: hard: pass 1 affordable on 9 turns over 8 games, played 1 time(s), mean evaluate change 1.3",
     ),
     (
         "meditativeplus-020",
-        "at risk: easy: pass 1 affordable on 16 turns over 8 games, played 1 time(s), mean evaluate change -1.6",
+        "at risk: easy: pass 1 affordable on 33 turns over 8 games, never played; hard: pass 1 affordable on 15 turns over 8 games, never played",
     ),
     (
         "meditativeplus-022",
-        "at risk: hard: pass 1 affordable on 4 turns over 8 games, never played",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, played 1 time(s), mean evaluate change 1.5",
     ),
     (
         "meditativeplus-023",
-        "at risk: hard: pass 1 affordable on 14 turns over 8 games, never played",
-    ),
-    (
-        "meditativeplus-025",
-        "at risk: hard: pass 1 affordable on 5 turns over 8 games, played 1 time(s), mean evaluate change -1.3",
+        "at risk: hard: pass 1 affordable on 8 turns over 8 games, never played",
     ),
 ];
 
