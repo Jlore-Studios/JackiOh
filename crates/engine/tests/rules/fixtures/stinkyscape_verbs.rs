@@ -169,7 +169,8 @@ fn opponent_attacks(id: &'static str) -> TriggerDef {
             attacker_id,
             forced: false,
             ..
-        } => find_instance(ctx.state, attacker_id).is_some_and(|attacker| attacker.controller != ctx.controller),
+        } => find_instance(ctx.state, attacker_id)
+            .is_some_and(|attacker| attacker.controller != ctx.controller),
         _ => false,
     })
 }
@@ -352,7 +353,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
             SMASH.to_string(),
             both(Script {
                 targets: pick(json!({ "of": ["unit", "backrow"] })),
-                cry: Some(hook(|_ctx| vec![effects::destroy(json_as(json!({ "target": chosen() })))])),
+                cry: Some(hook(|_ctx| {
+                    vec![effects::destroy(json_as(json!({ "target": chosen() })))]
+                })),
                 ..Script::default()
             }),
         ),
@@ -430,7 +433,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
             both(Script {
                 targets: pick(json!({ "of": ["unit"] })),
                 cry: Some(hook(|_ctx| {
-                    vec![effects::switch_position_of(json_as(json!({ "target": chosen() })))]
+                    vec![effects::switch_position_of(json_as(
+                        json!({ "target": chosen() }),
+                    ))]
                 })),
                 ..Script::default()
             }),
@@ -504,7 +509,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
 
 fn defs() -> Vec<CardDef> {
     vec![
-        card(18490, IMMUNE, "Unit", Some((2, 4)), json!([{ "kind": "Divine Shield" }])),
+        card(
+            18490,
+            IMMUNE,
+            "Unit",
+            Some((2, 4)),
+            json!([{ "kind": "Divine Shield" }]),
+        ),
         card(18491, BOLT, "Spell", None, json!([])),
         card(18492, EMBER, "Field Spell", None, json!([])),
         card(18493, RALLY, "Spell", None, json!([])),
@@ -513,7 +524,13 @@ fn defs() -> Vec<CardDef> {
         card(18496, EVOLVER, "Spell", None, json!([])),
         card(18497, DISINTEGREX, "Unit", Some((6, 3)), json!([])),
         card(18498, DISINTEGREX_R, "Unit", Some((6, 3)), json!([])),
-        card(18499, PHOENIX, "Unit", Some((2, 2)), json!([{ "kind": "Reborn" }])),
+        card(
+            18499,
+            PHOENIX,
+            "Unit",
+            Some((2, 2)),
+            json!([{ "kind": "Reborn" }]),
+        ),
         card(18500, FIELD, "Field Spell", None, json!([])),
         card(18501, SMASH, "Spell", None, json!([])),
         card(18502, WIPE, "Spell", None, json!([])),

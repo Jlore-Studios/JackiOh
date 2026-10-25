@@ -41,7 +41,8 @@ use crate::replacements::LethalHitTo;
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::wire::{
-    GameEvent, Keyword, KeywordKind, PlayerId, RedirectWhat, Row, ZoneName, armor_of, has_keyword, opponent_of,
+    GameEvent, Keyword, KeywordKind, PlayerId, RedirectWhat, Row, ZoneName, armor_of, has_keyword,
+    opponent_of,
 };
 
 /// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
@@ -765,7 +766,8 @@ fn own_turn_redirect(
         // R386: the card's declared numbers `cap` and `multiplier` where it declares them.
         let cap = crate::params::declared_or(sink.state, &card, "cap", redirect.cap).max(0);
         let multiplier =
-            crate::params::declared_or(sink.state, &card, "multiplier", redirect.multiplier.unwrap_or(1)).max(1);
+            crate::params::declared_or(sink.state, &card, "multiplier", redirect.multiplier.unwrap_or(1))
+                .max(1);
         let turn = sink.state.turn;
         let used = card
             .memory
@@ -794,7 +796,13 @@ fn own_turn_redirect(
             target: DamageTarget::Hero { player: opponent },
             ..args.clone()
         };
-        dealt += land_hit(sink, &moved, take.saturating_mul(multiplier), redirects + 1, caught);
+        dealt += land_hit(
+            sink,
+            &moved,
+            take.saturating_mul(multiplier),
+            redirects + 1,
+            caught,
+        );
         rest -= take;
     }
     if rest == amount {
@@ -820,8 +828,8 @@ fn reflect_damage(
 ) {
     let text = crate::scripts::flags_of(sink.state, unit);
     let to_hero = text.reflects_damage == Some(true);
-    let to_attacker = text.reflects_to_attacker == Some(true)
-        && flags.is_some_and(|flags| flags.attacking == Some(true));
+    let to_attacker =
+        text.reflects_to_attacker == Some(true) && flags.is_some_and(|flags| flags.attacking == Some(true));
     if !(to_hero || to_attacker) || dealt <= 0 {
         return;
     }

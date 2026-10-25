@@ -74,7 +74,15 @@ function rowNames(section: TableSection): string[] {
  * glossary, or the first B11 test fails.
  */
 const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
-  "§6.1": ["Can't attack or be attacked", "A keyword while a condition holds", "Luck-based", "Luck X"],
+  "§6.1": [
+    "Can't attack or be attacked",
+    "A keyword while a condition holds",
+    "Luck-based",
+    "Luck X",
+    // R1849000, R1849005: Stinkyscape's, rules only until the set's cards print them as terms.
+    "Immune to Spell Damage",
+    "Gauntlet lanes",
+  ],
   "§6.2": [
     "Cry and Death",
     "After this is attacked",
@@ -85,6 +93,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Fatigue",
     "Attack summon",
     "In N turns",
+    // R1849008, R1849009: Stinkyscape's, rules only until the set's cards print them as terms.
+    "When one of your Units is attacked",
+    "Chance to reveal",
   ],
   "§6.3": [
     "Summon",
@@ -127,6 +138,8 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
+    // R1849001: Stinkyscape's, rules only until the set's cards print it as a term.
+    "Evolve",
   ],
 };
 

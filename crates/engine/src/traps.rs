@@ -432,7 +432,7 @@ pub fn fire_trap(
     true
 }
 
-/// R1849009 (Stinkyscape #21 Aerelret, #22 Gatinsir): "30% chance to Reveal". A face-down trap whose
+/// R1849009 (Stinkyscape #174 Aerelret, #22 Gatinsir): "30% chance to Reveal". A face-down trap whose
 /// face prints a chance fires only when the match rng's roll comes under it — its declared number
 /// `chance` where it declares it, out of `PERCENT` — and with the controller's Luck and the trap's
 /// Lucky (R987, R1440) rolling again, any hit enough. A trap without one, a face-up Field Trap firing

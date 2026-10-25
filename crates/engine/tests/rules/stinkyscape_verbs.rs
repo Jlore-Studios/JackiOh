@@ -99,8 +99,14 @@ mod r1849000_immune_to_spell_damage {
         let immune = id_at(&s, P2, 1);
         s.play(BOLT, pick(&immune));
         let kinds = types_of(s.last_events());
-        assert!(!kinds.contains(&GameEventType::Damage), "no damage instance: {kinds:?}");
-        assert!(!kinds.contains(&GameEventType::DivineShieldLost), "the shield stays: {kinds:?}");
+        assert!(
+            !kinds.contains(&GameEventType::Damage),
+            "no damage instance: {kinds:?}"
+        );
+        assert!(
+            !kinds.contains(&GameEventType::DivineShieldLost),
+            "the shield stays: {kinds:?}"
+        );
         assert_eq!(s.card(immune.as_str()).divine_shield_spent, None);
         s.expect_stats(immune.as_str(), json!({ "health": 4 }));
     }
@@ -328,7 +334,10 @@ mod r1849003_reflected_damage {
         s.play(BOLT, pick(&plating));
         assert_eq!(
             damage_events(s.last_events()),
-            vec![(plating.clone(), BOLT_DAMAGE), ("hero-p1".to_string(), BOLT_DAMAGE)]
+            vec![
+                (plating.clone(), BOLT_DAMAGE),
+                ("hero-p1".to_string(), BOLT_DAMAGE)
+            ]
         );
 
         // What a strike back deals the rider goes to the enemy hero, never to the defender.
@@ -723,7 +732,10 @@ mod r1849008_ally_attacked {
         let taunter = id_at(&s, P2, 2);
         s.attack(grunt.as_str(), taunter.as_str());
         // +2 before the combat: its strike back of 4 kills the 3/3, which a 2 would not.
-        s.expect_stats(taunter.as_str(), json!({ "attack": 2 + JEMPIRE_ATTACK, "health": 1 }));
+        s.expect_stats(
+            taunter.as_str(),
+            json!({ "attack": 2 + JEMPIRE_ATTACK, "health": 1 }),
+        );
         s.expect_in_zone(grunt.as_str(), "graveyard");
     }
 

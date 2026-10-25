@@ -719,7 +719,7 @@ pub struct StaticFlags {
     /// switches to Attack Position at the state check (`restrictions::defense_barred`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub units_never_defense: Option<bool>,
-    /// R1849009 (Stinkyscape #21 Aerelret, #22 Gatinsir): "30% chance to Reveal": the percent chance a
+    /// R1849009 (Stinkyscape #174 Aerelret, #22 Gatinsir): "30% chance to Reveal": the percent chance a
     /// face-down trap fires when its triggers admit an event, rolled once per firing; a miss leaves it
     /// set (`traps::chance_admits`). The card's declared number `chance` where it declares it.
     #[serde(default, skip_serializing_if = "Option::is_none")]

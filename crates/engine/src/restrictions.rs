@@ -167,7 +167,11 @@ fn any_acting_flag(state: &GameState, has: impl Fn(&StaticFlags) -> bool) -> boo
 
 /// R1849000: "Immune to Spell Damage" — a Spell's hit on this Unit on the field deals nothing and is no
 /// damage instance (§4.4 step 0). Only damage: a Spell still targets it and does the rest to it.
-pub fn spell_damage_cannot_reach(state: &GameState, source: Option<&CardInstance>, unit: &CardInstance) -> bool {
+pub fn spell_damage_cannot_reach(
+    state: &GameState,
+    source: Option<&CardInstance>,
+    unit: &CardInstance,
+) -> bool {
     matches!(unit.zone, Zone::Field { .. })
         && is_spell_source(state, source)
         && crate::scripts::flags_of(state, unit).immune_to_spell_damage == Some(true)
