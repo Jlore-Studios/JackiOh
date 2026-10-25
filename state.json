@@ -13957,7 +13957,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-25T05:18:53Z",
       "requested_by": "squishy-squooby",
-      "run_id": "pending:2479296a-1792917858",
+      "run_id": "40177864479",
       "started_at": "2026-10-25T08:45:04Z",
       "stop_requested": false,
       "taken_asks": []
