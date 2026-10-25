@@ -12824,7 +12824,7 @@
       "started_at": "2026-10-24T23:53:00Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1
+      "verdict_rounds": 2
     },
     "1806": {
       "cleared": {
