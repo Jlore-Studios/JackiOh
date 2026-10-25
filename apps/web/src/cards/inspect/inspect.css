@@ -533,6 +533,10 @@
   color: var(--text-dim, #9aa1b8);
 }
 
+.inspect-stats-retry {
+  align-self: flex-start;
+}
+
 .inspect-actions {
   display: flex;
   flex: none;
