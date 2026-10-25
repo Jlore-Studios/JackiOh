@@ -13360,6 +13360,13 @@
     "1820": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T05:01:37Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "small and fully specified, but it is AI work in crates/ai/src (the reply model the search scores against), which the rule puts at hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
