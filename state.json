@@ -50,10 +50,10 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "gpt",
       "round_tier": "medium",
-      "run_id": "40190078092",
-      "started_at": "2026-10-25T11:43:40Z",
+      "run_id": "pending:752a1978-1792930928",
+      "started_at": "2026-10-25T12:22:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -459,9 +459,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T12:05:54Z",
+    "at": "2026-10-25T12:22:55Z",
     "url": "",
-    "what": "review #1908 on claude-7"
+    "what": "build #1817 on gpt"
   },
   "last_sweep": {
     "at": "2026-10-25T12:12:57Z",
