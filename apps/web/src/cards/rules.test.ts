@@ -145,6 +145,12 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1840000–R1840006: Stinkyscape's Resources and Credits, explained on the cards that use them.
     "Gain a Resource",
     "Credits",
+    // R1854000–R1854004: Stinkyscape's staged Quests, which no card prints until the set ships; its card
+    // parts make a term of any its texts bold.
+    "Quest stages",
+    "Complete the current stage",
+    "Hear back",
+    "Steal mana crystals",
   ],
 };
 

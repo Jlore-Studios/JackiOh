@@ -41,7 +41,7 @@ This is the only turn sequence; [[§6.2]] and [[§10.3]] follow it ([[R62]]). Th
 
 ### 2.3 Mana
 
-- Max mana = min(number of turns you have started, 4), plus persistent modifiers. It refreshes to max at the start of your turn. Turn 1: 1 mana; turn 4 onward: 4.
+- Max mana = min(number of turns you have started, 4), plus persistent modifiers. It refreshes to max at the start of your turn. Turn 1: 1 mana; turn 4 onward: 4. The turns you have started are your mana crystals, one more each turn: an effect that steals them (Stinkyscape #7's "steal your enemy's mana crystals") moves that count, inside the min, so the victim's come back one a turn and the thief's never pass 4 ([[R1854003]]).
 - Temporary mana (Mana Well, Fed Fauci, Efficiency Dividend, Genn's Greed, Call to Chaos, The Coin) adds to current mana and can exceed 4. A Refresh (/fullsend) gives back spent mana instead and never takes current above max ([[R364]]). GIGA Glowy Jelly Bean costs 6 and is castable only after such gains.
 - Hinder subtracts from the opponent's next refresh. Mana never goes below 0. While a card holding `no_natural_mana` acts on the field, no player generates mana naturally: each refresh still sets max mana but sets current mana to the next-turn rider only (M #26, [[R941]]); gains and prices still work.
 - Jlarna's credit line ([[R1223]]): while it acts on its controller's field, any mana they spend may go past what they have, owing up to 4 at once; one turn's debt is split into 4 instalments as evenly as possible, larger first, one falling due at each of the borrower's next four refreshes, which give that much less mana; an instalment that finds too little mana takes what there is and the rest is forgiven ([[R1224]]). Mana never goes below 0.

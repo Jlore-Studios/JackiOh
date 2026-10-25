@@ -1229,6 +1229,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub lost_refresh_through: Option<i32>,
+    /// R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
+    /// started", inside the cap): negative once theirs were stolen, positive once they stole some
+    /// (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
+    /// hashes as it did before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_crystals: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
     /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
     /// hashes as it did before this field existed.
@@ -1828,6 +1835,7 @@ pub fn create_player_state() -> PlayerState {
         hand_cap: None,
         jade: None,
         lost_refresh_through: None,
+        mana_crystals: None,
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,

@@ -157,6 +157,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `freeze::frozen_forever(card)` | whether a Unit is Frozen forever, which never thaws (R1848000) |
 | `subsystems::feng_shui::{last_element, element_preview}` | the last-played elements and their `preview` lines (R982, Meditative #40) |
 | `subsystems::activation_paid(ctx)` | what an Activate paid (R384, C #21) |
+| `subsystems::completed_stage_of(ctx, event)`, `subsystems::quest_stages_of(state, card)`, `subsystems::quest_memory_of(card)` | the stage (1 for the first) a staged quest's own `questCompleted` names, its stages, and its line: the stage it stands at and its wait to hear back (R1854000, R1854004, Stinkyscape #7, #112) |
 
 Board facts live in `crates/engine/src/query.rs`; if the one you need is missing, add it there and
 test it there. Randomness goes through `ctx`'s rng and every pool through `catalog.query` (§3).

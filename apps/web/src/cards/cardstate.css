@@ -142,6 +142,21 @@
   font-size: calc(var(--cf-state-size) * 0.48);
 }
 
+/* R1854000: a staged quest's stage, "2/3", the quest pill's shape in a plain ring. */
+.cf .cf-state[data-state="questStage"] {
+  width: auto;
+  min-width: var(--cf-state-size);
+  padding: 0 0.3em;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 max(1px, 0.5cqw) var(--text-dim, #9aa1b8),
+    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+}
+
+.cf .cf-state[data-state="questStage"] .cf-state-text {
+  font-size: calc(var(--cf-state-size) * 0.48);
+}
+
 /* The "+n" a small face folds the rest of its badges into (STATE_BADGES_SMALL_MAX, constants.ts). */
 .cf .cf-states-more {
   display: none;

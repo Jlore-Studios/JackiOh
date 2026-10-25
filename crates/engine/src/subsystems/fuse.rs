@@ -1278,6 +1278,8 @@ fn combine_objects(records: &[Script]) -> Script {
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),
         quests: combine_quests(records),
+        // R1854000: a list, the ingredients' stages in order.
+        stages: concat(records.iter().map(|s| s.stages.clone())),
         tribute_when: None,
         would_counter: None,
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),

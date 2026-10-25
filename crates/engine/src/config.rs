@@ -582,6 +582,12 @@ pub const INFLATION_ROLL_SIDES: i32 = 100;
 /// R1848006: what Inflation adds to a card's price when it hits ("cost (1) more").
 pub const INFLATION_COST: i32 = 1;
 
+// ---- Stinkyscape's staged Quests (issue #1854, R1854000–R1854004) ----
+
+/// R1854000: the number of a staged quest's first stage, the one that opens as the card enters (its
+/// stages count from it: `completed_stage_of`, `open_stage`, `QuestMemory.stage`).
+pub const FIRST_QUEST_STAGE: u32 = 1;
+
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // generation (E19, E23–E25), below A6a's prompts constants:

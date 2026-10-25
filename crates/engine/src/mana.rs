@@ -18,11 +18,48 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// "min(number of turns you have started, 4), plus persistent modifiers". `nextTurnMod` is not one of
 /// those: it is a one-shot rider on a single refresh, which the refresh spends and clears, so it never
 /// reaches max mana. Hinder and every other modifier apply on top of the capped value exactly as for
-/// a human.
+/// a human. R1854003: the crystals a steal moved count with the turns, inside the cap
+/// (`mana_crystal_count`).
 pub fn max_mana_for(side: &PlayerState) -> i32 {
     let handicap = handicap_of(side);
-    let base = (side.turns_started + handicap.mana_bonus).min(handicap.mana_cap);
+    let base = mana_crystal_count(side).min(handicap.mana_cap);
     (base + side.mana.perm_mod).max(0)
+}
+
+/// R1854003: a player's mana crystals before the cap — the turns they have started and their seat's
+/// mana bonus (R181), moved by the crystals effects stole from them or gave them (`mana_crystals`).
+/// It is Hearthstone's count of crystals: one more each turn, never past the cap.
+pub fn mana_crystal_count(side: &PlayerState) -> i32 {
+    side.turns_started + handicap_of(side).mana_bonus + side.mana_crystals.unwrap_or(0)
+}
+
+/// R1854003: `thief` steals `victim`'s mana crystals. The victim's crystals go, so their maximum mana
+/// falls to their persistent modifiers alone (0 on every shipped card) and their current mana by as
+/// much, never below 0; the crystals come back one a turn, as any player's do (§2.3). The thief gains
+/// as many as the victim lost, full, up to their cap, so a thief at the cap gains none. Both sides'
+/// `mana.max` is set at once. Returns the maximum mana the victim lost and the crystals the thief
+/// gained; the caller reports each side whose mana changed (`mana_event`).
+pub fn move_mana_crystals(state: &mut GameState, thief: PlayerId, victim: PlayerId) -> (i32, i32) {
+    let side = &mut state.players[victim];
+    let count = mana_crystal_count(side);
+    let before = side.mana.max;
+    if count > 0 {
+        side.mana_crystals = Some(side.mana_crystals.unwrap_or(0) - count).filter(|moved| *moved != 0);
+    }
+    side.mana.max = max_mana_for(side);
+    let lost = (before - side.mana.max).max(0);
+    side.mana.current = (side.mana.current - lost).max(0);
+
+    let side = &mut state.players[thief];
+    let room = (handicap_of(side).mana_cap - mana_crystal_count(side)).max(0);
+    let gained = lost.min(room);
+    if gained > 0 {
+        let held = side.mana.max;
+        side.mana_crystals = Some(side.mana_crystals.unwrap_or(0) + gained).filter(|moved| *moved != 0);
+        side.mana.max = max_mana_for(side);
+        side.mana.current += side.mana.max - held;
+    }
+    (lost, gained)
 }
 
 /// R169: the id the next refresh's rider (`mana.nextTurnMod`, §6.3 Mana: "'next turn' mana is stored

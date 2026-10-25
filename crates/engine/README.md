@@ -99,6 +99,12 @@ so a fold of a game played on an older catalog version reads that version's card
   Dormant Starship's one ability is the engine's launch (`launch_decl`, priced by `launch_cost`), and
   its awakening, however it comes, is its launch (`slumber::awaken_card` calls `launch`). Its memory is
   `CardInstance.starship`, absent on every other card.
+- `subsystems::quests` keeps every quest line: In Too Deep's tree (`Script.quests`, R404) and a staged
+  quest's stages (`Script.stages`, R1854000), run on the same `memory.quest`, with the goals the
+  Stinkyscape set's stages count (R1854002); the verbs that move a line or complete it are the
+  effects' (`effects/quests.rs`: `complete_quests`, `complete_this_quest`, `open_stage`, `next_stage`,
+  `hear_back`), and "steal your enemy's mana crystals" is `effects::steal_mana_crystals`, the count
+  `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
