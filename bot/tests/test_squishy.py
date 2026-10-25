@@ -301,7 +301,8 @@ class StatisticsSectionTests(unittest.TestCase):
             return subprocess.CompletedProcess(argv, 0, "## 🫧 Squishy\n", "")
         seen: list[tuple[str, ...]] = []
 
-        def update(ctx, extra=(), *, stats=False, stats_extra=tuple, force_stats=False):
+        def update(ctx, extra=(), *, stats=False, stats_extra=tuple, force_stats=False,
+                   read_cards=None):
             seen.append(stats_extra())
             return "rewrote #148"
         with mock.patch.object(main_mod.subprocess, "run", run), offline(), \
