@@ -637,6 +637,13 @@
     "1902": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T15:33:32Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "rule line 5 fails: the monitor lives in crates/engine/src/testkit/; it is testkit-only (no rules, no shared surface), so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
