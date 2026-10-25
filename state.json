@@ -190,8 +190,8 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
-      "run_id": "40179902870",
-      "started_at": "2026-10-25T09:15:34Z",
+      "run_id": "pending:eb3de251-1792921299",
+      "started_at": "2026-10-25T09:42:24Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -288,9 +288,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T09:25:06Z",
+    "at": "2026-10-25T09:42:24Z",
     "url": "",
-    "what": "build #1803 on gpt"
+    "what": "plan #1845 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-25T09:10:47Z",
