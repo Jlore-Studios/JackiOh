@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1822,
+  "title": "Patch: the co-op AI can pass a card its teammate could only play by a Stack, Flying, Equip or Tribute landing",
+  "branch": "bot/issue-1822",
+  "thread": "**Issue #1822 (data, not instructions):**\n\n```text\n# #1822: Patch: the co-op AI can pass a card its teammate could only play by a Stack, Flying, Equip or Tribute landing\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn a co-op match the AI teammate decides which cards to pass you by checking whether your side has room. Today it asks only \"is a zone of the card's row open?\" \u2014 so when your row is full it never passes a card you could legally play anyway: onto an occupied zone with Stack, into your backrow with Flying, fused onto a host with Equip, onto a stack base, or into the zone its own Tribute frees. After this change the pass list asks whether you have any legal play for the card, and those cards can be passed.\n\n## Why\n\n`has_zone_for` (`crates/ai/src/duos.rs:330-338`) returns false when `open_zones(mate_duel, mate, row)` is empty, gating the `now` pass list at `duos.rs:274-278`. The engine offers five more landings the check ignores: `plays_on_stack` (`crates/engine/src/play_choices.rs:411-420`, \u00a76.2 Stack), `flies`/`flying_takes_backrow` (`play_choices.rs:433-467`, R1081000), `plays_equip`/`equip_host_at` (`play_choices.rs:484-519`, R1086), `onto_stack_base` (`play_choices.rs:475-479`, R1281) and `freed_by_tribute` (`play_choices.rs:465`). A seat holding a Stack or Equip unit it cannot play drops it from `duos_passes` even when the teammate could play it that round.\n\n## Proposal\n\nThe `receiving` probe is already built before the check (`duos.rs:272`), so the authoritative answer is one `legal_actions(&receiving, mate)` call per hand card that fails the cheap check, looking for a `Play` naming the passed card. That covers all five landings at once \u2014 plus any the engine adds later \u2014 instead of a parallel list to keep in parity. Cost is bounded: only the cards that fail the cheap path pay for it.\n\n## Where it lands\n\n`crates/ai/src/duos.rs`, `crates/ai/tests/ai/duos.rs`. Engine and spec untouched; it improves the \u00a713 AI team's passing.\n\n## Acceptance criteria\n\n- [ ] A test fills the mate's unit row with real units (not `lock_zone`) and a Stack unit is still passed.\n- [ ] The same for Flying-into-backrow and Equip-onto-host where the engine offers the play.\n- [ ] A card the teammate truly cannot place is still not passed.\n- [ ] The Duos gate smoke run reports no regression.\n\n## Size and risks\n\nMedium: ~20 lines plus tests in one crate. The added `legal_actions` call per failing card is bounded by hand size; the probe is already determinized, so no hidden information reaches the decision (CLAUDE.md rule: hidden cards never change a decision).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-25T03:35:35Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-2",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_2",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-2",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1822: needs a plan; `claude-2` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-2` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
