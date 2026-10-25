@@ -13254,6 +13254,7 @@
         "tier": "medium",
         "why": "the planner gave no rating line"
       },
+      "failures": 0,
       "handoff": {
         "at": "2026-10-25T01:09:06Z",
         "family": "gemini",
@@ -13271,13 +13272,15 @@
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
+      "pr": 1830,
       "provider": "claude-2",
+      "question": "",
       "round_tier": "medium",
       "run_id": "40149762404",
       "started_at": "2026-10-25T01:13:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1
+      "verdict_rounds": 3
     },
     "1817": {
       "action": "plan",
