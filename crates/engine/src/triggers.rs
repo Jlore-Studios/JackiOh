@@ -56,7 +56,7 @@
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
-use crate::config::{BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, DRY_RUN_SETTLE_PASSES, LIBRARY_CAP, UNIT_ZONES};
+use crate::config::{BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES};
 use crate::resolve::HookName;
 use crate::script::{EngineSink, Script, TriggerDef};
 use crate::state::{
@@ -1242,9 +1242,6 @@ pub struct Frontier {
     /// The position in the action's list of each event this action took into `state.dispatch`, by its
     /// dispatch item's `seq`: TS's identity of a frontier item with the list's own object.
     pub positions: IndexMap<u32, usize>,
-    /// R1803000: the passes of `settle` a dry run has made so far, across every loop nested in it
-    /// (`DRY_RUN_SETTLE_PASSES`). Counted only while the sink is dry running.
-    pub dry_passes: usize,
 }
 
 /// Where a sink keeps its `Frontier`: its own, for the sink an action begins with
@@ -1418,10 +1415,6 @@ pub fn settle(sink: &mut SettleSink<'_>, options: SettleOptions) {
     // piece of owed work or a queued trigger (a trap runs its own check as it fires, `traps::fire_trap`).
     let mut check_due = options.hold_check != Some(true);
     for _pass in 0..SETTLE_PASS_CAP {
-        // R1803000: a dry run that has spent its passes stops here and is read as it stands.
-        if dry_run_spent(sink) {
-            return;
-        }
         // First, so a pause below leaves nothing owed on the sink (§9.3).
         dispatch_new_events(sink);
         if sink.state.result.is_some() {
@@ -1463,17 +1456,6 @@ pub fn settle(sink: &mut SettleSink<'_>, options: SettleOptions) {
         check_due = true;
     }
     panic!("the resolution loop did not settle in {SETTLE_PASS_CAP} passes (§10.3)");
-}
-
-/// R1803000: counts one more pass of a dry run's resolution loops and says whether it has spent
-/// `DRY_RUN_SETTLE_PASSES`. Never true outside a dry run, where `SETTLE_PASS_CAP` stays the bound.
-fn dry_run_spent(sink: &mut EngineSink<'_>) -> bool {
-    if !sink.dry_running {
-        return false;
-    }
-    let frontier = sink.frontier.get_mut();
-    frontier.dry_passes += 1;
-    frontier.dry_passes > DRY_RUN_SETTLE_PASSES
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
