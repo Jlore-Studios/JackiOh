@@ -132,6 +132,31 @@
         "status": "allowed_warning"
       }
     },
+    "claude-4": {
+      "spent": [
+        {
+          "at": "2026-10-25T09:13:17Z",
+          "minutes": 61.7
+        }
+      ],
+      "tokens_spent": [
+        {
+          "at": "2026-10-25T09:13:17Z",
+          "cache": 21475545,
+          "cost": 7.9996,
+          "input": 260,
+          "output": 86445
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T14:00:00Z",
+          "utilization": 0.01
+        },
+        "observed_at": "2026-10-25T09:13:17Z",
+        "status": "allowed"
+      }
+    },
     "claude-6": {
       "spent": [
         {
