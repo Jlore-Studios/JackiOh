@@ -99,9 +99,11 @@ function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-/** The script's problems, checked a moment after the last edit; stale answers are dropped. */
-function useScriptCheck(card: CustomCard, check: CreatorApi["check"]): ScriptCheck {
+/** The script's problems, checked a moment after the last edit; stale answers are dropped. The second value asks again after a check that failed, with no edit. */
+function useScriptCheck(card: CustomCard, check: CreatorApi["check"]): [ScriptCheck, () => void] {
   const [result, setResult] = useState<ScriptCheck>({ kind: "checking" });
+  /** Bumped by the failed check's Try again, which asks again for the same script. */
+  const [attempt, setAttempt] = useState(0);
   const asked = useRef(0);
   const source = card.source;
   const latest = useRef(card);
@@ -121,8 +123,9 @@ function useScriptCheck(card: CustomCard, check: CreatorApi["check"]): ScriptChe
       );
     }, CHECK_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [source, check]);
-  return result;
+  }, [source, check, attempt]);
+  const retry = useCallback(() => setAttempt((before) => before + 1), []);
+  return [result, retry];
 }
 
 function Preview({ card }: { card: CustomCard }): ReactElement {
@@ -180,7 +183,7 @@ function Editor({
       return [];
     }
   }, [card]);
-  const script = useScriptCheck(card, check);
+  const [script, retryCheck] = useScriptCheck(card, check);
   const problems = script.kind === "checked" && script.source === draft.source ? script.problems : [];
   const issues = save.kind === "refused" && save.issues.length > 0 ? save.issues : frameIssues;
   const refusal = builderRefusal(draft);
@@ -259,9 +262,12 @@ function Editor({
           </p>
         ) : null}
         {script.kind === "failed" ? (
-          <p className="creator-error" role="alert">
-            {t("The script could not be checked: {message}", { message: script.message })}
-          </p>
+          <div className="creator-error" role="alert">
+            <p>{t("The script could not be checked: {message}", { message: script.message })}</p>
+            <button type="button" className="button-secondary" data-testid={creatorTestid.checkRetry} onClick={retryCheck}>
+              {t("Try again")}
+            </button>
+          </div>
         ) : null}
         <ScriptProblems problems={problems} />
       </div>

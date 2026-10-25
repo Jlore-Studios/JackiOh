@@ -17,6 +17,8 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
   const [stat, setStat] = useState<PublicCardStat | null>(null);
   const [minSample, setMinSample] = useState<number>(20);
   const [error, setError] = useState(false);
+  /** Bumped by Try again, which loads the card's statistics again. */
+  const [attempt, setAttempt] = useState(0);
 
   useLocale();
   const playerStats = usePlayerStats();
@@ -46,7 +48,7 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
       cancelled = true;
       controller.abort();
     };
-  }, [cardId]);
+  }, [cardId, attempt]);
 
   if (loading) {
     return (
@@ -62,6 +64,11 @@ export function CardStatsBlock({ cardId }: CardStatsBlockProps): ReactElement {
       <div className="inspect-stats inspect-stats--error" data-testid={INSPECT_STATS}>
         <span className="inspect-stats-title">{t("Statistics")}</span>
         <p className="inspect-stats-unavailable">{t("Statistics unavailable")}</p>
+        {error ? (
+          <button type="button" className="inspect-stats-retry" onClick={() => setAttempt((before) => before + 1)}>
+            {t("Try again")}
+          </button>
+        ) : null}
       </div>
     );
   }
