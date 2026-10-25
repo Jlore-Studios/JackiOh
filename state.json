@@ -5,60 +5,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:6273319171": {
-      "at": "2026-10-19T17:36:05Z",
-      "lines": [
-        "@jgoetzmann-bot Revise this with the owner's numbers. #1294's table wasn't readable from the build, so most values here are placeholders that don't match the design. Auto-merge is off until this is fixed."
-      ]
-    },
-    "c:6277163180": {
-      "at": "2026-10-19T20:59:14Z",
-      "lines": [
-        "@jgoetzmann-bot revise close out merge conflict then force push it --force"
-      ]
-    },
-    "c:6278053541": {
-      "at": "2026-10-19T21:43:35Z",
-      "lines": [
-        "@jgoetzmann-bot Here is #1294's Numbers table, from the owner. Set these values and drop the invented ones."
-      ]
-    },
-    "c:6280918275": {
-      "at": "2026-10-20T01:07:44Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6280925841": {
-      "at": "2026-10-20T01:08:20Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6280930241": {
-      "at": "2026-10-20T01:08:40Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6280935298": {
-      "at": "2026-10-20T01:09:04Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6280940971": {
-      "at": "2026-10-20T01:09:34Z",
-      "lines": [
-        "Approve"
-      ]
-    },
-    "c:6280949177": {
-      "at": "2026-10-20T01:10:11Z",
-      "lines": [
-        "Reject"
-      ]
-    },
     "c:6283151712": {
       "at": "2026-10-20T04:10:40Z",
       "lines": [
@@ -793,6 +739,12 @@
     },
     "c:6387188855": {
       "at": "2026-10-24T17:16:58Z",
+      "lines": [
+        "approve"
+      ]
+    },
+    "c:6393001648": {
+      "at": "2026-10-25T03:33:56Z",
       "lines": [
         "approve"
       ]
