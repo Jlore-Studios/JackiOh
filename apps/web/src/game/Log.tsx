@@ -109,6 +109,11 @@ function whoseLabel(view: PlayerView, player: PlayerId): string {
   return sideOf(view, player) === "you" ? t("your") : t("the opponent's");
 }
 
+/** R1843000: the player a vote would remove, as the object of the line. */
+function removedLabel(view: PlayerView, player: PlayerId): string {
+  return sideOf(view, player) === "you" ? t("you") : t("your opponent");
+}
+
 /** The log's own words ("your hero", "a unit") open a line with a capital; a card's name is as printed. */
 const OWN_WORDS = /^(?:a|an|your|the) /;
 
@@ -402,7 +407,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "emoted":
       return t("{seat} emoted", { seat: name.seat(event.player) });
     case "gameOver": {
-      const why = t(resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason));
+      const why = t(resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason, event.winner));
       return event.winner === "draw" ? t("Draw. {why}", { why }) : t("{seat} won. {why}", { seat: seatLabel(view, event.winner), why });
     }
     // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
@@ -524,6 +529,39 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "marketCreditsChanged":
       // R1840005: Credits are public.
       return capitalised(t("{whose} Credits are {value}", { whose: name.whose(event.player), value: event.value }));
+    case "starshipFused":
+      // R1852000: a piece died, and a copy of it fused into its owner's Dormant Starship.
+      return t("{card} fused into {whose} Dormant Starship ({n} pieces)", {
+        card: name.def(event.defId),
+        whose: name.whose(event.player),
+        n: event.pieces,
+      });
+    case "starshipLaunched":
+      // R1852003: the Starship launched under the name it took.
+      return capitalised(t("{whose} Starship launched as {name}", { whose: name.whose(event.player), name: event.name }));
+    case "voteCast":
+      // R1843000: a card voted against a player; the tally counts toward `needed`.
+      return capitalised(
+        t("{card} voted to remove {who} ({votes} of {needed})", {
+          card: name.card(event.instanceId, event.defId),
+          who: removedLabel(view, event.player),
+          votes: event.votes,
+          needed: event.needed,
+        }),
+      );
+    case "votedOut":
+      // R1843000: the cards that agreed, by name (a card the viewer may not read is "a hidden card").
+      return capitalised(
+        t("{cards} agreed: {who} removed from the game", {
+          cards: event.ballots.map((ballot) => name.card(ballot.instanceId, ballot.defId)).join(listSeparator()),
+          who: removedLabel(view, event.player),
+        }),
+      );
+    case "fled":
+      // R1843002: the escape, and what it leaves the other player.
+      return event.opponent === "loss"
+        ? t("{seat} escaped the universe, leaving the other side a loss", { seat: name.seat(event.player) })
+        : t("{seat} escaped the universe, leaving the other side a draw", { seat: name.seat(event.player) });
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

@@ -194,6 +194,8 @@ const S2 = {
     chaosRolled: "Call to Chaos:",
     turnCutShort: "Turn cut short",
     autopilot: "The AI takes the turn",
+    votedOut: "Voted out",
+    escaped: "Escaped the universe",
     victory: "Victory",
     defeat: "Defeat",
     draw: "Draw",

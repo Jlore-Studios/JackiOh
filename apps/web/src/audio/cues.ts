@@ -65,6 +65,7 @@ import type {
 } from "@jackioh/shared";
 
 import { themeFor } from "../cards/art/themes.ts";
+import { seatOutcome } from "../game/outcome.ts";
 import { armorTookHalf, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { slamStatsOf, slamTier } from "../game/unitSlam.ts";
 import {
@@ -595,8 +596,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   gameOver: {
     sfx: "victory",
     cues: (event, ctx) => {
-      if (event.winner === "draw") return [sfx("notify")];
-      return event.winner === ctx.view.viewer ? [sfx("victory")] : [sfx("defeat")];
+      // R1843004: the other player's `fled` is this seat's draw, so it sounds as one.
+      const outcome = seatOutcome(event.winner, event.reason, ctx.view.viewer);
+      if (outcome === "draw") return [sfx("notify")];
+      return outcome === "win" ? [sfx("victory")] : [sfx("defeat")];
     },
   },
 
@@ -688,6 +691,18 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   resourceDiscarded: { sfx: "draw", cues: () => [sfx("draw")] },
   // R1840005: the Credits count ticks, as the Jade Counter's does.
   marketCreditsChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+  // R1852000: a dead piece's copy docks into its owner's Dormant Starship, which grows by it (the
+  // `fused` before it plays the fuse itself).
+  starshipFused: { sfx: "buff", cues: () => [sfx("buff")] },
+  // R1852003: a Starship launches, with the entrance a big arrival makes.
+  starshipLaunched: { sfx: "entrance", cues: () => [sfx("entrance")] },
+
+  // ---- Issue #1843: voted out and fled (R1843000–R1843002) ----
+  // A vote drops like a counter's tick; the agreement that removes a player stings; the escape
+  // whooshes away, and the `gameOver` behind both sounds the result.
+  voteCast: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+  votedOut: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
+  fled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */
@@ -716,6 +731,10 @@ function unitOf(event: GameEvent): string | null {
       return event.targetId;
     case "fused":
       return event.resultInstanceId;
+    // R1852000, R1852003: the Starship docked into or launched.
+    case "starshipFused":
+    case "starshipLaunched":
+      return event.instanceId;
     case "attackDeclared":
       return event.attackerId;
     case "divineShieldLost":

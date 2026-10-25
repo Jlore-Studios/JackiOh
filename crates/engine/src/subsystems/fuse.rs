@@ -548,9 +548,31 @@ fn build_def(
         // it even when the id is only a digest of it.
         ingredients: Some(specs),
         craft: None,
-        base: fused_face(ingredients, defs, false, forced),
-        radiant: fused_face(ingredients, defs, true, forced),
+        base: kept_piece_only(
+            fused_face(ingredients, defs, false, forced),
+            target_def.map(|def| &def.base),
+        ),
+        radiant: kept_piece_only(
+            fused_face(ingredients, defs, true, forced),
+            target_def.map(|def| &def.radiant),
+        ),
     }
+}
+
+/// R1852001: a fusion that keeps a card prints Starship Piece only when the kept card's own face does,
+/// so a piece fused onto a card that is no piece — an Equip onto its host, a copy into the Starship —
+/// leaves it no piece. A fusion that keeps no card unites the keyword as it unites every other (R77).
+fn kept_piece_only(mut face: CardFace, kept: Option<&CardFace>) -> CardFace {
+    if let Some(kept) = kept
+        && !kept
+            .keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+    {
+        face.keywords
+            .retain(|keyword| keyword.kind() != KeywordKind::StarshipPiece);
+    }
+    face
 }
 
 /// R470: what "its cost doesn't change" writes, read off the kept card before it becomes the fusion:
@@ -1151,6 +1173,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 embiggen_garden: least_number(defined.iter().map(|f| f.embiggen_garden)),
                 // R1839000: a card fused from a Dormant ingredient prints the first ingredient's Dormant.
                 slumber: defined.iter().find_map(|f| f.slumber.clone()),
+                // R1852000: a fusion the Dormant Starship is in is still its hull.
+                starship_hull: any_flag(defined.iter().map(|f| f.starship_hull)),
             })
         }
     }
@@ -1254,6 +1278,8 @@ fn combine_objects(records: &[Script]) -> Script {
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
         graveyard_triggers: lists_of_triggers(|s| s.graveyard_triggers.clone()),
         quests: combine_quests(records),
+        // R1854000: a list, the ingredients' stages in order.
+        stages: concat(records.iter().map(|s| s.stages.clone())),
         tribute_when: None,
         would_counter: None,
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
@@ -1938,7 +1964,15 @@ fn keep_instance(
         .iter()
         .flat_map(|card| card.granted_keywords.iter().cloned())
         .collect();
-    let granted = union_keywords(&all_granted);
+    let mut granted = union_keywords(&all_granted);
+    // R1852001: and keeps a granted Starship Piece only when the kept card had it granted itself.
+    if !kept
+        .granted_keywords
+        .iter()
+        .any(|keyword| keyword.kind() == KeywordKind::StarshipPiece)
+    {
+        granted.retain(|keyword| keyword.kind() != KeywordKind::StarshipPiece);
+    }
     let before = crate::catalog::def_of(Some(&*state), &kept.def_id).clone();
 
     // R102: the price each ingredient's text reads as its own, recorded before any of them ceases to

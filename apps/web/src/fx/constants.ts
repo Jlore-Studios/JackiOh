@@ -225,6 +225,10 @@ export const FX_TEXT = {
   turnCutShort: "Turn cut short",
   /** R1183002: the AI plays the rest of the turn (Meditative+ #18). */
   autopilot: "The AI takes the turn",
+  /** R1843000: a full tally removes a player. */
+  votedOut: "Voted out",
+  /** R1843002: a player escaped the universe. */
+  escaped: "Escaped the universe",
   victory: "Victory",
   defeat: "Defeat",
   draw: "Draw",

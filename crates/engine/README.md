@@ -93,6 +93,18 @@ so a fold of a game played on an older catalog version reads that version's card
   `preview::lasting_text_off` turns its text off, so a new rule that reads Units, acting cards or
   lasting text through them gets Dormant right for nothing. Its identifiers say slumber and awaken,
   never dormant, which names a card beneath a Stack pile (`zones::dormant_units_of`, R13).
+- `starship.rs` is the Starship (§6.1 Starship Piece and Starship, §6.2 When launched, §6.3 Launch,
+  R1852000–R1852007): a piece that dies fuses a copy of itself into its owner's Dormant Starship at
+  the death pass's end (`state_check`'s last step), summoning `DORMANT_STARSHIP_DEF_ID` first; a
+  Dormant Starship's one ability is the engine's launch (`launch_decl`, priced by `launch_cost`), and
+  its awakening, however it comes, is its launch (`slumber::awaken_card` calls `launch`). Its memory is
+  `CardInstance.starship`, absent on every other card.
+- `subsystems::quests` keeps every quest line: In Too Deep's tree (`Script.quests`, R404) and a staged
+  quest's stages (`Script.stages`, R1854000), run on the same `memory.quest`, with the goals the
+  Stinkyscape set's stages count (R1854002); the verbs that move a line or complete it are the
+  effects' (`effects/quests.rs`: `complete_quests`, `complete_this_quest`, `open_stage`, `next_stage`,
+  `hear_back`), and "steal your enemy's mana crystals" is `effects::steal_mana_crystals`, the count
+  `PlayerState.mana_crystals` moves inside §2.3's cap (R1854003).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
@@ -142,11 +154,13 @@ Every rules number is a named constant in `src/config.rs` (BUILD §2), the "deci
 R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
 `TRAINING_UNBAN`: each lane's games, pairing and wins) and Duos's team rules (§13.4, §13.7:
 `DUOS_OWN_HEALTH`, `DUOS_POOL_HEALTH`, `DUOS_POOL_HEALTH_HARD`, `DUOS_PASS_COST`, `DUOS_PASS_CAP`,
-`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`) and the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
+`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`), the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
-`trade::trades_per_turn_of`) and the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
-R1840000–R1840002, `resources.rs`). The ones the web reads are written to
-`apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
+`trade::trades_per_turn_of`), the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
+R1840000–R1840002, `resources.rs`) and #1843's two endings: `VOTE_TALLY_SIZE`, the votes in one turn
+that remove a player (R1843000), and `LOSER_DRAWS_REASONS`, the endings that leave the winner's
+opponent a draw (`fled`), which `game_over::seat_outcome` reads for every seat's result (R1843004).
+The ones the web reads are written to `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript
 

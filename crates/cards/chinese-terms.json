@@ -72,7 +72,9 @@
     "Cloaked": "隐匿",
     "Crater": "陨坑",
     "Flashback": "闪回",
-    "Tradable": "可交易"
+    "Tradable": "可交易",
+    "Starship Piece": "星舰部件",
+    "Starship": "星舰"
   },
   "labels": {
     "Cry:": "战吼：",
@@ -127,6 +129,8 @@
     "Crater": { "label": "陨坑", "rule": "作为单位进入场上时，或作为陷阱被揭示时，锁定其所在区域" },
     "Flashback": { "label": "闪回", "rule": "可以从你的墓地以其法力值消耗打出一次" },
     "Tradable": { "label": "可交易", "rule": "在你的主要阶段，将其从你的手牌洗入你的牌库并抽一张牌，不消耗法力值。每回合一次交易" },
+    "Starship Piece": { "label": "星舰部件", "rule": "死亡时，它的一个复制融合进你的休眠星舰；若你没有，先召唤一艘" },
+    "Starship": { "label": "星舰", "rule": "一艘已发射的星舰，由融合进它的星舰部件建造而成" },
     "Can't be in Defense Position": { "label": "无法成为守备表示", "rule": "永远不会切换为守备表示" },
     "Can't be attacked": { "label": "无法被攻击", "rule": "任何攻击都不能以其为目标" },
     "Only Units in this lane can attack this": { "label": "只有这一纵列的单位可以攻击这个单位", "rule": "只有从其所在纵列的敌方单位区发起的攻击才是合法的" },
@@ -148,6 +152,7 @@
     "Float": { "label": "结余", "rule": "玩家回合结束时未使用的法力值。“结余减费”：每当你结余时，本牌的法力值消耗相应减少" },
     "Activate": { "label": "激活", "rule": "在你的回合中每回合一次，点击这张牌以执行一个效果；“激活X”每回合最多X次，“激活♾️”次数不限" },
     "When this awakens": { "label": "苏醒时", "rule": "当这张休眠的牌苏醒时触发" },
+    "When launched": { "label": "发射时", "rule": "当这张牌所融合进的星舰发射时触发，在其战吼之后" },
     "Discover": { "label": "发现", "rule": "从3个选项中选择1个" },
     "Tribute": { "label": "献祭", "rule": "打出这张牌还需要付出你的X个单位，它们会进入墓地" },
     "Embiggened": { "label": "加码", "rule": "加码牌有两种价格。其普通版本花费较低的价格；其加码版本花费更多，效果也更强。" },
@@ -167,6 +172,7 @@
     "Allure": { "label": "迷惑", "rule": "在你的下个回合开始时夺取被标记的敌方永久物；若你没有空位，将其消灭" },
     "Freeze": { "label": "冻结", "rule": "该单位失去下一次攻击或切换表示形式的机会，并在其本可以这样做的回合结束时解冻" },
     "Awaken": { "label": "唤醒", "rule": "一张休眠的牌立即苏醒" },
+    "Launch": { "label": "发射", "rule": "你的休眠星舰苏醒：融合进它的每个战吼触发，然后每个发射时触发" },
     "Jade Counter": { "label": "玉计数器", "rule": "每名玩家都有的公开计数，只会增加" },
     "Plague Counter": { "label": "瘟疫指示物", "rule": "放置在永久物上的指示物，数量不限，离开场上时清除" },
     "Set health": { "label": "设定生命值", "rule": "一名英雄的生命值变为N" },

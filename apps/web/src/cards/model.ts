@@ -213,6 +213,11 @@ export type FaceModel = {
   dormant?: { turns: number | null } | null;
   /** R1848000: in play, the unit is Frozen forever, so it never thaws (`UnitView.frozenForever`). */
   frozenForever?: boolean;
+  /**
+   * R1852000, R1852005: in play, the card is a Starship (`UnitView.starship`): `pieces` how many
+   * Starship Pieces are fused into it, `launched` whether it has launched; null on every other card.
+   */
+  starship?: { pieces: number; launched: boolean } | null;
   /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
   created?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
@@ -277,6 +282,11 @@ export type InPlay = {
   dormant?: { turns: number | null };
   /** R1848000: the unit is Frozen forever (`UnitView.frozenForever`). */
   frozenForever?: true;
+  /**
+   * R1852000, R1852004: the card is a Starship (`UnitView.starship`): the pieces fused into it, and the
+   * name it took as it launched (null while it is Dormant), which its face prints in place of its own.
+   */
+  starship?: { pieces: number; name: string | null };
   /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
   created?: true;
   /** R437: the marks on the card (`CardView.marks`). */
@@ -372,7 +382,8 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   return {
     defId: source.defId,
     known: def !== undefined,
-    name: def?.name ?? source.name ?? source.defId,
+    // R1852004: a launched Starship prints the name it took.
+    name: inPlay?.starship?.name ?? def?.name ?? source.name ?? source.defId,
     type,
     // MD-B15, R923: in play a face lists the view's tags; outside play the definition's.
     tags: source.inPlay !== undefined && source.tags !== undefined ? source.tags : (def?.tags ?? []),
@@ -411,6 +422,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     frozen: inPlay?.frozen === true,
     dormant: inPlay?.dormant ?? null,
     frozenForever: inPlay?.frozenForever === true,
+    starship: inPlay?.starship === undefined ? null : { pieces: inPlay.starship.pieces, launched: inPlay.starship.name !== null },
     created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],

@@ -26,6 +26,7 @@ import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { prefersReducedMotion } from "./animations.ts";
 import { testid } from "./contract.ts";
+import { seatOutcome } from "./outcome.ts";
 import { revealedOpponentHand } from "./reveal.ts";
 import { TheirHand, TheirHandButton, type TheirHandProps } from "./TheirHand.tsx";
 import { FX_LETHAL_LEAD_MAX_MS, FX_RESULT_MS } from "../fx/constants.ts";
@@ -38,16 +39,19 @@ type Result = NonNullable<PlayerView["result"]>;
 export type ResultOutcome = "win" | "loss" | "draw";
 export type ResultForm = "panel" | "chip";
 
+/** R1843004: the other player's `fled` is a draw for the viewer (`outcome.ts`). */
 export function outcomeFor(result: Result, viewer: PlayerId): ResultOutcome {
-  if (result.winner === "draw") return "draw";
-  return result.winner === viewer ? "win" : "loss";
+  return seatOutcome(result.winner, result.reason, viewer);
 }
 
 /** BUILD M5-T4's overlay words, which e2e reads (`cy.expectResult`). */
 export const RESULT_WORD: Readonly<Record<ResultOutcome, string>> = { win: "Win", loss: "Loss", draw: "Draw" };
 
-/** Why the game ended, as the viewer would say it. Every `GameOverReason` has a sentence. */
-export function resultReason(outcome: ResultOutcome, reason: GameOverReason): string {
+/**
+ * Why the game ended, as the viewer would say it. Every `GameOverReason` has a sentence. `winner` is
+ * the result's, which tells a draw by two fleers from the other player's flight (R1843002).
+ */
+export function resultReason(outcome: ResultOutcome, reason: GameOverReason, winner: PlayerId | "draw" | null = null): string {
   switch (reason) {
     case "hero-death":
       return outcome === "win" ? "The opposing hero has fallen." : "Your hero has fallen.";
@@ -75,6 +79,21 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason): st
     case "won-by-effect":
       // R850: an effect won the game outright.
       return outcome === "win" ? "Your card won the game." : "Your opponent's card won the game.";
+    case "voted-out":
+      // R1843000: a player's tally filled, and the cards that voted removed them.
+      return outcome === "win" ? "Your opponent was voted out of the game." : "You were voted out of the game.";
+    case "both-voted-out":
+      // R1843001: both tallies filled at once.
+      return "Both players were voted out together.";
+    case "fled":
+      // R1843002, R1843004: a win for the fleer and a draw for the other player; two fleers draw.
+      if (outcome === "win") return "You escaped the universe. Your opponent draws.";
+      return winner === "draw" ? "Both players escaped the universe." : "Your opponent escaped the universe. You draw.";
+    case "fled-decisive":
+      // R1843002: the fleer chose a loss for the other player.
+      return outcome === "win"
+        ? "You escaped the universe and left your opponent behind."
+        : "Your opponent escaped the universe and left you behind.";
   }
 }
 
@@ -172,7 +191,7 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
         style={delay}
       >
         <strong className="result-overlay__word">{t(RESULT_WORD[outcome])}</strong>
-        <span className="result-overlay__reason">{t(resultReason(outcome, result.reason))}</span>
+        <span className="result-overlay__reason">{t(resultReason(outcome, result.reason, result.winner))}</span>
         {shownForm === "panel" && theirHand !== null ? <TheirHand view={theirHand.view} cards={theirHand.cards} /> : null}
         {shownForm === "panel" ? (
           <div className="result-overlay__actions" ref={firstAction}>

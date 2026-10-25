@@ -603,6 +603,8 @@ mod generator {
             ActivationUses,
             GameEventType,
             GameEvent,
+            Ballot,
+            FleeOpponent,
             ReplacementMoment,
             ReplacementWhere,
             ReplacementInstead,

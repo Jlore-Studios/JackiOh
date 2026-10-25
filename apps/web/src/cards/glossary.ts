@@ -72,6 +72,9 @@
 // Issue #1839 (R1839000–R1839002) adds §6.1's Dormant, a status that is no keyword kind, §6.2's "When
 // this awakens" and §6.3's Awaken. No card prints them yet (Stinkyscape's cards will); a card under a
 // Stack pile's top is "buried" to a player, never Dormant (§3.2).
+//
+// Issue #1852 (R1852000–R1852007) adds §6.1's Starship Piece and Starship, keyword kinds, §6.2's "When
+// launched" and §6.3's Launch. No card prints them yet (Stinkyscape's cards will).
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -89,7 +92,8 @@ export type TriggerTermId =
   | "Quickdraw"
   | "Float"
   | "Activate"
-  | "When this awakens";
+  | "When this awakens"
+  | "When launched";
 export type VerbTermId =
   | "Discover"
   | "Tribute"
@@ -117,6 +121,7 @@ export type VerbTermId =
   | "Allure"
   | "Freeze"
   | "Awaken"
+  | "Launch"
   | "Jade Counter"
   | "Exile"
   | "Hand size"
@@ -241,6 +246,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     "Tradable",
     "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
   ),
+  // Issue #1852 (R1852000–R1852003): Stinkyscape's two, which no card prints yet.
+  "Starship Piece": keyword(
+    "Starship Piece",
+    "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
+  ),
+  Starship: keyword("Starship", "A launched Starship, built from the Starship Pieces fused into it"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -304,6 +315,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   ),
   // R1839002: a Dormant card's own trigger.
   "When this awakens": trigger("When this awakens", "When this Dormant card awakens"),
+  // R1852003: a Starship Piece's trigger, which runs once it is part of a Starship that launches.
+  "When launched": trigger("When launched", "When the Starship this is fused into launches, after its Cries"),
 
   // §6.3 Actions and verbs
   Discover: verb("Discover", "Choose 1 of 3 options"),
@@ -353,6 +366,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   }),
   // R1839002: the one verb that reaches a Dormant card.
   Awaken: verb("Awaken", "A Dormant card awakens now"),
+  // R1852003: a Dormant Starship's awakening, which fires every Cry fused into it.
+  Launch: verb("Launch", "Your Dormant Starship awakens: every Cry fused into it fires, then every When launched"),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
   Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death", {
@@ -425,4 +440,6 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Crater: "CR",
   Flashback: "FB",
   Tradable: "TD",
+  "Starship Piece": "SP",
+  Starship: "SS",
 };

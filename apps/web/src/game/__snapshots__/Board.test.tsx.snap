@@ -2037,11 +2037,27 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                   TD
                 </span>
                 <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Starship Piece"
+                  title="Starship Piece"
+                >
+                  SP
+                </span>
+                <span
+                  class="keyword keyword-icon"
+                  data-chip="hidden"
+                  data-keyword="Starship"
+                  title="Starship"
+                >
+                  SS
+                </span>
+                <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary, Deft, Untributable, Equip, Ranged, Flying, Cloaked, Crater, Flashback, Tradable"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary, Deft, Untributable, Equip, Ranged, Flying, Cloaked, Crater, Flashback, Tradable, Starship Piece, Starship"
                 >
                   +
-                  28
+                  30
                 </span>
               </span>
               <span

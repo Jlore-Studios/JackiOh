@@ -134,6 +134,49 @@ pub struct Slumber {
     pub turns: Option<i32>,
 }
 
+/// R1852000, R1852005: a Starship's memory (`CardInstance.starship`, `starship.rs`): the Starship
+/// Pieces fused into it, in the order they fused, and — once it has launched (R1852003) — the name it
+/// took and when. Started as the Dormant Starship enters the field; a status, so R78's reset takes it
+/// off as the card leaves the field. Absent on every other card, so a game with no Starship serializes
+/// and hashes as before (D14).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipMemory {
+    /// R1852005: each piece a copy of which fused into it, oldest first.
+    pub pieces: Vec<StarshipPieceRecord>,
+    /// R1852004: the name it took as it launched; absent while it is Dormant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub name: Option<String>,
+    /// R1852005: the order it launched in among every Starship of the game (`GameState.next_seq` as it
+    /// launched), so "the launched Starship" is the latest; absent while it is Dormant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub launched: Option<u32>,
+}
+
+/// R1852005: one piece a Starship holds — the definition its copy fused in on, and whether on its
+/// Radiant face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipPieceRecord {
+    pub def_id: String,
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant: Option<bool>,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -299,6 +342,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub slumber: Option<Slumber>,
+    /// R1852000, R1852005: the card is a Starship — the Dormant Starship, whose hull text
+    /// (`StaticFlags.starshipHull`) started this as it entered the field — and this is its memory: the
+    /// pieces fused into it and, once it has launched, its name. A status, never text: R78's reset takes
+    /// it off with the card leaving the field. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starship: Option<StarshipMemory>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -605,6 +655,13 @@ pub enum ModifierKind {
     /// spends it. Expiry `thisTurn`; several are each spent by that one Spell.
     KeywordNextSpell {
         keyword: Keyword,
+    },
+    // ---- Stinkyscape's Starship (issue #1852) ----
+    /// R1852006: "Your Starship launch costs (N)": this player's next launch by the Activate costs
+    /// `cost` (`starship::launch_cost`), the least of several, until a launch it prices spends it
+    /// (expiry `used`).
+    StarshipLaunchCost {
+        cost: i32,
     },
 }
 
@@ -1172,6 +1229,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub lost_refresh_through: Option<i32>,
+    /// R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
+    /// started", inside the cap): negative once theirs were stolen, positive once they stole some
+    /// (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
+    /// hashes as it did before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_crystals: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
     /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
     /// hashes as it did before this field existed.
@@ -1218,6 +1282,35 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub market_credits: Option<i32>,
+    /// R1843000 (Stinkyscape #18's Brains): the votes cast this turn to remove this player from the
+    /// game (`effects::vote_out`). Absent until a first vote, so a game without one hashes as before
+    /// this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub votes: Option<VoteTally>,
+    /// R1843002 (Stinkyscape #148.1 Edge of the Universe): set when this player flees
+    /// (`effects::flee`), with what it leaves the other player; the state check's game-end point ends
+    /// the game on it. Absent otherwise, so a game without one hashes as before this field existed
+    /// (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fled: Option<crate::wire::FleeOpponent>,
+}
+
+/// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
+/// A tally kept for an earlier turn counts nothing: the first vote of a later turn starts it again.
+/// `ballots` holds one card per definition, in the order they voted; `VOTE_TALLY_SIZE` of them remove
+/// the player at the state check's game-end point (`win_conditions::vote_check`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct VoteTally {
+    pub turn: i32,
+    pub ballots: Vec<crate::wire::Ballot>,
 }
 
 string_union! {
@@ -1771,6 +1864,7 @@ pub fn create_player_state() -> PlayerState {
         hand_cap: None,
         jade: None,
         lost_refresh_through: None,
+        mana_crystals: None,
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
@@ -1781,6 +1875,8 @@ pub fn create_player_state() -> PlayerState {
         trades_per_turn: None,
         resource_tray: None,
         market_credits: None,
+        votes: None,
+        fled: None,
     }
 }
 
@@ -2096,6 +2192,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         frozen: None,
         slumber: None,
+        starship: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,

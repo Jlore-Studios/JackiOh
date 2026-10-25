@@ -134,6 +134,13 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   resourceSold: 700,
   resourceDiscarded: 250,
   marketCreditsChanged: 200,
+  // Stinkyscape's Starship (R1852000, R1852003).
+  starshipFused: 400,
+  starshipLaunched: 600,
+  // Issue #1843 (R1843000, R1843002).
+  voteCast: 400,
+  votedOut: 1200,
+  fled: 900,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -253,6 +260,19 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
+  starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
+  voteCast: { type: "voteCast", player: "p2", instanceId: "c7", defId: "core-073", votes: 2, needed: 3 },
+  votedOut: {
+    type: "votedOut",
+    player: "p2",
+    ballots: [
+      { instanceId: "c7", defId: "core-073" },
+      { instanceId: "c8", defId: "core-074" },
+      { instanceId: "c9", defId: "core-075" },
+    ],
+  },
+  fled: { type: "fled", player: "p1", opponent: "draw" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -323,7 +343,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(85);
+    expect(rows).toHaveLength(90);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -426,6 +446,22 @@ describe("R831003 KY's Papaya's curve", () => {
     expect(row.fx).toEqual({ recipe: "curve" });
     expect(targetFor(SAMPLES.curveDrawn, fullBoardView())).toBe(testid.board);
     expect(animationsCss).toContain('[data-animating="curveDrawn"]');
+  });
+});
+
+describe("R1843000 R1843002 the two endings' rows", () => {
+  it("R1843000 a vote flares its card, the agreement holds the banner, and R1843002 the fleer's hero fades out", () => {
+    const view = fullBoardView();
+    expect(ANIMATIONS.voteCast.animation).toBe("jk-radiant-pulse");
+    expect(ANIMATIONS.votedOut).toMatchObject({ animation: "jk-banner", durationMs: 1200, fx: { recipe: "banner" } });
+    expect(targetFor(SAMPLES.votedOut, view)).toBe(testid.banner);
+    expect(ANIMATIONS.fled).toMatchObject({ animation: "jk-exile-fade", durationMs: 900, fx: { recipe: "banner" } });
+    expect(targetFor({ type: "fled", player: view.viewer, opponent: "loss" }, view)).toBe(testid.hero("you"));
+    // A voter the viewer cannot see flares the voted player's backrow instead.
+    expect(targetFor({ ...SAMPLES.voteCast, player: view.viewer, instanceId: "nowhere" }, view)).toBe(animTestid.backrow("you"));
+    for (const type of ["voteCast", "votedOut", "fled"] as const) {
+      expect(animationsCss).toContain(`[data-animating="${type}"]`);
+    }
   });
 });
 

@@ -729,6 +729,8 @@ fn place_with(
     // R1839000: a Unit printing Dormant enters the field Dormant (a carried Unit included, R446).
     let as_unit = slot.row == Row::Units || is_unit_face(state, instance);
     crate::slumber::start_slumber_on_field(state, instance, from_off_field, as_unit);
+    // R1852000: and a Starship's hull starts its memory as it does.
+    crate::starship::start_starship_on_field(state, instance, from_off_field, as_unit);
 
     let placed = instance.clone();
     match landing {
@@ -1211,6 +1213,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.frozen = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
     instance.slumber = None;
+    // R1852000: and so is a Starship's memory, which its hull starts again as it next enters the field.
+    instance.starship = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
 }
