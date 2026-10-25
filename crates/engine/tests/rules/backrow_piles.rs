@@ -7,6 +7,7 @@
 
 use serde::Serialize;
 
+use jackioh_engine::effects::animate;
 use jackioh_engine::effects::destroy::destroy_all;
 use jackioh_engine::effects::move_::bounce_card;
 use jackioh_engine::effects::swap::swap_board;
@@ -18,7 +19,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, taunter};
 use crate::rules::fixtures::field::{
-    act, act_result, banner, cover, flush, fuser, mourner, notes_of, playing, tower, watcher, wrecker,
+    act, act_result, banner, cover, flush, fuser, golem, mourner, notes_of, playing, tower, watcher, wrecker,
 };
 use crate::rules::fixtures::harness::{
     events_of_type, in_hand, json_of, matches_object, put, sink_for, slot,
@@ -217,6 +218,58 @@ mod r447_b5_e21_backrow_piles {
             Some(5)
         );
         assert_eq!(by_id(sink.state, &unit.id).zone.z(), ZoneName::Field);
+    }
+
+    #[test]
+    fn r1829000_the_card_a_backrow_pile_uncovers_takes_this_turn_as_its_summoned_turn() {
+        let mut state = playing("piles-uncovered");
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let top = stack_onto(&mut state, &cover.id, &flag);
+        assert_ne!(by_id(&state, &flag.id).summoned_turn, Some(state.turn));
+        // The top leaves: the banner resumes acting, as a card that entered the field on this turn.
+        let mut sink = sink_for(&mut state);
+        (destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] }))).apply)(&mut make_context(
+            &mut sink,
+            None,
+            by(P1),
+        ));
+        settle(&mut sink, SettleOptions::default());
+        assert!(graveyard_ids(sink.state, P1).contains(&top.id));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(flag.id.clone())
+        );
+        assert_eq!(by_id(sink.state, &flag.id).summoned_turn, Some(sink.state.turn));
+    }
+
+    #[test]
+    fn r1829000_the_card_beneath_an_animated_top_is_uncovered_as_the_top_steps_into_a_unit_zone() {
+        let mut state = playing("piles-step-off");
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let top = stack_onto(&mut state, &golem.id, &flag);
+        assert_ne!(by_id(&state, &flag.id).summoned_turn, Some(state.turn));
+        // The top animates: it steps into a unit zone without leaving the field, and the banner resumes.
+        let mut sink = sink_for(&mut state);
+        (animate(json_as(
+            json!({ "target": { "of": "instance", "instanceId": top.id } }),
+        ))
+        .apply)(&mut make_context(&mut sink, None, by(P1)));
+        assert_eq!(id_at(sink.state, slot(P1, Row::Units, 2)), Some(top.id.clone()));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(flag.id.clone())
+        );
+        assert_eq!(by_id(sink.state, &flag.id).summoned_turn, Some(sink.state.turn));
     }
 
     #[test]
