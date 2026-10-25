@@ -136,7 +136,9 @@ to the new AI's strength.
   strength, and the gap a bigger search opens over a smaller one need not be the gap it opens over a
   person, so the offsets are a first estimate of the spread. A promotion's `vsParent` has the
   same fault: it is the new AI against the old one, at least 220 of 400 (improve) or 60 of 100
-  (unban) to be promoted, and overstates its gain against people. R610 corrects both in live play,
+  (unban) to be promoted until #1679, and since then the wins out of the games its sequential test
+  read (R1679000), which stops when the numbers look clear and so reads a passing candidate's rate a
+  little high; and it overstates its gain against people. R610 corrects both in live play,
   and `bot-calibrate-live` replaces the anchor as soon as people have played the reference.
 
 ## Results

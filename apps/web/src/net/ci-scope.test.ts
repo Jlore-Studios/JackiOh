@@ -2,7 +2,7 @@
 // only when every changed file is one no CI job reads (the night bot's code and its switches, the
 // workflows that run the bot, the training lanes' prompts and loop), and any other line false only
 // when nothing that line's job reads changed (`db` and its three suites, clippy, each Rust test
-// group, the web's checks and unit tests, e2e smoke), so each case here is a diff in a throwaway repo
+// group, the web's checks and unit tests, e2e smoke, infra/'s terraform steps), so each case here is a diff in a throwaway repo
 // and the answer a pull request would get: a path alone that leaves a line off, and the same path
 // beside an engine source, which turns it on. Every doubt must come out with every line true. The
 // scans at the end hold `web` and `e2e` to every repository path the web's and the client's sources
@@ -40,6 +40,7 @@ const NAMES = [
   "web",
   "web_promote",
   "e2e",
+  "infra",
 ] as const;
 type Name = (typeof NAMES)[number];
 type Answer = Record<Name, boolean>;
@@ -224,6 +225,7 @@ describe("scripts/ci-scope.sh", () => {
     "docs/CONTRIBUTING.md",
     "analysis-copy/x.py",
     "crates/tools/analysis/x.rs",
+    "infra/versions.tf",
   ])("runs everything the moment %s changes, alone or beside the bot's code", (file) => {
     expect(fullFor(file), file).toBe(true);
     expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);
@@ -309,15 +311,12 @@ describe("scripts/ci-scope.sh", () => {
   });
 
   it("runs every job but the db suites for the workspace's manifests, toolchain, cargo settings, workflows and this script", () => {
-    for (const file of [
-      "Cargo.toml",
-      "rust-toolchain.toml",
-      ".cargo/config.toml",
-      ".github/workflows/ci.yml",
-      ".github/actions/setup/action.yml",
-      "scripts/ci-scope.sh",
-    ]) {
+    for (const file of ["Cargo.toml", "rust-toolchain.toml", ".cargo/config.toml"]) {
       expect(onFor(file), file).toEqual(["full", "clippy", ...RUST, "web", "web_promote", "e2e"]);
+    }
+    // The workflows and this script also run infra/'s terraform steps, which a workflow holds.
+    for (const file of [".github/workflows/ci.yml", ".github/actions/setup/action.yml", "scripts/ci-scope.sh"]) {
+      expect(onFor(file), file).toEqual(["full", "clippy", ...RUST, "web", "web_promote", "e2e", "infra"]);
     }
     // The lockfile also picks the store's sqlx, so it runs two of the db suites besides.
     expect(onFor("Cargo.lock")).toEqual(["full", "db", "db_store", "db_deploy", "clippy", ...RUST, "web", "web_promote", "e2e"]);
@@ -410,6 +409,7 @@ describe("scripts/ci-scope.sh", () => {
         "training/history/improve.jsonl",
         "reviews/x.md",
         "analysis/README.md",
+        "infra/versions.tf",
         "SPEC.md",
         "BUILD.md",
         "REVIEW.md",
@@ -440,6 +440,7 @@ describe("scripts/ci-scope.sh", () => {
         "training/history/improve.jsonl",
         "reviews/x.md",
         "analysis/README.md",
+        "infra/versions.tf",
         "SPEC.md",
         "JackiOh_Core_Cards.md",
         "render.yaml",
@@ -507,6 +508,27 @@ describe("scripts/ci-scope.sh", () => {
     }
   });
 
+  // infra/'s terraform steps in `rust (checks, fuzz 200)` (#1708): nothing but infra/ reads it, so it
+  // runs that line alone, and nothing outside it but the workflows and this script turns it on.
+  it("runs infra/'s terraform steps only when infra/ or the workflow that runs them changed", () => {
+    for (const file of ["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"]) {
+      expect(onFor(file), file).toEqual(["full", "infra"]);
+    }
+    for (const file of [
+      "crates/engine/src/reduce.rs",
+      "apps/web/src/main.tsx",
+      "Cargo.toml",
+      "render.yaml",
+      "wrangler.jsonc",
+      "vercel.json",
+      "docs/deploy-cloudflare.md",
+      "infra-copy/versions.tf",
+    ]) {
+      expect(answerFor(file).infra, file).toBe(false);
+      expect(answerFor("infra/versions.tf", file).infra, `infra + ${file}`).toBe(true);
+    }
+  });
+
   // The Rust test groups each path runs, one path for each pattern of the script's crate map.
   const GROUPS: [string, (typeof RUST)[number][]][] = [
     ["crates/server/.env.example", ["rust_server", "rust_tools_wasm"]],
@@ -544,6 +566,7 @@ describe("scripts/ci-scope.sh", () => {
       "spec/rulings/R0195.md",
       "SPEC.md",
       "vercel.json",
+      "infra/versions.tf",
     ]) {
       expect(groups(file), file).toEqual([]);
       expect(groups(ENGINE, file), `engine + ${file}`).toEqual([...RUST]);

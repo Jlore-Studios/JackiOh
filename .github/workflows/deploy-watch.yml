@@ -12,14 +12,19 @@
 # start command that is not render.yaml's: the new commit is live but serves another catalog version.
 # The issue says which of those it is, and the run that finds the server live closes it again.
 # Before it polls, it asks Render to deploy the push through the service's deploy hook (the
-# RENDER_DEPLOY_HOOK_URL secret), so a deploy no longer waits on Render's GitHub integration.
+# RENDER_DEPLOY_HOOK_URL secret), so a deploy no longer waits on Render's GitHub integration. With
+# Render's API (RENDER_API_KEY) it follows that deploy by its id too, so a build Render failed or
+# canceled, out of build pipeline minutes as on 2026-10-25 (#1914), shows in the run and in the
+# issue with a link to its log.
 #
 # It is the only thing that starts a deploy (#985). render.yaml's autoDeployTrigger is "off", and the
 # watch runs only for a push that changes what the image is built from: the crates the server
-# compiles (server, engine, cards, ai; their tests and Markdown aside), the workspace manifests,
-# render.yaml, and this file and its poll action. Every push used to be built twice, by Render's
-# auto-deploy and by this request, web-only and docs-only pushes too; that ran the workspace out of
-# build pipeline minutes on 2026-10-15, with 386 pushes since Oct 1, of which 157 changed the server.
+# compiles (server, engine, cards, ai; their tests and Markdown aside, and the patch files no binary
+# reads: the technical log the patches log adds after every production merge, and the pending
+# fragments), the workspace manifests, render.yaml, and this file and its poll action. Every push
+# used to be built twice, by Render's auto-deploy and by this request, web-only and docs-only pushes
+# too; that ran the workspace out of build pipeline minutes on 2026-10-15, with 386 pushes since
+# Oct 1, of which 157 changed the server.
 # A push it skips leaves the live server on the last commit that did, which runs the same image.
 # Actions, Run workflow deploys and watches main's head on demand.
 #
@@ -39,7 +44,10 @@ on:
     branches: [main]
     # What crates/server/Dockerfile builds `jackioh-server` from (its COPY lines: the manifests and
     # crates/; `-p jackioh-server` compiles these four crates and nothing else of the workspace), and
-    # what this watch reads. Keep it in step with the server's dependencies.
+    # what this watch reads. Keep it in step with the server's dependencies. Of crates/cards/patches,
+    # crates/cards/build.rs compiles in patches.json, the snapshots, win_rates/ and aliases.json; the
+    # technical log (`patches log`) and the pending fragments reach no binary, so a push that changes
+    # only those would build the same image again.
     paths:
       - Cargo.toml
       - Cargo.lock
@@ -50,6 +58,8 @@ on:
       - crates/ai/**
       - "!crates/*/tests/**"
       - "!crates/**/*.md"
+      - "!crates/cards/patches/technical.json"
+      - "!crates/cards/patches/pending/**"
       - .github/workflows/deploy-watch.yml
       - .github/actions/poll-live/**
   workflow_dispatch:
@@ -79,7 +89,7 @@ jobs:
       served_version: ${{ steps.poll.outputs.served_version }}
       served_commit: ${{ steps.poll.outputs.served_commit }}
       service: ${{ steps.deploy.outputs.service }}
-      api: ${{ steps.deploy.outputs.api }}
+      deploy: ${{ steps.deploy.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
       - id: expected
@@ -97,7 +107,8 @@ jobs:
       # Render clones it either way. With neither, the watch relies on Render's own auto-deploy. The
       # service id comes from the RENDER_SERVICE_ID variable, the `srv-...` in the hook's URL, or Render's
       # API by render.yaml's service name (the hook URL saved on 2026-10-04 carries no `srv-`); it is
-      # an identifier, not a secret, and the `render` job below tracks the deploy by it.
+      # an identifier, not a secret, and the `render` job below tracks the deploy by it and the id
+      # Render's API gives the deploy.
       - name: ask Render to deploy this push
         id: deploy
         env:
@@ -125,8 +136,9 @@ jobs:
               -H "Authorization: Bearer $RENDER_API_KEY" -H 'Accept: application/json' -H 'Content-Type: application/json' \
               -d "{\"commitId\":\"$GITHUB_SHA\"}" "https://api.render.com/v1/services/$service/deploys" || echo 000)
             if [ "${code:0:1}" = 2 ]; then
-              echo "Render is deploying ${GITHUB_SHA:0:7}: deploy $(jq -r '.id // "?"' "$RUNNER_TEMP/deploy.json"), status $(jq -r '.status // "?"' "$RUNNER_TEMP/deploy.json")."
-              echo "api=true" >> "$GITHUB_OUTPUT"
+              deploy=$(jq -r '.id // empty' "$RUNNER_TEMP/deploy.json")
+              echo "Render is deploying ${GITHUB_SHA:0:7}: deploy ${deploy:-?}, status $(jq -r '.status // "?"' "$RUNNER_TEMP/deploy.json")."
+              echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             echo "::warning::Render's API refused the deploy of ${GITHUB_SHA:0:7} (HTTP $code): $(head -c 300 "$RUNNER_TEMP/deploy.json" 2>/dev/null). Trying the deploy hook."
@@ -149,39 +161,45 @@ jobs:
           commit: ${{ github.sha }}
           seconds: ${{ env.WINDOW_SECONDS }}
 
-  # Render's own account of the deploy this push started (Bounceapp/render-action): it finds the
-  # deploy of this commit through Render's API and follows it until it is live or has failed, so a
-  # failed build or boot shows here, with a link to its Render log, instead of only as a server that
-  # never moved. It only tracks a deploy, never starts one, so it runs when window 1 started one
-  # through the API. The windows above stay what decides and what opens the issue: this job is
-  # capped under CI's five-minute budget (#73) and a deploy that outlasts it is not a failure.
+  # Render's own account of the deploy window 1 started through its API: the deploy's status, read
+  # by its id until it is live or has ended otherwise, so a build Render failed or canceled shows
+  # here and in the issue, with a link to its Render log, instead of only as a server that never
+  # moved. A build canceled before it starts is the workspace out of build pipeline minutes
+  # (2026-10-15, 2026-10-25: #1914). It only tracks a deploy, never starts one. The windows stay
+  # what decides and what opens the issue: this job is capped under CI's five-minute budget (#73),
+  # and a deploy that outlasts it is not a failure.
   render:
     name: Render deploy of this push
     needs: [window-1]
-    # The action reads the push's commit from a push event only.
-    if: github.event_name == 'push' && needs.window-1.outputs.api == 'true'
+    if: needs.window-1.outputs.deploy != ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      status: ${{ steps.follow.outputs.status }}
     steps:
       - name: follow the deploy on Render
-        id: render
-        continue-on-error: true
-        timeout-minutes: 4
-        uses: Bounceapp/render-action@667d896d04b8d9f8c3b1263970efae0948ab0da5 # 0.12.0
-        with:
-          render-token: ${{ secrets.RENDER_API_KEY }}
-          service-id: ${{ needs.window-1.outputs.service }}
-          retries: "20"
-          wait: "10000"
-      - name: say what Render reported
+        id: follow
         env:
-          OUTCOME: ${{ steps.render.outcome }}
-          STATUS: ${{ steps.render.outputs.status }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE: ${{ needs.window-1.outputs.service }}
+          DEPLOY: ${{ needs.window-1.outputs.deploy }}
         run: |
-          case "$OUTCOME:$STATUS" in
-            success:live) echo "### Render: ${GITHUB_SHA:0:7} is live" >> "$GITHUB_STEP_SUMMARY" ;;
-            success:*) echo "### Render: the deploy of ${GITHUB_SHA:0:7} ended as ${STATUS:-unknown}" >> "$GITHUB_STEP_SUMMARY" ;;
-            *) echo "::warning::Render's deploy of ${GITHUB_SHA:0:7} failed, or outlasted this job; the step above links its Render log. The windows keep checking the live server." ;;
+          log="https://dashboard.render.com/web/$SERVICE/deploys/$DEPLOY"
+          deadline=$(( $(date +%s) + 240 ))
+          status=unknown
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            status=$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" -H 'Accept: application/json' \
+              "https://api.render.com/v1/services/$SERVICE/deploys/$DEPLOY" | jq -r '.status // .deploy.status // "unknown"' || echo unknown)
+            case $status in live | deactivated | build_failed | update_failed | pre_deploy_failed | canceled) break ;; esac
+            sleep 10
+          done
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          case $status in
+            live) echo "### Render: ${GITHUB_SHA:0:7} is live" >> "$GITHUB_STEP_SUMMARY" ;;
+            build_failed | update_failed | pre_deploy_failed | canceled)
+              echo "::error::Render's deploy of ${GITHUB_SHA:0:7} ended as $status: $log" ;;
+            deactivated) echo "::warning::Render's deploy of ${GITHUB_SHA:0:7} was replaced by a later one ($log)." ;;
+            *) echo "::warning::Render's deploy of ${GITHUB_SHA:0:7} is still $status after this job's wait ($log). The windows keep checking the live server." ;;
           esac
 
   window-2:
@@ -250,7 +268,7 @@ jobs:
   # Runs when the last window ran and still saw no deploy, or a window itself failed.
   report:
     name: report a deploy that never arrived
-    needs: [window-1, window-2, window-3, window-4]
+    needs: [window-1, render, window-2, window-3, window-4]
     if: >-
       !cancelled() && (
         (needs.window-4.result == 'success' && needs.window-4.outputs.live != 'true') ||
@@ -267,12 +285,20 @@ jobs:
           SERVED: ${{ needs.window-4.outputs.served_version || needs.window-3.outputs.served_version || needs.window-2.outputs.served_version || needs.window-1.outputs.served_version }}
           SERVED_COMMIT: ${{ needs.window-4.outputs.served_commit || needs.window-3.outputs.served_commit || needs.window-2.outputs.served_commit || needs.window-1.outputs.served_commit }}
           SHA: ${{ github.sha }}
+          RENDER_STATUS: ${{ needs.render.outputs.status }}
+          DEPLOY_LOG: https://dashboard.render.com/web/${{ needs.window-1.outputs.service }}/deploys/${{ needs.window-1.outputs.deploy }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
+          case $RENDER_STATUS in
+            build_failed | update_failed | pre_deploy_failed | canceled) failed=true ;;
+            *) failed=false ;;
+          esac
+          if [ "$failed" = true ]; then
+            diagnosis="Render's deploy of \`${SHA:0:7}\` ended as **$RENDER_STATUS** ([its log]($DEPLOY_LOG)), so Render kept the previous one serving. A build canceled before it starts is the workspace out of build pipeline minutes, which the log says (Workspace, Billing): buy more, or wait for the month's reset, then run this workflow (Actions, deploy watch, Run workflow); no change to the repository fixes it. Otherwise the log names the step that failed: the build, the \`release\` step's migrations or reseed, or the boot. Until the server serves this catalog, promote-production.sh holds a catalog bump back from production."
+          elif [ -n "$SERVED_COMMIT" ] && [ "$SERVED_COMMIT" = "$SHA" ]; then
             diagnosis="Render deployed this commit but serves another catalog version than render.yaml names. The server compiles its catalog version in from the newest entry of crates/cards/patches/patches.json and refuses to boot when its \`CATALOG_VERSION\` differs, so it is running with a \`CATALOG_VERSION\` other than render.yaml's that matches what it compiled: either render.yaml's line and that list disagree (the patch command writes both, and R388's test holds them equal), or the service does not take its environment from render.yaml: open jackioh-server, Settings, Environment, and Blueprints."
           elif [ -n "$SERVED_COMMIT" ]; then
-            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. If the \`RENDER_DEPLOY_HOOK_URL\` secret is not set, set it (jackioh-server, Settings, Deploy Hook): the watch then asks Render to deploy every push itself. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot."
+            diagnosis="Render is still running \`${SERVED_COMMIT:0:7}\`, not this push. If the \`RENDER_DEPLOY_HOOK_URL\` secret is not set, set it (jackioh-server, Settings, Deploy Hook): the watch then asks Render to deploy every push itself. Open jackioh-server, Events: no \"Deploy started\" for \`${SHA:0:7}\` means Render is not receiving pushes (the repository was moved or renamed, the GitHub app lost access to it, or Auto-Deploy is off: Settings, Build & Deploy; a Blueprint's own repository is under Blueprints). A deploy marked failed names its step in its log: the build, the \`release\` step's migrations or reseed, or the boot. A deploy that never started, or a build cut off, can be the workspace out of build pipeline minutes (Workspace, Billing): buy more, or wait for the month's reset; no change to the repository fixes it. Until the server serves this catalog, promote-production.sh holds a catalog bump back from production."
           else
             diagnosis="The server reported no commit. Either it predates this check and Render has not deployed since (jackioh-server, Events shows whether pushes start deploys, and Settings, Build & Deploy shows the repository, branch and Auto-Deploy), or \`RENDER_GIT_COMMIT\` is not set where it runs."
           fi

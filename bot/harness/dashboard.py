@@ -10,7 +10,8 @@ waits for (`waiting.py`, the planner's own rules on the lanes held now: never "f
 subscription the planner would give no work, never "starts next" for an item it would not start);
 each subscription's usage as bars and charts against its caps; the last runs; the statistics
 (`stats.py`: the last six hours, day, week and all time, counted every 30 minutes and kept in the
-issue between counts); and the full status text folded underneath. Times are clock times, which
+issue between counts, with which set's cards win most, `cardsets.py`, read from production once a
+day); and the full status text folded underneath. Times are clock times, which
 stay true between rewrites; hovering one shows how long it had been running when the issue was
 written. Editing an issue's body notifies nobody, so the rewrites stay quiet. The issue's number
 is kept in the state file; when it is missing or the issue was closed, an open issue with the
@@ -32,6 +33,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
+from harness import cardsets as cardsets_mod
 from harness import disk as disk_mod
 from harness import memory as memory_mod
 from harness import plan as plan_mod
@@ -927,26 +929,34 @@ def find(ctx: Context, state: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
-           stats_extra: Callable[[], tuple[str, ...]] = tuple, force_stats: bool = False) -> str:
+           stats_extra: Callable[[], tuple[str, ...]] = tuple, force_stats: bool = False,
+           read_cards: cardsets_mod.Fetch | None = None) -> str:
     """Rewrite the status issue, opening and pinning it first if there is none. `extra` are the
     other bots' sections (`section`), drawn by their own processes.
 
     With `stats`, the issue carries the statistics (`stats.block`): counted afresh when
     `STATS_EVERY` has passed (or `force_stats`, or the issue has none yet, or the kept block no
     longer fits), with `stats_extra` drawing the other bots' records then; otherwise the block
-    the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds."""
+    the issue holds is kept as it is, so a rewrite costs a few calls, not a count's hundreds.
+    A count reads which set's cards win most from production through `read_cards` once a day
+    (`cardsets.section`), and keeps the section the issue holds between reads."""
     view = look(ctx)
     view.learn = learn_lane(ctx)
     state = view.state
     issue = find(ctx, state)
-    kept = stats_mod.kept(issue.get("body")) if (stats and issue is not None) else None
+    body_now = issue.get("body") if (stats and issue is not None) else None
+    kept = stats_mod.kept(body_now)
     note = ""
+
+    def count() -> tuple[str, str]:
+        return _counted(ctx, view, extra, stats_extra,
+                        cardsets_mod.section(ctx, state, cardsets_mod.kept(body_now), read_cards))
     if stats and (force_stats or kept is None or stats_mod.due(ctx, state)):
-        body, note = _counted(ctx, view, extra, stats_extra)
+        body, note = count()
     elif kept is not None:
         body = render(ctx, extra, kept, view)
         if len(body) > MAX_BODY:
-            body, note = _counted(ctx, view, extra, stats_extra)
+            body, note = count()
     else:
         body = render(ctx, extra, "", view)
     if issue is None:
@@ -968,11 +978,11 @@ def update(ctx: Context, extra: tuple[str, ...] = (), *, stats: bool = False,
 
 
 def _counted(ctx: Context, view: View, extra: tuple[str, ...],
-             stats_extra: Callable[[], tuple[str, ...]]) -> tuple[str, str]:
+             stats_extra: Callable[[], tuple[str, ...]], cards: str = "") -> tuple[str, str]:
     """The body with the statistics counted afresh, and the note that says so."""
     facts = stats_mod.collect(ctx)
     others = stats_extra()
     body = fit(ctx, view, extra,
-               lambda shown: stats_mod.block(ctx, facts, shown=shown, extra=others))
+               lambda shown: stats_mod.block(ctx, facts, shown=shown, extra=others, cards=cards))
     stats_mod.counted(ctx)
     return body, ", with the statistics counted afresh"
