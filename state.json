@@ -6,6 +6,17 @@
       "asks": [],
       "taken_asks": []
     },
+    "1831": {
+      "action": "plan",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:54663170-1792919906",
+      "started_at": "2026-10-25T09:19:11Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1833": {
       "handoff": {
         "at": "2026-10-25T08:49:22Z",
@@ -125,9 +136,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:18:15Z",
+    "at": "2026-10-25T09:19:11Z",
     "url": "",
-    "what": "plan #1850 on claude-2"
+    "what": "plan #1831 on muse"
   },
   "loop_deliveries": {
     "40175181653": {
