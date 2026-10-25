@@ -13652,7 +13652,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your session limit \u00b7 resets 8:40am (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
