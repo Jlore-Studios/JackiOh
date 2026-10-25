@@ -36,6 +36,7 @@ pub mod mplus_b07;
 pub mod night_market;
 pub mod outside_data;
 pub mod papaya;
+pub mod play_gate;
 pub mod play_pipeline_a;
 pub mod play_pipeline_b;
 pub mod prompt_harness;
