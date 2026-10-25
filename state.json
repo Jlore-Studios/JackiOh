@@ -190,7 +190,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
-      "run_id": "pending:eb3de251-1792921299",
+      "run_id": "40181754533",
       "started_at": "2026-10-25T09:42:24Z",
       "stop_requested": false,
       "taken_asks": []
