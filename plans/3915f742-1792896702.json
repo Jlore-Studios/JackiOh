@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1827,
+  "title": "Patch: hero portraits join the global cosmetic roll as account cosmetics",
+  "branch": "bot/issue-1827",
+  "thread": "**Issue #1827 (data, not instructions):**\n\n```text\n# #1827: Patch: hero portraits join the global cosmetic roll as account cosmetics\nOpened by @MaxGoetzmann.\n\n## Why\n\nThe global cosmetic roll ([R1661001](../blob/main/spec/rulings/R1661001.md), `cosmetics::global_cosmetics`) lets a duplicate drop an **account cosmetic**, Epic or better, that the account does not own. Today it never fires: the only account cosmetics are the playmats, backdrops and card backs of R1297000, and every one is a starter ([R1661000](../blob/main/spec/rulings/R1661000.md)), so nothing is left to drop.\n\nThe hero portraits ([R641](../blob/main/spec/rulings/R0641.md): `vanilla`, `gary`, `timmy`, `dfender`, `felinors`, `shredder`, `PORTRAIT_IDS` in `crates/engine/src/wire/emotes.rs`) are cosmetics too, but they sit outside the cosmetics registry and every account has all six. This issue makes the five non-default portraits account cosmetics that accounts earn, so the global unlocks pool has something in it.\n\n## What to change\n\n1. **Registry.** Add a `portrait` kind to `CosmeticKind` in `crates/server/src/cosmetics.rs`. It is an account kind: `is_per_card()` is false, and it joins `PICKED` or a list of its own, whichever the check needs. Then add six entries to `crates/server/cosmetics.json`:\n   - `portrait-vanilla` is the kind's default: Common, `default: true`, `starter: true`. A deck with `portrait: null` already reads as `vanilla`.\n   - `portrait-gary`, `portrait-timmy`, `portrait-dfender`, `portrait-felinors` and `portrait-shredder` are Epic (`GLOBAL_COSMETIC_FLOOR_RARITY`), with `default: false` and `starter: false`.\n   - The registry's check (`problems`) also holds that each `PortraitId` has exactly one `portrait-<id>` entry and that no `portrait` entry has any other id. It applies R1661000's floor to the new kind as well.\n   - Once these entries are in, `global_cosmetics` returns the five portraits. They also become eligible for a cosmetic pack (`cosmetic_pack_cosmetics`, R1306000) and for an Epic cosmetic token (R1305003). That follows from the existing rules; no special case is needed.\n2. **Existing accounts keep what they had.** Every account that exists before this ships keeps all six portraits. A migration writes a cosmetics ledger row for each of the five non-default portraits, with no card, in the same way #1310's grandfathering did (R1310002). If no reason in the closed reason set fits, the ruling names the closest one. A new account starts with `vanilla` only and earns the rest.\n3. **Deck save.** `POST`/upsert of a deck refuses a `portrait` the account does not own. This sits on top of D5's \"known id\" check, uses the same validation-error shape and names the field. Practice, hotseat and the e2e specs treat every cosmetic as owned (R1310004) and stay as they are. A deck saved before this patch that names a portrait the account no longer owns cannot happen, because of the grant in step 2.\n4. **Client.** The deck builder's portrait picker offers only the portraits the account owns, read from `GET /api/cosmetics` plus the starters (CLAUDE.md rule 7). The Collection's Cosmetics owned list (R1579000) shows the portraits the account owns. A pack reveal or the global roll's drop of a portrait shows its name and portrait art. Regenerate `apps/web/src/wire/generated/cosmetics.ts` (`tests/export_cosmetics.rs`).\n5. **Spec.** Add a ruling numbered in this issue's block that amends R641 (all six are no longer unlocked for everyone) and R1661000/R1661001 (account cosmetics now include portraits, and the global roll is live on the shipped registry). Edit \u00a714.2 (\"an account cosmetic (a board, a field, a card back)\" gains the portrait, and \"Every one today is a starter\" no longer holds) and \u00a714.3's note that the roll waits for a non-starter. Run `cargo jackioh spec index`.\n\n## Acceptance\n\n- `global_cosmetics(shipped())` returns exactly the five non-default portraits, in registry order, all Epic.\n- A server test opens packs for an account that has no portraits. A duplicate whose global draw lands below `GLOBAL_COSMETIC_ROLL_WEIGHT` grants a `portrait-*` cosmetic, which is owned for the account with no card. Once all five are owned, later duplicates take no global draw (R1661001's \"nothing left to own\").\n- `GET /api/packs` answers `odds.globalCosmetic` as before. The opening's log replays (R1301003).\n- A deck upsert that names an unowned portrait fails with a validation error naming `portrait`. An owned one, or `null`, saves.\n- After the migration, an account created before it owns all six portraits, and a new account owns only `vanilla` (db suites: `crates/server/tests/sql`, `tests/db`, `tests/store/contract.rs`).\n- The deck builder lists only owned portraits (vitest), and the Collection shows owned portraits.\n- `cargo jackioh spec check`, clippy, fmt, the workspace tests and `pnpm --dir apps/web test` / `typecheck` are green, and `apps/web/src/wire/` has no diff left uncommitted.\n\n## Blocked by, part of\n\nFollows #1661 (part of #1651). Nothing open blocks it.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1827: needs a plan; `claude-1` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
