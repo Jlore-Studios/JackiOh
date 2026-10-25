@@ -13515,6 +13515,13 @@
     "1825": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T05:16:07Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 1 (small): exactly 10 files incl. Postgres SQL and contract tests, at the limit, so medium as the rule says for borderline"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
