@@ -1525,9 +1525,12 @@
     "1945": {
       "action": "revise",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "1f25d2c4e12ea2e027066ea8aa28bb58a9f07036": 1
       },
+      "ci_run_id": 40234275311,
+      "ci_sha": "1f25d2c4e12ea2e027066ea8aa28bb58a9f07036",
       "cleared": {
         "at": "2026-10-25T21:11:04Z",
         "by": "`claude` (strong)",
@@ -1547,11 +1550,12 @@
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-10-25T20:18:10Z",
+      "queued_at": "2026-10-25T21:26:38Z",
+      "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "40230204910",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-25T20:19:11Z",
       "stop_requested": false,
       "taken_asks": [],
