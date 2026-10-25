@@ -168,6 +168,8 @@ fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardIns
             if *row == Row::Units {
                 cards.extend(standing_units_of(state, player).into_iter().cloned());
             }
+            // R1839000: a Dormant card is in no card scope (`restrictions::unaffected_by`).
+            cards.retain(|card| !crate::slumber::is_slumbering(card));
             cards
         })
         .collect()

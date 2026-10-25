@@ -29,7 +29,21 @@ import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
-import { BERSERK_WORDS, FROZEN_GLYPH, FROZEN_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
+import {
+  BERSERK_WORDS,
+  DORMANT_GLYPH,
+  DORMANT_NEXT_TURN_WORDS,
+  DORMANT_WORDS,
+  FROZEN_GLYPH,
+  FROZEN_WORDS,
+  PILE_WORDS,
+  animatedWords,
+  brittleWords,
+  distinctEnchantments,
+  dormantWords,
+  enchantmentWords,
+  stateBadges,
+} from "./cardState.ts";
 import { markColorOf, markWords } from "./marks.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
@@ -611,6 +625,45 @@ describe("R1174000 Frozen: a frost badge on a Frozen unit, on either seat", () =
     // The same words announce the freeze and its thaw (`marked`, "frozen"), in the engine's "cyan".
     expect(markWords("frozen").text).toBe(FROZEN_WORDS);
     expect(markColorOf("cyan")).toBe("cyan");
+  });
+});
+
+/* ---------------------------------------------------------------------------- R1839000 Dormant */
+
+describe("R1839000 Dormant: a moon badge and its countdown on a Dormant card, on either seat, from the view alone", () => {
+  it("R1839000 R1839001 a Dormant card wears the moon with the turns its countdown has left, or the moon alone; an awake one wears none", () => {
+    vi.useFakeTimers();
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [
+            unit("p1", { instanceId: "u1", defId: "core-008", slumber: { turns: 2 }, canAct: false }),
+            unit("p1", { instanceId: "u2", defId: "core-008" }),
+            unit("p1", { instanceId: "u4", defId: "core-008", slumber: {}, canAct: false }),
+            null,
+            null,
+          ],
+        }),
+        opponent: emptySide("p2", {
+          units: [unit("p2", { instanceId: "u3", defId: "core-008", slumber: { turns: 1 } }), null, null, null, null],
+        }),
+      }),
+    );
+    const root = screen.getByTestId(testid.card("u1"));
+    const badge = root.querySelector('.cf-state[data-state="dormant"]');
+    expect(badge?.getAttribute("aria-label")).toBe(dormantWords(2));
+    expect(badge?.textContent).toBe(`${DORMANT_GLYPH}2`);
+    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="dormant"]')).toBeNull();
+    // With no countdown, the moon alone, and the words say an effect must awaken it.
+    const waiting = screen.getByTestId(testid.card("u4")).querySelector('.cf-state[data-state="dormant"]');
+    expect(waiting?.textContent).toBe(DORMANT_GLYPH);
+    expect(waiting?.getAttribute("aria-label")).toBe(DORMANT_WORDS);
+    // The opponent's Dormant card shows its countdown too: a status is public.
+    const theirs = screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="dormant"]');
+    expect(theirs?.textContent).toBe(`${DORMANT_GLYPH}1`);
+    expect(theirs?.getAttribute("aria-label")).toBe(DORMANT_NEXT_TURN_WORDS);
+    const preview = hover(root);
+    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(`${DORMANT_GLYPH}2${dormantWords(2)}`);
   });
 });
 

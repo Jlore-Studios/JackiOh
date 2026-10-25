@@ -592,7 +592,8 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
             return;
         }
         for old in pile.iter().skip(1) {
-            if unit_has(ctx.state, old, KeywordKind::Immutable) {
+            // R1839003: a Dormant card beneath the pile is reached by nothing, this Transform included.
+            if unit_has(ctx.state, old, KeywordKind::Immutable) || crate::slumber::is_slumbering(old) {
                 continue;
             }
             let mut copy = clone_of(ctx, &top, old.owner, &json_as(json!({ "of": { "of": "self" } })));

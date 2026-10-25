@@ -115,6 +115,25 @@ pub struct Grant {
     pub params: IndexMap<String, i32>,
 }
 
+/// R1839000, R1839001: a Dormant card's status (SPEC §6.1 Dormant, `CardInstance.slumber`): on the
+/// field, filling its zone, and out of every attack's, target's and effect's reach until it awakens
+/// (`slumber.rs`). `turns` is "Dormant for N turns"'s countdown: how many more of its controller's
+/// turns must start before it awakens at the start of the last of them; absent, it sleeps until an
+/// effect awakens it (`effects::awaken`, the Dormant Starship's Activate). Named apart from the
+/// "dormant" of a card beneath a Stack pile (§3.2, R13), which is a place, not a status.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Slumber {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub turns: Option<i32>,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -273,6 +292,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub frozen: Option<i32>,
+    /// R1839000: the card is Dormant (`slumber.rs`): it entered the field printing it
+    /// (`StaticFlags.slumber`) and has not awakened. A status, never text: it goes with R78's reset as
+    /// the card leaves the field, and an awakening takes it off. Absent on every other card, so a game
+    /// with no Dormant card serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -2024,6 +2050,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enchantments: None,
         berserk: None,
         frozen: None,
+        slumber: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,

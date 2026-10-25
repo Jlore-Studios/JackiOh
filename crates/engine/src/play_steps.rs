@@ -1997,7 +1997,7 @@ fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) 
             // R1487000: a face-down card's text sleeps until it is revealed or face-up.
             if held.id == played.id
                 || arrived.contains(&held.id)
-                || crate::preview::lasting_text_dormant(state, held)
+                || crate::preview::lasting_text_off(state, held)
             {
                 continue;
             }

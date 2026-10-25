@@ -682,6 +682,28 @@ pub struct StaticFlags {
     /// where it declares it, else this; two Gardens apply the least.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_garden: Option<i32>,
+    // ---- Stinkyscape's mechanic (issue #1839) ----
+    /// R1839000: "Dormant" (SPEC §6.1): this Unit enters the field Dormant — from a hand, a deck, a
+    /// graveyard or the resolving zone, any way it arrives — and is reached by nothing but an awakening
+    /// until it awakens (`slumber.rs`). What it prints is a `SlumberText`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slumber: Option<SlumberText>,
+}
+
+/// R1839000–R1839002: what a card's "Dormant" prints (`StaticFlags.slumber`). `turns` is "Dormant for
+/// N turns", the countdown it enters with (R1839001); absent, it is Dormant until an effect awakens it.
+/// `wakesBy` names the one Activate ability the card keeps while it is Dormant (the Dormant Starship's
+/// "pay (3) to awaken", whose effect is `effects::awaken` on itself, R1839002); its other abilities,
+/// like the rest of its text, are off until it awakens. Named apart from the "dormant" of a card
+/// beneath a Stack pile (§3.2, R13).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SlumberText {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turns: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wakes_by: Option<String>,
 }
 
 /// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the

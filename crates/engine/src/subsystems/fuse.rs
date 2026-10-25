@@ -1148,6 +1148,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 doubles_healing: flags(|f| f.doubles_healing),
                 answers_targeted_spells: flags(|f| f.answers_targeted_spells),
                 embiggen_garden: least_number(defined.iter().map(|f| f.embiggen_garden)),
+                // R1839000: a card fused from a Dormant ingredient prints the first ingredient's Dormant.
+                slumber: defined.iter().find_map(|f| f.slumber.clone()),
             })
         }
     }

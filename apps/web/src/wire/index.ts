@@ -205,6 +205,8 @@ export const GAME_EVENT_TYPES = [
   "curveDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
   "autopilotEngaged",
+  // Stinkyscape's Dormant: a Dormant card awakened (issue #1839, R1839002).
+  "awakened",
 ] as const satisfies readonly GameEventType[];
 
 /**

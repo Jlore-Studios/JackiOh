@@ -119,7 +119,10 @@ fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance
     let mut out = Vec::new();
     for row in [Row::Units, Row::Backrow] {
         for slot in slots_of(player, row) {
-            if let Some(card) = card_at(ctx.state, slot) {
+            // R1839000: nor is a Dormant card, which no effect reaches.
+            if let Some(card) = card_at(ctx.state, slot)
+                && !crate::slumber::is_slumbering(card)
+            {
                 out.push(card.clone());
             }
         }

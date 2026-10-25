@@ -126,7 +126,7 @@ pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
             continue;
         };
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if crate::preview::lasting_text_dormant(state, card) {
+        if crate::preview::lasting_text_off(state, card) {
             continue;
         }
         let side = HERO_ARMOR.on(card.radiant);
@@ -169,7 +169,7 @@ pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardIn
             continue;
         };
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        let face_down = crate::preview::lasting_text_dormant(state, card);
+        let face_down = crate::preview::lasting_text_off(state, card);
         // R1081000: a Unit standing in the backrow is already above, among the active units — its
         // text must not answer twice.
         if !face_down && !out.iter().any(|held| held.id == card.id) {

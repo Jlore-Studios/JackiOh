@@ -37,12 +37,15 @@
 //!   hand, library, graveyard, exile   (string | { def?, defId?, radiant?, costMod?, costOverride? })[]
 //!   field, backrow                    (string | { def?, defId?, radiant?, row?, lane?, stack?,
 //!                                                 position?, damage?, counters?, faceUp?,
-//!                                                 statsOverride?, costMod?, costOverride? })[]
+//!                                                 statsOverride?, costMod?, costOverride?,
+//!                                                 slumber? })[]
 //!   health, mana, armor               number
 //! `def` and `defId` are aliases: exactly one is required, and both with different values throws
 //! naming both. A bare string is `{ def: <string> }`. `radiant: true` sets the instance's Radiant
 //! flag in whatever zone the entry names, a library or a hand included (#21, #23 need a Radiant
-//! card sitting on top of a library). `statsOverride` is §10.4 layer 1 / R41's X/X token.
+//! card sitting on top of a library). `statsOverride` is §10.4 layer 1 / R41's X/X token. `slumber`
+//! lays a field card down Dormant with that countdown (R1839000); the setup is no arrival, so a
+//! card's printed Dormant starts only when it is played or summoned in the test.
 //! `counters` seeds §10.1's instance counters — #91's `plague`, #93's `grade`. `costMod` and
 //! `costOverride` seed §2.3's cost layers, which R78 keeps in every zone, so a ruling about the cost
 //! at resolution rather than the printed cost (R65, R66) can be set up in a hand or a library.
@@ -485,6 +488,11 @@ pub struct FieldEntry {
     /// MD-B6, R943: opt a setup card into Created (as on `PileEntry`).
     #[serde(default)]
     pub created: Option<bool>,
+    /// R1839000: the card lies on the field Dormant, with this countdown (`{ "turns": 2 }`, or `{}` for
+    /// none). A setup card is already on the field rather than arriving, so its text starts nothing; a
+    /// card played or summoned in the test enters Dormant by its text.
+    #[serde(default)]
+    pub slumber: Option<crate::state::Slumber>,
 }
 
 /// TS `FieldSetup = string | FieldEntry`.
@@ -1016,6 +1024,9 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
             && let Some(face_up) = entry.entry.face_up
         {
             card.face_up = Some(face_up);
+        }
+        if let Some(slumber) = entry.entry.slumber {
+            card.slumber = Some(slumber);
         }
     }
     Ok(())

@@ -113,7 +113,7 @@ fn acting_permanents(state: &GameState) -> Vec<&CardInstance> {
             for slot in crate::zones::slots_of(player, row) {
                 // R1487000: a face-down card's text sleeps until it is revealed or face-up.
                 if let Some(card) = crate::zones::card_at(state, slot)
-                    && !crate::preview::lasting_text_dormant(state, card)
+                    && !crate::preview::lasting_text_off(state, card)
                 {
                     out.push(card);
                 }

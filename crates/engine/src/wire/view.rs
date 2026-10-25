@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::state::DuosLife;
+use crate::state::{DuosLife, Slumber};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
     CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
@@ -487,6 +487,13 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub frozen: Option<bool>,
+    /// R1839000, R1839001: the card is Dormant (a status, public on the field on both seats): it can
+    /// neither attack, be attacked, be targeted nor be reached by an effect until it awakens, and
+    /// `turns` is how many more of its controller's turns start before it does (absent: until an effect
+    /// awakens it). What the board's Dormant badge and its countdown read. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
     /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
     /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
     /// Only ever `Some(true)`.

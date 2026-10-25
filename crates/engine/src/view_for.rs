@@ -803,6 +803,8 @@ fn unit_view_of(
         },
         // R1174000: a status, public on the field like the unit itself.
         frozen: top.frozen.map(|_| true),
+        // R1839000: a status, public on the field like the unit itself, its countdown included.
+        slumber: top.slumber,
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
@@ -2413,7 +2415,9 @@ fn redact_event(
         GameEventType::Activated
         | GameEventType::Animated
         | GameEventType::Deanimated
-        | GameEventType::Flickered => {
+        | GameEventType::Flickered
+        // R1839002: an awakening names a card face-up on the field, public as the card is.
+        | GameEventType::Awakened => {
             if !hidden(&instance) {
                 return event.clone();
             }

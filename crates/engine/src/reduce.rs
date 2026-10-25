@@ -167,13 +167,15 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
 }
 
 /// The target an `attack` action names, looked up among the enemy's active units and the enemy hero
-/// and nothing else, so a friendly target never reaches the validator (§4.2 step 2).
+/// and nothing else, so a friendly target never reaches the validator (§4.2 step 2). A Dormant enemy
+/// card is looked up too (`units_on_field_of`), so that "that card is Dormant" is `combat`'s refusal
+/// to give rather than a lookup failure here (R1839000).
 fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Option<AttackTarget> {
     let enemy = opponent_of(player);
     if target_id == format!("hero-{enemy}") {
         return Some(AttackTarget::Hero { player: enemy });
     }
-    let unit = active_units_of(state, enemy)
+    let unit = crate::zones::units_on_field_of(state, enemy)
         .into_iter()
         .find(|card| card.id == target_id)
         .cloned()?;

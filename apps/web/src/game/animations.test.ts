@@ -125,6 +125,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   // Patch v0.3.10 (C+ #62 KY's Papaya, R831003).
   curveDrawn: 700,
   autopilotEngaged: 600,
+  // Stinkyscape's Dormant (R1839002).
+  awakened: 400,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -237,6 +239,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
+  awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -307,7 +310,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(79);
+    expect(rows).toHaveLength(80);
   });
 
   it("gives every row an animation name and a testid template", () => {

@@ -139,7 +139,7 @@ pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
                     continue;
                 };
                 // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-                if crate::preview::lasting_text_dormant(sink.state, &card) {
+                if crate::preview::lasting_text_off(sink.state, &card) {
                     continue;
                 }
                 let amount = crate::scripts::flags_of(sink.state, &card)

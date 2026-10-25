@@ -10,6 +10,7 @@ import type { KnownAs } from "./KnownAs";
 import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
 import type { SetAs } from "./SetAs";
+import type { Slumber } from "./Slumber";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
@@ -114,6 +115,13 @@ berserk?: true,
  * serializes and hashes as before (D14).
  */
 frozen?: number, 
+/**
+ * R1839000: the card is Dormant (`slumber.rs`): it entered the field printing it
+ * (`StaticFlags.slumber`) and has not awakened. A status, never text: it goes with R78's reset as
+ * the card leaves the field, and an awakening takes it off. Absent on every other card, so a game
+ * with no Dormant card serializes and hashes as before (D14).
+ */
+slumber?: Slumber, 
 /**
  * R429: how many times this card has been played, the play under way included — counted at §10.5
  * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks

@@ -134,7 +134,9 @@ pub fn cry_place_of(state: &GameState, card: &CardInstance) -> Option<CryPlace> 
         // R1081000: a Unit standing in the backrow is on the field as one in a unit zone is.
         Zone::Field { .. }
             if crate::zones::in_units_row_or_standing(state, card)
-                && !crate::zones::is_buried(state, card) =>
+                && !crate::zones::is_buried(state, card)
+                // R1839000: no effect triggers a Dormant card's Cry.
+                && !crate::slumber::is_slumbering(card) =>
         {
             Some(CryPlace::Field)
         }

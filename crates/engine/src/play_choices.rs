@@ -237,7 +237,7 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
         for slot in crate::zones::slots_of(player, row) {
             // R1487000: a face-down card's text sleeps until it is revealed or face-up.
             if let Some(held) = crate::zones::card_at(state, slot)
-                && !crate::preview::lasting_text_dormant(state, held)
+                && !crate::preview::lasting_text_off(state, held)
             {
                 out.push(held);
             }
@@ -1124,6 +1124,10 @@ fn reachable(
     decl: &TargetDecl,
     candidate: &CardInstance,
 ) -> bool {
+    // R1839000: a Dormant card is never picked, for a target, a Tribute or anything else.
+    if crate::slumber::is_slumbering(candidate) {
+        return false;
+    }
     if decl.kind == PromptKind::Tribute {
         // R1220: a declared Tribute never offers an Untributable card.
         return !crate::query::is_untributable(state, candidate);

@@ -90,6 +90,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.berserk === true) inPlay.berserk = true;
   // R1174000: a Frozen unit.
   if (unit?.frozen === true) inPlay.frozen = true;
+  // R1839000, R1839001: a Dormant card, with its countdown.
+  if (unit?.slumber !== undefined) inPlay.dormant = { turns: unit.slumber.turns ?? null };
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
   // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
