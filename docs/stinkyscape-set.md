@@ -464,6 +464,7 @@ Asked and answered on 2026-10-25; the S parts and mechanics are written in these
 | — | Orca's Embiggened version | The offered Miners are Radiant |
 | — | Spacerace Propaganda and The Syndicate | Field Spells, with the tags they lack |
 | — | Great Replacement Theory's name | Kept: it is satire |
+| — | Who builds | Squishy: `squishy:build` for phase 0, `squishy:fullsend` for the three fullsends |
 
 **KY's Tricknology's coordinates** (the build's choice): a zone is (x, y) with x its lane, 1 to 5, and y
 its row — 1 your unit row, 2 your backrow, −1 the enemy's unit row, −2 the enemy's backrow. The chosen
@@ -488,5 +489,6 @@ cards; Drone Hanger keeps its spelling.
   client's piece, with the repo's gates (CLAUDE.md, Commands); for a card part, each card's base and
   Radiant tests in its script file (CLAUDE.md rule 6), its BUILD M12 rows green, and `catalog check`,
   `patches check` (no fragment) and `spec check` green on the integration branch's reconcile.
-- **Labels**: `patch` (with `major version` for the set's issues), one `difficulty:*`, and the builder's
-  queue label once it is asked for (fullsend 1's parent only after phase 0 has merged).
+- **Labels**: `patch` (with `major version` for the set's issues), one `difficulty:*`, and Squishy's queue
+  label once it is asked for (ST9): `squishy:build` on a phase-0 issue, `squishy:fullsend` on a fullsend
+  parent, fullsend 1's only after phase 0 has merged.
