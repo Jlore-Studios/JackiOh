@@ -1,7 +1,7 @@
 {
   "title": "A flickered unit token keeps its size",
   "sources": "#1803",
-  "notes": "R444, R175: a unit token Flickered keeps the X/X it was summoned at (and the Bread Token's Armor), as one a Reborn brings back does, where the reset had made it a printed 0/0 that died at once: under a Radiant Shadowstep it flickered again and the board never settled. R57, R1300: Radiant Shadowstep remakes each hand copy from its definition, carrying the token's summoned X/X, Armor and tuning explicitly without carrying the Chinese flag; add_to_hand's true copyOf path also carries a Bread Token's Armor (summon's copy already did). The classifier's unforced games show The Rock (core-066) playing differently; the Bread Token and Shadowstep are the cards the rule is about, and a forced game of Shadowstep alone shows no divergence.",
+  "notes": "R444, R175: a unit token Flickered keeps the X/X it was summoned at (and the Bread Token's Armor), as one a Reborn brings back does, where the reset had made it a printed 0/0 that died at once: under a Radiant Shadowstep it flickered again and the board never settled. R57, R1300: Radiant Shadowstep remakes each hand copy from its definition, carrying the token's summoned X/X, Armor and tuning explicitly without carrying the Chinese flag; add_to_hand's true copyOf path also carries a Bread Token's Armor (summon's copy already did). The classifier's unforced games show Lava Golem (core-055), The Rock (core-066), Keymaster Keenus (meditative-065) and Harmony Spirit (meditativeplus-021) playing differently; the Bread Token and Shadowstep are the cards the rule is about, and a forced game of Shadowstep alone shows no divergence.",
   "player": {
     "title": "Flickered tokens keep their size",
     "new": [],
@@ -15,6 +15,9 @@
   },
   "cards": [],
   "plays": [
-    "core-066"
+    "core-055",
+    "core-066",
+    "meditative-065",
+    "meditativeplus-021"
   ]
 }
