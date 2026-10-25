@@ -220,6 +220,36 @@ mod r447_b5_e21_backrow_piles {
     }
 
     #[test]
+    fn r1829000_the_card_a_backrow_pile_uncovers_takes_this_turn_as_its_summoned_turn() {
+        let mut state = playing("piles-uncovered");
+        let flag = put(
+            &mut state,
+            &banner.id,
+            slot(P1, Row::Backrow, 2),
+            Default::default(),
+        );
+        let top = stack_onto(&mut state, &cover.id, &flag);
+        assert_ne!(by_id(&state, &flag.id).summoned_turn, Some(state.turn));
+        // The top leaves: the banner resumes acting, as a card that entered the field on this turn.
+        let mut sink = sink_for(&mut state);
+        (destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] }))).apply)(&mut make_context(
+            &mut sink,
+            None,
+            by(P1),
+        ));
+        settle(&mut sink, SettleOptions::default());
+        assert!(graveyard_ids(sink.state, P1).contains(&top.id));
+        assert_eq!(
+            id_at(sink.state, slot(P1, Row::Backrow, 2)),
+            Some(flag.id.clone())
+        );
+        assert_eq!(
+            by_id(sink.state, &flag.id).summoned_turn,
+            Some(sink.state.turn)
+        );
+    }
+
+    #[test]
     fn r447_a_face_down_trap_under_a_pile_never_fires_once_uncovered_it_answers_only_what_happens_after() {
         let mut state = playing("piles-trap");
         state.active = P2;
