@@ -9,8 +9,9 @@
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
 //! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78).
 //! RADIANT: a replacement at "would die" (B5 E5): your collected units Flicker (E22: reset, full health,
-//! no Cry, no Death), then a fresh copy of each joins your hand, radiant flag kept (R57), unread by them
-//! (R97).
+//! no Cry, no Death), then a copy of each joins your hand with what R57 gives a copy in a hand (its radiant
+//! flag, `statsOverride` and `tuning`, and R175's `armorOverride` with the size: a token summoned at a size
+//! is still that size, #1803), unread by them (R97).
 
 use jackioh_engine::prelude::*;
 

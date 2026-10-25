@@ -217,11 +217,9 @@ mod b5_e22_flicker {
             Default::default(),
         );
         live_mut(&mut state, &token.id).damage = 1;
-        eprintln!("DBG before: {:?} token={} is_unit_token={}", by_id(&state, &token.id).stats_override, jackioh_engine::catalog::def_of(Some(&state), "fx-token-rush").token, jackioh_engine::zones::is_unit_token(&state, by_id(&state, &token.id)));
         let mut sink = sink_for(&state);
         assert!(sink.flicker_card(&mut state, &token.id));
         let flickered = by_id(&state, &token.id);
-        eprintln!("DBG after: {:?}", flickered);
         assert_eq!(
             flickered.stats_override,
             Some(AttackHealth { attack: 5, health: 5 }),
