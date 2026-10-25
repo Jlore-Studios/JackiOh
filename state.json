@@ -543,6 +543,13 @@
     "1895": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T16:11:58Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "Lines 1-8 hold (4 files, all in crates/server, no spec), but line 9 can't be checked from here (no GitHub access, so open PRs are unknown), and the change is an async undo path whose seat lease has to be judged by reading the code, so it is medium by the doubt rule"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
