@@ -30,12 +30,12 @@ resource "cloudflare_workers_custom_domain" "jackioh_com" {
 
 import {
   to = cloudflare_workers_custom_domain.jackioh_com
-  # <account id>/<custom domain id>. The id is the one value here only the account shows: README.md,
-  # The first import, step 2.
-  id = "${local.cloudflare_account_id}/FIRST_IMPORT_CUSTOM_DOMAIN_ID"
+  # <account id>/<custom domain id>, from the account's /workers/domains (README.md, The first
+  # import, step 2).
+  id = "${local.cloudflare_account_id}/4a0a902b4d034376d00a1f4e6286cadf7f927235"
 }
 
-# Every other DNS record of the zone is a cloudflare_dns_record with its own import block
-# (<zone id>/<record id>), added at the first import (README.md, The first import, step 2): none was
-# known when this file was written, and a record this file does not name is one Terraform neither
-# reads nor changes.
+# No cloudflare_dns_record: at the first import (2026-10-25) the zone's one record was the custom
+# domain's own, read-only AAAA. A record added to the zone gets one here, with its import block
+# (<zone id>/<record id>; README.md, The first import, step 2): a record this file does not name is
+# one Terraform neither reads nor changes.

@@ -70,31 +70,35 @@ committed one. `plan` and `apply` need the tokens, so they stay manual.
 
 ## The first import
 
-Every resource here already exists on the hosts, so each comes in through an `import` block beside
-it, and the first `apply` changes nothing on them. Once in the state, an `import` block does nothing,
-so they stay as the record of where each resource came from.
+Every resource here that already existed on the hosts comes in through an `import` block beside it,
+so the first `apply` changes nothing on them. The `production` ruleset did not exist (the repository
+had no rulesets on 2026-10-25), so the first `apply` creates it, which only adds protection. Once in
+the state, an `import` block does nothing, so they stay as the record of where each resource came
+from.
 
 1. **The state bucket.** Create the bucket (Cloudflare -> R2 -> Create bucket,
    `jackioh-terraform-state`) and the R2 API token for it.
-2. **The ids only the accounts show.** Replace each `FIRST_IMPORT_…` placeholder:
-   - `FIRST_IMPORT_CUSTOM_DOMAIN_ID` in `cloudflare.tf`: the `id` of `jackioh.com` in
+2. **The ids only the accounts show** (filled in on 2026-10-25; redo this for a resource added
+   later):
+   - The custom domain's id in `cloudflare.tf`: the `id` of `jackioh.com` in
      `curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts/3c0495fcdd2622a08e1a91b8de248b46/workers/domains`.
      If that list also has `www.jackioh.com`, give it a `cloudflare_workers_custom_domain` and an
-     `import` block like the apex's.
+     `import` block like the apex's (it had none on 2026-10-25).
    - The DNS records: the zone's id is on its Overview page, and
      `curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/zones/<zone id>/dns_records`
      lists its records. A custom domain's own record (read-only, made by the custom domain) stays
      out; every other record gets a `cloudflare_dns_record` in `cloudflare.tf`, its
      `name` the full hostname and its `type`, `content`, `ttl`, `proxied` (and `priority` for MX)
-     as listed, with an `import` block whose `id` is `<zone id>/<record id>`.
-   - `FIRST_IMPORT_RULESET_ID` in `github.tf`: GitHub -> Settings -> Rules -> Rulesets -> the
-     ruleset on `production`; its address ends in `/rules/<id>`. Set `name` to the ruleset's name
-     too.
+     as listed, with an `import` block whose `id` is `<zone id>/<record id>`. On 2026-10-25 the
+     custom domain's record was the only one.
+   - A ruleset that already exists is imported as `<repository>:<ruleset id>`
+     (`gh api repos/Jlore-Studios/JackiOh/rulesets` lists them); `production`'s did not exist.
 3. **The lock file.** `terraform -chdir=infra providers lock -platform=linux_amd64
    -platform=darwin_arm64 -platform=darwin_amd64 -platform=windows_amd64` writes
    `.terraform.lock.hcl`; commit it.
-4. **Plan.** `init`, then `plan`. It reads `Plan: N to import, 0 to add, 1 to change, 0 to
-   destroy`, and the one change is `supabase_settings.auth`: an import reads every Supabase setting
+4. **Plan.** `init`, then `plan`. It reads `Plan: 3 to import, 1 to add, 1 to change, 0 to
+   destroy`. The one add is the `production` ruleset, and the one change is `supabase_settings.auth`:
+   an import reads every Supabase setting
    into the state, and the first apply drops all but the Site URL and the Redirect URLs from it,
    sending Supabase those two values as they already are. Any other change means a file differs
    from the host. Make the file say what the host says, and when the host is the one that is wrong,
