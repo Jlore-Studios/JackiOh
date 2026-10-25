@@ -1546,152 +1546,15 @@ const TS_SHADOW_BAN: &[(&str, &str)] = &[
 mod v12 {
     use super::*;
 
-    /// Generation 9's table: the sweep of record over the Meditative set's 102 cards (#732, R732000),
-    /// copied as the sweep printed it. The unban lane only removes entries, so every entry of
-    /// `SHADOW_BAN` is one of these, and none is one of TypeScript's eleven, which generations 1 to 8
-    /// removed.
-    const SWEEP_OF_RECORD_SHADOW_BAN: &[(&str, &str)] = &[
-        (
-            "meditative-006",
-            "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-011",
-            "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-012",
-            "timeout: easy: 11 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-016",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-017",
-            "timeout: hard: 13 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-021",
-            "timeout: hard: 5 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-025",
-            "timeout: hard: 7 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-029",
-            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-030",
-            "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-031",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-033",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-041",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-045",
-            "timeout: hard: 31 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-047",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-049",
-            "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-051",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-058",
-            "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-063",
-            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-067",
-            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-068",
-            "timeout: easy: 8 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-069",
-            "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-073",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-075",
-            "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-078",
-            "timeout: easy: 4 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-080",
-            "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-085",
-            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-087",
-            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions; hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-091",
-            "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-092",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-096",
-            "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-        (
-            "meditative-099",
-            "timeout: easy: 2 decision(s) over 2000 ms or game(s) past 600 actions",
-        ),
-    ];
-
-    /// #1675's sweep of record over the seventeen on generation 13 (R1675000): its `SHADOW_BAN`
-    /// entries, as it printed them.
-    const SWEEP_1675_SHADOW_BAN: &[(&str, &str)] = &[(
-        "meditative-069",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    )];
-
+    /// R1678000: a sweep of record writes every entry, since the sweep after each AI promotion and
+    /// each set that ships (`.github/workflows/sweep.yml`) may ban a card again, with a reason no
+    /// earlier report printed. `cargo jackioh sweep --check` (the `jackioh-tools` test
+    /// `shadow_ban_rs_is_what_its_reports_of_record_dictate`) holds every row to the reports of
+    /// record, so a row added or rewritten by hand fails there; this keeps only that none is one of
+    /// TypeScript's eleven, which generations 1 to 8 removed.
     #[test]
-    fn v12_every_entry_is_the_meditative_sweeps_and_none_is_typescripts() {
+    fn v12_r1678000_no_entry_is_typescripts_and_the_reports_of_record_hold_the_rest() {
         for entry in SHADOW_BAN {
-            assert!(
-                SWEEP_OF_RECORD_SHADOW_BAN.contains(entry) || SWEEP_1675_SHADOW_BAN.contains(entry),
-                "{} added or rewritten: only a sweep of record writes an entry",
-                entry.0
-            );
             assert!(
                 !TS_SHADOW_BAN.contains(entry),
                 "{} is TypeScript's, removed by generation 8",

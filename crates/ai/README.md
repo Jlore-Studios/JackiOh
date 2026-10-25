@@ -153,6 +153,16 @@ Meditative cards only, at most half of the set (R732000), and since #1186 Medita
 set held to its own half (R1186000): no sweep, lane or person adds a card of an
 earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
+**When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
+(every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
+runners, `.github/workflows/sweep.yml`. `cargo jackioh sweep --due <base>` names the cards: the bans and
+the watched Meditative and Meditative+ cards when the AI changed, every non-token card of a set that
+ships now and did not. Its report goes under `training/history/`, `--write` reads it last, and a
+changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
+on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
+promotion may ban a card of those two sets again when the new AI is slow with it, within each set's
+half; a record `--write` refuses opens an issue for a person instead.
+
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
 when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that
 needs a new deal changes its seed instead. R290's tier games, the `cargo test` gate smokes behind

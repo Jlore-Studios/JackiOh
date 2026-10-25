@@ -106,7 +106,8 @@ this repository alone, and save it as the repository secret `LEARN_LANE_TOKEN` (
 and variables → Actions). A pull request opened with a run's own token would start no CI. Without
 the secret, or once it has expired, a passing run fails in red at its deliver step and stops at its
 artifact (`promotion.patch`), which a person can push. A fine-grained token expires on the date it was
-given: renew it before then.
+given: renew it before then. The shadow-ban sweep that follows each promotion
+(`.github/workflows/sweep.yml`, R1678000) opens its pull request with the same token.
 
 To run it now: `gh workflow run learn.yml` (`-f games=… -f shards=… -f screen=800`). `-f
 export_run=<run id>` plays no export and retrains on that earlier run's, kept 30 days: a change to
