@@ -554,6 +554,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
+      "round_tier": "",
       "run_id": "40243470853",
       "started_at": "2026-10-25T23:09:25Z",
       "stop_requested": false,
@@ -561,7 +562,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1889": {
       "action": "build",
