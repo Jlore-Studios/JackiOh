@@ -13,12 +13,11 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } f
 
 import { CATALOG } from "@jackioh/cards";
 
+import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import { BURST_MS, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import RewardReveal from "../economy/RewardReveal.tsx";
-import { portraitOfCosmetic } from "../emotes/ownedPortraits.ts";
-import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import { t } from "../i18n/i18n.ts";
 import {
   buyChase,
@@ -216,8 +215,12 @@ export default function CosmeticPacks({
           {opened === null ? null : (
             <div className="pack-slots" data-testid={shopTestid.reveal}>
               {opened.slots.map((slot, index) => {
-                // R1827000: a portrait is an account cosmetic, on no card, and shows its art.
-                const portrait = slot.grant.kind === "cosmetic" ? portraitOfCosmetic(slot.grant.cosmeticId) : null;
+                // R1827000, R1833000: a cosmetic shows its look: a portrait's art, an account cosmetic's
+                // board or back, a per-card one on its card.
+                const look =
+                  slot.grant.kind === "cosmetic" && hasLook(slot.grant.cosmeticId, slot.grant.cardId)
+                    ? { id: slot.grant.cosmeticId, cardId: slot.grant.cardId }
+                    : null;
                 return (
                   <div
                     key={index}
@@ -228,7 +231,7 @@ export default function CosmeticPacks({
                     data-revealed="true"
                   >
                     <p className="pack-slot__outcome">{cosmeticSlotOutcome(slot)}</p>
-                    {portrait === null ? null : <PortraitArt portrait={portrait} className="pack-slot__portrait" />}
+                    {look === null ? null : <CosmeticLook id={look.id} cardId={look.cardId} />}
                     {slot.grant.kind === "cosmetic" && slot.grant.cardId !== null ? (
                       <p className="pack-slot__card">
                         {t("On {card}", { card: cardName(slot.grant.cardId) })}
@@ -358,6 +361,12 @@ function ShardBar({
                   {cosmetic.name} · {t(cosmetic.rarity)}
                   {cosmetic.chase ? ` · ${t("Chase")}` : null}
                 </span>
+                {/* R1833000: the chase's look, a per-card one on the card it would go on. */}
+                {hasLook(cosmetic.id, chosen ?? null) ? (
+                  <div className="token-preview" data-testid={shopTestid.chasePreview(cosmetic.id)}>
+                    <CosmeticLook id={cosmetic.id} cardId={chosen ?? null} />
+                  </div>
+                ) : null}
                 {isPerCardKind(cosmetic.kind) && open.length > 1 ? (
                   <label className="token-card-choice">
                     {t("Card for {name}", { name: cosmetic.name })}

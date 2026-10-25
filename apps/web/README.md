@@ -258,9 +258,12 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
                         as live previews, which equip on that card alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
-                        the account owns them (cards/ownedFullArt.ts); collection/ holds the panels
-                        (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel) and their model; every one
-                        renders the server's answers and decides nothing (rule 7)
+                        the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles,
+                        the default selects and the deck builder's slot picker offer what the account
+                        owns, and an unowned stored pick draws as the default (R1833000); collection/
+                        holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
+                        model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
+                        every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot

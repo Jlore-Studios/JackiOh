@@ -127,6 +127,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1185002, R1185001: M+ #21's set and M+ #1.1's raised play count, plain as Hearthstone prints them.
     "Set stats",
     "Raise a play count",
+    // R1844000, R1844001, R1844002: Stinkyscape's M10, which no card prints until the set's cards do.
+    "Autopilot aura",
+    "Pareto hint",
+    "Do something helpful",
   ],
 };
 
