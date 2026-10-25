@@ -169,9 +169,9 @@ fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardIns
                 .filter_map(|slot| card_at(state, slot))
                 // R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated).
                 .filter(|card| !is_standing_unit(state, card))
-                .cloned()
                 // R1839000: a Dormant card is in no card scope (`restrictions::unaffected_by`).
                 .filter(|card| !crate::slumber::is_slumbering(card))
+                .cloned()
                 .collect::<Vec<CardInstance>>()
         })
         .collect()

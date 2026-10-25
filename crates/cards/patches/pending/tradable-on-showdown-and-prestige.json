@@ -1,7 +1,7 @@
 {
   "title": "Tradable on Showdown and Prestige",
   "sources": "#1838",
-  "notes": "R1838000: Tradable, Hearthstone's Tradeable at no mana (TRADE_COST 0): in their own main phase a player may Trade a Tradable hand card, which goes into their deck at a random position as they draw a card, one Trade a turn (TRADES_PER_TURN, or a figure of the player's own, PlayerState.tradesPerTurn) over all their Tradable cards, refused into a full deck; one refusal (trade::why_trade_refused) for legal_actions, the reducer and the view's tradeReason and trades. R1838001: a public traded naming only the player, then the shuffledIn and drawn it is made of, hidden per zone. R1838002: the draw is a draw for every rule and the Trade no play. R1838003: a Trade on offer keeps a turn from ending by itself; the AI, the random policy and the clock answer it. Meditative #53 Prestige and #98 Showdown are Tradable on both faces. The plays are the families the classifier's games against the base build show playing differently with no change of their own: a Trade on offer moves the AI's, the random policy's and the clock's choices (R1838003), so the games those cards are in diverge (each token family claimed through one of its tokens, classicplus-t-ai-01 and core-t-coin, as a claim names a shipped card); the rule is the Trade action itself, which every game meets.",
+  "notes": "R1838000: Tradable, Hearthstone's Tradeable at no mana (TRADE_COST 0): in their own main phase a player may Trade a Tradable hand card, which goes into their deck at a random position as they draw a card, one Trade a turn (TRADES_PER_TURN, or a figure of the player's own, PlayerState.tradesPerTurn) over all their Tradable cards, refused into a full deck; one refusal (trade::why_trade_refused) for legal_actions, the reducer and the view's tradeReason and trades. R1838001: a public traded naming only the player, then the shuffledIn and drawn it is made of, hidden per zone. R1838002: the draw is a draw for every rule and the Trade no play. R1838003: a Trade on offer keeps a turn from ending by itself; the AI, the random policy and the clock answer it. Meditative #53 Prestige and #98 Showdown are Tradable on both faces. Against main's build, the classifier's games find no family playing differently but the two Tradable cards themselves: a game moves only once a Trade is on offer, and that needs Prestige or Showdown in a hand, so the fragment claims those two cards and no `plays` or rule (R1370000).",
   "player": {
     "title": "Showdown and Prestige are Tradable",
     "new": [
@@ -18,44 +18,5 @@
   "cards": [
     "meditative-053",
     "meditative-098"
-  ],
-  "plays": [
-    "classic-007",
-    "classic-024",
-    "classic-039",
-    "classic-045",
-    "classic-050",
-    "classic-054",
-    "classic-087",
-    "classic-090",
-    "classicplus-024",
-    "classicplus-029",
-    "classicplus-031",
-    "classicplus-051",
-    "classicplus-065",
-    "classicplus-t-ai-01",
-    "core-005",
-    "core-014",
-    "core-024",
-    "core-038",
-    "core-055",
-    "core-066",
-    "core-067",
-    "core-075",
-    "core-t-coin",
-    "meditative-004",
-    "meditative-008",
-    "meditative-039",
-    "meditative-045",
-    "meditative-047",
-    "meditative-048",
-    "meditative-067",
-    "meditative-068",
-    "meditative-082",
-    "meditative-087",
-    "meditative-090",
-    "meditative-099",
-    "meditativeplus-019"
-  ],
-  "rule": true
+  ]
 }
