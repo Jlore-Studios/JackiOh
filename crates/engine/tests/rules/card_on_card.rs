@@ -15,7 +15,7 @@ use super::fixtures::card_on_card::{
     cheap_trap, copier, crier, dear, duo, human, immutable_copier, legend, radiant_copier,
     register_card_on_card, rod, rod_field, sack, sacker, tag_exiler, ticket, token, wormhole,
 };
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use super::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
 
 /// Every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
@@ -759,6 +759,66 @@ mod r1850003_hold_beneath {
         );
         assert!(state.players.p2.exile.iter().any(|card| card.id == held.id));
         assert_eq!(state.held, None);
+    }
+
+    /// The `held` events of the window `events`, as `viewer` reads them.
+    fn held_seen(state: &GameState, events: Vec<GameEvent>, viewer: PlayerId) -> Vec<Value> {
+        let mut state = state.clone();
+        state.applied = vec![AppliedAction {
+            nonce: "held".into(),
+            events,
+        }];
+        view_for(&state, viewer)
+            .events
+            .iter()
+            .filter(|event| event.event_type() == GameEventType::Held)
+            .map(json_of)
+            .collect()
+    }
+
+    #[test]
+    fn r1850003_held_reads_as_where_the_card_and_its_holder_are_now() {
+        // Both on the board: both seats read the card and its holder.
+        let mut state = playing("held-view");
+        let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        let (holder, mut events) = ticketed(&mut state, &held.id);
+        for viewer in [P1, P2] {
+            let seen = held_seen(&state, events.clone(), viewer);
+            assert_eq!(seen.len(), 1);
+            assert_eq!(seen[0]["instanceId"], json!(held.id));
+            assert_eq!(seen[0]["defId"], json!(cheap().id));
+            assert_eq!(seen[0]["holderId"], json!(holder));
+        }
+
+        // The holder bounced to p1's hand, and the card it released, keeping its id, bounced to
+        // p2's: each seat reads only the card now in its own hand (R97).
+        for id in [holder.clone(), held.id.clone()] {
+            events.extend(apply(
+                &mut state,
+                None,
+                P1,
+                effects::bounce(json_as(json!({ "target": instance(&id) }))),
+            ));
+        }
+        assert_eq!(state.players.p1.hand.last().map(|card| &card.id), Some(&holder));
+        assert_eq!(state.players.p2.hand.last().map(|card| &card.id), Some(&held.id));
+        let mine = &held_seen(&state, events.clone(), P1)[0];
+        assert_eq!(mine["instanceId"], json!(HIDDEN_ID));
+        assert_eq!(mine["defId"], json!(HIDDEN_ID));
+        assert_eq!(mine["holderId"], json!(holder));
+        let theirs = &held_seen(&state, events.clone(), P2)[0];
+        assert_eq!(theirs["instanceId"], json!(held.id));
+        assert_eq!(theirs["defId"], json!(cheap().id));
+        assert_eq!(theirs["holderId"], json!(HIDDEN_ID));
+        state.applied = vec![AppliedAction {
+            nonce: "window".into(),
+            events,
+        }];
+        assert!(
+            !json_of(view_for(&state, P1).events)
+                .to_string()
+                .contains(&held.id)
+        );
     }
 
     #[test]

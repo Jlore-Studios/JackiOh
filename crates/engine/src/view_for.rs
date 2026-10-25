@@ -2289,9 +2289,21 @@ fn redact_event(
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
         // R1183002: the autopilot names a player and a turn.
-        | GameEventType::AutopilotEngaged
-        // R1850003: only a face-up card is held, beneath a card on the board, so both are public.
-        | GameEventType::Held => event.clone(),
+        | GameEventType::AutopilotEngaged => event.clone(),
+
+        // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
+        // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps
+        // its id, and may since have been bounced into a hand, and a holder may since be somewhere this
+        // viewer cannot read. A holder that never found a zone is named by no id, and stays so.
+        GameEventType::Held => {
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            if nullable_at(&shown, "holderId").is_some_and(|holder| !holder.is_empty() && hidden(&holder)) {
+                hide(&mut shown, &["holderId"]);
+            }
+            rebuild(shown)
+        }
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

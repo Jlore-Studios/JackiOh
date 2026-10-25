@@ -502,7 +502,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
       return t("The AI plays the rest of {whose} turn", { whose: name.whose(event.player) });
     case "held":
-      // R1850003: the card and the one it is held beneath, both public.
+      // R1850003: the card and the one it is held beneath, each a card back where the view hides it.
       return capitalised(
         t("{card} is held beneath {holder}", { card: name.card(event.instanceId, event.defId), holder: name.instance(event.holderId) }),
       );
