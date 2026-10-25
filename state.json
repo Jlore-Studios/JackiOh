@@ -461,7 +461,7 @@
       "provider": "gpt",
       "queued_at": "2026-10-25T12:33:27Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "pending:2fee04ed-1792933825",
+      "run_id": "40196471607",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-25T13:11:19Z",
