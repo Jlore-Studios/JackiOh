@@ -161,4 +161,11 @@ grantedTags?: Array<Tag>,
  * R78's reset takes them off with the card leaving the field; an instance copy keeps them, a
  * Fuse unites them, a Transform drops them — as `granted_tags` above.
  */
-grants?: Array<Grant>, };
+grants?: Array<Grant>, 
+/**
+ * R1845000: Nerfs no seat may read, the owner's included, waiting to land at §10.5 step 3 of the
+ * card's next play or cast (R1845001). Kept in every zone; a copy or a Transform is a new card
+ * without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
+ * and hashes as before (D3).
+ */
+hiddenNerfs?: number, };

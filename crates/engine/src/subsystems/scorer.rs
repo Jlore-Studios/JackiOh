@@ -744,6 +744,8 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
         }
     }
     base.board_history = history;
+    // R1845000: no seat reads a hidden Nerf, the viewer's own hand's included, so the dry run lands none.
+    crate::state::forget_hidden_nerfs(base);
 }
 
 /// R1714000: the records beside the cards that the viewer may not read either, as the AI's `redact`

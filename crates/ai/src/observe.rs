@@ -594,6 +594,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             card.counters.plague = plague;
         }
     }
+    // R1845000: no seat reads a hidden Nerf, the card's own owner included, and the seat's own hand is
+    // never a placeholder, so every card forgets them.
+    jackioh_engine::state::forget_hidden_nerfs(&mut next);
 
     // Step 4: erase the true order of the piles the seat cannot see into.
     next.players[opp].hand.sort_by(by_instance_id);

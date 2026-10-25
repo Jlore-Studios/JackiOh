@@ -1804,6 +1804,14 @@ pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
 /// card's Tribute X, whatever the Float's size (`float::float_lowers_tribute`).
 pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
 
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape M11 (issue #1845, R1845000–R1845002): hidden Nerfs and trade offers
+// ---------------------------------------------------------------------------------------------
+
+/// R1845002: the offer comes due at the start of the opponent's next turn, counted in their own turns
+/// (R1181000), so its badge counts down on the offerer's side while it waits.
+pub const TRADE_OFFER_TURNS: i32 = 1;
+
 #[cfg(test)]
 mod tests {
     use super::*;

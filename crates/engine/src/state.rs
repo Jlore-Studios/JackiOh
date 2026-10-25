@@ -321,6 +321,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grants: Option<Vec<Grant>>,
+    /// R1845000: Nerfs no seat may read, the owner's included, waiting to land at §10.5 step 3 of the
+    /// card's next play or cast (R1845001). Kept in every zone; a copy or a Transform is a new card
+    /// without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
+    /// and hashes as before (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hidden_nerfs: Option<i32>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -2034,6 +2041,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         set_as: None,
         granted_tags: None,
         grants: None,
+        hidden_nerfs: None,
     };
     *next_id += 1;
     instance
@@ -2329,6 +2337,24 @@ pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Opt
         &mut state.players.p2
     };
     side_cards_mut(side).find(|card| card.id == instance_id)
+}
+
+/// R1845000: no seat reads a hidden Nerf, the card's own owner included, so a copy of the state made
+/// for a seat holds none: on any card of either side, nor in Rollback's snapshots (R419). The AI's
+/// `redact` (R185) and the dry run's `concealed_copy` (R222) both end with it.
+pub fn forget_hidden_nerfs(state: &mut GameState) {
+    for player in PLAYER_IDS {
+        for card in side_cards_mut(&mut state.players[player]) {
+            card.hidden_nerfs = None;
+        }
+    }
+    for snapshot in state.board_history.iter_mut().flatten() {
+        for player in PLAYER_IDS {
+            for card in side_snapshot_instances_mut(&mut snapshot.sides[player]) {
+                card.hidden_nerfs = None;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
