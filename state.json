@@ -13750,6 +13750,14 @@
       "started_at": "2026-10-25T04:53:44Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "1835": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-25T03:45:23Z",
+      "issue": 1825,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
