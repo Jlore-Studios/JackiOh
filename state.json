@@ -237,6 +237,8 @@
       "verdict_rounds": 0
     },
     "1833": {
+      "action": "build",
+      "asks": [],
       "handoff": {
         "at": "2026-10-25T08:49:22Z",
         "family": "claude",
@@ -246,10 +248,17 @@
         "reason": "planned on opus",
         "trail": "d -n 20,60p cards/borders.test.ts; sed -n 85,100p cards/borders.test.ts\", \"description\": \"Read minion border rule selection logic\"}\n- Bash: {\"command\": \"grep -rn \\\"<PackOpening\\\\|<TokenPicker\\\\|<CosmeticPacks\\\" --include=*.tsx . | grep -v test | head\", \"description\": \"Find where reveal components mount\"}\n- Bash: {\"command\": \"grep -n \\\"className=\\\\\\\"app-shell\\\\|className={\\\\`app-shell\\\\|app-shell\\\" routes/packs.tsx | head -3; grep -n \\\"collection-sample {\\\" -A8 collection/collection.css; grep -n \\\"token-previ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1833 && timeout 60 grep -rln \\\"TOKEN_BAR_TARGET_PACKS\\\" crates --include=*.rs | head\", \"description\": \"Find tests using token bar target packs\"}\n- Bash: {\"command\": \"grep -n \\\"TOKEN_BAR_TARGET_PACKS\\\\|shipped\\\\|fn r1\\\" crates/server/src/economy/math.rs | head -20\", \"description\": \"Check economy math tests for registry dependence\"}\n- Bash: {\"command\": \"cd crates/server && grep -rn \\\"table_cosmetic: Some\\\\|\\\\\\\"tableCosmetic\\\\\\\": \\\\\\\"\\\" src tests | grep -v \\\"table-felt\\\\|table-wood\\\\|table-neon\\\" | head\", \"description\": \"Find deck fixtur\u2026\n- Bash: {\"command\": \"sed -n 210,225p ../../apps/web/src/collection/collection.ts; sed -n 555,566p ../../apps/web/src/main.tsx\", \"description\": \"Read accountTiles and Gated provider lines\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\", \"content\": \"## Goal\\n\\n`crates/server/cosmetics.json` grows from 36 to 72 entries: the issue's 36, appended, none a default or sta\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1833 && wc -w .bot-plan.md && wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"tr -s ' \\\\n\\\\t' '\\\\n' < .bot-plan.md | grep -vc '^[|\\u2014-]*$'\", \"description\": \"Count words excluding table separators\"}\n- Bash: {\"command\": \"grep -n \\\"react-refresh\\\\|only-export\\\" eslint.config.js; grep -n \\\"export function\\\\|export const\\\" apps/web/src/collection/CardCosmeticsView.tsx apps/web/src/emotes/PortraitArt.tsx | h\u2026\n- Bash: {\"command\": \"awk '/^## /{s=$0} {n=split($0,a,/[ \\\\t]+/); c=0; for(i=1;i<=n;i++) if (a[i] !~ /^[|\\u2014-]*$/) c++; w[s]+=c} END{for (k in w) print w[k], k}' .bot-plan.md | sort -rn\", \"description\": \"C\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\", \"old_string\": \"`crates/server/cosmetics.json` grows from 36 to 72 entries: the issue's 36, appended, none a \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\", \"old_string\": \"Looks (Common and Rare subtle, Epic richer, Legendary and Mythic two layers or variants):\\n\\n\u2026\n- Bash: {\"command\": \"tr -s ' \\\\n\\\\t' '\\\\n' < .bot-plan.md | grep -vc '^[|\\u2014-]*$'\", \"description\": \"Recount plan words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\", \"old_string\": \"21. **`spec/rulings/R1833000.md`**: title \\\"The registry doubles: 36 earned cosmetics, the fi\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\", \"old_string\": \"- [ ] 72 entries, the 36 appended as specified, `shipped()` passes\\n- [ ] Every new id styled\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\", \"old_string\": \"- **Replay (R1301003):** logs hold their cosmetics whole, and the entries are appended, so ol\u2026\n- Bash: {\"command\": \"tr -s ' \\\\n\\\\t' '\\\\n' < .bot-plan.md | grep -vc '^[|\\u2014-]*$'\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"awk '/^## Tests/{p=1} /^## Done when/{p=0} p' .bot-plan.md\", \"description\": \"Show the current Tests section\"}\n- Bash: {\"command\": \"cat > /tmp/tests_section.md <<'EOF'\\n## Tests\\n\\n`crates/server/src/cosmetics.rs`:\\n- Add a test constant `R1833000_NEW: [(&str, CosmeticKind, CosmeticRarity); 36]`.\\n- Rename `\\u2026thr\u2026\n- Bash: {\"command\": \"awk '/^### Web: ownership/{p=1} /^### Spec and docs/{p=0} p' .bot-plan.md | head -80\", \"description\": \"Show the web steps for trimming\"}\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\" - Update the header comment (\\\\\\\"every one unlocked\\\\\\\").\\\\n\\\",\\\"\\\"),\\n(\\\" - Make the cache hold `Promise<OwnedCosmetics\u2026\n- Bash: {\"command\": \"awk '/^### Server/{p=1} /^### Web: ownership/{p=0} p' .bot-plan.md; awk '/^### Spec and docs/{p=1} /^## Tests/{p=0} p' .bot-plan.md; awk '/^## Open questions/{p=1} p' .bot-plan.md\", \"des\u2026\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"1. **`cosmetics.json`**: after `portrait-shredder`, add one line per entry in the issue's table order (foil, finish, bord\u2026\n- Bash: {\"command\": \"awk '/^## Files to touch/{p=1} /^## Steps/{p=0} p' .bot-plan.md\", \"description\": \"Show the files table\"}\n- Bash: {\"command\": \"cat > /tmp/files.md <<'EOF'\\n## Files to touch\\n\\n| Path | | What |\\n|---|---|---|\\n| `crates/server/cosmetics.json` | change | append 36 |\\n| `crates/server/src/cosmetics.rs` | change |\u2026\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"The registry grows from 36 to 72: the issue's 36 appended, none a default or starter, `chase` on the 12 Legendary and Myt\u2026\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"- **Foils:** glitter, white dots, glint; sunburst, warm rays, glint; aurora, green/violet bands at 200% width, drift; gal\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1833/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'PY'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\\n\\\\nAlso fix `r1306002_a_full_bar_holds\\u2026`'s comments.\\\\n\\\",\\\"\\\\n\\\")\\ns=s.replace(\\\" - `r1306002_a_chase_cosmeti\u2026\n- said: ## Goal The registry grows to 72: the issue's 36 appended, none default or starter, `chase` on the 12 Legendary and Mythic. Each has a CSS look (chases animated, still under reduced motion). While ownership decides (`FULL_ART_GATED`), the playmat, backdrop and card-back picks and the account-wide f\u2026"
       },
+      "kind": "build",
+      "pending_request": false,
       "planned_at": "2026-10-25T09:13:00Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
-      "planned_tier": "strong"
+      "planned_tier": "strong",
+      "provider": "claude-3",
+      "run_id": "pending:af202897-1792936151",
+      "started_at": "2026-10-25T13:49:44Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "1841": {
       "action": "plan",
@@ -635,9 +644,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T13:45:49Z",
+    "at": "2026-10-25T13:49:44Z",
     "url": "",
-    "what": "build #1829 on claude-3"
+    "what": "build #1833 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-25T13:42:03Z",
