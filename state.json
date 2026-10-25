@@ -628,6 +628,13 @@
     "1903": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T14:59:14Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "easy rule 7 fails outright: the whole change is Cypress specs and e2e support, ~18 files and ~520 changed lines, which also breaks rule 1"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
