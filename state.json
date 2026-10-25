@@ -496,6 +496,14 @@
           "gpt": "medium"
         }
       }
+    },
+    "1910": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-25T12:43:28Z",
+      "issue": 1818,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
