@@ -285,6 +285,16 @@
     }
   },
   "loop_tick": "2026-10-25T09:10:47Z",
+  "machine_disk": {
+    "reading": {
+      "at": "2026-10-25T09:24:15Z",
+      "free": 81740267520,
+      "percent": 34,
+      "total": 123690532864
+    },
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/40180419342",
+    "runner": "night-vm-agy"
+  },
   "planning": null,
   "providers": {
     "agy": {
