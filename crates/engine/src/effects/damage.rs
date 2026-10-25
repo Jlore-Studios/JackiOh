@@ -28,6 +28,9 @@ pub struct DamageFlagArgs {
     /// Spell's printed Trample is read off it while it resolves too; stating it keeps it on a repeat.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trample: Option<bool>,
+    /// R1841001: "deals half damage to heroes": a hit on a hero is halved, rounded down, before Armor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub half_to_heroes: Option<bool>,
 }
 
 /// `damage`'s argument: `{ to; amount } & DamageFlagArgs`.
@@ -55,6 +58,11 @@ fn damage_flags(args: &DamageFlagArgs) -> DamageFlags {
         },
         poisonous: None,
         attacking: None,
+        half_to_heroes: if args.half_to_heroes == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
     }
 }
 

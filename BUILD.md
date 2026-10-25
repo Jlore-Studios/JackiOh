@@ -191,6 +191,9 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `FENG_SHUI_DAMAGE` / `FENG_SHUI_BRITTLE` | 10 base, 20 on the Radiant face / Brittle 2: a punished play's hit and count (R985) | §8.8 M #40, R983 |
 | `HETU_ELEMENTS` / `ELEMENT_WITHOUT_DIGIT` | by digit 0–9: 土水火木金土水火木金 / 土: an index's element and an index with no digit's (R980) | §8.8 M #40 |
 | `GENERATING_CYCLE` / `OVERCOMING_CYCLE` | 木火土金水 / 木土水火金: the reaction's two cycles (R981) | §8.8 M #40 |
+| `ACTIVATE_COOLDOWN_TURNS` | 1: how many of its user's own turns an ability that "has an extra turn cooldown" sits out after a use | §6.2, R1841000 |
+| `HALF_DAMAGE_TO_HEROES_DIVISOR` | 2: "deals half damage to heroes" divides a hit on a hero, rounded down, before Armor | §4.4, R1841001 |
+| `FLOAT_TRIBUTE_REDUCTION` | 1: what each of its owner's Floats takes off a card's Tribute X, whatever the Float's size | §6.2, §6.3, R1841003 |
 
 A card's own printed numbers that nothing outside its script reads (C+ #7's 2 in 3, C+ #41's 3, #31's return cap of (4), every "costs (0)") stay named constants in its script, as Core's do; the numbers Nerf, Buff and KY's Constant may tune are the card's `params` (§5), not constants. In Too Deep's quest tree (C #90) is card data in its file.
 

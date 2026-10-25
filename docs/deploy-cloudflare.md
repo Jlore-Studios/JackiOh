@@ -197,11 +197,12 @@ GitHub -> Actions -> **promote production** -> **Run workflow** (leave `sha` emp
 `production` at the newest green commit of main. Check that the branch exists before step 3, because
 Cloudflare needs a branch to point at.
 
-Then protect it: Settings -> Rules -> Rulesets -> New branch ruleset, target `production`, and enable
-**Restrict deletions** and **Block force pushes**. Do **not** enable "Require a pull request" or
-required status checks on it; those would block the push that creates the branch and hold back the
-promotion pull requests, which no check runs on. Merging a pull request still works under these two
-rules, and they make an accidental `git push -f` to production impossible.
+Then protect it. The `production` ruleset, **Restrict deletions** and **Block force pushes** on
+`production`, lives in `infra/github.tf` (`github_repository_ruleset.production`) and is changed
+there (`infra/README.md`), not in Settings -> Rules -> Rulesets. Do **not** add "Require a pull
+request" or required status checks to it; those would block the push that creates the branch and
+hold back the promotion pull requests, which no check runs on. Merging a pull request still works
+under these two rules, and they make an accidental `git push -f` to production impossible.
 
 ### Step 3: Set up Cloudflare
 
@@ -232,8 +233,10 @@ The Worker's name is `jackioh` (`wrangler.jsonc`), and its account is `CLOUDFLAR
 the workflow. **Never** put `SUPABASE_SECRET_KEY`, `DATABASE_URL` or `CODE_PEPPER` in the web build
 or in Cloudflare: anything the web build reads is readable by every visitor.
 
-**Custom domain:** Worker -> Settings -> Domains & Routes -> Add -> Custom domain. Until you add one,
-the site is on `jackioh.<your-account>.workers.dev`.
+**Custom domain:** `jackioh.com`, and the zone's DNS records, live in `infra/cloudflare.tf` and are
+changed there (`infra/README.md`), not under Worker -> Settings -> Domains & Routes. Without a custom
+domain the site is on `jackioh.<your-account>.workers.dev`, which stays on either way: the deploy
+job's `check the live site` step reads it.
 
 ### Step 4: Tell the backend about the new origin
 
@@ -259,11 +262,14 @@ the site is on `jackioh.<your-account>.workers.dev`.
   `https://jackioh.vercel.app,https://play.example.com`. This list gates both CORS and the WebSocket
   Origin check (R162), so a missing entry breaks matches, not just page loads. Saving restarts the
   server.
-- **Supabase** -> Authentication -> URL Configuration -> **Redirect URLs**: add
-  `https://<cloudflare-domain>/login`. Emailed links (sign-up confirmation, password reset) are
-  built from the page's own origin (`auth.ts` `authRedirectUrl`), and Supabase silently replaces any
-  `redirect_to` that is not on this list with the Site URL. Keep the Vercel entry for staging.
-- **Supabase Site URL:** change it to the Cloudflare domain at cut-over (step 6), not before.
+- **Supabase Redirect URLs** (Authentication -> URL Configuration) live in `infra/supabase.tf`
+  (`uri_allow_list`) and are changed there (`infra/README.md`): `https://<cloudflare-domain>/login`
+  is on it. Emailed links (sign-up confirmation, password reset) are built from the page's own origin
+  (`auth.ts` `authRedirectUrl`), and Supabase silently replaces any `redirect_to` that is not on this
+  list with the Site URL. Staging's `https://jackioh.vercel.app/login` is not on it, so staging's
+  emailed links land on jackioh.com.
+- **Supabase Site URL:** `site_url` in the same file. It moves to the Cloudflare domain at cut-over
+  (step 6), not before.
 - **`TRUSTED_PROXY_HOPS` on Render does not change.** Browsers talk to Render directly; Cloudflare
   only serves the static files. It would change only if Render itself were put behind Cloudflare.
 
@@ -302,7 +308,8 @@ production: `crates/server/tests/deploy/rehearse.sh` boots with
 `PUBLIC_ORIGINS=https://jackioh.com,https://www.jackioh.com`, and the usage comment of
 `e2e/cypress/e2e/99-online-smoke.cy.ts` shows `E2E_BASE_URL=https://jackioh.com`.
 
-What is left is the dashboards' half (#256): set the Supabase Site URL to `https://jackioh.com`.
+The dashboards' half (#256) was the Supabase Site URL, `https://jackioh.com`. It is `site_url` in
+`infra/supabase.tf` now, and is changed there (`infra/README.md`).
 
 ### Step 7: Let the countdown issue start Vercel's builds
 
@@ -351,7 +358,8 @@ past the hour.
   or main was rewritten. Compare with `git log --oneline --graph origin/main origin/production`. If
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
-  ruleset), and the next run continues normally. The hourly check fails the same way until then.
+  ruleset; `terraform -chdir=infra apply` puts the rule back, `infra/README.md`), and the next run
+  continues normally. The hourly check fails the same way until then.
 - **A run says "main has N newer commit(s) whose CI has not passed yet":** production has every
   green commit and `main` is ahead. The countdown stays due (a `/fast-forward` too), and the next
   green CI run on `main` merges. CI on `main` is never cancelled by a newer push (`ci.yml`'s

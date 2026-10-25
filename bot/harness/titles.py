@@ -53,15 +53,16 @@ _MERGE = re.compile(r"^Merge pull request #(\d+)\b")
 PATCHES_JSON = "crates/cards/patches/patches.json"
 
 #: Threads whose titles a workflow or a bot finds by their text, or that a tool names, which the
-#: retcon leaves as they are (#1372): ci-duration.yml's alert, super.yml's, deploy-watch.yml's and
-#: patches-ship.yml's refusal, the disk alert (`disk.TITLE`), the weekly hygiene issues
-#: (.github/hygiene/branches.py), the status issues (`dashboard.TITLE`, Squishy's), and the
-#: tools' own pull requests.
+#: retcon leaves as they are (#1372): ci-duration.yml's alert, super.yml's, deploy-watch.yml's,
+#: patches-ship.yml's refusal and its watch's stuck issue, the disk alert (`disk.TITLE`), the weekly
+#: hygiene issues (.github/hygiene/branches.py), the status issues (`dashboard.TITLE`, Squishy's),
+#: and the tools' own pull requests.
 LEFT_ALONE = re.compile(
     r"^(?:CI: a job ran over \d+ minutes$"
     r"|CI: daily super run failed$"
     r"|Render: the live server is not serving main's catalog$"
     r"|patches ship refused to promote the pending patches$"
+    r"|CI: a patches promotion or log is stuck$"
     r"|Night bot: the machine's disk is filling up$"
     r"|Architecture: weekly hygiene\b"
     r"|(?:Night bot|Squishy) status$"

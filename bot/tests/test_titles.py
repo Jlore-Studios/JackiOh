@@ -96,6 +96,7 @@ class RetconTests(unittest.TestCase):
         for title in ("CI: a job ran over 7 minutes", "CI: daily super run failed",
                       "Render: the live server is not serving main's catalog",
                       "patches ship refused to promote the pending patches",
+                      "CI: a patches promotion or log is stuck",
                       "Night bot: the machine's disk is filling up",
                       "Architecture: weekly hygiene, dead files and archives, 2026-10-19",
                       "Night bot status", "patches ship: v0.3.17", "AI gen 13 (improve): in training",
