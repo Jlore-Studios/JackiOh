@@ -585,6 +585,31 @@
         "status": "allowed"
       }
     },
+    "claude-7": {
+      "spent": [
+        {
+          "at": "2026-10-25T09:39:36Z",
+          "minutes": 17.8
+        }
+      ],
+      "tokens_spent": [
+        {
+          "at": "2026-10-25T09:39:36Z",
+          "cache": 23930517,
+          "cost": 8.7857,
+          "input": 300,
+          "output": 95807
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T14:00:00Z",
+          "utilization": 0.32
+        },
+        "observed_at": "2026-10-25T09:39:36Z",
+        "status": "allowed"
+      }
+    },
     "claude-8": {
       "usage": {
         "five_hour": {
