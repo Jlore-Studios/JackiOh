@@ -2,6 +2,12 @@
   "halt": {},
   "halted": false,
   "items": {
+    "1833": {
+      "planned_at": "2026-10-25T09:13:00Z",
+      "planned_by": "`claude-1` (claude, `opus`, strong)",
+      "planned_by_id": "claude-1",
+      "planned_tier": "strong"
+    },
     "1841": {
       "failures": 1,
       "handoff": {
