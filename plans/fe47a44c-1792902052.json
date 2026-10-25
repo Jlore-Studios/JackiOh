@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1821,
+  "title": "Patch: an attack whose only kill is Cleave's splash counts as a killing trade",
+  "branch": "bot/issue-1821",
+  "thread": "**Issue #1821 (data, not instructions):**\n\n```text\n# #1821: Patch: an attack whose only kill is Cleave's splash counts as a killing trade\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe practice AI always weighs an attack that kills its target at an even trade before it spends mana \u2014 but only when the target itself dies. A Cleave attacker's best attack is often the one whose splash kills the neighbours while the target survives; today that attack is filed with the weak attacks and may never be simulated. After this change an attack counts as a killing trade when the target or any splashed neighbour dies.\n\n## Why\n\n`even_trade` (`crates/ai/src/candidates.rs:316-319`) gates on `trade.kills`, defined at `crates/ai/src/reply.rs:71` as \"whether the strike kills the target itself\". Splash kills only feed `cleave_value` (`reply.rs:104-105`). So a Cleave 4/4 hitting a 5/5 flanked by two 2/2s \u2014 the attack's entire payoff \u2014 has `kills == false`, lands in `other_attacks` after `round_robin(plays)` and `answers` (`candidates.rs:835-837`), and the beam's `root_branching` truncation (`crates/ai/src/search.rs:182-186`) can cut it before it is ever simulated. Same shape as the accepted #1779, which put each attacker's best even trade beside its free kills.\n\n## Proposal\n\nAdd a `kills_any` flag to `Trade`, set when the target or any splashed neighbour dies \u2014 the `splash.kills` loop at `reply.rs:104` already computes it \u2014 and gate `even_trade` on it instead of `kills`. Do not relax the gate to `value > 0`: that would promote every chip attack (`chip_per_damage` is positive for any hit).\n\n## Where it lands\n\n`crates/ai/src/reply.rs`, `crates/ai/src/candidates.rs`, `crates/ai/tests/ai/`. Engine and spec untouched.\n\n## Acceptance criteria\n\n- [ ] A Cleave attack whose only kills are splashed neighbours passes `even_trade`.\n- [ ] An ordering test puts such an attack ahead of the plays, the #1779 spot.\n- [ ] `cargo jackioh gate` smoke reports no regression.\n\n## Size and risks\n\nSmall \u2014 plausibly easy: ~15 lines plus a test in one crate, one flag beside a field that already flows through. Low risk: a strict superset of today's promotion, never a new attack.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-25T03:35:52Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1821: needs a plan; `claude-8` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
