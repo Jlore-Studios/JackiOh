@@ -627,6 +627,10 @@
         {
           "at": "2026-10-25T10:01:21Z",
           "minutes": 5.5
+        },
+        {
+          "at": "2026-10-25T10:01:38Z",
+          "minutes": 15.8
         }
       ],
       "tokens_spent": [
@@ -650,7 +654,7 @@
           "resets_at": "2026-10-25T14:00:00Z",
           "utilization": 0.7
         },
-        "observed_at": "2026-10-25T10:01:21Z",
+        "observed_at": "2026-10-25T10:01:38Z",
         "status": "allowed"
       }
     },
