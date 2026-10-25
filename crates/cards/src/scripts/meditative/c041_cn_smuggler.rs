@@ -50,6 +50,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -57,10 +58,6 @@ mod tests {
 
     const FILLER: &str = "core-008";
     const LIBRARY: [&str; 3] = ["core-025", "core-008", "core-020"];
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).iter().map(|card| card.def_id.clone()).collect()
-    }
 
     fn is_cn_non_token(def_id: &str) -> bool {
         let def = crate::card_def(def_id);
@@ -81,7 +78,7 @@ mod tests {
         // card, and last the drawn card.
         s.start_turn();
 
-        let hand = hand_defs(&s, P1);
+        let hand = def_ids(&s.hand(P1));
         assert_eq!(hand.len(), 4, "the Rock, one CN card, then the draw");
         assert_eq!(hand[1], ROCK, "the Rock first");
         assert!(is_cn_non_token(&hand[2]), "{} is a non-token CN card, not itself", hand[2]);
@@ -116,8 +113,8 @@ mod tests {
 
         s.start_turn();
 
-        assert_eq!(hand_defs(&s, P1), vec![FILLER]);
-        assert_eq!(hand_defs(&s, P2).len(), 2, "p2 drew, and nothing else");
+        assert_eq!(def_ids(&s.hand(P1)), vec![FILLER]);
+        assert_eq!(def_ids(&s.hand(P2)).len(), 2, "p2 drew, and nothing else");
     }
 
     #[test]
@@ -135,11 +132,10 @@ mod tests {
         s.start_turn();
 
         // Nine in hand: the Rock is the tenth, the CN card burns, and the draw after it burns too.
-        let hand = hand_defs(&s, P1);
+        let hand = def_ids(&s.hand(P1));
         assert_eq!(hand.len(), 10);
         assert_eq!(hand[9], ROCK, "the Rock lands first");
-        let burned: Vec<String> =
-            s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+        let burned = def_ids(&s.pile(P1, "graveyard"));
         let burned_cn: Vec<&String> = burned.iter().filter(|def| is_cn_non_token(def)).collect();
         assert_eq!(burned_cn.len(), 1, "the CN card burns first: {burned:?}");
         assert_eq!(hand.iter().filter(|def| *def == ROCK).count(), 1);

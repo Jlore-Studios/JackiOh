@@ -13,7 +13,7 @@ use std::sync::LazyLock;
 use jackioh_engine::testkit::*;
 
 use super::catalog::vanilla_deck;
-use super::harness::setup_catalog;
+use super::harness::{both, setup_catalog};
 
 /// TS `def(overrides)`: a Core Common card with empty faces, `overrides` over it.
 fn def(overrides: Value) -> CardDef {
@@ -32,14 +32,6 @@ fn def(overrides: Value) -> CardDef {
         }
     }
     json_as(literal)
-}
-
-/// The same script on both faces.
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// Meditative #52's modifier as a fixture: +2 while any attacker strikes any Unit (R1120).

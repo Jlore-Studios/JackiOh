@@ -21,21 +21,11 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::{indestructible, plain, trampler};
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot,
+    both, events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot, spread,
 };
 
 // Local defs. Indices start above 1300 so they never collide with a fixture catalog or another test
 // file's local defs.
-
-/// The keys `extra` names replace the defaults'.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
-        for (key, value) in extra {
-            base.insert(key, value);
-        }
-    }
-    base
-}
 
 fn def(index: u32, overrides: Value) -> CardDef {
     json_as(spread(
@@ -128,13 +118,6 @@ fn cheap_spell() -> CardDef {
             "cost": 2,
         }),
     )
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn mod_defs() -> Vec<CardDef> {

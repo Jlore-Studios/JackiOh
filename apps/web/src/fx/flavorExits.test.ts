@@ -10,6 +10,7 @@ import { ANIMATIONS, animTestid, planEntries, type AnimationEntry } from "../gam
 import { testid, type Side } from "../game/contract.ts";
 import { faceUpBackrow, fullBoardView, unit, withEvents } from "../test/fixtures.ts";
 import { flavorOfId } from "../cards/flavor.ts";
+import { must } from "../test/stubServer.ts";
 import {
   FX_CRACK_TAIL_MS,
   FX_DEATH_BOLT_FLIGHT_FRACTION,
@@ -69,11 +70,6 @@ function stable(value: unknown): string {
 function expectCues(actual: readonly FxCue[], expected: readonly Loose[]): void {
   const sort = (cues: readonly Loose[]): Loose[] => [...cues].sort((a, b) => (stable(a) < stable(b) ? -1 : stable(a) > stable(b) ? 1 : 0));
   expect(sort(actual.map(shape))).toEqual(sort(expected));
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
 }
 
 function entryFor(events: readonly GameEvent[], view: PlayerView, D: number, reduced = false): AnimationEntry {

@@ -212,7 +212,8 @@ mod tests {
         })
     }
 
-    /// practice/decks.ts' Human Vanguard: twenty distinct Core cards.
+    /// practice/decks.ts' Human Vanguard as it was before #1705: twenty distinct Core cards, which a
+    /// recorded game still folds (R1705003).
     const VANGUARD: [&str; 20] = [
         "core-004", "core-005", "core-008", "core-011", "core-015", "core-081", "core-001", "core-016",
         "core-020", "core-045", "core-061", "core-069", "core-077", "core-030", "core-013", "core-019",

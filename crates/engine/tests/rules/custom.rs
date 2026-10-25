@@ -87,7 +87,7 @@ impl CustomScriptHost for FixtureHost {
 }
 
 fn setup() {
-    register_catalog(vanilla_catalog(40, 1));
+    register_catalog(vanilla_catalog(2 * DECK_SIZE, 1));
 }
 
 fn board(cards: &[&str]) -> Value {
@@ -395,7 +395,7 @@ fn r915004_script_failed_names_the_card_its_controller_and_what_went_wrong() {
 fn snapshot() -> CatalogSnapshot {
     CatalogSnapshot {
         version: "v-test".to_string(),
-        cards: vanilla_catalog(40, 1),
+        cards: vanilla_catalog(2 * DECK_SIZE, 1),
         banned: None,
     }
 }
@@ -538,7 +538,7 @@ fn r915006_a_log_with_a_custom_card_s_play_folds_to_the_live_hash_under_the_same
 /// The vanilla units and the combat fixtures, among them Spikey Pillow, whose aura takes 2 attack off
 /// its controller's units.
 fn sandbox_setup() {
-    register_catalog(combat_catalog(vanilla_catalog(40, 1)));
+    register_catalog(combat_catalog(vanilla_catalog(2 * DECK_SIZE, 1)));
     register_scripts(combat::scripts());
 }
 

@@ -117,8 +117,8 @@ mod tests {
         assert_eq!(
             js(&def().params),
             json!([
-                { "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 },
-                { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
+                { "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1, "cry": true },
+                { "key": "draw", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "cry": true }
             ])
         );
         assert_eq!(js(&def().base.keywords), json!([{ "kind": "Rush" }]));

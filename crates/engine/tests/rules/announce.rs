@@ -17,7 +17,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, new_game, put, setup_catalog, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, register_play_a, with_play_a};
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
@@ -75,23 +75,15 @@ fn hand(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstance {
         .expect("no card")
 }
 
-/// The events of one type, each as its JSON, so literals compare key for key.
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
-}
-
 fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
-    of_type(events, kind)
+    events_json(events, kind)
         .iter()
         .map(|event| event[key].clone())
         .collect()
 }
 
 fn first_field(events: &[GameEvent], kind: GameEventType, key: &str) -> Option<Value> {
-    of_type(events, kind).first().map(|event| event[key].clone())
+    events_json(events, kind).first().map(|event| event[key].clone())
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -140,7 +132,7 @@ mod r448_the_announce_between_s10_5_steps_3_and_4 {
         assert!(index_in(&order, "manaChanged") < index_in(&order, "cardAnnounced"));
         assert!(index_in(&order, "cardAnnounced") < index_in(&order, "cardPlayed"));
         assert_eq!(
-            of_type(events, GameEventType::CardAnnounced),
+            events_json(events, GameEventType::CardAnnounced),
             vec![json!({
                 "type": "cardAnnounced",
                 "player": "p1",
@@ -230,7 +222,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         let (after, events) = (&result.state, &result.events);
 
         assert_eq!(
-            of_type(events, GameEventType::Countered),
+            events_json(events, GameEventType::Countered),
             vec![json!({
                 "type": "countered",
                 "player": "p1",
@@ -245,7 +237,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             GameEventType::Summoned,
             GameEventType::CardResolved,
         ] {
-            assert_eq!(of_type(events, absent), Vec::<Value>::new());
+            assert_eq!(events_json(events, absent), Vec::<Value>::new());
         }
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
         assert!(ids(&after.players.p1.graveyard).contains(&crier.id));
@@ -289,7 +281,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             pluck(events, GameEventType::TrapFired, "instanceId"),
             vec![json!(first.id)]
         );
-        assert_eq!(of_type(events, GameEventType::Countered).len(), 1);
+        assert_eq!(events_json(events, GameEventType::Countered).len(), 1);
         let standing = card_at(after, slot(PlayerId::P2, Row::Backrow, 2));
         assert_eq!(standing.map(|card| card.id.clone()), Some(second.id.clone()));
         assert_ne!(standing.and_then(|card| card.face_up), Some(true));
@@ -323,7 +315,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
         );
         let (after, events) = (&result.state, &result.events);
 
-        assert_eq!(of_type(events, GameEventType::Damage), Vec::<Value>::new());
+        assert_eq!(events_json(events, GameEventType::Damage), Vec::<Value>::new());
         assert_eq!(after.echo_queue, Vec::<EchoItem>::new());
         assert_eq!(after.pending, None);
     }
@@ -350,7 +342,10 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             pluck(events, GameEventType::Countered, "instanceId"),
             vec![json!(crier.id)]
         );
-        assert_eq!(of_type(events, GameEventType::CardPlayed), Vec::<Value>::new());
+        assert_eq!(
+            events_json(events, GameEventType::CardPlayed),
+            Vec::<Value>::new()
+        );
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
 
         // A play that paid 0 is not the chalice's: it resolves.
@@ -362,7 +357,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             json!({ "type": "play", "instanceId": field.id }),
         );
         assert_eq!(
-            of_type(&next.events, GameEventType::Countered),
+            events_json(&next.events, GameEventType::Countered),
             Vec::<Value>::new()
         );
         assert_eq!(
@@ -427,7 +422,7 @@ mod r448_a_countered_play_never_resolves_and_counts_for_nothing {
             json!({ "type": "play", "instanceId": bolt.id, "targets": [{ "pick": "hero", "player": "p2" }] }),
         );
         assert_eq!(
-            of_type(&first.events, GameEventType::Countered),
+            events_json(&first.events, GameEventType::Countered),
             Vec::<Value>::new()
         );
         let second = must(
@@ -523,7 +518,7 @@ mod r448_r70_a_cast_is_announced_and_can_be_countered {
         cast_card(&mut bench.sink(&mut state), &ping, Default::default());
         settle(&mut bench.sink(&mut state), Default::default());
 
-        let announced: Vec<Value> = of_type(&bench.events, GameEventType::CardAnnounced)
+        let announced: Vec<Value> = events_json(&bench.events, GameEventType::CardAnnounced)
             .iter()
             .map(|event| json!([event["instanceId"], event["costPaid"]]))
             .collect();
@@ -533,7 +528,7 @@ mod r448_r70_a_cast_is_announced_and_can_be_countered {
             vec![json!(trap.id)]
         );
         assert_eq!(
-            of_type(&bench.events, GameEventType::CardPlayed),
+            events_json(&bench.events, GameEventType::CardPlayed),
             Vec::<Value>::new()
         );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
@@ -592,7 +587,7 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
             Some(json!("hand"))
         );
         assert_eq!(
-            of_type(events, GameEventType::Stolen),
+            events_json(events, GameEventType::Stolen),
             vec![json!({
                 "type": "stolen",
                 "instanceId": crier.id,
@@ -741,7 +736,10 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
             Some(PlayerId::P2)
         );
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH);
-        assert_eq!(of_type(events, GameEventType::CardPlayed), Vec::<Value>::new());
+        assert_eq!(
+            events_json(events, GameEventType::CardPlayed),
+            Vec::<Value>::new()
+        );
         assert_eq!(after.work, Vec::<WorkItem>::new());
         assert_eq!(after.announcing, None);
     }
@@ -926,7 +924,7 @@ mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits
 
         let theirs = view_for(&state, PlayerId::P2);
         assert_eq!(
-            of_type(&theirs.events, GameEventType::CardAnnounced),
+            events_json(&theirs.events, GameEventType::CardAnnounced),
             vec![json!({
                 "type": "cardAnnounced",
                 "player": "p1",

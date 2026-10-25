@@ -14,9 +14,10 @@
 //!
 //! `choose` (R1183003) is a pure function of the state and the player: every candidate is tried on
 //! the player's concealed copy of the board (`scorer::concealed_copy`, R222: a card hidden from
-//! them is a stand-in with no text), drawing from the dry run's own seed, so the match's rng is
-//! never touched, the choice never reads what the player may not, and the same state always makes
-//! the same choice (§9.3). In order:
+//! them is a stand-in with no text; R1714000: and no record they may not read, an answer's key or
+//! the other seat's secret choice among them), drawing from the dry run's own seed, so the match's
+//! rng is never touched, the choice never reads what the player may not, and the same state always
+//! makes the same choice (§9.3). In order:
 //!
 //! 1. A prompt of theirs: the first `AUTOPILOT_ANSWERS_TRIED` answers `legal_actions` lists, the one
 //!    whose result ranks highest (`Outcome`), ties to the earlier.

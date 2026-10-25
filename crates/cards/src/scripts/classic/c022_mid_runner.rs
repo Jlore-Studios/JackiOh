@@ -84,6 +84,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -256,7 +257,7 @@ mod tests {
                     let token = token.expect("two tokens");
                     s.expect_in_zone(&token, "gone");
                 }
-                let hand: Vec<String> = s.hand(P2).into_iter().map(|card| card.def_id).collect();
+                let hand = def_ids(&s.hand(P2));
                 assert_eq!(hand, vec![ANCHOR]);
             }
 

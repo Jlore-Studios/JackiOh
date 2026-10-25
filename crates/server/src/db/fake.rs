@@ -108,16 +108,17 @@ use crate::config::{
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
     CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
-    EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase, MatchRow,
-    MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
+    InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase,
+    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
     RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
     SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
     TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -250,6 +251,10 @@ pub struct FakeTables {
     pub game_records: Vec<GameRecord>,
     // R1044000, R1044001 (migration 0041): each record id ever written, when, and whether it is folded.
     pub game_record_ledger: IndexMap<String, GameRecordLedgerRow>,
+    // R1715000: the rows whose detail no `GameRecord` reads, by id, with the reason, as a row in an
+    // older format is in Postgres. No store method writes one: a test plants one with its ledger row.
+    // The fold sets each aside; `game_records_list` never meets one.
+    pub unreadable_game_records: IndexMap<String, String>,
     // R1044000 (migration 0041's three totals tables, in one): the records folded.
     pub stats_totals: StatsTotals,
     // RankedTables
@@ -1434,6 +1439,15 @@ pub fn matches_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<Vec<MatchAc
         .collect();
     rows.sort_by_key(|a| a.seq);
     Ok(rows)
+}
+
+/// #1825: as Postgres's `exists`.
+pub fn matches_has_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<bool, StoreError> {
+    call(f, "matches.hasActions")?;
+    Ok(f.tables()
+        .match_actions
+        .iter()
+        .any(|row| row.match_id == match_id))
 }
 
 /// #1169: as Postgres's one statement: stored only while the match is live and its log holds `seq`
@@ -2724,36 +2738,52 @@ pub fn game_records_list(f: &mut FakeTx<'_>, query: &GameRecordQuery) -> Result<
 }
 
 /// R1044000: folds up to `limit` records the totals do not hold yet, the first in id order, and marks
-/// them folded. A record with no ledger row (put in the table by hand) is one of them.
-pub fn game_records_fold_pending(f: &mut FakeTx<'_>, limit: usize) -> Result<usize, StoreError> {
+/// them folded. A record with no ledger row (put in the table by hand) is one of them. R1715000: a
+/// record whose detail does not read is marked folded with its detail emptied, counted nowhere and
+/// answered, so it never holds back the records behind it.
+pub fn game_records_fold_pending(f: &mut FakeTx<'_>, limit: usize) -> Result<FoldedRecords, StoreError> {
     call(f, "gameRecords.foldPending")?;
     let now = (f.guard.now)();
     let tables = f.tables();
-    let mut pending: Vec<GameRecord> = tables
+    let mut pending: Vec<(String, Result<GameRecord, String>)> = tables
         .game_records
         .iter()
-        .filter(|record| {
+        .map(|record| (record.id.clone(), Ok(record.clone())))
+        .chain(
             tables
-                .game_record_ledger
-                .get(&record.id)
-                .is_none_or(|row| !row.folded)
-        })
-        .cloned()
+                .unreadable_game_records
+                .iter()
+                .map(|(id, message)| (id.clone(), Err(message.clone()))),
+        )
+        .filter(|(id, _)| tables.game_record_ledger.get(id).is_none_or(|row| !row.folded))
         .collect();
-    pending.sort_by(|a, b| a.id.cmp(&b.id));
+    pending.sort_by(|a, b| a.0.cmp(&b.0));
     pending.truncate(limit);
-    for record in &pending {
-        tables.stats_totals.fold(record, true);
+    let mut batch = FoldedRecords::default();
+    for (id, read) in pending {
+        match read {
+            Ok(record) => {
+                tables.stats_totals.fold(&record, true);
+                batch.folded += 1;
+            }
+            Err(message) => {
+                tables.unreadable_game_records.shift_remove(&id);
+                batch.unreadable.push(UnreadableGameRecord {
+                    id: id.clone(),
+                    message,
+                });
+            }
+        }
         tables
             .game_record_ledger
-            .entry(record.id.clone())
+            .entry(id)
             .or_insert(GameRecordLedgerRow {
                 recorded_at: now,
                 folded: false,
             })
             .folded = true;
     }
-    Ok(pending.len())
+    Ok(batch)
 }
 
 /// R1596000: the store's [`crate::db::store::Tx::game_records_unfiled`].
@@ -4909,7 +4939,7 @@ pub fn shares_sharers(f: &mut FakeTx<'_>, match_id: &str, friend: &str) -> Resul
     Ok(shares.into_iter().map(|row| row.sharer.clone()).collect())
 }
 
-pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+pub fn shares_for(f: &mut FakeTx<'_>, friend: &str, limit: i64) -> Result<Vec<SharedReplayRow>, StoreError> {
     call(f, "shares.for")?;
     let tables: &FakeTables = f.tables();
     let mut shared: Vec<SharedReplayRow> = tables
@@ -4927,6 +4957,7 @@ pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRo
         .collect();
     shared
         .sort_by(|a, b| (b.created_at, &b.match_id, &b.sharer).cmp(&(a.created_at, &a.match_id, &a.sharer)));
+    shared.truncate(usize::try_from(limit).unwrap_or(0));
     Ok(shared)
 }
 

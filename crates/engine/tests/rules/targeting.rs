@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, matches_object, new_game, put, sink_for, slot,
+    events_json, events_of_type, in_hand, matches_object, new_game, put, sink_for, slot,
 };
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
 
@@ -104,17 +104,9 @@ fn top(pile: &Option<Pile>) -> Option<&CardInstance> {
     pile.as_ref().and_then(|cards| cards.first())
 }
 
-/// `eventsOfType(events, kind)`, each event as its JSON.
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .into_iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
-}
-
 /// `eventsOfType(events, kind).map((event) => event[field])`.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
-    of_type(events, kind)
+    events_json(events, kind)
         .into_iter()
         .map(|event| event[field].clone())
         .collect()
@@ -448,6 +440,43 @@ mod r450_a_targeting_cost_classic_89_paul_allens_ghost {
     }
 
     #[test]
+    fn r450_r682_a_unit_naming_it_is_listed_in_every_open_zone_while_payable_and_in_none_otherwise() {
+        // #1889: the listing checks the discards once per price, so every zone of the price agrees.
+        for (others, payable) in [(2, true), (1, false)] {
+            let mut state = game("r450-ghost-zones");
+            let ghost = put(
+                &mut state,
+                &PA.ghost.id,
+                slot(PlayerId::P2, Row::Units, 1),
+                json!({}),
+            );
+            let other = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
+            let zapper = one(&mut state, PlayerId::P1, &PA.zapper.id);
+            hand(&mut state, PlayerId::P1, "fx-5", others);
+            let plays: Vec<Value> = play_actions_for(&state, PlayerId::P1, &zapper)
+                .iter()
+                .map(play_json)
+                .collect();
+            let zones_naming = |named: &dyn Fn(&Value) -> bool| -> Vec<Value> {
+                plays
+                    .iter()
+                    .filter(|play| named(play))
+                    .map(|play| play["zone"].clone())
+                    .collect()
+            };
+            let at_other = zones_naming(&|play| names_first(play, &other));
+            let at_ghost = zones_naming(&|play| names_first(play, &ghost));
+            assert!(at_other.len() > 1, "{plays:?}");
+            assert!(at_other.windows(2).all(|pair| pair[0] != pair[1]), "{at_other:?}");
+            assert_eq!(
+                at_ghost,
+                if payable { at_other } else { vec![] },
+                "{others} other card(s)"
+            );
+        }
+    }
+
+    #[test]
     fn r450_r682_two_random_other_cards_are_paid_at_step_2_with_the_mana_and_the_play_resolves_at_the_card() {
         let mut state = game("r450-ghost-pay");
         let ghost = put(
@@ -715,10 +744,10 @@ mod r450_an_interception_classic_33_joro {
         );
 
         assert_eq!(
-            Value::Array(of_type(&events, GameEventType::Redirected)),
+            Value::Array(events_json(&events, GameEventType::Redirected)),
             json!([{ "type": "redirected", "what": "target", "fromId": unit.id, "toId": joro.id, "byInstanceId": joro.id }])
         );
-        let summoned = of_type(&events, GameEventType::Summoned)
+        let summoned = events_json(&events, GameEventType::Summoned)
             .into_iter()
             .find(|event| event["instanceId"] == json!(joro.id));
         assert!(summoned.is_some_and(|event| matches_object(
@@ -728,7 +757,7 @@ mod r450_an_interception_classic_33_joro {
         // Its Cry would have hit p1's hero for 5: a summon fires none (R1).
         assert_eq!(after.players.p1.hero.health, HERO_HEALTH);
         assert_eq!(
-            of_type(&events, GameEventType::CardAnnounced)
+            events_json(&events, GameEventType::CardAnnounced)
                 .first()
                 .map(|event| event["targets"].clone()),
             Some(json!([joro.id]))
@@ -851,7 +880,7 @@ mod r450_an_interception_classic_33_joro {
         );
 
         assert_eq!(
-            of_type(&events, GameEventType::Redirected)
+            events_json(&events, GameEventType::Redirected)
                 .into_iter()
                 .map(|event| json!([event["fromId"], event["toId"]]))
                 .collect::<Vec<_>>(),
@@ -947,7 +976,7 @@ mod r450_an_interception_classic_33_joro {
         );
         assert_eq!(picks, vec![at(&joro)]);
         assert_eq!(
-            Value::Array(of_type(&sink.events[..], GameEventType::Redirected)),
+            Value::Array(events_json(&sink.events[..], GameEventType::Redirected)),
             json!([{ "type": "redirected", "what": "attack", "fromId": unit.id, "toId": joro.id, "byInstanceId": joro.id }])
         );
     }

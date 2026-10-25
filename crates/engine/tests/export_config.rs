@@ -2,7 +2,8 @@
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, the custom cards' and the practice
-//! sandbox's limits, R915001 and R923002, Duos co-op's six, #936 S1, and R1563006's sequence clock),
+//! sandbox's limits, R915001 and R923002, Duos co-op's six, #936 S1, R1563006's sequence clock, and
+//! R1705003's and R1705005's earlier deck size and lesson handicap),
 //! generated from `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md
 //! rule 9).
 //!
@@ -27,10 +28,10 @@ use jackioh_engine::config::{
     CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH, CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX,
     CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
     DIFFICULTIES, DRAWS_PER_TURN, DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST,
-    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
+    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
     KY_COMPETITION_SECONDS, LIBRARY_CAP, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY,
     REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX,
-    TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, VERSIONS_SCHEME,
+    TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_HUMAN, VERSIONS_SCHEME,
 };
 use serde::Serialize;
 
@@ -139,6 +140,8 @@ fn engine_config_ts() -> String {
         constant("DUOS_PASS_COST", None, &DUOS_PASS_COST),
         constant("DUOS_POOL_HEALTH", None, &DUOS_POOL_HEALTH),
         constant("DUOS_POOL_HEALTH_HARD", None, &DUOS_POOL_HEALTH_HARD),
+        // R1705003: the deck size a game made before #1705 holds to, which a saved draft may still have.
+        constant("EARLIER_DECK_SIZE", None, &EARLIER_DECK_SIZE),
         constant("GLITCH_DEF_ID", None, GLITCH_DEF_ID),
         constant("HERO_HEALTH", None, &HERO_HEALTH),
         constant("HUMAN_HANDICAP", Some("Handicap"), &HUMAN_HANDICAP),
@@ -157,6 +160,8 @@ fn engine_config_ts() -> String {
         constant("SANDBOX_MANA_MAX", None, &SANDBOX_MANA_MAX),
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
+        // R1705005: the human seat's handicap in a lesson.
+        constant("TUTORIAL_HUMAN", Some("Handicap"), &TUTORIAL_HUMAN),
     ];
     constants.sort_by(|a, b| a.name.cmp(b.name));
 
@@ -178,8 +183,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifty-one constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 51, "{text}");
+    // Fifty-three constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 53, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

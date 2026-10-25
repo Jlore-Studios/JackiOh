@@ -10,6 +10,8 @@
 //! after it lands: an enemy permanent with counters at least its cost (R396's `costNow`: an X card on the field its X,
 //! 0 with none chosen; any other card R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it stays
 //! with them and nothing is drawn, since "otherwise" is the condition's, not the steal's. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
+//! Tunes: tokens 1 ↑ (Radiant 2); drawPer 1 ↑, the cards drawn per counter (R1748003). Through v0.4.4b that 1 was
+//! printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, instance_of, place_plague, steal};
@@ -68,14 +70,20 @@ fn steal_it(instance_id: &str) -> Effect {
     steal(json_as(json!({ "instanceId": instance_id })))
 }
 
-fn draw_one(_instance_id: &str) -> Effect {
-    draw(json_as(json!({ "count": 1 })))
-}
+/// "draw 1 per Plague Counter" as v0.4.4b printed it, before it was the declared `drawPer` (R1748003).
+const PRINTED_DRAW_PER: i32 = 1;
 
-pub fn script() -> CardScripts {
+/// Both faces: the cards drawn per counter are the declared `drawPer`, or the printed 1 when
+/// `declared` is off.
+fn outbreak(declared: bool) -> CardScripts {
     let base = Script {
         targets: targets(),
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
+            let per = if declared {
+                param(ctx, "drawPer")
+            } else {
+                PRINTED_DRAW_PER
+            };
             vec![
                 place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": param(ctx, "tokens") }))),
                 for_each_card(ForEachCardArgs {
@@ -84,7 +92,7 @@ pub fn script() -> CardScripts {
                 }),
                 for_each_card(ForEachCardArgs {
                     cards: Arc::new(draws_owed),
-                    each: Arc::new(draw_one),
+                    each: Arc::new(move |_instance_id: &str| draw(json_as(json!({ "count": per })))),
                 }),
             ]
         })),
@@ -96,6 +104,16 @@ pub fn script() -> CardScripts {
         radiant: base.clone(),
         base,
     }
+}
+
+pub fn script() -> CardScripts {
+    outbreak(true)
+}
+
+/// R767000: through v0.4.4b its draws per counter were printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    outbreak(false)
 }
 
 // C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39: "A declared target, any permanent
@@ -154,6 +172,36 @@ mod tests {
 
     fn lib(n: usize) -> Vec<&'static str> {
         vec![X; n]
+    }
+
+    #[test]
+    fn r1748003_draw_per_moves_with_a_buff_or_a_nerf() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }], "library": lib(6) },
+            "p2": { "hand": [ANCHOR] },
+        }));
+        // A Nerf finds it at its floor of 1 (an amount never drops below 1, R386); a Buff draws 2 a counter.
+        assert!(!crate::can_degrade_number(&s, OUTBREAK, "drawPer"));
+        assert_eq!(crate::upgrade_number(&mut s, OUTBREAK, "drawPer"), 2);
+        let targets = at(&s, VANILLA);
+        s.play(OUTBREAK, json!({ "targets": targets }));
+        assert_eq!(s.card(VANILLA).counters.plague, Some(2));
+        assert_eq!(drawn(&s), 4);
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_draw_per() {
+        crate::under_kept(OUTBREAK, super::script_v0_4_4b(), || {
+            let mut s = scenario(json!({
+                "p1": { "hand": [OUTBREAK, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }], "library": lib(6) },
+                "p2": { "hand": [ANCHOR] },
+            }));
+            crate::upgrade_number(&mut s, OUTBREAK, "drawPer");
+            let targets = at(&s, VANILLA);
+            s.play(OUTBREAK, json!({ "targets": targets }));
+            assert_eq!(drawn(&s), 2, "the kept script draws its printed 1 a counter");
+        });
     }
 
     mod c_39_outbreak {

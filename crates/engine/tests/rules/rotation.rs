@@ -4,7 +4,7 @@
 use jackioh_engine::subsystems::rotation::{RotationResult, rotate_rings};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_json, new_game, put, slot};
 
 // Fixture cards.
 
@@ -110,15 +110,8 @@ fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardIn
     find_instance_mut(state, &card.id).expect("the card is still in the game")
 }
 
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .into_iter()
-        .map(|event| serde_json::to_value(event).unwrap())
-        .collect()
-}
-
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
-    of_type(events, kind)
+    events_json(events, kind)
         .into_iter()
         .map(|event| event[field].clone())
         .collect()
@@ -161,16 +154,16 @@ mod r14_rotation_m3_t7 {
 
         // One `rotated` for the rotation, whatever moved (§10.3).
         assert_eq!(
-            of_type(&events, GameEventType::Rotated),
+            events_json(&events, GameEventType::Rotated),
             vec![json!({ "type": "rotated", "direction": "right" })]
         );
         assert_eq!(
-            of_type(&events, GameEventType::ControlChanged),
+            events_json(&events, GameEventType::ControlChanged),
             vec![
                 json!({ "type": "controlChanged", "instanceId": lane5.id, "controller": "p2", "row": "units", "lane": 5 })
             ]
         );
-        assert!(of_type(&events, GameEventType::Bounced).is_empty());
+        assert!(events_json(&events, GameEventType::Bounced).is_empty());
     }
 
     #[test]
@@ -196,7 +189,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(live(&state, &lane1).controller, PlayerId::P2);
         assert_eq!(result.crossed, ids(&[&lane1]));
         assert_eq!(
-            of_type(&events, GameEventType::Rotated),
+            events_json(&events, GameEventType::Rotated),
             vec![json!({ "type": "rotated", "direction": "left" })]
         );
 
@@ -234,7 +227,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(live(&state, &back).controller, PlayerId::P2);
         assert_eq!(live(&state, &enemy_back).controller, PlayerId::P1);
         assert_eq!(result.crossed, ids(&[&back, &enemy_back]));
-        assert_eq!(of_type(&events, GameEventType::Rotated).len(), 1);
+        assert_eq!(events_json(&events, GameEventType::Rotated).len(), 1);
         assert_eq!(
             field_of(&events, GameEventType::ControlChanged, "row"),
             vec![json!("backrow"), json!("backrow")]
@@ -347,8 +340,8 @@ mod r14_rotation_m3_t7 {
         );
         assert!(result.bounced.is_empty());
         assert_eq!(result.crossed, ids(&[&crossing]));
-        assert!(of_type(&events, GameEventType::Bounced).is_empty());
-        assert_eq!(of_type(&events, GameEventType::ControlChanged).len(), 1);
+        assert!(events_json(&events, GameEventType::Bounced).is_empty());
+        assert_eq!(events_json(&events, GameEventType::ControlChanged).len(), 1);
         // It never left the field, so its damage and buffs come along (R14); the zone stays Locked.
         let it = live(&state, &crossing);
         assert_eq!(it.damage, 1);
@@ -509,7 +502,7 @@ mod r14_rotation_m3_t7 {
         // Who may read it follows from the controller alone, so the card is still face down (R33).
         assert!(live(&state, &card).face_up.is_none());
         assert_eq!(
-            of_type(&events, GameEventType::ControlChanged),
+            events_json(&events, GameEventType::ControlChanged),
             vec![
                 json!({ "type": "controlChanged", "instanceId": card.id, "controller": "p2", "row": "backrow", "lane": 5 })
             ]

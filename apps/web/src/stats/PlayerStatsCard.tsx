@@ -3,15 +3,16 @@
 // card the player was not shown while playing (track.ts). It draws nothing before the first finished
 // game. R1584000: it shows them one at a time (StatShowcase.tsx), each card playing the board's
 // animation for its stat; the showcase is loaded when there is a stat to show, so the first screen
-// stays light. The one request it makes is R1583000's, for the player base's play rates behind the
+// stays light. R1743000: 35 stats, none about a token, in a random order drawn from the page's source. The one request it makes is R1583000's, for the player base's play rates behind the
 // Pocket Pick, and that request sends nothing of the tally.
 
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactElement } from "react";
 
 import { landingTestid } from "../auth/testids.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
+import type { RandomSource } from "../routes/landingFan.ts";
 import { loadPocketPick, type PocketPick } from "./pocketPick.ts";
-import { recordLine, showcaseStats } from "./showcase.ts";
+import { pocketStat, recordLine, showcaseStats } from "./showcase.ts";
 import { resetPlayerStats, usePlayerStats } from "./store.ts";
 import type { PlayerStats } from "./model.ts";
 
@@ -35,11 +36,19 @@ function usePocketPick(stats: PlayerStats): PocketPick | null {
   return pick;
 }
 
-export function PlayerStatsCard({ reduced }: { reduced: boolean }): ReactElement | null {
+export type PlayerStatsCardProps = {
+  reduced: boolean;
+  /** R1743000: where the showcase's random picks and its order are drawn from (landing.tsx's `random`). */
+  random: RandomSource;
+};
+
+export function PlayerStatsCard({ reduced, random }: PlayerStatsCardProps): ReactElement | null {
   useLocale();
   const stats = usePlayerStats();
   const pocket = usePocketPick(stats);
-  const showcase = useMemo(() => showcaseStats(stats, pocket), [stats, pocket]);
+  // The pick's answer redraws nothing: the random stats are drawn once for a tally, and the pick is added to them.
+  const drawn = useMemo(() => showcaseStats(stats, null, random), [stats, random]);
+  const showcase = useMemo(() => [...drawn, ...pocketStat(stats, pocket)], [drawn, stats, pocket]);
   if (stats.games === 0) return null;
 
   // With no card to show, the record alone, as before R1584000.
@@ -54,7 +63,7 @@ export function PlayerStatsCard({ reduced }: { reduced: boolean }): ReactElement
         record
       ) : (
         <Suspense fallback={record}>
-          <StatShowcase stats={showcase} reduced={reduced} />
+          <StatShowcase stats={showcase} reduced={reduced} random={random} />
         </Suspense>
       )}
       <p className="landing-stats-note">

@@ -44,6 +44,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -364,7 +365,7 @@ mod tests {
                 s.end_turn();
                 assert!(s.pile(P1, "library").iter().any(|card| card.def_id == WILDFIRE));
                 assert_eq!(
-                    s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect::<Vec<String>>(),
+                    def_ids(&s.pile(P1, "graveyard")),
                     vec![WILDFIRE],
                 );
                 assert!(!s.events().iter().map(js).any(|event| event["type"] == "transformed"));

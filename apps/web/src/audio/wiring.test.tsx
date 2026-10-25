@@ -10,53 +10,42 @@
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 
 import { HIDDEN_DEF_ID } from "./constants.ts";
 import { setAudioEngineForTests } from "./engine.ts";
 import { resetAudioSettingsForTests } from "./settings.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "./test/fakeAudio.ts";
 import type { AudioEngine, SfxId, SfxParams } from "./types.ts";
 import { durationFor } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import Game from "../game/Game.tsx";
 import { baseView, withEvents } from "../test/fixtures.ts";
 
-type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> } & { say(on: boolean): void };
+type SpeakingEngine = FakeAudioEngine & { say(on: boolean): void };
 
 /** A stand-in for the singleton that records every cue and speaks when told to. */
-function fakeEngine(): FakeEngine {
+function speakingEngine(): SpeakingEngine {
   let speaking = false;
   const listeners = new Set<() => void>();
-  const engine: FakeEngine = {
-    state: vi.fn<AudioEngine["state"]>(() => "running"),
-    unlock: vi.fn<AudioEngine["unlock"]>(),
-    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-    setBusy: vi.fn<AudioEngine["setBusy"]>(),
-    log: vi.fn<AudioEngine["log"]>(() => []),
-    clearLog: vi.fn<AudioEngine["clearLog"]>(),
-    contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 1),
-    speaking: vi.fn<AudioEngine["speaking"]>(() => speaking),
-    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>((listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
+  return {
+    ...fakeAudioEngine({
+      contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 1),
+      speaking: vi.fn<AudioEngine["speaking"]>(() => speaking),
+      subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>((listener) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      }),
     }),
-    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-    dispose: vi.fn<AudioEngine["dispose"]>(),
-    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
-    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
     say(on) {
       speaking = on;
       for (const listener of [...listeners]) listener();
     },
   };
-  return engine;
 }
 
 const lookup = lookupFromDefs(CATALOG);
@@ -76,7 +65,7 @@ function play(events: GameEvent[], withCatalog = true): void {
   });
 }
 
-function sfx(engine: FakeEngine, id: SfxId): (SfxParams | undefined)[] {
+function sfx(engine: SpeakingEngine, id: SfxId): (SfxParams | undefined)[] {
   return engine.playSfx.mock.calls.filter((call) => call[0] === id).map((call) => call[1]);
 }
 
@@ -93,13 +82,13 @@ const summoned = (defId: string, instanceId = "u9"): GameEvent => ({
 const LEGENDARY_UNIT = "core-052";
 const MYTHIC_UNIT = "core-100";
 
-let engine: FakeEngine;
+let engine: SpeakingEngine;
 
 beforeEach(() => {
   vi.useFakeTimers();
   localStorage.clear();
   resetAudioSettingsForTests();
-  engine = fakeEngine();
+  engine = speakingEngine();
   setAudioEngineForTests(engine);
 });
 

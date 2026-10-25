@@ -51,6 +51,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -70,7 +71,7 @@ mod tests {
     }
 
     fn rolled(s: &Scenario) -> String {
-        let mut hand: Vec<String> = s.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+        let mut hand = def_ids(&s.hand(P1));
         hand.retain(|def| def != FILLER);
         assert_eq!(hand.len(), 1, "one rolled token");
         hand[0].clone()
@@ -125,11 +126,7 @@ mod tests {
         s.play(ID, json!({}));
 
         assert_eq!(s.hand(P1).len(), 10);
-        let burned: Vec<String> = s
-            .pile(P1, "graveyard")
-            .into_iter()
-            .map(|card| card.def_id)
-            .collect();
+        let burned = def_ids(&s.pile(P1, "graveyard"));
         assert!(
             burned.iter().any(|def| rank(def) >= 0),
             "the roll burned: {burned:?}"

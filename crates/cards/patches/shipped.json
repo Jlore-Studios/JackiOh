@@ -254,5 +254,41 @@
     "commit": "c0acf807d92cc6ecc12c9b9fb5f135c8262ce652",
     "blob": "39b4562315d4820eedeeebdacfdd39f11ad7e08d",
     "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.5",
+    "commit": "a7a107f54f6a78e0b583f23f9f3cbdd691c5948d",
+    "blob": "39b4562315d4820eedeeebdacfdd39f11ad7e08d",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.6",
+    "commit": "51f86b3430991cdef00f9d1267dca89bb715f247",
+    "blob": "ad7f73f19bb9ecd80367222acea615da6dfa47db",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.7",
+    "commit": "1d6f8eb52a3a455234d5e174b035b03ac88649c9",
+    "blob": "ad7f73f19bb9ecd80367222acea615da6dfa47db",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.8",
+    "commit": "d7fa6dccdcd1e1e5176ae60f5c01837055f41741",
+    "blob": "ad7f73f19bb9ecd80367222acea615da6dfa47db",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "7197c600cb4ab5a4842f85130252fa55219d3938",
+    "blob": "f060c22a41af34d4b883de31ec6913cd9f2ffd53",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "b17db12b222559a0db18945c3ee54073448cb56d",
+    "blob": "45224017753dda6797125ab4edb59455421226a3",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   }
 ]

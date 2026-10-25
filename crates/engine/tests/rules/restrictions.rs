@@ -13,7 +13,7 @@ use crate::rules::fixtures::damage_combat::{
     answer, ask_controller, bolt, charger, fighter, grunt, note, notes, playing, recorder, replays_to,
     round_trip, statue, storm, top_loser, wall, warded,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, put, slot};
 
 fn unit_of(instance: &CardInstance) -> AttackTarget {
     AttackTarget::Unit {
@@ -136,13 +136,6 @@ fn target_ids(targets: &[AttackTarget]) -> Vec<String> {
         .collect()
 }
 
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .into_iter()
-        .map(|event| serde_json::to_value(event).unwrap())
-        .collect()
-}
-
 fn on_instance(id: &str) -> Value {
     json!({ "of": "instance", "instanceId": id })
 }
@@ -189,7 +182,7 @@ mod e35_attack_restrictions_section_4_2_step_2 {
                 json!({ "target": on_instance(&jet.id), "attackers": "self" }),
             ))],
         );
-        assert!(of_type(&b.events, GameEventType::AttackDeclared).is_empty());
+        assert!(events_json(&b.events, GameEventType::AttackDeclared).is_empty());
         // Effects still reach it.
         b.apply(
             Some(&attacker),
@@ -491,7 +484,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
             ))],
         );
         assert_eq!(
-            of_type(&b.events, GameEventType::AttackDeclared),
+            events_json(&b.events, GameEventType::AttackDeclared),
             vec![
                 json!({ "type": "attackDeclared", "attackerId": attacker.id, "targetId": open.id, "forced": true })
             ]
@@ -600,7 +593,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         let striker = live(&b.state, &attacker).clone();
         force_attacks_random(&mut b.sink(), &striker, json_as(json!("enemyUnits")), 2, None);
         // The first strike back killed it, so there is no second attack.
-        let targets: Vec<Value> = of_type(&b.events, GameEventType::AttackDeclared)
+        let targets: Vec<Value> = events_json(&b.events, GameEventType::AttackDeclared)
             .into_iter()
             .map(|event| event["targetId"].clone())
             .collect();
@@ -632,7 +625,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         assert_eq!(b.state.players.p1.hero.health, 25);
         assert_eq!(live(&b.state, &attacker).damage, 0);
         assert_eq!(
-            of_type(&b.events, GameEventType::AttackDeclared),
+            events_json(&b.events, GameEventType::AttackDeclared),
             vec![
                 json!({ "type": "attackDeclared", "attackerId": attacker.id, "targetId": "hero-p1", "forced": true })
             ]

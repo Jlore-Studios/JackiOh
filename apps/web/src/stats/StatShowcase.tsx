@@ -3,12 +3,16 @@
 // (showcaseStage.ts) that carries the board's testids, so the board's keyframes (game/animations.css)
 // and effects (fx/) run on it unchanged. No effect is new.
 //
-// The showcase steps on its own every `SHOWCASE_INTERVAL_MS`, and the player steps it by hand with
-// the arrows or a dot. It holds like the home hand (R639): under reduced motion (the page's, the
-// panel's or the effects setting), a pointer or focus on it, and while the page is hidden. A card
+// The showcase steps on its own every `SHOWCASE_INTERVAL_MS`, and the player steps it by hand with a
+// click, a tap, Enter or Space. It holds like the home hand (R639): under reduced motion (the page's,
+// the panel's or the effects setting), a pointer or focus on it, and while the page is hidden. A card
 // already moving finishes its animation first. Reduced motion shows the still card and its number,
-// and the controls still step it. It reads only what the device logged and the Pocket Pick's public
+// and a click still steps it. It reads only what the device logged and the Pocket Pick's public
 // rates (CLAUDE.md rule 7).
+//
+// R1743000: the stats come in a shuffled bag drawn from the page's random source (`nextInBag`): each
+// once before any repeats, never the one just shown first in a new round. There is no arrow and no dot
+// (a dot for each would give away how many there are), and the showcase is itself the one control.
 
 import {
   useEffect,
@@ -22,7 +26,7 @@ import {
 
 import { CATALOG } from "@jackioh/cards";
 
-import { landingShowcasePickTestid, landingTestid } from "../auth/testids.ts";
+import { landingTestid } from "../auth/testids.ts";
 import CardMarks from "../cards/CardMarks.tsx";
 import { CardFace, faceModel } from "../cards/index.ts";
 import { markEventOf } from "../cards/marks.ts";
@@ -35,9 +39,10 @@ import { useFxSettings } from "../fx/settings.ts";
 import { createSurface } from "../fx/surface.ts";
 import type { FxShakeSink } from "../fx/types.ts";
 import { testid } from "../game/contract.ts";
-import { t, useLocale } from "../i18n/i18n.ts";
+import { useLocale } from "../i18n/i18n.ts";
+import type { RandomSource } from "../routes/landingFan.ts";
 import { SHOWCASE_BEAT_GAP_MS, SHOWCASE_INTERVAL_MS, SHOWCASE_LEAD_MS } from "./config.ts";
-import type { ShowcaseKey, ShowcaseStat } from "./showcase.ts";
+import { EMPTY_BAG, nextInBag, type ShowcaseStat } from "./showcase.ts";
 import { OPPONENT_LUNGE_DIR, STAGE_INSTANCE_ID, STAGE_LANE, stageCues, stageScript } from "./showcaseStage.ts";
 import "../game/animations.css";
 import "../fx/fx.css";
@@ -53,37 +58,40 @@ export type StatShowcaseProps = {
   stats: readonly ShowcaseStat[];
   /** The page's reduced motion (landing.tsx's); the effects setting's is read here. */
   reduced: boolean;
+  /** R1743000: where the order of the stats is drawn from; `Math.random` on the page, a seeded source in tests. */
+  random: RandomSource;
 };
 
-export function StatShowcase({ stats, reduced }: StatShowcaseProps): ReactElement | null {
+export function StatShowcase({ stats, reduced, random }: StatShowcaseProps): ReactElement | null {
   useLocale();
   const [fx] = useFxSettings();
-  const [key, setKey] = useState<ShowcaseKey | null>(null);
+  const keys = useMemo(() => stats.map((stat) => stat.key), [stats]);
+  const [bag, setBag] = useState(() => nextInBag(EMPTY_BAG, keys, random));
   const [held, setHeld] = useState(false);
   const still = reduced || fx.motion === "reduce";
   const fxOn = !still && fx.intensity !== "off";
   const intensity: number = FX_INTENSITY_SCALE[fx.intensity];
 
+  const advance = (): void => {
+    setBag(nextInBag(bag, keys, random));
+  };
+
   // R639's hold: the interval runs only while nothing reads the stat, and a hidden page skips a tick.
-  // A step by hand starts it again, so the stat the player picked gets its whole time.
+  // A step by hand starts it again, so the stat the player moved to gets its whole time.
   useEffect(() => {
-    if (still || held || stats.length < 2) return undefined;
+    if (still || held || keys.length < 2) return undefined;
     const timer = window.setInterval(() => {
       if (document.visibilityState === "hidden") return;
-      setKey((from) => stats[(Math.max(0, stats.findIndex((stat) => stat.key === from)) + 1) % stats.length]?.key ?? null);
+      setBag(nextInBag(bag, keys, random));
     }, SHOWCASE_INTERVAL_MS);
     return () => {
       window.clearInterval(timer);
     };
-  }, [still, held, stats, key]);
+  }, [still, held, keys, bag, random]);
 
-  const at = Math.max(0, stats.findIndex((stat) => stat.key === key));
-  const current = stats[at];
+  const current = stats.find((stat) => stat.key === bag.shown) ?? stats[0];
   if (current === undefined) return null;
-
-  const step = (to: number): void => {
-    setKey(stats[(to + stats.length) % stats.length]?.key ?? null);
-  };
+  const steps = stats.length > 1;
 
   return (
     <div
@@ -91,6 +99,18 @@ export function StatShowcase({ stats, reduced }: StatShowcaseProps): ReactElemen
       data-testid={landingTestid.showcase}
       data-stat={current.key}
       style={{ "--showcase-lead": `${String(SHOWCASE_LEAD_MS)}ms` } as CSSProperties}
+      role={steps ? "button" : undefined}
+      tabIndex={steps ? 0 : undefined}
+      onClick={steps ? advance : undefined}
+      onKeyDown={
+        steps
+          ? (event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              advance();
+            }
+          : undefined
+      }
       onMouseEnter={() => {
         setHeld(true);
       }}
@@ -113,47 +133,6 @@ export function StatShowcase({ stats, reduced }: StatShowcaseProps): ReactElemen
           {current.line()}
         </p>
       </div>
-      {stats.length > 1 ? (
-        <div className="landing-showcase-controls">
-          <button
-            type="button"
-            className="landing-showcase-step"
-            data-testid={landingTestid.showcasePrev}
-            aria-label={t("Previous stat")}
-            onClick={() => {
-              step(at - 1);
-            }}
-          >
-            ‹
-          </button>
-          <div className="landing-showcase-picks" role="group" aria-label={t("Pick a stat")}>
-            {stats.map((stat) => (
-              <button
-                key={stat.key}
-                type="button"
-                className="landing-showcase-pick"
-                data-testid={landingShowcasePickTestid(stat.key)}
-                aria-pressed={stat.key === current.key}
-                aria-label={stat.title()}
-                onClick={() => {
-                  setKey(stat.key);
-                }}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            className="landing-showcase-step"
-            data-testid={landingTestid.showcaseNext}
-            aria-label={t("Next stat")}
-            onClick={() => {
-              step(at + 1);
-            }}
-          >
-            ›
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }

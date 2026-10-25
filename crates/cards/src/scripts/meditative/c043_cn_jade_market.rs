@@ -44,15 +44,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
 
     const FILLER: &str = "core-008";
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).iter().map(|card| card.def_id.clone()).collect()
-    }
 
     #[test]
     fn x_3_adds_three_base_rocks() {
@@ -61,7 +58,7 @@ mod tests {
 
         s.play(ID, json!({ "x": 3 }));
 
-        assert_eq!(hand_defs(&s, P1), vec![FILLER, ROCK, ROCK, ROCK]);
+        assert_eq!(def_ids(&s.hand(P1)), vec![FILLER, ROCK, ROCK, ROCK]);
         assert!(s.hand(P1).iter().skip(1).all(|card| !card.radiant));
     }
 
@@ -74,7 +71,7 @@ mod tests {
         // R348: X is at least 1 and at most the current mana.
         s.expect_refused(|s| s.play(ID, json!({ "x": 0 })));
         s.expect_refused(|s| s.play(ID, json!({ "x": mana + 1 })));
-        assert_eq!(hand_defs(&s, P1), vec![ID, FILLER]);
+        assert_eq!(def_ids(&s.hand(P1)), vec![ID, FILLER]);
     }
 
     #[test]
@@ -89,9 +86,8 @@ mod tests {
         s.play(ID, json!({ "x": 3 }));
 
         assert_eq!(s.hand(P1).len(), 10);
-        assert_eq!(hand_defs(&s, P1).iter().filter(|def| *def == ROCK).count(), 1);
-        let burned: Vec<String> =
-            s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+        assert_eq!(def_ids(&s.hand(P1)).iter().filter(|def| *def == ROCK).count(), 1);
+        let burned = def_ids(&s.pile(P1, "graveyard"));
         assert_eq!(burned.iter().filter(|def| *def == ROCK).count(), 2);
     }
 

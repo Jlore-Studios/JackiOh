@@ -51,12 +51,20 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
 /// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
-/// (`duos_decide` at AI_GATE_BUDGET) against a team on §10.7's random policy, `duos.rs`'s `duos_gate`.
+/// (`duos_decide` at AI_GATE_BUDGET) against each opponent team, §10.7's random policy and the greedy
+/// baseline, `duos.rs`'s `duos_gate`.
 pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
 
 /// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
 /// wins count; a draw is reported beside them.
 pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
+
+/// #1760: the share of its games the Easy AI team must win against a team on the 1v1 gates' one-ply
+/// greedy baseline (`duos_greedy_action`), B32's second matchup. Only wins count. Set as §9.9 sets
+/// the 1v1 gates' counts, the most wins of DUOS_GATE_GAMES_SMOKE that a team as strong as measured
+/// reaches in 95% of runs: on fresh deals (series `duos-tune`, games 1-200, which no gate plays) the
+/// AI team won 168 of 200 against greedy, so 14 of 20.
+pub const DUOS_GATE_GREEDY_WIN_FLOOR: f64 = 0.7;
 
 /// R1127000: the seed of the throwaway determinization `duos_passes` scores a teammate's
 /// follow-ups on. Fixed (never the caller's stream), so the same state reproduces the pass order.
@@ -67,6 +75,14 @@ pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 /// cards times this many single `reduce` calls per `duos_passes` call, with no search and no reply
 /// simulation.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
+
+/// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
+/// price of a crystal everywhere else in the evaluation (`AI_EVAL.unspent_mana`).
+pub const DUOS_PASS_MARGIN_PER_COST: f64 = 0.8;
+
+/// R1723000: the least a pass must gain past the card's worth in the seat's hand and its price, so a
+/// card that would only move from one hand to the other (a tie, up to rounding) stays with the seat.
+pub const DUOS_PASS_MIN_GAIN: f64 = 0.5;
 
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,7 +95,18 @@ pub struct AiSearch {
     /// placement (#1635, `root_candidate_actions`), so a card that reads its own lane or its neighbours
     /// is tried in each; its screen, 400 games of improve-dev against the parent (`82d7eb4b8`), read
     /// 197-203, edge -0.015 (-0.078 to 0.048). 3 let a Tribute play's sets outgrow the lethal allowance.
+    /// In the beam, a line that differs from an earlier one only in where its units stand is a lane
+    /// variant, at most this many of a position counting the first; it is closed beside the first
+    /// rather than played on (#1797, `beam_search`). Its screen, 400 games of improve-dev against the
+    /// parent (`2bcd74f93`), read 215-184 with one game aborted, edge 0.078 (0.019 to 0.136).
     pub zone_variants: i32,
+    /// #1759, R1759000: the stand-downs (a switch from Attack to Defense Position of a unit an enemy unit
+    /// would kill and survive) `expand` keeps past its `width`, the first of them the cut left out, beside endTurn. Switches are the last tier of the
+    /// move order, so where `branching` is 6 (below the root), a board with that many earlier moves cut
+    /// every one, and a unit that cannot win its next fight never stood down in a line, as the
+    /// opponent's reply does (`AI_REPLY.defense_switches`). Bounds a level's children at `width` + this
+    /// + 1. A switch back to Attack is kept only where the width holds it.
+    pub position_switches: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// Answers tried for each auto-answered prompt before the answerer's best is committed
@@ -142,6 +169,7 @@ pub struct AiSearch {
 
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
+    position_switches: 2,
     max_auto_answers: 8,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
@@ -329,6 +357,18 @@ pub struct EvalWeights {
     pub marked_share: f64,
     /// R846: per extra turn owed.
     pub extra_turn: f64,
+    /// R458: per rest-of-game start-of-turn effect a side holds (`ModifierKind::StartOfTurnEffect`:
+    /// Classic+ #52's card each turn, Call to Chaos's eternal cast, R1241), an annuity paid at each of
+    /// its holder's turn starts. Every shipped one pays its holder.
+    pub start_of_turn_effect: f64,
+    /// R848, R849: what a side's closest held alternative win (`ModifierKind::AltWin`) is worth at its
+    /// threshold. It counts the square of the progress toward it (`alt_win_progress`), so the last
+    /// steps weigh most: for its holder a plan, for the holder's enemy a danger.
+    pub alt_win: f64,
+    /// B5 E27 (Classic #37 Last Hurrah): the share of its worth a hand card loses while a delayed
+    /// discard of its owner's hand waits (`DELAYED_DISCARD_HAND_HOOK`), unless it is played first. A
+    /// Temporary card (R637) keeps the smaller of the two shares, not their product.
+    pub doomed_hand_discount: f64,
     /// §3.2, R13: the share of its `unit_worth` a card dormant under one of the seat's own unit piles
     /// counts. It resumes when the cards above it leave.
     pub dormant_share: f64,
@@ -447,6 +487,13 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     jade_step: 1.5,
     marked_share: 0.5,
     extra_turn: 5.0,
+    // #1722: untuned starts for the training lanes, as #1086's are. A start-of-turn effect as about
+    // the two cards it adds over its holder's next two turns (2 × (hand_card + hand_per_cost ×
+    // opponent_hand_cost)), an alternative win at its threshold as three lethal pressures, a doomed
+    // hand at Temporary's half.
+    start_of_turn_effect: 3.0,
+    alt_win: 60.0,
+    doomed_hand_discount: 0.5,
     // #1506: off. At 0.5 and 1.0 its screen, 400 games of improve-dev against the parent (8a366430a),
     // read 200-200, edge 0.0 (-0.024 to 0.024), which keeps nothing (training/improve.md, A screen);
     // the training lanes may move them.
@@ -618,6 +665,11 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     jade_step: 0.0,
     marked_share: 0.0,
     extra_turn: 0.0,
+    // #1722's modifier terms and doomed hand came after the gates were fixed too: nothing, as it gave
+    // them.
+    start_of_turn_effect: 0.0,
+    alt_win: 0.0,
+    doomed_hand_discount: 0.0,
     // #1506's dormant cards came after the gates were fixed too: nothing, as it gave them.
     dormant_share: 0.0,
     dormant_card: 0.0,

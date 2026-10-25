@@ -94,6 +94,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, OFFERED};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -209,7 +210,7 @@ mod tests {
                 let hand = s.hand(P1).len();
                 s.answer(json!(picked));
                 // The pick reaches the hand, not Radiant, and the Sheep stands where it was played.
-                let after: Vec<String> = s.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+                let after = def_ids(&s.hand(P1));
                 assert_eq!(after.len(), hand + 1);
                 assert!(after.contains(&picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");

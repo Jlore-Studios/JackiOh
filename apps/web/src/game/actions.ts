@@ -61,7 +61,6 @@ import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import {
   LANES,
   NO_HIGHLIGHT,
-  namedAbility,
   playerOf,
   sideOf,
   testid,
@@ -93,6 +92,7 @@ export type FaceDownChoice = RevealAt | "up";
 
 /** The R81 play-time choices (and an activation's), as the client accumulates them. */
 export type PlayBuild = {
+  ability?: string;
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
@@ -115,6 +115,7 @@ type Activating = {
   ability?: string;
   candidates: ActionBody[];
   picked: Partial<PlayBuild>;
+  cardAbilities?: string[];
 };
 type Building = Playing | Activating;
 
@@ -134,6 +135,7 @@ export function isBuilding(interaction: Interaction): interaction is Building {
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
 export type PlayNeed =
+  | { kind: "ability"; min: number; max: number; abilities: string[] }
   | { kind: "faceDown"; min: number; max: number; options: FaceDownChoice[] }
   | { kind: "zone"; min: number; max: number; zones: ZoneChoice[] }
   | { kind: "x"; min: number; max: number; values: number[] }
@@ -328,8 +330,7 @@ export function activationControlTestids(view: PlayerView, body: ActivationBody)
   if (body.type === "activate") {
     const listed = activationsOnField(view, body.instanceId);
     if (listed !== null && listed.length > 0) {
-      const ability = body.ability === undefined ? undefined : namedAbility(listed.length, body.ability);
-      out.push(testid.activate(body.instanceId, ability));
+      out.push(testid.activate(body.instanceId));
     }
   }
   if (out.length === 0) out.push(body.type === "activatePower" ? testid.power : testid.activate(body.instanceId));
@@ -342,6 +343,7 @@ export function activationControlTestids(view: PlayerView, body: ActivationBody)
 
 /** Every choice field a build body can carry, read the same way off a play or an activation. */
 type BuildFields = {
+  ability?: string;
   zone?: ZoneChoice;
   x?: number;
   embiggen?: boolean;
@@ -370,6 +372,9 @@ function containsAll(fixed: readonly string[], wanted: readonly string[]): boole
  */
 function matches(candidate: BuildBody, picked: Partial<PlayBuild>): boolean {
   const fixed = fieldsOf(candidate);
+  if (picked.ability !== undefined && fixed.ability !== undefined && fixed.ability !== picked.ability) {
+    return false;
+  }
   // ME-ALTPLAY: face-up is the absence of a timing, compared strictly.
   if (picked.faceDown !== undefined && (fixed.faceDown ?? "up") !== picked.faceDown) return false;
   // A picked zone excludes a candidate that fixes none: a board click never carries through.
@@ -434,6 +439,7 @@ function mergePicked(candidate: BuildBody, picked: Partial<PlayBuild>): BuildBod
     case "activate": {
       const { tributes: _t, targets: _g, modes: _m, ...rest } = candidate;
       const body: ActivateBody = { ...rest };
+      if (picked.ability !== undefined) body.ability = picked.ability;
       if (tributes !== undefined) body.tributes = tributes;
       if (targets !== undefined) body.targets = targets;
       if (modes !== undefined) body.modes = modes;
@@ -470,6 +476,19 @@ function distinctBy<T>(values: readonly T[], key: (value: T) => string): T[] {
  */
 export function outstandingNeed(interaction: Interaction): PlayNeed | null {
   if (!isBuilding(interaction)) return null;
+
+  // R1751000: an activation on a card with several abilities asks which one first.
+  if (interaction.stage === "activating" && interaction.picked.ability === undefined) {
+    const cardAbilities = interaction.cardAbilities;
+    const remaining = remainingCandidates(interaction);
+    const fields = remaining.map(fieldsOf);
+    const legalAbilities = [...new Set(fields.flatMap((c) => (c.ability === undefined ? [] : [c.ability])))];
+    const hasMultiple = (cardAbilities !== undefined && cardAbilities.length > 1) || legalAbilities.length > 1;
+    if (hasMultiple && legalAbilities.length > 0) {
+      return { kind: "ability", min: 1, max: 1, abilities: legalAbilities };
+    }
+  }
+
   const remaining = remainingCandidates(interaction);
   if (remaining.length < 2) return null;
   const fields = remaining.map(fieldsOf);
@@ -886,6 +905,7 @@ function startActivation(
   legal: readonly ActionBody[],
   interaction: Interaction,
   target: Extract<ClickTarget, { on: "activate" }>,
+  view?: PlayerView,
 ): ClickResult {
   if (
     interaction.stage === "activating" &&
@@ -896,13 +916,29 @@ function startActivation(
   }
   const candidates = activationsFor(legal, target.instanceId, target.ability);
   if (candidates.length === 0) return { interaction };
+  const listed = view ? activationsOnField(view, target.instanceId) : null;
+  const cardAbilities = listed && listed.length > 1 ? listed.map((a) => a.ability) : undefined;
   return settle({
     stage: "activating",
     instanceId: target.instanceId,
     ...(target.ability === undefined ? {} : { ability: target.ability }),
     candidates,
-    picked: {},
+    picked: target.ability === undefined ? {} : { ability: target.ability },
+    cardAbilities,
   });
+}
+
+/**
+ * Picks a unit up to attack with it: the attacks `legal` lists for it become the candidates.
+ * R1200: while a Mayor acts the attack names no target, so the click sends it at once. `null` when
+ * `legal` offers the unit no attack.
+ */
+function startAttack(legal: readonly ActionBody[], attackerId: string): ClickResult | null {
+  const candidates = attacksBy(legal, attackerId);
+  if (candidates.length === 0) return null;
+  const only = candidates.length === 1 ? candidates[0] : undefined;
+  if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
+  return { interaction: { stage: "attacking", attackerId, candidates } };
 }
 
 /**
@@ -933,7 +969,7 @@ export function onClickTarget(
     }
 
     case "activate":
-      return startActivation(legal, interaction, target);
+      return startActivation(legal, interaction, target, view);
 
     case "zone": {
       if (!isBuilding(interaction)) return { interaction };
@@ -963,7 +999,10 @@ export function onClickTarget(
               candidate.attackerId === interaction.attackerId &&
               attackTargetTestid(view, candidate.targetId) === testid.card(target.instanceId),
           );
-        return action === undefined ? { interaction } : { interaction: IDLE, action };
+        if (action !== undefined) return { interaction: IDLE, action };
+        // The other attackers stay clickable (`highlightFor`), so a click on one switches the attack to
+        // it, as dragging it does (`planAttack`); a target of the picked attacker is read first, above.
+        return startAttack(legal, target.instanceId) ?? { interaction };
       }
       if (isBuilding(interaction)) {
         const asTribute = target.on === "unit" ? narrowByTribute(interaction, target.instanceId) : null;
@@ -981,17 +1020,12 @@ export function onClickTarget(
         }
         return { interaction };
       }
-      const candidates = attacksBy(legal, target.instanceId);
-      if (candidates.length === 0) {
-        // R849000: legal offers this unit no attack; say why in the engine's words where the view gives
-        // them (`UnitView.attackReason`, on the viewer's own units only). Nothing is sent.
-        const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
-        return reason === undefined ? { interaction } : { interaction, notice: reason };
-      }
-      // R1200: while a Mayor acts the attack names no target, so the click sends it at once.
-      const only = candidates.length === 1 ? candidates[0] : undefined;
-      if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
-      return { interaction: { stage: "attacking", attackerId: target.instanceId, candidates } };
+      const started = startAttack(legal, target.instanceId);
+      if (started !== null) return started;
+      // R849000: legal offers this unit no attack; say why in the engine's words where the view gives
+      // them (`UnitView.attackReason`, on the viewer's own units only). Nothing is sent.
+      const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
+      return reason === undefined ? { interaction } : { interaction, notice: reason };
     }
 
     case "hero": {

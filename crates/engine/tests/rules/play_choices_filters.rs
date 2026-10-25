@@ -7,16 +7,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
-
-/// A shallow merge of `extra`'s keys over `object`'s.
-fn spread(object: &mut Value, extra: Value) {
-    if let (Some(object), Value::Object(extra)) = (object.as_object_mut(), extra) {
-        for (key, value) in extra {
-            object.insert(key, value);
-        }
-    }
-}
+use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot, spread};
 
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let mut card = json!({
@@ -32,7 +23,7 @@ fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
         "base": { "keywords": [], "text": name },
         "radiant": { "keywords": [], "text": name },
     });
-    spread(&mut card, extra);
+    card = spread(card, extra);
     json_as(card)
 }
 
@@ -41,7 +32,7 @@ fn unit(name: &str, index: i32, extra: Value) -> CardDef {
         "base": { "attack": 2, "health": 2, "keywords": [], "text": name },
         "radiant": { "attack": 4, "health": 4, "keywords": [], "text": name },
     });
-    spread(&mut faces, extra);
+    faces = spread(faces, extra);
     def(name, "Unit", index, faces)
 }
 
@@ -121,13 +112,6 @@ fn trap_card() -> CardDef {
 }
 fn field_spell_card() -> CardDef {
     def("field-spell", "Field Spell", 1120, json!({}))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// A script's `targets`, written as JSON.

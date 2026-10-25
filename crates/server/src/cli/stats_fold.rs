@@ -9,7 +9,8 @@
 //! is not, and until it is, the totals miss it and the retention purge keeps its detail. The server's
 //! retention loop folds them at boot (`api::retention::run_purge`); this runs the same fold by hand,
 //! `STATS_FOLD_BATCH_RECORDS` records to a transaction, and says how many it folded. Run again, it
-//! folds nothing: each record is marked folded with its counts, in one transaction.
+//! folds nothing: each record is marked folded with its counts, in one transaction. A record whose
+//! detail does not read is set aside uncounted and printed (R1715000).
 
 use anyhow::bail;
 
@@ -24,8 +25,16 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         bail!(USAGE);
     }
     let db = connect_one(&database_url()?).await?;
-    let folded = fold_pending(&db).await;
+    let done = fold_pending(&db).await;
     db.close().await;
-    println!("stats:fold: folded {} records into the totals", folded?);
+    let done = done?;
+    println!("stats:fold: folded {} records into the totals", done.folded);
+    // R1715000: the server's alert has no subscriber here, so each record set aside is printed.
+    for record in &done.unreadable {
+        println!(
+            "stats:fold: set aside {}, whose detail does not read: {}",
+            record.id, record.message
+        );
+    }
     Ok(())
 }

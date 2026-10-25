@@ -80,14 +80,13 @@ describe("R384 the Activate control is lit by the activations legalActions lists
     expect(lit.has(testid.activate("act1"))).toBe(true);
     expect(glow?.has(testid.activate("act1"))).toBe(true);
     expect(lit.has(testid.activate("fs1"))).toBe(true);
-    // act2 lists two abilities, but legal names neither: neither of its controls lights.
-    expect(lit.has(testid.activate("act2", "ping"))).toBe(false);
-    expect(lit.has(testid.activate("act2", "turtle"))).toBe(false);
+    // act2 lists two abilities, but legal names neither: its control does not light.
+    expect(lit.has(testid.activate("act2"))).toBe(false);
     // An activation is a move left, so End turn does not glow.
     expect(glow?.has(testid.endTurn) ?? false).toBe(false);
   });
 
-  it("R510 a card listing several abilities names the ability in its control's testid; one listing one does not", () => {
+  it("R1751000 a card listing several abilities lights its Activate control when any is legal, and outstandingNeed returns kind ability", () => {
     const view = activateView();
     const legal: ActionBody[] = [
       { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u1"], targets: [at("e1")] },
@@ -95,9 +94,17 @@ describe("R384 the Activate control is lit by the activations legalActions lists
 
     const { legal: lit } = highlightFor(view, legal, IDLE);
 
-    expect(lit.has(testid.activate("act2", "turtle"))).toBe(true);
-    expect(lit.has(testid.activate("act2", "ping"))).toBe(false);
-    expect(lit.has(testid.activate("act2"))).toBe(false);
+    expect(lit.has(testid.activate("act2"))).toBe(true);
+
+    const oneInteraction = onClickTarget(view, legal, IDLE, { on: "activate", instanceId: "act2" }).interaction;
+    expect(outstandingNeed(oneInteraction)).toEqual({ kind: "ability", min: 1, max: 1, abilities: ["turtle"] });
+
+    const twoLegal: ActionBody[] = [
+      { type: "activate", instanceId: "act2", ability: "ping", targets: [at("e1")] },
+      { type: "activate", instanceId: "act2", ability: "turtle", tributes: ["u1"], targets: [at("e1")] },
+    ];
+    const interaction = onClickTarget(view, twoLegal, IDLE, { on: "activate", instanceId: "act2" }).interaction;
+    expect(outstandingNeed(interaction)).toEqual({ kind: "ability", min: 1, max: 1, abilities: ["ping", "turtle"] });
     expect(namedAbility(1, "ping")).toBeUndefined();
     expect(namedAbility(2, "ping")).toBe("ping");
   });
@@ -231,7 +238,7 @@ describe("R384 pressing the control builds the activation as a play is built", (
     const { glow } = highlightFor(view, legal, pressed);
     expect(glow?.has(testid.card("u1"))).toBe(true);
     expect(glow?.has(testid.card("u2"))).toBe(true);
-    expect(highlightFor(view, legal, pressed).selected.has(testid.activate("act2", "turtle"))).toBe(true);
+    expect(highlightFor(view, legal, pressed).selected.has(testid.activate("act2"))).toBe(true);
 
     const paid = onClickTarget(view, legal, pressed, { on: "unit", instanceId: "u2", side: "you", lane: 4 });
     expect(paid.action).toEqual(legal[1]);

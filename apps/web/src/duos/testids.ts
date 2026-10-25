@@ -45,6 +45,8 @@ export const duosTestid = {
   resultBoard: "duos-result-board",
   resultReplay: "duos-result-replay",
   resultJlore: "duos-result-jlore",
+  /** #1755: the rail's "Result", while "View the board" has folded the result panel; it opens it again. */
+  resultReopen: "duos-result-reopen",
   // The route's own: before the first view, its clock, and its connection line and Reconnect now.
   connecting: "duos-connecting",
   refused: "duos-refused",

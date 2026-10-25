@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::subsystems::activate::{
     ACTIVATION_WORK, ActivateAction, abilities_of, activate_ability, activate_actions_for,
-    is_acting_on_field, uses_allowed, why_cannot_activate_ability,
+    is_acting_on_field, uses_allowed, uses_record_after_refund, why_cannot_activate_ability,
 };
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::subsystems::hero_power::POWER_KEY;
@@ -244,7 +244,7 @@ mod r384_b3_2_activate_using_an_ability {
                 .as_ref()
                 .and_then(|held| held.memory.get("activations"))
                 .cloned(),
-            Some(json!({ "turn": state.turn, "count": 1 }))
+            Some(json!({ "turn": state.turn, "count": 1, "abilities": { "ping": 1 } }))
         );
     }
 
@@ -308,7 +308,8 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     }
 
     #[test]
-    fn r384_uses_are_counted_per_card_a_card_with_several_abilities_counts_every_use_of_any_of_them() {
+    fn r1751000_r384_uses_are_counted_per_ability_a_card_with_several_abilities_tracks_each_ability_separately()
+     {
         let mut state = playing("per-card");
         let card = put(&mut state, &chooser.id, slot(P1, Row::Backrow, 1), json!({}));
         card_mut(&mut state, &card.id)
@@ -320,10 +321,28 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
                 .as_ref()
                 .and_then(|held| held.memory.get("activations"))
                 .cloned(),
-            Some(json!({ "turn": state.turn, "count": 1 }))
+            Some(json!({ "turn": state.turn, "count": 1, "abilities": { "gamma": 1 } }))
+        );
+        // Under R1751000 (amending R384), each ability tracks its uses separately.
+        // gamma's activation does not lock out alpha!
+        assert_eq!(why_not(&after, P1, &card.id, Some("alpha")).as_deref(), None);
+
+        // Activating alpha in the same turn succeeds.
+        let after2 = act(&after, activate(P1, &card.id, json!({ "ability": "alpha" }))).0;
+        assert_eq!(
+            after2.players.p1.backrow[0]
+                .as_ref()
+                .and_then(|held| held.memory.get("activations"))
+                .cloned(),
+            Some(json!({ "turn": state.turn, "count": 2, "abilities": { "gamma": 1, "alpha": 1 } }))
+        );
+        // Both abilities are now spent for the turn.
+        assert_eq!(
+            why_not(&after2, P1, &card.id, Some("alpha")).as_deref(),
+            Some("that ability has already been used this turn")
         );
         assert_eq!(
-            why_not(&after, P1, &card.id, Some("alpha")).as_deref(),
+            why_not(&after2, P1, &card.id, Some("gamma")).as_deref(),
             Some("that ability has already been used this turn")
         );
     }
@@ -1318,7 +1337,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
                 .as_ref()
                 .and_then(|held| held.memory.get("activations"))
                 .cloned(),
-            Some(json!({ "turn": state.turn, "count": 1 }))
+            Some(json!({ "turn": state.turn, "count": 1, "abilities": { "burn": 1 } }))
         );
         assert_eq!(
             act_result(
@@ -1609,6 +1628,201 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         assert_eq!(
             notes(&answer(&act(&before, activate(P1, &card.id, json!({ "ability": "tell" }))).0).0),
             vec![format!("told:{LOW_TELL}")]
+        );
+    }
+}
+
+mod r1751000_fused_activates_have_separate_cooldowns {
+    use super::*;
+
+    #[test]
+    fn r1751000_each_ability_on_a_fused_card_tracks_its_uses_separately() {
+        let mut state = playing("fused-separate-uses");
+        let card = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card);
+        assert_eq!(ability_ids(&state, &card.id), vec!["zap", "recall"]);
+
+        // Ability 1 ("recall") activated.
+        let state = act(&state, activate(P1, &card.id, json!({ "ability": "recall" }))).0;
+        assert_eq!(notes(&state), vec!["recall:spell"]);
+
+        // Ability 2 ("zap") is still usable in the same turn!
+        assert_eq!(why_not(&state, P1, &card.id, Some("zap")), None);
+
+        // Ability 1 cannot be activated again this turn.
+        assert_eq!(
+            why_not(&state, P1, &card.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+
+        // Activate ability 2 ("zap") in the same turn.
+        let state = act(
+            &state,
+            activate(
+                P1,
+                &card.id,
+                json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
+            ),
+        )
+        .0;
+        assert_eq!(state.players.p2.hero.health, HERO_HEALTH - ZAPPER_DAMAGE);
+
+        // Now both abilities have spent their uses for this turn.
+        assert_eq!(
+            why_not(&state, P1, &card.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+        assert_eq!(
+            why_not(&state, P1, &card.id, Some("zap")),
+            Some("that ability has already been used this turn".to_string())
+        );
+    }
+
+    #[test]
+    fn r1751000_activation_views_report_independent_uses_left_per_ability() {
+        let mut state = playing("fused-views");
+        let card_inst = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card_inst.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card_inst);
+
+        let live_card = card(&state, &card_inst.id);
+        let views =
+            jackioh_engine::subsystems::activate::activation_views_for(&state, P1, live_card).unwrap();
+        let zap_view = views.iter().find(|v| v.ability == "zap").unwrap();
+        let recall_view = views.iter().find(|v| v.ability == "recall").unwrap();
+        assert_eq!(zap_view.uses_left, Some(1));
+        assert!(zap_view.usable);
+        assert_eq!(recall_view.uses_left, Some(1));
+        assert!(recall_view.usable);
+
+        // Activate recall
+        let state = act(
+            &state,
+            activate(P1, &card_inst.id, json!({ "ability": "recall" })),
+        )
+        .0;
+        let live_card = card(&state, &card_inst.id);
+        let views =
+            jackioh_engine::subsystems::activate::activation_views_for(&state, P1, live_card).unwrap();
+        let zap_view = views.iter().find(|v| v.ability == "zap").unwrap();
+        let recall_view = views.iter().find(|v| v.ability == "recall").unwrap();
+        assert_eq!(zap_view.uses_left, Some(1));
+        assert!(zap_view.usable);
+        assert_eq!(recall_view.uses_left, Some(0));
+        assert!(!recall_view.usable);
+    }
+
+    #[test]
+    fn r1751000_a_refund_gives_back_only_the_named_abilitys_use() {
+        let mut state = playing("fused-refund");
+        let card_inst = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card_inst.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+        let other = in_hand(&mut state, &zapper.id, P1, 1).remove(0);
+        fuse_onto(&mut state, vec![other], &card_inst);
+        assert_eq!(
+            uses_record_after_refund(&state, card(&state, &card_inst.id), Some("recall")),
+            None
+        );
+
+        let state = act(
+            &state,
+            activate(P1, &card_inst.id, json!({ "ability": "recall" })),
+        )
+        .0;
+        let state = act(
+            &state,
+            activate(
+                P1,
+                &card_inst.id,
+                json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
+            ),
+        )
+        .0;
+        let record = uses_record_after_refund(&state, card(&state, &card_inst.id), Some("recall"))
+            .expect("a use to give back");
+        assert_eq!(
+            record,
+            json!({ "turn": state.turn, "count": 1, "abilities": { "recall": 0, "zap": 1 } })
+        );
+    }
+
+    #[test]
+    fn r1751000_fused_activates_with_target_first_ingredient_tracks_uses_correctly() {
+        let mut state = playing("fused-target-first");
+        let card_inst = put(&mut state, &keeper.id, slot(P1, Row::Backrow, 1), json!({}));
+        remember_on(
+            &mut card_mut(&mut state, &card_inst.id).memory,
+            &IndexMap::new(),
+            KEEPER_KEY,
+            json!("spell"),
+        );
+
+        // Activate recall on the target BEFORE fusion.
+        let state = act(
+            &state,
+            activate(P1, &card_inst.id, json!({ "ability": "recall" })),
+        )
+        .0;
+
+        // Verify recall was marked used on the card.
+        assert_eq!(
+            card(&state, &card_inst.id).memory.get("activations"),
+            Some(&json!({ "turn": state.turn, "count": 1, "abilities": { "recall": 1 } }))
+        );
+
+        // Fuse with target as first ingredient: [&target, &food].
+        let mut fused_state = state.clone();
+        let other = in_hand(&mut fused_state, &zapper.id, P1, 1).remove(0);
+        let live_target = card(&fused_state, &card_inst.id).clone();
+        fuse_onto(&mut fused_state, vec![live_target, other], &card_inst);
+
+        // The fused card has recall (from target at ingredient 0) and zap (from food).
+        // recall is already used this turn.
+        assert_eq!(
+            why_not(&fused_state, P1, &card_inst.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+
+        // zap was NOT used, and can be activated!
+        assert_eq!(why_not(&fused_state, P1, &card_inst.id, Some("zap")), None);
+
+        // Activate zap.
+        let state_after_zap = act(
+            &fused_state,
+            activate(
+                P1,
+                &card_inst.id,
+                json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
+            ),
+        )
+        .0;
+
+        // Both are now spent.
+        assert_eq!(
+            why_not(&state_after_zap, P1, &card_inst.id, Some("recall")),
+            Some("that ability has already been used this turn".to_string())
+        );
+        assert_eq!(
+            why_not(&state_after_zap, P1, &card_inst.id, Some("zap")),
+            Some("that ability has already been used this turn".to_string())
         );
     }
 }

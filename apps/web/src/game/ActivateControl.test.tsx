@@ -151,16 +151,13 @@ describe("R510 the Activate control on the card", () => {
     expect(el(testid.card("act1")).contains(control)).toBe(true);
   });
 
-  it("R510 a card listing several abilities wears one control each, named by ability; ♾️ counts as ∞", () => {
+  it("R1751000 a card listing several abilities wears one control; ♾️ counts as ∞", () => {
     renderBoard([TURTLE_U1]);
 
-    expect(screen.queryByTestId(testid.activate("act2"))).toBeNull();
-    expect(el(testid.activateUses("act2", "ping"))).toHaveTextContent("2");
-    expect(el(testid.activateUses("act2", "turtle"))).toHaveTextContent("∞");
-    expect(el(testid.activateUses("act2", "turtle"))).toHaveAttribute("data-uses", "unlimited");
-    expect(el(testid.activate("act2", "turtle"))).toHaveAttribute("data-legal", "true");
-    // legal lists no `ping` for it, so that control is greyed though the view calls it usable.
-    expect(el(testid.activate("act2", "ping"))).toHaveAttribute("data-legal", "false");
+    expect(screen.getByTestId(testid.activate("act2"))).toBeInTheDocument();
+    expect(el(testid.activateUses("act2"))).toHaveTextContent("∞");
+    expect(el(testid.activateUses("act2"))).toHaveAttribute("data-uses", "unlimited");
+    expect(el(testid.activate("act2"))).toHaveAttribute("data-legal", "true");
     expect(usesText(null)).toBe("∞");
   });
 
@@ -297,12 +294,46 @@ describe("R384 an activation is built through the board as a play is", () => {
   it("R384 a Tribute cost: the picker lists the units the sets name, and a click on a unit on the board pays it", () => {
     const { onAction } = renderGame([TURTLE_U1, TURTLE_U2]);
 
-    fireEvent.click(el(testid.activate("act2", "turtle")));
+    fireEvent.click(el(testid.activate("act2")));
+    // R1751000: Even when only one ability is legal on a multi-ability card, clicking Activate opens the ability modal first.
+    expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "discover");
+    expect(screen.getByTestId("prompt-option-turtle")).toBeInTheDocument();
+
+    fireEvent.click(el("prompt-option-turtle"));
     expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "tribute");
     expect(el(testid.card("u2"))).toHaveAttribute("data-glow", "ready");
 
     fireEvent.click(el(testid.card("u2")));
     expect(onAction).toHaveBeenCalledWith(TURTLE_U2);
+  });
+
+  it("R1751000 a card with several abilities wears one Activate button that opens the discover panel to choose an ability", () => {
+    const PING_ACT2: ActionBody = { type: "activate", instanceId: "act2", ability: "ping", targets: [at("e1")] };
+    const { onAction } = renderGame([PING_ACT2, TURTLE_U1]);
+
+    fireEvent.click(el(testid.activate("act2")));
+    const modal = el("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-kind", "discover");
+    expect(modal).toHaveTextContent("Deal {damage} damage.");
+    expect(modal).toHaveTextContent(/Tribute a Unit/);
+
+    fireEvent.click(el("prompt-option-ping"));
+    expect(onAction).toHaveBeenCalledWith(PING_ACT2);
+  });
+
+  it("R1751000 clicking Activate on a card with several abilities opens the discover modal even when only one ability is legal and has no targets", () => {
+    const DRAW_ACT2: ActionBody = { type: "activate", instanceId: "act2", ability: "ping" };
+    const { onAction } = renderGame([DRAW_ACT2]);
+
+    fireEvent.click(el(testid.activate("act2")));
+    // Does not dispatch immediately; opens discover modal!
+    expect(onAction).not.toHaveBeenCalled();
+    const modal = el("prompt-modal");
+    expect(modal).toHaveAttribute("data-prompt-kind", "discover");
+    expect(screen.getByTestId("prompt-option-ping")).toBeInTheDocument();
+
+    fireEvent.click(el("prompt-option-ping"));
+    expect(onAction).toHaveBeenCalledWith(DRAW_ACT2);
   });
 
   it("R384 Cancel puts the activation down and sends nothing", () => {

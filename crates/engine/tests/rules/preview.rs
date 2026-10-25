@@ -24,7 +24,7 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, sink_for, slot, spread};
 
 // Fixtures
 
@@ -164,16 +164,6 @@ fn hook_b() -> PreviewHook {
     })
 }
 
-/// Every key of `extra` written over `base`.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(target), Value::Object(extra)) = (base.as_object_mut(), extra) {
-        for (key, value) in extra {
-            target.insert(key, value);
-        }
-    }
-    base
-}
-
 /// A test definition; `index` is the one each definition got, in the order the file made them.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(spread(
@@ -286,7 +276,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-fn both(base: Option<PreviewHook>, radiant: Option<PreviewHook>) -> CardScripts {
+fn previews(base: Option<PreviewHook>, radiant: Option<PreviewHook>) -> CardScripts {
     CardScripts {
         base: Script {
             preview: base,
@@ -301,7 +291,7 @@ fn both(base: Option<PreviewHook>, radiant: Option<PreviewHook>) -> CardScripts 
 
 /// Both faces hooked.
 fn hooked() -> CardScripts {
-    both(Some(base_hook()), Some(radiant_hook()))
+    previews(Some(base_hook()), Some(radiant_hook()))
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -312,11 +302,11 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts.insert(pv_field_trap().id, hooked());
     scripts.insert(pv_field_spell().id, hooked());
     scripts.insert(pv_stack().id, hooked());
-    scripts.insert(plain_stack().id, both(None, None));
-    scripts.insert(quiet_unit().id, both(None, None));
-    scripts.insert(empty_unit().id, both(Some(empty_hook()), Some(empty_hook())));
-    scripts.insert(pv_a().id, both(Some(hook_a()), Some(hook_a())));
-    scripts.insert(pv_b().id, both(Some(hook_b()), Some(hook_b())));
+    scripts.insert(plain_stack().id, previews(None, None));
+    scripts.insert(quiet_unit().id, previews(None, None));
+    scripts.insert(empty_unit().id, previews(Some(empty_hook()), Some(empty_hook())));
+    scripts.insert(pv_a().id, previews(Some(hook_a()), Some(hook_a())));
+    scripts.insert(pv_b().id, previews(Some(hook_b()), Some(hook_b())));
     scripts
 }
 

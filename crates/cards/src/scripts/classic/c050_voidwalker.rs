@@ -61,6 +61,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -80,11 +81,6 @@ mod tests {
     const FILLER: &str = "core-005";
 
     use crate::js;
-
-    /// `zone` is "graveyard" or "exile".
-    fn def_ids(s: &Scenario, player: PlayerId, zone: &str) -> Vec<String> {
-        s.pile(player, zone).into_iter().map(|card| card.def_id).collect()
-    }
 
     fn target(s: &Scenario, player: PlayerId, lane: i32) -> Value {
         let Some(unit) = s.unit(player, lane) else {
@@ -132,10 +128,10 @@ mod tests {
                     "p2": { "hand": [FILLER], "graveyard": [HIT_JOB, GARY] },
                 }));
                 s.play(VOID, json!({}));
-                assert!(def_ids(&s, P1, "graveyard").is_empty());
-                assert!(def_ids(&s, P2, "graveyard").is_empty());
-                assert_eq!(def_ids(&s, P1, "exile"), vec![STOCKPILE, VANILLA]);
-                assert_eq!(def_ids(&s, P2, "exile"), vec![HIT_JOB, GARY]);
+                assert!(def_ids(&s.pile(P1, "graveyard")).is_empty());
+                assert!(def_ids(&s.pile(P2, "graveyard")).is_empty());
+                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![STOCKPILE, VANILLA]);
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![HIT_JOB, GARY]);
                 assert_eq!(exiled_events(&s).len(), 4);
                 s.expect_in_zone(VOID, "field");
             }
@@ -158,10 +154,10 @@ mod tests {
                 let targets = target(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&vanilla, "exile").expect_in_zone(&hit_job, "exile");
-                assert_eq!(def_ids(&s, P2, "exile"), vec![VANILLA]);
-                assert_eq!(def_ids(&s, P1, "exile"), vec![HIT_JOB]);
-                assert!(def_ids(&s, P1, "graveyard").is_empty());
-                assert!(def_ids(&s, P2, "graveyard").is_empty());
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![VANILLA]);
+                assert_eq!(def_ids(&s.pile(P1, "exile")), vec![HIT_JOB]);
+                assert!(def_ids(&s.pile(P1, "graveyard")).is_empty());
+                assert!(def_ids(&s.pile(P2, "graveyard")).is_empty());
             }
 
             #[test]
@@ -184,7 +180,7 @@ mod tests {
                 let (lunar, gary) = (s.card(LUNAR).clone(), s.card(GARY).clone());
                 s.play(ZAO_GAO, json!({}));
                 s.expect_in_zone(&lunar, "exile").expect_in_zone(&gary, "exile").expect_in_zone(ZAO_GAO, "exile");
-                assert!(def_ids(&s, P1, "graveyard").is_empty());
+                assert!(def_ids(&s.pile(P1, "graveyard")).is_empty());
             }
 
             #[test]
@@ -200,7 +196,7 @@ mod tests {
                 assert!(s.events().iter().any(|event| matches!(event, GameEvent::Burned { .. })));
                 s.expect_in_zone(GARY, "exile");
                 assert_eq!(s.hand(P1).len(), 10);
-                assert!(def_ids(&s, P1, "graveyard").is_empty());
+                assert!(def_ids(&s.pile(P1, "graveyard")).is_empty());
             }
 
             #[test]
@@ -214,7 +210,7 @@ mod tests {
                 s.play(VANILLA, json!({ "zone": 2 }));
                 s.expect_events(json!(["trapFired"]));
                 s.expect_in_zone(&sheepish, "exile");
-                assert!(def_ids(&s, P2, "graveyard").is_empty());
+                assert!(def_ids(&s.pile(P2, "graveyard")).is_empty());
             }
 
             #[test]
@@ -225,7 +221,7 @@ mod tests {
                 let targets = target(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&token, "gone");
-                assert!(def_ids(&s, P2, "exile").is_empty());
+                assert!(def_ids(&s.pile(P2, "exile")).is_empty());
             }
 
             #[test]
@@ -254,8 +250,8 @@ mod tests {
                 let voidwalker = s.card(VOID).clone();
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": voidwalker.id }] }));
                 s.expect_in_zone(&voidwalker, "graveyard");
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![VOID]);
-                assert!(def_ids(&s, P1, "exile").is_empty());
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![VOID]);
+                assert!(def_ids(&s.pile(P1, "exile")).is_empty());
             }
 
             #[test]
@@ -269,7 +265,7 @@ mod tests {
                 let targets = target(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.play(STOCKPILE, json!({}));
-                assert_eq!(def_ids(&s, P2, "graveyard"), vec![HIT_JOB, STOCKPILE]);
+                assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![HIT_JOB, STOCKPILE]);
             }
 
             #[test]
@@ -293,8 +289,8 @@ mod tests {
                 }));
                 let targets = target(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(def_ids(&s, P2, "graveyard"), vec![VANILLA]);
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![HIT_JOB]);
+                assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![VANILLA]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![HIT_JOB]);
             }
 
             #[test]
@@ -303,8 +299,8 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [VOID, HIT_JOB, FILLER] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
                 let targets = target(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(def_ids(&s, P2, "graveyard"), vec![VANILLA]);
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![HIT_JOB]);
+                assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![VANILLA]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![HIT_JOB]);
             }
 
             #[test]
@@ -334,9 +330,9 @@ mod tests {
                     "p2": { "hand": [FILLER], "graveyard": [HIT_JOB, GARY] },
                 }));
                 s.play(VOID, json!({}));
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![STOCKPILE, VANILLA]);
-                assert!(def_ids(&s, P2, "graveyard").is_empty());
-                assert_eq!(def_ids(&s, P2, "exile"), vec![HIT_JOB, GARY]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![STOCKPILE, VANILLA]);
+                assert!(def_ids(&s.pile(P2, "graveyard")).is_empty());
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![HIT_JOB, GARY]);
                 s.expect_stats(VOID, json!({ "attack": 12, "health": 6 }));
             }
 
@@ -349,8 +345,8 @@ mod tests {
                 }));
                 let targets = target(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(def_ids(&s, P2, "exile"), vec![VANILLA]);
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![HIT_JOB]);
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![VANILLA]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![HIT_JOB]);
             }
 
             #[test]
@@ -365,8 +361,8 @@ mod tests {
                 assert_eq!(s.card(&vanilla).controller, P1);
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla.id }] }));
                 s.expect_in_zone(&vanilla, "exile");
-                assert_eq!(def_ids(&s, P2, "exile"), vec![VANILLA]);
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![MIND_CONTROL, HIT_JOB]);
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![VANILLA]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![MIND_CONTROL, HIT_JOB]);
             }
 
             #[test]
@@ -379,8 +375,8 @@ mod tests {
                 }));
                 let targets = target(&s, P1, 2);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![GARY]);
-                assert_eq!(def_ids(&s, P2, "exile"), vec![HIT_JOB]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![GARY]);
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![HIT_JOB]);
             }
 
             #[test]
@@ -392,8 +388,8 @@ mod tests {
                     "active": "p2",
                 }));
                 s.play(ZAO_GAO, json!({}));
-                assert!(contains_all(&def_ids(&s, P2, "exile"), &[LUNAR, GARY, ZAO_GAO]));
-                assert!(def_ids(&s, P2, "graveyard").is_empty());
+                assert!(contains_all(&def_ids(&s.pile(P2, "exile")), &[LUNAR, GARY, ZAO_GAO]));
+                assert!(def_ids(&s.pile(P2, "graveyard")).is_empty());
             }
 
             #[test]
@@ -406,7 +402,7 @@ mod tests {
                 }));
                 let targets = target(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
-                assert_eq!(def_ids(&s, P1, "graveyard"), vec![VOID]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![VOID]);
             }
 
             #[test]
@@ -420,7 +416,7 @@ mod tests {
                 let targets = target(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&token, "gone");
-                assert!(def_ids(&s, P2, "exile").is_empty());
+                assert!(def_ids(&s.pile(P2, "exile")).is_empty());
             }
         }
     }

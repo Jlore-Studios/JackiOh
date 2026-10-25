@@ -118,6 +118,7 @@ import { useSequenceSecondsLeft } from "./sequenceClock.ts";
 import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
+import { abilityLabel, usesWords } from "./ActivateControl.tsx";
 import { modeText } from "./modeText.ts";
 import { useWearerSeat } from "./wearer.ts";
 import "./prompt.css";
@@ -520,6 +521,33 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
   const common = { min: need.min, max: need.max, immediate: need.max <= 1 };
 
   switch (need.kind) {
+    case "ability": {
+      // R1751000: picking an ability when a card has several.
+      const played = isBuilding(interaction) ? cardRefFor(view, interaction.instanceId) : null;
+      const source = played?.defId ?? undefined;
+      const info = played && lookup ? lookup(played.defId, played.radiant) : undefined;
+      const activations = played?.card.activations ?? [];
+      const actMap = new Map(activations.map((a) => [a.ability, a]));
+      return {
+        ...common,
+        chrome: "discover",
+        title: t("Choose an ability"),
+        ...(source !== undefined ? { sourceDefId: source } : {}),
+        ...(played !== null ? { sourceCard: played.card } : {}),
+        items: need.abilities.map((abilityId) => {
+          const act = actMap.get(abilityId);
+          const rawLabel = act?.label ?? abilityId;
+          const label = info && played?.card ? abilityLabel(info, played.card, rawLabel) : rawLabel;
+          const detail = act?.usesLeft !== undefined ? usesWords(act.usesLeft) : undefined;
+          return {
+            key: abilityId,
+            label: t(label),
+            ...(detail !== undefined ? { detail } : {}),
+          };
+        }),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ ability: keys[0] })),
+      };
+    }
     case "zone":
       return {
         ...common,

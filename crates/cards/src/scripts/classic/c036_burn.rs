@@ -74,6 +74,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const BURN: &str = "classic-036";
     const MENACE: &str = "core-019";
@@ -85,10 +86,6 @@ mod tests {
 
     fn at_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
-    }
-
-    fn hand_defs(s: &Scenario) -> Vec<String> {
-        s.hand(PlayerId::P1).iter().map(|card| card.def_id.clone()).collect()
     }
 
     mod c_36_burn {
@@ -127,7 +124,7 @@ mod tests {
                 s.play(BURN, json!({ "targets": [{ "pick": "instance", "instanceId": menace }] }));
 
                 s.expect_stats(&menace, json!({ "health": 7 }));
-                assert_eq!(hand_defs(&s), vec![ANCHOR, A]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR, A]);
                 s.expect_events(json!(["damage", "drawn"]));
             }
 
@@ -164,7 +161,7 @@ mod tests {
                 s.play(BURN, json!({ "targets": at_hero() }));
 
                 s.expect_health(PlayerId::P2, 28);
-                assert_eq!(hand_defs(&s), vec![ANCHOR]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
             }
 
             #[test]
@@ -178,7 +175,7 @@ mod tests {
                 s.play(BURN, json!({ "targets": at_hero() }));
 
                 s.expect_mana(PlayerId::P1, 3);
-                assert_eq!(hand_defs(&s), vec![ANCHOR]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
             }
 
             #[test]
@@ -192,7 +189,7 @@ mod tests {
 
                 s.play(BURN, json!({ "targets": at_hero() }));
 
-                assert_eq!(hand_defs(&s), vec![ANCHOR, A]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR, A]);
             }
 
             #[test]
@@ -206,12 +203,12 @@ mod tests {
                 let mut harder = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(harder.card_mut(BURN), "threshold", 1);
                 harder.play(BURN, json!({ "targets": at_hero() }));
-                assert_eq!(hand_defs(&harder), vec![ANCHOR]);
+                assert_eq!(def_ids(&harder.hand(PlayerId::P1)), vec![ANCHOR]);
 
                 let mut more = scenario(json!({ "p1": { "hand": [BURN, ANCHOR], "library": [A, B] }, "p2": { "hand": [ANCHOR] } }));
                 step_param(more.card_mut(BURN), "draw", 1);
                 more.play(BURN, json!({ "targets": at_hero() }));
-                assert_eq!(hand_defs(&more), vec![ANCHOR, A, B]);
+                assert_eq!(def_ids(&more.hand(PlayerId::P1)), vec![ANCHOR, A, B]);
             }
         }
 
@@ -229,7 +226,7 @@ mod tests {
                 s.play(BURN, json!({ "targets": at_hero() }));
 
                 s.expect_health(PlayerId::P2, 26);
-                assert_eq!(hand_defs(&s), vec![ANCHOR, A]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR, A]);
             }
 
             #[test]
@@ -245,7 +242,7 @@ mod tests {
                 s.play(BURN, json!({ "targets": at_hero() }));
 
                 s.expect_health(PlayerId::P2, 26);
-                assert_eq!(hand_defs(&s), vec![ANCHOR]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
             }
 
             #[test]
@@ -259,7 +256,7 @@ mod tests {
 
                 s.play(BURN, json!({ "targets": at_hero() }));
 
-                assert_eq!(hand_defs(&s), vec![ANCHOR]);
+                assert_eq!(def_ids(&s.hand(PlayerId::P1)), vec![ANCHOR]);
             }
         }
     }

@@ -37,16 +37,13 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
 
     const FILLER: &str = "core-008";
     const LIBRARY: [&str; 3] = ["core-025", "core-008", "core-020"];
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).iter().map(|card| card.def_id.clone()).collect()
-    }
 
     #[test]
     fn r964_a_field_spell_that_stays_and_adds_a_rock_at_your_start() {
@@ -62,7 +59,7 @@ mod tests {
 
         // Mana Well's shape and clock: still on the field, and a Rock in hand.
         assert!(s.backrow(P1, 1).is_some_and(|card| card.def_id == ID));
-        let hand = hand_defs(&s, P1);
+        let hand = def_ids(&s.hand(P1));
         assert_eq!(hand.len(), 3, "the Rock, then the draw");
         assert_eq!(hand[1], ROCK);
         assert!(!s.hand(P1)[1].radiant);
@@ -79,7 +76,7 @@ mod tests {
 
         s.start_turn();
 
-        assert_eq!(hand_defs(&s, P1), vec![FILLER]);
+        assert_eq!(def_ids(&s.hand(P1)), vec![FILLER]);
     }
 
     #[test]
@@ -99,7 +96,7 @@ mod tests {
         s.start_turn();
 
         // Exiled, it adds nothing; the draw still lands.
-        let hand = hand_defs(&s, P1);
+        let hand = def_ids(&s.hand(P1));
         assert_eq!(hand.len(), 2);
         assert!(!hand.contains(&ROCK.to_string()));
     }

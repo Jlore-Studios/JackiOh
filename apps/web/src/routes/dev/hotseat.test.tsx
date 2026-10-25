@@ -6,6 +6,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import { DECK_SIZE } from "@jackioh/engine/config";
 import type { Action, CardDef, CardDefs, EmoteId, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { DEFAULT_EMOTE_HAND } from "../../emotes/hand.ts";
@@ -14,6 +15,7 @@ import { testid } from "../../game/contract.ts";
 import { setEnginePort } from "../../game/engine.ts";
 import type { CreateGameArgs, EnginePort, EngineState } from "../../game/engine.ts";
 import { baseView, emptySide } from "../../test/fixtures.ts";
+import { at } from "../../test/stubServer.ts";
 import {
   DEFAULT_SEED,
   E2E_DECKS_KEY,
@@ -57,9 +59,10 @@ function def(index: number, over: Partial<CardDef> = {}): CardDef {
   };
 }
 
-function catalogOf25(): CardDefs {
+/** More cards than a deck holds, so `first20` and `cheap20` (each `DECK_SIZE` long) hold different cards. */
+function fakeCatalog(): CardDefs {
   const defs: CardDef[] = [];
-  for (let i = 1; i <= 25; i += 1) defs.push(def(i));
+  for (let i = 1; i <= DECK_SIZE + 5; i += 1) defs.push(def(i));
   return Object.fromEntries(defs.map((d) => [d.id, d]));
 }
 
@@ -76,7 +79,7 @@ function makeEngine(options: { catalog?: CardDefs | "throws"; pendingAfterBegin?
   let live: FakeState = { turn: 0, active: "p1", pendingFor: null };
   const unwrap = (state: EngineState): FakeState => state as unknown as FakeState;
   const wrap = (state: FakeState): EngineState => state as unknown as EngineState;
-  const catalog = options.catalog ?? catalogOf25();
+  const catalog = options.catalog ?? fakeCatalog();
 
   fake.port = {
     createGame: (args) => {
@@ -128,13 +131,9 @@ function makeEngine(options: { catalog?: CardDefs | "throws"; pendingAfterBegin?
 
 // Mounting
 
-function at(search: string): void {
-  window.history.replaceState({}, "", `/dev/hotseat${search}`);
-}
-
 /** Render the route and wait for the engine promise the route resolves in an effect. */
 async function mount(search = "?seed=42&a=first20&b=cheap20"): Promise<void> {
-  at(search);
+  at(`/dev/hotseat${search}`);
   await act(async () => {
     render(<HotseatRoute />);
   });
@@ -147,7 +146,7 @@ afterEach(() => {
   delete window.__jackioh;
   delete window.__jackiohE2E;
   window.localStorage.clear();
-  at("");
+  at("/dev/hotseat");
   vi.unstubAllEnvs();
   vi.resetModules();
 });
@@ -247,8 +246,8 @@ describe("the route starts one game from the URL", () => {
     expect(fake.createGameArgs).toHaveLength(1);
     const args = fake.createGameArgs[0];
     expect(args?.seed).toBe("seed-7");
-    expect(args?.decks[0]).toHaveLength(20);
-    expect(args?.decks[1]).toHaveLength(20);
+    expect(args?.decks[0]).toHaveLength(DECK_SIZE);
+    expect(args?.decks[1]).toHaveLength(DECK_SIZE);
     expect(args?.decks[0]).not.toEqual(args?.decks[1]);
     expect(args?.decks[0]?.[0]).toBe("core-001");
     expect(args?.catalog).toBe(fake.port.catalog?.());
@@ -262,13 +261,15 @@ describe("the route starts one game from the URL", () => {
   it("plays the injected fixture decks Cypress parked in localStorage", async () => {
     window.localStorage.setItem(
       E2E_DECKS_KEY,
-      JSON.stringify({ decks: { fixture: Array.from({ length: 20 }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`) } }),
+      JSON.stringify({
+        decks: { fixture: Array.from({ length: DECK_SIZE }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`) },
+      }),
     );
     const fake = makeEngine();
     setEnginePort(fake.port);
     await mount("?seed=42&a=fixture&b=fixture");
 
-    expect(fake.createGameArgs[0]?.decks[0]?.[19]).toBe("core-020");
+    expect(fake.createGameArgs[0]?.decks[0]?.[DECK_SIZE - 1]).toBe(`core-${String(DECK_SIZE).padStart(3, "0")}`);
   });
 
   it("R180 hands the injected handicaps to createGame and to the dev handle, and sizes the deck by them", async () => {
@@ -295,7 +296,7 @@ describe("the route starts one game from the URL", () => {
   });
 
   it("refuses a deck its seat's handicap does not size, before the engine is asked", async () => {
-    // p2 has no handicap, so §2.6's 20-card rule applies.
+    // p2 has no handicap, so §2.6's DECK_SIZE rule applies.
     window.__jackiohE2E = { decks: { tiny: ["core-001", "core-002", "core-003", "core-004"] }, handicaps: { p1: FOUR_CARDS } };
     const fake = makeEngine();
     setEnginePort(fake.port);
@@ -307,7 +308,7 @@ describe("the route starts one game from the URL", () => {
   });
 
   it("renders the engine's refusal of an illegal handicap instead of a game", async () => {
-    window.__jackiohE2E = { decks: {}, handicaps: { p1: { ...FOUR_CARDS, deckSize: 20, manaBonus: -1 } } };
+    window.__jackiohE2E = { decks: {}, handicaps: { p1: { ...FOUR_CARDS, deckSize: DECK_SIZE, manaBonus: -1 } } };
     const fake = makeEngine();
     const createGame = fake.port.createGame;
     fake.port.createGame = (args) => {
@@ -347,7 +348,7 @@ describe("the route starts one game from the URL", () => {
 
     try {
       const route = await import("./hotseat.tsx");
-      at("?seed=42&a=first20&b=first20");
+      at("/dev/hotseat?seed=42&a=first20&b=first20");
       await act(async () => {
         render(<route.HotseatRoute />);
       });
@@ -478,7 +479,7 @@ describe("window.__jackioh outside a production build", () => {
     expect(handle.seed).toBe("42");
     expect(handle.seat).toBe("p1");
     expect(handle.log).toEqual([]);
-    expect(handle.decks[0]).toHaveLength(20);
+    expect(handle.decks[0]).toHaveLength(DECK_SIZE);
     expect(handle.view().viewer).toBe("p1");
     expect(handle.legal()).toEqual([]);
     expect(typeof handle.hash()).toBe("string");
@@ -518,7 +519,7 @@ describe("window.__jackioh outside a production build", () => {
   it("is removed when the route unmounts, so a stale handle cannot answer a later spec", async () => {
     const fake = makeEngine();
     setEnginePort(fake.port);
-    at("?seed=42&a=first20&b=first20");
+    at("/dev/hotseat?seed=42&a=first20&b=first20");
     let view!: ReturnType<typeof render>;
     await act(async () => {
       view = render(<HotseatRoute />);
@@ -546,7 +547,7 @@ describe("window.__jackioh in a production build", () => {
 
     const fake = makeEngine();
     engine.setEnginePort(fake.port);
-    at("?seed=42&a=first20&b=first20");
+    at("/dev/hotseat?seed=42&a=first20&b=first20");
     await act(async () => {
       render(<route.HotseatRoute />);
     });

@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::call_to_chaos_plus::immutable;
 use crate::rules::fixtures::combat::{plain, trampler};
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
 
 /// A Field Spell with no other text, indexed from 1981.
 fn field_spell(name: &str, index: u32) -> CardDef {
@@ -40,13 +40,6 @@ fn two_cost() -> CardDef {
     CardDef {
         cost: CardCost::Fixed(2),
         ..field_spell("two-cost", 1983)
-    }
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
     }
 }
 

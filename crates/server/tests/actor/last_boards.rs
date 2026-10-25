@@ -11,6 +11,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use jackioh_engine::LastBoardEntry;
+use jackioh_engine::config::DECK_SIZE as ENGINE_DECK_SIZE;
 use jackioh_engine::wire::PlayerId;
 use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::api::results::{reap_stuck_matches, record_result};
@@ -133,6 +134,8 @@ impl Submitter {
     }
 }
 
+const DECK_SIZE: usize = ENGINE_DECK_SIZE as usize;
+
 /// Cheap Traps that fire only on what the walk below never does — a lethal attack, a death of p1's
 /// Unit, a hit to 0, a heal, a Spell — so the one p1 sets stays face-down to the end.
 const QUIET_TRAPS: [&str; 5] = [
@@ -163,8 +166,9 @@ mod r417_r565_last_boards_through_a_real_match {
             .map(|(id, _)| id.clone())
             .collect();
         let mut first: Vec<String> = QUIET_TRAPS.iter().map(|id| id.to_string()).collect();
-        first.extend(core[..15].iter().cloned());
-        let decks = (first, core[15..35].to_vec());
+        let rest = DECK_SIZE - QUIET_TRAPS.len();
+        first.extend(core[..rest].iter().cloned());
+        let decks = (first, core[rest..rest + DECK_SIZE].to_vec());
         let app = world().await;
         start(&app, "m-last-1", "last-boards-real", &decks).await;
         let actor = app

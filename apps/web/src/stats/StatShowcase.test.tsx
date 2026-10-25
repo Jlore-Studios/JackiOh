@@ -1,15 +1,18 @@
 // R1584000: the floor's stat showcase: the cycle and its holds, reduced motion, and the board's
-// animation each stat's card plays.
+// animation each stat's card plays. R1743000: the order is a shuffled bag drawn from the page's random
+// source, and the showcase itself, not an arrow or a dot, is the control.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { landingShowcasePickTestid, landingTestid } from "../auth/testids.ts";
+import { landingTestid } from "../auth/testids.ts";
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { animationRow } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
+import { shuffled, type RandomSource } from "../routes/landingFan.ts";
+import { seeded } from "../test/random.ts";
 import { SHOWCASE_BEAT_GAP_MS, SHOWCASE_INTERVAL_MS, SHOWCASE_LEAD_MS } from "./config.ts";
-import { NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
+import { EMPTY_STATS, NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
 import type { PocketPick } from "./pocketPick.ts";
 import { showcaseStats, type ShowcaseKey, type ShowcaseStat } from "./showcase.ts";
 import { STAGE_INSTANCE_ID } from "./showcaseStage.ts";
@@ -30,6 +33,7 @@ afterEach(() => {
 
 function tally(cards: Record<string, Partial<CardCounters>>): PlayerStats {
   return {
+    ...EMPTY_STATS,
     games: 12,
     wins: 7,
     losses: 5,
@@ -40,13 +44,29 @@ function tally(cards: Record<string, Partial<CardCounters>>): PlayerStats {
 
 const PICK: PocketPick = { id: "core-005", playerRate: 0.8, baseRate: 0.2 };
 
-/** Toppled, Coveted, Old Faithful and The Record, all on core-004. */
-const FOUR: readonly ShowcaseStat[] = showcaseStats(tally({ "core-004": { defeated: 37, allured: 6, played: 9, seen: 12 } }), null);
-
 const KEYS: readonly ShowcaseKey[] = ["toppled", "coveted", "faithful", "record"];
 
-function show(stats: readonly ShowcaseStat[] = FOUR, reduced = false): void {
-  render(<StatShowcase stats={stats} reduced={reduced} />);
+/** Toppled, Coveted, Old Faithful and The Record, all on core-004 (the tally's other stats are left off). */
+const FOUR: readonly ShowcaseStat[] = showcaseStats(tally({ "core-004": { defeated: 37, allured: 6, played: 9, seen: 12 } }), null, seeded(1)).filter(
+  (stat) => KEYS.includes(stat.key),
+);
+
+/** One of the four alone, for a test of what its card plays. */
+function only(key: ShowcaseKey): ShowcaseStat[] {
+  return FOUR.filter((stat) => stat.key === key);
+}
+
+function show(stats: readonly ShowcaseStat[] = FOUR, reduced = false, random: RandomSource = seeded(7)): void {
+  render(<StatShowcase stats={stats} reduced={reduced} random={random} />);
+}
+
+function root(): HTMLElement {
+  return screen.getByTestId(landingTestid.showcase);
+}
+
+/** The line the stat on show says, by its key. */
+function lineShown(): string {
+  return FOUR.find((stat) => stat.key === shown())!.line();
 }
 
 function advance(ms: number): void {
@@ -70,86 +90,120 @@ function pageIs(state: "hidden" | "visible"): void {
 describe("R1584000 the cycle", () => {
   it("R1584000 shows a stat's title, card and number", () => {
     expect(FOUR.map((stat) => stat.key)).toEqual(KEYS);
-    show();
+    show(only("toppled"));
     expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("Most Toppled");
     expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe("taken down 37×");
     expect(card().getAttribute("data-def-id")).toBe("core-004");
     expect(card().childElementCount).toBeGreaterThan(0);
   });
 
-  it("R1584000 cycles to the next stat every SHOWCASE_INTERVAL_MS and wraps", () => {
-    show();
-    expect(shown()).toBe("toppled");
-    for (const key of [...KEYS.slice(1), KEYS[0]!]) {
-      advance(SHOWCASE_INTERVAL_MS - 1);
-      expect(shown()).not.toBe(key);
-      advance(1);
-      expect(shown()).toBe(key);
+  it("R1743000 a seeded source sets the order: each round is every stat once, the seed's shuffle first, none twice in a row, the same on a second render", () => {
+    const rounds = 5;
+    const run = (): string[] => {
+      show(FOUR, false, seeded(7));
+      const order: string[] = [shown()!];
+      for (let i = 1; i < KEYS.length * rounds; i += 1) {
+        // A stat shows for SHOWCASE_INTERVAL_MS, then the next of the bag.
+        advance(SHOWCASE_INTERVAL_MS - 1);
+        expect(shown()).toBe(order[i - 1]);
+        advance(1);
+        order.push(shown()!);
+      }
+      cleanup();
+      return order;
+    };
+    const order = run();
+    for (let round = 0; round < rounds; round += 1) {
+      expect(order.slice(round * KEYS.length, (round + 1) * KEYS.length).sort()).toEqual([...KEYS].sort());
     }
+    expect(order.slice(0, KEYS.length)).toEqual(shuffled(KEYS, seeded(7)));
+    order.forEach((key, i) => {
+      if (i > 0) expect(key).not.toBe(order[i - 1]);
+    });
+    expect(run()).toEqual(order);
+    // Another seed is another order.
+    show(FOUR, false, seeded(8));
+    expect(shown()).toBe(shuffled(KEYS, seeded(8))[0]);
   });
 
-  it("R1584000 previous and next step, and a pick shows its stat", () => {
+  it("R1743000 a click, Enter or Space moves on to another stat; there is no button, prev, next or pick control", () => {
     show();
-    const pick = (key: ShowcaseKey): HTMLElement => screen.getByTestId(landingShowcasePickTestid(key));
-    expect(pick("toppled").getAttribute("aria-pressed")).toBe("true");
-    expect(pick("coveted").getAttribute("aria-pressed")).toBe("false");
+    expect(root().getAttribute("role")).toBe("button");
+    expect(root().getAttribute("tabindex")).toBe("0");
+    expect(root().querySelector("button")).toBeNull();
+    expect(screen.getAllByRole("button")).toEqual([root()]);
+    expect(document.querySelector('[data-testid*="prev"], [data-testid*="next"], [data-testid*="pick"], .landing-showcase-controls')).toBeNull();
+    expect(screen.queryByLabelText("Next stat")).toBeNull();
+    expect(screen.queryByLabelText("Previous stat")).toBeNull();
+    expect(screen.queryByLabelText("Pick a stat")).toBeNull();
 
-    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
-    expect(shown()).toBe("coveted");
-    expect(pick("coveted").getAttribute("aria-pressed")).toBe("true");
-    expect(pick("toppled").getAttribute("aria-pressed")).toBe("false");
-
-    fireEvent.click(screen.getByTestId(landingTestid.showcasePrev));
-    fireEvent.click(screen.getByTestId(landingTestid.showcasePrev));
-    expect(shown()).toBe("record");
-
-    fireEvent.click(pick("faithful"));
-    expect(shown()).toBe("faithful");
-    expect(screen.getByTestId(landingTestid.showcaseTitle).textContent).toBe("Old Faithful");
-    expect(pick("faithful").getAttribute("aria-label")).toBe("Old Faithful");
-    expect(screen.getByTestId(landingTestid.showcaseNext).getAttribute("aria-label")).toBe("Next stat");
-    expect(screen.getByTestId(landingTestid.showcasePrev).getAttribute("aria-label")).toBe("Previous stat");
+    const order = [shown()];
+    fireEvent.click(root());
+    order.push(shown());
+    // Enter and Space are taken (the page does not scroll); another key is left alone.
+    expect(fireEvent.keyDown(root(), { key: "Enter" })).toBe(false);
+    order.push(shown());
+    expect(fireEvent.keyDown(root(), { key: " " })).toBe(false);
+    order.push(shown());
+    // Four stops: the first round, every stat once, and each a different stat than the one before.
+    expect([...order].sort()).toEqual([...KEYS].sort());
+    const now = shown();
+    expect(fireEvent.keyDown(root(), { key: "a" })).toBe(true);
+    expect(fireEvent.keyDown(root(), { key: "Tab" })).toBe(true);
+    expect(shown()).toBe(now);
+    // The next round starts with another stat than the last one of this.
+    fireEvent.click(root());
+    expect(shown()).not.toBe(now);
   });
 
-  it("R1584000 a step by hand gives the stat it lands on its whole time", () => {
+  it("R1743000 a step by hand gives the stat it lands on its whole time", () => {
     show();
     advance(SHOWCASE_INTERVAL_MS - 100);
-    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
+    const before = shown();
+    fireEvent.click(root());
+    const landed = shown();
+    expect(landed).not.toBe(before);
     advance(SHOWCASE_INTERVAL_MS - 1);
-    expect(shown()).toBe("coveted");
+    expect(shown()).toBe(landed);
     advance(1);
-    expect(shown()).toBe("faithful");
+    expect(shown()).not.toBe(landed);
   });
 
   it("R1584000 holds still under a pointer, under focus and while the page is hidden", () => {
     show();
-    const root = screen.getByTestId(landingTestid.showcase);
+    const first = shown();
 
-    fireEvent.mouseEnter(root);
+    fireEvent.mouseEnter(root());
     advance(3 * SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("toppled");
-    fireEvent.mouseLeave(root);
+    expect(shown()).toBe(first);
+    fireEvent.mouseLeave(root());
     advance(SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("coveted");
+    const second = shown();
+    expect(second).not.toBe(first);
 
-    fireEvent.focus(screen.getByTestId(landingTestid.showcaseNext));
+    fireEvent.focus(root());
     advance(3 * SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("coveted");
-    fireEvent.blur(screen.getByTestId(landingTestid.showcaseNext));
+    expect(shown()).toBe(second);
+    fireEvent.blur(root());
     advance(SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("faithful");
+    const third = shown();
+    expect(third).not.toBe(second);
 
     pageIs("hidden");
     advance(3 * SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("faithful");
+    expect(shown()).toBe(third);
     pageIs("visible");
     advance(SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("record");
+    expect(shown()).not.toBe(third);
   });
 
-  it("R1584000 a lone stat has no controls and never moves, and none draws nothing", () => {
-    show(FOUR.slice(0, 1));
-    expect(screen.queryByTestId(landingTestid.showcaseNext)).toBeNull();
+  it("R1584000 a lone stat has no control and never moves, and none draws nothing", () => {
+    show(only("toppled"));
+    expect(root().hasAttribute("role")).toBe(false);
+    expect(root().hasAttribute("tabindex")).toBe(false);
+    expect(screen.queryAllByRole("button")).toEqual([]);
+    fireEvent.click(root());
+    fireEvent.keyDown(root(), { key: "Enter" });
     advance(2 * SHOWCASE_INTERVAL_MS);
     expect(shown()).toBe("toppled");
     cleanup();
@@ -166,18 +220,23 @@ describe("R1584000 the cycle", () => {
 });
 
 describe("R1584000 reduced motion", () => {
-  /** Nothing plays and nothing is drawn, the stat holds, and the controls still step it. */
+  /** Nothing plays and nothing is drawn, the stat holds, and a click or Enter still steps it. */
   function expectStill(): void {
+    const first = shown();
     expect(card().hasAttribute("data-entry")).toBe(false);
     expect(document.querySelector("[data-animating]")).toBeNull();
     expect(screen.queryByTestId(landingTestid.showcaseFx)).toBeNull();
     advance(2 * SHOWCASE_INTERVAL_MS);
-    expect(shown()).toBe("toppled");
+    expect(shown()).toBe(first);
     expect(card().hasAttribute("data-entry")).toBe(false);
     expect(document.querySelector("[data-animating]")).toBeNull();
-    expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe("taken down 37×");
-    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
-    expect(shown()).toBe("coveted");
+    expect(screen.getByTestId(landingTestid.showcaseLine).textContent).toBe(lineShown());
+    fireEvent.click(root());
+    const second = shown();
+    expect(second).not.toBe(first);
+    fireEvent.keyDown(root(), { key: "Enter" });
+    expect(shown()).not.toBe(second);
+    expect(card().hasAttribute("data-entry")).toBe(false);
   }
 
   it("R1584000 reduced motion shows the still card and number, plays nothing and draws no effects", () => {
@@ -190,6 +249,18 @@ describe("R1584000 reduced motion", () => {
     show();
     expectStill();
   });
+
+  it("R1743000 under reduced motion a click still moves it, and it never moves on by itself", () => {
+    show(FOUR, true);
+    const first = shown();
+    advance(10 * SHOWCASE_INTERVAL_MS);
+    expect(shown()).toBe(first);
+    fireEvent.click(root());
+    expect(shown()).not.toBe(first);
+    const second = shown();
+    advance(10 * SHOWCASE_INTERVAL_MS);
+    expect(shown()).toBe(second);
+  });
 });
 
 describe("R1584000 the card's animation", () => {
@@ -197,7 +268,7 @@ describe("R1584000 the card's animation", () => {
 
   it("R1584000 the card plays its stat's board animation after the lead", () => {
     // Most Toppled: it comes in, plays its Death animation and comes back.
-    show();
+    show(only("toppled"));
     expect(card().getAttribute("data-entry")).toBe("enter");
     expect(card().hasAttribute("data-animating")).toBe(false);
     expect(screen.getByTestId(landingTestid.showcaseFx).getAttribute("data-fx")).toBe("on");
@@ -210,8 +281,7 @@ describe("R1584000 the card's animation", () => {
   });
 
   it("R1584000 Most Coveted marks the card with Allure, then takes it to the other side", () => {
-    show();
-    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
+    show(only("coveted"));
     expect(shown()).toBe("coveted");
     advance(SHOWCASE_LEAD_MS);
     expect(card().getAttribute("data-animating")).toBe("marked");
@@ -224,8 +294,7 @@ describe("R1584000 the card's animation", () => {
   });
 
   it("R1584000 the Pocket Pick plays the trap reveal and the card stays face-up", () => {
-    show(showcaseStats(tally({ "core-004": { played: 9 } }), PICK));
-    fireEvent.click(screen.getByTestId(landingShowcasePickTestid("pocketPick")));
+    show(showcaseStats(tally({ "core-004": { played: 9 } }), PICK, seeded(1)).filter((stat) => stat.key === "pocketPick"));
     expect(card().getAttribute("data-def-id")).toBe("core-005");
     advance(SHOWCASE_LEAD_MS);
     expect(card().getAttribute("data-animating")).toBe("trapFired");
@@ -235,7 +304,7 @@ describe("R1584000 the card's animation", () => {
   });
 
   it("R1584000 an opponent's card lunges down the screen", () => {
-    show(showcaseStats(tally({ "core-004": { playedAgainst: 3 } }), null));
+    show(showcaseStats(tally({ "core-004": { playedAgainst: 3 } }), null, seeded(1)).filter((stat) => stat.key === "nemesis"));
     advance(SHOWCASE_LEAD_MS);
     expect(card().getAttribute("data-animating")).toBe("attackDeclared");
     expect(card().style.getPropertyValue("--lunge-dir")).toBe("1");
@@ -243,7 +312,7 @@ describe("R1584000 the card's animation", () => {
 
   it("R1584000 with effects off the keyframes play without the effects layer", () => {
     setFxSettings({ intensity: "off" });
-    show();
+    show(only("toppled"));
     expect(screen.queryByTestId(landingTestid.showcaseFx)).toBeNull();
     advance(SHOWCASE_LEAD_MS);
     expect(card().getAttribute("data-animating")).toBe("destroyed");
@@ -252,7 +321,9 @@ describe("R1584000 the card's animation", () => {
   it("R1584000 a new stat's card comes in again", () => {
     show();
     advance(SHOWCASE_LEAD_MS + ms("destroyed") + SHOWCASE_BEAT_GAP_MS);
-    fireEvent.click(screen.getByTestId(landingTestid.showcaseNext));
+    const before = shown();
+    fireEvent.click(root());
+    expect(shown()).not.toBe(before);
     expect(card().getAttribute("data-entry")).toBe("enter");
   });
 });

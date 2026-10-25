@@ -7,8 +7,9 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
-import { baseView } from "../test/fixtures.ts";
+import { baseView, pendingFor } from "../test/fixtures.ts";
 import {
+  awaitsYou,
   createMatchClient,
   parseServerFrame,
   remainingMs,
@@ -903,5 +904,21 @@ describe("viewDerivedState", () => {
       },
     });
     expect(viewDerivedState(mine).pending).toEqual({ choiceId: "c9", kind: "mode", player: "p1" });
+  });
+});
+
+describe("awaitsYou (#1792)", () => {
+  it("#1792 follows an open prompt over the turn, and never flags a finished game", () => {
+    expect(awaitsYou(baseView())).toBe(true);
+    expect(awaitsYou(baseView({ active: "p2" }))).toBe(false);
+    expect(awaitsYou(baseView({ active: "p2", pending: pendingFor("discover", []) }))).toBe(true);
+    expect(awaitsYou(baseView({ pending: { forYou: false, pendingFor: "p2" } }))).toBe(false);
+    expect(awaitsYou(baseView({ result: { winner: "p1", reason: "hero-death" } }))).toBe(false);
+  });
+
+  it("#1792 takes the caller's turn when it names one, but a prompt still decides first", () => {
+    expect(awaitsYou(baseView(), false)).toBe(false);
+    expect(awaitsYou(baseView({ active: "p2" }), true)).toBe(true);
+    expect(awaitsYou(baseView({ pending: pendingFor("discover", []) }), false)).toBe(true);
   });
 });

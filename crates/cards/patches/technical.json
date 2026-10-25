@@ -862,5 +862,382 @@
     "pr": 1725,
     "title": "patches ship: v0.4.1, v0.4.2, v0.4.3, v0.4.4, v0.4.4b",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "e9b88bdbcf345e0694cd9f536c4adb9c3b9d6834",
+    "pr": 1730,
+    "title": "an account flooding the API raises the unusual-rejections alert",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "285b6b65ed864946ecb7bd652f1eeb12bf8ca205",
+    "pr": 1732,
+    "title": "the tools' README command table is checked against the CLI",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "549e3526504afe68b0ad6b7b0f8913ddf84297e1",
+    "pr": 1735,
+    "title": "patches log: c894231..e9b88bd",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "3cbde900bd7619cd042eafe89964949f5acac61c",
+    "pr": 1729,
+    "title": "a ruling's proof must be a test that can run",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "e38b875bbbb04faa0d2657268770b26266f83a07",
+    "pr": 1731,
+    "title": "an unreadable game record is quarantined instead of wedging the statistics fold",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "73cd395dea9f1c76998e73e15e0e5758f55ecb89",
+    "pr": 1734,
+    "title": "a dry run's concealed copy keeps no secrets a player could not see",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "67834024768036cc1bb9f823e9bbd3bf5c3d385d",
+    "pr": 1738,
+    "title": "the Duos AI passes a card only when the trade is worth it",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "658df0331f0319a0bf098731bf4e1a8abd028c46",
+    "pr": 1739,
+    "title": "the deploy rehearsal runs as one CI job per image stage, then one per boot",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "8904cd47ee74c66e32ff759a383cbd93b99f54b4",
+    "pr": 1740,
+    "title": "patches check validates the technical changelog it ships",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "37d89187bf73b0c741a1e872591ef34c07e9cc41",
+    "pr": 1741,
+    "title": "claude-8, an eighth Claude account under 85% of its 5-hour session",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "b70fd14afc7cd8acaf143c83d83fac0a71985ac8",
+    "pr": 1737,
+    "title": "the AI's evaluation prices banked modifiers and scheduled effects",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "a7a107f54f6a78e0b583f23f9f3cbdd691c5948d",
+    "pr": 1736,
+    "title": "standard deck size 25",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "af7f9bc881a0e33c32e82030597ac277e394ec10",
+    "pr": 1746,
+    "title": "the fuzz monitor checks that an event's payload matches the state it leaves",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "907f2826225746439580a6c45ce17f7bdd544377",
+    "pr": 1747,
+    "title": "Your Table skips tokens, adds many more stats and shuffles them with no arrows",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "c7a011071ca098e135138b689ba5a7ca6f10dd08",
+    "pr": 1745,
+    "title": "daily super run failed",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "858cb885d9cb35adf843c2a4af190cc3b3f26bc6",
+    "pr": 1765,
+    "title": "the co-op result panel takes focus and can be reopened, so the replay door is never lost",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "14835f04acaf60eca71dcd4e5dfd0fc2ece8118d",
+    "pr": 1767,
+    "title": "in-app navigation resets the scroll position",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "ee9300467e5d4d25185372464968cfbde3494654",
+    "pr": 1768,
+    "title": "the pack-opening scene takes and returns focus and closes on Escape like the game's other dialogs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "5d1574fd8e8498e9e5cd02ff60ad9d1e3c0d33bd",
+    "pr": 1766,
+    "title": "a failed settings save to the account says so and offers Try again",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "7d10ab7032784013e7d555303637b32f020ee849",
+    "pr": 1769,
+    "title": "the card creator's unsaved-draft guard covers every way off the page",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "1d6f8eb52a3a455234d5e174b035b03ac88649c9",
+    "pr": 1763,
+    "title": "Trample only works on attack",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "496b5cd87667ae11ed1a16ecb386c9dea01d32bd",
+    "pr": 1780,
+    "title": "the Duos gate measures the co-op AI against a greedy team, not only a random one",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "bb38d512d4bae083849654fe48717d257f09b9e1",
+    "pr": 1782,
+    "title": "the account's player statistics keep only real cards and whole counts, so the public stats page never shows text a player made up",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "f50ecdf1d24a6e34ce514da3ac902bab056da01f",
+    "pr": 1783,
+    "title": "a failed read on the Purchases page offers Try again, as the other screens do",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "0056153440f215cd354f25993cf8859c1575eb69",
+    "pr": 1785,
+    "title": "a Buffed spell's Pierce is proven to go through Armor, and the damage steps say a spell's keywords come through Buffs",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "93ff983e4424db3b7c69f716380ec0c8e412b997",
+    "pr": 1786,
+    "title": "the engine's rule tests take `both`, `spread` and their JSON helpers from the shared harness instead of a hundred-odd private copies",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "26cf16be37eb589dc55dc59adc75a1e299642569",
+    "pr": 1784,
+    "title": "the AI keeps its own position switches in the beam, so a losing attacker can stand down",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "84ca5e954016e7da0be94f4a191eca784b4f2d17",
+    "pr": 1790,
+    "title": "rehearse.sh reads several layer caches, so each deploy-image job can keep a cache scope of its own",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "1d6ec71448a7b54c14d8a5f9df2f08115663a1b2",
+    "pr": 1788,
+    "title": "the AI weighs an even trade or a trade up beside its free kills, ahead of its plays",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "d7fa6dccdcd1e1e5176ae60f5c01837055f41741",
+    "pr": 1770,
+    "title": "Update how multiple activates work",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.4",
+    "commit": "36ac34b4cb07ae02292c919e693ea7574777d141",
+    "pr": 1801,
+    "title": "the AI tries an X card at its biggest X, an Embiggened price, an Equip and a face-down set before a second lane of its cheapest play",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "633568b997c0c127c198f6eb2f08c2647d042481",
+    "title": "Merge pull request #1789 from Jlore-Studios/bot/issue-1775",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "56a0b3d5546531aac8e9c5ac4933ff0f5a81a2a3",
+    "pr": 1805,
+    "title": "patches log: e9b88bd..36ac34b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "db8d97fad993ff1eb4a01566c0d7de262b7bbe09",
+    "pr": 1806,
+    "title": "the browser tab says it is your move during the mulligan and when a prompt waits on you, not only on your turn",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "6c53eaae2ea415c98e2f5be9089b8a1f3aa203c5",
+    "pr": 1808,
+    "title": "a held backrow zone says it waits for an animated card's return, not a Reborn unit, when that is why",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "0694cfd8ec6745e9223f25a69f69212af3e535a1",
+    "pr": 1810,
+    "title": "the deck list marks each card that keeps the deck from being queued",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "52b2951bd981e3120f82c51549d01ed69e260214",
+    "pr": 1807,
+    "title": "the online and co-op tables can open the full list of live modifiers, as practice and lessons already can",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "87ad7b9d754116dc69b32649ff738ab7f00e3774",
+    "pr": 1811,
+    "title": "clicking another attacker while one is picked switches the attack to it",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "106a26e6d7f93c50bc369906f7acf614bdac746a",
+    "pr": 1813,
+    "title": "the AI's trade reckoning counts a Reborn unit's return, so killing one is not priced as removing it",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "1dc2aa529dca7b5a32abcf598ca3123f46f499f6",
+    "pr": 1814,
+    "title": "the web's tests take their stub-server, sign-in and fake audio helpers from one place instead of dozens of private copies",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "9efdb26dc237d521583d7d18305939688add3783",
+    "pr": 1809,
+    "title": "bot: build pass 1 for #1800",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "2bcd74f934d625f9090bfb912bbb9e27e5f67f68",
+    "pr": 1812,
+    "title": "the card scripts' tests read def ids through the crate's one helper instead of about 130 hand-written copies",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "03e2df32aff01b2dfe2aeee69741cd10104933a2",
+    "pr": 1815,
+    "title": "the AI's search keeps a play's placements apart when they differ only in lane, so trying every lane is not undone",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "c291f24e929e4827633ed5d790f01721464a5037",
+    "pr": 1835,
+    "title": "the replays list, the share button and the shared list stop reading whole action logs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "d228a62797fcd7f825d14206838c878a773fbca9",
+    "pr": 1887,
+    "title": "bot: build pass 1 for #1827",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "49b6b994d5d9dbec82125f1c69138c2751b794a9",
+    "pr": 1891,
+    "title": "the docs and the status issue say the two LLM training lanes are stopped",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.9",
+    "commit": "526e98112369f544582929fb80589ed830236fe6",
+    "pr": 1832,
+    "title": "patches ship: v0.4.5, v0.4.6, v0.4.7, v0.4.8, v0.4.9",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "a2a53daac0d5d2599486bcf51a1524caa503453d",
+    "pr": 1892,
+    "title": "a patches ship promotion still red 2 hours on opens a hard issue for the night bot",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "41fe673f4bfc7818f815c12a753cdd09b6bc8b0c",
+    "pr": 1894,
+    "title": "patches log: 36ac34b..526e981",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "86430e35493dc2a7026b206e3ece57fd070e96f7",
+    "pr": 1905,
+    "title": "the training box becomes the Muse box, one Muse runner on each box (#1677)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "2d780934c526d247cb0a42816ee79608bbac4f47",
+    "pr": 1906,
+    "title": "the AI's decisions stay under 2 s on a state made wide by a many-ingredient fused card (The Maestro)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "c786880ac495f29361b09310295a17a59789d044",
+    "pr": 1909,
+    "title": "the watch and replay tables can open the full list of live modifiers, as the others do",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "876a4c9a81287d5ebd176f1e1388cd76db7d2bbe",
+    "pr": 1912,
+    "title": "patches ship: v0.4.10",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "09360eea5db769681177f2e13d5b080ef6c2fc74",
+    "pr": 1910,
+    "title": "the card sheet's statistics, the creator's script check and a finished GIF's share offer a way on after a failure",
+    "kind": "app"
   }
 ]

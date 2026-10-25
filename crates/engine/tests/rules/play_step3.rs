@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, matches_object, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, matches_object, new_game, put, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
 
 /// Unique across the tests, which run on parallel threads.
@@ -75,24 +75,9 @@ fn pacted(seed: &str, radiant: bool) -> GameState {
     .state
 }
 
-fn values(events: &[GameEvent]) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
-}
-
-/// Events of one type, as JSON.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    values(events)
-        .into_iter()
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
-
 /// The field of the first event of a type: `Null` when there is no such event.
 fn first_field(events: &[GameEvent], kind: &str, field: &str) -> Value {
-    of_type(events, kind)
+    events_json(events, kind)
         .first()
         .map(|event| event[field].clone())
         .unwrap_or(Value::Null)
@@ -159,7 +144,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
         );
         let (asked, events) = (played.state, played.events);
 
-        let replaced = of_type(&events, "transformed")
+        let replaced = events_json(&events, "transformed")
             .first()
             .cloned()
             .unwrap_or(Value::Null);
@@ -185,7 +170,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
                 .as_ref()
                 .is_some_and(|pending| pending.prompt.contains("Play:"))
         );
-        assert_eq!(of_type(&events, "cardAnnounced"), Vec::<Value>::new());
+        assert_eq!(events_json(&events, "cardAnnounced"), Vec::<Value>::new());
         let resolving: Vec<String> = asked
             .players
             .p1
@@ -201,7 +186,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             json!({ "type": "answer", "choiceId": pending_id(&asked), "selection": [ENEMY_HERO] }),
         );
         let (after, resolved) = (answered.state, answered.events);
-        let announced = of_type(&resolved, "cardAnnounced")
+        let announced = events_json(&resolved, "cardAnnounced")
             .first()
             .cloned()
             .unwrap_or(Value::Null);
@@ -218,7 +203,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             ),
             "{announced}"
         );
-        let played: Vec<Value> = of_type(&resolved, "cardPlayed")
+        let played: Vec<Value> = events_json(&resolved, "cardPlayed")
             .iter()
             .map(|event| json!([event["instanceId"], event["costPaid"]]))
             .collect();
@@ -315,9 +300,9 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             PlayerId::P1,
             json!({ "type": "play", "instanceId": book.id, "targets": [ENEMY_HERO] }),
         );
-        assert_eq!(of_type(&played.events, "transformed"), Vec::<Value>::new());
+        assert_eq!(events_json(&played.events, "transformed"), Vec::<Value>::new());
         assert_eq!(
-            pluck(&of_type(&played.events, "cardPlayed"), "instanceId"),
+            pluck(&events_json(&played.events, "cardPlayed"), "instanceId"),
             vec![json!(book.id)]
         );
         assert_eq!(played.state.players.p2.hero.health, HERO_HEALTH - 4);
@@ -364,7 +349,7 @@ mod r449_a_play_replaced_at_step_3_classic_c23_devils_pact {
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
         );
-        assert_eq!(of_type(&played.events, "transformed"), Vec::<Value>::new());
+        assert_eq!(events_json(&played.events, "transformed"), Vec::<Value>::new());
         assert!(
             !after
                 .players
@@ -473,7 +458,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
             json!({ "type": "play", "instanceId": pear.id }),
         );
         assert_eq!(
-            pluck(&of_type(&first.events, "radiantSet"), "instanceId"),
+            pluck(&events_json(&first.events, "radiantSet"), "instanceId"),
             vec![json!(pear.id)]
         );
         assert_eq!(
@@ -485,7 +470,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
             PlayerId::P1,
             json!({ "type": "play", "instanceId": ping.id }),
         );
-        assert_eq!(of_type(&second.events, "radiantSet"), Vec::<Value>::new());
+        assert_eq!(events_json(&second.events, "radiantSet"), Vec::<Value>::new());
     }
 
     /// "R449 step 1 reads the Radiant face (R214), so the play carries that face's choices"
@@ -555,7 +540,7 @@ mod r449_r213_by_tag_plays_made_radiant_at_step_3_classic_plus_c68_organic_produ
         );
         let events = cast_and_settle(&mut after, &cast);
         assert_eq!(
-            pluck(&of_type(&events, "radiantSet"), "instanceId"),
+            pluck(&events_json(&events, "radiantSet"), "instanceId"),
             vec![json!(cast.id)]
         );
     }

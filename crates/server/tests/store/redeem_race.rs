@@ -49,9 +49,9 @@ macro_rules! once {
 
 // The two ends of the contract
 
-/// The fixture catalog the Postgres end seeds: 64 playable ids and two tokens (§9.4 L1–L3).
+/// The fixture catalog the Postgres end seeds: 80 playable ids and two tokens (§9.4 L1–L3).
 const CATALOG_VERSION: &str = "core-1";
-const PLAYABLE_COUNT: usize = 64;
+const PLAYABLE_COUNT: usize = 80;
 
 fn playable_ids() -> Vec<String> {
     (1..=PLAYABLE_COUNT).map(|i| format!("core-{i:03}")).collect()

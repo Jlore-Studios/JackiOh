@@ -17,19 +17,24 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c032_felinor_feelings, c052_final_gambit, c064_malzahars_recycler,
-    c088_siphon_squad, c090_in_too_deep,
+    c008_pickle, c009_income_tax, c032_felinor_feelings, c039_outbreak, c052_final_gambit,
+    c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
-use crate::scripts::classic_plus::{c007_the_house, c033_ivory_tower, c040_appropriations, c062_kys_papaya};
+use crate::scripts::classic_plus::{
+    c007_the_house, c033_ivory_tower, c040_appropriations, c043_ai_slop, c062_kys_papaya,
+    c078_claudes_datacenter,
+};
 use crate::scripts::core::{
-    c029_giga_glowy_jelly_bean, c049_snom_bunny_mind_control, c050_k_pop_fanatic, c054_straaza,
+    c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
+    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
+    c069_call_to_arms, c080_zao_gao,
 };
 use crate::scripts::meditative::{
-    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c030_fickle_e_kitten, c037_cn_in_a_bottle,
-    c049_yilegpt_tamed, c054_money_machine, c074_montana_giant, c080_aluneth, c097_2_wishing_well,
-    c097_8_prison,
+    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
+    c030_fickle_e_kitten, c037_cn_in_a_bottle, c038_h1b_printer, c049_yilegpt_tamed, c054_money_machine,
+    c074_montana_giant, c080_aluneth, c094_shrinking_felinor, c097_2_wishing_well, c097_8_prison,
 };
-use crate::scripts::meditative_plus::c001_bobs_plan;
+use crate::scripts::meditative_plus::{c001_bobs_plan, c003_wondrous_wand, c019_grubby_gloves};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -59,7 +64,14 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// any enemy permanent; Final Gambit redirected the hit to the enemy hero; Straaza's pool was (3) or (4)
 /// Cost Units; Fickle E-Kitten asked at the start of the turn; CN in a Bottle's base card took no raise;
 /// Appropriations had +2X Attack, 2X Books, 8X% and +2X Health [+4X, 5X, 20X%, +6X]; and In Too Deep's
-/// quests 3, 5 and 6 asked 3 permanents, 12 damage and totals of 10.
+/// quests 3, 5 and 6 asked 3 permanents, 12 damage and totals of 10. #1748's eleven ran theirs through
+/// v0.4.4b with the numbers printed that they now declare (R1748003): Hinder's discard, Reoccurring
+/// Dream's and Eugenics' chances, Call to Arms' recruits, Zao Gao's tokens, Outbreak's draws per
+/// counter, the cost Claude's Datacenter, H1B Printer, Wondrous Wand and Grubby Gloves set, and CN in a
+/// Bottle's raise and its Radiant face's cost. #1828's four ran theirs through v0.4.9: API Key Fishing's
+/// Radiant face added a base copy (R1828000), AI Slop fused from every AI generated card (R1828001), KY's
+/// Empty Notebook drew 1, or 2 on its Radiant face (R1828002), and Shrinking Felinor's Radiant face
+/// summoned a Radiant body (R1828003).
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -165,6 +177,57 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c040_appropriations::script_v0_4_0f,
     ),
     (c090_in_too_deep::ID, "v0.4.0f", c090_in_too_deep::script_v0_4_0f),
+    (c021_hinder::ID, "v0.4.4b", c021_hinder::script_v0_4_4b),
+    (
+        c023_reoccurring_dream::ID,
+        "v0.4.4b",
+        c023_reoccurring_dream::script_v0_4_4b,
+    ),
+    (c042_eugenics::ID, "v0.4.4b", c042_eugenics::script_v0_4_4b),
+    (
+        c069_call_to_arms::ID,
+        "v0.4.4b",
+        c069_call_to_arms::script_v0_4_4b,
+    ),
+    (c080_zao_gao::ID, "v0.4.4b", c080_zao_gao::script_v0_4_4b),
+    (c039_outbreak::ID, "v0.4.4b", c039_outbreak::script_v0_4_4b),
+    (
+        c078_claudes_datacenter::ID,
+        "v0.4.4b",
+        c078_claudes_datacenter::script_v0_4_4b,
+    ),
+    (
+        c037_cn_in_a_bottle::ID,
+        "v0.4.4b",
+        c037_cn_in_a_bottle::script_v0_4_4b,
+    ),
+    (c038_h1b_printer::ID, "v0.4.4b", c038_h1b_printer::script_v0_4_4b),
+    (
+        c003_wondrous_wand::ID,
+        "v0.4.4b",
+        c003_wondrous_wand::script_v0_4_4b,
+    ),
+    (
+        c019_grubby_gloves::ID,
+        "v0.4.4b",
+        c019_grubby_gloves::script_v0_4_4b,
+    ),
+    (
+        c021_api_key_fishing::ID,
+        "v0.4.9",
+        c021_api_key_fishing::script_v0_4_9,
+    ),
+    (c043_ai_slop::ID, "v0.4.9", c043_ai_slop::script_v0_4_9),
+    (
+        c051_1_kys_empty_notebook::ID,
+        "v0.4.9",
+        c051_1_kys_empty_notebook::script_v0_4_9,
+    ),
+    (
+        c094_shrinking_felinor::ID,
+        "v0.4.9",
+        c094_shrinking_felinor::script_v0_4_9,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

@@ -712,7 +712,7 @@ mod roll_weighted_r960_md_c1 {
     fn rock_game(seed: &str) -> GameState {
         let mut state = new_game(seed, None);
         register_catalog(jade_catalog(fruit_catalog(combat_catalog(fixture_catalog(
-            vanilla_catalog(40, 1),
+            vanilla_catalog(2 * DECK_SIZE, 1),
         )))));
         let mut scripts = FIXTURE_SCRIPTS.clone();
         scripts.extend(COMBAT_SCRIPTS.clone());

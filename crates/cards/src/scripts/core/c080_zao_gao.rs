@@ -10,6 +10,8 @@
 //! (thirteen with R346's Pierce and R636's Windfury), never one it has (§10.4), and "each token is
 //! summoned Radiant and then rolls its keywords" (§8). R64: with no free zone a summon fizzles.
 //! `summon` rolls them (`randomKeywords`), after the discards and next to its own summon (§9.3).
+//! Tunes: discard 2 ↓; keywords 2 ↑ (Radiant 3); tokens 2 ↑ (R1748003). Through v0.4.4b the token
+//! count was printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::effects::{discard_random, summon};
 use jackioh_engine::prelude::*;
@@ -21,6 +23,7 @@ fn rush_token_id() -> String {
     crate::card_def("core-t-rush").id
 }
 
+/// "Summon 2 Rush Tokens" as v0.4.4b printed it, before it was the declared `tokens` (R1748003).
 const TOKEN_COUNT: i32 = 2;
 
 /// What a face summons: whether the tokens are Radiant (R276, R354), and how many keywords each rolls
@@ -41,17 +44,23 @@ fn rush_token(def_id: &str, tokens: Tokens) -> Effect {
 }
 
 /// The faces differ only in the tokens they summon. The discard is the declared number `discard`
-/// (R386), less being better.
-fn zao_gao(rush_token_def: String, radiant: bool) -> Script {
+/// (R386), less being better; how many tokens, the declared number `tokens` (R1748003), or the
+/// printed 2 when `declared` is off.
+fn zao_gao(rush_token_def: String, radiant: bool, declared: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let tokens = Tokens {
                 radiant,
                 keywords: param(&*ctx, "keywords"),
             };
+            let count = if declared {
+                param(&*ctx, "tokens")
+            } else {
+                TOKEN_COUNT
+            };
             // R16, R354: "random" is stated, so the match rng picks and nobody is asked.
             let mut effects = vec![discard_random(json_as(json!({ "count": param(&*ctx, "discard") })))];
-            effects.extend((0..TOKEN_COUNT).map(|_| rush_token(&rush_token_def, tokens)));
+            effects.extend((0..count).map(|_| rush_token(&rush_token_def, tokens)));
             effects
         })),
         ..Script::default()
@@ -61,8 +70,17 @@ fn zao_gao(rush_token_def: String, radiant: bool) -> Script {
 pub fn script() -> CardScripts {
     let rush = rush_token_id();
     CardScripts {
-        base: zao_gao(rush.clone(), false),
-        radiant: zao_gao(rush, true),
+        base: zao_gao(rush.clone(), false, true),
+        radiant: zao_gao(rush, true, true),
+    }
+}
+
+/// R767000: through v0.4.4b its token count was printed; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    let rush = rush_token_id();
+    CardScripts {
+        base: zao_gao(rush.clone(), false, false),
+        radiant: zao_gao(rush, true, false),
     }
 }
 
@@ -72,6 +90,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use indexmap::IndexSet;
     use jackioh_engine::testkit::*;
 
@@ -178,7 +197,7 @@ mod tests {
 
     /// The def ids of p1's graveyard, sorted.
     fn graveyard(s: &Scenario) -> Vec<String> {
-        let mut ids: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+        let mut ids = def_ids(&s.pile(P1, "graveyard"));
         ids.sort();
         ids
     }
@@ -236,6 +255,32 @@ mod tests {
         }
     }
 
+    #[test]
+    fn r1748003_tokens_moves_with_a_buff_or_a_nerf() {
+        for (upgrade, tokens) in [(true, 3), (false, 1)] {
+            crate::register_all();
+            let mut s = board(false, &DISCARDABLE, None);
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, ZAO_GAO, "tokens")
+            } else {
+                crate::degrade_number(&mut s, ZAO_GAO, "tokens")
+            };
+            assert_eq!(moved, tokens);
+            s.play(ZAO_GAO, json!({}));
+            assert_eq!(occupied_lanes(&s).len(), tokens as usize);
+        }
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_tokens() {
+        crate::under_kept(ZAO_GAO, script_v0_4_4b(), || {
+            let mut s = board(false, &DISCARDABLE, None);
+            crate::upgrade_number(&mut s, ZAO_GAO, "tokens");
+            s.play(ZAO_GAO, json!({}));
+            assert_eq!(occupied_lanes(&s).len(), 2, "the kept script summons its printed 2");
+        });
+    }
+
     mod n80_zao_gao_base {
         use super::*;
 
@@ -266,7 +311,7 @@ mod tests {
             let picked = |seed: &str| -> Vec<String> {
                 let mut s = board(false, &DISCARDABLE, Some(seed));
                 s.play(ZAO_GAO, json!({}));
-                s.pile(P1, "hand").iter().map(|card| card.def_id.clone()).collect()
+                def_ids(&s.pile(P1, "hand"))
             };
             assert_eq!(picked("core-080-rng-a"), picked("core-080-rng-a"));
             let kept: IndexSet<Option<String>> =

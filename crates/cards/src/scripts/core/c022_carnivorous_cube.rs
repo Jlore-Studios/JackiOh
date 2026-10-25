@@ -186,6 +186,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::script;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -207,13 +208,6 @@ mod tests {
     fn backrow(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.backrow(player, lane).map(|card| card.def_id.clone()))
-            .collect()
-    }
-
-    fn graveyard(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "graveyard")
-            .iter()
-            .map(|card| card.def_id.clone())
             .collect()
     }
 
@@ -401,7 +395,7 @@ mod tests {
                 s.play(CUBE, json!({}));
 
                 assert_eq!(row(&s, P1), lanes([Some(CUBE), None, None, None, None]));
-                assert!(graveyard(&s, P1).is_empty());
+                assert!(def_ids(&s.pile(P1, "graveyard")).is_empty());
                 assert!(s.card(CUBE).memory.is_empty());
             }
 
@@ -421,7 +415,7 @@ mod tests {
 
                 assert_eq!(row(&s, P1), lanes([None, None, None, None, None]));
                 assert_eq!(backrow(&s, P1), lanes([None, None, None, None, None]));
-                assert_eq!(graveyard(&s, P1), vec![CUBE.to_string()]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![CUBE.to_string()]);
             }
         }
 
@@ -490,7 +484,7 @@ mod tests {
 
                 s.expect_in_zone(&cube, "graveyard");
                 assert_eq!(row(&s, P1), lanes([None, None, None, None, None]));
-                assert_eq!(graveyard(&s, P1), vec![CUBE.to_string()]);
+                assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![CUBE.to_string()]);
             }
 
             #[test]

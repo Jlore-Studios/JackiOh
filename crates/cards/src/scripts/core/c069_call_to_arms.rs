@@ -11,26 +11,31 @@
 //! R1: Recruit never fires a Cry, which is why #12 Duplicating Felinors cannot fill a board for 2 mana.
 //! R65: the filter reads each def's cost out of play (`matches_filter` via `query_cost`).
 //! The `type: "Unit"` filter matters as well as the cost: `recruit` would take any permanent.
+//! Tunes: costLimit 1 ↑ (Radiant 2); units 3 ↑ (R1748003). Through v0.4.4b the count was printed, not
+//! declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::effects::{RecruitFilter, recruit};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-069";
 
-/// §8.3: "Recruit 3", the same on both faces.
-const RECRUITS: usize = 3;
+/// §8.3: "Recruit 3", the same on both faces, as v0.4.4b printed it before it was the declared
+/// `units` (R1748003).
+const RECRUITS: i32 = 3;
 
 fn units_costing(max: i32) -> RecruitFilter {
     json_as(json!({ "type": "Unit", "costRange": { "max": max } }))
 }
 
 /// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
-/// the face that is running.
-fn call_to_arms() -> Script {
+/// the face that is running. The count is the declared number `units` (R1748003), or the printed 3
+/// when `declared` is off.
+fn call_to_arms(declared: bool) -> Script {
     Script {
-        cry: Some(hook(|ctx| {
+        cry: Some(hook(move |ctx| {
             let filter = units_costing(param(&*ctx, "costLimit"));
-            (0..RECRUITS)
+            let units = if declared { param(&*ctx, "units") } else { RECRUITS };
+            (0..units)
                 .map(|_| recruit(json_as(json!({ "filter": filter, "player": "self" }))))
                 .collect()
         })),
@@ -39,7 +44,14 @@ fn call_to_arms() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    let base = call_to_arms();
+    let base = call_to_arms(true);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: through v0.4.4b its count was printed; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    let base = call_to_arms(false);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -49,6 +61,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -87,10 +100,6 @@ mod tests {
         (1..=5).map(|lane| s.unit(P1, lane).map(|card| card.def_id)).collect()
     }
 
-    fn library_ids(s: &Scenario) -> Vec<String> {
-        s.pile(P1, "library").into_iter().map(|card| card.def_id).collect()
-    }
-
     fn row(ids: [Option<&str>; 5]) -> Vec<Option<String>> {
         ids.iter().map(|id| id.map(str::to_string)).collect()
     }
@@ -108,6 +117,31 @@ mod tests {
             s.play(CALL, json!({}));
             assert_eq!(unit_ids(&s)[0].as_deref(), Some(recruited));
         }
+    }
+
+    #[test]
+    fn r1748003_units_moves_with_a_buff_or_a_nerf() {
+        for (upgrade, units) in [(true, 4), (false, 2)] {
+            let mut s = board(json!({ "p1": { "hand": [CALL], "library": [TIMMY, VANILLA, DEFENDER, TIMMY, VANILLA] } }));
+            let moved = if upgrade {
+                crate::upgrade_number(&mut s, CALL, "units")
+            } else {
+                crate::degrade_number(&mut s, CALL, "units")
+            };
+            assert_eq!(moved, units);
+            s.play(CALL, json!({}));
+            assert_eq!(unit_ids(&s).iter().flatten().count(), units as usize);
+        }
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_units() {
+        crate::under_kept(CALL, super::script_v0_4_4b(), || {
+            let mut s = board(json!({ "p1": { "hand": [CALL], "library": [TIMMY, VANILLA, DEFENDER, TIMMY, VANILLA] } }));
+            crate::upgrade_number(&mut s, CALL, "units");
+            s.play(CALL, json!({}));
+            assert_eq!(unit_ids(&s).iter().flatten().count(), 3, "the kept script recruits its printed 3");
+        });
     }
 
     mod call_to_arms {
@@ -144,7 +178,7 @@ mod tests {
             }));
             s.play(CALL, json!({}));
 
-            assert_eq!(library_ids(&s), [SPELL, MENACE, TRAP, POINTMASTER, TIMMY]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [SPELL, MENACE, TRAP, POINTMASTER, TIMMY]);
         }
 
         #[test]
@@ -153,7 +187,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([None, None, None, None, None]));
-            assert_eq!(library_ids(&s), [SPELL, TRAP, SPELL, TRAP]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [SPELL, TRAP, SPELL, TRAP]);
             // §8 Conventions: the spell still counts as played, and it goes to the graveyard (§10.5).
             s.expect_in_zone(CALL, "graveyard").expect_mana(P1, 2);
         }
@@ -164,7 +198,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([Some(TIMMY), None, None, None, None]));
-            assert_eq!(library_ids(&s), [POINTMASTER, POINTMASTER]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [POINTMASTER, POINTMASTER]);
         }
 
         #[test]
@@ -184,7 +218,7 @@ mod tests {
                 unit_ids(&s),
                 row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(DEFENDER), Some(VANILLA)])
             );
-            assert_eq!(library_ids(&s), [TIMMY, POINTMASTER]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TIMMY, POINTMASTER]);
         }
 
         #[test]
@@ -200,7 +234,7 @@ mod tests {
             // The first scan takes the one open unlocked zone (lane 3); with none left, the next scans
             // take the leftmost empty Locked lanes (R688 prefers unlocked, then fills Locked).
             assert_eq!(unit_ids(&s), row([Some(VANILLA), Some(DEFENDER), Some(TIMMY), None, None]));
-            assert!(library_ids(&s).is_empty());
+            assert!(def_ids(&s.pile(P1, "library")).is_empty());
         }
 
         #[test]
@@ -239,7 +273,7 @@ mod tests {
                 unit_ids(&s),
                 row([Some(POINTMASTER), Some(TIMMY), Some(POINTMASTER), None, None])
             );
-            assert_eq!(library_ids(&s), [MENACE, SPELL, MENACE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [MENACE, SPELL, MENACE]);
         }
 
         #[test]
@@ -248,7 +282,7 @@ mod tests {
             s.play(CALL, json!({}));
 
             assert_eq!(unit_ids(&s), row([None, None, None, None, None]));
-            assert_eq!(library_ids(&s), [MENACE, MENACE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [MENACE, MENACE]);
         }
 
         #[test]
@@ -266,7 +300,7 @@ mod tests {
                 unit_ids(&s),
                 row([Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(TIMMY), Some(POINTMASTER)])
             );
-            assert_eq!(library_ids(&s), [TIMMY, VANILLA]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TIMMY, VANILLA]);
         }
     }
 
@@ -284,7 +318,7 @@ mod tests {
             assert_eq!(unit_ids(&s), row([Some(TIMMY), None, None, None, None]));
             let ids: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.id).collect();
             assert!(token.is_some_and(|token| ids.contains(&token.id)));
-            assert_eq!(library_ids(&s), [RUSH_TOKEN, MENACE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [RUSH_TOKEN, MENACE]);
         }
     }
 }

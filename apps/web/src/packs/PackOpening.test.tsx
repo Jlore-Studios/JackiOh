@@ -8,7 +8,7 @@
 
 import { CATALOG } from "@jackioh/cards";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
@@ -17,7 +17,7 @@ import {
 } from "@jackioh/server-config";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
-import type { AudioEngine } from "../audio/types.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -40,38 +40,14 @@ import {
   withOpening,
 } from "./packs.ts";
 
-type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
-
-/** The same stand-in the audio suite uses: every member a spy, every sink call accepted. */
-function fakeEngine(): FakeEngine {
-  return {
-    state: vi.fn<AudioEngine["state"]>(() => "running"),
-    unlock: vi.fn<AudioEngine["unlock"]>(),
-    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-    setBusy: vi.fn<AudioEngine["setBusy"]>(),
-    log: vi.fn<AudioEngine["log"]>(() => []),
-    clearLog: vi.fn<AudioEngine["clearLog"]>(),
-    contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 0),
-    speaking: vi.fn<AudioEngine["speaking"]>(() => false),
-    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
-    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-    dispose: vi.fn<AudioEngine["dispose"]>(),
-    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
-    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
-  };
-}
-
 const TOKEN = "token-1";
 const NO_PACK = "no unopened pack of that kind";
 const GARY = "Gary the Gambler full art";
 
-let engine: FakeEngine;
+let engine: FakeAudioEngine;
 
 beforeEach(() => {
-  engine = fakeEngine();
+  engine = fakeAudioEngine();
   setAudioEngineForTests(engine);
   __resetSettingsForTests();
   resetFxSettingsForTests();
@@ -290,6 +266,30 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.getByTestId(T.slot(2))).toHaveAttribute("data-grant", "cosmetic");
     expect(screen.queryByTestId(T.next), "cards are still face down").toBeNull();
     expect(screen.getByTestId(T.close)).toHaveTextContent("Close");
+  });
+
+  it("R1827000 a slot that dropped a portrait shows its name and its art", () => {
+    const opened = openedPack();
+    const [first, second, third, ...rest] = opened.slots;
+    torn({
+      opened: {
+        ...opened,
+        slots: [
+          first!,
+          second!,
+          { ...third!, grant: { kind: "cosmetic", cosmeticId: "portrait-gary", cosmeticRarity: "Epic" } },
+          ...rest,
+        ],
+      },
+    });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent("New cosmetic: Gary the Gambler portrait");
+    const slot = screen.getByTestId(T.slot(2));
+    const art = slot.querySelector('.pack-slot__face [data-portrait-art="gary"]');
+    expect(art).not.toBeNull();
+    expect(art).toHaveClass("pack-slot__portrait");
+    // The portrait is in the slot card's place: an account cosmetic sits on no card.
+    expect(slot.querySelector(".pack-slot__face .cf")).toBeNull();
   });
 
   it("Epic and above flip only after a hold", () => {
@@ -716,5 +716,120 @@ describe("#1308 the card packs panel", () => {
     await waitFor(() => {
       expect(server.to("GET", "/api/packs")).toHaveLength(2);
     });
+  });
+});
+
+describe("#1757 the pack-opening scene's focus and keys", () => {
+  /** fireEvent returns false when a handler called preventDefault. */
+  function tabFrom(element: Element, shift = false): boolean {
+    return fireEvent.keyDown(element, { key: "Tab", shiftKey: shift });
+  }
+
+  it("#1757 the scene takes the focus when it opens, and Tab and Shift+Tab wrap inside it", () => {
+    render(
+      <>
+        <button type="button" data-testid="behind">
+          behind
+        </button>
+        <PackScene {...props()} />
+      </>,
+    );
+    const scene = screen.getByTestId(T.scene);
+    const pack = screen.getByTestId(T.pack);
+    const close = screen.getByTestId(T.close);
+    expect(scene).toHaveFocus();
+
+    expect(tabFrom(scene)).toBe(false);
+    expect(pack).toHaveFocus();
+    expect(tabFrom(pack, true)).toBe(false);
+    expect(close).toHaveFocus();
+    expect(tabFrom(close)).toBe(false);
+    expect(pack).toHaveFocus();
+
+    scene.focus();
+    expect(tabFrom(scene, true)).toBe(false);
+    expect(close).toHaveFocus();
+
+    pack.focus();
+    expect(tabFrom(pack), "a Tab between two controls inside is the browser's").toBe(true);
+
+    const behind = screen.getByTestId("behind");
+    behind.focus();
+    expect(tabFrom(behind)).toBe(false);
+    expect(pack).toHaveFocus();
+  });
+
+  it("#1757 while an open is out nothing in it can take the focus, so Tab and Shift+Tab keep it on the scene", () => {
+    render(<PackScene {...props({ busy: true })} />);
+    const scene = screen.getByTestId(T.scene);
+    expect(scene).toHaveFocus();
+
+    expect(tabFrom(scene)).toBe(false);
+    expect(scene).toHaveFocus();
+    expect(tabFrom(scene, true)).toBe(false);
+    expect(scene).toHaveFocus();
+  });
+
+  it("#1757 Escape closes the scene, but not while an open is out, when Close is disabled too", () => {
+    const given = props({ busy: true });
+    const { rerender } = render(<PackScene {...given} />);
+    const scene = screen.getByTestId(T.scene);
+
+    fireEvent.keyDown(scene, { key: "Escape" });
+    expect(given.onClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId(T.close)).toBeDisabled();
+    expect(scene).toHaveFocus();
+
+    rerender(<PackScene {...given} busy={false} />);
+    expect(screen.getByTestId(T.close)).toBeEnabled();
+    fireEvent.keyDown(scene, { key: "Escape" });
+    expect(given.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1757 under reduced motion the scene takes the focus and Escape closes it the same", () => {
+    writeSettings({ reduceMotion: true });
+    const given = props({ opened: openedPack() });
+    render(<PackScene {...given} />);
+    const scene = screen.getByTestId(T.scene);
+    expect(scene).toHaveAttribute("data-motion", "reduce");
+    expect(scene).toHaveFocus();
+
+    fireEvent.keyDown(scene, { key: "Escape" });
+    expect(given.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1757 focus goes back to the Open button that opened the scene, on Escape and on Done", async () => {
+    packsServer();
+    await panel();
+    const opener = screen.getByTestId(T.open("Core"));
+    opener.focus();
+    fireEvent.click(opener);
+    expect(screen.getByTestId(T.scene)).toHaveFocus();
+
+    fireEvent.keyDown(screen.getByTestId(T.scene), { key: "Escape" });
+    expect(screen.queryByTestId(T.scene)).toBeNull();
+    expect(opener).toHaveFocus();
+
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    expect(screen.getByTestId(T.close)).toHaveTextContent("Done");
+    fireEvent.click(screen.getByTestId(T.close));
+    expect(screen.queryByTestId(T.scene)).toBeNull();
+    expect(screen.getByTestId(T.open("Core")), "Core still holds a pack, so its row stays").toHaveFocus();
+  });
+
+  it("#1757 the next pack of a batch takes the focus again", async () => {
+    packsServer({
+      open: (call): Reply => ({ status: 200, body: { ...openedPack(), unopened: call === 1 ? 1 : 0 } satisfies OpenedPackResponse }),
+    });
+    await panel();
+    fireEvent.click(screen.getByTestId(T.openAll("Core")));
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    await screen.findByTestId(T.outcome(0));
+    fireEvent.click(screen.getByTestId(T.next));
+
+    expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
+    expect(screen.getByTestId(T.scene)).toHaveFocus();
   });
 });

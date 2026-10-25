@@ -45,7 +45,7 @@ use jackioh_engine::{
 
 use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY};
-use crate::evaluate::{NextSwing, coming_mana, evaluate, unit_worth};
+use crate::evaluate::{NextSwing, coming_mana, evaluate, kill_worth, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
@@ -54,16 +54,30 @@ use crate::simulate::{
 };
 use crate::types::NodeCounter;
 
-/// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
-/// body when that dies too, with First Strike deciding who strikes first and no strike back at all on
-/// a Ranged attacker unless the target is Ranged too (R783000). A hit that kills nothing is worth a
-/// little per point dealt, so a second attacker can finish what the first one started. A Cleave
-/// attack also prices what its splash kills or unshields on the target's neighbours (R63): a killed
-/// neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the same share
-/// of the Divine Shield weight.
-fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f64 {
+/// `trade_value`'s answer: what an attack is worth to the static trader, and whether its strike
+/// kills the target.
+pub(crate) struct Trade {
+    pub(crate) value: f64,
+    pub(crate) kills: bool,
+}
+
+/// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
+/// (`kill_worth`: a unit with Reborn unspent less the body it comes back as, §4.5 step 4, #1796), less
+/// what its own death removes when it dies too, with First Strike deciding who strikes first and no
+/// strike back at all on a Ranged attacker unless the target is Ranged too (R783000). A hit that kills
+/// nothing is worth a little per point dealt, so a second attacker can finish what the first one
+/// started. A Cleave attack also prices what its splash kills or unshields on the target's neighbours
+/// (R63): a killed neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the
+/// same share of the Divine Shield weight. `kills` says whether the strike kills the target itself; the
+/// move order reads both (`candidates.rs`'s even trades, #1779). Its screen (#1796), 400 games of
+/// improve-dev against the parent (`633568b99`), read 196-202 with 2 aborted, edge -0.015 (-0.041 to
+/// 0.011).
+pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> Trade {
     let Some(target) = find_instance(state, target_id) else {
-        return f64::NEG_INFINITY;
+        return Trade {
+            value: f64::NEG_INFINITY,
+            kills: false,
+        };
     };
     let a = side_of(state, attacker);
     let t = side_of(state, target);
@@ -96,7 +110,7 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     }
 
     let mut value = if kills {
-        unit_worth(state, target, &AI_EVAL)
+        kill_worth(state, target, &AI_EVAL)
     } else {
         AI_REPLY.chip_per_damage * f64::from(out.dealt.min(t.view.health))
     };
@@ -104,9 +118,12 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
         value += AI_EVAL.keyword.divine_shield;
     }
     if dies {
-        value -= unit_worth(state, attacker, &AI_EVAL);
+        value -= kill_worth(state, attacker, &AI_EVAL);
     }
-    value + cleave_value
+    Trade {
+        value: value + cleave_value,
+        kills,
+    }
 }
 
 /// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
@@ -150,7 +167,7 @@ fn ranked_attacks(
                 subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
             reply_face_value(state, seat, damage)
         } else {
-            trade_value(state, attacker, target_id)
+            trade_value(state, attacker, target_id).value
         };
         if value > 0.0 {
             ranked.push((action, value));
@@ -543,4 +560,77 @@ pub fn reply_score(
         0.0
     };
     Some(finalist_score(&after, seat, next) + spent - AI_EVAL.unspent_mana * f64::from(unspent))
+}
+
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::{Scenario, Value, json, scenario};
+
+    use super::*;
+
+    /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
+    const BARKER: &str = "classicplus-013";
+    /// #77 Professor Curvature, whose Radiant face is a vanilla 6/6.
+    const CURVATURE: &str = "core-077";
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+
+    /// p1's `attacker` facing p2's Radiant Mommy Barker.
+    fn facing_barker(attacker: Value) -> Scenario {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "p1": { "field": [attacker] },
+            "p2": { "field": [{ "def": BARKER, "radiant": true }] },
+        }))
+    }
+
+    /// The worth of Mommy Barker's Reborn body (§4.5 step 4): its Radiant 4/4 at 1 health, no Reborn.
+    fn barker_return() -> f64 {
+        4.0 * AI_EVAL.attack + AI_EVAL.health
+    }
+
+    #[test]
+    fn a_kill_of_a_reborn_unit_is_worth_its_worth_less_its_one_health_return() {
+        let s = facing_barker(json!({ "def": CURVATURE, "radiant": true }));
+        let barker = s.card(BARKER);
+        let trade = trade_value(s.state(), s.card(CURVATURE), &barker.id);
+        assert!(trade.kills);
+        let worth = unit_worth(s.state(), barker, &AI_EVAL);
+        assert!(
+            (trade.value - (worth - barker_return())).abs() < 1e-9,
+            "{}",
+            trade.value
+        );
+    }
+
+    #[test]
+    fn a_kill_of_a_unit_whose_reborn_is_spent_is_worth_its_whole_worth() {
+        let mut s = facing_barker(json!({ "def": CURVATURE, "radiant": true }));
+        s.card_mut(BARKER).reborn_spent = Some(true);
+        let barker = s.card(BARKER);
+        let trade = trade_value(s.state(), s.card(CURVATURE), &barker.id);
+        assert!(trade.kills);
+        let worth = unit_worth(s.state(), barker, &AI_EVAL);
+        assert!((trade.value - worth).abs() < 1e-9, "{}", trade.value);
+        assert!(
+            (worth - (4.0 * AI_EVAL.attack + 4.0 * AI_EVAL.health)).abs() < 1e-9,
+            "{worth}"
+        );
+    }
+
+    #[test]
+    fn a_dying_reborn_attacker_is_charged_its_worth_less_its_return() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": { "field": [{ "def": BARKER, "radiant": true }] },
+            "p2": { "field": [VANILLA] },
+        }));
+        let barker = s.card(BARKER);
+        let vanilla = s.card(VANILLA);
+        let trade = trade_value(s.state(), barker, &vanilla.id);
+        assert!(trade.kills);
+        let expected = unit_worth(s.state(), vanilla, &AI_EVAL)
+            - (unit_worth(s.state(), barker, &AI_EVAL) - barker_return());
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
 }

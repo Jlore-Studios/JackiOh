@@ -60,6 +60,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::merged;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const FORWARD: &str = "classicplus-074";
@@ -333,7 +334,7 @@ mod tests {
                     |_| {},
                 );
                 assert_eq!(plays_of(&s), 1);
-                let graveyard: Vec<String> = s.pile(P2, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER]);
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(plays_of(&s), 2);
@@ -380,7 +381,7 @@ mod tests {
                     Some(vec![HINDER.to_string(), FORWARD.to_string()])
                 );
                 // Both rest in p2's graveyard: a copy of the Hinder was fused in, never the card.
-                let graveyard: Vec<String> = s.pile(P2, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let graveyard = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(graveyard, vec![HINDER, STOCKPILE]);
             }
 

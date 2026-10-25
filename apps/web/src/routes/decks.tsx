@@ -5,6 +5,7 @@
 // R915005: the account's custom cards join the catalog the workshop reads (set `Custom`, drawn from
 // their frames by `customDef`) and are owned once each; the validator's L7 marks a deck naming one.
 // The catalog is the one the client ships (game/currentCatalog.ts, §9.4); only the decks and the collection are read.
+// R1827000: and, while ownership decides, the account's cosmetics, for the portraits its picker offers.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -12,9 +13,10 @@ import type { CardDefs, CustomCard } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { AccountError } from "../auth/AccountError.tsx";
-import { OwnCopy } from "../cards/fullArt.ts";
+import { FULL_ART_GATED, OwnCopy } from "../cards/fullArt.ts";
 import { CardDefsProvider } from "../cards/index.ts";
 import { customDefsOf, useCustomCards } from "../creator/useCustomCards.ts";
+import { ownedPortraits, PortraitsOwned, type PortraitOwnership } from "../emotes/ownedPortraits.ts";
 import { t } from "../i18n/i18n.ts";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
@@ -27,6 +29,7 @@ import {
   deleteTrio,
   getCollection,
   getDecks,
+  getOwnedCosmetics,
   importTrio,
   putDeck,
   putTrio,
@@ -40,6 +43,8 @@ type Loaded = {
   catalog: CatalogSnapshot;
   collection: Collection | null;
   decks: DecksResponse;
+  /** R1827000: the portraits the picker offers. */
+  portraits: PortraitOwnership;
 };
 
 const NO_CUSTOM: readonly CustomCard[] = [];
@@ -70,7 +75,12 @@ function Shell({ children, settings = true }: { children: ReactNode; settings?: 
   );
 }
 
-export default function DecksRoute() {
+/**
+ * `portraitsGated`: whether ownership decides which portraits the picker offers (R1827000). It
+ * decides here as it does for full art (`FULL_ART_GATED`, R1310004): once the economy is live in a
+ * production build. Elsewhere every portrait is offered and nothing is read.
+ */
+export default function DecksRoute({ portraitsGated = FULL_ART_GATED }: { portraitsGated?: boolean } = {}) {
   const account = useAccount();
   const [screen, setScreen] = useState<Screen>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -130,8 +140,16 @@ export default function DecksRoute() {
         (response) => response,
         () => null,
       ),
+      // R1827000: a failed read offers only the starters (and each deck's own pick), as full art
+      // shows only the defaults and starters until its read answers.
+      portraitsGated
+        ? getOwnedCosmetics(readToken).then(
+            (owned) => ownedPortraits(owned.account),
+            () => ownedPortraits([]),
+          )
+        : Promise.resolve<PortraitOwnership>("every"),
     ])
-      .then(([decks, collection]) => {
+      .then(([decks, collection, portraits]) => {
         if (cancelled) return;
         setScreen({
           kind: "ready",
@@ -140,6 +158,7 @@ export default function DecksRoute() {
             catalog: currentCatalog(),
             collection: collection === null ? null : collectionFrom(collection.entries),
             decks,
+            portraits,
           },
         });
       })
@@ -154,7 +173,7 @@ export default function DecksRoute() {
     return () => {
       cancelled = true;
     };
-  }, [hasToken, profileId, blocked, attempt]);
+  }, [hasToken, profileId, blocked, attempt, portraitsGated]);
 
   if (account.kind === "error") {
     return (
@@ -227,15 +246,18 @@ export default function DecksRoute() {
     <CardDefsProvider defs={catalog.cards}>
       {/* R1313000: every face here is the viewer's own, and prints the full arts they own. */}
       <OwnCopy own>
-        <DeckWorkshop
-          // One store per profile keeps another account's mirror separate.
-          key={screen.profileId}
-          catalog={catalog}
-          collection={collection}
-          data={screen.data.decks}
-          profileId={screen.profileId}
-          api={api}
-        />
+        {/* R1827000: the picker offers the portraits the account owns; the server refuses any other. */}
+        <PortraitsOwned owned={screen.data.portraits}>
+          <DeckWorkshop
+            // One store per profile keeps another account's mirror separate.
+            key={screen.profileId}
+            catalog={catalog}
+            collection={collection}
+            data={screen.data.decks}
+            profileId={screen.profileId}
+            api={api}
+          />
+        </PortraitsOwned>
       </OwnCopy>
     </CardDefsProvider>
   );

@@ -169,7 +169,10 @@ mod summarize_game_s9_11 {
 
     #[test]
     fn r376_records_each_seats_deck_opening_hand_draws_and_plays_and_how_the_game_ended() {
-        let mut game = stepper("summary-hand-written", decks());
+        const SEED: &str = "summary-hand-written-0";
+        // A seed whose deal leaves p2 a play on turn 2, so its turn does not end by itself (R1705000's
+        // 25-card decks dealt "summary-hand-written" a turn-1 Hinder).
+        let mut game = stepper(SEED, decks());
         let dealt = game.state.clone();
         let p1_dealt = dealt.players.p1.hand.clone();
         // R225: the Quickdraw card is always dealt. p1 sends back one other card; p2 keeps its hand.
@@ -226,7 +229,7 @@ mod summarize_game_s9_11 {
         game.act(PlayerId::P2, ActionBody::EndTurn);
         game.act(PlayerId::P1, ActionBody::Concede);
 
-        let summary = summarize_game(&fold_args("summary-hand-written", decks(), game.log.clone()))
+        let summary = summarize_game(&fold_args(SEED, decks(), game.log.clone()))
             .expect("no summary of a finished game");
 
         assert_eq!(summary.first, PlayerId::P1);

@@ -8,10 +8,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { guardLeaving } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink } from "../net/roomLink.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
-import { must, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, meBody, must, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 
@@ -43,23 +43,15 @@ const OUTGOING: Challenge = {
   expiresAt: "2099-01-01T00:00:00.000Z",
 };
 
-function meBody() {
-  return {
-    profile: { id: ME.profileId, status: "active" },
-    needsInviteCode: false,
-    emailVerified: true,
-    currentMatchId: null,
-    email: "me@example.test",
-  };
-}
-
 type Challenges = { incoming: Challenge[]; outgoing: Challenge[] };
 
 function serve(challenges: Challenges, special?: (call: Call) => Reply | undefined): StubServer {
   return stubServer((call) => {
     const answer = special?.(call);
     if (answer !== undefined) return answer;
-    if (call.path === "/api/auth/me") return { status: 200, body: meBody() };
+    if (call.path === "/api/auth/me") {
+      return { status: 200, body: meBody({ profile: { id: ME.profileId, status: "active" }, email: "me@example.test" }) };
+    }
     if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: challenges };
     if (call.method === "POST" && call.path.endsWith("/decline")) {
       challenges.incoming = challenges.incoming.filter((challenge) => !call.path.includes(challenge.challengeId));
@@ -73,14 +65,6 @@ function serve(challenges: Challenges, special?: (call: Call) => Reply | undefin
     if (call.method === "GET" && call.path === "/api/duos/live") return { status: 200, body: { matchId: null } };
     return undefined;
   });
-}
-
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-toast" }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 function acceptButtons(): HTMLElement[] {
@@ -115,7 +99,7 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 an incoming challenge shows a toast naming the challenger, with Accept and Decline",
     async () => {
-      signedIn();
+      signIn("tok-toast");
       serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
       expect(await screen.findByRole("button", { name: /^accept/i }, SOON)).toBeInTheDocument();
@@ -128,7 +112,7 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 Accept goes to /play with the room code filled in",
     async () => {
-      signedIn();
+      signIn("tok-toast");
       serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
       fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
@@ -143,7 +127,7 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 Accept neither declines the challenge nor joins the room by itself",
     async () => {
-      signedIn();
+      signIn("tok-toast");
       const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
       fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
@@ -159,7 +143,7 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 Decline declines the challenge and the toast goes, leaving the player where they are",
     async () => {
-      signedIn();
+      signIn("tok-toast");
       const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
       fireEvent.click(await screen.findByRole("button", { name: /^decline/i }, SOON));
@@ -179,7 +163,7 @@ describe("B57 the challenge toast", () => {
     "B57 no incoming challenge, no toast: the player's own outgoing challenge raises none",
     async () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-      signedIn();
+      signIn("tok-toast");
       const server = serve({ incoming: [], outgoing: [OUTGOING] });
       render(<ChallengeToast />);
       await waitFor(() => {
@@ -211,7 +195,7 @@ describe("B57 the challenge toast", () => {
     "B57 a refused read of the challenges shows no toast",
     async () => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-      signedIn();
+      signIn("tok-toast");
       const server = serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
         call.path === "/api/challenges" ? { status: 500, body: { error: { code: "internal", message: "boom" } } } : undefined,
       );
@@ -229,13 +213,43 @@ describe("B57 the challenge toast", () => {
   it(
     "B57 the shell mounts the toast: an incoming challenge shows on any signed-in screen, once",
     async () => {
-      signedIn();
+      signIn("tok-toast");
       serve({ incoming: [INCOMING], outgoing: [] });
       at("/");
       render(<App />);
       expect(await screen.findByRole("button", { name: /^accept/i }, SOON)).toBeInTheDocument();
       expect(acceptButtons()).toHaveLength(1);
       expect(must(acceptButtons()[0], "accept")).toBeInTheDocument();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1754000 Accept on a page holding unsaved work waits for its note, and the toast stays until the player goes",
+    async () => {
+      signIn("tok-toast");
+      serve({ incoming: [INCOMING], outgoing: [] });
+      const held: (() => void)[] = [];
+      const release = guardLeaving((leave) => {
+        held.push(leave);
+      });
+      try {
+        render(<ChallengeToast />);
+        fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
+        expect(held).toHaveLength(1);
+        expect(window.location.pathname).toBe("/decks");
+        expect(acceptButtons()).toHaveLength(1);
+
+        act(() => {
+          must(held[0], "held move")();
+        });
+        await waitFor(() => {
+          expect(window.location.pathname).toBe("/play");
+        });
+        expect(readRoomLink()?.code).toBe(INCOMING.roomCode);
+      } finally {
+        release();
+      }
     },
     TEST_MS,
   );

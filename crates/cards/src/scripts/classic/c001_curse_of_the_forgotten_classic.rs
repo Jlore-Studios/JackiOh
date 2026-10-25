@@ -95,6 +95,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -127,10 +128,6 @@ mod tests {
 
     fn damage_events(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(js).filter(|event| event["type"] == "damage").collect()
-    }
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
     /// p2's exiled card of this definition (p1's library holds some of the same definitions).
@@ -225,7 +222,7 @@ mod tests {
                 s.play(CURSE, json!({}));
                 assert_eq!(damage_events(&s), Vec::<Value>::new());
                 s.expect_health(P2, 30);
-                assert_eq!(hand_defs(&s, P1), vec![STOCKPILE, VANILLA]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![STOCKPILE, VANILLA]);
             }
 
             #[test]
@@ -233,7 +230,7 @@ mod tests {
                 crate::register_all();
                 let mut s = curse(false, CurseOpts::default());
                 s.play(CURSE, json!({}));
-                assert_eq!(hand_defs(&s, P1), vec![STOCKPILE, VANILLA]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![STOCKPILE, VANILLA]);
                 s.expect_events(json!(["damage", "drawn"]));
             }
 
@@ -277,7 +274,7 @@ mod tests {
                 let mut s = curse(false, CurseOpts::default());
                 step_param(s.card_mut(CURSE), "draw", 1);
                 s.play(CURSE, json!({}));
-                assert_eq!(hand_defs(&s, P1), vec![STOCKPILE, VANILLA, MENACE]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![STOCKPILE, VANILLA, MENACE]);
             }
         }
 
@@ -290,7 +287,7 @@ mod tests {
                 let mut s = curse(true, CurseOpts::default());
                 s.play(CURSE, json!({}));
                 assert_eq!(hits_on(&s, P2), vec![3]);
-                assert_eq!(hand_defs(&s, P1), vec![STOCKPILE, VANILLA]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![STOCKPILE, VANILLA]);
             }
 
             #[test]
@@ -430,7 +427,7 @@ mod tests {
                 s.play(CURSE, json!({}));
                 let units: Vec<Option<CardInstance>> = (1..=5).map(|lane| s.unit(P1, lane)).collect();
                 assert_eq!(units, vec![None, None, None, None, None]);
-                let exiled: Vec<String> = s.pile(P2, "exile").into_iter().map(|card| card.def_id).collect();
+                let exiled = def_ids(&s.pile(P2, "exile"));
                 assert_eq!(exiled, vec![VANILLA, SHEEPISH]);
                 assert_eq!(hits_on(&s, P2), vec![2]);
             }

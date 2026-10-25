@@ -9,7 +9,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game, stoic, translator};
 
 const P1: PlayerId = PlayerId::P1;
@@ -63,17 +63,13 @@ fn first(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("a card")
 }
 
-fn js<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// The events of one action, as each player's view sends them.
 fn sent(state: &mut GameState, events: Vec<GameEvent>, viewer: PlayerId) -> Value {
     state.applied = vec![AppliedAction {
         nonce: "t".to_string(),
         events,
     }];
-    js(&view_for(state, viewer).events)
+    json_of(&view_for(state, viewer).events)
 }
 
 mod r1300_the_flag_and_its_verb {
@@ -92,7 +88,7 @@ mod r1300_the_flag_and_its_verb {
             }]
         );
         for viewer in [P1, P2] {
-            let view = js(&view_for(&state, viewer));
+            let view = json_of(view_for(&state, viewer));
             let side = if viewer == P1 { "you" } else { "opponent" };
             assert_eq!(view[side]["units"][0]["chinese"], json!(true));
         }
@@ -224,18 +220,18 @@ mod r1300_the_flag_and_its_verb {
     fn r1300_a_card_never_translated_serialises_without_the_key() {
         let mut state = game("translate-hash");
         let held = first(in_hand(&mut state, &plain.id, P1, 1));
-        assert!(js(&held).get("chinese").is_none());
+        assert!(json_of(&held).get("chinese").is_none());
         let record = FaceUpRecord {
             def_id: plain.id.clone(),
             radiant: false,
             type_: CardType::Unit,
             chinese: None,
         };
-        assert!(js(&record).get("chinese").is_none());
-        let view = js(&view_for(&state, P1));
+        assert!(json_of(&record).get("chinese").is_none());
+        let view = json_of(view_for(&state, P1));
         assert!(!view.to_string().contains("chinese"));
         run(&mut state, translate_id(&held.id));
-        assert_eq!(js(&live(&state, &held.id))["chinese"], json!(true));
+        assert_eq!(json_of(live(&state, &held.id))["chinese"], json!(true));
     }
 }
 
@@ -415,7 +411,7 @@ mod r1301_who_sees_it {
             },
         });
 
-        let mine = js(&view_for(&state, P1));
+        let mine = json_of(view_for(&state, P1));
         assert_eq!(mine["you"]["hand"][0]["chinese"], json!(true));
         // R351: the controller reads their own face-down trap.
         assert_eq!(mine["you"]["backrow"][0]["chinese"], json!(true));
@@ -423,7 +419,7 @@ mod r1301_who_sees_it {
         // R311: the owner's library list keeps its records as they were shown.
         assert!(!mine["you"]["ownLibrary"].to_string().contains("chinese"));
 
-        let theirs = js(&view_for(&state, P2));
+        let theirs = json_of(view_for(&state, P2));
         assert_eq!(theirs["opponent"]["hand"], json!({ "count": 1 }));
         assert_eq!(theirs["opponent"]["backrow"][0]["faceDown"], json!(true));
         assert!(!theirs.to_string().contains("chinese"), "{theirs}");

@@ -51,17 +51,17 @@ class ParseTests(unittest.TestCase):
 
     def test_the_committed_file(self):
         pool = providers.load(ROOT)
-        # The usage order: claude-3 (no caps), claude-7 and claude-1 first, then claude-4,
-        # claude-6 and claude-5 last of the Claude accounts (each under its caps), then the medium models, Muse first (#317 part 9), then claude-2, kept for
+        # The usage order: claude-3 (no caps), claude-7, claude-8 and claude-1 first, then
+        # claude-4, claude-6 and claude-5 last of the Claude accounts (each under its caps), then the medium models, Muse first (#317 part 9), then claude-2, kept for
         # planning and review, and Devin last. (The AI's training lanes run outside the
         # harness: no subscription of theirs.)
-        self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-1", "claude-4",
-                                         "claude-6", "claude-5", "muse", "agy", "gpt",
+        self.assertEqual(pool.priority, ("claude-3", "claude-7", "claude-8", "claude-1",
+                                         "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt",
                                          "claude-2", "devin"))
         self.assertEqual((pool.max_parallel, pool.machine_parallel), (8, 6))
         self.assertTrue(pool.balance)  # the load balancer (`plan.balance`)
         self.assertEqual({p.cli for p in pool.ordered()}, set(providers.CLIS))
-        self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 7)
+        self.assertEqual(len([p for p in pool.ordered() if p.cli == "claude"]), 8)
         first = pool.get("claude-1")
         self.assertEqual(first.secret, "CLAUDE_CODE_OAUTH_TOKEN")
         # No subscription waits for quiet any more: the bot spends claude-1 like the rest.
@@ -75,6 +75,7 @@ class ParseTests(unittest.TestCase):
             "claude-5": [("opus", "strong", False), ("sonnet", "medium", False)],
             "claude-6": [("opus", "strong", False), ("sonnet", "medium", False)],
             "claude-7": [("opus", "strong", False), ("sonnet", "medium", False)],
+            "claude-8": [("opus", "strong", False), ("sonnet", "medium", False)],
             "agy": [("gemini-3.8-flash-high", "medium", False)],
             "muse": [("muse-spark-1.3-contributor", "medium", False)],
             "gpt": [("gpt-5.6-sol", "medium", False)],
@@ -91,7 +92,7 @@ class ParseTests(unittest.TestCase):
                           for p in pool.ordered() if p.cli == "claude"},
                          {name: ["", ""] for name in ("claude-1", "claude-2", "claude-3",
                                                       "claude-4", "claude-5", "claude-6",
-                                                      "claude-7")})
+                                                      "claude-7", "claude-8")})
         self.assertEqual([e.model for e in pool.tiers["strong"]], ["opus"])
         for provider in pool.ordered():
             self.assertFalse(hasattr(provider, "difficult") or hasattr(provider, "self_review"))
@@ -552,6 +553,36 @@ class MatchingTests(unittest.TestCase):
         self.assertIn("CLAUDE_CODE_OAUTH_TOKEN_7", providers.availability(
             claude_7, {}, NIGHT, "America/Chicago", Secrets.of(secrets("CLAUDE_CODE_OAUTH_TOKEN"))))
 
+    def test_claude_8_works_any_hour_up_to_85_percent_of_its_session_with_no_weekly_cap(self):
+        claude_8 = providers.load(ROOT).get("claude-8")
+        self.assertEqual((claude_8.secret, claude_8.schedule.mode, dict(claude_8.limits.stops),
+                          dict(claude_8.off_hours)),
+                         ("CLAUDE_CODE_OAUTH_TOKEN_8", "always", {"five_hour": 0.85}, {}))
+        self.assertEqual(claude_8.hours("America/Chicago"), "any time")
+        later = clock.iso(DAY + timedelta(days=1))  # past every check below
+        everyone = Secrets.of(secrets(*providers.SECRETS))
+
+        def why(five_hour, seven_day=0.1, starting=False, at=DAY):
+            entry = {"usage": {"five_hour": {"utilization": five_hour, "resets_at": later},
+                               "seven_day": {"utilization": seven_day, "resets_at": later}}}
+            return providers.availability(claude_8, {"providers": {"claude-8": entry}}, at,
+                                          "America/Chicago", everyone, starting=starting)
+
+        for at in (DAY, NIGHT, DAY + timedelta(hours=12, minutes=30)):  # any hour
+            self.assertIsNone(why(0.8, at=at))
+            # No weekly cap: a nearly spent week holds nothing back.
+            self.assertIsNone(why(0.1, seven_day=0.99, at=at))
+            self.assertIn("5-hour usage is 86%, at or over its 85% cap", why(0.86, at=at))
+        # A build starts only `start_headroom` (5 points) under the cap.
+        self.assertIsNone(why(0.79, starting=True))
+        self.assertIn("too close to its 85% cap", why(0.82, starting=True))
+        # A run going on stops at the cap.
+        entry = {"usage": {"five_hour": {"utilization": 0.86, "resets_at": later}}}
+        self.assertIsNotNone(providers.refusal(claude_8, entry, DAY, "America/Chicago"))
+        # Without its secret it takes nothing.
+        self.assertIn("CLAUDE_CODE_OAUTH_TOKEN_8", providers.availability(
+            claude_8, {}, NIGHT, "America/Chicago", Secrets.of(secrets("CLAUDE_CODE_OAUTH_TOKEN"))))
+
     def test_claude_5_works_any_hour_under_40_percent_of_its_session_and_60_of_its_week(self):
         claude_5 = providers.load(ROOT).get("claude-5")
         self.assertEqual((claude_5.secret, claude_5.schedule.mode, dict(claude_5.limits.stops)),
@@ -628,7 +659,8 @@ class MatchingTests(unittest.TestCase):
         100% cap with no weekly cap, claude-2 under 90% and claude-3 with none; claude-4 and
         claude-6 run all day too, up to 70% of their 5-hour session from 03:00 to 15:00 and
         under 50% otherwise, claude-7 the same from 01:00 to 10:00, all three with no weekly
-        cap, and claude-5 under 40%/60% (their own tests are above). By day claude-3, claude-7,
+        cap, claude-5 under 40%/60% and claude-8 under 85% of its 5-hour session at any hour,
+        with no weekly cap (their own tests are above). By day claude-3, claude-7, claude-8,
         claude-1, claude-4, claude-6 and then claude-5
         take Opus's
         work first, and claude-2, kept back, plans for the medium models."""
@@ -638,7 +670,8 @@ class MatchingTests(unittest.TestCase):
                                  "claude-3": ("always", "none"), "claude-4": ("window", "caps"),
                                  "claude-5": ("always", "caps"),
                                  "claude-6": ("window", "caps"),
-                                 "claude-7": ("window", "caps")})
+                                 "claude-7": ("window", "caps"),
+                                 "claude-8": ("always", "caps")})
         gh = FakeGitHub()
         gh.add_issue(3, labels=(LABEL_BUILD,))
         gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:hard"))
@@ -684,11 +717,13 @@ class MatchingTests(unittest.TestCase):
         ctx.store.update(lambda s: state_item(s, 13).update(run_id="13"))
         # Then the Sonnet seats: claude-3 holds #4 on one of its two lanes, so the load
         # balancer (`plan.balance`) gives each next one to an account holding none, in usage
-        # order (claude-1 works by day too, after claude-7), and claude-3's second lane comes
+        # order (claude-1 works by day too, after claude-7 and claude-8), and claude-3's second
+        # lane comes
         # after all of them; the capped accounts hold one lane each (#695).
-        for run, (number, provider) in enumerate(((7, "claude-7"), (8, "claude-1"),
-                                                  (9, "claude-4"), (10, "claude-6"),
-                                                  (11, "claude-5"), (12, "claude-3")), start=5):
+        for run, (number, provider) in enumerate(((7, "claude-7"), (8, "claude-8"),
+                                                  (9, "claude-1"), (10, "claude-4"),
+                                                  (11, "claude-6"), (12, "claude-5"),
+                                                  (14, "claude-3")), start=5):
             gh.add_issue(number, labels=(LABEL_BUILD,))
             planned = plan_mod.make(ctx)
             self.assertEqual((planned["number"], planned["provider"], planned["action"]),

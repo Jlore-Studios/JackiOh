@@ -22,7 +22,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, slot,
+    both, events_of_type, in_hand, json_of, matches_object, new_game, put, slot,
 };
 
 // Fixtures.
@@ -204,13 +204,6 @@ fn defs() -> Vec<CardDef> {
         trap_attack(),
         field_trap_played(),
     ]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// Deal `amount` to the enemy hero, the one visible thing a concatenated script list can do.

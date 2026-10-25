@@ -179,8 +179,15 @@ else
   # with `mode=max` keeps the build stages' layers, the Dockerfile's dependency layer (`cargo chef
   # cook`) among them, which a change to the sources alone reuses; `mode=min` keeps only the image's
   # own layers, so any change under crates/ compiles every dependency again.
+  # REHEARSAL_CACHE_FROM may name several caches, separated by spaces, each read with a
+  # `--cache-from` of its own (#1787). A cache write replaces that cache's whole index with the
+  # records of the stages its build built, so while the deps, crates and image jobs shared one
+  # scope, the deps job's write dropped the crates stage's records and the binary's, and every run
+  # compiled the workspace's crates and the binary again though nothing under crates/ had changed.
+  # CI gives each stage's job a scope of its own to write, and reads the earlier stages' beside it.
+  # A cache spec has no spaces or glob characters, so splitting on spaces is safe.
   if [ -n "${REHEARSAL_CACHE_FROM:-}" ]; then
-    set -- "$@" --cache-from "$REHEARSAL_CACHE_FROM"
+    for cache in $REHEARSAL_CACHE_FROM; do set -- "$@" --cache-from "$cache"; done
     if [ -n "${REHEARSAL_CACHE_TO:-}" ]; then set -- "$@" --cache-to "$REHEARSAL_CACHE_TO"; fi
     if [ -z "$STAGE" ] || [ "$STAGE" = "image" ]; then set -- "$@" --load; fi
     docker buildx build "$@" -f "$REPO/$DOCKERFILE" "$REPO/$CONTEXT"

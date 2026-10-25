@@ -172,6 +172,8 @@ export function useQueued(): QueueMode | null {
  * R897000: a queue the server no longer holds ends the follow too: `QUEUE_ENDED_AFTER_READS`
  * reads in a row saying `queued` is false forget the queue, so an expired ticket stops the wait
  * instead of waiting for a pairing that never comes.
+ *
+ * R1754000: a page holding unsaved work may hold that move; the queue is already forgotten and the announcement gone, so nothing waits on it, and the menus' banner still offers the game.
  */
 export function useQueueFollow(path: string, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const queued = useQueued();

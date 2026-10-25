@@ -66,6 +66,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -85,10 +86,6 @@ mod tests {
     /// The open prompt, as JSON (`null` when none).
     fn pending(s: &Scenario) -> Value {
         js(&s.state().pending)
-    }
-
-    fn hand_def_ids(s: &Scenario) -> Vec<String> {
-        s.hand(P1).into_iter().map(|card| card.def_id).collect()
     }
 
     /// R386: a Reminisce of the given face, with one Mana Well (printed 3) in the graveyard to take back.
@@ -168,7 +165,7 @@ mod tests {
             s.answer(json!(token.id));
 
             s.expect_in_zone(&token, "hand");
-            assert!(hand_def_ids(&s).contains(&"core-051-1".to_string()));
+            assert!(def_ids(&s.hand(P1)).contains(&"core-051-1".to_string()));
         }
 
         #[test]
@@ -239,7 +236,7 @@ mod tests {
             // §6.3: an effect with nothing to offer fizzles and the card still resolves.
             assert!(s.state().pending.is_none());
             // The resume step never ran, so nothing reached the hand; only core-005 is left there.
-            assert_eq!(hand_def_ids(&s), ["core-005"]);
+            assert_eq!(def_ids(&s.hand(P1)), ["core-005"]);
             // The parked tail was never parked: it ran straight through in the same pass.
             s.expect_in_zone(&spell, "exile").expect_events(json!(["cardPlayed", "exiled"]));
         }
@@ -353,7 +350,7 @@ mod tests {
 
             assert!(s.state().pending.is_none());
             s.expect_in_zone(&spell, "exile");
-            assert_eq!(hand_def_ids(&s), ["core-005"]);
+            assert_eq!(def_ids(&s.hand(P1)), ["core-005"]);
         }
     }
 }

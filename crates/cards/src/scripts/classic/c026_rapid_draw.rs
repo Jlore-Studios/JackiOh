@@ -56,6 +56,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -72,14 +73,6 @@ mod tests {
     const D: &str = "core-020";
     const E: &str = "core-012";
     const F: &str = "core-045";
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
-
-    fn grave_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "graveyard").into_iter().map(|card| card.def_id).collect()
-    }
 
     fn discarded_defs(s: &Scenario) -> Vec<String> {
         s.events()
@@ -134,7 +127,7 @@ mod tests {
                 }
                 let mut expected: Vec<&str> = discarded.iter().map(String::as_str).collect();
                 expected.push(RAPID);
-                assert!(contains_all(&grave_defs(&s, P1), &expected));
+                assert!(contains_all(&def_ids(&s.pile(P1, "graveyard")), &expected));
             }
 
             #[test]
@@ -156,7 +149,7 @@ mod tests {
                 s.play(RAPID, json!({}));
 
                 assert!(s.state().pending.is_none());
-                assert_eq!(hand_defs(&s, P1), Vec::<String>::new());
+                assert_eq!(def_ids(&s.hand(P1)), Vec::<String>::new());
                 assert_eq!(discarded_defs(&s), vec![A, B, C, D]);
             }
 
@@ -169,7 +162,7 @@ mod tests {
 
                 // The CN-Virus cast itself in the first draw's chain, which then drew A.
                 s.expect_health(P1, 29);
-                let library: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.def_id).collect();
+                let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![E]);
                 // Four drawn into a five-card hand, then four random discards: one card left, no prompt.
                 assert!(s.state().pending.is_none());
@@ -210,7 +203,7 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 assert_eq!(s.hand(P1).len(), 6);
                 assert_eq!(count(&s, GameEventType::Burned), 3);
-                assert!(contains_all(&grave_defs(&s, P1), &[B, C, D]));
+                assert!(contains_all(&def_ids(&s.pile(P1, "graveyard")), &[B, C, D]));
                 assert_eq!(discarded_defs(&s).len(), 4);
             }
 
@@ -226,7 +219,7 @@ mod tests {
 
                 assert_eq!(count(&s, GameEventType::DrawLimited), 3);
                 assert_eq!(discarded_defs(&s), vec![A]);
-                let library: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.def_id).collect();
+                let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![B, C, D]);
             }
 

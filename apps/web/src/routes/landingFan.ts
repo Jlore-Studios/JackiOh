@@ -82,11 +82,11 @@ export function rotationPool(fullArtOn: boolean): readonly CardDef[] {
 }
 
 /** Clamp a faulty `random` result of 1 so it cannot overrun. */
-function below(random: RandomSource, n: number): number {
+export function below(random: RandomSource, n: number): number {
   return Math.min(n - 1, Math.floor(random() * n));
 }
 
-function shuffled<T>(items: readonly T[], random: RandomSource): T[] {
+export function shuffled<T>(items: readonly T[], random: RandomSource): T[] {
   const out = [...items];
   for (let i = out.length - 1; i > 0; i -= 1) {
     const j = below(random, i + 1);

@@ -14,10 +14,9 @@ use jackioh_engine::effects::{
     BoardScope, TargetSpec, adjacent_to, cards_in_scope, instance_of, matches_scope, resolve_target,
 };
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::catalog as catalog_fx;
-use super::fixtures::harness::{new_game, put, slot};
+use super::fixtures::harness::{json_of, new_game, put, slot};
 
 // Fixture cards: two tags and a backrow type, so every filter has something to bite on.
 
@@ -102,10 +101,6 @@ fn live(state: &GameState, id: &str) -> CardInstance {
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 // `{ of: "instance" }`
 
 mod target_spec_of_instance {
@@ -128,8 +123,8 @@ mod target_spec_of_instance {
                 _ => panic!("expected {{ kind: \"unit\", instance }} for {}", on_field.id),
             }
             assert_eq!(
-                to_json(instance_of(ctx, &instance_spec(&on_field.id))),
-                to_json(Some(&on_field))
+                json_of(instance_of(ctx, &instance_spec(&on_field.id))),
+                json_of(Some(&on_field))
             );
         });
     }
@@ -150,9 +145,9 @@ mod target_spec_of_instance {
         state.players.p1.graveyard.push(dead.clone());
 
         let found = with_ctx(&mut state, None, |ctx| {
-            to_json(instance_of(ctx, &instance_spec(&card.id)))
+            json_of(instance_of(ctx, &instance_spec(&card.id)))
         });
-        assert_eq!(found, to_json(Some(&dead)));
+        assert_eq!(found, json_of(Some(&dead)));
     }
 
     #[test]

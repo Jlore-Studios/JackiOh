@@ -25,23 +25,34 @@ use serde_json::{Map, Value, json};
 
 use crate::actor::engine;
 use crate::actor::registry::pinned_for;
+use crate::api::http::log_alert;
 use crate::app::App;
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
 use crate::config::STATS_FOLD_BATCH_RECORDS;
-use crate::db::store::{Db, MatchRow, ProfileKind, QueueMode, StoreError};
+use crate::db::store::{Db, FoldedRecords, MatchRow, ProfileKind, QueueMode, StoreError};
 
 /// R1044000: folds every record not yet in the totals, `STATS_FOLD_BATCH_RECORDS` to a transaction,
 /// and answers how many it folded. `jackioh-server stats-fold` runs it once after migration 0041,
 /// and the retention loop before each purge, so a purge never meets a record it may not empty.
-pub async fn fold_pending(db: &Db) -> Result<usize, StoreError> {
-    let mut folded = 0;
+/// R1715000: and each record set aside because its detail does not read, each alerted
+/// (`game_records.fold_poison`) once its batch has committed.
+pub async fn fold_pending(db: &Db) -> Result<FoldedRecords, StoreError> {
+    let mut done = FoldedRecords::default();
     loop {
         let mut tx = db.begin(None).await?;
         let batch = tx.game_records_fold_pending(STATS_FOLD_BATCH_RECORDS).await?;
         tx.commit().await?;
-        folded += batch;
-        if batch < STATS_FOLD_BATCH_RECORDS {
-            return Ok(folded);
+        for record in &batch.unreadable {
+            log_alert(
+                "game_records.fold_poison",
+                json!({ "recordId": record.id, "message": record.message }),
+            );
+        }
+        let taken = batch.folded + batch.unreadable.len();
+        done.folded += batch.folded;
+        done.unreadable.extend(batch.unreadable);
+        if taken < STATS_FOLD_BATCH_RECORDS {
+            return Ok(done);
         }
     }
 }

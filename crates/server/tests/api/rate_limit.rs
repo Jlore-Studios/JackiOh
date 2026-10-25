@@ -28,9 +28,11 @@ use tracing_subscriber::layer::SubscriberExt;
 use jackioh_server::api::http::{account_key, address_key, create_rate_limiter};
 use jackioh_server::app::{self, App};
 use jackioh_server::auth::{Auth, SupabaseAuth, SupabaseAuthInput};
-use jackioh_server::config::API_REQUESTS_PER_MINUTE;
+use jackioh_server::config::{
+    API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS, API_REQUESTS_PER_MINUTE,
+};
 
-use crate::support::deps::{add_user, test_app};
+use crate::support::deps::{add_user, record_logs, test_app};
 use crate::support::store::fake_lock;
 
 /// R109's allowance, as the server itself carries it.
@@ -310,6 +312,128 @@ mod the_sliding_window_itself {
 
         limiter.allow(&account_key("still-here"), 2000);
         assert_eq!(limiter.size(), 1);
+    }
+}
+
+// §9.8: "accounts with an unusual rejection rate raise an alert", at the API (R1717000)
+
+mod the_unusual_rejections_alert_r1717000 {
+    use super::*;
+
+    const THRESHOLD: usize = API_REJECTION_ALERT_THRESHOLD;
+    const WINDOW: i64 = API_REJECTION_ALERT_WINDOW_MS;
+    const UNUSUAL: &str = "api.rejections.unusual";
+
+    /// Long enough to drain both the limit's window and the alert's.
+    fn next_window() -> Duration {
+        Duration::from_millis(MINUTE_MS.max(WINDOW as u64))
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1717000_an_account_refused_past_the_threshold_raises_one_alert_per_window() {
+        let logs = record_logs();
+        let app = test_app().await;
+        let token = sign_in(&app, "hammer").await;
+
+        // The allowance, then exactly the threshold's worth of refusals: not past it.
+        let statuses = burst(&app, LIMIT + THRESHOLD, MINE, Some(&token), None).await;
+        assert_eq!(count(&statuses, 429), THRESHOLD);
+        assert!(logs.named(UNUSUAL).is_empty(), "{:?}", logs.entries());
+
+        // One more is past it.
+        assert_eq!(send(&app, "GET", MINE, Some(&token), None).await.status, 429);
+        let alerts = logs.named(UNUSUAL);
+        assert_eq!(alerts.len(), 1, "{:?}", logs.entries());
+        assert_eq!(alerts[0].level, "alert");
+        assert_eq!(
+            alerts[0].data["data"],
+            json!({ "key": account_key("hammer"), "rejected": THRESHOLD + 1, "windowMs": WINDOW })
+        );
+
+        // The flood goes on inside the window: still the one alert.
+        burst(&app, THRESHOLD * 2, MINE, Some(&token), None).await;
+        assert_eq!(logs.named(UNUSUAL).len(), 1);
+
+        // A window on, the same flood raises its own.
+        tokio::time::advance(next_window()).await;
+        burst(&app, LIMIT + THRESHOLD + 1, MINE, Some(&token), None).await;
+        assert_eq!(logs.named(UNUSUAL).len(), 2, "{:?}", logs.entries());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1717000_under_the_threshold_or_spread_past_the_window_nothing_alerts() {
+        let logs = record_logs();
+        let app = test_app().await;
+        let token = sign_in(&app, "trickle").await;
+
+        let first = burst(&app, LIMIT + THRESHOLD, MINE, Some(&token), None).await;
+        assert_eq!(count(&first, 429), THRESHOLD);
+
+        // The same number of refusals a window later: each lot is at the threshold, never past it.
+        tokio::time::advance(next_window()).await;
+        let second = burst(&app, LIMIT + THRESHOLD, MINE, Some(&token), None).await;
+        assert_eq!(count(&second, 429), THRESHOLD);
+
+        assert!(logs.named(UNUSUAL).is_empty(), "{:?}", logs.entries());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1717000_counts_the_address_budget_s_refusals_before_any_token_is_resolved() {
+        let logs = record_logs();
+        let app = test_app().await;
+
+        let statuses = burst(
+            &app,
+            LIMIT + THRESHOLD + 1,
+            MINE,
+            Some("not-a-token"),
+            Some("203.0.113.12"),
+        )
+        .await;
+        assert_eq!(count(&statuses, 401), LIMIT);
+        assert_eq!(count(&statuses, 429), THRESHOLD + 1);
+
+        let alerts = logs.named(UNUSUAL);
+        assert_eq!(alerts.len(), 1, "{:?}", logs.entries());
+        assert!(
+            alerts[0].data["data"]["key"]
+                .as_str()
+                .is_some_and(|key| key.starts_with("address:")),
+            "{:?}",
+            alerts[0]
+        );
+        assert_eq!(alerts[0].data["data"]["rejected"], json!(THRESHOLD + 1));
+    }
+
+    #[test]
+    fn r1717000_note_rejection_alerts_once_a_window_and_keeps_at_most_threshold_plus_one_refusals() {
+        let limiter = create_rate_limiter(1, 1000);
+        let key = account_key("flooder");
+
+        for _ in 0..THRESHOLD {
+            assert_eq!(limiter.note_rejection(&key, 0), None);
+        }
+        assert_eq!(limiter.note_rejection(&key, 0), Some(THRESHOLD + 1));
+
+        // A flood inside the window is silent, and holds no more than the cap.
+        for _ in 0..1000 {
+            assert_eq!(limiter.note_rejection(&key, WINDOW / 2), None);
+        }
+
+        // A whole window since the alert: the flood alerts again. Uncapped, the count would be 1001.
+        assert_eq!(limiter.note_rejection(&key, WINDOW), Some(THRESHOLD + 1));
+    }
+
+    #[test]
+    fn r1717000_drops_a_key_whose_refusals_have_all_left_the_window() {
+        let limiter = create_rate_limiter(1, 1000);
+        for i in 0..50 {
+            limiter.note_rejection(&address_key(&format!("ip-{i}")), 0);
+        }
+        assert_eq!(limiter.rejected_keys(), 50);
+
+        limiter.note_rejection(&account_key("still-here"), WINDOW);
+        assert_eq!(limiter.rejected_keys(), 1);
     }
 }
 

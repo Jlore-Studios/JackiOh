@@ -6,8 +6,10 @@ night box: one virtual machine on AWS, where each subscription in
 (Codex, agy, Muse and Devin) has a Linux user of its own and a GitHub runner of its own per lane.
 The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
 public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
-GitHub write token. A second box, the training box (below), runs the two AI training lanes,
-outside the harness.
+GitHub write token. A second box, the training box (below), ran the two LLM training lanes
+outside the harness until #1677 stopped them on 2026-10-25. It is the Muse box now: it holds one of
+Muse's two runners and the night box the other, so each Muse build has a box to itself, and it
+still runs `gather` ([The Muse box](#the-muse-box)).
 
 **After the v0.3.0 cutover (#306), run `setup.sh` on the night box again, once**, with the same
 ids as before (Building it, step 2). The repository's checks are Rust now, and that run gives every
@@ -39,9 +41,9 @@ place. With one user per subscription, a session can read only its own login and
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
 the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6` on the six runners here, and Muse has two (#1273), which its four runners
-(`night-vm-muse` and `night-vm-muse-2` to `night-vm-muse-4`, all under `agent-muse` and its one
-login) take in turn. A lane the harness counts but no
+`"lanes": 6` on the six runners here, and Muse has two (#1273): one runner here, `night-vm-muse`,
+and one on the Muse box, `night-vm-muse-b2`, each under that box's `agent-muse` and its login
+(#1677). A lane the harness counts but no
 runner serves only queues its job until another runner of that label is free, so after raising a
 subscription's `lanes`, run `register-runners.sh` (Building it, step 4) to add the new runners.
 
@@ -93,7 +95,9 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
    bot/machine/register-runners.sh OWNER/REPO
    ```
 
-   It prints each runner's state; they also appear under Settings → Actions → Runners.
+   It prints each runner's state; they also appear under Settings → Actions → Runners. With the
+   Muse box, name what each box carries instead ([The Muse box](#the-muse-box), step 4): here,
+   `bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1`.
 5. **Deploy the starter**:
 
    ```sh
@@ -116,6 +120,14 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## The training box
 
+**Since 2026-10-25 only `jackioh-train@gather` runs here.** #682's audit
+(`reviews/2026-10-22-issue-682-subscriptions.md`) found that the two LLM lanes made no fair promotion
+in about 427 hours, and that on Muse's plan they spent most of the night bot's week. So
+`jackioh-train@improve` and `@unban` are disabled (`disabled; inactive (dead)`), and `setup.sh
+--training` keeps their users and checkouts but starts neither again. The AI improves through the
+`learn` lane on the owner's PC instead (The local runner, below). Whether this box becomes a second
+night box or is stopped was #1677's question: it is the Muse box now ([The Muse box](#the-muse-box)).
+
 The AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
 is always on: `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, three systemd
 services that run `training/loop.sh <lane>` forever, each as its own user with its own checkout and
@@ -131,7 +143,7 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
 | CLIs | `muse` (as on the night box; #1272 moved the lanes from Devin, whose plan ends on 2026-11-02), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Muse run the web's tests that play the AI before a promotion goes up |
-| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; all three enabled, so they start at boot |
+| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; only `gather` enabled since #1677, so it alone starts at boot |
 | Idle stop | none: the box never powers itself off, and no starter wakes it |
 
 Build it once, after the cutover has put `training/loop.sh` on `main` (a lane runs whatever `main`
@@ -191,6 +203,58 @@ Running the lanes:
   in `~/.local/share/devin/cli/`; delete it as that user.
 - **Cost**: the box is always on: about $70 a month for the instance (on-demand `m7i-flex.large` in
   `us-east-2`; an `m7i.xlarge` would be about $150) plus about $8 for its disk.
+
+## The Muse box
+
+Since #1677 the training box also carries one of Muse's two runners, and the night box the other.
+Two builds at once on one 8 GB box swap (`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse
+build that shared the box took a median 57 minutes in its build call, against 34 alone. With one
+Muse runner on each box, GitHub hands Muse's two jobs to different boxes. Muse has no login a
+secret can carry onto GitHub's runners, which is why both boxes are AWS's.
+
+| | The night box (`jackioh-night-vm`) | The Muse box (`jackioh-train-box`) |
+|---|---|---|
+| Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-devin` (until 2026-11-02) and `night-vm-muse` | `night-vm-muse-b2` |
+| Also | | `jackioh-train@gather` ([`training/gather.md`](../../training/gather.md)), while the box is on |
+| Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
+| Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
+
+Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
+runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
+line gives each box its own verdict.
+
+**Building it**, once, from the repository's root, with the AWS CLI signed in and `gh` as a
+repository admin:
+
+1. **Its shutdown behaviour must be stop.** The idle stop powers the box off from inside, and a box
+   whose shutdown behaviour is terminate would be deleted. See it, and set it if it is not `stop`:
+   ```sh
+   aws ec2 describe-instance-attribute --instance-id i-017d1843ea5e68cef --attribute instanceInitiatedShutdownBehavior
+   aws ec2 modify-instance-attribute --instance-id i-017d1843ea5e68cef --instance-initiated-shutdown-behavior Value=stop
+   ```
+2. **Set it up for Muse:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh
+   muse`. It adds `agent-muse`, its runner and Rust, the idle stop and the disk clean-up, and
+   leaves the `gather` lane as it is.
+3. **Log Muse in** as that user, once: `aws ssm start-session --target i-017d1843ea5e68cef`, then
+   `sudo -iu agent-muse muse login` (a second login of the same account).
+4. **Register the runners**, the night box's first:
+   ```sh
+   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1
+   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=1
+   ```
+   The first removes the night box's Muse runners past its one (`night-vm-muse-2` to `-4`); one in
+   the middle of a job is left registered, and the same command run again once it ends removes it.
+5. **Deploy its starter**:
+   ```sh
+   TAG=jackioh-train-box STARTER_NAME=jackioh-muse-box-starter STARTER_ROLE=jackioh-muse-box-starter \
+     RUNNER_LABELS=night-vm-muse REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
+   ```
+
+**Updating it:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh muse`. Never
+`--training` on it: that takes the idle stop off again, and the box then stays on for good.
+
+**Going back to one box:** `TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO
+muse=0`, then `bot/machine/register-runners.sh OWNER/REPO muse=2` on the night box.
 
 ## The local runner
 
@@ -342,7 +406,7 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   kernel's memory stall time (`/proc/pressure/memory`), its swapping (`/proc/vmstat`) and the
   memory available (`/proc/meminfo`) as it starts, after each model call and check run, and as
   it ends; the deliver job keeps the last 60 runs' figures, and the status issue says, for the
-  last 24 hours, whether the box had memory to spare or ran short (a run stalled on memory for
+  last 24 hours, whether each box had memory to spare or ran short (a run stalled on memory for
   5 s or more), with the least memory available and how many runs swapped
   ([`harness/memory.py`](../harness/memory.py)). After a busy day, read it beside CPU and decide
   `machine_parallel`: fewer lanes if the box ran short or swapped, the same if it had memory to

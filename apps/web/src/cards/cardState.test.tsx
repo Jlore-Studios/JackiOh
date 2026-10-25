@@ -27,6 +27,7 @@ import { testid } from "../game/contract.ts";
 import { liveFace } from "../game/faces.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
 import { baseView, card, emptySide, faceUpBackrow, fusedDef, unit } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
 import { BERSERK_WORDS, FROZEN_GLYPH, FROZEN_WORDS, PILE_WORDS, animatedWords, brittleWords, distinctEnchantments, enchantmentWords, stateBadges } from "./cardState.ts";
 import { markColorOf, markWords } from "./marks.ts";
@@ -87,11 +88,6 @@ function withCatalog(node: ReactElement): ReactElement {
 
 function renderBoard(view: PlayerView): void {
   render(withCatalog(<Board view={view} />));
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
 }
 
 /** The `.cf` face inside a board card's root. */

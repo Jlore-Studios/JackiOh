@@ -9,13 +9,7 @@
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
-/// `{ ...defaults, ...extra }`: the keys of `extra` replace the defaults' (TS's object spread).
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(fields), Value::Object(over)) = (base.as_object_mut(), extra) {
-        fields.extend(over);
-    }
-    base
-}
+use super::harness::{both, spread};
 
 fn def(index: u32, name: &str, type_: &str, extra: Value) -> CardDef {
     json_as(spread(
@@ -46,13 +40,6 @@ fn unit(index: u32, name: &str, attack: i32, health: i32, keywords: Value) -> Ca
             "radiant": { "attack": attack * 2, "health": health * 2, "keywords": keywords, "text": name },
         }),
     )
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn flags(value: Value) -> Option<StaticFlags> {

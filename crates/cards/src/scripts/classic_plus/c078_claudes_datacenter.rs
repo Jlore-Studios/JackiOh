@@ -3,10 +3,12 @@
 //!   Radiant: "… random Radiant AI generated card …"
 //!   Engine:  "Its controller's end of turn (R62). The pool is the AI generated cards (T-AI-1 to
 //!            T-AI-10, and M+ #1.1 to #1.4 since Meditative+ shipped and #1563, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
-//!            it (§2.4). Tunes: none (balance patch 1: the count is fixed at one)."
+//!            it (§2.4). Tunes: setCost 0 ↓ (R1748003); the count is fixed at one (balance patch 1)."
 //!
 //! An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
 //! §6.3's Add to hand, so a full hand burns it, and the opponent sees the sentinel (R97).
+//!
+//! Through v0.4.4b the (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -18,16 +20,18 @@ fn ai_pool() -> Value {
     json!({ "tags": ["AI"], "token": true })
 }
 
-/// §8.7: "It costs (0)".
+/// §8.7: "It costs (0)", as v0.4.4b printed it before it was the declared `setCost` (R1748003).
 const FREE: i32 = 0;
 
 /// The printed "a random AI generated card": one card per end of turn.
 const CARDS: i32 = 1;
 
-fn datacenter(radiant: bool) -> Script {
+/// One face; the card's price is the declared `setCost`, or the printed (0) when `declared` is off.
+fn datacenter(radiant: bool, declared: bool) -> Script {
     Script {
-        end_of_turn: Some(hook(move |_ctx| {
-            let mut args = json!({ "query": ai_pool(), "count": CARDS, "costOverride": FREE });
+        end_of_turn: Some(hook(move |ctx| {
+            let cost = if declared { param(&*ctx, "setCost") } else { FREE };
+            let mut args = json!({ "query": ai_pool(), "count": CARDS, "costOverride": cost });
             if radiant {
                 args["radiant"] = json!(radiant);
             }
@@ -39,8 +43,16 @@ fn datacenter(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: datacenter(false),
-        radiant: datacenter(true),
+        base: datacenter(false, true),
+        radiant: datacenter(true, true),
+    }
+}
+
+/// R767000: through v0.4.4b its card's (0) was printed; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: datacenter(false, false),
+        radiant: datacenter(true, false),
     }
 }
 
@@ -108,9 +120,41 @@ mod tests {
         use super::*;
 
         #[test]
-        fn declares_no_tuned_numbers() {
+        fn r1748003_declares_the_card_s_price_and_no_count() {
+            // Balance patch 1 fixed the count at one: the price is its one declared number.
             crate::register_all();
-            assert!(crate::card_def(DATACENTER).params.is_none());
+            let keys: Vec<String> = crate::card_def(DATACENTER)
+                .params
+                .unwrap_or_default()
+                .into_iter()
+                .map(|param| param.key)
+                .collect();
+            assert_eq!(keys, ["setCost"]);
+        }
+
+        #[test]
+        fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
+            let mut s = setup(false, 1, None);
+            // On the field it is no Cry's number (R1748000): a Buff finds it at its floor of (0), a
+            // Nerf raises it.
+            assert!(!crate::can_upgrade_number(&s, DATACENTER, "setCost"));
+            assert_eq!(crate::degrade_number(&mut s, DATACENTER, "setCost"), 1);
+            s.end_turn();
+            let added = ai_cards_in(&s);
+            assert_eq!(added.len(), 1);
+            assert_eq!(added[0].cost_override, Some(1));
+        }
+
+        #[test]
+        fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_set_cost() {
+            crate::under_kept(DATACENTER, super::super::script_v0_4_4b(), || {
+                let mut s = setup(false, 1, None);
+                crate::degrade_number(&mut s, DATACENTER, "setCost");
+                s.end_turn();
+                let added = ai_cards_in(&s);
+                assert_eq!(added.len(), 1);
+                assert_eq!(added[0].cost_override, Some(0), "the kept script prints (0)");
+            });
         }
 
         #[test]

@@ -4,7 +4,7 @@ JackiOh is a 1v1 collectible card game: a Hearthstone-style mana curve, combat m
 
 Design pillars:
 
-- Short, sharp games: 20-card decks with no duplicates, 4 max mana, 30 hero health, a 60-turn cap that is a backstop, fatigue being the usual end of a long game ([[§2.5]]).
+- Short, sharp games: 25-card decks with no duplicates, 4 max mana, 30 hero health, a 60-turn cap that is a backstop, fatigue being the usual end of a long game ([[§2.5]]).
 - Two combat axes: Attack/Defense position (Defense = Taunt + Armor) layered over Hearthstone-style free-target attacking.
 - Radiant: every card has an upgraded form, and upgrading cards mid-game is a core resource loop (the Glowy Jelly Bean family, Radiant Saintess, Gifted Program, Eugenics).
 - Lanes matter: 5 shared lanes give adjacency (Cleave, Hit Job, Collateral Damage), rotation (Silly Silas) and per-lane traps (Zoomerbin Oomen).

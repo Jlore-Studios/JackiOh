@@ -9,16 +9,21 @@
 //! `give_from_hand { from: enemy, cards: random }` (as M+ #10). Either way the cards become the
 //! taker's (R12), hidden from the opponent but for the count (R97), the hand cap burning the
 //! overflow (§2.4). The Radiant face's `TakenRiders.cost_override` is 0 on each card taken, either
-//! version. The count is declared and read through `param` (R386). Tunes: cards 2 ↑ (Radiant 3).
+//! version. The count is declared and read through `param` (R386), and so is the Radiant face's
+//! price, `setCost` (R1748003). Tunes: cards 2 ↑ (Radiant 3); setCost 0 ↓, on the Radiant face only
+//! (R824000). Through v0.4.4b that (0) was printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditativeplus-019";
 
-/// The Radiant face's price for each card taken.
+/// The Radiant face's price for each card taken, "They cost (0)" as v0.4.4b printed it before it was
+/// the declared `setCost` (R1748003).
 const TAKEN_COST: i32 = 0;
 
-fn gloves(radiant: bool) -> Script {
+/// One face; the Radiant face's cards are priced at the declared `setCost`, or at the printed (0)
+/// when `declared` is off.
+fn gloves(radiant: bool, declared: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut args = json!({
@@ -26,7 +31,7 @@ fn gloves(radiant: bool) -> Script {
                 "count": param(&*ctx, "cards"),
             });
             if radiant {
-                args["costOverride"] = json!(TAKEN_COST);
+                args["costOverride"] = json!(if declared { param(&*ctx, "setCost") } else { TAKEN_COST });
             }
             if ctx.embiggened {
                 args["cards"] = json!("random");
@@ -42,8 +47,17 @@ fn gloves(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: gloves(false),
-        radiant: gloves(true),
+        base: gloves(false, true),
+        radiant: gloves(true, true),
+    }
+}
+
+/// R767000: through v0.4.4b its Radiant face's (0) was printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: gloves(false, false),
+        radiant: gloves(true, false),
     }
 }
 
@@ -55,6 +69,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -68,10 +83,6 @@ mod tests {
     use crate::scenario;
 
     use crate::js;
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
 
     fn taken(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.owner == P1 && card.def_id != FILLER).collect()
@@ -88,7 +99,7 @@ mod tests {
         s.play(GLOVES, json!({}));
         assert_eq!(s.state().rng_cursor, cursor);
         // The top 2 in order: Menace, then Lunar.
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE, LUNAR]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR]);
         let taken = taken(&s);
         assert_eq!(taken.len(), 2);
         for card in &taken {
@@ -96,7 +107,7 @@ mod tests {
             assert_eq!(card.controller, P1);
         }
         assert_eq!(
-            s.pile(P2, "library").into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+            def_ids(&s.pile(P2, "library")),
             vec![VANILLA]
         );
     }
@@ -109,7 +120,7 @@ mod tests {
             "p2": { "hand": [FILLER], "library": [MENACE] },
         }));
         s.play(GLOVES, json!({}));
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE]);
         assert!(s.pile(P2, "library").is_empty());
     }
 
@@ -123,7 +134,7 @@ mod tests {
         let cursor = s.state().rng_cursor;
         s.play(GLOVES, json!({}));
         assert_eq!(s.state().rng_cursor, cursor);
-        assert_eq!(hand_defs(&s, P1), [FILLER]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER]);
         assert_eq!(s.state().players.p2.fatigue_count, 0);
         assert!(
             !s.events().iter().any(|event| event.event_type() == GameEventType::Fatigue),
@@ -141,7 +152,7 @@ mod tests {
         s.play(GLOVES, json!({ "embiggen": true }));
         s.expect_mana(P1, 2);
         // Both cards of their hand, in whatever order the shuffle took them.
-        let mut hand = hand_defs(&s, P1);
+        let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, MENACE, LUNAR]);
         let taken = taken(&s);
@@ -149,7 +160,7 @@ mod tests {
         for card in &taken {
             assert_eq!(card.owner, P1);
         }
-        assert_eq!(hand_defs(&s, P2), Vec::<String>::new());
+        assert_eq!(def_ids(&s.hand(P2)), Vec::<String>::new());
     }
 
     #[test]
@@ -201,7 +212,7 @@ mod tests {
         }));
         step_param(s.card_mut(GLOVES), "cards", 1);
         s.play(GLOVES, json!({}));
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE, LUNAR, VANILLA]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR, VANILLA]);
     }
 
     #[test]
@@ -212,11 +223,42 @@ mod tests {
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
         }));
         s.play(GLOVES, json!({}));
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE, LUNAR, VANILLA]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR, VANILLA]);
         for card in taken(&s) {
             assert_eq!(card.cost_override, Some(0));
             assert_eq!(effective_cost(s.state(), &card, Default::default()), 0);
         }
+    }
+
+    /// p1 plays the Radiant Gloves at its normal price after one Nerf of its `setCost`: the prices of
+    /// the cards taken.
+    fn taken_prices_after_a_nerf() -> Vec<Option<i32>> {
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
+            "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
+        }));
+        crate::degrade_number(&mut s, GLOVES, "setCost");
+        s.play(GLOVES, json!({}));
+        taken(&s).iter().map(|card| card.cost_override).collect()
+    }
+
+    #[test]
+    fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
+        crate::register_all();
+        let s = scenario(json!({
+            "p1": { "hand": [{ "def": GLOVES, "radiant": true }, FILLER] },
+            "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
+        }));
+        // A Buff finds it at its floor of (0); a Nerf makes each card taken cost (1).
+        assert!(!crate::can_upgrade_number(&s, GLOVES, "setCost"));
+        assert_eq!(taken_prices_after_a_nerf(), [Some(1); 3]);
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_set_cost() {
+        crate::under_kept(GLOVES, super::script_v0_4_4b(), || {
+            assert_eq!(taken_prices_after_a_nerf(), [Some(0); 3], "the kept script prints (0)");
+        });
     }
 
     #[test]
@@ -228,7 +270,7 @@ mod tests {
         }));
         s.play(GLOVES, json!({ "embiggen": true }));
         // All three cards of their hand, in whatever order the shuffle took them.
-        let mut hand = hand_defs(&s, P1);
+        let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, VANILLA, MENACE, LUNAR]);
         let taken = taken(&s);
@@ -237,6 +279,6 @@ mod tests {
             assert_eq!(card.cost_override, Some(0));
             assert_eq!(card.owner, P1);
         }
-        assert_eq!(hand_defs(&s, P2), Vec::<String>::new());
+        assert_eq!(def_ids(&s.hand(P2)), Vec::<String>::new());
     }
 }

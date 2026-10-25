@@ -159,8 +159,9 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
     });
 
     // R1584000: with stats to show, the floor below the hero is one screen: the showcase, the Clear
-    // control and the footer are inside it, and nothing in it scrolls.
-    it(`B39 R1584000 the stats floor fits one screen below the hero at ${where(viewport)}`, () => {
+    // control and the footer are inside it, and nothing in it scrolls. R1743000: the showcase is the one
+    // control, with no arrow or dot (and so no row of them to fit) inside it.
+    it(`B39 R1584000 R1743000 the stats floor fits one screen below the hero at ${where(viewport)}`, () => {
       cy.viewport(viewport.width, viewport.height);
       cy.window({ log: false }).then((win) => {
         win.localStorage.setItem(
@@ -178,7 +179,8 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
       });
       cy.mount(<LandingRoute />);
 
-      cy.get(byTestid(landingTestid.showcase)).should("exist");
+      cy.get(byTestid(landingTestid.showcase)).should("have.attr", "role", "button");
+      cy.get(byTestid(landingTestid.showcase)).find("button").should("not.exist");
       cy.get(".landing .landing-floor").should(($floor) => {
         const floor = $floor[0];
         expect(floor, "the floor is mounted").to.not.eq(undefined);

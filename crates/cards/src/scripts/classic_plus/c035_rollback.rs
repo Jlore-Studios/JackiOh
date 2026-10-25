@@ -872,7 +872,7 @@ mod tests {
             deck.extend([
                 "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015", "core-016",
                 "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053",
-                "core-055",
+                "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
             ]);
             let args: CreateGameArgs = json_as(json!({ "seed": "rollback-first-turn", "decks": [deck, deck] }));
             let mut state = begin_game(&create_game(&args)).state;
@@ -1017,12 +1017,12 @@ mod tests {
             let deck = [
                 ROLLBACK, "core-008", "core-011", "core-015", "core-002", "core-005", "core-006", "core-012", "core-013",
                 "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044",
-                "core-053", "core-055",
+                "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
             ];
             let other = [
                 "core-008", "core-011", "core-015", "core-002", "core-005", "core-006", "core-012", "core-013", "core-016",
                 "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043", "core-044", "core-053",
-                "core-055", "core-004",
+                "core-055", "core-004", "core-001", "core-003", "core-009", "core-010", "core-047",
             ];
             let decks = json!([deck, other]);
             let mut found: Option<(String, GameState)> = None;
@@ -1085,14 +1085,15 @@ mod tests {
         #[test]
         fn r419_random_policy_games_with_rollback_in_both_decks_keep_the_fuzz_invariants_and_replay_s9_3_r171() {
             crate::register_all();
-            const POOL: [&str; 22] = [
+            // Two decks of Rollback and DECK_SIZE - 1 of these, the second skipping the first three.
+            const POOL: [&str; DECK_SIZE as usize + 2] = [
                 "core-008", "core-011", "core-015", "core-002", "core-012", "core-016", "core-017", "core-019", "core-020",
                 "core-025", "core-026", "core-036", "core-041", "core-043", "core-049", "core-053", "core-055", "core-060",
-                "core-092", "core-003", "core-018", "core-071",
+                "core-092", "core-003", "core-018", "core-071", "core-001", "core-004", "core-009", "core-013", "core-047",
             ];
             let deck = |offset: usize| -> Vec<&str> {
                 let mut cards = vec![ROLLBACK];
-                cards.extend(POOL.iter().skip(offset).take(19));
+                cards.extend(POOL.iter().skip(offset).take(DECK_SIZE as usize - 1));
                 cards
             };
             let mut rolled_back = 0;

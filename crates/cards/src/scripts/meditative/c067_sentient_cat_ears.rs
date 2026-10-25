@@ -41,6 +41,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::filler;
     use jackioh_engine::testkit::*;
 
@@ -52,10 +53,6 @@ mod tests {
     /// (1) Spell, deals 3 to a target.
     const ECLIPSE: &str = "core-035";
     const FILLER: &str = "core-005";
-
-    fn library_def_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.state().players[player].library.iter().map(|card| card.def_id.clone()).collect()
-    }
 
     fn fused(s: &Scenario) -> bool {
         s.events().iter().any(|event| matches!(event, GameEvent::Fused { .. }))
@@ -118,7 +115,7 @@ mod tests {
                 )));
                 // The fused host carries the end-of-turn line: a Love Bomb reaches the deck.
                 s.end_turn();
-                assert!(library_def_ids(&s, P1).contains(&BOMB.to_string()));
+                assert!(def_ids(&s.pile(P1, "library")).contains(&BOMB.to_string()));
             }
 
             /// R1081000: a Unit standing in the backrow is one of your acting Units: a host where it stands.
@@ -170,7 +167,7 @@ mod tests {
                 s.end_turn();
 
                 assert_eq!(
-                    library_def_ids(&s, P1).iter().filter(|id| *id == BOMB).count(),
+                    def_ids(&s.pile(P1, "library")).iter().filter(|id| *id == BOMB).count(),
                     1
                 );
             }
@@ -188,7 +185,7 @@ mod tests {
                 s.end_turn();
 
                 assert_eq!(
-                    library_def_ids(&s, P1).iter().filter(|id| *id == BOMB).count(),
+                    def_ids(&s.pile(P1, "library")).iter().filter(|id| *id == BOMB).count(),
                     3
                 );
             }
@@ -214,7 +211,7 @@ mod tests {
                 s.end_turn();
 
                 assert_eq!(
-                    library_def_ids(&s, P1).iter().filter(|id| *id == BOMB).count(),
+                    def_ids(&s.pile(P1, "library")).iter().filter(|id| *id == BOMB).count(),
                     2
                 );
             }

@@ -5,12 +5,15 @@
 //
 // The client computes nothing (CLAUDE.md rule 7): every percentage is the server's, from `GET
 // /api/packs` and `GET /api/cosmetic-packs`, only formatted (`tierPercents`), the fallback tier
-// included, and so is every counter and threshold. A read that fails says why in its place.
+// included, and so is every counter and threshold. A read that fails says why in its place and
+// offers Try again (#1774), as the other screens' own reads do (#1691).
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import { AccountError } from "../auth/AccountError.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getCosmeticPacks, getPacks, type CosmeticPacksResponse, type PacksResponse } from "../net/api.ts";
+import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { ODDS_RARITIES, PITY_RARITIES, percent, tierPercents } from "../packs/packs.ts";
@@ -26,6 +29,7 @@ export const purchasesTestid = {
   signIn: "purchases-sign-in",
   loading: (place: PurchasesPlace) => `purchases-${place}-loading`,
   loadError: (place: PurchasesPlace) => `purchases-${place}-load-error`,
+  retry: (place: PurchasesPlace) => `purchases-${place}-retry`,
   cardPacks: "purchases-card-packs",
   odds: "purchases-odds",
   oddsRow: (key: string) => `purchases-odds-${key}`,
@@ -42,17 +46,16 @@ export const purchasesTestid = {
 /** Where a read's wait or failure shows: the card packs' and the pity's both read `GET /api/packs`. */
 export type PurchasesPlace = "card-packs" | "cosmetic-packs" | "pity";
 
-/** A read as the page shows it: waiting, answered, or refused with the words to show. */
-type Read<T> = { kind: "loading" } | { kind: "ready"; value: T } | { kind: "failed"; message: string };
+/** A read as the page shows it: waiting, answered, or refused with the words to show and Try again. */
+type Read<T> =
+  | { kind: "loading" }
+  | { kind: "ready"; value: T }
+  | ({ kind: "failed"; retry: () => void } & ReadFailure);
 
-/** What a failed request says: the server's words, else the error's. */
-function wordsOf(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
-}
-
-/** `read(token)` once the page has a token; never, without one. */
+/** `read(token)` once the page has a token, and again each time Try again asks; never, without one. */
 function useRead<T>(token: string | null, read: (token: string) => Promise<T>): Read<T> {
   const [state, setState] = useState<Read<T>>({ kind: "loading" });
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (token === null) return;
     let cancelled = false;
@@ -61,17 +64,25 @@ function useRead<T>(token: string | null, read: (token: string) => Promise<T>): 
         if (!cancelled) setState({ kind: "ready", value });
       },
       (cause: unknown) => {
-        if (!cancelled) setState({ kind: "failed", message: wordsOf(cause) });
+        if (cancelled) return;
+        setState({
+          kind: "failed",
+          ...readFailureOf(cause),
+          retry: () => {
+            setState({ kind: "loading" });
+            setAttempt((before) => before + 1);
+          },
+        });
       },
     );
     return () => {
       cancelled = true;
     };
-  }, [token, read]);
+  }, [token, read, attempt]);
   return state;
 }
 
-/** `ready` where the read answered, else what it is waiting for or why it failed, in the same place. */
+/** `ready` where the read answered, else what it is waiting for, or why it failed with Try again, in the same place. */
 function Answered<T>({
   read,
   place,
@@ -92,9 +103,13 @@ function Answered<T>({
       );
     case "failed":
       return (
-        <p className="notice" role="alert" data-testid={purchasesTestid.loadError(place)}>
-          {read.message}
-        </p>
+        <AccountError
+          message={read.message}
+          retryAfterMs={read.retryAfterMs}
+          onRetry={read.retry}
+          testId={purchasesTestid.loadError(place)}
+          retryTestId={purchasesTestid.retry(place)}
+        />
       );
     case "ready":
       return children(read.value);

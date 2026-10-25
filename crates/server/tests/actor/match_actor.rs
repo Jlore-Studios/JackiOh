@@ -4353,14 +4353,15 @@ async fn live_fixture_match(app: &Arc<App>, match_id: &str) -> (String, String) 
     let first = profile_id_of(app, "e2e-p1").await;
     let second = profile_id_of(app, "e2e-p2").await;
     let pool = deckable_pool();
+    let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
     let input: StartMatchInput = serde_json::from_value(json!({
         "matchId": match_id,
         "seed": SEED,
         "catalogVersion": TEST_CATALOG_VERSION,
         "ranked": false,
         "seats": [
-            { "profileId": first, "player": "p1", "deck": pool[..20].to_vec() },
-            { "profileId": second, "player": "p2", "deck": pool[20..40].to_vec() },
+            { "profileId": first, "player": "p1", "deck": pool[..size].to_vec() },
+            { "profileId": second, "player": "p2", "deck": pool[size..2 * size].to_vec() },
         ],
     }))
     .expect("a StartMatchInput");

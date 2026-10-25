@@ -14,6 +14,8 @@ use std::sync::LazyLock;
 use jackioh_engine::effects::{damage, delay};
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 /// TS `def(name, type, extra = {})`: a Core Common at cost 1, a 1/1 when it is a Unit (unless `extra`
 /// names `attack` or `health`), both faces alike, every other key of `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
@@ -127,13 +129,6 @@ fn marker_script() -> Script {
             }),
         )]),
         ..Script::default()
-    }
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
     }
 }
 

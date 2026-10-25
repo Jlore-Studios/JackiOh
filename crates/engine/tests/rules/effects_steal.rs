@@ -21,7 +21,7 @@ use jackioh_engine::zones::{
 
 use super::fixtures::catalog::spell_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{in_hand, new_game, put, slot};
+use super::fixtures::harness::{events_json, in_hand, new_game, put, slot};
 
 /// A face-down Trap for R33; #36 radiant steals a backrow card.
 fn trap() -> CardDef {
@@ -62,15 +62,6 @@ fn as_p1() -> HookOptions {
 
 fn controls(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     run(state, steal(json_as(json!({ "instanceId": card.id }))), as_p1())
-}
-
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
 }
 
 /// The card under `id` as it stands in the state now (TS read the live object).
@@ -156,7 +147,7 @@ mod r15_steal_s6_3_m3_t1 {
         );
 
         assert_eq!(
-            of_type(&events, "controlChanged"),
+            events_json(&events, "controlChanged"),
             vec![
                 // R1366: the event says it was a steal.
                 json!({ "type": "controlChanged", "instanceId": victim.id, "controller": "p1", "row": "units", "lane": 3, "how": "steal" })
@@ -192,7 +183,7 @@ mod r15_steal_s6_3_m3_t1 {
             id_at(&state, PlayerId::P1, Row::Units, 2),
             Some(victim.id.clone())
         );
-        assert_eq!(of_type(&events, "controlChanged")[0]["lane"], json!(2));
+        assert_eq!(events_json(&events, "controlChanged")[0]["lane"], json!(2));
 
         // An empty but Locked same lane is not free either, so the fallback applies again (§3.2).
         let mut locked = game();
@@ -205,7 +196,7 @@ mod r15_steal_s6_3_m3_t1 {
         lock_zone(&mut locked, slot(PlayerId::P1, Row::Units, 4));
 
         assert_eq!(
-            of_type(&controls(&mut locked, &other), "controlChanged")[0]["lane"],
+            events_json(&controls(&mut locked, &other), "controlChanged")[0]["lane"],
             json!(1)
         );
         assert_eq!(
@@ -300,7 +291,7 @@ mod r15_steal_s6_3_m3_t1 {
         // The steal never flips the card: `controller` is what decides who may read it (R33).
         assert_eq!(now.face_up, None);
         assert_eq!(
-            of_type(&events, "controlChanged"),
+            events_json(&events, "controlChanged"),
             vec![
                 json!({ "type": "controlChanged", "instanceId": hidden.id, "controller": "p1", "row": "backrow", "lane": 4, "how": "steal" })
             ]
@@ -410,7 +401,7 @@ mod r15_steal_s6_3_m3_t1 {
             ]
         );
         assert_eq!(
-            of_type(&events, "controlChanged")
+            events_json(&events, "controlChanged")
                 .iter()
                 .map(|event| json!([event["instanceId"], event["lane"]]))
                 .collect::<Vec<_>>(),
@@ -497,7 +488,7 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
         assert_eq!(now.owner, PlayerId::P1);
         // R171: it entered its new side this turn.
         assert_eq!(now.summoned_turn, Some(4));
-        assert_eq!(of_type(&events, "controlChanged").len(), 1);
+        assert_eq!(events_json(&events, "controlChanged").len(), 1);
     }
 
     #[test]
@@ -565,7 +556,7 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
             slot(PlayerId::P2, Row::Units, 2),
             json!({}),
         );
-        let stolen = of_type(&controls(&mut state, &theirs), "controlChanged");
+        let stolen = events_json(&controls(&mut state, &theirs), "controlChanged");
         assert_eq!(stolen.len(), 1);
         assert_eq!(stolen[0]["how"], json!("steal"));
 
@@ -576,7 +567,7 @@ mod r1423_give_control_hands_a_card_to_the_other_player {
             json!({}),
         );
         let events = gives(&mut state, &mine);
-        let given = of_type(&events, "controlChanged");
+        let given = events_json(&events, "controlChanged");
         assert_eq!(given.len(), 1);
         assert_eq!(given[0]["how"], json!("give"));
         let read = serde_json::to_value(events[0].as_rules_read()).expect("an event serialises");

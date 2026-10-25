@@ -4,6 +4,8 @@
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
+//! The rules tests take `both`, `spread`, `json_of` and `events_json` from here rather than a
+//! copy (#1777; crates/tools/tests/acceptance.rs refuses a local `both` or `spread`).
 
 use jackioh_engine::testkit::*;
 
@@ -14,7 +16,7 @@ use super::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 /// The fixture catalog every engine test starts from: the vanilla units, the Rush token and the
 /// scripted and combat fixtures, with their scripts.
 pub fn setup_catalog() {
-    register_catalog(combat_catalog(fixture_catalog(vanilla_catalog(40, 1))));
+    register_catalog(combat_catalog(fixture_catalog(vanilla_catalog(2 * DECK_SIZE, 1))));
     let mut merged: IndexMap<String, CardScripts> = FIXTURE_SCRIPTS.clone();
     merged.extend(COMBAT_SCRIPTS.clone());
     register_scripts(merged);
@@ -100,6 +102,31 @@ pub fn events_of_type(events: &[GameEvent], type_: impl ToString) -> Vec<GameEve
         .filter(|event| event.event_type().as_str() == wanted)
         .cloned()
         .collect()
+}
+
+/// The events of one type, in order, each as its JSON (TS's `eventsOfType`, read by the TS field
+/// names); `kind` is a `GameEventType` or its string, as `events_of_type` takes.
+pub fn events_json(events: &[GameEvent], kind: impl ToString) -> Vec<Value> {
+    events_of_type(events, kind).into_iter().map(json_of).collect()
+}
+
+/// TS `both(script)`: the same script on the base and the Radiant face.
+pub fn both(script: Script) -> CardScripts {
+    CardScripts {
+        base: script.clone(),
+        radiant: script,
+    }
+}
+
+/// TS `{ ...base, ...extra }` on two object literals: `extra`'s keys replace `base`'s (the cards
+/// crate's `merged`). Anything but two objects leaves `base` as it is.
+pub fn spread(mut base: Value, extra: Value) -> Value {
+    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
+        for (key, value) in from {
+            into.insert(key, value);
+        }
+    }
+    base
 }
 
 #[derive(Clone, Debug)]

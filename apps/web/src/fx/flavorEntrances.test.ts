@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { ANIMATIONS, planEntries, type AnimationEntry } from "../game/animations.ts";
 import { testid } from "../game/contract.ts";
 import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import {
   FX_CRACK_TAIL_MS,
   FX_INTENSITY_SCALE,
@@ -88,11 +89,6 @@ const FACTS: Record<string, FxCardFacts> = {
 
 function envOf(over: Partial<FxPlanEnv> = {}): FxPlanEnv {
   return { intensity: FX_INTENSITY_SCALE.normal, card: (defId) => FACTS[defId], memory: createFxMemory(), ...over };
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
 }
 
 function entryFor(events: readonly GameEvent[], view: PlayerView, D: number, reduced = false): AnimationEntry {

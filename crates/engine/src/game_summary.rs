@@ -24,7 +24,7 @@ use indexmap::{IndexMap, IndexSet};
 
 use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
-use crate::state::{CreateGameOptions, GameState, create_game, find_instance};
+use crate::state::{CreateGameOptions, GameState, create_recorded_game, find_instance};
 use crate::wire::{CounteredTo, GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary};
 
 /// Each seat's hand as instance id → catalog id, in hand order.
@@ -298,7 +298,7 @@ fn seat_summary(
 /// game.
 pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
     // TS hands `createGame` no `dealt` here (only `fold` does); kept so, since it changes no event.
-    let start = create_game(&CreateGameOptions {
+    let start = create_recorded_game(&CreateGameOptions {
         seed: input.seed.clone(),
         decks: input.decks.clone(),
         catalog: input.catalog.clone(),

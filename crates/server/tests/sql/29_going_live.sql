@@ -1,8 +1,11 @@
 -- Going live (migration 0050, SPEC §14.12, §14.2, §14.11; R1310000, R1310001, R1310002; issue #1310).
 -- Runs after 26_dev_accounts.sql; profiles 1 and 2 are active by then (03 activated them), profile 1
--- owns all 60 non-Token cards of 'core-1' (01's CHECK 10 and 03's CHECK 2), 03b's legacy profile has
+-- owns all 75 non-Token cards of 'core-1' (01's CHECK 10 and 03's CHECK 2), 03b's legacy profile has
 -- owned its 60 'core-0' cards since before run.sh applied 0050, and app.settings.starter_cards is
--- 01's ["core-001","core-002"], written where seed-catalog would write it.
+-- 01's ["core-001","core-002"], written where seed-catalog would write it. run.sh applied 0057 after
+-- 0050, which gave 03b's and 14b's profiles the five portraits that are not starters, each an
+-- account_cosmetics row and a cosmetic_grants row of reason 'launch' and ref 'launch:0057'
+-- (R1827000): the R1310002 checks pass over those rows, which 32_portrait_cosmetics.sql checks.
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-26: every check raises on failure (`raise exception 'FAIL (…): …'`), each check
@@ -226,12 +229,17 @@ begin
     raise exception 'FAIL (R1310002): 03b''s account holds % of its 60 launch rows', n;
   end if;
 
-  -- Vacuity guard for the ledger sums below: 01-26 left no economy row behind.
+  -- Vacuity guard for the ledger sums below: 01-26 left no economy row behind, but 0057's portrait
+  -- grants (R1827000), which run.sh applied after 0050 and which the checks below pass over.
   foreach t in array array['wallets', 'jlore_grants', 'inventory', 'inventory_grants', 'economy_counters',
                            'economy_counter_grants', 'set_tracks', 'set_track_grants', 'held_quests',
                            'quest_schedules', 'quest_grants', 'card_cosmetics', 'account_cosmetics',
                            'cosmetic_grants'] loop
-    execute format('select count(*) from public.%I', t) into n;
+    execute format('select count(*) from public.%I', t)
+         || case t when 'account_cosmetics' then $q$ where cosmetic_id not like 'portrait-%'$q$
+                   when 'cosmetic_grants' then $q$ where ref is distinct from 'launch:0057'$q$
+                   else '' end
+      into n;
     if n <> 0 then
       raise exception 'FAIL (R1310002): public.% holds % row(s) before the seed', t, n;
     end if;
@@ -345,8 +353,8 @@ begin
     raise exception 'FAIL (R1310002): the launch changed what is owned';
   end if;
   select count(*) into n from public.collection where profile_id = p1;
-  if n <> 60 then
-    raise exception 'FAIL (R1310002): profile 1 owns % of its 60 cards after the launch', n;
+  if n <> 75 then
+    raise exception 'FAIL (R1310002): profile 1 owns % of its 75 cards after the launch', n;
   end if;
   select count(*) into n from public.collection_grants;
   if n <> (select r.n from r1310002_rows r where r.tbl = 'collection_grants') then
@@ -367,7 +375,8 @@ begin
     raise exception 'FAIL (R1310002): the per-card cosmetics read [%] after the launch, expected profile 1''s foil alone',
       coalesce(v_text, '(none)');
   end if;
-  select string_agg(profile_id || ' ' || cosmetic_id, ', ') into v_text from public.account_cosmetics;
+  select string_agg(profile_id || ' ' || cosmetic_id, ', ') into v_text from public.account_cosmetics
+   where cosmetic_id not like 'portrait-%';
   if v_text is distinct from p1 || ' test-table' then
     raise exception 'FAIL (R1310002): the account cosmetics read [%] after the launch, expected profile 1''s table',
       coalesce(v_text, '(none)');
@@ -406,15 +415,17 @@ begin
     raise exception 'FAIL (R1310002): the quest launch rows are [%]', v_text;
   end if;
   select string_agg(format('%s %s %s %s', profile_id, card_id, cosmetic_id, delta), ', ' order by profile_id)
-    into v_text from public.cosmetic_grants where reason = 'launch';
+    into v_text from public.cosmetic_grants where reason = 'launch' and ref is distinct from 'launch:0057';
   if v_text is distinct from format('%s core-001 test-full-art -1, %s core-002 test-full-art -1', p1, p2) then
     raise exception 'FAIL (R1310002): the cosmetic launch rows are [%], expected one per full art and none for the foil or the table',
       v_text;
   end if;
-  -- Each says it was the launch, and no dev tool wrote it (§14.11).
+  -- Each says it was the launch, and no dev tool wrote it (§14.11). 0057's portrait grants are
+  -- launch rows of their own ref (R1827000), which 32_portrait_cosmetics.sql checks.
   foreach t in array ledgers loop
     execute format($q$select count(*) from public.%I
-                       where reason = 'launch' and (ref is distinct from 'launch:0050' or dev)$q$, t) into n;
+                       where reason = 'launch' and ref is distinct from 'launch:0057'
+                         and (ref is distinct from 'launch:0050' or dev)$q$, t) into n;
     if n <> 0 then
       raise exception 'FAIL (R1310002): % launch row(s) of public.% are not ref launch:0050 or are marked dev', n, t;
     end if;

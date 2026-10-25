@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
 
 // Fixtures.
 
@@ -162,13 +162,6 @@ fn notes(state: &GameState) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> Vec<(String, CardScripts)> {

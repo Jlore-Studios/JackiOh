@@ -2,6 +2,7 @@
 // REHEARSAL_STAGE builds one Dockerfile stage (`deps`, then `crates`) into the layer cache and starts
 // nothing (REHEARSAL_DEPS_ONLY=1 is `deps`); REHEARSAL_STAGE=image builds the whole image and saves it
 // with REHEARSAL_SAVE_IMAGE; REHEARSAL_LOAD_IMAGE with REHEARSAL_BOOT runs one boot shard on it.
+// REHEARSAL_CACHE_FROM may name several caches, separated by spaces, one --cache-from each (#1787).
 // A stand-in `docker` on PATH records each call, so no Docker is needed. Only the validation and the
 // build/save paths are tested here: past the build the script needs real `psql`/Postgres (the
 // readiness loop would burn 60 s in vitest), so the full boot sequencing is proven by CI's own
@@ -92,6 +93,20 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(build).not.toContain(" -t ");
     expect(calls.filter((call) => call.startsWith("run "))).toEqual([]);
     expect(stdout).toContain("the crates stage is built and cached");
+  });
+
+  it("reads each cache REHEARSAL_CACHE_FROM names with a --cache-from of its own (#1787)", () => {
+    const { status, stderr, calls } = rehearse({
+      REHEARSAL_STAGE: "crates",
+      REHEARSAL_CACHE_FROM: "type=gha,scope=deps type=gha,scope=crates",
+      REHEARSAL_CACHE_TO: "type=gha,mode=max,scope=crates",
+    });
+    const [build = ""] = builds(calls);
+    expect(status, stderr).toBe(0);
+    expect(builds(calls)).toHaveLength(1);
+    expect(build).toContain("--cache-from type=gha,scope=deps --cache-from type=gha,scope=crates --cache-to ");
+    expect(build.match(/--cache-from /g)).toHaveLength(2);
+    expect(build).toContain("--cache-to type=gha,mode=max,scope=crates");
   });
 
   it("refuses a REHEARSAL_STAGE that is neither deps, crates nor image, before any docker call", () => {

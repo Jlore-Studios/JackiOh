@@ -121,6 +121,8 @@ function tabbablesIn(dialog: Element): HTMLElement[] {
 /**
  * Keeps Tab inside `dialog`, wrapping last to first and first to last. Both overlays are portalled
  * to the end of <body>, so without this one Tab from Close walks into the page under the scrim (B25).
+ * Focus on the dialog itself (the pack scene's root holds it from the open, #1757) counts as outside, so
+ * the next Tab goes to the first control and Shift+Tab to the last.
  */
 function trapTab(event: KeyboardEvent, dialog: Element): void {
   const tabbables = tabbablesIn(dialog);
@@ -131,7 +133,7 @@ function trapTab(event: KeyboardEvent, dialog: Element): void {
     return;
   }
   const active = document.activeElement;
-  const outside = active === null || !dialog.contains(active);
+  const outside = active === null || active === dialog || !dialog.contains(active);
   if (event.shiftKey && (outside || active === first)) {
     event.preventDefault();
     last.focus();
@@ -145,16 +147,24 @@ function trapTab(event: KeyboardEvent, dialog: Element): void {
  * What the sheet and the detail share: focus moves to `focusRef` and back, Tab stays inside, Escape,
  * the scrim and Close dismiss. A pointer click that began before the overlay opened is ignored (after
  * a long-press the lifting finger's click lands on the new scrim) unless it is a keyboard click, a
- * press that began on the element, or CLICK_SUPPRESS_MS has passed.
+ * press that began on the element, or CLICK_SUPPRESS_MS has passed. While `closable` is false (the pack
+ * scene while its open request is out, #1757), Escape and `close` do nothing, as that dialog's disabled
+ * Close does.
  */
-export function useModalOverlay(onClose: () => void, focusRef: RefObject<HTMLElement | null>): ModalOverlay {
+export function useModalOverlay(
+  onClose: () => void,
+  focusRef: RefObject<HTMLElement | null>,
+  closable = true,
+): ModalOverlay {
   const onCloseRef = useRef(onClose);
+  const closableRef = useRef(closable);
   const restoreRef = useRef<HTMLElement | null>(null);
   const pressedRef = useRef(false);
   const openedAtRef = useRef(0);
 
   useLayoutEffect(() => {
     onCloseRef.current = onClose;
+    closableRef.current = closable;
   });
 
   useLayoutEffect(() => {
@@ -171,6 +181,8 @@ export function useModalOverlay(onClose: () => void, focusRef: RefObject<HTMLEle
         return;
       }
       if (event.key !== "Escape") return;
+      // A dialog that cannot close now (the pack scene while its open is out, #1757) ignores Escape.
+      if (!closableRef.current) return;
       // R279: Escape over an open reference's tooltip closes the tooltip alone (CardRef.tsx).
       const dialog = focusRef.current?.closest('[role="dialog"]') ?? null;
       if (dialog !== null && dialog.querySelector('[data-ref-open="true"]') !== null) return;
@@ -186,6 +198,7 @@ export function useModalOverlay(onClose: () => void, focusRef: RefObject<HTMLEle
   }, [focusRef]);
 
   const close = (): void => {
+    if (!closableRef.current) return;
     restoreFocus(restoreRef.current);
     onCloseRef.current();
   };

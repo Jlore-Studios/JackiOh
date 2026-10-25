@@ -56,6 +56,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
@@ -140,7 +141,7 @@ mod tests {
 
             // §9.3: the pick comes from the seeded rng, so the same seed exiles the same card every time.
             let exiled = |scene: &Scenario| -> Vec<String> {
-                scene.pile("p2", "library").into_iter().map(|card| card.def_id).collect()
+                def_ids(&scene.pile("p2", "library"))
             };
             assert_eq!(exiled(&run()), exiled(&s));
         }

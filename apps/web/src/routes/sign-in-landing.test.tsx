@@ -13,6 +13,7 @@ import { landingTestid, loginTestid } from "../auth/testids.ts";
 import { SIGN_IN_FAILED_MESSAGE } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
+import { at } from "../test/stubServer.ts";
 
 const { App } = await import("../main.tsx");
 
@@ -80,10 +81,6 @@ function stubFetch(status: "pending" | "active" = "active"): Stub {
     }),
   );
   return stub;
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 function signIn(password: string): void {

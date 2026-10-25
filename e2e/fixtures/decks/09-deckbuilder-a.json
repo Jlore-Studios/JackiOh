@@ -1,7 +1,7 @@
 {
   "id": "09-deckbuilder-a",
   "spec": "09-deckbuilder.cy.ts",
-  "description": "Deck 1 of the legal loadout spec 09 saves. SPEC §8 cards #1-#20, so the three 09-deckbuilder decks are pairwise disjoint (L4: a card id appears in at most one deck) and each holds exactly DECK_SIZE distinct non-Token ids (L2, L3). Every card is owned once by a launch-grant profile (R111), which is what makes L5 pass at exactly one copy across the loadout. No card is chosen for its behaviour: spec 09 never starts a game, it only saves and re-reads the loadout, so the only properties that matter are the six the validator checks.",
+  "description": "Deck 1 of the legal loadout spec 09 saves. SPEC §8 cards #1-#25, so the three 09-deckbuilder decks are pairwise disjoint (L4: a card id appears in at most one deck) and each holds exactly DECK_SIZE distinct non-Token ids (L2, L3). Every card is owned once by a launch-grant profile (R111), which is what makes L5 pass at exactly one copy across the loadout. No card is chosen for its behaviour: spec 09 never starts a game, it only saves and re-reads the loadout, so the only properties that matter are the six the validator checks.",
   "cards": [
     "core-001",
     "core-002",
@@ -22,6 +22,11 @@
     "core-017",
     "core-018",
     "core-019",
-    "core-020"
+    "core-020",
+    "core-021",
+    "core-022",
+    "core-023",
+    "core-024",
+    "core-025"
   ]
 }

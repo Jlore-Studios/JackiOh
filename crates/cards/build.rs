@@ -17,8 +17,9 @@
 //! ```
 //!
 //! It fails the build, naming the path, for a card file without `ID`, an `ID` the catalog lacks, a
-//! duplicate `ID`, a file outside `<set>/`, a file name that is not a Rust identifier, or a catalog id
-//! with no file (all 318 are written; part 33 made the last one an error).
+//! duplicate `ID`, a file outside `<set>/`, a file name that is not a Rust identifier, a file outside
+//! its `ID`'s set's folder or whose name starts with another card's number (`misfiled`), or a catalog
+//! id with no file (all 318 are written; part 33 made the last one an error).
 //!
 //! It also compiles the catalog version in: the `version` of the last entry of
 //! `patches/patches.json` (the newest shipped patch), as `JACKIOH_CATALOG_VERSION`.
@@ -98,7 +99,8 @@ fn main() {
     check_win_rates(&win_rates_path, &mut problems);
     let files = find_card_files(&scripts_dir, &mut problems);
 
-    // Every ID names a catalog card, and no two files claim one.
+    // Every ID names a catalog card, its file sits in its set's folder under its number, and no two
+    // files claim one.
     let mut by_id: BTreeMap<&str, &CardFile> = BTreeMap::new();
     for file in &files {
         if !catalog_ids.iter().any(|id| id == &file.id) {
@@ -107,6 +109,8 @@ fn main() {
                 file.path.display(),
                 file.id
             ));
+        } else if let Some(problem) = misfiled(file, &catalog_ids) {
+            problems.push(problem);
         }
         if let Some(first) = by_id.insert(&file.id, file) {
             problems.push(format!(
@@ -671,6 +675,52 @@ fn is_identifier(name: &str) -> bool {
     let mut chars = name.chars();
     chars.next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+/// CLAUDE.md rule 6: where a card's file is filed, its `ID`'s set's folder and the prefix its number
+/// spells: `core-051-1` → `core`, `c051_1`; `classicplus-t-ai-01` → `classic_plus`, `t_ai_01`. An id
+/// spells its set's folder without the underscore (`classicplus-…`). `None` for an id whose set has no
+/// folder in `SETS`.
+fn home_of(id: &str) -> Option<(&'static str, String)> {
+    let (segment, number) = id.split_once('-')?;
+    let set = SETS.iter().copied().find(|set| set.replace('_', "") == segment)?;
+    let stem = number.replace('-', "_");
+    let prefix = if number.starts_with("t-") {
+        stem
+    } else {
+        format!("c{stem}")
+    };
+    Some((set, prefix))
+}
+
+/// CLAUDE.md rule 6: a card file sits in its `ID`'s set's folder, and of that set's catalog ids the
+/// one with the longest prefix its name starts with is its `ID` (`c051_1_…` is #51.1's, not #51's;
+/// `c025_4_mana_7_7` is #25's, as no `core-025-4` exists). The slug after the prefix is free: some
+/// differ from the card's name on purpose (`core/c097_zephyrs.rs` for Zephrys). The problem, naming
+/// where the file belongs, or `None` when it is filed right.
+fn misfiled(file: &CardFile, catalog_ids: &[String]) -> Option<String> {
+    let Some((set, prefix)) = home_of(&file.id) else {
+        return Some(format!(
+            "{}: ID \"{}\" names no set with a folder under src/scripts/ ({})",
+            file.path.display(),
+            file.id,
+            SETS.join(", ")
+        ));
+    };
+    let carries = |stem: &str| file.module == stem || file.module.starts_with(&format!("{stem}_"));
+    let owner = catalog_ids
+        .iter()
+        .filter_map(|id| home_of(id).map(|home| (id, home)))
+        .filter(|(_, (folder, stem))| *folder == file.set && carries(stem))
+        .max_by_key(|(_, (_, stem))| stem.len())
+        .map(|(id, _)| id.as_str());
+    (set != file.set || owner != Some(file.id.as_str())).then(|| {
+        format!(
+            "{}: ID \"{}\" belongs in src/scripts/{set}/, in a file named `{prefix}.rs` or `{prefix}_<slug>.rs` (CLAUDE.md rule 6)",
+            file.path.display(),
+            file.id
+        )
+    })
 }
 
 fn render(files: &[CardFile], by_id: &BTreeMap<&str, &CardFile>) -> String {

@@ -11,7 +11,7 @@ import { useSyncExternalStore, type CSSProperties, type ReactElement } from "rea
 import type { PlayerId, PlayerView } from "@jackioh/shared";
 
 import { t, useLocale } from "../i18n/i18n.ts";
-import { ModifierList } from "../practice/ModifierList.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { OUTCOME_TITLE, type PracticeOutcome } from "../practice/PracticeResult.tsx";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
 import type { TutorialLesson } from "./lessons.ts";
@@ -90,7 +90,7 @@ export function TutorialHud({
         </span>
       ) : null}
       <span className="practice-hud__status">
-        <ModifierList view={view} />
+        <ModifierList view={view} opponentLabel={t("AI")} />
         <ThinkIndicator thinking={thinking} />
         {outcome === null ? null : (
           <button

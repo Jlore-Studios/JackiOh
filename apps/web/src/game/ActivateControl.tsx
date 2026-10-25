@@ -1,7 +1,7 @@
-// Activate control (B3.2, SPEC §6.2, R384; presentation R510).
+// Activate control (B3.2, SPEC §6.2, R384; presentation R510, R1751000).
 // It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable`
 // and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`;
-// `ability` is named only for multiple entries (`namedAbility`).
+// cards with multiple abilities wear a single button opening an ability picker modal (R1751000).
 // It flashes for its `activated` animation row; reduced motion uses a static ring.
 
 import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
@@ -10,7 +10,7 @@ import { fillParams, type ActivationView, type CardView } from "@jackioh/shared"
 
 import { chineseName } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
-import { NO_HIGHLIGHT, namedAbility, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
+import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import { isZhCn, t } from "../i18n/i18n.ts";
 
@@ -31,7 +31,7 @@ export function usesText(usesLeft: number | null): string {
   return usesLeft === null ? UNLIMITED_USES : String(usesLeft);
 }
 
-function usesWords(usesLeft: number | null): string {
+export function usesWords(usesLeft: number | null): string {
   if (usesLeft === null) return t("unlimited uses this turn");
   return usesLeft === 1 ? t("1 use left this turn") : t("{count} uses left this turn", { count: String(usesLeft) });
 }
@@ -70,21 +70,53 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
   const activations = card.activations ?? [];
   if (activations.length === 0) return null;
   const flashing = props.animating?.get(testid.card(card.instanceId)) === ACTIVATED_EVENT;
-  return (
-    <span className="activate-controls" data-count={activations.length}>
-      {activations.map((activation) => (
+
+  if (activations.length === 1 && activations[0] !== undefined) {
+    const activation = activations[0];
+    return (
+      <span className="activate-controls" data-count={1}>
         <ActivateButton
-          key={activation.ability}
           card={card}
           name={isZhCn() ? chineseName(card.defId, info.name, info.def) : info.name}
           label={t(abilityLabel(info, card, activation.label))}
           activation={activation}
-          ability={namedAbility(activations.length, activation.ability)}
+          ability={undefined}
           highlight={props.highlight ?? NO_HIGHLIGHT}
           flashing={flashing}
           onClick={props.onClick}
         />
-      ))}
+      </span>
+    );
+  }
+
+  // R1751000: When card.activations.length > 1, render a single unified Activate control.
+  const anyUnlimited = activations.some((a) => a.usesLeft === null);
+  const totalUses = anyUnlimited
+    ? null
+    : activations.reduce((sum, a) => sum + (a.usesLeft ?? 0), 0);
+  const anyUsable = activations.some((a) => a.usable);
+  const firstReason = activations.find((a) => a.reason !== undefined)?.reason;
+
+  const combinedActivation: ActivationView = {
+    ability: "",
+    label: t("Activate"),
+    usesLeft: totalUses,
+    usable: anyUsable,
+    reason: firstReason,
+  };
+
+  return (
+    <span className="activate-controls" data-count={1}>
+      <ActivateButton
+        card={card}
+        name={isZhCn() ? chineseName(card.defId, info.name, info.def) : info.name}
+        label={t("Activate")}
+        activation={combinedActivation}
+        ability={undefined}
+        highlight={props.highlight ?? NO_HIGHLIGHT}
+        flashing={flashing}
+        onClick={props.onClick}
+      />
     </span>
   );
 }

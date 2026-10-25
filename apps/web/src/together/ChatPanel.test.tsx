@@ -9,9 +9,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS } from "@jackioh/server-config";
 
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
-import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { InMatchChat } from "./InMatchChat.tsx";
@@ -56,10 +55,6 @@ function serve(messages: ChatMessage[], special?: (call: Call) => Reply | undefi
   });
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-chat" }));
-}
-
 function shown(): string[] {
   return screen.queryAllByTestId("chat-message").map((element) => element.textContent ?? "");
 }
@@ -88,7 +83,7 @@ async function opened(): Promise<void> {
 
 beforeEach(() => {
   window.localStorage.clear();
-  signedIn();
+  signIn("tok-chat");
 });
 
 afterEach(() => {

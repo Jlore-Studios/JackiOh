@@ -92,16 +92,16 @@ begin
 end $$;
 select id, status, current_match_id is null as not_in_match from public.profiles order by id;
 
-\echo '### save_loadout: a legal loadout of 3 decks x 20 cards saves ###'
+\echo '### save_loadout: a legal loadout of 3 decks x 25 cards saves ###'
 -- CHECK 2, and the vacuity guard for CHECKs 3, 4 and 5: a save_loadout that refuses
 -- everything — the `raise exception 'boom'` mutation, a dropped dependency, a broken
 -- setting read — cannot get past this one. Every rejection below is then known to be a
 -- rejection of its payload and not of all payloads.
 --
--- SPEC §9.4 L2 is DECK_SIZE = 20 and L3 is MAX_COPIES = 1, so a legal loadout needs 60
+-- SPEC §9.4 L2 is DECK_SIZE = 25 and L3 is MAX_COPIES = 1, so a legal loadout needs 75
 -- distinct non-Token cards. 01 seeded three cards (two of them non-Token) because its
--- checks are about the schema; this fills the catalog out to 60 non-Token cards and
--- grants profile 1 the 58 it lacks through app.grant_cards, as an operator's 'admin'
+-- checks are about the schema; this fills the catalog out to 75 non-Token cards and
+-- grants profile 1 the 73 it lacks through app.grant_cards, as an operator's 'admin'
 -- grant. Since going live the activation grant gives only the starter cards (R1310000),
 -- which 01 set to its two, so it cannot fill a loadout; CHECK 20 (R111) re-runs it to
 -- prove it idempotent and that it granted the starters alone.
@@ -109,7 +109,7 @@ insert into public.cards (id, card_index, name, set_id, type, tags, rarity, toke
                           catalog_version)
 select format('bulk-%s', to_char(n, 'FM000')), n::text, format('Bulk %s', n), 'Core',
        'Unit', '{}'::text[], 'Common', false, to_jsonb(1), 'core-1'
-  from generate_series(1, 58) as n;
+  from generate_series(1, 73) as n;
 select app.grant_cards(
   '11111111-1111-1111-1111-111111111111',
   (select jsonb_agg(jsonb_build_object('card_id', c.id, 'delta', 1) order by c.id)
@@ -136,9 +136,9 @@ declare
 begin
   select count(*) into v_catalog from public.cards
    where token = false and catalog_version = 'core-1';
-  if v_catalog <> 60 then
+  if v_catalog <> 75 then
     raise exception
-      'FAIL (CHECK 2): the core-1 catalog holds % non-Token cards, expected 60 — a legal loadout of 3 x DECK_SIZE(20) disjoint decks cannot be built',
+      'FAIL (CHECK 2): the core-1 catalog holds % non-Token cards, expected 75 — a legal loadout of 3 x DECK_SIZE(25) disjoint decks cannot be built',
       v_catalog;
   end if;
   select count(*) into v_owned from public.collection where profile_id = p1 and quantity >= 1;
@@ -148,20 +148,20 @@ begin
       v_owned, v_catalog;
   end if;
 
-  -- 60 cards, ordered by id, cut into three decks of 20. One copy of each (L3), and no
+  -- 75 cards, ordered by id, cut into three decks of 25. One copy of each (L3), and no
   -- card in two decks (L4), so the only thing being tested is that a legal loadout saves.
   with ranked as (
     select c.id, row_number() over (order by c.id) as rn
       from public.cards c
      where c.token = false and c.catalog_version = 'core-1'
   ), decks as (
-    select ((rn - 1) / 20) + 1 as slot,
+    select ((rn - 1) / 25) + 1 as slot,
            jsonb_build_object(
-             'name', 'Deck ' || (((rn - 1) / 20) + 1),
+             'name', 'Deck ' || (((rn - 1) / 25) + 1),
              'cards', jsonb_agg(jsonb_build_object('card_id', id, 'count', 1) order by id)
            ) as deck
       from ranked
-     group by ((rn - 1) / 20) + 1
+     group by ((rn - 1) / 25) + 1
   )
   select jsonb_agg(deck order by slot) into v_decks from decks;
 
@@ -178,7 +178,7 @@ begin
     -- save_loadout that raises for every input dies here, and CHECKs 3, 4 and 5 below
     -- are never reached to mistake its error for the one each of them expects.
     raise exception
-      'FAIL (CHECK 2): app.save_loadout refused a legal 3 x 20 loadout with "%" (%) — every rejection asserted below would then be a rejection of everything',
+      'FAIL (CHECK 2): app.save_loadout refused a legal 3 x 25 loadout with "%" (%) — every rejection asserted below would then be a rejection of everything',
       sqlerrm, sqlstate;
   end;
 
@@ -194,19 +194,19 @@ begin
   end if;
   select count(*), count(distinct card_id) into v_rows, v_distinct
     from public.loadout_deck_cards where profile_id = p1;
-  if v_rows <> 60 or v_distinct <> 60 then
+  if v_rows <> 75 or v_distinct <> 75 then
     raise exception
-      'FAIL (CHECK 2): the saved loadout holds % card rows over % distinct cards, expected 60 of each (L2 x 3 decks, L4 disjoint)',
+      'FAIL (CHECK 2): the saved loadout holds % card rows over % distinct cards, expected 75 of each (L2 x 3 decks, L4 disjoint)',
       v_rows, v_distinct;
   end if;
   if exists (
     select 1 from public.loadout_deck_cards
-     where profile_id = p1 group by slot having sum("count") <> 20
+     where profile_id = p1 group by slot having sum("count") <> 25
   ) then
-    raise exception 'FAIL (CHECK 2): a saved deck does not hold exactly DECK_SIZE (20) cards';
+    raise exception 'FAIL (CHECK 2): a saved deck does not hold exactly DECK_SIZE (25) cards';
   end if;
 
-  raise notice 'OK (CHECK 2): app.save_loadout accepted a legal 3 x 20 loadout over a 60-card catalog';
+  raise notice 'OK (CHECK 2): app.save_loadout accepted a legal 3 x 25 loadout over a 75-card catalog';
 end $$;
 select slot, sum("count") as cards_in_deck from public.loadout_deck_cards
  where profile_id = '11111111-1111-1111-1111-111111111111' group by slot order by slot;
@@ -217,7 +217,7 @@ select slot, sum("count") as cards_in_deck from public.loadout_deck_cards
 do $$
 declare
   p1 constant uuid := '11111111-1111-1111-1111-111111111111';
-  expected constant text := 'loadout: L2 deck 1 has 1 cards, expected 20';
+  expected constant text := 'loadout: L2 deck 1 has 1 cards, expected 25';
   v_decks jsonb := jsonb_build_array(
     jsonb_build_object('name', 'One',   'cards', jsonb_build_array(
       jsonb_build_object('card_id', 'core-001', 'count', 1))),
@@ -244,9 +244,9 @@ begin
   -- SPEC §9.4: "writes all three decks in one transaction or nothing." The legal loadout
   -- CHECK 2 saved must still be there, untouched, after a rejected save.
   select count(*) into v_after from public.loadout_deck_cards where profile_id = p1;
-  if v_after <> v_before or v_before <> 60 then
+  if v_after <> v_before or v_before <> 75 then
     raise exception
-      'FAIL (CHECK 3): the stored loadout went from % to % card rows across a rejected save (expected 60, unchanged)',
+      'FAIL (CHECK 3): the stored loadout went from % to % card rows across a rejected save (expected 75, unchanged)',
       v_before, v_after;
   end if;
 end $$;
@@ -287,7 +287,7 @@ begin
   end if;
   select sum((elem ->> 'count')::int) into v_cards
     from jsonb_array_elements(v_bad -> 1 -> 'cards') as elem;
-  if v_cards <> 20 then
+  if v_cards <> 25 then
     raise exception 'FAIL (CHECK 4): deck 2 of the duplicate payload holds % cards, so L2 would reject it first',
       v_cards;
   end if;
@@ -312,9 +312,9 @@ begin
   end;
 
   select count(*) into v_after from public.loadout_deck_cards where profile_id = p1;
-  if v_after <> v_before or v_before <> 60 then
+  if v_after <> v_before or v_before <> 75 then
     raise exception
-      'FAIL (CHECK 4): the stored loadout went from % to % card rows across a rejected save (expected 60, unchanged)',
+      'FAIL (CHECK 4): the stored loadout went from % to % card rows across a rejected save (expected 75, unchanged)',
       v_before, v_after;
   end if;
 end $$;
@@ -1227,8 +1227,8 @@ begin
   end if;
 
   -- R1310000: the launch rows are the starter cards of the catalog, one each, and nothing
-  -- else, though profile 1 owns all 60 non-Token cards (CHECK 2's admin grant) and the
-  -- catalog holds 58 more cards the grant could have reached.
+  -- else, though profile 1 owns all 75 non-Token cards (CHECK 2's admin grant) and the
+  -- catalog holds 73 more cards the grant could have reached.
   select string_agg(g.card_id || ' ' || g.delta, ', ' order by g.card_id) into launched
     from public.collection_grants g where g.profile_id = p1 and g.reason = 'launch';
   select string_agg(c.id || ' 1', ', ' order by c.id) into starters

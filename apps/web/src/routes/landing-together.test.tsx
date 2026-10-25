@@ -7,8 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { landingTestid, loginTestid } from "../auth/testids.ts";
 import { paths } from "../net/navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
-import { stubServer } from "../test/stubServer.ts";
+import { at, signIn, stubServer } from "../test/stubServer.ts";
 import LandingRoute from "./landing.tsx";
 import { playTestid } from "./play.tsx";
 
@@ -37,14 +36,6 @@ function serve(): void {
   });
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
-
 function landing(): HTMLElement {
   return screen.getByTestId(landingTestid.root);
 }
@@ -71,7 +62,7 @@ describe("B54 the landing offers no Play together call to action", () => {
   });
 
   it("B54 a signed-in visitor is shown no Play together either", async () => {
-    signedIn();
+    signIn();
     render(<LandingRoute />);
     await screen.findByTestId(landingTestid.account, undefined, SLOW);
     expect(within(landing()).queryByTestId(PLAY_TOGETHER)).toBeNull();

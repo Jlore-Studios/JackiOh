@@ -24,6 +24,7 @@ import { API_UNREACHABLE_MESSAGE } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY } from "../net/session.ts";
+import { at } from "../test/stubServer.ts";
 import { accountTestid } from "./account.tsx";
 import { playModeTestid, playTestid } from "./play.tsx";
 
@@ -79,10 +80,6 @@ function stubFetch(answer: (url: string) => Response | "hang" | "reject"): strin
     }),
   );
   return urls;
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 async function flushMicrotasks(): Promise<void> {
@@ -485,7 +482,10 @@ describe("B35 #479 a sign-in lands on the main menu, whichever screen sent the p
     });
     expect(await screen.findByTestId(playTestid.joinInput, undefined, SLOW)).toHaveValue("ABC234");
     expect(screen.getByTestId(playModeTestid("bo3"))).toBeChecked();
-    expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+    // The hub forgets the link in an effect, which can run just after the form shows.
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem(ROOM_LINK_STORAGE_KEY)).toBeNull();
+    });
 
     // Used once: back to the menu and in again, the form starts empty.
     act(() => {

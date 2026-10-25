@@ -23,6 +23,7 @@ import {
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { consentTestid } from "../auth/testids.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
+import { at } from "../test/stubServer.ts";
 import AccessibilityRoute, { ACCESSIBILITY_LAST_UPDATED, accessibilityTestid } from "./accessibility.tsx";
 import CopyrightRoute, { COPYRIGHT_LAST_UPDATED, copyrightTestid } from "./copyright.tsx";
 import LandingRoute from "./landing.tsx";
@@ -58,10 +59,6 @@ function agreedText(): string {
     return words;
   };
   return `${text(TermsRoute)}\n${text(PrivacyRoute)}`;
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 function canonical(): string | null {

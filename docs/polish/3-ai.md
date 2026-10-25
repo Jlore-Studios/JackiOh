@@ -527,10 +527,15 @@ export function candidateActions(state: GameState, seat: PlayerId): ActionBody[]
 The move order is a stable sort by tier, and ties keep `legalActions` order:
 0 an attack on the enemy hero ·
 1 an attack on a unit it kills and survives, read from `unitView` (Divine Shield on the target means no kill) ·
+1b an attack on a unit it kills at an even trade or better by the static trader's `trade_value`
+(crates/ai/src/reply.rs: the target's worth less the attacker's when it dies too, at least 0), only each
+attacker's best (ties: the first), its others staying in 4 (#1779) ·
 2 `play` and `activatePower`, round-robin across source instances (every source's first variant,
 then every source's second, …), each round by `effectiveCost` descending; inside one source the variants
-whose first target is the enemy hero or a card the enemy controls (the enemy hero's first) alternate with
-the rest, enemy first, each group in `legalActions` order (#1062) ·
+are partitioned into ways of being played (keyed by X value, Embiggen, Equip host, face-down set, and Tribute set),
+ordered dearest price first, then cheapest, then remaining descending, Tribute sets cheapest units first (#1778),
+with variants within each way alternating between those whose first target is the enemy hero or a card the
+enemy controls (the enemy hero's first) and the rest, enemy first (#1062), and interleaved across ways before assembling ·
 3 `answer` ·
 4 any other attack ·
 5 `switchPosition` ·
@@ -709,10 +714,12 @@ The rule, one step at a time, each step one `reduce` (one node):
    (`readyGap` at most zero; #1634, behind `AI_REPLY.openLethal`, switched off until a screen keeps
    it); one on the hero is worth `facePerDamage` per point of `projectedHeroDamage`; one on a unit
    is worth the target's `unitWorth` if it dies (First Strike deciding who strikes first, Divine
-   Shield popped for its keyword weight, Poisonous killing), `chipPerDamage` per point otherwise,
-   less the attacker's own `unitWorth` if it dies. First, a Deft unit of its in Defense Position,
-   its switch and its attack unspent, is switched to Attack on trial (one node, R49), and the switch
-   is kept when the best attack afterwards, ranked one hit at a time, is its own.
+   Shield popped for its keyword weight, Poisonous killing), less the `unitWorth` of the body it
+   comes back as while its Reborn is unspent (§4.5 step 4, #1796), `chipPerDamage` per point
+   otherwise, less the attacker's own, priced the same way, if it dies. First, a Deft unit of its
+   in Defense Position, its switch and its attack unspent, is switched to Attack on trial (one node,
+   R49), and the switch is kept when the best attack afterwards, ranked one hit at a time, is its
+   own.
 4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
    to Defense Position of its units in Attack Position whose switch is unspent (a unit that
    attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own

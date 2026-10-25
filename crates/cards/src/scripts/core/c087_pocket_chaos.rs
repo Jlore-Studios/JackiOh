@@ -98,6 +98,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -120,10 +121,6 @@ mod tests {
     const SEED: &str = "chaos-87";
 
     use crate::js;
-
-    fn defs(cards: Vec<CardInstance>) -> Vec<String> {
-        cards.into_iter().map(|card| card.def_id).collect()
-    }
 
     fn gifts_in(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
         s.hand(Some(player))
@@ -231,8 +228,8 @@ mod tests {
             s.play(CHAOS, json!({ "modes": ["health"] }));
 
             assert!(!drew(&s));
-            assert_eq!(defs(s.pile(P1, "library")), vec![GARY.to_string(), RENO.to_string()]);
-            assert_eq!(defs(s.hand(Some(P1))), vec![FILLER.to_string()]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), vec![GARY.to_string(), RENO.to_string()]);
+            assert_eq!(def_ids(&s.hand(Some(P1))), vec![FILLER.to_string()]);
         }
 
         #[test]
@@ -336,8 +333,8 @@ mod tests {
             s.play(CHAOS, json!({ "modes": ["library"] }));
 
             // The piles changed places whole, keeping their order: library[0] is still the next draw.
-            assert_eq!(defs(s.pile(P1, "library")), vec![RENO.to_string(), POSTDOC.to_string()]);
-            assert_eq!(defs(s.pile(P2, "library")), vec![GARY.to_string()]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), vec![RENO.to_string(), POSTDOC.to_string()]);
+            assert_eq!(def_ids(&s.pile(P2, "library")), vec![GARY.to_string()]);
 
             // R12's one exception: the owner of a swapped library card becomes the player holding it.
             assert!(s.pile(P1, "library").iter().all(|card| card.owner == P1));
@@ -405,8 +402,8 @@ mod tests {
                 s.play(CHAOS, json!({ "modes": ["health", gift] }));
 
                 assert!(!drew(&s));
-                assert_eq!(defs(s.hand(Some(P1))), vec![FILLER.to_string()]);
-                assert_eq!(defs(s.pile(P1, "library")), vec![GARY.to_string(), RENO.to_string()]);
+                assert_eq!(def_ids(&s.hand(Some(P1))), vec![FILLER.to_string()]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![GARY.to_string(), RENO.to_string()]);
             }
         }
 
@@ -430,9 +427,9 @@ mod tests {
             // R742: the Radiant cast copy's base cost is still (4), so its gift costs (3) too.
             assert_eq!(gifts.first().and_then(|card| card.cost_override), Some(3));
             // R73: the libraries swapped, whole and in order, each card now its new holder's (R12).
-            assert_eq!(defs(s.pile(P1, "library")), vec![RENO.to_string(), POSTDOC.to_string()]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), vec![RENO.to_string(), POSTDOC.to_string()]);
             assert!(s.pile(P1, "library").iter().all(|card| card.owner == P1));
-            assert_eq!(defs(s.pile(P2, "library")), vec![GARY.to_string()]);
+            assert_eq!(def_ids(&s.pile(P2, "library")), vec![GARY.to_string()]);
             s.expect_in_zone(&this, "exile");
         }
 

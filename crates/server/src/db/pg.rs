@@ -74,17 +74,18 @@ use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_STAR
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
-    CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FrozenDeck, FrozenTrio,
-    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchCheckpointRow,
-    MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput,
-    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow,
-    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
-    TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FoldedRecords,
+    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
+    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
+    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
+    Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
+    SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
+    TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
+    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -3206,6 +3207,20 @@ pub async fn matches_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<Mat
         .collect()
 }
 
+pub async fn matches_has_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<bool, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let row =
+        sqlx::query("select exists (select 1 from public.match_actions where match_id = $1::uuid) as logged")
+            .bind(match_id)
+            .fetch_one(&mut **t)
+            .await
+            .map_err(db_error)?;
+    get(&row, "logged")
+}
+
 /// #1169: one statement, so the guards and the write cannot come apart: the row goes in only while
 /// the match is live and its log holds `seq` under `nonce`, and replaces only an earlier seq's.
 pub async fn matches_put_checkpoint(t: &mut PgTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
@@ -4652,11 +4667,12 @@ pub async fn game_records_list(
 
 /// R1044000: folds up to `limit` records written unfolded (before migration 0041), the first in id
 /// order, and marks them folded. `skip locked`, so two folds running at once take different records
-/// and none is folded twice.
-pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result<usize, StoreError> {
+/// and none is folded twice. R1715000: a record whose detail does not read is marked folded with its
+/// detail emptied, counted nowhere and answered, so it never holds back the records behind it.
+pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result<FoldedRecords, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select record from public.game_records
+        "select id, record from public.game_records
           where not folded
           order by id collate \"C\"
           limit $1
@@ -4668,22 +4684,41 @@ pub async fn game_records_fold_pending(t: &mut PgTx<'_>, limit: usize) -> Result
     .map_err(db_error)?;
     let mut delta = StatsTotals::default();
     let mut ids: Vec<String> = Vec::with_capacity(rows.len());
+    let mut unreadable: Vec<UnreadableGameRecord> = Vec::new();
     for row in &rows {
-        let record: Value = get(row, "record")?;
-        let record = parse_game_record(&record).map_err(|error| StoreError::from(error.to_string()))?;
-        delta.fold(&record, true);
-        ids.push(record.id);
+        let id: String = get(row, "id")?;
+        let detail: Value = get(row, "record")?;
+        match parse_game_record(&detail) {
+            Ok(record) => {
+                delta.fold(&record, true);
+                ids.push(id);
+            }
+            Err(error) => unreadable.push(UnreadableGameRecord {
+                id,
+                message: error.to_string(),
+            }),
+        }
     }
-    if ids.is_empty() {
-        return Ok(0);
+    if !ids.is_empty() {
+        sqlx::query("update public.game_records set folded = true where id = any($1::text[])")
+            .bind(&ids)
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+        stats_totals_add(t, &delta).await?;
     }
-    sqlx::query("update public.game_records set folded = true where id = any($1::text[])")
-        .bind(&ids)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    stats_totals_add(t, &delta).await?;
-    Ok(ids.len())
+    if !unreadable.is_empty() {
+        let unread: Vec<String> = unreadable.iter().map(|record| record.id.clone()).collect();
+        sqlx::query("update public.game_records set folded = true, record = null where id = any($1::text[])")
+            .bind(&unread)
+            .execute(&mut **t)
+            .await
+            .map_err(db_error)?;
+    }
+    Ok(FoldedRecords {
+        folded: ids.len(),
+        unreadable,
+    })
 }
 
 /// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
@@ -7733,7 +7768,11 @@ pub async fn shares_sharers(
     rows.iter().map(|row| uuid_text(row, "sharer")).collect()
 }
 
-pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+pub async fn shares_for(
+    t: &mut PgTx<'_>,
+    friend: &str,
+    limit: i64,
+) -> Result<Vec<SharedReplayRow>, StoreError> {
     if !is_uuid(friend) {
         return Ok(Vec::new());
     }
@@ -7745,9 +7784,11 @@ pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedRepl
           where s.friend = $1::uuid and ",
         readable_share!(),
         "
-          order by s.created_at desc, s.match_id desc, s.sharer desc"
+          order by s.created_at desc, s.match_id desc, s.sharer desc
+          limit $2::bigint"
     ))
     .bind(friend)
+    .bind(limit)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;

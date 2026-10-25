@@ -6,7 +6,8 @@
 //! at AI_TUTORIAL in about half its games, and on the same seeds more often than the AI at Easy.
 //!
 //! Game n plays seed `${TUTORIAL_TIER.series}:greedy:${n}` at both tiers, so only the AI seat's
-//! handicap and deck differ. Both seats are dealt by the gates' one rule, with the frozen fixture ban
+//! handicap and deck differ, and the greedy seat's deck size: against AI_TUTORIAL it plays a lesson's
+//! human seat, TUTORIAL_HUMAN's EARLIER_DECK_SIZE cards (R1705005), and at Easy a human's DECK_SIZE. Both seats are dealt by the gates' one rule, with the frozen fixture ban
 //! (`FIXTURE_BANNED_IDS`, issue #1113) on both sides, so a shadow-ban change re-deals none of these
 //! games, and every game has to be clean and fold back to its hash (B31).
 //! §10.7's random policy is not asserted: a run small enough for `pnpm test` holds too few wins.
@@ -82,6 +83,14 @@ fn tier_handicap(tier: Tier) -> Handicap {
     }
 }
 
+/// The greedy seat's handicap: a lesson's human seat against AI_TUTORIAL (R1705005), a human's at Easy.
+fn human_handicap_of(tier: Tier) -> Handicap {
+    match tier {
+        Tier::Tutorial => TUTORIAL_HUMAN,
+        Tier::Easy => HUMAN_HANDICAP,
+    }
+}
+
 fn tier_games(tier: Tier) -> i32 {
     match tier {
         Tier::Tutorial => TUTORIAL_TIER.tutorial_games,
@@ -124,12 +133,17 @@ fn tier_game(tier: Tier, n: i32) -> MatchConfig {
             },
         )
     };
-    let human_deck = deck_for(human_seat, &HUMAN_HANDICAP);
+    let human_handicap = human_handicap_of(tier);
+    let human_deck = deck_for(human_seat, &human_handicap);
     let ai_deck = deck_for(ai_seat, &ai_handicap);
 
-    // The greedy seat plays with no handicap (R180); at Easy the AI seat stores none either.
+    // At Easy the greedy seat plays with no handicap (R180) and the AI seat stores none either; against
+    // AI_TUTORIAL it plays a lesson's human seat, under TUTORIAL_HUMAN (R1705005).
     let mut handicaps: PerPlayerOpt<Handicap> = PerPlayerOpt::default();
     *handicaps.slot(ai_seat) = Some(ai_handicap);
+    if human_handicap != HUMAN_HANDICAP {
+        *handicaps.slot(human_seat) = Some(human_handicap);
+    }
     let ai = SeatController::Ai {
         budget: Some(AI_GATE_BUDGET),
         skill: None,
@@ -248,7 +262,7 @@ mod r290_the_tutorial_tier_by_play {
 
             assert_eq!(tutorial.seed, format!("{}:greedy:{n}", TUTORIAL_TIER.series));
             assert_eq!(easy.seed, tutorial.seed);
-            for config in [&tutorial, &easy] {
+            for (tier, config) in [(Tier::Tutorial, &tutorial), (Tier::Easy, &easy)] {
                 assert_eq!(config.controllers[human_seat], SeatController::Greedy);
                 assert_eq!(
                     config.controllers[ai_seat],
@@ -263,11 +277,29 @@ mod r290_the_tutorial_tier_by_play {
                     .and_then(|handicaps| handicaps.get(human_seat))
                     .copied()
                     .unwrap_or(HUMAN_HANDICAP);
-                assert_eq!(human_handicap, HUMAN_HANDICAP);
-                assert_eq!(deck_at(config, human_seat).len(), DECK_SIZE as usize);
+                assert_eq!(human_handicap, human_handicap_of(tier));
+                assert_eq!(
+                    deck_at(config, human_seat).len(),
+                    human_handicap.deck_size as usize
+                );
             }
-            // The greedy seat's deck is the same at both tiers; only the AI seat's differs.
-            assert_eq!(deck_at(&easy, human_seat), deck_at(&tutorial, human_seat));
+            assert_eq!(human_handicap_of(Tier::Tutorial), TUTORIAL_HUMAN);
+            assert_eq!(human_handicap_of(Tier::Easy), HUMAN_HANDICAP);
+            // The greedy seat's deck is the one its seed deals at each tier's size; the AI seat's differs.
+            for (config, size) in [(&tutorial, EARLIER_DECK_SIZE), (&easy, DECK_SIZE)] {
+                assert_eq!(
+                    *deck_at(config, human_seat),
+                    build_ai_deck(
+                        &mut create_rng(&format!("{}:deck:{human_seat}", config.seed), 0),
+                        size,
+                        &AiDeckOptions {
+                            mana_cap: Some(HUMAN_HANDICAP.mana_cap),
+                            banned: Some(FIXTURE_BANNED_IDS.iter().map(|id| id.to_string()).collect()),
+                            ..Default::default()
+                        },
+                    )
+                );
+            }
 
             assert_eq!(
                 tutorial

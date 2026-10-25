@@ -72,7 +72,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Browser → server WebSocket `/ws/watch` | the user's JWT, as `/ws/match` | a `hello` naming a friend's match; receives the friend's seat's `viewFor`, `SPECTATE_DELAY_MS` late, and nothing it sends after `hello` is read (SPEC §9.5) |
 
 One rule, from SPEC §9.1: **the client sends intent, never state.** "Play instance 7 in zone 3 with
-target 12", never "my deck contains these 20 cards", never "I own a Mythic".
+target 12", never "my deck contains these 25 cards", never "I own a Mythic".
 
 ---
 
@@ -848,7 +848,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `/api/collection`, `/api/decks` and `/api/queue`.
 10. **Redeem a code on each** (BUILD M6-T1). `status` flips to `active`, the activation trigger fires
     the launch grant, and `select profile_id, count(*) from public.collection group by 1;` shows
-    the 39 starter cards for each profile (R111, R1310000), and `select profile_id, jlore from
+    the 50 starter cards for each profile (R111, R1310000, R1705002), and `select profile_id, jlore from
     public.wallets;` 100 Jlore each, the newest set's track's first level, which the redemption pays
     (§14.7). Confirm the three failure kinds — missing, expired, exhausted — return the
     identical message.

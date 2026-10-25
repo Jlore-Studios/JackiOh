@@ -586,6 +586,76 @@ describe("the attack flow", () => {
     expect(result.action).toEqual({ type: "switchPosition", instanceId: "u2" });
     expect(result.interaction).toEqual(IDLE);
   });
+
+  it("switches the attack to another attacker when it is clicked", () => {
+    const legal: ActionBody[] = [
+      { type: "attack", attackerId: "u1", targetId: "e1" },
+      { type: "attack", attackerId: "u2", targetId: "e1" },
+      { type: "attack", attackerId: "u2", targetId: heroTargetId("p2") },
+    ];
+    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+      .interaction;
+
+    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toEqual({ stage: "attacking", attackerId: "u2", candidates: [legal[1], legal[2]] });
+  });
+
+  it("attacks a unit the picked attacker can target even when that unit can attack too", () => {
+    const legal: ActionBody[] = [
+      { type: "attack", attackerId: "u1", targetId: "u2" },
+      { type: "attack", attackerId: "u2", targetId: "e1" },
+    ];
+    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+      .interaction;
+
+    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
+
+    expect(result.action).toEqual({ type: "attack", attackerId: "u1", targetId: "u2" });
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("deselects the attacker when it is clicked again, with another attacker listed", () => {
+    const legal: ActionBody[] = [
+      { type: "attack", attackerId: "u1", targetId: "e1" },
+      { type: "attack", attackerId: "u2", targetId: "e1" },
+    ];
+    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+      .interaction;
+
+    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u1", side: "you", lane: 1 });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toEqual(IDLE);
+  });
+
+  it("ignores a click on a unit with no attack while an attack is in flight", () => {
+    const legal: ActionBody[] = [
+      { type: "attack", attackerId: "u1", targetId: "e1" },
+      { type: "switchPosition", instanceId: "u2" },
+    ];
+    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+      .interaction;
+
+    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
+
+    expect(result.action).toBeUndefined();
+    expect(result.notice).toBeUndefined();
+    expect(result.interaction).toBe(attacking);
+  });
+
+  it("sends a random attack at once when the attack is switched to it", () => {
+    const random: ActionBody = { type: "attack", attackerId: "u2", targetId: RANDOM_ATTACK_TARGET };
+    const legal: ActionBody[] = [{ type: "attack", attackerId: "u1", targetId: "e1" }, random];
+    const attacking = onClickTarget(view, legal, IDLE, { on: "unit", instanceId: "u1", side: "you", lane: 1 })
+      .interaction;
+
+    const result = onClickTarget(view, legal, attacking, { on: "unit", instanceId: "u2", side: "you", lane: 2 });
+
+    expect(result.action).toEqual(random);
+    expect(result.interaction).toEqual(IDLE);
+  });
 });
 
 describe("onControl", () => {

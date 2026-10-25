@@ -6,7 +6,8 @@
 //!
 //! No card prints Ranged or Flying yet (§6.1: the random keyword pool only), so each board grants the
 //! keyword to a unit on the field. The cards: Mr. Vanilla (core-008) 4/4, Tempo Timmy (core-011) 3/3,
-//! Pointmaster (core-020) 7/1 and Midrange Menace (core-019) 9/9 Taunt.
+//! Pointmaster (core-020) 7/1, Midrange Menace (core-019) 9/9 Taunt and Wrong-House Attacker
+//! (classicplus-006) 1/1 Rush, Lifesteal, Poisonous.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -36,20 +37,21 @@ fn grant(state: &mut GameState, player: PlayerId, def_id: &str, keyword: Keyword
 mod r783000_move_order {
     use super::*;
 
-    /// The AI's Mr. Vanilla 4/4 ready on the field, another in hand, and the enemy's Mr. Vanilla: a
-    /// kill either way, which the AI's survives only when it is Ranged and the enemy's is not. Returns
-    /// the enemy unit's id.
+    /// The AI's Midrange Menace 9/9 ready on the field, Mr. Vanilla in hand, and the enemy's Wrong-House
+    /// Attacker 1/1 Poisonous: a kill either way, which the Menace survives only when it is Ranged and
+    /// the enemy's unit is not. Otherwise the poison kills it, a losing trade, which waits behind the
+    /// plays even beside the even trades (#1779). Returns the enemy unit's id.
     fn trade(attacker_ranged: bool, defender_ranged: bool) -> (GameState, String) {
         let mut state = board(json!({
             "seed": "ai-ranged-order",
-            "p1": { "hand": ["core-008"], "field": ["core-008"] },
-            "p2": { "field": ["core-008"] },
+            "p1": { "hand": ["core-008"], "field": ["core-019"] },
+            "p2": { "field": ["classicplus-006"] },
         }));
         if attacker_ranged {
-            grant(&mut state, AI, "core-008", Keyword::Ranged);
+            grant(&mut state, AI, "core-019", Keyword::Ranged);
         }
         if defender_ranged {
-            grant(&mut state, HUMAN, "core-008", Keyword::Ranged);
+            grant(&mut state, HUMAN, "classicplus-006", Keyword::Ranged);
         }
         let target = active_units_of(&state, HUMAN)[0].id.clone();
         (state, target)

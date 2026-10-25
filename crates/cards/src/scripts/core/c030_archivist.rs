@@ -94,15 +94,12 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
 
     fn archivist(library: &[&str], radiant: bool) -> Scenario {
         scenario(json!({ "p1": { "hand": [{ "def": "core-030", "radiant": radiant }], "library": library, "mana": 2 } }))
-    }
-
-    fn hand_defs(s: &Scenario) -> Vec<String> {
-        s.state().players.p1.hand.iter().map(|card| card.def_id.clone()).collect()
     }
 
     fn sorted(mut ids: Vec<String>) -> Vec<String> {
@@ -126,7 +123,7 @@ mod tests {
 
             // R81: the mode travelled in the play action, so resolution never paused.
             assert!(s.state().pending.is_none());
-            assert_eq!(hand_defs(&s), strings(&["core-025"])); // #25 at 4 is the dearest
+            assert_eq!(def_ids(&s.hand(P1)), strings(&["core-025"])); // #25 at 4 is the dearest
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()).as_deref(), Some("core-030"));
         }
 
@@ -137,7 +134,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": ["lowest"] }));
 
-            assert_eq!(hand_defs(&s), strings(&["core-010"])); // #10 Rapid Replenish at 0
+            assert_eq!(def_ids(&s.hand(P1)), strings(&["core-010"])); // #10 Rapid Replenish at 0
         }
 
         #[test]
@@ -146,12 +143,12 @@ mod tests {
             // #13 and #19 both cost 3, and #13 is nearer the top, so #13 wins the highest.
             let mut highest = archivist(&["core-013", "core-019", "core-005"], false);
             highest.play("core-030", json!({ "modes": ["highest"] }));
-            assert_eq!(hand_defs(&highest), strings(&["core-013"]));
+            assert_eq!(def_ids(&highest.hand(P1)), strings(&["core-013"]));
 
             // The same tie on the other side: #5 and #51 both cost 1, and #5 is nearer the top.
             let mut lowest = archivist(&["core-025", "core-005", "core-051"], false);
             lowest.play("core-030", json!({ "modes": ["lowest"] }));
-            assert_eq!(hand_defs(&lowest), strings(&["core-005"]));
+            assert_eq!(def_ids(&lowest.hand(P1)), strings(&["core-005"]));
         }
 
         #[test]
@@ -159,11 +156,11 @@ mod tests {
             crate::register_all();
             let mut lowest = archivist(&["core-005", "core-024", "core-025"], false);
             lowest.play("core-030", json!({ "modes": ["lowest"] }));
-            assert_eq!(hand_defs(&lowest), strings(&["core-024"])); // #24 Efficiency Dividend, X → 0
+            assert_eq!(def_ids(&lowest.hand(P1)), strings(&["core-024"])); // #24 Efficiency Dividend, X → 0
 
             let mut highest = archivist(&["core-024", "core-005"], false);
             highest.play("core-030", json!({ "modes": ["highest"] }));
-            assert_eq!(hand_defs(&highest), strings(&["core-005"])); // 1 beats X's 0
+            assert_eq!(def_ids(&highest.hand(P1)), strings(&["core-005"])); // 1 beats X's 0
         }
 
         #[test]
@@ -175,7 +172,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": ["highest"] }));
 
-            assert_eq!(hand_defs(&s), strings(&["core-013"]));
+            assert_eq!(def_ids(&s.hand(P1)), strings(&["core-013"]));
         }
 
         #[test]
@@ -185,7 +182,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": ["highest"] }));
 
-            assert!(hand_defs(&s).is_empty());
+            assert!(def_ids(&s.hand(P1)).is_empty());
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()).as_deref(), Some("core-030"));
             assert_eq!(s.state().players.p1.hero.health, 30); // no fatigue: nothing was drawn
         }
@@ -230,7 +227,7 @@ mod tests {
             s.play("core-030", json!({ "modes": [] }));
 
             assert!(s.state().pending.is_none());
-            assert_eq!(sorted(hand_defs(&s)), strings(&["core-010", "core-025"])); // 0 and 4
+            assert_eq!(sorted(def_ids(&s.hand(P1))), strings(&["core-010", "core-025"])); // 0 and 4
             // The radiant face is an 8/10 (§8.2).
             let unit_id = s.unit(P1, 1).map(|card| card.id.clone()).unwrap_or_default();
             s.expect_stats(&unit_id, json!({ "attack": 8, "maxHealth": 10 }));
@@ -243,7 +240,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": [] }));
 
-            assert_eq!(hand_defs(&s), strings(&["core-005"]));
+            assert_eq!(def_ids(&s.hand(P1)), strings(&["core-005"]));
         }
 
         #[test]
@@ -254,7 +251,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": [] }));
 
-            assert_eq!(sorted(hand_defs(&s)), strings(&["core-005", "core-013"]));
+            assert_eq!(sorted(def_ids(&s.hand(P1))), strings(&["core-005", "core-013"]));
         }
 
         #[test]
@@ -264,7 +261,7 @@ mod tests {
 
             s.play("core-030", json!({ "modes": [] }));
 
-            assert!(hand_defs(&s).is_empty());
+            assert!(def_ids(&s.hand(P1)).is_empty());
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id.clone()).as_deref(), Some("core-030"));
         }
     }

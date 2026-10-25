@@ -21,7 +21,7 @@ use jackioh_engine::zones::{PlaceOnFieldOptions, place_on_field};
 
 use super::fixtures::catalog::unit_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_json, in_hand, new_game, put, set_library, slot};
 
 /// A Cry that would be loud if making a card Radiant ever re-fired one (R22).
 fn crier() -> CardDef {
@@ -120,17 +120,8 @@ fn as_p1() -> HookOptions {
     }
 }
 
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
-
 fn radiant_ids(events: &[GameEvent]) -> Vec<String> {
-    of_type(events, "radiantSet")
+    events_json(events, "radiantSet")
         .iter()
         .map(|event| event["instanceId"].as_str().unwrap_or_default().to_string())
         .collect()
@@ -289,7 +280,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
         assert_eq!(now.zone, Zone::Hand { player: PlayerId::P1 });
         assert_eq!(unit_view(&state, now).attack, 6);
         assert_eq!(
-            of_type(&events, "radiantSet")[0]["zone"],
+            events_json(&events, "radiantSet")[0]["zone"],
             json!({ "z": "hand", "player": "p1" })
         );
     }

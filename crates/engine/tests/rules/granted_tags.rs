@@ -18,7 +18,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game};
 
 const P1: PlayerId = PlayerId::P1;
@@ -60,10 +60,6 @@ fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
         .unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn js<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
@@ -146,7 +142,7 @@ mod r923_granted_tags_md_b15 {
             );
         }
         // A JSON round trip keeps it too.
-        let back: GameState = serde_json::from_value(js(&state)).expect("a state survives JSON");
+        let back: GameState = serde_json::from_value(json_of(&state)).expect("a state survives JSON");
         assert_eq!(live(&back, &unit.id).granted_tags, Some(vec![Tag::Cn]));
     }
 
@@ -285,7 +281,7 @@ mod r923_granted_tags_md_b15 {
         let trap = put(&mut state, &brittle_trap.id, slot(P1, Row::Backrow, 1), json!({}));
         run(&mut state, grant_id(&trap.id));
 
-        let mine = js(&view_for(&state, P1));
+        let mine = json_of(view_for(&state, P1));
         assert_eq!(mine["you"]["hand"][0]["tags"], json!(["CN"]));
         // An ungranted card's view carries no `tags` key.
         assert!(mine["you"]["hand"][1].get("tags").is_none());
@@ -293,7 +289,7 @@ mod r923_granted_tags_md_b15 {
         assert_eq!(mine["you"]["backrow"][0]["tags"], json!(["CN"]));
 
         // The opponent reads a back and a count: no tags anywhere.
-        let theirs = js(&view_for(&state, P2));
+        let theirs = json_of(view_for(&state, P2));
         assert_eq!(theirs["opponent"]["hand"], json!({ "count": 3 }));
         assert_eq!(theirs["opponent"]["backrow"][0]["faceDown"], json!(true));
         assert!(!theirs.to_string().contains("\"tags\""), "{theirs}");
@@ -303,9 +299,9 @@ mod r923_granted_tags_md_b15 {
     fn r923_no_granted_tag_serialises_without_the_key() {
         let mut state = game("granted-hash");
         let held = first(in_hand(&mut state, &plain.id, P1, 1));
-        assert!(js(&held).get("grantedTags").is_none());
+        assert!(json_of(&held).get("grantedTags").is_none());
         run(&mut state, grant_id(&held.id));
-        assert_eq!(js(&live(&state, &held.id))["grantedTags"], json!(["CN"]));
+        assert_eq!(json_of(live(&state, &held.id))["grantedTags"], json!(["CN"]));
     }
 }
 

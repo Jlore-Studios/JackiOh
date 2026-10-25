@@ -189,6 +189,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::js;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const RECYCLING: &str = "core-039"; // Spell, 0
@@ -223,12 +224,8 @@ mod tests {
         scenario(opts)
     }
 
-    fn defs_in(s: &Scenario, player: &str, zone: &str) -> Vec<String> {
-        s.pile(player, zone).into_iter().map(|card| card.def_id).collect()
-    }
-
     fn count_in(s: &Scenario, player: &str, zone: &str, def_id: &str) -> usize {
-        defs_in(s, player, zone).iter().filter(|id| *id == def_id).count()
+        def_ids(&s.pile(player, zone)).iter().filter(|id| *id == def_id).count()
     }
 
     /// The index in the cumulative log of the first event matching, or -1.
@@ -279,7 +276,7 @@ mod tests {
             s.play(&spell, json!({}));
 
             s.expect_in_zone(&spell, "exile").expect_events(json!(["cardPlayed", "exiled"]));
-            assert!(defs_in(&s, "p1", "graveyard").is_empty());
+            assert!(def_ids(&s.pile("p1", "graveyard")).is_empty());
         }
 
         #[test]
@@ -465,7 +462,7 @@ mod tests {
             s.play(&spell, json!({}));
 
             s.expect_in_zone(&spell, "exile");
-            assert!(defs_in(&s, "p1", "graveyard").is_empty());
+            assert!(def_ids(&s.pile("p1", "graveyard")).is_empty());
         }
 
         #[test]

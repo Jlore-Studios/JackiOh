@@ -9,10 +9,9 @@
 //!   2. Who and when: the card's controller, in their own main phase, with no prompt open and the game
 //!      not over, while the card acts on the field — the top of its pile, or a face-up backrow card
 //!      (`is_acting_on_field`). Summoning sickness and exertion do not apply: activating is not attacking.
-//!   3. Uses are counted per card per turn on the instance (`memory.activations = { turn, count }`,
+//!   3. Uses are counted per ability per turn on the instance (`memory.activations`, R1751000,
 //!      SPEC §6.2), which R78's reset clears when the card leaves the field, so a card bounced and
-//!      played again, or a copy, starts fresh. A card with several abilities (a fusion's) counts every
-//!      use of any of them, and each ability allows as many as its own number says.
+//!      played again, or a copy, starts fresh. Each ability on a card tracks its uses independently.
 //!   4. A cost is paid as the ability is activated — mana, a random discard, a Tribute of the
 //!      controller's units (the card itself allowed) or the card itself — and an ability whose cost
 //!      cannot be paid cannot be activated (`why_cannot_activate_ability`).
@@ -293,11 +292,33 @@ fn uses_record(card: &CardInstance) -> Option<UsesRecord> {
     Some(UsesRecord { turn, count })
 }
 
-/// How many times the card's abilities have been used this turn.
+/// How many times the card's abilities have been used this turn in total.
 pub fn uses_this_turn(state: &GameState, card: &CardInstance) -> i32 {
     match uses_record(card) {
         Some(record) if record.turn == f64::from(state.turn) => record.count as i32,
         _ => 0,
+    }
+}
+
+/// R1751000: How many times a specific ability has been used this turn on the card.
+pub fn ability_uses_this_turn(state: &GameState, card: &CardInstance, ability: &str) -> i32 {
+    let Some(raw) = card.memory.get(ACTIVATIONS_MEMORY_KEY) else {
+        return 0;
+    };
+    let turn = raw.get("turn").and_then(Value::as_f64).unwrap_or(-1.0);
+    if turn != f64::from(state.turn) {
+        return 0;
+    }
+    if let Some(abilities) = raw.get("abilities").and_then(Value::as_object) {
+        return abilities.get(ability).and_then(Value::as_f64).unwrap_or(0.0) as i32;
+    }
+    // Backward-compatibility fallback when an older record lacks "abilities":
+    // If the card has only one ability, that ability had all uses.
+    let decls = abilities_of(state, card);
+    if decls.len() == 1 && decls[0].id == ability {
+        raw.get("count").and_then(Value::as_f64).unwrap_or(0.0) as i32
+    } else {
+        0
     }
 }
 
@@ -314,14 +335,61 @@ pub fn uses_allowed(card: &CardInstance, decl: &ActivationDecl) -> i32 {
     }
 }
 
-fn mark_use(state: &mut GameState, card_id: &str) {
+fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
     let Some(card) = find_instance(state, card_id) else {
         return;
     };
-    let record = json!({ "turn": state.turn, "count": uses_this_turn(state, card) + 1 });
+    let count = uses_this_turn(state, card) + 1;
+    let mut abilities_map = card
+        .memory
+        .get(ACTIVATIONS_MEMORY_KEY)
+        .filter(|raw| raw.get("turn").and_then(Value::as_f64) == Some(f64::from(state.turn)))
+        .and_then(|raw| raw.get("abilities"))
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    // A record an older engine wrote (`{ turn, count }`) counts for the card's only ability.
+    let prev = ability_uses_this_turn(state, card, ability);
+    abilities_map.insert(ability.to_string(), json!(prev + 1));
+    let record = json!({
+        "turn": state.turn,
+        "count": count,
+        "abilities": abilities_map,
+    });
     if let Some(card) = find_instance_mut(state, card_id) {
         card.memory.insert(ACTIVATIONS_MEMORY_KEY.to_string(), record);
     }
+}
+
+/// R757, R1751000: the record with one use of `ability` given back, or `None` when the card has none
+/// to give back this turn. The other abilities of a fusion keep their own uses.
+pub fn uses_record_after_refund(
+    state: &GameState,
+    card: &CardInstance,
+    ability: Option<&str>,
+) -> Option<Value> {
+    let count = uses_this_turn(state, card);
+    if count == 0 {
+        return None;
+    }
+    let mut abilities_map = card
+        .memory
+        .get(ACTIVATIONS_MEMORY_KEY)
+        .and_then(|raw| raw.get("abilities"))
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    if let Some(ability) = ability {
+        let prev = ability_uses_this_turn(state, card, ability);
+        if prev > 0 {
+            abilities_map.insert(ability.to_string(), json!(prev - 1));
+        }
+    }
+    Some(json!({
+        "turn": state.turn,
+        "count": count - 1,
+        "abilities": abilities_map,
+    }))
 }
 
 // ---------------------------------------------------------------------------
@@ -381,7 +449,7 @@ fn why_ability_unusable(
     }
 
     let allowed = uses_allowed(card, decl);
-    if uses_this_turn(state, card) >= allowed {
+    if ability_uses_this_turn(state, card, &decl.id) >= allowed {
         return Err(if allowed == 1 {
             EngineError::new("that ability has already been used this turn")
         } else {
@@ -959,7 +1027,7 @@ pub fn activate_ability(
         crate::alt_play::fire_cloaked_reveal(sink, &card, &activated);
         return Ok(());
     }
-    mark_use(sink.state, &card.id);
+    mark_use(sink.state, &card.id, &decl.id);
     sink.events.push(GameEvent::Activated {
         player,
         instance_id: card.id.clone(),
@@ -1017,9 +1085,9 @@ pub fn activation_views_for(
                     .map(|error| error.message);
                 let uses_left = match decl.uses {
                     ActivationUses::Unlimited => None,
-                    ActivationUses::Count(_) => {
-                        Some((uses_allowed(card, decl) - uses_this_turn(state, card)).max(0))
-                    }
+                    ActivationUses::Count(_) => Some(
+                        (uses_allowed(card, decl) - ability_uses_this_turn(state, card, &decl.id)).max(0),
+                    ),
                 };
                 ActivationView {
                     ability: decl.id.clone(),

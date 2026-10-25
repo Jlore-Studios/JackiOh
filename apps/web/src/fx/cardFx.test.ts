@@ -357,10 +357,12 @@ describe("R502 the per-card table", () => {
 const DECK_A = [
   "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-008", "core-009", "core-010", "core-011",
   "core-012", "core-013", "core-014", "core-015", "core-016", "core-017", "core-018", "core-019", "core-020", "core-022",
+  "core-023", "core-024", "core-025", "core-026", "core-028",
 ];
 const DECK_B = [
   "core-021", "core-027", "core-030", "core-032", "core-033", "core-034", "core-035", "core-036", "core-037", "core-038",
   "core-040", "core-042", "core-043", "core-044", "core-045", "core-046", "core-047", "core-048", "core-051", "core-052",
+  "core-053", "core-054", "core-055", "core-056", "core-057",
 ];
 
 type Seats = { p1: PlayerView; p2: PlayerView };

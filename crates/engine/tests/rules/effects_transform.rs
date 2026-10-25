@@ -7,11 +7,10 @@
 
 use jackioh_engine::effects::{damage, transform, vanilla};
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, set_library, slot};
 
 /// A Cry that would be loud if a Transform ever fired one (R1).
 fn crier() -> CardDef {
@@ -189,10 +188,6 @@ fn def_ids_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
 
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 mod transform_s6_3_r23_r35_m3_t1 {
     use super::*;
 
@@ -276,7 +271,7 @@ mod transform_s6_3_r23_r35_m3_t1 {
         let now = at(&state, PlayerId::P1, Row::Units, 3);
         assert_ne!(now.as_ref().map(|card| card.id.clone()), Some(old.id.clone()));
         assert_eq!(
-            to_json(&events),
+            json_of(&events),
             json!([
                 {
                     "type": "transformed",
@@ -697,7 +692,7 @@ mod vanilla_s6_3_r23_m3_t1 {
 
         // No instance is created and no definition changes, so both sides name the same card.
         assert_eq!(
-            to_json(&events),
+            json_of(&events),
             json!([
                 {
                     "type": "transformed",
@@ -738,7 +733,7 @@ mod vanilla_s6_3_r23_m3_t1 {
         assert_eq!((view.attack, view.max_health), (2, 5));
         let tuning = now.tuning.clone().expect("the rest of its tuning stays");
         assert_eq!((tuning.attack, tuning.health), (None, None));
-        assert_eq!(to_json(&tuning.numbers), json!({ "n": 1 }));
+        assert_eq!(json_of(&tuning.numbers), json!({ "n": 1 }));
     }
 
     #[test]

@@ -93,12 +93,13 @@ class PlanningLaneTests(unittest.TestCase):
         """claude-3 plans while it builds; claude-1, capped like the rest, plans only
         when it holds nothing else; Devin builds once a strong model planned it. The load
         balancer (`plan.balance`) gives the first plan to claude-1, which holds nothing, over
-        claude-3, which builds; claude-2, claude-5, claude-6 and claude-7, idle too, would plan
-        the second, so they have no secret here."""
+        claude-3, which builds; claude-2, claude-5, claude-6, claude-7 and claude-8, idle too,
+        would plan the second, so they have no secret here."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, env=secrets(*(s for s in providers.SECRETS if s not in (
             "CLAUDE_CODE_OAUTH_TOKEN_2", "CLAUDE_CODE_OAUTH_TOKEN_5",
-            "CLAUDE_CODE_OAUTH_TOKEN_6", "CLAUDE_CODE_OAUTH_TOKEN_7"))))
+            "CLAUDE_CODE_OAUTH_TOKEN_6", "CLAUDE_CODE_OAUTH_TOKEN_7",
+            "CLAUDE_CODE_OAUTH_TOKEN_8"))))
         busy(gh, ctx, ("claude-3", 50), ("claude-4", 52), ("agy", 53), ("muse", 54), ("gpt", 55))
         queue(gh, ctx, 3, "priority:high", planned=False)    # medium and urgent
         queue(gh, ctx, 4, EASY, "priority:low", planned=False)  # easy: Devin's, once planned

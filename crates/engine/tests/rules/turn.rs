@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, new_game, put, round_trip, set_library, sink_for, slot,
+    both, events_of_type, new_game, put, round_trip, set_library, sink_for, slot,
 };
 use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, x_bolt};
 
@@ -536,13 +536,6 @@ fn ask_controller() -> Effect {
             })),
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn js_string(value: Option<&Value>) -> String {

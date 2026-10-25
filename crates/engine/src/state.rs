@@ -16,7 +16,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{
-    BACKROW_ZONES, DECK_SIZE, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP, SETUP_TURN, UNIT_ZONES,
+    BACKROW_ZONES, DECK_SIZE, EARLIER_DECK_SIZE, HERO_HEALTH, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
+    SETUP_TURN, UNIT_ZONES,
 };
 use crate::rng::Rng;
 use crate::wire::{
@@ -1798,11 +1799,16 @@ pub fn starting_hero_health(handicap: Option<&Handicap>) -> i32 {
     handicap.and_then(|h| h.hero_health).unwrap_or(HERO_HEALTH)
 }
 
-/// R180: whether a handicap is exactly a human's, which is what `create_game` declines to store.
-fn is_human_handicap(handicap: &Handicap) -> bool {
+/// R180: whether a handicap is exactly a human's, which is what `create_game` declines to store. A
+/// human's deck is `standard` cards, the game's `standard_deck_size` (R1705003).
+fn is_human_handicap(handicap: &Handicap, standard: i32) -> bool {
+    let human = Handicap {
+        deck_size: standard,
+        ..HUMAN_HANDICAP
+    };
     HANDICAP_FIELDS
         .iter()
-        .all(|field| handicap_field(handicap, field) == handicap_field(&HUMAN_HANDICAP, field))
+        .all(|field| handicap_field(handicap, field) == handicap_field(&human, field))
         && starting_hero_health(Some(handicap)) == HERO_HEALTH
 }
 
@@ -1907,6 +1913,55 @@ pub fn validate_deck_with(
     Ok(())
 }
 
+/// R1705003: whether a game is being made now or built again from a record of one already made.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SetupKind {
+    /// `create_game`: a game made now, under today's rules.
+    New,
+    /// A game already made, built again by a fold, a replay, a summary or a Glitch reset.
+    Recorded,
+}
+
+/// R1705000, R1705003: the cards a seat with no handicap holds. A new game's is DECK_SIZE. A recorded
+/// one made before #1705 raised it dealt EARLIER_DECK_SIZE to such a seat, so a recorded game with a
+/// seat holding that many folds under the size it was made under, and stores the handicaps it stored.
+pub fn standard_deck_size(options: &CreateGameOptions, kind: SetupKind) -> i32 {
+    let handicaps = options.handicaps.as_ref();
+    let earlier = PLAYER_IDS.into_iter().enumerate().any(|(seat, player)| {
+        handicaps.and_then(|handicaps| handicaps.get(player)).is_none()
+            && deck_of(options, seat).len() as i32 == EARLIER_DECK_SIZE
+    });
+    if kind == SetupKind::Recorded && earlier {
+        EARLIER_DECK_SIZE
+    } else {
+        DECK_SIZE
+    }
+}
+
+/// R180, R184: every seat's handicap, then every seat's deck against its handicap's size, or
+/// `standard_deck_size` for a seat with none. `customs` are the game's custom definitions
+/// (R915005). `create_game` panics with the message; a caller that must not panic checks this first.
+pub fn validate_setup(
+    options: &CreateGameOptions,
+    catalog: &CardDefs,
+    customs: &IndexMap<String, CardDef>,
+    kind: SetupKind,
+) -> Result<(), EngineError> {
+    let no_handicaps = PerPlayerOpt::default();
+    let handicaps: &PerPlayerOpt<Handicap> = options.handicaps.as_ref().unwrap_or(&no_handicaps);
+    for player in PLAYER_IDS {
+        if let Some(handicap) = handicaps.get(player) {
+            validate_handicap(handicap, player.as_str())?;
+        }
+    }
+    let standard = standard_deck_size(options, kind);
+    for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
+        let size = handicaps.get(player).map_or(standard, |h| h.deck_size);
+        validate_deck_with(deck_of(options, seat), catalog, customs, player.as_str(), size)?;
+    }
+    Ok(())
+}
+
 /// TS's `Pick<GameState, "nextId">`: whatever hands out instance ids. The state does; so does a
 /// bare counter (fuse's scratch numbering, `{ nextId: 0 }` in TS).
 pub trait NextId {
@@ -2006,16 +2061,23 @@ pub fn new_dealt_instance(
 /// human's — carries no `handicap` key and hashes and replays exactly as before the field existed.
 ///
 /// Panics with TS's message on a bad handicap or deck, as TS threw (SURFACE §6.1 fixes the return
-/// type; a caller that must not panic checks `validate_handicap` and `validate_deck` first).
+/// type; a caller that must not panic checks `validate_setup` first).
 pub fn create_game(options: &CreateGameOptions) -> GameState {
-    build_game(options, 1, "")
+    build_game(options, 1, "", SetupKind::New)
+}
+
+/// R1705003: `create_game` for a game already made — a fold, a replay, a summary — which holds a
+/// seat with no handicap to the size the game was made under (`standard_deck_size`), so a game dealt
+/// EARLIER_DECK_SIZE-card decks before #1705 is built again exactly as it was.
+pub fn create_recorded_game(options: &CreateGameOptions) -> GameState {
+    build_game(options, 1, "", SetupKind::Recorded)
 }
 
 /// R676: the new game a Glitch reset deals — `create_game`'s, with ids numbered on from `next_id` in
 /// an order drawn from a stream of this reset's own (R223), so no id the old game showed names a card
 /// of the new one. (TS `createGameForReset(options, { nextId, resets })`.)
 pub fn create_game_for_reset(options: &CreateGameOptions, next_id: u32, resets: i32) -> GameState {
-    build_game(options, next_id, &format!(":reset-{resets}"))
+    build_game(options, next_id, &format!(":reset-{resets}"), SetupKind::Recorded)
 }
 
 fn deck_of(options: &CreateGameOptions, seat: usize) -> &Vec<String> {
@@ -2026,7 +2088,7 @@ fn deck_of(options: &CreateGameOptions, seat: usize) -> &Vec<String> {
     }
 }
 
-fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameState {
+fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: SetupKind) -> GameState {
     let catalog: &CardDefs = match &options.catalog {
         Some(catalog) => catalog,
         None => crate::catalog::registered_catalog(),
@@ -2034,13 +2096,6 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
 
     let no_handicaps = PerPlayerOpt::default();
     let handicaps: &PerPlayerOpt<Handicap> = options.handicaps.as_ref().unwrap_or(&no_handicaps);
-    for player in PLAYER_IDS {
-        if let Some(handicap) = handicaps.get(player)
-            && let Err(error) = validate_handicap(handicap, player.as_str())
-        {
-            panic!("{error}");
-        }
-    }
 
     // R915006: the game's custom cards and their definitions, before the decks that name them.
     let customs: &[CustomCard] = options.custom_cards.as_deref().unwrap_or(&[]);
@@ -2053,18 +2108,10 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         .map(|card| (card.id.clone(), crate::custom::custom_def(card)))
         .collect();
 
-    for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
-        let size = handicaps.get(player).map_or(DECK_SIZE, |h| h.deck_size);
-        if let Err(error) = validate_deck_with(
-            deck_of(options, seat),
-            catalog,
-            &custom_defs,
-            player.as_str(),
-            size,
-        ) {
-            panic!("{error}");
-        }
+    if let Err(error) = validate_setup(options, catalog, &custom_defs, kind) {
+        panic!("{error}");
     }
+    let standard = standard_deck_size(options, kind);
 
     let mut state = GameState {
         seed: options.seed.clone(),
@@ -2157,7 +2204,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         // R290: `heroHealth` joins them only when it moves the hero off HERO_HEALTH, so a tier that does
         // not set it stores exactly what it stored before the field existed.
         if let Some(handicap) = handicaps.get(player)
-            && !is_human_handicap(handicap)
+            && !is_human_handicap(handicap, standard)
         {
             let hero_health = starting_hero_health(Some(handicap));
             side.handicap = Some(Handicap {
@@ -2353,8 +2400,9 @@ mod tests {
             validate_deck(&["core-001".to_string()], &catalog, "p1", DECK_SIZE)
                 .unwrap_err()
                 .message,
-            "p1: deck must hold exactly 20 cards (§2.6 L2), got 1"
+            "p1: deck must hold exactly 25 cards (§2.6 L2), got 1"
         );
-        assert!(is_human_handicap(&HUMAN_HANDICAP));
+        assert!(is_human_handicap(&HUMAN_HANDICAP, DECK_SIZE));
+        assert!(!is_human_handicap(&HUMAN_HANDICAP, EARLIER_DECK_SIZE));
     }
 }

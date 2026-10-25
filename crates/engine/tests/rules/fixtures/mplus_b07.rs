@@ -17,6 +17,8 @@ use jackioh_engine::effects;
 use jackioh_engine::prelude::{draw_priced, fill_board, raise_times_played, set_stats_all, take_to_hand};
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 /// The Attack and Health the set fixtures set, Harmony Spirit's 3/3.
 pub const SET_TO: i32 = 3;
 /// How many plays the camp fixture adds to the summit fixture's count.
@@ -101,18 +103,11 @@ pub static xerox: LazyLock<CardDef> = LazyLock::new(|| card(11859, "xerox", "Spe
 /// A Spell with Cast on draw: 1 damage to the enemy hero, so a draw puts nothing in the hand (R58).
 pub static spark: LazyLock<CardDef> = LazyLock::new(|| card(11860, "spark", "Spell", None, json!([])));
 
-fn both(script: impl Fn() -> Script) -> CardScripts {
-    CardScripts {
-        base: script(),
-        radiant: script(),
-    }
-}
-
 static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     IndexMap::from([
         (
             harmony.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![set_stats_all(json_as(json!({
                         "side": "any",
@@ -126,7 +121,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             banner.id.clone(),
-            both(|| Script {
+            both(Script {
                 aura: Some(aura_hook(|a| {
                     let controller = a.self_.controller;
                     let me = a.self_.id.clone();
@@ -146,7 +141,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             kidnapper.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: vec![TargetDecl::target(
                     1,
                     1,
@@ -160,7 +155,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             snatch.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit"] }))],
                 cry: Some(hook(|_ctx| {
                     vec![take_to_hand(json_as(
@@ -172,7 +167,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             summit.id.clone(),
-            both(|| Script {
+            both(Script {
                 static_flags: Some(StaticFlags {
                     counts_plays: Some(true),
                     ..StaticFlags::default()
@@ -182,7 +177,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             camp.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![
                         raise_times_played(json_as(json!({ "defId": "b7-summit", "amount": RAISE_BY }))),
@@ -194,7 +189,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             party.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![fill_board(json_as(
                         json!({ "defId": "fx-token-rush", "chinese": true }),
@@ -205,7 +200,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             xerox.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![draw_priced(json_as(json!({ "fillWithCopies": true })))]
                 })),
@@ -214,7 +209,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             spark.id.clone(),
-            both(|| Script {
+            both(Script {
                 static_flags: Some(StaticFlags {
                     cast_on_draw: Some(true),
                     ..StaticFlags::default()

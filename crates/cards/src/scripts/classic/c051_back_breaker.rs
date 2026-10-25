@@ -34,6 +34,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -87,10 +88,6 @@ mod tests {
         )
     }
 
-    fn graveyard_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "graveyard").into_iter().map(|card| card.def_id).collect()
-    }
-
     fn hit(s: &mut Scenario, card: &str) {
         let id = s.card(card).id.clone();
         s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": id }] }));
@@ -135,10 +132,10 @@ mod tests {
                 assert_eq!(backrow_ids(&s, P1), vec![None, None, None, None, None]);
                 assert_eq!(backrow_ids(&s, P2), vec![None, None, None, None, None]);
                 for id in [MANA_WELL, SHEEPISH] {
-                    assert!(graveyard_defs(&s, P1).iter().any(|card| card == id));
+                    assert!(def_ids(&s.pile(P1, "graveyard")).iter().any(|card| card == id));
                 }
                 for id in [GOING_LONG, HONEYPOT] {
-                    assert!(graveyard_defs(&s, P2).iter().any(|card| card == id));
+                    assert!(def_ids(&s.pile(P2, "graveyard")).iter().any(|card| card == id));
                 }
             }
 

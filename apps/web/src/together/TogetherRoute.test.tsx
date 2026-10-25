@@ -9,9 +9,8 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
-import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { FRIENDS_POLL_MS } from "./config.ts";
 import { stopFollowingChallenge } from "./follow.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
@@ -94,16 +93,6 @@ function world(over: Partial<World> = {}): World {
   };
 }
 
-function meBody(status: World["status"]) {
-  return {
-    profile: { id: ME.profileId, status },
-    needsInviteCode: status === "pending",
-    emailVerified: true,
-    currentMatchId: null,
-    email: "me@example.test",
-  };
-}
-
 const DECKS = {
   catalogVersion: "v1",
   decks: [{ id: "d-aggro", name: "Aggro", cards: [], catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 }],
@@ -117,7 +106,10 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
     const answer = special?.(call);
     if (answer !== undefined) return answer;
     const { method, path } = call;
-    if (path === "/api/auth/me") return { status: 200, body: meBody(state.status) };
+    if (path === "/api/auth/me") {
+      const profile = { id: ME.profileId, status: state.status };
+      return { status: 200, body: meBody({ profile, needsInviteCode: state.status === "pending", email: "me@example.test" }) };
+    }
     if (method === "GET" && path === "/api/friends") {
       return {
         status: 200,
@@ -145,14 +137,6 @@ function serve(state: World, special?: (call: Call) => Reply | undefined): StubS
   });
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-together" }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
-
 beforeEach(() => {
   window.localStorage.clear();
   resetUsernamePromptForTests();
@@ -176,7 +160,7 @@ afterEach(() => {
 // ---------------------------------------------------------------------------------------------
 
 async function renderPage(state: World = world(), special?: (call: Call) => Reply | undefined): Promise<StubServer> {
-  signedIn();
+  signIn("tok-together");
   const server = serve(state, special);
   render(<TogetherRoute />);
   if (state.friends.length > 0) {
@@ -300,7 +284,7 @@ describe("B54 /together is gated as /play is", () => {
   });
 
   it("B54 a pending account visiting /together lands on /invite, never on the page", async () => {
-    signedIn();
+    signIn("tok-together");
     serve(world({ status: "pending" }));
     at("/together");
     render(<App />);
@@ -311,7 +295,7 @@ describe("B54 /together is gated as /play is", () => {
   });
 
   it("B54 a token the server no longer accepts is the same as having none", async () => {
-    signedIn();
+    signIn("tok-together");
     stubServer((call) =>
       call.path === "/api/auth/me" ? refusal(401, "unauthorized", "Sign in first.") : undefined,
     );
@@ -323,7 +307,7 @@ describe("B54 /together is gated as /play is", () => {
   });
 
   it("B54 an active account stays on /together and gets the page", async () => {
-    signedIn();
+    signIn("tok-together");
     serve(world());
     at("/together");
     render(<App />);
@@ -362,7 +346,7 @@ describe("B55 the friends list", () => {
 
   it("B55 a friends list the server refuses to read draws no friend row and no request control", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    signedIn();
+    signIn("tok-together");
     const server = serve(world(), (call) =>
       call.method === "GET" && call.path === "/api/friends" ? refusal(500, "internal", "Something went wrong.") : undefined,
     );
@@ -379,7 +363,7 @@ describe("B55 the friends list", () => {
 
   it("#1691 a friends list that could not be read offers Try again, which lists the friends", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    signedIn();
+    signIn("tok-together");
     let refused = true;
     const server = serve(world(), (call) =>
       refused && call.method === "GET" && call.path === "/api/friends" ? refusal(500, "internal", "Something went wrong.") : undefined,
@@ -401,7 +385,7 @@ describe("B55 the friends list", () => {
 
   it("#1691 a rate-limited friends list holds Try again", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
-    signedIn();
+    signIn("tok-together");
     serve(world(), (call) =>
       call.method === "GET" && call.path === "/api/friends"
         ? { status: 429, body: { error: { code: "rate_limited", message: "Slow down.", details: { retryAfterMs: 60_000 } } } }

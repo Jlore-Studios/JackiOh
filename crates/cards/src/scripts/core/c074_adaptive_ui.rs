@@ -75,6 +75,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -183,7 +184,7 @@ mod tests {
 
             // Nothing happened: no damage, no heal, no draw, no token, and the card is still in hand.
             s.expect_health(P2, 30).expect_health(P1, 20);
-            let hand: Vec<String> = s.hand(P1).into_iter().map(|card| card.def_id).collect();
+            let hand = def_ids(&s.hand(P1));
             assert_eq!(hand, ["core-074", "core-005"]);
             assert!(s.unit(P1, 1).is_none());
             assert_eq!(s.state().players.p1.turn_log.cards_played, 0);

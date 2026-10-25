@@ -90,6 +90,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -137,7 +138,7 @@ mod tests {
 
             // Indices 5, 11 and 5 (Core, then Meditative: any set counts), skipping 8 and 15.
             assert_eq!(drawn_defs(&s), vec![FIVE, ELEVEN, MED_FIVE]);
-            let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![EIGHT, FIFTEEN, TWENTY_FIVE, NINETEEN]);
         }
 
@@ -156,7 +157,7 @@ mod tests {
             s.play(PRIME, json!({}));
 
             assert_eq!(drawn_defs(&s), vec![FIVE]);
-            let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![RUSH_TOKEN, EIGHT]);
         }
 
@@ -212,7 +213,7 @@ mod tests {
 
             // Nine cards plus the first draw: the other four burn into the graveyard (R4).
             assert_eq!(s.hand(P1).len(), 10);
-            let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![EIGHT]);
             // The graveyard holds the burned four and the resolved Prime Time itself.
             let burned: Vec<String> = s

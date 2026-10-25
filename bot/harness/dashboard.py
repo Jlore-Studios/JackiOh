@@ -297,8 +297,10 @@ def _box(ctx: Context, state: dict[str, Any], provider: Any, now: waiting_mod.No
 
 
 #: The AI's training lanes on the training box that keep a pull request open from `ai/<lane>`
-#: (training/README.md, #1272). The third, `gather`, runs no model and opens none.
-TRAINING_LANES = ("improve", "unban")
+#: (training/README.md, #1272). None since 2026-10-25: #682's audit stopped `improve` and `unban`
+#: (#1677), so the box shows `gather` alone, which runs no model and opens none. A lane named here
+#: again shows its draft.
+TRAINING_LANES: tuple[str, ...] = ()
 #: A training lane's draft unchanged for longer than a session (`training/loop.sh`'s
 #: TRAIN_SESSION_SECONDS, five hours; each session pushes to it as it starts) says the lane stopped.
 TRAINING_STALE = timedelta(hours=6)
@@ -308,7 +310,8 @@ def training_boxes(ctx: Context) -> list[str]:
     """The training box's lanes as a subgraph, read from their pull requests: a draft is a Muse
     session at work (or an idle unban lane, which its title says), one ready for review is a
     promotion waiting on CI, and none is a lane between sessions or stopped. `gather` shows
-    nothing on GitHub. [] when the pull requests cannot be read."""
+    nothing on GitHub. With no lane in `TRAINING_LANES`, the box shows `gather` alone. [] when the
+    pull requests cannot be read."""
     try:
         pulls = {str(p["head"]["ref"]): p for p in ctx.gh.list_pulls(state="open")}
     except GitHubError:
@@ -334,8 +337,9 @@ def training_boxes(ctx: Context) -> list[str]:
     boxes.append(f'        t{len(TRAINING_LANES)}["<b>gather</b><br/>no model, no pull request'
                  '<br/>its log is on the box"]:::closed')
     nodes = range(len(TRAINING_LANES) + 1)
-    return [f'    subgraph training["The training box, on Muse: {working} of '
-            f'{len(TRAINING_LANES)} lanes working"]', "        direction LR", *boxes,
+    title = (f"The training box, on Muse: {working} of {len(TRAINING_LANES)} lanes working"
+             if TRAINING_LANES else "The training box: gather alone, no model")
+    return [f'    subgraph training["{title}"]', "        direction LR", *boxes,
             "        " + " ~~~ ".join(f"t{i}" for i in nodes), "    end"]
 
 
@@ -351,7 +355,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
     runs: dict[str, list[int]] = {}
     for number, provider_id in _by_start(ctx, state, live):
         runs.setdefault(provider_id, []).append(number)
-    # By name (claude-1 to claude-7), so each keeps its place from one rewrite to the next.
+    # By name (claude-1 to claude-8), so each keeps its place from one rewrite to the next.
     hosted = sorted((p for p in pool.ordered() if not pool.on_machine(p.id)), key=lambda p: p.id)
     machine = sorted((p for p in pool.ordered() if pool.on_machine(p.id)), key=lambda p: p.id)
     busy_hosted = sum(1 for p in hosted if runs.get(p.id))

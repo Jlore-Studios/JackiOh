@@ -3,7 +3,8 @@
 //
 // AN INCOMING CHALLENGE is a toast: Accept takes the player to `/play` with the room's code and mode
 // filled in, the way a room link does (R767), where they pick their deck and join; the join is what
-// accepts it (B49). Decline declines it. Either way the toast goes.
+// accepts it (B49). Decline declines it. Either way the toast goes. A screen holding unsaved work asks first,
+// and the toast stays until the player goes (R1754000).
 //
 // AN OUTGOING CHALLENGE is followed: a challenge is a room, so the challenger's game starts when the
 // friend joins it, wherever the challenger is. While the last read held one of theirs (or one was just
@@ -133,12 +134,16 @@ export function ChallengeToast(): ReactElement {
   }, [found]);
 
   const accept = (challenge: Challenge): void => {
-    setAnswered((ids) => including(ids, challenge.challengeId));
     setError(null);
     const target = roomLinkPath(challenge.roomCode, challenge.mode);
     // `/play` reads a room link as it mounts (R767); a lobby already open reads it on a fresh load.
-    if (currentPath() === paths.play) window.location.assign(target);
-    else navigate(target);
+    if (currentPath() === paths.play) {
+      setAnswered((ids) => including(ids, challenge.challengeId));
+      window.location.assign(target);
+      return;
+    }
+    // R1754000: a page holding unsaved work may hold the move; until the player goes, the toast stays to be accepted again.
+    if (navigate(target)) setAnswered((ids) => including(ids, challenge.challengeId));
   };
 
   const decline = (challenge: Challenge): void => {

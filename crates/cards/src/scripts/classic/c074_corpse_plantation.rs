@@ -222,7 +222,7 @@ mod tests {
         assert_eq!(def.id, PLANTATION);
         assert_eq!(
             js(&def.params),
-            json!([{ "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }])
+            json!([{ "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1, "cry": true }])
         );
         let scripts = script();
         let grant = scripts.base.graveyard_play.as_ref().expect("a graveyard permission");

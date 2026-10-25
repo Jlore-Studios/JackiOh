@@ -28,6 +28,7 @@ import Card, * as CardModule from "./Card.tsx";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid, type AnimatingMap, type BoardProps, type ClickTarget, type Highlight } from "./contract.ts";
 import { card, faceUpBackrow, fullBoardView } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 
 afterEach(() => {
   // `globals: false`: @testing-library/react cannot register its own cleanup.
@@ -52,11 +53,6 @@ function renderBoard(view: PlayerView, props: Omit<BoardProps, "view"> = {}, wit
     withCatalog ? <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider> : board,
   );
   return container;
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
 }
 
 function yourUnit(view: PlayerView, lane: number): UnitView {

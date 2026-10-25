@@ -13,6 +13,10 @@
 //
 // REDUCED MOTION (the panel's setting or the system's) shows the results at once: no tear, no flip,
 // no hold and no effects. A skip-all shows the same, with the best card's sting played once.
+//
+// THE KEYBOARD (#1757): the scene is a modal overlay as the inspect views are (`useModalOverlay`): its
+// root takes the focus when it opens and gives it back to the opener when it closes, Tab and Shift+Tab
+// stay inside it, and Escape closes it unless an open request is out, when Close is disabled too.
 
 import {
   useEffect,
@@ -28,7 +32,10 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import { useModalOverlay } from "../cards/inspect/store.ts";
 import OpeningBars from "../economy/OpeningBars.tsx";
+import { portraitOfCosmetic } from "../emotes/ownedPortraits.ts";
+import { PortraitArt } from "../emotes/PortraitArt.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
 import { capacityFor, createFxDirector, type FxDirector } from "../fx/director.ts";
@@ -95,6 +102,10 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
   const director = useRef<FxDirector | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const domRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<HTMLDivElement | null>(null);
+
+  // Focus moves in on open and back out on close, Tab stays inside, and Escape closes as Close does: not while busy.
+  useModalOverlay(onClose, sceneRef, !busy);
 
   // The director lives exactly as long as the canvas and the DOM root it draws into (FxLayer's).
   useLayoutEffect(() => {
@@ -217,6 +228,8 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      ref={sceneRef}
+      tabIndex={-1}
       style={style}
     >
       <h2 className="pack-scene__title">{title}</h2>
@@ -250,6 +263,8 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
           {opened.slots.map((slot, index) => {
             const hold = holdsToFlip(slot.rarity);
             const shown = shows(index);
+            // R1827000: a dropped portrait is an account cosmetic, on no card: its face is the portrait's art.
+            const portrait = slot.grant.kind === "cosmetic" ? portraitOfCosmetic(slot.grant.cosmeticId) : null;
             return (
               <div
                 key={index}
@@ -263,7 +278,11 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                 {shown ? (
                   <>
                     <div className="pack-slot__face">
-                      <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
+                      {portrait === null ? (
+                        <CardFace face={faceModel({ defId: slot.cardId, def: CATALOG[slot.cardId], radiant: false })} />
+                      ) : (
+                        <PortraitArt portrait={portrait} className="pack-slot__portrait" />
+                      )}
                     </div>
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
                       {slotOutcome(slot)}

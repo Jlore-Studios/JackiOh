@@ -566,6 +566,16 @@ pub const REJECTION_ALERT_THRESHOLD: usize = 20;
 /// are kept over, in milliseconds. A minute: abuse inside a live match (§9.8) is bursty, and a
 /// window this wide keeps a rapid test's sends inside one of them.
 pub const REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
+/// SPEC §11 R1717000: how many requests the API's rate limit (`API_REQUESTS_PER_MINUTE`) refuses one
+/// account or address, inside `API_REJECTION_ALERT_WINDOW_MS`, before `api.rejections.unusual` is
+/// raised (§9.8). Twenty, as a seat's (`REJECTION_ALERT_THRESHOLD`): a client that waits out a
+/// refusal's `retryAfterMs` (R192) is refused about once per wait, while a script that ignores it
+/// crosses twenty in a second. Counted strictly over the threshold, so exactly this many stay silent.
+pub const API_REJECTION_ALERT_THRESHOLD: usize = 20;
+/// SPEC §11 R1717000: the rolling window `API_REJECTION_ALERT_THRESHOLD` counts in, in milliseconds,
+/// and the least time between two alerts for one key. A minute, the API limit's own window, so a
+/// sustained flood alerts once a minute.
+pub const API_REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
 /// SPEC §11 R835002: how many malformed frames from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
 /// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
 /// this many, so past it the peer is a flooder, not a bug.
@@ -696,7 +706,7 @@ pub const MAX_SAVED_TRIOS: usize = 5;
 /// Mirrored in `app.settings` (0007).
 pub const DECK_NAME_MAX_LENGTH: usize = 40;
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
-/// most `DECK_SIZE` cards can break D1–D4 about forty times; a request body of junk ids could break
+/// most `DECK_SIZE` cards can break D1–D4 about fifty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
 /// still the error's message, so nothing a player could fix is hidden. A refused custom card's
 /// issues are capped the same way (R915008): a frame of junk keywords breaks §12.2 once per keyword.
@@ -2205,6 +2215,9 @@ pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
 pub const CHAT_RETENTION_DAYS: i64 = 30;
 /// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
 pub const CHAT_PAGE: i64 = 50;
+/// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
+/// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
+pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
 /// B58: how often an open chat panel reads its conversation again.
 pub const CHAT_POLL_MS: i64 = 4_000;
 /// §9.4: how often a signed-in client reads its unread counts and its challenges again (the challenge
@@ -2505,17 +2518,20 @@ pub const SET_TRACK_FIRST_LEVEL: i64 = 1;
 /// R1310000): finished games pay (R1302006), quests arrive (R1304002) and the client prints a full
 /// art only on its owner's own copies (R1313000). Exported to `serverConfig.ts`.
 pub const ECONOMY_LIVE: bool = true;
-/// §14.12, R1310000: the starter cards, what a new account owns on becoming active (R111): the
-/// cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new account can
-/// queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which migration
-/// 0050's launch grant reads, and the in-memory store reads them here. Exported to
-/// `serverConfig.ts`.
+/// §14.12, R1310000, R1705002: the starter cards, what a new account owns on becoming active
+/// (R111): the 50 cards of the three practice presets (`apps/web/src/practice/decks.ts`), so a new
+/// account can queue any of them. `seed-catalog` writes them to `app.settings.starter_cards`, which
+/// migration 0050's launch grant reads, and the in-memory store reads them here; migration 0055
+/// adds the eleven the presets gained at 25 cards to the stored list and grants them to every
+/// active account. Exported to `serverConfig.ts`.
 pub const STARTER_CARDS: &[&str] = &[
-    "core-001", "core-004", "core-005", "core-008", "core-009", "core-011", "core-012", "core-013",
-    "core-014", "core-015", "core-016", "core-019", "core-020", "core-025", "core-030", "core-032",
-    "core-035", "core-036", "core-037", "core-041", "core-044", "core-045", "core-049", "core-053",
-    "core-054", "core-056", "core-058", "core-061", "core-063", "core-066", "core-067", "core-068",
-    "core-069", "core-070", "core-073", "core-074", "core-077", "core-081", "core-088",
+    "core-001", "core-002", "core-003", "core-004", "core-005", "core-008", "core-009", "core-010",
+    "core-011", "core-012", "core-013", "core-014", "core-015", "core-016", "core-019", "core-020",
+    "core-025", "core-030", "core-031", "core-032", "core-034", "core-035", "core-036", "core-037",
+    "core-041", "core-043", "core-044", "core-045", "core-047", "core-049", "core-053", "core-054",
+    "core-056", "core-058", "core-061", "core-063", "core-066", "core-067", "core-068", "core-069",
+    "core-070", "core-072", "core-073", "core-074", "core-077", "core-080", "core-081", "core-088",
+    "core-089", "core-091",
 ];
 
 // ---- The pack roll (SPEC §14.3, #1301) ----

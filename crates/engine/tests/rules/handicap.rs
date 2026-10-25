@@ -3,7 +3,7 @@
 //! Practice gives the AI seat more resources than a human; the tutorial's opponent (AI_TUTORIAL,
 //! R290) gets fewer. A game with no handicap must hash and replay exactly as before the field existed.
 //!
-//! Fixtures: the vanilla catalog (`fx-1`..`fx-40`), the Hinder and Going Long fixtures, and two
+//! Fixtures: the vanilla catalog (`fx-1` up to twice `DECK_SIZE`), the Hinder and Going Long fixtures, and two
 //! cast-on-draw Spells of this file's own (`hc-`, from 2800) for R183's draw chain.
 //!
 //! `create_game` and `fold` panic, caught by `refusal`; `validate_handicap` answers `Result`. A value
@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{round_trip, setup_catalog};
+use crate::rules::fixtures::harness::{both, round_trip, setup_catalog};
 use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 
 type Handicaps = PerPlayerOpt<Handicap>;
@@ -95,13 +95,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn local_scripts() -> IndexMap<String, CardScripts> {
@@ -295,9 +288,20 @@ struct Live {
 
 /// A full random-policy game (§10.7) under these handicaps, as fold must reproduce it. `observe`, when
 /// given, sees the dealt state and every state after it.
-fn play_random(seed: &str, handicaps: Handicaps, mut observe: Option<&mut dyn FnMut(&GameState)>) -> Live {
+fn play_random(seed: &str, handicaps: Handicaps, observe: Option<&mut dyn FnMut(&GameState)>) -> Live {
     let decks = decks_for(Some(&handicaps));
-    let mut state = begin_game(&game(seed, Some(handicaps), Some(decks.clone()))).state;
+    let created = game(seed, Some(handicaps), Some(decks.clone()));
+    play_from(seed, &created, decks, observe)
+}
+
+/// `play_random` from a game already created over `decks`.
+fn play_from(
+    seed: &str,
+    created: &GameState,
+    decks: (Vec<String>, Vec<String>),
+    mut observe: Option<&mut dyn FnMut(&GameState)>,
+) -> Live {
+    let mut state = begin_game(created).state;
     if let Some(observe) = observe.as_deref_mut() {
         observe(&state);
     }
@@ -432,7 +436,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
         assert_eq!(
             AI_DIFFICULTY.medium,
             Handicap {
-                deck_size: 25,
+                deck_size: 30,
                 mana_bonus: 1,
                 mana_cap: 5,
                 extra_opening_cards: 1,
@@ -443,7 +447,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
         assert_eq!(
             AI_DIFFICULTY.hard,
             Handicap {
-                deck_size: 30,
+                deck_size: 35,
                 mana_bonus: 1,
                 mana_cap: 7,
                 extra_opening_cards: 1,
@@ -463,7 +467,7 @@ mod r180_handicaps_the_table_the_default_and_replay {
     }
 
     #[test]
-    fn r180_b8_every_tiers_handicap_is_a_valid_one_and_easys_deck_is_the_loadouts_20() {
+    fn r180_b8_every_tiers_handicap_is_a_valid_one_and_easys_deck_is_the_loadouts_25() {
         for &difficulty in DIFFICULTIES {
             assert!(state::validate_handicap(&AI_DIFFICULTY[difficulty], difficulty.as_str()).is_ok());
         }
@@ -686,20 +690,20 @@ mod r180_handicaps_the_table_the_default_and_replay {
     }
 
     #[test]
-    fn r180_b7_the_same_fold_without_the_handicaps_throws_on_the_25_or_30_card_deck() {
+    fn r180_b7_the_same_fold_without_the_handicaps_throws_on_the_30_or_35_card_deck() {
         let medium = play_random("r180-fold-missing-medium", on_p2(AI_DIFFICULTY.medium), None);
         register_all();
         let message = refusal(|| {
             fold_with("r180-fold-missing-medium", &medium, None);
         });
-        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 20")));
+        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 25")));
 
         let hard = play_random("r180-fold-missing-hard", on_p1(AI_DIFFICULTY.hard), None);
         register_all();
         let message = refusal(|| {
             fold_with("r180-fold-missing-hard", &hard, None);
         });
-        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 20")));
+        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 25")));
     }
 
     #[test]
@@ -1343,25 +1347,25 @@ mod r184_deck_size_for_a_handicapped_seat {
     use super::*;
 
     #[test]
-    fn r184_b2_a_hard_p2_takes_a_30_card_distinct_token_free_deck_a_medium_p2_a_25_card_one() {
+    fn r184_b2_a_hard_p2_takes_a_35_card_distinct_token_free_deck_a_medium_p2_a_30_card_one() {
         let hard = game(
             "r184-hard",
             Some(on_p2(AI_DIFFICULTY.hard)),
-            Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(30, 1))),
+            Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(35, 1))),
         );
-        assert_eq!(hard.players.p2.library.len(), 30);
+        assert_eq!(hard.players.p2.library.len(), 35);
         assert_eq!(hard.players.p1.library.len(), DECK_SIZE as usize);
 
         let medium = game(
             "r184-medium",
             Some(on_p2(AI_DIFFICULTY.medium)),
-            Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(25, 1))),
+            Some((vanilla_deck(DECK_SIZE, 1), vanilla_deck(30, 1))),
         );
-        assert_eq!(medium.players.p2.library.len(), 25);
+        assert_eq!(medium.players.p2.library.len(), 30);
     }
 
     #[test]
-    fn r184_b2_a_hard_p2_with_a_20_card_deck_is_refused_naming_the_seat_and_its_handicap() {
+    fn r184_b2_a_hard_p2_with_a_25_card_deck_is_refused_naming_the_seat_and_its_handicap() {
         register_all();
         let message = create_refusal(options(
             "r184-short",
@@ -1369,21 +1373,21 @@ mod r184_deck_size_for_a_handicapped_seat {
             on_p2(AI_DIFFICULTY.hard),
         ));
         assert!(
-            message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards (its handicap, R184)"))
+            message.is_some_and(|m| m.contains("p2: deck must hold exactly 35 cards (its handicap, R184)"))
         );
     }
 
     #[test]
     fn r184_b2_one_card_short_or_over_is_refused_for_a_hard_p2() {
         register_all();
-        for size in [29, 31] {
+        for size in [34, 36] {
             let message = create_refusal(options(
                 &format!("r184-{size}"),
                 (vanilla_deck(DECK_SIZE, 1), vanilla_deck(size, 1)),
                 on_p2(AI_DIFFICULTY.hard),
             ));
             assert!(
-                message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards")),
+                message.is_some_and(|m| m.contains("p2: deck must hold exactly 35 cards")),
                 "{size} cards"
             );
         }
@@ -1392,7 +1396,7 @@ mod r184_deck_size_for_a_handicapped_seat {
     #[test]
     fn r184_b2_a_card_missing_from_the_catalog_in_the_hard_deck_is_refused_naming_the_seat() {
         register_all();
-        let mut with_ghost = vanilla_deck(29, 1);
+        let mut with_ghost = vanilla_deck(34, 1);
         with_ghost.push("fx-does-not-exist".to_string());
         let message = create_refusal(options(
             "r184-ghost",
@@ -1403,61 +1407,61 @@ mod r184_deck_size_for_a_handicapped_seat {
     }
 
     #[test]
-    fn r184_b2_an_easy_handicap_keeps_the_20_card_rule_so_a_25_card_deck_is_refused_with_s2_6s_message() {
+    fn r184_b2_an_easy_handicap_keeps_the_25_card_rule_so_a_30_card_deck_is_refused_with_s2_6s_message() {
         register_all();
         let message = create_refusal(options(
             "r184-easy",
-            (vanilla_deck(DECK_SIZE, 1), vanilla_deck(25, 1)),
+            (vanilla_deck(DECK_SIZE, 1), vanilla_deck(30, 1)),
             on_p2(AI_DIFFICULTY.easy),
         ));
-        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 20 cards (§2.6 L2)")));
+        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 25 cards (§2.6 L2)")));
     }
 
     #[test]
-    fn r184_b2_a_medium_p1_takes_25_cards_while_the_human_p2_is_still_held_to_20() {
+    fn r184_b2_a_medium_p1_takes_30_cards_while_the_human_p2_is_still_held_to_25() {
         let state = game(
             "r184-medium-p1",
             Some(on_p1(AI_DIFFICULTY.medium)),
-            Some((vanilla_deck(25, 1), vanilla_deck(DECK_SIZE, 1))),
+            Some((vanilla_deck(30, 1), vanilla_deck(DECK_SIZE, 1))),
         );
-        assert_eq!(state.players.p1.library.len(), 25);
+        assert_eq!(state.players.p1.library.len(), 30);
         assert_eq!(state.players.p2.library.len(), DECK_SIZE as usize);
 
         register_all();
         let message = create_refusal(options(
             "r184-medium-p1-bad",
-            (vanilla_deck(25, 1), vanilla_deck(25, 1)),
+            (vanilla_deck(30, 1), vanilla_deck(30, 1)),
             on_p1(AI_DIFFICULTY.medium),
         ));
-        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 20 cards (§2.6 L2)")));
+        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 25 cards (§2.6 L2)")));
     }
 
     #[test]
-    fn r184_b2_a_medium_p2_with_a_30_card_deck_is_refused() {
+    fn r184_b2_a_medium_p2_with_a_35_card_deck_is_refused() {
         register_all();
         let message = create_refusal(options(
             "r184-long",
-            (vanilla_deck(DECK_SIZE, 1), vanilla_deck(30, 1)),
+            (vanilla_deck(DECK_SIZE, 1), vanilla_deck(35, 1)),
             on_p2(AI_DIFFICULTY.medium),
         ));
-        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 25 cards")));
+        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 30 cards")));
     }
 
     #[test]
-    fn r184_b2_the_unhandicapped_p1_is_still_held_to_20_with_s2_6s_own_message() {
+    fn r184_b2_the_unhandicapped_p1_is_still_held_to_25_with_s2_6s_own_message() {
         register_all();
         let message = create_refusal(options(
             "r184-p1",
-            (vanilla_deck(30, 1), vanilla_deck(30, 1)),
+            (vanilla_deck(35, 1), vanilla_deck(35, 1)),
             on_p2(AI_DIFFICULTY.hard),
         ));
-        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 20 cards (§2.6 L2)")));
+        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 25 cards (§2.6 L2)")));
     }
 
     #[test]
     fn r184_b2_a_duplicate_id_in_the_hard_deck_is_refused_naming_the_seat() {
         register_all();
-        let mut with_duplicate = vanilla_deck(29, 1);
+        let mut with_duplicate = vanilla_deck(34, 1);
         with_duplicate.push("fx-1".to_string());
         let message = create_refusal(options(
             "r184-dup",
@@ -1470,7 +1474,7 @@ mod r184_deck_size_for_a_handicapped_seat {
     #[test]
     fn r184_b2_a_token_card_in_the_hard_deck_is_refused_naming_the_seat() {
         register_all();
-        let mut with_token = vanilla_deck(29, 1);
+        let mut with_token = vanilla_deck(34, 1);
         with_token.push(token_def("rush", [Tag::Token]).id);
         let message = create_refusal(options(
             "r184-token",
@@ -1482,7 +1486,7 @@ mod r184_deck_size_for_a_handicapped_seat {
 
     #[test]
     fn r184_b2_validate_deck_holds_any_size_exactly_one_card_for_a_size_of_1_none_refused() {
-        let catalog = vanilla_catalog(40, 1);
+        let catalog = vanilla_catalog(2 * DECK_SIZE, 1);
         assert!(state::validate_deck(&["fx-1".to_string()], &catalog, "p2", 1).is_ok());
         assert!(state::validate_deck(&[], &catalog, "p2", 1).is_err_and(|e| e.message.contains("p2")));
         assert!(
@@ -1494,23 +1498,26 @@ mod r184_deck_size_for_a_handicapped_seat {
     #[test]
     fn r184_b2_validate_deck_keeps_s2_6s_message_byte_identical_at_deck_size_and_names_r184_at_any_other_size()
      {
-        let catalog = vanilla_catalog(40, 1);
+        let catalog = vanilla_catalog(2 * DECK_SIZE, 1);
         assert!(state::validate_deck(&vanilla_deck(DECK_SIZE, 1), &catalog, "p1", DECK_SIZE).is_ok());
         assert!(state::validate_deck(&vanilla_deck(DECK_SIZE, 1), &catalog, "p1", DECK_SIZE).is_ok());
         assert!(state::validate_deck(&vanilla_deck(30, 1), &catalog, "p2", 30).is_ok());
 
-        let via_validate = state::validate_deck(&vanilla_deck(19, 1), &catalog, "p1", DECK_SIZE)
+        let via_validate = state::validate_deck(&vanilla_deck(DECK_SIZE - 1, 1), &catalog, "p1", DECK_SIZE)
             .err()
             .map(|error| error.message)
             .unwrap_or_default();
         let via_create = create_refusal(CreateGameOptions {
             seed: "r184-msg".to_string(),
-            decks: (vanilla_deck(19, 1), vanilla_deck(DECK_SIZE, 21)),
+            decks: (
+                vanilla_deck(DECK_SIZE - 1, 1),
+                vanilla_deck(DECK_SIZE, DECK_SIZE + 1),
+            ),
             catalog: Some(catalog.clone()),
             ..Default::default()
         })
         .unwrap_or_default();
-        assert!(via_validate.contains("exactly 20 cards (§2.6 L2)"));
+        assert!(via_validate.contains("exactly 25 cards (§2.6 L2)"));
         assert!(!via_validate.contains("R184"));
         assert_eq!(via_create, via_validate);
 
@@ -1521,7 +1528,7 @@ mod r184_deck_size_for_a_handicapped_seat {
         );
         assert!(
             state::validate_deck(&vanilla_deck(30, 1), &catalog, "p2", DECK_SIZE)
-                .is_err_and(|e| e.message.contains("exactly 20 cards (§2.6 L2)"))
+                .is_err_and(|e| e.message.contains("exactly 25 cards (§2.6 L2)"))
         );
     }
 }
@@ -1690,7 +1697,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_create_game_a_tutorial_p1_is_the_same_and_the_p2_human_keeps_hero_health_and_its_20_cards() {
+    fn r290_create_game_a_tutorial_p1_is_the_same_and_the_p2_human_keeps_hero_health_and_its_25_cards() {
         let state = game("r290-create-p1", Some(on_p1(AI_TUTORIAL)), None);
         assert_eq!(state.players.p1.library.len(), AI_TUTORIAL.deck_size as usize);
         assert_eq!(state.players.p2.library.len(), DECK_SIZE as usize);
@@ -1701,7 +1708,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
     }
 
     #[test]
-    fn r290_a_tutorial_seats_deck_is_held_to_exactly_12_r184_20_11_or_13_cards_are_refused_and_the_human_is_still_held_to_20()
+    fn r290_a_tutorial_seats_deck_is_held_to_exactly_12_r184_25_11_or_13_cards_are_refused_and_the_human_is_still_held_to_25()
      {
         register_all();
         for size in [DECK_SIZE, AI_TUTORIAL.deck_size - 1, AI_TUTORIAL.deck_size + 1] {
@@ -1724,7 +1731,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
             ),
             on_p2(AI_TUTORIAL),
         ));
-        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 20 cards (§2.6 L2)")));
+        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 25 cards (§2.6 L2)")));
     }
 
     #[test]
@@ -1886,7 +1893,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         for hero_health in [0, -1] {
             let message = create_refusal(options(
                 "r290-bad-health",
-                // A 20-card p2 deck is wrong for AI_TUTORIAL too; the handicap is named first (R180).
+                // A DECK_SIZE-card p2 deck is wrong for AI_TUTORIAL too; the handicap is named first (R180).
                 (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 1)),
                 on_p2(Handicap {
                     hero_health: Some(hero_health),
@@ -2003,7 +2010,7 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         let message = refusal(|| {
             fold_with(seed, &live, None);
         });
-        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 20")));
+        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 25")));
 
         let forgot = fold_with(seed, &live, Some(on_p2(without_hero_health(AI_TUTORIAL))));
         let same = forgot.errors.is_empty() && hash_state(&forgot.state) == hash_state(&live.state);
@@ -2075,5 +2082,170 @@ mod r290_the_tutorial_handicap_ai_tutorial {
         assert_eq!(sink.state.players.p2.hero.health, HERO_HEALTH);
         // The stored handicap is untouched by either: its heroHealth records where the hero started.
         assert_eq!(sink.state.players.p2.handicap, Some(AI_TUTORIAL));
+    }
+}
+
+// R1705000, R1705003, R1705005: the standard deck of 25 (#1705), the games made before it and a
+// lesson's human seat.
+
+mod r1705000_the_standard_deck_holds_25_cards {
+    use super::*;
+
+    #[test]
+    fn r1705000_create_game_holds_a_seat_with_no_handicap_to_25_cards() {
+        register_all();
+        assert_eq!(DECK_SIZE, 25);
+        for size in [EARLIER_DECK_SIZE, DECK_SIZE + 1] {
+            for (decks, seat) in [
+                ((vanilla_deck(size, 1), vanilla_deck(DECK_SIZE, 1)), "p1"),
+                ((vanilla_deck(DECK_SIZE, 1), vanilla_deck(size, 1)), "p2"),
+            ] {
+                let message = create_refusal(CreateGameOptions {
+                    seed: format!("r1705000-{seat}-{size}"),
+                    decks,
+                    ..Default::default()
+                });
+                let expected = format!("{seat}: deck must hold exactly 25 cards (§2.6 L2), got {size}");
+                assert!(
+                    message.is_some_and(|m| m.contains(&expected)),
+                    "{seat}, {size} cards"
+                );
+            }
+        }
+        let state = game("r1705000-25", None, None);
+        assert_eq!(state.players.p1.library.len(), 25);
+        assert_eq!(state.players.p2.library.len(), 25);
+        assert!(state.players.p1.handicap.is_none() && state.players.p2.handicap.is_none());
+    }
+
+    #[test]
+    fn r1705000_medium_and_hard_hold_five_and_ten_more_than_a_human() {
+        assert_eq!((MEDIUM_EXTRA_DECK_CARDS, HARD_EXTRA_DECK_CARDS), (5, 10));
+        assert_eq!(
+            AI_DIFFICULTY.medium.deck_size,
+            DECK_SIZE + MEDIUM_EXTRA_DECK_CARDS
+        );
+        assert_eq!(AI_DIFFICULTY.hard.deck_size, DECK_SIZE + HARD_EXTRA_DECK_CARDS);
+        assert_eq!(AI_DIFFICULTY.easy, HUMAN_HANDICAP);
+        assert_eq!(HUMAN_HANDICAP.deck_size, 25);
+        assert_eq!(AI_TUTORIAL.deck_size, 12);
+        for (difficulty, size) in [
+            (Difficulty::Easy, 25),
+            (Difficulty::Medium, 30),
+            (Difficulty::Hard, 35),
+        ] {
+            let state = game(
+                &format!("r1705000-{}", difficulty.as_str()),
+                Some(on_p2(AI_DIFFICULTY[difficulty])),
+                None,
+            );
+            assert_eq!(state.players.p2.library.len(), size, "{}", difficulty.as_str());
+            assert_eq!(state.players.p1.library.len(), 25, "{}", difficulty.as_str());
+        }
+    }
+}
+
+mod r1705003_a_game_made_before_1705_folds_as_it_was_made {
+    use super::*;
+
+    /// A human's handicap as it was before #1705, as a practice game handed an Easy seat.
+    const EARLIER_HUMAN: Handicap = Handicap {
+        deck_size: EARLIER_DECK_SIZE,
+        ..HUMAN_HANDICAP
+    };
+
+    #[test]
+    fn r1705003_a_recorded_twenty_card_game_folds_as_it_was_made() {
+        register_all();
+        let seed = "r1705003-earlier";
+        let decks = (
+            vanilla_deck(EARLIER_DECK_SIZE, 1),
+            vanilla_deck(EARLIER_DECK_SIZE, 1),
+        );
+        let options = |handicaps: Option<Handicaps>| CreateGameOptions {
+            seed: seed.to_string(),
+            decks: decks.clone(),
+            handicaps,
+            ..Default::default()
+        };
+
+        // A new game may no longer be dealt them...
+        let message = create_refusal(options(None));
+        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 25 cards (§2.6 L2), got 20")));
+        let message = create_refusal(options(Some(on_p2(EARLIER_HUMAN))));
+        assert!(message.is_some_and(|m| m.contains("p1: deck must hold exactly 25 cards (§2.6 L2), got 20")));
+
+        // ...but a game made with them is built again as it was: no handicap stored, as before #1705.
+        let made = create_recorded_game(&options(None));
+        assert_eq!(made.players.p1.library.len(), 20);
+        assert!(made.players.p1.handicap.is_none() && made.players.p2.handicap.is_none());
+        let with_earlier_human = create_recorded_game(&options(Some(on_p2(EARLIER_HUMAN))));
+        assert!(with_earlier_human.players.p2.handicap.is_none());
+        assert_eq!(hash_state(&with_earlier_human), hash_state(&made));
+
+        let live = play_from(seed, &made, decks.clone(), None);
+        register_all();
+        for handicaps in [None, Some(on_p2(EARLIER_HUMAN)), Some(on_p1(EARLIER_HUMAN))] {
+            let label = format!("{handicaps:?}");
+            let folded = fold_with(seed, &live, handicaps);
+            assert!(folded.errors.is_empty(), "{label}");
+            assert_eq!(hash_state(&folded.state), hash_state(&live.state), "{label}");
+            assert!(folded.state.players.p2.handicap.is_none(), "{label}");
+        }
+
+        // A recorded game of today's decks is held to today's size, and today's human handicap stores
+        // nothing in it.
+        let today = create_recorded_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: decks_for(None),
+            handicaps: Some(on_p2(HUMAN_HANDICAP)),
+            ..Default::default()
+        });
+        assert!(today.players.p2.handicap.is_none());
+        let message = refusal(|| {
+            create_recorded_game(&CreateGameOptions {
+                seed: seed.to_string(),
+                decks: (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE + 1, 1)),
+                ..Default::default()
+            });
+        });
+        assert!(message.is_some_and(|m| m.contains("p2: deck must hold exactly 25 cards (§2.6 L2), got 26")));
+    }
+}
+
+mod r1705005_a_lessons_human_seat_under_tutorial_human {
+    use super::*;
+
+    #[test]
+    fn r1705005_tutorial_human_is_stored_live_and_folded_alike() {
+        assert_eq!(
+            TUTORIAL_HUMAN,
+            Handicap {
+                deck_size: EARLIER_DECK_SIZE,
+                ..HUMAN_HANDICAP
+            }
+        );
+        assert!(state::validate_handicap(&TUTORIAL_HUMAN, "p1").is_ok());
+
+        let seed = "r1705005-lesson";
+        let handicaps = on_both(TUTORIAL_HUMAN, AI_TUTORIAL);
+        let decks = decks_for(Some(&handicaps));
+        assert_eq!(decks.0.len(), 20);
+        let created = game(seed, Some(handicaps.clone()), Some(decks.clone()));
+        // A human's resources at another deck size than DECK_SIZE is no human's handicap: it is stored.
+        assert_eq!(created.players.p1.handicap, Some(TUTORIAL_HUMAN));
+        assert_eq!(created.players.p2.handicap, Some(AI_TUTORIAL));
+
+        let live = play_from(seed, &created, decks, None);
+        register_all();
+        let folded = fold_with(seed, &live, Some(handicaps));
+        assert!(folded.errors.is_empty());
+        assert_eq!(hash_state(&folded.state), hash_state(&live.state));
+        assert_eq!(folded.state.players.p1.handicap, Some(TUTORIAL_HUMAN));
+
+        // Folded without the human seat's handicap, it is a game made before #1705 (R1705003): a
+        // different game, so no hash of a lesson played since matches it.
+        let forgot = fold_with(seed, &live, Some(on_p2(AI_TUTORIAL)));
+        assert!(!(forgot.errors.is_empty() && hash_state(&forgot.state) == hash_state(&live.state)));
     }
 }

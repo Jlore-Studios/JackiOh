@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PlayRatesResponse } from "../net/api.ts";
 import { POCKET_PICK_MIN_GAMES, POCKET_PICK_MIN_PLAYS } from "./config.ts";
-import { NO_COUNTS, type PlayerStats } from "./model.ts";
+import { EMPTY_STATS, NO_COUNTS, type PlayerStats } from "./model.ts";
 import { loadPocketPick, pocketPick } from "./pocketPick.ts";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -12,7 +12,7 @@ afterEach(() => vi.unstubAllGlobals());
 /** A device tally of `games` games, each card played as many times as `played` says. */
 function tally(games: number, played: Record<string, number>): PlayerStats {
   const cards = Object.fromEntries(Object.entries(played).map(([id, n]) => [id, { ...NO_COUNTS, played: n }]));
-  return { games, wins: 0, losses: 0, draws: 0, cards };
+  return { ...EMPTY_STATS, games, cards };
 }
 
 /** The server's play rates, each card at the rate given, in key order. */

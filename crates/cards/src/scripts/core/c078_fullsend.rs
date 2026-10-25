@@ -93,6 +93,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -283,13 +284,13 @@ mod tests {
             crate::register_all();
             let mut s = board(false);
             s.play(FULLSEND, json!({}));
-            let left: Vec<String> = s.pile(P1, "hand").iter().map(|card| card.def_id.clone()).collect();
+            let left = def_ids(&s.pile(P1, "hand"));
             assert!(!left.is_empty());
 
             s.end_turn();
 
             assert_eq!(s.pile(P1, "hand").len(), 0);
-            let mut exiled: Vec<String> = s.pile(P1, "exile").iter().map(|card| card.def_id.clone()).collect();
+            let mut exiled = def_ids(&s.pile(P1, "exile"));
             exiled.sort();
             let mut expected = left.clone();
             expected.sort();
@@ -451,12 +452,12 @@ mod tests {
             crate::register_all();
             let mut s = board(true);
             s.play(FULLSEND, json!({}));
-            let left: Vec<String> = s.pile(P1, "hand").iter().map(|card| card.def_id.clone()).collect();
+            let left = def_ids(&s.pile(P1, "hand"));
 
             s.end_turn();
 
             assert_eq!(s.pile(P1, "hand").len(), 0);
-            let mut exiled: Vec<String> = s.pile(P1, "exile").iter().map(|card| card.def_id.clone()).collect();
+            let mut exiled = def_ids(&s.pile(P1, "exile"));
             exiled.sort();
             let mut expected = left.clone();
             expected.sort();

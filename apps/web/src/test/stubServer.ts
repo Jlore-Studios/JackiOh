@@ -1,12 +1,16 @@
 // A stubbed `fetch` for the Play together tests (#936): every request is recorded with its method,
 // path, query, headers and JSON body, and answered by the test's handler, or by a 404 `not_found`
-// when the handler has no answer. Test support only; no component imports it.
+// when the handler has no answer. Beside it, the helpers most of the web's tests share (#1799):
+// `must`, `jsonResponse`, `at`, `signIn` and `meBody`. Test support only; no component imports it.
 //
 // A refusal carries its code twice: inside `error`, the shape `crates/server/src/api/http.rs`
 // answers with and `net/api.ts` reads, and at the top level, as SPEC S6/S7 write it
 // (`409 {code:"full"}`), so a wrapper reading either finds it.
 
 import { vi } from "vitest";
+
+import type { MeResponse } from "../net/api.ts";
+import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 
 export type Call = {
   method: string;
@@ -95,6 +99,31 @@ export function stubServer(handler: Handler): StubServer {
 export function must<T>(value: T | null | undefined, what: string): T {
   if (value === null || value === undefined) throw new Error(`missing: ${what}`);
   return value;
+}
+
+/** Move the page to `path` (with any query and hash) without a navigation or a history entry. */
+export function at(path: string): void {
+  window.history.replaceState(null, "", path);
+}
+
+/**
+ * Sign a test player in: the e2e session the M8 specs seed in `cy.visit`'s `onBeforeLoad`
+ * (`net/session.ts`, e2e/README.md A6).
+ */
+export function signIn(token = "e2e-token"): void {
+  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
+}
+
+/** `GET /api/auth/me`'s answer: an active, verified player in no match, but for what `over` replaces. */
+export function meBody(over: Partial<MeResponse> = {}): MeResponse {
+  return {
+    profile: { id: "profile-1", status: "active" },
+    needsInviteCode: false,
+    emailVerified: true,
+    currentMatchId: null,
+    email: "player@example.test",
+    ...over,
+  };
 }
 
 /** `n` as a whole number somewhere in `text` ("14" in "14 / 20", not in "114"). */

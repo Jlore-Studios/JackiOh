@@ -13,6 +13,8 @@ use jackioh_engine::effects;
 use jackioh_engine::prelude::{freeze, freeze_all};
 use jackioh_engine::testkit::*;
 
+use super::harness::both;
+
 fn def(index: u32, name: &str, type_: &str, keywords: Value) -> CardDef {
     let (face, radiant) = if type_ == "Unit" {
         (
@@ -67,13 +69,6 @@ pub static rally: LazyLock<CardDef> = LazyLock::new(|| def(11750, "rally", "Spel
 pub static warded: LazyLock<CardDef> =
     LazyLock::new(|| def(11751, "warded", "Unit", json!([{ "kind": "Immune to Spells" }])));
 
-fn both(script: impl Fn() -> Script) -> CardScripts {
-    CardScripts {
-        base: script(),
-        radiant: script(),
-    }
-}
-
 /// A declared pick of one Unit, either side.
 fn a_unit() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "of": ["unit"] }))]
@@ -87,7 +82,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     IndexMap::from([
         (
             chill.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))],
                 cry: Some(hook(|_ctx| vec![freeze(json_as(chosen()))])),
                 ..Script::default()
@@ -95,21 +90,21 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             blizzard.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| vec![freeze_all(json_as(json!({ "side": "enemy" })))])),
                 ..Script::default()
             }),
         ),
         (
             frost.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| vec![freeze_all(json_as(json!({ "side": "enemy" })))])),
                 ..Script::default()
             }),
         ),
         (
             shiver.id.clone(),
-            both(|| Script {
+            both(Script {
                 end_of_turn: Some(hook(|_ctx| {
                     vec![
                         freeze_all(json_as(json!({ "side": "self", "excludeSelf": true }))),
@@ -121,7 +116,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             ice_trap.id.clone(),
-            both(|| Script {
+            both(Script {
                 triggers: vec![
                     TriggerDef::new("ice", &[GameEventType::AttackDeclared], |_ctx, event| {
                         let GameEvent::AttackDeclared { attacker_id, .. } = event else {
@@ -140,7 +135,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             grab.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: a_unit(),
                 cry: Some(hook(|_ctx| vec![effects::steal(json_as(chosen()))])),
                 ..Script::default()
@@ -148,7 +143,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             hush.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: a_unit(),
                 cry: Some(hook(|_ctx| vec![effects::vanilla(json_as(chosen()))])),
                 ..Script::default()
@@ -156,7 +151,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             recall.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: a_unit(),
                 cry: Some(hook(|_ctx| vec![effects::bounce(json_as(chosen()))])),
                 ..Script::default()
@@ -164,7 +159,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             shove.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: a_unit(),
                 cry: Some(hook(|_ctx| vec![effects::switch_position_of(json_as(chosen()))])),
                 ..Script::default()
@@ -172,7 +167,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             goad.id.clone(),
-            both(|| Script {
+            both(Script {
                 cry: Some(hook(|_ctx| {
                     vec![effects::forced_attacks_on(json_as(
                         json!({ "target": { "of": "enemyHero" }, "attackers": "self" }),
@@ -183,7 +178,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             rally.id.clone(),
-            both(|| Script {
+            both(Script {
                 targets: a_unit(),
                 cry: Some(hook(|_ctx| vec![effects::may_attack_again(json_as(chosen()))])),
                 ..Script::default()

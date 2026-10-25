@@ -3,10 +3,11 @@
 
 import type { ActionBody, ActivationView, PlayerView, Selection } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setAudioEngineForTests } from "../../audio/engine.ts";
 import { resetAudioSettingsForTests } from "../../audio/settings.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "../../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../../audio/types.ts";
 import Game from "../../game/Game.tsx";
 import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
@@ -74,30 +75,7 @@ const el = (testid: string): HTMLElement => screen.getByTestId(testid);
 
 // Audio engine.
 
-type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
-
-function fakeEngine(): FakeEngine {
-  return {
-    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
-    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
-    state: vi.fn<AudioEngine["state"]>(() => "running"),
-    unlock: vi.fn<AudioEngine["unlock"]>(),
-    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-    setBusy: vi.fn<AudioEngine["setBusy"]>(),
-    log: vi.fn<AudioEngine["log"]>(() => []),
-    clearLog: vi.fn<AudioEngine["clearLog"]>(),
-    contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 1),
-    speaking: vi.fn<AudioEngine["speaking"]>(() => false),
-    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
-    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-    dispose: vi.fn<AudioEngine["dispose"]>(),
-  };
-}
-
-let engine: FakeEngine;
+let engine: FakeAudioEngine;
 
 const pickups = (): string[] => engine.playPickup.mock.calls.map((call) => call[0]);
 
@@ -135,7 +113,7 @@ beforeEach(() => {
   document.elementsFromPoint = (() => under) as Document["elementsFromPoint"];
   localStorage.clear();
   resetAudioSettingsForTests();
-  engine = fakeEngine();
+  engine = fakeAudioEngine({ contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 1) });
   setAudioEngineForTests(engine);
 });
 
@@ -372,15 +350,26 @@ describe("R655 click-click: choosing your attacker is a pick-up", () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  it("R655 a click that leaves the chosen attacker chosen (your own Unit, not its target) plays nothing more", () => {
+  it("R655 a click that leaves the chosen attacker chosen (your own Unit with no attack, not its target) plays nothing more", () => {
     const { onAction } = renderGame();
 
     fireEvent.click(el("card-u1"));
     fireEvent.click(el("card-u2"));
-    fireEvent.click(el("card-u3"));
 
     expect(el("card-u1")).toHaveAttribute("data-selected", "true");
     expect(pickups()).toEqual([ROCK]);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R655 a click on another of your attackers switches the choice and plays the pick-up again", () => {
+    const { onAction } = renderGame();
+
+    fireEvent.click(el("card-u1"));
+    fireEvent.click(el("card-u3"));
+
+    expect(el("card-u1")).not.toHaveAttribute("data-selected");
+    expect(el("card-u3")).toHaveAttribute("data-selected", "true");
+    expect(pickups()).toEqual([ROCK, TIMMY]);
     expect(onAction).not.toHaveBeenCalled();
   });
 

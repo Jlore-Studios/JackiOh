@@ -13,8 +13,11 @@
 //! next-turn rider (§2.3). #1506 weighs the cards dormant under a side's Stack piles (§3.2, R13):
 //! the seat's own unit piles card by card, every other pile by its count (R447). #1602 prices three
 //! facts both seats see: the cost an enemy face-down card shows (R351), the fatigue draws a side has
-//! taken (§2.4) and Windfury (R636). It reads only what the seat may know or what a determinization
-//! sampled, and nothing here reads a handicap or a difficulty (R180).
+//! taken (§2.4) and Windfury (R636). #1722 prices what a side holds in its player modifiers, public on
+//! both seats (R169): its rest-of-game start-of-turn effects (R458) and its closest alternative win
+//! (R848), and a delayed discard of its hand (Classic #37 Last Hurrah) as a discount on that hand. It
+//! reads only what the seat may know or what a determinization sampled, and nothing here reads a
+//! handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
@@ -22,14 +25,15 @@
 use jackioh_engine::config::{
     DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
 };
-use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
+use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
-    AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword, KeywordKind, PlayerId,
-    PlayerState, Position, UnitView, active_brittle_count, active_units_of, animated_kind_of, armor_of,
-    attack_restriction, attacks_per_turn, backrow_is_public, cannot_attack, card_keywords, card_type_of_face,
-    credit_lapsing, effective_cost, effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of,
-    is_temporary_card, lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
-    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
+    AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
+    KeywordKind, ModifierKind, PlayerId, PlayerState, Position, UnitView, active_brittle_count,
+    active_units_of, animated_kind_of, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
+    board_totals, cannot_attack, card_keywords, card_type_of_face, credit_lapsing, effective_cost,
+    effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card,
+    lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs,
+    subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -203,7 +207,13 @@ fn face_uplift(state: &GameState, card: &CardInstance, def: &CardDef, w: &EvalWe
 /// An own hand card, a Temporary one (R637) at `temporary_discount` off, a Radiant one with
 /// `radiant_in_hand` for its Radiant text, and one with two Unit faces with `radiant_face_share` of
 /// what the face it will enter with adds to its printed one (`face_uplift`, #1143).
-fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+pub(crate) fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
+    doomed_hand_card_value(state, card, false, w)
+}
+
+/// `hand_card_value`, #1722: while a delayed discard of the hand waits (`doomed`, `discards_hand`), the
+/// card keeps the smaller of Temporary's share and `doomed_hand_discount`'s.
+fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {
         None => w.opponent_hand_cost,
@@ -226,9 +236,15 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     } else {
         1.0
     };
+    // #1722: a hand its owner's delayed discard will empty loses what a Temporary card does, once.
+    let kept = if doomed {
+        temporary.min(1.0 - w.doomed_hand_discount)
+    } else {
+        temporary
+    };
     (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant + uplift - shift)
         * brittle_share(card, w)
-        * temporary
+        * kept
 }
 
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
@@ -279,8 +295,9 @@ pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
 /// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
 /// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
 /// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
-/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff. Nor does a delayed
-/// destroy's mark on a unit that is Indestructible now, which the destroy spares (Classic #20, R46).
+/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff; the engine's own
+/// discard of a hand is priced on that hand (`discards_hand`). Nor does a delayed destroy's mark on a
+/// unit that is Indestructible now, which the destroy spares (Classic #20, R46).
 fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
     let Some(marks) = &state.marks else {
         return 0.0;
@@ -311,6 +328,59 @@ fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f
     worth
 }
 
+/// B5 E27 (Classic #37 Last Hurrah): whether a delayed discard of `player`'s whole hand waits. The
+/// engine runs `DELAYED_DISCARD_HAND_HOOK` as its owner and discards that owner's hand. Every delayed
+/// entry `redact` keeps is public (R185).
+fn discards_hand(state: &GameState, player: PlayerId) -> bool {
+    state
+        .delayed
+        .iter()
+        .any(|entry| entry.owner == player && entry.resume.hook == DELAYED_DISCARD_HAND_HOOK)
+}
+
+/// R458: how many rest-of-game start-of-turn effects `side` holds.
+fn start_of_turn_effects(side: &PlayerState) -> i32 {
+    side.mods
+        .iter()
+        .filter(|held| matches!(held.kind, ModifierKind::StartOfTurnEffect { .. }))
+        .count() as i32
+}
+
+/// R848, R849: how far `player` has come toward one held alternative win, in [0, 1]: the measure
+/// `condition_met` reads (the hero's health, the graveyard's count, the lesser of the acting Units'
+/// two totals, `board_totals`) over the threshold. A threshold of 0 or less is met.
+fn alt_win_progress(state: &GameState, player: PlayerId, condition: AltWinCondition, threshold: i32) -> f64 {
+    if threshold <= 0 {
+        return 1.0;
+    }
+    let now = match condition {
+        AltWinCondition::Health => state.players[player].hero.health,
+        AltWinCondition::Graveyard => state.players[player].graveyard.len() as i32,
+        AltWinCondition::Board => {
+            let (attack, health) = board_totals(state, player);
+            attack.min(health)
+        }
+    };
+    (f64::from(now) / f64::from(threshold)).clamp(0.0, 1.0)
+}
+
+/// R848, R169: `alt_win` times the square of the progress of `player`'s closest held alternative win.
+/// Any one met wins, so the others add nothing. Both seats see each condition and its progress (its
+/// badge), so it counts for its holder and against the holder's enemy alike.
+fn alt_win_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
+    let closest = state.players[player]
+        .mods
+        .iter()
+        .filter_map(|held| match &held.kind {
+            ModifierKind::AltWin { condition, threshold } => {
+                Some(alt_win_progress(state, player, *condition, *threshold))
+            }
+            _ => None,
+        })
+        .fold(0.0, f64::max);
+    w.alt_win * closest * closest
+}
+
 /// §3.2, R13: what the cards dormant under `player`'s Stack piles are worth, each resuming when the
 /// cards above it leave. The seat reads its own unit piles card by card, each at `dormant_share` of
 /// its `unit_worth` (no call at a zero share); every other dormant card counts `dormant_card`
@@ -339,7 +409,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
 }
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
-/// banked (a debt, Jade steps, extra turns, the enemy units it has marked), what its coming refreshes
+/// banked (a debt, Jade steps, extra turns, the enemy units it has marked, its start-of-turn effects and
+/// closest alternative win), what its coming refreshes
 /// will or will not give, the backrow (an enemy face-down card by the cost it shows), the hand, the
 /// library and the fatigue draws it has taken.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
@@ -362,6 +433,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     if w.marked_share != 0.0 {
         value += w.marked_share * marked_enemy_worth(state, player, w);
     }
+    // #1722: what the side holds in its player modifiers, both seats' (R169): its rest-of-game
+    // start-of-turn effects (R458) and its closest alternative win (R848).
+    value += w.start_of_turn_effect * f64::from(start_of_turn_effects(side));
+    value += alt_win_worth(state, player, w);
     // R1225: on its controller's turn, an unused base-face Jlarna is tributed at end of turn, so it
     // is worth nothing.
     let lapsing: Vec<String> = if state.active == player {
@@ -406,12 +481,19 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         }
     }
 
+    // #1722: a delayed discard of the side's hand waits (Classic #37 Last Hurrah).
+    let doomed = discards_hand(state, player);
     if player == seat {
         for card in &side.hand {
-            value += hand_card_value(state, card, w);
+            value += doomed_hand_card_value(state, card, doomed, w);
         }
     } else {
-        value += side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
+        let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
+        value += if doomed {
+            (1.0 - w.doomed_hand_discount) * unseen
+        } else {
+            unseen
+        };
     }
 
     value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
@@ -665,16 +747,35 @@ fn falls_to_first_strike(
     dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
 }
 
-/// §4.5 step 4: the body a destroyed Reborn Taunt comes back as, a reset instance (R78) without
-/// Reborn at `REBORN_HEALTH`, and its view — or nothing when the body has no Taunt. A printed Divine
-/// Shield comes back with it; a granted Taunt, or Defense Position's, is gone.
-fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance, UnitView)> {
-    let mut body = taunt.clone();
+/// §4.5 step 4: the body a destroyed Reborn unit comes back as, a reset instance (R78) without Reborn
+/// at `REBORN_HEALTH`, and its view. A printed Divine Shield comes back with it; a granted keyword, a
+/// buff, or Defense Position's Taunt, is gone.
+pub(crate) fn reborn_return(state: &GameState, unit: &CardInstance) -> (CardInstance, UnitView) {
+    let mut body = unit.clone();
     reset_instance(&mut body);
     body.reborn_spent = Some(true);
     body.damage = (unit_view(state, &body).max_health - REBORN_HEALTH).max(0);
     let view = unit_view(state, &body);
+    (body, view)
+}
+
+/// §4.5 step 4: the body a destroyed Reborn Taunt comes back as (`reborn_return`), or nothing when
+/// the body has no Taunt.
+fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance, UnitView)> {
+    let (body, view) = reborn_return(state, taunt);
     has_keyword(&view.keywords, KeywordKind::Taunt).then_some((body, view))
+}
+
+/// What destroying `unit` takes off the board (#1796): its `unit_worth`, less the worth of the body it
+/// comes back as while its Reborn is unspent (§4.5 step 4, `reborn_return`). A spent Reborn is gone
+/// from its keywords (§10.4), so such a unit is worth its whole `unit_worth`.
+pub(crate) fn kill_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
+    let worth = unit_worth(state, unit, w);
+    if !unit_has(state, unit, KeywordKind::Reborn) {
+        return worth;
+    }
+    let (body, _) = reborn_return(state, unit);
+    worth - unit_worth(state, &body, w)
 }
 
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end

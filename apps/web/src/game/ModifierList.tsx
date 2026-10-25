@@ -1,9 +1,12 @@
-// Every live modifier (R169), in full, one tap from the HUD.
+// Every live modifier (R169), in full, one tap from the table's controls.
 //
 // The board draws R169's badges beside each hero, but on a phone the rail beside the portrait
-// holds a count and a few shortened labels at most. This is where the rest can be read: a chip
-// with the count while any modifier is live on either side, which opens the whole list. It reads
-// the same `SideView.modifiers` the board does, so it can show nothing the view does not (§10.8).
+// holds a count and a few shortened labels at most, and a badge's full text is only its `title`,
+// which a touch screen never shows. This is where the rest can be read: a chip with the count while
+// any modifier is live on either side, which opens the whole list. Practice and the lessons mount it
+// in their HUD; the online match, the Duos board, the watch screen and the replay player in the
+// board's rail. It reads the same `SideView.modifiers` the board does, so it can show nothing the
+// view does not (§10.8, CLAUDE.md rule 7).
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -11,11 +14,21 @@ import { createPortal } from "react-dom";
 import type { PlayerView } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
-import { practiceTestid } from "./testids.ts";
+import "./modifierList.css";
 
-type ModifierListProps = { view: PlayerView };
+/** The chip (`data-count`: the live modifiers on both sides) and the list it opens. `e2e/support/testids.ts` carries the same strings. */
+export const modifierListTestid = {
+  chip: "modifier-list",
+  panel: "modifier-list-panel",
+} as const;
 
-export function ModifierList({ view }: ModifierListProps): ReactElement | null {
+type ModifierListProps = {
+  view: PlayerView;
+  /** The heading over the opponent's list, already translated: "AI" in practice and lessons, "Opponent" against a person. */
+  opponentLabel: string;
+};
+
+export function ModifierList({ view, opponentLabel }: ModifierListProps): ReactElement | null {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const root = useRef<HTMLSpanElement>(null);
@@ -46,11 +59,11 @@ export function ModifierList({ view }: ModifierListProps): ReactElement | null {
   if (count === 0) return null;
 
   return (
-    <span className="practice-modifiers" ref={root}>
+    <span className="modifier-list" ref={root}>
       <button
         type="button"
-        className="practice-modifiers__chip"
-        data-testid={practiceTestid.modifiers}
+        className="modifier-list__chip"
+        data-testid={modifierListTestid.chip}
         data-count={count}
         aria-expanded={open}
         aria-controls={panelId}
@@ -71,21 +84,21 @@ export function ModifierList({ view }: ModifierListProps): ReactElement | null {
         ? createPortal(
         <span
           ref={panel}
-          className="practice-modifiers__panel"
+          className="modifier-list__panel"
           id={panelId}
-          data-testid={practiceTestid.modifiersPanel}
+          data-testid={modifierListTestid.panel}
           role="group"
           aria-label={t("Active modifiers")}
         >
           {[
             { key: "you", title: t("You"), list: yours },
-            { key: "opponent", title: t("AI"), list: theirs },
+            { key: "opponent", title: opponentLabel, list: theirs },
           ].map((side) =>
             side.list.length === 0 ? null : (
-              <span key={side.key} className="practice-modifiers__side" data-side={side.key}>
-                <span className="practice-modifiers__who">{side.title}</span>
+              <span key={side.key} className="modifier-list__side" data-side={side.key}>
+                <span className="modifier-list__who">{side.title}</span>
                 {side.list.map((modifier) => (
-                  <span key={modifier.id} className="practice-modifiers__item" data-modifier-id={modifier.id}>
+                  <span key={modifier.id} className="modifier-list__item" data-modifier-id={modifier.id}>
                     {t(modifier.label)}
                   </span>
                 ))}

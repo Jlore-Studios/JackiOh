@@ -105,6 +105,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const NUKE: &str = "classic-043";
@@ -292,7 +293,7 @@ mod tests {
                 assert_eq!(s.card(&theirs).controller, PlayerId::P1);
                 // The Menace with no token stays in its owner's graveyard.
                 assert_eq!(
-                    s.pile(PlayerId::P2, "graveyard").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.pile(PlayerId::P2, "graveyard")),
                     vec![MENACE],
                 );
             }
@@ -387,7 +388,7 @@ mod tests {
 
                 assert_eq!(unit_defs(&s, PlayerId::P1), json!([STATE, STATE, STATE, STATE, VANILLA]));
                 assert_eq!(
-                    s.pile(PlayerId::P2, "graveyard").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.pile(PlayerId::P2, "graveyard")),
                     vec![MENACE],
                 );
             }
@@ -427,7 +428,7 @@ mod tests {
 
                 assert!(s.pile(PlayerId::P2, "exile").is_empty());
                 assert_eq!(
-                    s.pile(PlayerId::P2, "graveyard").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.pile(PlayerId::P2, "graveyard")),
                     vec![VOIDWALKER],
                 );
                 assert_eq!(unit_defs(&s, PlayerId::P1), json!([VANILLA, null, null, null, null]));

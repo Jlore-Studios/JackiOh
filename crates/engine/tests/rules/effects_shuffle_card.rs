@@ -14,7 +14,7 @@ use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::state::{CardInstance, GameState, find_instance_mut, new_instance};
 
-use super::fixtures::harness::{new_game, set_library};
+use super::fixtures::harness::{events_json, new_game, set_library};
 
 fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -39,15 +39,6 @@ fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardIn
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
     state.players[player].graveyard.push(card.clone());
     card
-}
-
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
 }
 
 fn shuffle_in(id: &str) -> Effect {
@@ -81,7 +72,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
         );
         assert_eq!(moved.map(|c| c.cost_mod), Some(-1));
         assert_eq!(
-            of_type(&events, "shuffledIn")
+            events_json(&events, "shuffledIn")
                 .iter()
                 .map(|event| event["instanceId"].clone())
                 .collect::<Vec<_>>(),
@@ -136,10 +127,10 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
                 .collect::<Vec<_>>(),
             vec![first.id.clone(), second.id.clone()]
         );
-        assert_eq!(of_type(&events, "enteredGraveyard"), Vec::<Value>::new());
-        assert_eq!(of_type(&events, "shuffledIn"), Vec::<Value>::new());
+        assert_eq!(events_json(&events, "enteredGraveyard"), Vec::<Value>::new());
+        assert_eq!(events_json(&events, "shuffledIn"), Vec::<Value>::new());
         assert_eq!(
-            of_type(&events, "libraryOverflow"),
+            events_json(&events, "libraryOverflow"),
             vec![json!({
                 "type": "libraryOverflow", "player": "p1", "instanceId": first.id, "defId": "fx-4",
                 "outcome": "graveyard"
@@ -158,7 +149,7 @@ mod s6_3_shuffle_card_into_c_c30_recycle {
 
         let events = run(&mut state, shuffle_in(&card.id), PlayerId::P1);
 
-        assert_eq!(of_type(&events, "libraryOverflow")[0]["radiant"], json!(true));
+        assert_eq!(events_json(&events, "libraryOverflow")[0]["radiant"], json!(true));
     }
 
     #[test]

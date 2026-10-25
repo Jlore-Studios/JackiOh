@@ -1,7 +1,7 @@
 {
   "id": "01-aggro-b",
   "spec": "01-hotseat-full-game.cy.ts",
-  "description": "Player 2's aggro deck for the full seeded game: the same rule as 01-aggro-a - every card is choice-free at play time and opens no PendingChoice - with a different twenty so the two seats are not mirror images and the recorded log exercises both sides' scripts. #1 Big D-fender and #19 Midrange Menace are the defensive anchors, #89 Corpse Eater grows in hand off both sides' deaths, #64 Gifted Program and #81 Radiant Saintess put the Radiant layer into the log, and #75 Infinite Reserves keeps a long game out of fatigue so a draw at the turn cap is reached by the cap and not by a fatigue race.",
+  "description": "Player 2's aggro deck for the full seeded game: the same rule as 01-aggro-a - every card is choice-free at play time and opens no PendingChoice - with a different twenty so the two seats are not mirror images and the recorded log exercises both sides' scripts. #1 Big D-fender and #19 Midrange Menace are the defensive anchors, #89 Corpse Eater grows in hand off both sides' deaths, #64 Gifted Program and #81 Radiant Saintess put the Radiant layer into the log, and #75 Infinite Reserves keeps a long game out of fatigue so a draw at the turn cap is reached by the cap and not by a fatigue race. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-001",
     "core-003",
@@ -23,5 +23,12 @@
     "core-089",
     "core-091",
     "core-092"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

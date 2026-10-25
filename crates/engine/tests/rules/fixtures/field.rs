@@ -15,7 +15,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::new_game;
+use super::harness::{both, new_game};
 
 /// A Core Common at cost 1 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
@@ -221,13 +221,6 @@ pub static FIELD_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         mourner.clone(),
     ]
 });
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
-}
 
 /// The memory key the note effects write, on the card whose script runs.
 pub const NOTES: &str = "fdNotes";

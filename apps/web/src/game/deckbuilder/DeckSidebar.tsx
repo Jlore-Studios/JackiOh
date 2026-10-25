@@ -5,6 +5,8 @@
 //
 // R251 conflicts are marked, never removed for the player.
 //
+// A card the validator's verdict names (L3, L5, L6, L7) wears the same flag, with the verdict's words.
+//
 // On phones the list folds but stays mounted (deckbuilder.css).
 //
 // Tiles support preview, inspect, and keyboard detail view (I, the context-menu key or Shift+F10).
@@ -12,7 +14,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 
 import type { CardCost, CardDef } from "@jackioh/shared";
-import type { CatalogSnapshot } from "@jackioh/validator";
+import type { CatalogSnapshot, LoadoutError } from "@jackioh/validator";
 
 import { CardArt, faceModel, isInspectKey, useInspectTrigger } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
@@ -28,6 +30,8 @@ type DeckSidebarProps = {
   cards: readonly string[];
   catalog: CatalogSnapshot;
   conflicts: ReadonlyMap<string, Holder>;
+  /** The verdict's first error naming each card (DeckEditor's `cardIssues`), shown on its tile. */
+  issues: ReadonlyMap<string, LoadoutError>;
   head: ReactNode;
   onDropCard: (event: DragEvent<HTMLElement>) => void;
   onRemove: (cardId: string) => void;
@@ -98,13 +102,14 @@ type DeckTileProps = {
   cardId: string;
   def: CardDef | undefined;
   conflict: Holder | undefined;
+  issue: LoadoutError | undefined;
   onRemove: (cardId: string) => void;
   onInspect: (cardId: string) => void;
 };
 
 export { isInspectKey };
 
-function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: DeckTileProps): ReactElement {
+function DeckTile({ deckName, cardId, def, conflict, issue, onRemove, onInspect }: DeckTileProps): ReactElement {
   const locale = useLocale();
   const name = def === undefined ? cardId : readerName(def);
   const face = useMemo(
@@ -116,6 +121,21 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
       onInspect(cardId);
     },
   });
+  const problem = issue === undefined ? undefined : t(issue.message);
+  const label =
+    conflict === undefined
+      ? problem === undefined
+        ? t("Remove {name} from {deck}", { name, deck: deckName })
+        : t("Remove {name} from {deck}: {problem}", { name, deck: deckName, problem })
+      : problem === undefined
+        ? t("Remove {name} from {deck} (also in {other})", { name, deck: deckName, other: conflict.name })
+        : t("Remove {name} from {deck} (also in {other}): {problem}", { name, deck: deckName, other: conflict.name, problem });
+  const title =
+    conflict === undefined
+      ? problem
+      : problem === undefined
+        ? t("Also in {deck}", { deck: conflict.name })
+        : t("Also in {deck}. {problem}", { deck: conflict.name, problem });
 
   return (
     <li>
@@ -127,12 +147,9 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
         data-rarity={def?.rarity}
         data-conflict={conflict === undefined ? undefined : "true"}
         data-conflict-with={conflict?.name}
-        aria-label={
-          conflict === undefined
-            ? t("Remove {name} from {deck}", { name, deck: deckName })
-            : t("Remove {name} from {deck} (also in {other})", { name, deck: deckName, other: conflict.name })
-        }
-        title={conflict === undefined ? undefined : t("Also in {deck}", { deck: conflict.name })}
+        data-issue={issue?.rule}
+        aria-label={label}
+        title={title}
         aria-keyshortcuts="I"
         onClick={() => {
           onRemove(cardId);
@@ -153,7 +170,7 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
             <CardArt defId={cardId} radiant={false} tags={def.tags} type={def.type} shape="strip" />
           )}
         </span>
-        {conflict === undefined ? null : <span className="db-tile-flag" aria-hidden="true" />}
+        {conflict === undefined && issue === undefined ? null : <span className="db-tile-flag" aria-hidden="true" />}
         <span className="db-tile-pip" data-rarity={def?.rarity} aria-hidden="true" />
       </button>
       {inspect.overlay}
@@ -163,7 +180,7 @@ function DeckTile({ deckName, cardId, def, conflict, onRemove, onInspect }: Deck
 
 export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
   useLocale();
-  const { deckName, cards, catalog, conflicts, head, onDropCard, onRemove, onInspect, children } = props;
+  const { deckName, cards, catalog, conflicts, issues, head, onDropCard, onRemove, onInspect, children } = props;
   const [listOpen, setListOpen] = useState(false);
   const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog]);
   const full = cards.length >= DECK_SIZE;
@@ -224,6 +241,7 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
               cardId={cardId}
               def={catalog.cards[cardId]}
               conflict={conflicts.get(cardId)}
+              issue={issues.get(cardId)}
               onRemove={onRemove}
               onInspect={onInspect}
             />

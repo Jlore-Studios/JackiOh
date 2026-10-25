@@ -26,6 +26,10 @@
 // `replay` too, with no legal action and a no-op `onAction`, as the teammate's already is; no card
 // bar, concede, waiting line or result panel is drawn, the rail's round line names the team's result,
 // and the portal still flips.
+//
+// THE RESULT (#1755): the team's result panel takes focus on its first way on as it comes in, and
+// "View the board" folds it to the rail's "Result", which takes the focus and opens it again, its
+// XP reveal and replay door with it, as the 1v1 result folds to its chip (Result.tsx).
 
 import {
   useCallback,
@@ -49,6 +53,7 @@ import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import type { GameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
@@ -213,6 +218,12 @@ function ResultPanel({
   onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
 }): ReactElement | null {
+  // #1755: the panel takes focus as it comes in (and again when the rail's "Result" reopens it,
+  // which mounts it afresh), on its first way on, as the 1v1 result does (Result.tsx).
+  const actions = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    actions.current?.querySelector<HTMLElement>("button, a")?.focus({ preventScroll: true });
+  }, []);
   if (view.result === null) return null;
   const words = resultWords(view.result, teamOf(view.seat));
   return (
@@ -226,7 +237,7 @@ function ResultPanel({
       ) : null}
       {/* #1664: the tracks the game moved, level by level with their rewards, and the quests it completed. */}
       {economy === null ? null : <XpReveal economy={economy} />}
-      <div className="row duos-result__actions">
+      <div className="row duos-result__actions" ref={actions}>
         <button type="button" data-testid={duosTestid.resultBoard} onClick={onShowBoard}>
           {t("View the board")}
         </button>
@@ -277,6 +288,12 @@ export function DuosBoard({
   const portal = useRef<HTMLButtonElement>(null);
   const [showing, setShowing] = useState<Showing>("own");
   const [boardAfterResult, setBoardAfterResult] = useState(false);
+  // #1755: "View the board" folds the result to the rail's "Result", which takes the focus the panel
+  // had and opens the panel again, as the 1v1 result's chip does (Result.tsx).
+  const reopen = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (boardAfterResult) reopen.current?.focus({ preventScroll: true });
+  }, [boardAfterResult]);
 
   const seat = view.seat;
   const mate = teammateOf(seat);
@@ -397,6 +414,20 @@ export function DuosBoard({
           {showing === "own" ? t("Teammate's board") : t("Back to your board")}
         </button>
         {replay ? null : <ConcedeControl view={view} live={concedeLegal} onConcede={sendConcede} />}
+        {/* R169: the seat's own duel's live modifiers in full, whichever board the portal shows. */}
+        <ModifierList view={view.own} opponentLabel={t("Opponent")} />
+        {over && boardAfterResult && !replay ? (
+          <button
+            ref={reopen}
+            type="button"
+            data-testid={duosTestid.resultReopen}
+            onClick={() => {
+              setBoardAfterResult(false);
+            }}
+          >
+            {t("Result")}
+          </button>
+        ) : null}
       </div>
       {!replay && !over && ended ? (
         <p className="duos-waiting" data-testid={duosTestid.waiting} role="status">

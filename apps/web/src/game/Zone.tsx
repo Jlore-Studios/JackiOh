@@ -5,7 +5,7 @@
 //
 // DragLayer hit-tests zones by testid; no drag handler belongs here.
 
-import type { ReactElement } from "react";
+import { useContext, type ReactElement } from "react";
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
@@ -20,6 +20,7 @@ function flagAt(flags: { units: boolean[]; backrow: boolean[] } | undefined, row
 
 import Backrow from "./Backrow.tsx";
 import Card, { cx, isLegal, isSelected, legalAttr, type Pops } from "./Card.tsx";
+import { CatalogContext, type CardLookup } from "./catalog.ts";
 import {
   laneIndex,
   sideView,
@@ -30,6 +31,7 @@ import {
   type Highlight,
   type Side,
 } from "./contract.ts";
+import { listedFace } from "./faces.ts";
 import { glowAttr } from "./glow.ts";
 import LockIcon from "./LockIcon.tsx";
 import { t } from "../i18n/i18n.ts";
@@ -51,7 +53,20 @@ function zoneLabel(side: Side, row: Row, lane: number): string {
   return row === "units" ? t("opponent units lane {lane}", { lane }) : t("opponent backrow lane {lane}", { lane });
 }
 
+/**
+ * What a held zone's icon says it waits for. B3.1 rule 6, R383: a backrow zone is held for the
+ * animated "Animated on your turn" card on its side that goes back to it (`UnitView.animated.home`),
+ * named as its face names it; any other hold is R64's, for a Reborn unit. The card stands on the
+ * field, so its name is public (CLAUDE.md rule 7).
+ */
+function heldFor(lookup: CardLookup | null, view: PlayerView, side: Side, row: Row, lane: number): string {
+  const returning = row === "backrow" ? (sideView(view, side).units.find((unit) => unit?.animated?.home === lane) ?? null) : null;
+  const face = returning === null ? null : listedFace(lookup, view, returning);
+  return face === null ? t("Held for a Reborn unit") : t("Held for {name} to return", { name: face.name });
+}
+
 export default function Zone(props: ZoneProps): ReactElement {
+  const lookup = useContext(CatalogContext);
   const { view, side, row, lane } = props;
   const seat = sideView(view, side);
   const locked = flagAt(seat.locks, row, lane);
@@ -100,7 +115,7 @@ export default function Zone(props: ZoneProps): ReactElement {
       }}
     >
       {locked && <LockIcon />}
-      {reserved && !locked && <span className="lock-icon reserved-icon" aria-label={t("Reserved zone")} title={t("Held for a Reborn unit")} />}
+      {reserved && !locked && <span className="lock-icon reserved-icon" aria-label={t("Reserved zone")} title={heldFor(lookup, view, side, row, lane)} />}
       {unit !== null && (
         <Card
           testId={testid.card(unit.instanceId)}

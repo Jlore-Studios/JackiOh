@@ -6,44 +6,21 @@
 // test that finds one on screen has found the answer's.
 
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
-import type { AudioEngine } from "../audio/types.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { BURST_MS, REVEAL_STAGGER_MS, segmentMs } from "./bars.ts";
 import { parseGameEconomy, stagesOf, type GameEconomy, type QuestPaid, type TrackGain, type TrackPoint } from "./xp.ts";
 import XpReveal from "./XpReveal.tsx";
 
-type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
-
-function fakeEngine(): FakeEngine {
-  return {
-    state: vi.fn<AudioEngine["state"]>(() => "running"),
-    unlock: vi.fn<AudioEngine["unlock"]>(),
-    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-    setBusy: vi.fn<AudioEngine["setBusy"]>(),
-    log: vi.fn<AudioEngine["log"]>(() => []),
-    clearLog: vi.fn<AudioEngine["clearLog"]>(),
-    contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 0),
-    speaking: vi.fn<AudioEngine["speaking"]>(() => false),
-    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
-    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-    dispose: vi.fn<AudioEngine["dispose"]>(),
-    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
-    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
-  };
-}
-
-let engine: FakeEngine;
+let engine: FakeAudioEngine;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  engine = fakeEngine();
+  engine = fakeAudioEngine();
   setAudioEngineForTests(engine);
   __resetSettingsForTests();
   resetFxSettingsForTests();

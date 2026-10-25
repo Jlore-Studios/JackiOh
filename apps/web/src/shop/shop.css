@@ -132,6 +132,12 @@
   margin: 4px 0 0;
 }
 
+/* R1827000: a dropped portrait's art, beside its name. */
+.cosmetic-packs-panel .pack-slot__portrait {
+  width: 4rem;
+  aspect-ratio: 1;
+}
+
 /* R1580000: the page never scrolls; the board shrinks and the body scrolls inside it (as R1579000). */
 .tavern.app-shell.shop-screen {
   height: 100vh;

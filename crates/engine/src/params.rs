@@ -40,7 +40,7 @@ use crate::script::{
 };
 use crate::state::{CardInstance, GameState};
 use crate::tuning::{add_step, tidy_tuning, tuning_of};
-use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning};
+use crate::wire::{Param, ParamBetter, ParamTunedOn, Tuning, ZoneName};
 
 /// B3.4 rule 5: the numbers a definition declares. A catalog card's are its `params`; a fused
 /// definition's (R77, R102) are its ingredients', the first declaration of each key kept. Empty for a
@@ -419,7 +419,8 @@ pub struct SteppableParam {
 }
 
 /// B3.4 rule 3's "Number" row: the declared numbers in reach (`param_in_reach`: on their face, R749,
-/// R1431, and of the card's power now, R1430) that one step in `direction` would change — up moves a
+/// R1431, and of the card's power now, R1430), but for one only the card's Cry reads (`Param.cry`)
+/// while the card is on the field (R1748000), that one step in `direction` would change — up moves a
 /// number the way its `better` says for an Upgrade, the other way for a Degrade — with how far each
 /// would move, in declaration order. A number already at the bound it would move past is not one.
 pub fn steppable_params(
@@ -442,6 +443,8 @@ pub fn steppable_params_times(
     params_of(state, &instance.def_id)
         .into_iter()
         .filter(|param| param_in_reach(state, instance, param))
+        // R1748000: on the field the card's Cry has resolved, so a number only it reads moves nothing.
+        .filter(|param| !(param.cry == Some(true) && instance.zone.z() == ZoneName::Field))
         .filter_map(|param| {
             let toward_better = if change == TuneDirection::Upgrade { 1 } else { -1 };
             let unit = if param.better == ParamBetter::Up {

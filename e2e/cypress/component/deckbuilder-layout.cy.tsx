@@ -2,6 +2,7 @@
 // Mount `/decks`'s bare `DeckWorkshop` with its heaviest data so the browser measures production layout (SPEC §9.4, R250–R256).
 // jsdom cannot measure layout; retried Cypress assertions require the workshop and every pool item to render.
 
+import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.tsx";
 import type { DecksResponse } from "../../../apps/web/src/net/api.ts";
@@ -43,7 +44,6 @@ const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.
 
 const COLLECTION: Record<string, number> = Object.fromEntries(DECKABLE.map((def) => [def.id, 1]));
 
-const DECK_SIZE = 20;
 const SAVED_AT = 0;
 const DECK_IDS = [
   "00000000-0000-4000-8000-000000000001",
@@ -335,7 +335,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     const stacked = viewport.label === "phone";
     it(`the deck's verdict sits in its sidebar on the first screen${stacked ? ", above the pool," : ""} at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
-      // An empty deck produces the L2 verdict (0 of 20 cards).
+      // An empty deck produces the L2 verdict (0 of DECK_SIZE cards).
       mountWorkshop([[]]);
       cy.get(`${ts(DB_SIDEBAR)} ${ts(DECK_VERDICT)} ${ts(LOADOUT_ERRORS)}`).should("have.attr", "data-count", "1");
       cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);

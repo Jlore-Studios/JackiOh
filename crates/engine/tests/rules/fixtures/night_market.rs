@@ -8,18 +8,10 @@ use std::sync::LazyLock;
 use jackioh_engine::subsystems::night_market::{MarketShelf, night_market_script};
 use jackioh_engine::testkit::*;
 
+use super::harness::spread;
+
 /// The Auspicious Rock's real id (M #39.1), which the market names.
 pub const ROCK: &str = "meditative-039-1";
-
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
 
 fn def(index: u32, id: &str, extra: Value) -> CardDef {
     json_as(spread(

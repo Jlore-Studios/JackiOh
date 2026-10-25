@@ -18,29 +18,40 @@
 //! Through patch v0.3.7b it cost (X) and was replaced in place on any arrival in a hand (the
 //! `enters_hand` hook, R925, R926); `script_v0_3_7b` keeps that for those versions' replays
 //! (R767000). Through v0.4.0f the base face's card took no raise; `script_v0_4_0f` keeps that.
+//! Through v0.4.4b the raise and the Radiant face's (0) were printed, not declared;
+//! `script_v0_4_4b` keeps that.
+//!
+//! Tunes: surcharge 1 ↓, on the base face only; setCost 0 ↓, on the Radiant face only (R1431, R824000,
+//! R1748003). The cap of (4) stays printed (R1704003).
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-037";
 
-/// R1704003: "It costs (1) more (up to (4))".
+/// R1704003: "It costs (1) more (up to (4))", the raise as v0.4.4b printed it before it was the
+/// declared `surcharge` (R1748003).
 const RAISE: i32 = 1;
 const RAISE_UP_TO: i32 = 4;
 
-/// The bottle; `raised`, the base face's card costs (1) more, up to (4) (none through v0.4.0f).
-fn bottle(radiant: bool, raised: bool) -> Script {
+/// The Radiant face's "It costs (0)", as v0.4.4b printed it before it was the declared `setCost`.
+const FREE: i32 = 0;
+
+/// The bottle; `raised`, the base face's card costs more, up to (4) (none through v0.4.0f): by the
+/// declared `surcharge` and, on the Radiant face, at the declared `setCost` when `declared` is on, by
+/// the printed (1) and at the printed (0) when it is off.
+fn bottle(radiant: bool, raised: bool, declared: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             cast_on_draw: Some(true),
             ..StaticFlags::default()
         }),
-        cry: Some(hook(move |_ctx| {
+        cry: Some(hook(move |ctx| {
             let mut args = json!({ "radiant": true, "chinese": true });
             if radiant {
-                args["costOverride"] = json!(0);
+                args["costOverride"] = json!(if declared { param(&*ctx, "setCost") } else { FREE });
             } else if raised {
-                args["costMod"] = json!(RAISE);
+                args["costMod"] = json!(if declared { param(&*ctx, "surcharge") } else { RAISE });
                 args["costModUpTo"] = json!(RAISE_UP_TO);
             }
             vec![add_random_from_catalog(json_as(args))]
@@ -51,8 +62,17 @@ fn bottle(radiant: bool, raised: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: bottle(false, true),
-        radiant: bottle(true, true),
+        base: bottle(false, true, true),
+        radiant: bottle(true, true, true),
+    }
+}
+
+/// R767000: through v0.4.4b its raise and its Radiant face's (0) were printed; `KEPT_SCRIPTS` folds
+/// those replays, back to v0.4.0f's, under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: bottle(false, true, false),
+        radiant: bottle(true, true, false),
     }
 }
 
@@ -60,8 +80,8 @@ pub fn script() -> CardScripts {
 /// face's card at its own cost; `KEPT_SCRIPTS` folds those versions' replays under them.
 pub fn script_v0_4_0f() -> CardScripts {
     CardScripts {
-        base: bottle(false, false),
-        radiant: bottle(true, false),
+        base: bottle(false, false, false),
+        radiant: bottle(true, false, false),
     }
 }
 
@@ -170,13 +190,23 @@ mod tests {
         let rest = [
             "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
             "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-016", "core-017",
-            "core-019", "core-020", "core-025",
+            "core-019", "core-020", "core-025", "core-032", "core-036", "core-043", "core-044", "core-053",
         ];
         let mut mine = vec![BOTTLE.to_string()];
         mine.extend(rest.iter().map(|id| id.to_string()));
         let mut theirs = vec!["core-026".to_string()];
         theirs.extend(rest.iter().map(|id| id.to_string()));
         (mine, theirs)
+    }
+
+    /// R1704003: the `costMod` a raise of `by` leaves on a card the bottle added: what takes its price
+    /// up to (4) at most, and nothing on an X-cost card.
+    fn raise_on(card: &CardInstance, by: i32) -> i32 {
+        let def = crate::card_def(&card.def_id);
+        if def.cost == CardCost::X {
+            return 0;
+        }
+        by.min((RAISE_UP_TO - query_cost(&def)).max(0))
     }
 
     fn in_graveyard(s: &Scenario, def_id: &str) -> usize {
@@ -461,6 +491,57 @@ mod tests {
         }
 
         #[test]
+        fn r1748003_surcharge_moves_with_a_buff_or_a_nerf() {
+            // A Buff finds it at its floor of 1 (an amount never drops below 1, R386); a Nerf in the
+            // hand makes the card it adds cost (2) more, still up to (4).
+            let mut s = quiet("bottle-surcharge");
+            let _ = apply_for_p1(
+                &mut s,
+                &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE })))],
+            );
+            let held = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id == BOTTLE)
+                .expect("the bottle stays in the hand");
+            assert!(!crate::can_upgrade_number(&s, &held.id, "surcharge"));
+            assert_eq!(crate::degrade_number(&mut s, &held.id, "surcharge"), 2);
+            s.play(&held.id, json!({}));
+            let new_card = s.hand(P1).last().cloned().expect("the card it added");
+            assert_ne!(new_card.def_id, BOTTLE);
+            assert_eq!(new_card.cost_mod, raise_on(&new_card, 2));
+        }
+
+        #[test]
+        fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_surcharge_and_set_cost() {
+            crate::under_kept(BOTTLE, super::super::script_v0_4_4b(), || {
+                for radiant in [false, true] {
+                    let mut s = quiet("bottle-kept-4-4b");
+                    let _ = apply_for_p1(
+                        &mut s,
+                        &[jackioh_engine::effects::add_to_hand(json_as(
+                            json!({ "defId": BOTTLE, "radiant": radiant }),
+                        ))],
+                    );
+                    let held = s
+                        .hand(P1)
+                        .into_iter()
+                        .find(|card| card.def_id == BOTTLE)
+                        .expect("the bottle stays in the hand");
+                    let key = if radiant { "setCost" } else { "surcharge" };
+                    crate::degrade_number(&mut s, &held.id, key);
+                    s.play(&held.id, json!({}));
+                    let new_card = s.hand(P1).last().cloned().expect("the card it added");
+                    if radiant {
+                        assert_eq!(new_card.cost_override, Some(0), "the kept script prints (0)");
+                    } else {
+                        assert_eq!(new_card.cost_mod, raise_on(&new_card, RAISE), "its printed (1)");
+                    }
+                }
+            });
+        }
+
+        #[test]
         fn r1704003_r767000_through_v0_4_0f_the_kept_script_adds_its_card_at_its_own_cost() {
             crate::under_kept(BOTTLE, super::super::script_v0_4_0f(), || {
                 let mut s = quiet("bottle-kept");
@@ -503,6 +584,29 @@ mod tests {
                     assert_eq!(new_card.cost_override, Some(0));
                     assert_eq!(new_card.cost_mod, 0);
                 }
+            }
+
+            #[test]
+            fn r1748003_set_cost_moves_with_a_buff_or_a_nerf() {
+                // A Buff finds it at its floor of (0); a Nerf in the hand makes the card it adds cost (1).
+                let mut s = quiet("bottle-radiant-set-cost");
+                let _ = apply_for_p1(
+                    &mut s,
+                    &[jackioh_engine::effects::add_to_hand(json_as(
+                        json!({ "defId": BOTTLE, "radiant": true }),
+                    ))],
+                );
+                let held = s
+                    .hand(P1)
+                    .into_iter()
+                    .find(|card| card.def_id == BOTTLE)
+                    .expect("the bottle stays in the hand");
+                assert!(!crate::can_upgrade_number(&s, &held.id, "setCost"));
+                assert_eq!(crate::degrade_number(&mut s, &held.id, "setCost"), 1);
+                s.play(&held.id, json!({}));
+                let new_card = s.hand(P1).last().cloned().expect("the card it added");
+                assert_ne!(new_card.def_id, BOTTLE);
+                assert_eq!(new_card.cost_override, Some(1));
             }
 
             #[test]

@@ -54,6 +54,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -183,7 +184,7 @@ mod tests {
                     "p1": { "hand": [STOCKPILE, FILLER], "field": [MACHINE], "library": [VANILLA, CN_VIRUS] },
                 }));
                 s.play(STOCKPILE, json!({}));
-                let library: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.def_id).collect();
+                let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![CN_VIRUS]);
                 assert_eq!(
                     s.last_events()

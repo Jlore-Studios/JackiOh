@@ -67,10 +67,13 @@ export const FIELD_LABEL = {
   set: "Set",
   token: "Token",
   radiantFallback: "Radiant form",
+  dealsDamage: "Deals damage",
+  usesPlague: "Uses its Plague Counters",
 } as const;
 
-/** R507: fields without printed faces are listed by name. */
-const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(["loc", "refs", "params"]);
+/** R507: fields without printed faces are listed by name. R1748001 and R1748002's flags are the
+ * Buff's data, as `patches ship` records them by name. */
+const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(["loc", "refs", "params", "dealsDamage", "usesPlague"]);
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "id",
@@ -87,6 +90,8 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "params",
   "loc",
   "radiantFallback",
+  "dealsDamage",
+  "usesPlague",
   "base",
   "radiant",
 ]);
@@ -117,6 +122,8 @@ function paramText(param: Param): string {
   if (param.tunedOn === "radiant") parts.push("tuned on the Radiant face only");
   if (param.tunedOn === "base") parts.push("tuned on the base face only");
   if (param.power !== undefined) parts.push(`tuned only while the card has ${powerTitle({ name: param.power }, false)}`);
+  // R1748000: a number only the card's Cry reads is out of a Nerf's and a Buff's reach on the field.
+  if (param.cry === true) parts.push("tuned only off the field");
   parts.push(param.better === "up" ? "more is better" : "less is better");
   return parts.join(", ");
 }
@@ -207,6 +214,8 @@ function fieldChanges(before: CardDef, after: CardDef, names: DiffNames): FieldC
     before.radiantFallback === true ? "the base face, doubled" : "printed",
     after.radiantFallback === true ? "the base face, doubled" : "printed",
   );
+  value("dealsDamage", before.dealsDamage === true ? "yes" : "no", after.dealsDamage === true ? "yes" : "no");
+  value("usesPlague", before.usesPlague === true ? "yes" : "no", after.usesPlague === true ? "yes" : "no");
 
   // Anything else the catalog grows: reported under its key rather than dropped.
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);

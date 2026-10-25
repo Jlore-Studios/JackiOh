@@ -20,14 +20,14 @@
 use std::sync::LazyLock;
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::Rng;
+use jackioh_engine::{DECK_SIZE, Rng};
 
 use crate::api::queue::new_seed;
 use crate::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_GRIND_ACTIVE_HOURS, BOT_HOURS_PER_DAY,
     BOT_VS_BOT_MIN_GAP_SECONDS, MAX_FAIR_GAP,
 };
-use crate::db::store::{BotRow, QueueMode, RatedGameRow, Ticket};
+use crate::db::store::{BotRow, FrozenTrio, QueueMode, RatedGameRow, Ticket};
 
 /// Unit conversion, not configuration: the fallback time speaks seconds, tickets are stamped in ms.
 const MS_PER_SECOND: i64 = 1000;
@@ -81,6 +81,34 @@ pub fn scheduled_hours(bot: &BotRow) -> i32 {
     }
 }
 
+/// R1705001: whether a deck holds `DECK_SIZE` cards, the size L2 asks of every deck a player
+/// queues. A bot's deck dealt before the size changed holds the earlier size.
+pub(crate) fn holds_deck_size(cards: &[String]) -> bool {
+    usize::try_from(DECK_SIZE).is_ok_and(|size| cards.len() == size)
+}
+
+/// R1454, R1705001: whether the bot holds Best-of-1 decks dealt for `catalog_version`, each of
+/// `DECK_SIZE` cards. A bot that does not is never chosen, and the pool's refresh deals it again
+/// (`bots::pool::refresh_pool`).
+pub fn holds_decks(bot: &BotRow, catalog_version: &str) -> bool {
+    !bot.decks.is_empty()
+        && bot.decks_catalog_version.as_deref() == Some(catalog_version)
+        && bot.decks.iter().all(|deck| holds_deck_size(&deck.cards))
+}
+
+/// R641000, R1705001: whether the bot holds a Conquest trio dealt for `catalog_version`, each of its
+/// decks of `DECK_SIZE` cards. A bot that does not is never chosen for Conquest, and the pool's
+/// refresh deals it again.
+pub fn holds_trio(bot: &BotRow, catalog_version: &str) -> bool {
+    bot.trio_catalog_version.as_deref() == Some(catalog_version)
+        && bot
+            .trio
+            .as_ref()
+            .is_some_and(|FrozenTrio { decks: (a, b, c), .. }| {
+                [a, b, c].iter().all(|deck| holds_deck_size(&deck.cards))
+            })
+}
+
 /// R1454: whether the bot is on at `hour` of the day (UTC): its schedule runs `scheduled_hours`
 /// hours from `active_from_hour`, around midnight when it must.
 pub fn on_schedule(bot: &BotRow, hour: i32) -> bool {
@@ -90,9 +118,10 @@ pub fn on_schedule(bot: &BotRow, hour: i32) -> bool {
 /// R1453: the bot the ticket pairs with, or none. Of the bots in the pool, on their schedule, in no
 /// match, not `busy` (taken by this sweep, or a side of a series that is not over, R641000), not
 /// among the player's `recent` opponents and holding what the mode needs dealt for the catalog this
-/// server plays (`catalog_version`): Best-of-1 decks (R1454) or, for Conquest, a trio (R641000); the
-/// one closest in rating, ties on id. A player rated above every bot in the pool, free or not, is
-/// given none but a grinder within `MAX_FAIR_GAP` of them (R1555000).
+/// server plays (`catalog_version`) at `DECK_SIZE` cards a deck: Best-of-1 decks (R1454,
+/// `holds_decks`) or, for Conquest, a trio (R641000, `holds_trio`; R1705001); the one closest in
+/// rating, ties on id. A player rated above every bot in the pool, free or not, is given none but a
+/// grinder within `MAX_FAIR_GAP` of them (R1555000).
 pub fn choose_bot<'a>(
     ticket: &Ticket,
     bots: &'a [BotRow],
@@ -110,12 +139,8 @@ pub fn choose_bot<'a>(
         .filter(|bot| bot.in_match_id.is_none() && !busy.contains(&bot.profile_id))
         .filter(|bot| !recent.contains(&bot.profile_id))
         .filter(|bot| match ticket.mode {
-            QueueMode::Bo1 => {
-                !bot.decks.is_empty() && bot.decks_catalog_version.as_deref() == Some(catalog_version)
-            }
-            QueueMode::Bo3 => {
-                bot.trio.is_some() && bot.trio_catalog_version.as_deref() == Some(catalog_version)
-            }
+            QueueMode::Bo1 => holds_decks(bot, catalog_version),
+            QueueMode::Bo3 => holds_trio(bot, catalog_version),
             QueueMode::Random => true,
         })
         .min_by(|a, b| {
@@ -158,10 +183,10 @@ pub fn bot_match_gap_passed(games: &[RatedGameRow], now: i64) -> bool {
 
 /// R1555000: the two bots a match between two bots seats, or none. Both are ready: in the pool, on
 /// their schedule, in no match, not `busy` (a side of a series that is not over, R641000) and
-/// holding Best-of-1 decks dealt for `catalog_version` (R1454). The first is the lowest-rated ready
-/// grinder (ties on id) that has an opponent: the ready bot, grinder or not, closest in rating to
-/// it (ties on id), never one of its `recent` opponents (`BOT_RECENT_OPPONENTS`, keyed by the
-/// grinder's id).
+/// holding Best-of-1 decks dealt for `catalog_version` at `DECK_SIZE` cards (R1454, R1705001,
+/// `holds_decks`). The first is the lowest-rated ready grinder (ties on id) that has an opponent: the
+/// ready bot, grinder or not, closest in rating to it (ties on id), never one of its `recent`
+/// opponents (`BOT_RECENT_OPPONENTS`, keyed by the grinder's id).
 pub fn choose_bot_pair<'a>(
     bots: &'a [BotRow],
     recent: &IndexMap<String, Vec<String>>,
@@ -174,8 +199,7 @@ pub fn choose_bot_pair<'a>(
             && on_schedule(bot, hour)
             && bot.in_match_id.is_none()
             && !busy.contains(&bot.profile_id)
-            && !bot.decks.is_empty()
-            && bot.decks_catalog_version.as_deref() == Some(catalog_version)
+            && holds_decks(bot, catalog_version)
     };
     let mut grinders: Vec<&BotRow> = bots.iter().filter(ready).filter(|bot| bot.grinding).collect();
     grinders.sort_by(|a, b| {

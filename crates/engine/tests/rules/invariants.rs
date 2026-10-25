@@ -1,6 +1,10 @@
 //! The fuzz monitor's I7 (`testkit/invariants.rs`): a live game with no prompt open owes no paused
 //! sequence, so `work` is empty and `work_cursor` is 0 (§9.3, §10.3, R113). A prompt, the open
 //! mulligans (§10.6, R265) or a game over each excuse what is still owed.
+//!
+//! And its I9 (#1719): each `turnStarted`, `turnEnded`, `turnAutoEnded`, `gameOver` and `manaChanged`
+//! an action announces says what the state it left holds. Each check is proved by tampering with one
+//! payload of a real action's events; the untampered events are clean.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -111,4 +115,143 @@ fn i7_work_a_game_over_left_owed_is_not_orphaned() {
     state.work.push(orphan());
     let mut monitor = create_invariant_monitor(&state);
     assert_eq!(orphaned(&monitor.after(&[], &state)), Vec::<&String>::new());
+}
+
+// ---------------------------------------------------------------------------------------------
+// I9: what an action announces is what it left (#1719)
+// ---------------------------------------------------------------------------------------------
+
+/// The I9 findings of a monitor started on `start` and fed one action's `events`, which left `state`.
+fn wire_findings(start: &GameState, events: &[GameEvent], state: &GameState) -> Vec<String> {
+    create_invariant_monitor(start)
+        .after(events, state)
+        .into_iter()
+        .filter(|finding| finding.starts_with("I9"))
+        .collect()
+}
+
+/// `events`, each one `tamper` returns a replacement for replaced by it.
+fn tampered(events: &[GameEvent], tamper: impl Fn(&GameEvent) -> Option<GameEvent>) -> Vec<GameEvent> {
+    events
+        .iter()
+        .map(|event| tamper(event).unwrap_or_else(|| event.clone()))
+        .collect()
+}
+
+/// p1 ends their first turn: `turnEnded` (p1, 1), then `turnStarted` (p2, 2) and p2's refresh to 1/1.
+fn ended(seed: &str) -> (GameState, ReduceResult) {
+    let start = playing(seed);
+    let result = reduce(&start, &Action::new(ActionBody::EndTurn, P1, "i9-end"));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    (start, result)
+}
+
+#[test]
+fn i9_an_end_turn_s_announcements_are_the_state_it_left() {
+    let (start, result) = ended("i9-clean");
+    assert_eq!(
+        wire_findings(&start, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn i9_a_turn_started_that_names_another_turn_or_player_than_the_state_holds_is_flagged() {
+    let (start, result) = ended("i9-turn-started");
+    let (turn, active) = (result.state.turn, result.state.active);
+    for (player, turn) in [(active, turn + 1), (opponent_of(active), turn)] {
+        let events = tampered(&result.events, |event| match event {
+            GameEvent::TurnStarted { extra, .. } => Some(GameEvent::TurnStarted {
+                player,
+                turn,
+                extra: *extra,
+            }),
+            _ => None,
+        });
+        let found = wire_findings(&start, &events, &result.state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong turn start"), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i9_a_turn_ended_that_names_another_turn_or_player_than_the_one_under_way_is_flagged() {
+    let (start, result) = ended("i9-turn-ended");
+    for (player, turn) in [(P1, start.turn + 1), (P2, start.turn)] {
+        let events = tampered(&result.events, |event| match event {
+            GameEvent::TurnEnded { unspent_mana, .. } => Some(GameEvent::TurnEnded {
+                player,
+                turn,
+                unspent_mana: *unspent_mana,
+            }),
+            _ => None,
+        });
+        let found = wire_findings(&start, &events, &result.state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong turn end"), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i9_a_turn_auto_ended_that_names_another_turn_or_player_than_the_one_under_way_is_flagged() {
+    let state = playing("i9-auto-ended");
+    let clean = [GameEvent::TurnAutoEnded {
+        player: P1,
+        turn: state.turn,
+    }];
+    assert_eq!(wire_findings(&state, &clean, &state), Vec::<String>::new());
+    for (player, turn) in [(P1, state.turn + 1), (P2, state.turn)] {
+        let found = wire_findings(&state, &[GameEvent::TurnAutoEnded { player, turn }], &state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong turn end"), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i9_a_seat_s_last_mana_changed_that_is_not_its_mana_is_flagged() {
+    let (start, result) = ended("i9-mana");
+    let mana = result.state.players[P2].mana;
+    for (current, max) in [(mana.current + 1, mana.max), (mana.current, mana.max + 1)] {
+        let events = tampered(&result.events, |event| match event {
+            GameEvent::ManaChanged { player: P2, .. } => Some(GameEvent::ManaChanged {
+                player: P2,
+                current,
+                max,
+            }),
+            _ => None,
+        });
+        let found = wire_findings(&start, &events, &result.state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong mana"), "{}", found[0]);
+    }
+}
+
+#[test]
+fn i9_a_game_over_that_is_not_the_result_is_flagged() {
+    let start = playing("i9-game-over");
+    let result = reduce(&start, &Action::new(ActionBody::Concede, P1, "i9-concede"));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert_eq!(
+        result.state.result,
+        Some(GameResult {
+            winner: Winner::P2,
+            reason: GameOverReason::Concede
+        })
+    );
+    assert_eq!(
+        wire_findings(&start, &result.events, &result.state),
+        Vec::<String>::new()
+    );
+    for (winner, reason) in [
+        (Winner::P1, GameOverReason::Concede),
+        (Winner::P2, GameOverReason::HeroDeath),
+    ] {
+        let events = tampered(&result.events, |event| match event {
+            GameEvent::GameOver { .. } => Some(GameEvent::GameOver { winner, reason }),
+            _ => None,
+        });
+        let found = wire_findings(&start, &events, &result.state);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I9 wrong game over"), "{}", found[0]);
+    }
 }

@@ -11,13 +11,41 @@
 # Safe to run again: a runner already registered and running is left alone, job and all, except
 # that one without Rust on its PATH (its .path, which config.sh writes from sudo's PATH) gets it
 # and restarts once it holds no job.
+#
+# Two boxes (#1677: the night box and the Muse box) split the subscriptions between them. Name the
+# ones this box carries, each with the runners it holds here (`id=n`; `id` alone takes its
+# `lanes`), and give the second box a BOX suffix, which ends each of its runners' names: GitHub
+# allows one runner of a name in a repository, and `--replace` takes a name over from another box.
+# A box keeps only the runners it is given: one past its count (or every one, at `id=0`) is
+# unregistered and its service removed, unless it holds a job, which a run once it ends removes.
+#
+#   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1
+#   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=1
 set -euo pipefail
 repo="${1:?OWNER/REPO, the repository the runners serve}"
+shift
 here="$(cd "$(dirname "$0")" && pwd)"
-labels="$(jq -r '.providers | to_entries[] | select(.value.runs_on // "" | startswith("night-vm-"))
+box="${BOX:-}"
+[[ "$box" =~ ^[a-z0-9]*$ ]] || { echo "BOX=$box: lower-case letters and digits only" >&2; exit 2; }
+all="$(jq -r '.providers | to_entries[] | select(.value.runs_on // "" | startswith("night-vm-"))
   | "\(.key)=\(.value.runs_on)=\(.value.lanes // 1)"' .harness/providers.json)"
-[ -n "$labels" ] || { echo "no provider in .harness/providers.json runs on night-vm-*" >&2; exit 1; }
+[ -n "$all" ] || { echo "no provider in .harness/providers.json runs on night-vm-*" >&2; exit 1; }
+if [ "$#" -eq 0 ]; then
+  labels="$all"
+else
+  labels=""
+  for arg in "$@"; do
+    id="${arg%%=*}"
+    line="$(printf '%s\n' "$all" | grep -m1 "^$id=" || true)"
+    [ -n "$line" ] || { echo "$id: no provider in .harness/providers.json runs it on night-vm-*" >&2; exit 2; }
+    lanes="${line##*=}"
+    [ "$arg" = "$id" ] || lanes="${arg#*=}"
+    [[ "$lanes" =~ ^[0-9]+$ ]] || { echo "$arg: the runners here must be a number" >&2; exit 2; }
+    labels="$labels ${line%=*}=$lanes"
+  done
+fi
 token="$(gh api -X POST "repos/$repo/actions/runners/registration-token" --jq .token)"
+remove_token="$(gh api -X POST "repos/$repo/actions/runners/remove-token" --jq .token)"
 
 # A directory of its own: on-machine.sh packs the whole directory the script sits in, and the
 # shared temporary directory (macOS's $TMPDIR, /tmp) holds sockets and folders tar cannot read.
@@ -26,10 +54,11 @@ trap 'rm -rf "$scratch"' EXIT
 remote="$scratch/register.sh"
 cat > "$remote" <<'EOF'
 #!/bin/bash
-# On the machine, as root: $1 the repository, $2 the registration token, then id=label=lanes.
+# On the machine, as root: $1 the repository, $2 the registration token, $3 the removal token,
+# $4 the box's name suffix (empty on the night box), then id=label=lanes.
 set -uo pipefail
 date +%s > /run/night-vm-last-busy
-repo="$1"; token="$2"; shift 2
+repo="$1"; token="$2"; remove_token="$3"; box="$4"; shift 4
 failed=0
 for entry in "$@"; do
   id="${entry%%=*}"; rest="${entry#*=}"; label="${rest%%=*}"; lanes="${rest#*=}"
@@ -37,10 +66,27 @@ for entry in "$@"; do
   if [ ! -x "$first/config.sh" ]; then
     echo "$label: no runner unpacked for $user; run setup.sh with $id first"; failed=1; continue
   fi
+  # Past this box's count: unregistered and gone, unless it holds a job (#1677).
+  for dir in "$first" "$first"-*; do
+    lane="${dir#"$first"}"; lane="${lane#-}"; lane="${lane:-1}"
+    [[ "$lane" =~ ^[0-9]+$ ]] && [ "$lane" -gt "$lanes" ] && [ -f "$dir/.runner" ] || continue
+    gone="$(jq -r '.agentName // empty' "$dir/.runner" 2>/dev/null || true)"; gone="${gone:-$dir}"
+    if pgrep -f "$dir/bin/Runner.Worker" >/dev/null; then
+      echo "$gone: busy with a job, so still registered; run this again once it ends"; continue
+    fi
+    if [ -f "$dir/.service" ]; then
+      (cd "$dir" && ./svc.sh stop >/dev/null 2>&1; ./svc.sh uninstall >/dev/null 2>&1)
+    fi
+    if ! out="$(cd "$dir" && sudo -u "$user" ./config.sh remove --token "$remove_token" 2>&1)"; then
+      echo "$gone: removal failed:"; echo "$out" | grep -iv token | tail -4; failed=1; continue
+    fi
+    [ "$dir" = "$first" ] || rm -rf "$dir"  # the unpacked runner stays, the source of every copy
+    echo "$gone: removed from this box"
+  done
   for lane in $(seq 1 "$lanes"); do
-    dir="$first"; name="$label"
+    dir="$first"; name="$label${box:+-$box}"
     if [ "$lane" -gt 1 ]; then
-      dir="$first-$lane"; name="$label-$lane"
+      dir="$first-$lane"; name="$label-$lane${box:+-$box}"
       if [ ! -x "$dir/config.sh" ]; then  # a fresh copy of the unpacked runner, no registration
         sudo -u "$user" mkdir -p "$dir"
         (cd "$first" && sudo -u "$user" cp -a bin externals ./*.sh ./*.template .env .path "$dir/")
@@ -80,7 +126,7 @@ done
 exit "$failed"
 EOF
 # shellcheck disable=SC2086  # one argument per id=label=lanes entry
-"$here/on-machine.sh" "$remote" "$repo" "$token" $labels
+"$here/on-machine.sh" "$remote" "$repo" "$token" "$remove_token" "$box" $labels
 echo
 gh api "repos/$repo/actions/runners" \
   --jq '.runners[] | "\(.name)  \(.status)  \([.labels[].name] | join(","))"'

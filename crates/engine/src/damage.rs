@@ -69,6 +69,12 @@ pub struct DamageFlags {
     /// without the source having the keyword. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub poisonous: Option<bool>,
+    /// #1750, R1750000: the hit is the attacker's own strike (its hit on the defender and its
+    /// Cleave's), the only damage a Unit's Trample applies to: a defender's strike back and the
+    /// damage a Unit's text deals never trample. A Spell's printed Trample and an effect's stated
+    /// `trample` do not need it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attacking: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -150,27 +156,17 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
         })
 }
 
-/// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
-/// card, a face-down Trap left out — its text is in nobody's use until it fires (R33) or is revealed
-/// (R1487000). What E6's hero guards read.
+/// The cards acting on a player's side of the field (§3.2), each once (`zones::acting_on`): the top of
+/// each unit pile, the Units its carriers hold (R446), a Unit standing in the backrow among them
+/// (R1081000), and each backrow card, a face-down Trap left out — its text is in nobody's use until it
+/// fires (R33) or is revealed (R1487000). What E6's hero guards read.
 pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    let mut out: Vec<CardInstance> = crate::zones::active_units_of(state, player)
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
         .into_iter()
-        .cloned()
-        .collect();
-    for slot in crate::zones::slots_of(player, Row::Backrow) {
-        let Some(card) = crate::zones::card_at(state, slot) else {
-            continue;
-        };
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        let face_down = crate::preview::lasting_text_dormant(state, card);
-        // R1081000: a Unit standing in the backrow is already above, among the active units — its
-        // text must not answer twice.
-        if !face_down && !out.iter().any(|held| held.id == card.id) {
-            out.push(card.clone());
-        }
-    }
-    out
+        .filter(|card| !crate::preview::lasting_text_dormant(state, card))
+        .cloned()
+        .collect()
 }
 
 /// E6: every hero guard a player's cards set on their hero now (`Script.heroGuard`).
@@ -360,11 +356,11 @@ fn credit_killer(unit: &mut CardInstance, source: Option<&CardInstance>, killed_
 }
 
 /// R346: whether a hit skips §4.4 step 2. Pierce is a keyword of the source — a unit's, read through
-/// the layers like its Lifesteal and Trample (§10.4), or a spell's printed on its face (#44 True
-/// Strike), which the same reading finds on the card while it resolves — or the effect's own
-/// `ignore_armor`, which states that its damage pierces without the source having the keyword, as
-/// R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine Shield, the hero
-/// cap and Indestructible all still apply.
+/// the layers like its Lifesteal and Trample (§10.4), or a spell's, printed on its face (#44 True
+/// Strike) or given by a Buff (R1748001), which the same reading finds on the card while it resolves —
+/// or the effect's own `ignore_armor`, which states that its damage pierces without the source having
+/// the keyword, as R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine
+/// Shield, the hero cap and Indestructible all still apply.
 pub fn pierces(state: &GameState, source: Option<&CardInstance>, flags: Option<&DamageFlags>) -> bool {
     if flags.is_some_and(|flags| flags.ignore_armor == Some(true)) {
         return true;
@@ -568,8 +564,12 @@ fn land_hit(
     if let Some(live) = &unit {
         let view = crate::layers::unit_view(sink.state, live);
         // E6: a Spell's printed Trample is read off it while it resolves, as a unit's is, or stated.
+        // R1750000: a Unit's own Trample is for the hits of its attack only, never for a strike back
+        // or for the damage of its text.
         let trample = flags.is_some_and(|flags| flags.trample == Some(true))
-            || source_has(sink.state, source, KeywordKind::Trample);
+            || (source_has(sink.state, source, KeywordKind::Trample)
+                && (flags.is_some_and(|flags| flags.attacking == Some(true))
+                    || crate::restrictions::is_spell_source(sink.state, source)));
         if trample && amount > view.health {
             dealt = view.health.max(0);
             trample_excess = amount - dealt;

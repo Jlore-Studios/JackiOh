@@ -4,7 +4,7 @@
   "plan_lanes": 6,
   "start_headroom": { "five_hour": 0.05, "seven_day": 0.05 },
   "balance": true,
-  "priority": ["claude-3", "claude-7", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
+  "priority": ["claude-3", "claude-7", "claude-8", "claude-1", "claude-4", "claude-6", "claude-5", "muse", "agy", "gpt", "claude-2", "devin"],
   "tiers": {
     "weak": [
       { "model": "swe-2-max", "note": "Devin (SWE-2): easy items only, under the easy rule. Its builds check themselves before any review." }
@@ -148,6 +148,24 @@
       "limits": { "mode": "caps", "five_hour": 0.7 },
       "quiet_check": false
     },
+    "claude-8": {
+      "note": "An eighth Claude account (token added 2026-10-23): any hour, capped at 85% of its 5-hour session with no weekly cap. Third in the usage order, after claude-3 and claude-7: Opus for strong roles, Sonnet (medium) for easy and medium builds, and each run switches between the two as the work needs. One lane, so it works one item at a time (#695).",
+      "enabled": true,
+      "cli": "claude",
+      "family": "claude",
+      "model": "opus",
+      "effort": "xhigh",
+      "fix_effort": "high",
+      "tier": "strong",
+      "extra_models": [{ "model": "sonnet", "effort": "xhigh", "tier": "medium" }],
+      "login": "secret",
+      "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+      "runs_on": "ubuntu-latest",
+      "lanes": 1,
+      "schedule": { "mode": "always" },
+      "limits": { "mode": "caps", "five_hour": 0.85 },
+      "quiet_check": false
+    },
     "gpt": {
       "note": "ChatGPT through the Codex CLI, logged in on the machine as agent-gpt (`codex login`). GPT-5.6 Sol, its top tier, since 2026-10-20, and medium again with it: weak from 2026-10-11 to 2026-10-20, on Terra, when it built easy items only (#682).",
       "enabled": true,
@@ -196,7 +214,7 @@
       "quiet_check": false
     },
     "muse": {
-      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Two lanes (#1273), under the one login: its caps are its whole plan, which read under 10% of the week on one lane, so the one run at a time of a capped subscription (#695) bought it nothing. Four runners take its runs in turn, `night-vm-muse` and `night-vm-muse-2` to `night-vm-muse-4`, as `bot/machine/register-runners.sh` registered them. Two Muse builds at once share the box's 8 GB (reviews/2026-10-19-issue-383-muse.md): if the status issue says the box ran short of memory most days, go back to one lane. On Meta's $50 plan since 2026-10-11, four times the usage of the one before; its caps are shares of whatever the plan gives, so they stretch with it. Its week has no start headroom (`start_headroom`, #682): a build or a plan may start right up to the 100% cap, since a run the cap cuts off keeps its work and Muse then waits for the reset.",
+      "note": "Meta's Muse Code CLI, logged in on the machine as agent-muse (`muse login`). Its usage is the TUI's `/usage` panel (`muse exec` runs no slash commands), read before the run, after every call and every ten minutes during one. Two lanes (#1273), under the one login: its caps are its whole plan, which read under 10% of the week on one lane, so the one run at a time of a capped subscription (#695) bought it nothing. One runner on each box since #1677: `night-vm-muse` on the night box and `night-vm-muse-b2` on the Muse box (the training box), so two Muse builds never share one box's 8 GB (reviews/2026-10-19-issue-383-muse.md, finding 1; bot/machine/README.md, The Muse box). On Meta's $50 plan since 2026-10-11, four times the usage of the one before; its caps are shares of whatever the plan gives, so they stretch with it. Its week has no start headroom (`start_headroom`, #682): a build or a plan may start right up to the 100% cap, since a run the cap cuts off keeps its work and Muse then waits for the reset.",
       "enabled": true,
       "cli": "muse",
       "family": "muse",

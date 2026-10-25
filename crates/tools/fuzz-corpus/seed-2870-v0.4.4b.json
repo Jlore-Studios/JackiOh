@@ -1,0 +1,9 @@
+{
+  "seed": 2870,
+  "catalogVersion": "v0.4.4b",
+  "decks": [
+    ["core-092", "core-095", "meditative-083", "classicplus-003", "classic-025", "classic-085", "classicplus-057", "classic-018", "classic-027", "classicplus-049", "classic-077", "classicplus-038", "meditative-053", "meditative-076", "core-085", "meditative-080", "core-009", "meditativeplus-015", "classicplus-031", "core-080"],
+    ["classic-032", "meditative-090", "meditative-086", "classicplus-043", "core-014", "meditativeplus-025", "meditative-015", "classic-059", "core-047", "core-003", "meditative-001", "meditative-016", "classic-064", "classic-031", "meditative-066", "meditative-024", "classicplus-063", "classic-074", "classic-079", "meditative-043"]
+  ],
+  "found": "The plain fuzz wave's second quarter (seeds 2501-5000, the daily run's fuzz 2/4) at c8942314f (#1728): I8 fired on turn 19, 100 actions in: p1 may send an activatePower with \"targets\":[] for c3 (classicplus-031, p1's), though legalActions does not list it. While p2's Mayor Medinamogger acts the list spells Fusion Lab's activation with an empty hand with no targets (R1200), and the reducer reads an empty list alike. Fixed by #1728, proven by invariants.rs's r1200_i8_is_clean_on_an_activation_the_list_spells_with_no_targets. The decks are decks_for_seed(2870) over the 396-card pool of catalog.json at c8942314f (v0.4.4b)."
+}

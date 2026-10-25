@@ -14,15 +14,7 @@ use std::sync::LazyLock;
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
+use super::harness::{both, spread};
 
 /// A Core Common card at cost 1 whose faces both print `keywords`.
 fn def(index: u32, name: &str, type_: &str, cost: i32, keywords: Value) -> CardDef {
@@ -51,13 +43,6 @@ fn unit(index: u32, name: &str, cost: i32, attack: i32, health: i32, keywords: V
         serde_json::to_value(def(index, name, "Unit", cost, keywords)).expect("a def serialises"),
         faces,
     ))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 // ---------------------------------------------------------------------------

@@ -70,7 +70,8 @@ export function screenNameFor(path: string): string | null {
 
 /**
  * The tab title for a path: "Sign in · JackiOh", and plain "JackiOh" on the landing page. The
- * match screen replaces it with "Your turn · JackiOh" while it is the player's turn (match.tsx).
+ * match and co-op screens replace it with "Your turn · JackiOh" while the game waits on the player
+ * (`awaitsYou`, game/net.ts).
  */
 export function documentTitleFor(path: string): string {
   const name = screenNameFor(path);

@@ -67,6 +67,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -104,10 +105,6 @@ mod tests {
             "p1": { "hand": [{ "def": MELT, "radiant": radiant_face }, FILLER] },
             "p2": { "hand": their_hand, "library": [FILLER] },
         }))
-    }
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
     /// The JSON round trip of §9.3, then the answer sent through `reduce`.
@@ -177,7 +174,7 @@ mod tests {
             let menace = s.card(MENACE).clone();
             s.answer(json!(menace.id));
             s.expect_in_zone(&menace, "exile");
-            assert_eq!(hand_defs(&s, P2), [SEVEN, FELINORS, VANILLA, REPLENISH]);
+            assert_eq!(def_ids(&s.hand(P2)), [SEVEN, FELINORS, VANILLA, REPLENISH]);
             assert!(s.state().pending.is_none());
             s.expect_in_zone(MELT, "graveyard");
             s.expect_events(json!(["promptOpened", "promptAnswered", "exiled"]));
@@ -258,7 +255,7 @@ mod tests {
             s.answer(json!([menace.id, vanilla.id]));
             s.expect_in_zone(&menace, "exile");
             s.expect_in_zone(&vanilla, "exile");
-            assert_eq!(hand_defs(&s, P2), [SEVEN, FELINORS, REPLENISH]);
+            assert_eq!(def_ids(&s.hand(P2)), [SEVEN, FELINORS, REPLENISH]);
         }
 
         #[test]
@@ -307,7 +304,7 @@ mod tests {
             s.answer(json!("1"));
             s.expect_in_zone(&felinors, "exile");
             s.expect_in_zone(&vanilla, "exile");
-            assert_eq!(hand_defs(&s, P2), [MENACE, REPLENISH, BIGOT]);
+            assert_eq!(def_ids(&s.hand(P2)), [MENACE, REPLENISH, BIGOT]);
             s.expect_in_zone(MELT, "graveyard");
         }
 
@@ -317,7 +314,7 @@ mod tests {
             s.play(MELT, json!({}));
             s.answer(json!("4"));
             s.expect_in_zone(SEVEN, "exile");
-            assert_eq!(hand_defs(&s, P2), [MENACE, FELINORS, VANILLA, REPLENISH]);
+            assert_eq!(def_ids(&s.hand(P2)), [MENACE, FELINORS, VANILLA, REPLENISH]);
         }
 
         #[test]

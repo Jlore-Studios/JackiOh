@@ -13,6 +13,11 @@
 // Gary the Gambler holds Me and Mr Token's place (#898): once the AI judged Taunts by their Armor per
 // hit, it raced the Rush Token at the hero of a beginner who ignores the coach and won, and tokens are
 // lesson 3's anyway.
+// Pointmaster holds the AI's Big D-fender's place (#1797): once the AI's search kept apart positions
+// that differ only in their units' lanes, it played Mr. Vanilla and Big D-fender on its third turn and
+// put both in Defense Position, where the aura's Armor left the player's fourth turn no attack that
+// clears a Taunt, so Deft Duelist's Charge never reached the hero. With Pointmaster the coach's line
+// plays as before through that turn, and wins on the fifth, once Hit Job takes out the AI's Jilliax.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -57,7 +62,7 @@ export const lesson: TutorialLesson = {
     "core-077", // Professor Curvature
     "core-045", // Deft Duelist
     "core-005", // Stockpile
-    "core-001", // Big D-fender
+    "core-020", // Pointmaster
     "core-008", // Mr. Vanilla
   ],
   retryTip: "Break a Divine Shield with a small hit before a big one, and clear Taunts with spells, so your units can reach the hero.",

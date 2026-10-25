@@ -110,6 +110,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -503,7 +504,7 @@ mod tests {
             // #99's ingredients are Discovered DEFINITIONS that were never cards on a board, so the only
             // thing to assert is that the fusion created no corpse and counted no destruction.
             assert_eq!(
-                s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+                def_ids(&s.pile(P1, "graveyard")),
                 vec![CRAFT.to_string()],
             );
             assert_eq!(s.state().counters.destroyed, 0);
@@ -599,11 +600,11 @@ mod tests {
 
             assert!(events_of(&s, "drawn").is_empty());
             assert_eq!(
-                s.hand(P1).into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+                def_ids(&s.hand(P1)),
                 vec![SPARE.to_string(), fused.id.clone()],
             );
             assert_eq!(
-                s.pile(P1, "library").into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+                def_ids(&s.pile(P1, "library")),
                 vec![TIMMY.to_string(), MENACE.to_string()],
             );
         }

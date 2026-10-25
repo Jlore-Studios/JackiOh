@@ -7,7 +7,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
 
 fn catalog() -> CardDefs {
-    vanilla_catalog(40, 1)
+    vanilla_catalog(2 * DECK_SIZE, 1)
 }
 
 fn deck_a() -> Vec<String> {
@@ -127,16 +127,16 @@ mod create_game_m1_t1 {
     }
 
     #[test]
-    fn rejects_a_deck_that_is_not_exactly_20_cards_naming_the_rule() {
-        let short = refusal((vanilla_deck(19, 1), deck_b()));
-        assert!(short.contains("exactly 20 cards (§2.6 L2)"), "{short}");
-        let long = refusal((deck_a(), vanilla_deck(21, 21)));
-        assert!(long.contains("p2: deck must hold exactly 20"), "{long}");
+    fn rejects_a_deck_that_is_not_exactly_deck_size_cards_naming_the_rule() {
+        let short = refusal((vanilla_deck(DECK_SIZE - 1, 1), deck_b()));
+        assert!(short.contains("exactly 25 cards (§2.6 L2)"), "{short}");
+        let long = refusal((deck_a(), vanilla_deck(DECK_SIZE + 1, 21)));
+        assert!(long.contains("p2: deck must hold exactly 25"), "{long}");
     }
 
     #[test]
     fn rejects_duplicate_card_ids_naming_the_rule() {
-        let mut with_duplicate = vanilla_deck(19, 1);
+        let mut with_duplicate = vanilla_deck(DECK_SIZE - 1, 1);
         with_duplicate.push("fx-1".into());
         let message = refusal((with_duplicate, deck_b()));
         assert!(
@@ -148,7 +148,7 @@ mod create_game_m1_t1 {
     #[test]
     fn rejects_a_token_tagged_card_naming_the_rule() {
         let token = token_def("rush", [Tag::Token]);
-        let mut with_token = vanilla_deck(19, 1);
+        let mut with_token = vanilla_deck(DECK_SIZE - 1, 1);
         with_token.push(token.id);
         let message = refusal((with_token, deck_b()));
         assert!(
@@ -159,7 +159,7 @@ mod create_game_m1_t1 {
 
     #[test]
     fn rejects_a_card_that_is_not_in_the_catalog_naming_the_rule() {
-        let mut with_ghost = vanilla_deck(19, 1);
+        let mut with_ghost = vanilla_deck(DECK_SIZE - 1, 1);
         with_ghost.push("fx-does-not-exist".into());
         let message = refusal((with_ghost, deck_b()));
         assert!(message.contains("not in the catalog (§9.4 L6)"), "{message}");

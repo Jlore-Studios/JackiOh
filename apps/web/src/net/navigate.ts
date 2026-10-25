@@ -1,6 +1,7 @@
 // Client routing.
 // M5's pathname switch and M6's screens share URL changes; §9.4 redirects pending accounts and room claims.
 // `pushState` and `replaceState` do not fire `popstate`, so `navigate` dispatches an event for `usePathname`.
+// A page holding work a move would lose registers a leave guard (`guardLeaving`, R1754000): `navigate` and the browser's Back wait for it.
 
 import { useSyncExternalStore } from "react";
 
@@ -21,24 +22,91 @@ function splitTarget(path: string): { pathname: string; search: string } {
   };
 }
 
-/** Avoid stacking history when a guard re-renders the current pathname and query. */
-export function navigate(path: string, options: { replace?: boolean } = {}): void {
-  if (typeof window === "undefined") return;
-  const target = splitTarget(path);
-  if (currentPath() === target.pathname && window.location.search === target.search) return;
-  if (options.replace === true) {
-    window.history.replaceState(null, "", path);
-  } else {
-    window.history.pushState(null, "", path);
-  }
+/** R1754000: the page that asks before it is left, and its own address, which a held Back puts back. One page at a time. */
+let leaveGuard: { hold: (leave: () => void) => void; here: string } | null = null;
+
+function here(): string {
+  return window.location.pathname + window.location.search;
+}
+
+/**
+ * R1754000: while a page holds work a move would lose, every `navigate` off it (but a `force`d one)
+ * and every `popstate` off it is held: `hold` is handed the move, to make if the player lets the
+ * work go. Returns the release, which the page calls once nothing is at stake.
+ */
+export function guardLeaving(hold: (leave: () => void) => void): () => void {
+  const guard = { hold, here: here() };
+  leaveGuard = guard;
+  return () => {
+    if (leaveGuard === guard) leaveGuard = null;
+  };
+}
+
+function go(path: string, replace: boolean): void {
+  const from = currentPath();
+  if (replace) window.history.replaceState(null, "", path);
+  else window.history.pushState(null, "", path);
+  if (currentPath() !== from) window.scrollTo(0, 0);
   window.dispatchEvent(new Event(NAVIGATED));
 }
 
+/**
+ * Avoid stacking history when a guard re-renders the current pathname and query. A new pathname opens
+ * at the top (#1756), scrolled after the push so the entry left keeps its position for Back; a change
+ * of query or fragment alone keeps the scroll, and Back and Forward (`popstate`) are the browser's.
+ * R1754000: a page's leave guard holds the move unless `force` (a move the page itself decided);
+ * returns false when it held it.
+ */
+export function navigate(path: string, options: { replace?: boolean; force?: boolean } = {}): boolean {
+  if (typeof window === "undefined") return true;
+  const target = splitTarget(path);
+  if (currentPath() === target.pathname && window.location.search === target.search) return true;
+  const replace = options.replace === true;
+  const guard = leaveGuard;
+  if (guard !== null && options.force !== true) {
+    guard.hold(() => {
+      go(path, replace);
+    });
+    return false;
+  }
+  go(path, replace);
+  return true;
+}
+
+/**
+ * R1754000: a `popstate` off a guarded page puts its address back before any screen reads the
+ * path, and hands the guard the way out: the browser's own Back, the guard gone, which returns to
+ * the entry the player went to (the restored address sits just after it). Had the player pressed
+ * Forward, that Back lands on the guarded page instead, so the entry is made again.
+ */
+function heldPop(): boolean {
+  const guard = leaveGuard;
+  if (guard === null || here() === guard.here) return false;
+  const popped = here();
+  window.history.pushState(null, "", guard.here);
+  guard.hold(() => {
+    if (leaveGuard !== guard) return;
+    leaveGuard = null;
+    window.addEventListener(
+      "popstate",
+      () => {
+        if (here() !== popped) go(popped, false);
+      },
+      { once: true },
+    );
+    window.history.back();
+  });
+  return true;
+}
+
 function subscribe(onChange: () => void): () => void {
-  window.addEventListener("popstate", onChange);
+  const onPop = (): void => {
+    if (!heldPop()) onChange();
+  };
+  window.addEventListener("popstate", onPop);
   window.addEventListener(NAVIGATED, onChange);
   return () => {
-    window.removeEventListener("popstate", onChange);
+    window.removeEventListener("popstate", onPop);
     window.removeEventListener(NAVIGATED, onChange);
   };
 }

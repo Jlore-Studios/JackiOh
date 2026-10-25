@@ -21,8 +21,8 @@ module, the `jackioh` tools, and this crate's tests (dev-dependency).
 Every AI number is a named constant (CLAUDE.md rule 9): `AI_BUDGET`, `AI_GATE_BUDGET`, `AI_SEARCH`,
 `AI_DETERMINIZE`, `AI_MULLIGAN` and `AI_MULLIGAN_CURVE` in `src/config.rs`, and the deck, gate, sweep
 and development-run numbers in their modules (`AI_DECK` in `deck.rs`, `AI_GATE` in `gate.rs`,
-`AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE` and
-`DUOS_GATE_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
+`AI_SWEEP` in `sweep.rs`, `AI_DEV_RUN` in `dev_run.rs`), with the Duos gate's `DUOS_GATE_GAMES_SMOKE`,
+`DUOS_GATE_WIN_FLOOR` and `DUOS_GATE_GREEDY_WIN_FLOOR` in `src/config.rs`. The tiers are the engine's (`AI_DIFFICULTY`, `AI_TUTORIAL`
 and Duos's `duos_ai_team` in `crates/engine/src/config.rs`).
 
 ## `decide` reads only `redact`
@@ -63,14 +63,32 @@ one redaction (R1184002).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
+it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
+less the body it comes back as, #1796), and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
-re-plans after every action. Its root tries a play in every distinct placement; deeper levels, the
-lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). An action the true state
-refuses (a cost no determinization could see) is never submitted: `submitted` sends the first action of
-the next finalist the true state accepts, best mean first, with the search's reason, and only when none
-is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer or other
-legal action (#1575).
+re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
+enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
+opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the other
+attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
+its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
+X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
+target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
+first (#1778). Its root tries a play in every distinct placement;
+deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
+drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
+are one position). A line that differs from an earlier one only in where its units stand is a lane variant
+(#1797): the evaluation reads no lane, so it takes no place in the beam, but when the beam keeps the earlier
+line, the first `AI_SEARCH.zone_variants` - 1 of them end their turn where they stand after it, below that
+line on a tie. So the placements the beam tries reach the reply, which prices a Cleave into a unit's
+neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
+lethal solver's visited set still reads a position without its units' lanes. Position
+switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
+the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
+kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the
+true state refuses (a cost no determinization could see) is never submitted: `submitted` sends the
+first action of the next finalist the true state accepts, best mean first, with the search's reason, and
+only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
+or other legal action (#1575).
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
@@ -297,7 +315,8 @@ and any human seat the server hands it after a disconnect (§13.8).
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision>;   // { body, fallback, sim_panics, first_sim_panic }
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String>;
-pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins, draws, rejected, fallbacks, sim_panics }
+pub fn duos_gate(games: usize, seed: &str, opponent: DuosOpponent) -> DuosGateReport;   // { opponent, games, wins, draws, rejected, fallbacks, sim_panics }
+pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody>;
 ```
 
 - `duos_decide` is `decide` on the seat's own duel: its mulligan and its prompts as a 1v1 seat answers
@@ -314,6 +333,10 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
   rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
   on a fixed-seed probe), ties by cost then hand order; free-pass next-turn cards keep cost order.
+  An immediate pass is named only when it is worth it (R1723000): the teammate's best follow-up with
+  the card, also tried after the teammate's own best play, beats its best without it by more than the
+  card's `hand_card_value` in the seat's hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost`
+  and `DUOS_PASS_MIN_GAIN`.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
@@ -325,10 +348,16 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI
   never concedes (R188), so it neither offers nor confirms a team's concede.
-- `duos_gate` plays the Easy AI team against a team on §10.7's random policy; it passes at
-  `DUOS_GATE_WIN_FLOOR` (0.8) of `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team
-  refused, no AI action off a fallback path and no panic an AI seat's search caught
-  (`cargo jackioh gate --duos`); `duos_gate_game_at` plays a game at another budget.
+- `duos_gate` plays the Easy AI team against one `DuosOpponent`: a team on §10.7's random policy
+  (seeds `${series}:${n}`) or a team on the 1v1 gates' greedy baseline (#1760): `duos_greedy_action`
+  plays each seat's own duel with `greedy_action`, never passes, and draws only on its seat's stream
+  (seeds `${series}:greedy:${n}`). A matchup passes at its opponent's floor, `DUOS_GATE_WIN_FLOOR`
+  (0.8) against random and `DUOS_GATE_GREEDY_WIN_FLOOR` (0.7) against greedy, of
+  `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team refused, no AI action off a
+  fallback path and no panic an AI seat's search caught (`cargo jackioh gate --duos` plays both);
+  `duos_gate_game_at` plays a game at another budget, and `duos_gate_game_with` one with a stand-in
+  decider (`DuosGateDecider`) for the AI team, which the tests use to show the gate catching a
+  weakened pass.
 
 ## Commands
 
@@ -338,7 +367,7 @@ cargo test -p jackioh-ai -- --include-ignored # and the daily ones: the many-gam
 cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its own job (#873)
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
-cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team (--games N)
+cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team and a greedy team (--games N)
 cargo jackioh gate --full --shard 1/4 --out ai-gate-shards && cargo jackioh gate merge ai-gate-shards
 cargo jackioh trace ai-vs-greedy 3            # one gate game, turn by turn
 cargo jackioh sweep core-011 classic-020      # the shadow-ban sweep over these ids (no ids: every card)

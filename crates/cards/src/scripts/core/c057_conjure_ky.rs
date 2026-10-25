@@ -59,14 +59,10 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-
-    /// The def ids in p1's hand, in hand order.
-    fn hand_defs(g: &Scenario) -> Vec<String> {
-        g.hand(P1).iter().map(|card| card.def_id.clone()).collect()
-    }
 
     /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62, Meditative #34
     /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
@@ -142,8 +138,8 @@ mod tests {
 
             g.play("core-057", json!({}));
 
-            assert_eq!(hand_defs(&g).len(), 3);
-            for def_id in hand_defs(&g) {
+            assert_eq!(def_ids(&g.hand(P1)).len(), 3);
+            for def_id in def_ids(&g.hand(P1)) {
                 assert!(in_ky_pool(&def_id), "{def_id} is not in the KY pool");
             }
             g.expect_events(json!(["cardPlayed", "addedToHand", "addedToHand", "addedToHand"]));
@@ -168,7 +164,7 @@ mod tests {
                 .map(|seed| {
                     let mut g = scenario(json!({ "seed": seed, "p1": { "hand": ["core-057"] } }));
                     g.play("core-057", json!({}));
-                    hand_defs(&g)
+                    def_ids(&g.hand(P1))
                 })
                 .collect();
 
@@ -239,8 +235,8 @@ mod tests {
             g.card_mut("core-057").radiant = true;
             g.play("core-057", json!({}));
 
-            assert_eq!(hand_defs(&g).len(), 4);
-            for def_id in hand_defs(&g) {
+            assert_eq!(def_ids(&g.hand(P1)).len(), 4);
+            for def_id in def_ids(&g.hand(P1)) {
                 assert!(in_ky_pool(&def_id), "{def_id} is not in the KY pool");
             }
             let flags: Vec<bool> = g.hand(P1).iter().map(|card| card.radiant).collect();

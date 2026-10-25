@@ -37,6 +37,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -45,10 +46,6 @@ mod tests {
     const FILLER: &str = "core-008";
     const CALL_TO_ARMS: &str = "core-069";
 
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).iter().map(|card| card.def_id.clone()).collect()
-    }
-
     #[test]
     fn r1_the_cry_adds_a_base_rock_hidden_from_the_opponent() {
         crate::register_all();
@@ -56,7 +53,7 @@ mod tests {
 
         s.play(ID, json!({}));
 
-        assert_eq!(hand_defs(&s, P1), vec![FILLER, ROCK]);
+        assert_eq!(def_ids(&s.hand(P1)), vec![FILLER, ROCK]);
         let rock = s.hand(P1).into_iter().find(|card| card.def_id == ROCK).expect("the Rock");
         assert!(!rock.radiant);
         assert_eq!(s.hand(P2).len(), 1);
@@ -77,9 +74,8 @@ mod tests {
 
         // Eleven in hand, ten after the play: the Rock is the eleventh add, so it burns.
         assert_eq!(s.hand(P1).len(), 10);
-        assert!(!hand_defs(&s, P1).contains(&ROCK.to_string()));
-        let burned: Vec<String> =
-            s.pile(P1, "graveyard").into_iter().map(|card| card.def_id).collect();
+        assert!(!def_ids(&s.hand(P1)).contains(&ROCK.to_string()));
+        let burned = def_ids(&s.pile(P1, "graveyard"));
         assert!(burned.contains(&ROCK.to_string()));
     }
 
@@ -99,7 +95,7 @@ mod tests {
 
         // Recruited, never played or cast: the Cry stays silent (R1).
         assert!(s.unit(P1, 1).is_some_and(|unit| unit.def_id == ID));
-        assert!(hand_defs(&s, P1).iter().all(|def| def != ROCK));
+        assert!(def_ids(&s.hand(P1)).iter().all(|def| def != ROCK));
     }
 
     #[test]

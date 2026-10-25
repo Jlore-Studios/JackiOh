@@ -47,6 +47,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -66,10 +67,6 @@ mod tests {
 
     fn play_at(s: &mut Scenario, player: PlayerId) -> &mut Scenario {
         s.play(VITAL, json!({ "targets": [{ "pick": "hero", "player": player }] }))
-    }
-
-    fn defs_of(cards: &[CardInstance]) -> Vec<String> {
-        cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
     mod c_n29_book_of_vital_kill {
@@ -215,7 +212,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 play_at(&mut s, P2);
-                assert_eq!(defs_of(&s.hand(P1)), vec![FILLER]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![FILLER]);
             }
 
             #[test]
@@ -241,7 +238,7 @@ mod tests {
                 }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
-                assert_eq!(defs_of(&s.hand(P1)), vec![FILLER]);
+                assert_eq!(def_ids(&s.hand(P1)), vec![FILLER]);
                 assert!(events_of(&s, GameEventType::TurnEnded).is_empty());
                 assert_eq!(s.state().active, P1);
             }

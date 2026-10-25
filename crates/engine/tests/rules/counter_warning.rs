@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
 
 /// TS `def(name, type, cost)`, its module `nextIndex` (from 1480) written out per definition.
 fn def(name: &str, type_: &str, cost: i32, index: i32) -> CardDef {
@@ -73,13 +73,6 @@ fn counter(opponent_only: bool) -> Script {
             args.cost_paid == 2 && !(opponent_only && args.player == args.controller)
         })),
         ..Script::default()
-    }
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
     }
 }
 

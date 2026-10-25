@@ -1,7 +1,7 @@
 {
   "id": "08-reserves-b",
   "spec": "08-turn-cap-draw.cy.ts",
-  "description": "Player 2's deck for spec 08 at R389's 60-turn cap: 08-do-nothing-b with #100 Ceaseless Void swapped for #75 Infinite Reserves, for the same reason as 08-reserves-a. The card list differs from seat 1's so the spec is not asserting a mirror of one shuffle, but the constraints are identical. The spec's seed (08-turn-cap-26) deals Infinite Reserves into this seat's opening hand, so its library runs dry into Rush Tokens instead of fatigue.",
+  "description": "Player 2's deck for spec 08 at R389's 60-turn cap: 08-do-nothing-b with #100 Ceaseless Void swapped for #75 Infinite Reserves, for the same reason as 08-reserves-a. The card list differs from seat 1's so the spec is not asserting a mirror of one shuffle, but the constraints are identical. The spec's seed (08-turn-cap-26) deals Infinite Reserves into this seat's opening hand, so its library runs dry into Rush Tokens instead of fatigue. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-006",
     "core-013",
@@ -23,5 +23,12 @@
     "core-095",
     "core-099",
     "core-075"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

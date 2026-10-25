@@ -275,11 +275,11 @@ declare
   p1 constant uuid := '11111111-1111-1111-1111-111111111111';
   -- [label, call, expected message prefix]
   probes constant text[][] := array[
-    ['D2: 21 cards',
+    ['D2: 26 cards',
      $q$select app.upsert_deck('11111111-1111-1111-1111-111111111111', 'a1000000-0000-4000-8000-0000000000f1',
-          'Big', (select jsonb_agg(format('bulk-%s', to_char(k, 'FM000'))) from generate_series(1, 21) k),
+          'Big', (select jsonb_agg(format('bulk-%s', to_char(k, 'FM000'))) from generate_series(1, 26) k),
           'core-1', now(), 10)$q$,
-     'deck: D2 21 cards'],
+     'deck: D2 26 cards'],
     ['D4: a card twice',
      $q$select app.upsert_deck('11111111-1111-1111-1111-111111111111', 'a1000000-0000-4000-8000-0000000000f2',
           'Twice', '["core-001", "core-001"]', 'core-1', now(), 10)$q$,

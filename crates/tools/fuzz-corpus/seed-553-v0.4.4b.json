@@ -1,0 +1,9 @@
+{
+  "seed": 553,
+  "catalogVersion": "v0.4.4b",
+  "decks": [
+    ["classicplus-033", "core-060", "classic-015", "meditative-027", "core-075", "classic-074", "meditative-038", "classicplus-005", "meditative-068", "meditative-085", "core-079", "meditativeplus-008", "meditative-090", "core-022", "core-047", "core-090", "meditativeplus-018", "meditative-101", "core-086", "classic-003"],
+    ["meditative-091", "meditative-023", "classicplus-056", "core-006", "meditative-083", "classic-075", "classic-054", "core-068", "classic-022", "core-007", "meditative-011", "classicplus-058", "core-082", "classic-073", "meditativeplus-005", "classic-077", "classicplus-078", "classicplus-074", "classic-063", "meditativeplus-016"]
+  ],
+  "found": "The plain fuzz wave's first quarter (seeds 1-2500, the daily run's fuzz 1/4) at c8942314f (#1728): I4 fired on turn 20, 91 actions in: c65 (t-9:classicplus-065-2*+(t-8:core-007+(t-7:#507dd6c3e8edca8a)), p1's) has summonedTurn 20 on turn 20, but its latest entry event was on turn 19. M #47 Taotie, a Flying Unit standing in p1's backrow (R1081000) with C+ #74 Twice Forward One Step Backwards, an Animated Field Trap, fused into it, was moved into its unit zone on p2's turn by that trap's animate step, when it fused in a copy of p2's Normal Grape. Fixed by #1728 (R1728000), proven by ranged_flying.rs's r1728000_animating_a_unit_standing_in_the_backrow_leaves_it_where_it_stands. The decks are decks_for_seed(553) over the 396-card pool of catalog.json at c8942314f (v0.4.4b)."
+}

@@ -423,9 +423,9 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
   public.code_attempts, public.invite_codes, public.profiles, auth.users
   restart identity cascade";
 
-    /// The harness's fixture catalog: 64 playable ids and two tokens.
+    /// The harness's fixture catalog: 80 playable ids and two tokens.
     fn playable_ids() -> Vec<String> {
-        (1..=64).map(|i| format!("core-{i:03}")).collect()
+        (1..=80).map(|i| format!("core-{i:03}")).collect()
     }
 
     fn token_ids() -> Vec<String> {
@@ -508,7 +508,7 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         if set_ships(SetName::Meditative) {
             expected.extend(["meditative-087", "meditative-097", "meditative-097-9"]);
         }
-        // R1178000: the Meditative+ set's one, #4 Supply Drop, once it ships.
+        // R1178000: the Meditative+ set's one, #4 Jlockeed's Supply Drop, once it ships.
         if set_ships(SetName::MeditativePlus) {
             expected.push("meditativeplus-004");
         }
@@ -527,8 +527,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         for tag in ["Book", "Pancake", "AI", "Plague"] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
         }
-        // Classic+ #7 The House is the 18th since #1704.
-        assert_eq!(tagged("Plague"), 18 + meditative(2));
+        // Classic+ #7 The House is the 18th since #1704, and #39 Book Worm the 19th since #1828.
+        assert_eq!(tagged("Plague"), 19 + meditative(2));
         // v0.3.10 (#967) made Meditative #49 YileGPT a Catalyst and its #49.1 a Prime, beside #45
         // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone. Meditative+ adds a
         // Catalyst and a Prime, #16 Jazakus and its #16.1 Jazakus Prime, and no Acclaimed.
@@ -761,7 +761,7 @@ mod r1310001_r1300001_db_a_new_version_grants_nobody {
     const FIXTURE_VERSION: &str = "core-1";
     /// The version the case seeds, holding one card no fixture uses.
     const NEW_VERSION: &str = "r1310001-v2";
-    /// A starter card past the fixture catalog's `core-064`, so a grant of the new version's
+    /// A starter card past the fixture catalog's `core-080`, so a grant of the new version's
     /// cards would have had it to give.
     const NEW_CARD: &str = "core-088";
     const DEV: &str = "d0000000-0000-4000-8000-000000001300";

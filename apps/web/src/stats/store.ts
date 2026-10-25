@@ -35,6 +35,17 @@ function parseCounters(raw: unknown): CardCounters | null {
   return CARD_COUNTERS.every((counter) => counters[counter] === 0) ? null : Object.freeze(counters);
 }
 
+/** R1743000: a card id's whole positive count, for each entry that has one. */
+function parseCounts(raw: unknown): Record<string, number> {
+  if (!isRecord(raw)) return {};
+  const counts: Record<string, number> = {};
+  for (const [id, value] of Object.entries(raw)) {
+    const n = count(value);
+    if (n > 0) counts[id] = n;
+  }
+  return counts;
+}
+
 /** Tolerant parsing: malformed input becomes empty statistics. */
 export function parsePlayerStats(raw: unknown): PlayerStats {
   try {
@@ -60,6 +71,10 @@ export function parsePlayerStats(raw: unknown): PlayerStats {
       losses: count(value.losses),
       draws: count(value.draws),
       cards: Object.freeze(cards),
+      streak: count(value.streak),
+      bestStreak: count(value.bestStreak),
+      longestGame: count(value.longestGame),
+      longestGamePlayed: Object.freeze(parseCounts(value.longestGamePlayed)),
     });
   } catch {
     return EMPTY_STATS;

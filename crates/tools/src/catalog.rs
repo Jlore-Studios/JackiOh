@@ -243,7 +243,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #1 Bob's Plan.
         Tag::Quickdraw => 5 + meditative(5) + meditative_plus(1),
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
-        // Supply Drop (the designer's "Jlockheed").
+        // Jlockeed's Supply Drop (the designer's "Jlockheed").
         Tag::Jlockeed => 6 + meditative(3) + meditative_plus(1),
         // Meditative+ #15 Book of Potions.
         Tag::Book => 14 + meditative_plus(1),
@@ -251,8 +251,8 @@ fn expected_tag_count(tag: Tag) -> usize {
         // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day, #1 Bob's Plan's
         // AI generated helpers.
         Tag::Ai => 10 + meditative_plus(4),
-        // Classic+ #7 The House since #1704.
-        Tag::Plague => 18 + meditative(2),
+        // Classic+ #7 The House since #1704, and #39 Book Worm since #1828.
+        Tag::Plague => 19 + meditative(2),
         // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         Tag::Catalyst => 2 + meditative(3) + meditative_plus(1),
@@ -786,12 +786,42 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     ),
                 );
             }
+            // R1748000: a number only the card's Cry reads is `cry: true`, and only such a number is.
+            let cry = param.get("cry");
+            if cry.is_some() && cry != Some(&Json::Bool(true)) {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("{key}: `cry` is `true` when present (got {})", describe(cry)),
+                );
+            }
+            let writing: Vec<&str> = texts
+                .iter()
+                .flat_map(|text| text.lines())
+                .map(str::trim)
+                .filter(|line| writes(line, key))
+                .collect();
+            let cry_only = !writing.is_empty() && writing.iter().all(|line| line.starts_with("Cry:"));
+            if cry_only && cry.is_none() {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("{key}: every line that writes {{{key}}} is a Cry, so it is `cry: true`"),
+                );
+            }
+            if cry.is_some() && !cry_only {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!("{key}: `cry: true`, but a line that writes {{{key}}} is no Cry"),
+                );
+            }
             let extra: Vec<&str> = param
                 .keys()
                 .map(String::as_str)
                 .filter(|k| {
                     ![
-                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn", "power",
+                        "key", "base", "radiant", "better", "step", "min", "max", "tunedOn", "power", "cry",
                     ]
                     .contains(k)
                 })
@@ -839,6 +869,51 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
 
 /// R349's fallback face, as `validate_fallback` holds a `radiantFallback` entry's `radiant` to it.
 const RADIANT_FALLBACK_FACTOR: f64 = 2.0;
+
+/// R1748001: `dealsDamage` marks a Spell or a Field Spell whose text deals damage, so a Buff may give it
+/// Pierce or Lifesteal. R1748002: `usesPlague` marks a Field Spell whose text names Plague Counters, so
+/// on the field a Buff places one on it and a Nerf removes one. Each is `true` when present.
+fn validate_buff_targets(failures: &mut Vec<String>, at: &str, value: &Object) {
+    let card_type = value.get("type").and_then(Json::as_str).unwrap_or_default();
+    let text: String = ["base", "radiant"]
+        .iter()
+        .filter_map(|face| match value.get(*face) {
+            Some(Json::Object(face)) => face.get("text").and_then(Json::as_str),
+            _ => None,
+        })
+        .collect::<Vec<&str>>()
+        .join("\n");
+    let marks: [(&str, &[&str], &str); 2] = [
+        ("dealsDamage", &["Spell", "Field Spell"], "damage"),
+        ("usesPlague", &["Field Spell"], "Plague Counter"),
+    ];
+    for (field, types, named) in marks {
+        let Some(mark) = value.get(field) else {
+            continue;
+        };
+        if mark != &Json::Bool(true) {
+            fail(
+                failures,
+                at,
+                &format!("`{field}` is `true` when present (got {})", describe(Some(mark))),
+            );
+        }
+        if !types.contains(&card_type) {
+            fail(
+                failures,
+                at,
+                &format!("`{field}` marks a {}, not a {card_type}", types.join(" or a ")),
+            );
+        }
+        if !text.contains(named) {
+            fail(
+                failures,
+                at,
+                &format!("`{field}`, but no face's text says \"{named}\""),
+            );
+        }
+    }
+}
 
 fn validate_fallback(failures: &mut Vec<String>, at: &str, value: &Object) {
     if value.get("radiantFallback") != Some(&Json::Bool(true)) {
@@ -1287,6 +1362,9 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             validate_fallback(&mut failures, &at, value);
         }
 
+        // R1748001, R1748002: the Buff targets a card's data names.
+        validate_buff_targets(&mut failures, &at, value);
+
         let known = [
             "id",
             "index",
@@ -1301,6 +1379,8 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "cost",
             "refs",
             "params",
+            "dealsDamage",
+            "usesPlague",
             "loc",
             "radiantFallback",
             "base",
@@ -2289,6 +2369,79 @@ mod tests {
                 )]
             );
         }
+    }
+
+    #[test]
+    fn r1748000_a_number_only_a_cry_writes_is_cry_and_a_cry_number_is_written_only_by_a_cry() {
+        let marked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up","cry":true}]"#;
+        let unmarked = r#"[{"key":"draw","base":1,"radiant":2,"better":"up"}]"#;
+        let (cry, cry_radiant) = ("Cry: Draw {draw}.", "Rush\\nCry: Draw {draw}.");
+        let lasting = "Start of turn: Draw {draw}.";
+        // Every line that writes it is a Cry: marked, it passes; unmarked, it is refused.
+        assert_eq!(params_failures(marked, cry, cry_radiant), Vec::<String>::new());
+        assert_eq!(
+            params_failures(unmarked, cry, cry_radiant),
+            ["x.params[0]: draw: every line that writes {draw} is a Cry, so it is `cry: true`"]
+        );
+        // A line that is no Cry writes it, beside a Cry or not: unmarked, it passes; marked, it is refused.
+        assert_eq!(params_failures(unmarked, lasting, lasting), Vec::<String>::new());
+        assert_eq!(params_failures(unmarked, cry, lasting), Vec::<String>::new());
+        assert_eq!(
+            params_failures(marked, cry, lasting),
+            ["x.params[0]: draw: `cry: true`, but a line that writes {draw} is no Cry"]
+        );
+        // `cry` is `true` or absent.
+        assert_eq!(
+            params_failures(
+                r#"[{"key":"draw","base":1,"radiant":2,"better":"up","cry":false}]"#,
+                cry,
+                cry_radiant
+            ),
+            ["x.params[0]: draw: `cry` is `true` when present (got false)"]
+        );
+    }
+
+    #[test]
+    fn r1748001_deals_damage_marks_only_a_spell_or_field_spell_that_deals_damage() {
+        let failures = |id: &str, value: Json| check_catalog(&with_field(id, "dealsDamage", value)).failures;
+        // The shipped catalog marks Lunar Eclipse, a Spell that deals damage, and passes.
+        assert_eq!(failures("core-035", Json::Bool(true)), Vec::<String>::new());
+        // Mana Well, a Field Spell that deals none.
+        assert_eq!(
+            failures("core-006", Json::Bool(true)),
+            ["catalog[\"core-006\"]: `dealsDamage`, but no face's text says \"damage\""]
+        );
+        // Bigot, a Unit that deals none.
+        assert_eq!(
+            failures("core-002", Json::Bool(true)),
+            [
+                "catalog[\"core-002\"]: `dealsDamage` marks a Spell or a Field Spell, not a Unit",
+                "catalog[\"core-002\"]: `dealsDamage`, but no face's text says \"damage\"",
+            ]
+        );
+        assert_eq!(
+            failures("core-035", Json::Bool(false)),
+            ["catalog[\"core-035\"]: `dealsDamage` is `true` when present (got false)"]
+        );
+    }
+
+    #[test]
+    fn r1748002_uses_plague_marks_only_a_field_spell_that_names_plague_counters() {
+        let failures = |id: &str| check_catalog(&with_field(id, "usesPlague", Json::Bool(true))).failures;
+        // Corpse Plantation, marked in the shipped catalog, passes.
+        assert_eq!(failures("classic-074"), Vec::<String>::new());
+        // Living Bomb names Plague Counters, but on other permanents: still a Field Spell that names them.
+        assert_eq!(failures("classic-062"), Vec::<String>::new());
+        // Mana Well names none.
+        assert_eq!(
+            failures("core-006"),
+            ["catalog[\"core-006\"]: `usesPlague`, but no face's text says \"Plague Counter\""]
+        );
+        // Outbreak is a Spell: it never stays on the field to carry them.
+        assert_eq!(
+            failures("classic-039"),
+            ["catalog[\"classic-039\"]: `usesPlague` marks a Field Spell, not a Spell"]
+        );
     }
 
     #[test]

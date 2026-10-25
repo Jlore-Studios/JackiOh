@@ -250,7 +250,9 @@ mod summarize_game_over_real_cards_s9_11 {
                             }
                         }
                         GameEvent::CardPlayed {
+                            player: caster,
                             instance_id,
+                            def_id,
                             former_id,
                             ..
                         } => {
@@ -258,6 +260,22 @@ mod summarize_game_over_real_cards_s9_11 {
                                 .or_else(|| former_id.as_deref().and_then(|id| open_play(&plays, id)))
                             {
                                 plays[seat][at].placed = true;
+                            } else if let Some(card) = state.players[*caster]
+                                .hand
+                                .iter()
+                                .find(|card| card.id == *instance_id)
+                            {
+                                // Re-pinned for #1705 (25-card decks): M+ #17 Dogpile's hand trigger casts
+                                // it from the hand it stood in as the step began, counted as a play
+                                // (R1180005), with no `play` logged; summary-cards-35's p2 holds one.
+                                plays[*caster].push(Play {
+                                    id: card.id.clone(),
+                                    def_id: def_id.clone(),
+                                    radiant: card.radiant,
+                                    placed: true,
+                                    open: false,
+                                    announced: true,
+                                });
                             }
                         }
                         // A Death the play's own Tribute set off can discard the hand the card still stands in

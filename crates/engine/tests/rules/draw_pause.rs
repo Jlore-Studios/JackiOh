@@ -23,7 +23,7 @@ use jackioh_engine::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use jackioh_engine::testkit::*;
 use jackioh_engine::work::owed_work;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, round_trip, set_library, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, round_trip, set_library, slot};
 
 // Fixtures.
 
@@ -145,13 +145,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn cast_on_draw() -> Option<StaticFlags> {

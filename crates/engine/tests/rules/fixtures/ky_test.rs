@@ -13,15 +13,7 @@ use std::sync::LazyLock;
 use jackioh_engine::subsystems::ky_test::{KyTestProblem, ky_test_script};
 use jackioh_engine::testkit::*;
 
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
+use super::harness::spread;
 
 fn def(index: u32, id: &str, type_: &str, extra: Value) -> CardDef {
     json_as(spread(

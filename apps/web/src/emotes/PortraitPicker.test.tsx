@@ -12,14 +12,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PortraitId } from "@jackioh/shared";
 import { EMOJI_EMOTE_IDS, EMOTE_IDS, PORTRAIT_IDS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { VOICE_PRIORITY } from "../audio/constants.ts";
 import { setAudioEngineForTests } from "../audio/engine.ts";
-import type { AudioEngine } from "../audio/types.ts";
+import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import type { SavedDeck } from "../net/api.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
 import { fixtureCatalog, fixtureCollection, legalDecks } from "../game/deckbuilder/fixtures.ts";
@@ -31,38 +31,16 @@ import {
   memoryStorage,
   savedDeck,
 } from "../game/deckbuilder/testkit.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { EMOJI_LABEL } from "./EmojiArt.tsx";
+import { ownedPortraits, portraitCosmeticId, portraitOfCosmetic, PortraitsOwned } from "./ownedPortraits.ts";
 import { PORTRAIT_DEFS } from "./portraits.ts";
 import { PortraitPicker } from "./PortraitPicker.tsx";
 
-type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
-
-/** The same stand-in the audio suite uses: every member a spy, every sink call accepted. */
-function fakeEngine(): FakeEngine {
-  return {
-    state: vi.fn<AudioEngine["state"]>(() => "running"),
-    unlock: vi.fn<AudioEngine["unlock"]>(),
-    preloadVoices: vi.fn<AudioEngine["preloadVoices"]>(),
-    setBusy: vi.fn<AudioEngine["setBusy"]>(),
-    log: vi.fn<AudioEngine["log"]>(() => []),
-    clearLog: vi.fn<AudioEngine["clearLog"]>(),
-    contextsCreated: vi.fn<AudioEngine["contextsCreated"]>(() => 0),
-    speaking: vi.fn<AudioEngine["speaking"]>(() => false),
-    subscribeSpeaking: vi.fn<AudioEngine["subscribeSpeaking"]>(() => () => undefined),
-    musicOutput: vi.fn<AudioEngine["musicOutput"]>(() => null),
-    subscribeState: vi.fn<AudioEngine["subscribeState"]>(() => () => undefined),
-    dispose: vi.fn<AudioEngine["dispose"]>(),
-    playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
-    playVoice: vi.fn<AudioEngine["playVoice"]>(() => true),
-    playEffect: vi.fn<AudioEngine["playEffect"]>(() => true),
-    playPickup: vi.fn<AudioEngine["playPickup"]>(() => true),
-  };
-}
-
-let engine: FakeEngine;
+let engine: FakeAudioEngine;
 
 beforeEach(() => {
-  engine = fakeEngine();
+  engine = fakeAudioEngine();
   setAudioEngineForTests(engine);
 });
 
@@ -139,6 +117,51 @@ describe("the deck's portrait button (R641)", () => {
     openPicker();
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("the portraits an account owns (R1827000)", () => {
+  /** The open menu's tiles, by portrait, in the order they show. */
+  function tiles(): (string | null)[] {
+    const grid = within(openPicker()).getByRole("listbox", { name: "Portraits" });
+    return [...grid.querySelectorAll<HTMLElement>(".portrait-tile")].map((tile) => tile.getAttribute("data-portrait"));
+  }
+
+  it("R1827000 the menu offers only the owned portraits, in roster order, and the deck's own", () => {
+    render(<PortraitsOwned owned={["vanilla", "gary"]}>{picker("timmy")}</PortraitsOwned>);
+    expect(tiles()).toEqual(["vanilla", "gary", "timmy"]);
+    // The deck's own pick, owned or not, is the one shown selected.
+    expect(screen.getByTestId("portrait-pick-timmy")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("portrait-pick-shredder")).toBeNull();
+    cleanup();
+
+    // An owned pick shows once; under "every", as with no provider above it, every portrait is offered.
+    render(<PortraitsOwned owned={["vanilla", "gary"]}>{picker("gary")}</PortraitsOwned>);
+    expect(tiles()).toEqual(["vanilla", "gary"]);
+    cleanup();
+    render(<PortraitsOwned owned="every">{picker("gary")}</PortraitsOwned>);
+    expect(tiles()).toEqual([...PORTRAIT_IDS]);
+  });
+
+  it("R1827000 ownedPortraits reads the starters and the account's rows, and portraitOfCosmetic maps ids", () => {
+    // `vanilla` is the registry's starter: every account owns it with no row.
+    expect(ownedPortraits([])).toEqual(["vanilla"]);
+    expect(ownedPortraits(["portrait-shredder", "table-wood", "portrait-gary", "portrait-ulfric", "gary"])).toEqual([
+      "vanilla",
+      "gary",
+      "shredder",
+    ]);
+    expect(ownedPortraits(PORTRAIT_IDS.map(portraitCosmeticId))).toEqual([...PORTRAIT_IDS]);
+
+    expect(portraitCosmeticId("timmy")).toBe("portrait-timmy");
+    expect(portraitOfCosmetic("portrait-gary")).toBe("gary");
+    expect(portraitOfCosmetic("portrait-ulfric")).toBeNull();
+    expect(portraitOfCosmetic("table-wood")).toBeNull();
+    expect(portraitOfCosmetic("gary")).toBeNull();
+    // The registry holds one portrait cosmetic per roster id, and only `vanilla`'s is a starter.
+    const registry = COSMETICS.filter((cosmetic) => cosmetic.kind === "portrait");
+    expect(registry.map((cosmetic) => portraitOfCosmetic(cosmetic.id))).toEqual([...PORTRAIT_IDS]);
+    expect(registry.filter((cosmetic) => cosmetic.starter).map((cosmetic) => cosmetic.id)).toEqual(["portrait-vanilla"]);
   });
 });
 

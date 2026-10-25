@@ -82,6 +82,7 @@ jobs:
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_5 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_5' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_6 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_6' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_7 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_7' || '' }}
+            ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_8 != '' && 'CLAUDE_CODE_OAUTH_TOKEN_8' || '' }}
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY != '' && 'CLAUDE_CODE_OAUTH_TOKEN_SQUISHY' || '' }}
         run: |
           set -euo pipefail

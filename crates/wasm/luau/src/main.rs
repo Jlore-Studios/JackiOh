@@ -47,7 +47,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use jackioh_engine::custom::{check_custom_setup, custom_def, validate_custom_card, with_custom_scripts};
 use jackioh_engine::prelude::IndexMap;
-use jackioh_engine::{CardDef, CreateGameArgs, CustomCard};
+use jackioh_engine::{CardDef, CreateGameArgs, CustomCard, SetupKind};
 use jackioh_luau::custom::{KitHost, check_custom_source};
 use jackioh_wasm_core::{self as wasm_core, parse, to_json};
 use serde_json::json;
@@ -129,7 +129,7 @@ fn out(result: Result<String, String>) -> *mut c_char {
 /// before the engine is called: Rust's `create_game` panics where TypeScript threw (SURFACE §6.1),
 /// and a panic in WebAssembly is an abort the page cannot catch as the error TypeScript gave it. The
 /// functions are the engine's own (`state.rs`), so the messages are the engine's verbatim.
-fn check_setup(args: &CreateGameArgs) -> Result<(), String> {
+fn check_setup(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
     // R915005, R915006: the game's custom cards, each valid and given once, and every custom id a deck
     // names among them; the decks are then judged with their definitions.
     let customs: &[CustomCard] = args.custom_cards.as_deref().unwrap_or(&[]);
@@ -138,7 +138,7 @@ fn check_setup(args: &CreateGameArgs) -> Result<(), String> {
         .iter()
         .map(|card| (card.id.clone(), custom_def(card)))
         .collect();
-    wasm_core::check_decks(args, &custom_defs)
+    wasm_core::check_decks(args, &custom_defs, kind)
 }
 
 // The panic hook writes through emscripten, straight to the JavaScript console. Off the browser

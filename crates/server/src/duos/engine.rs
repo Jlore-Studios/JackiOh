@@ -17,8 +17,9 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::config::{AI_DIFFICULTY, DUOS_HUMAN_TEAM, Difficulty, HUMAN_HANDICAP, duos_ai_team};
 use jackioh_engine::duos::{
-    DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create, duos_fold,
-    duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for,
+    DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create,
+    duos_create_recorded, duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act,
+    duos_view_for,
 };
 use jackioh_engine::wire::{
     DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,
@@ -205,8 +206,8 @@ impl DuosSteps {
 
 /// B41: the match folded once under its catalog, both people's views after every step. A log the
 /// engine no longer folds to its end, its setup or any action refused, is `rules_changed` (B24, R768):
-/// the replay is refused, never cut short. Panics, as `duos_create` does, on a deck the catalog
-/// refuses; the caller catches it.
+/// the replay is refused, never cut short. The match is built as one already made (R1705003). Panics,
+/// as `duos_create` does, on a deck the catalog refuses; the caller catches it.
 pub fn steps_for(
     pinned: Pinned,
     options: &DuosCreateOptions,
@@ -214,7 +215,7 @@ pub fn steps_for(
 ) -> Result<DuosSteps, ReplayRefusal> {
     registered();
     pinned.run(|| {
-        let begun = duos_begin(&duos_create(options));
+        let begun = duos_begin(&duos_create_recorded(options));
         if begun.error.is_some() {
             return Err(ReplayRefusal::RulesChanged);
         }

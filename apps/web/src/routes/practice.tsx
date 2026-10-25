@@ -106,7 +106,7 @@ import { createPracticeHost, type PracticeHost } from "../practice/host.ts";
 import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
 import { clearPracticeResume, readPracticeResumeState, writePracticeResume } from "../practice/resume.ts";
-import { ModifierList } from "../practice/ModifierList.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { SANDBOX_HOLD, sandboxAction } from "../practice/sandbox.ts";
 import { SandboxPanel } from "../practice/SandboxPanel.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
@@ -1353,7 +1353,7 @@ function PracticeScreen({
           {/* SPEC §2.1 step 5: p1 takes the first turn. */}
           <span className="practice-hud__seat">{config.humanSeat === "p1" ? t("You go first") : t("You go second")}</span>
           <span className="practice-hud__status">
-            <ModifierList view={snapshot.view} />
+            <ModifierList view={snapshot.view} opponentLabel={t("AI")} />
             <ThinkIndicator thinking={state.thinking} />
             {outcome === null ? null : (
               <button

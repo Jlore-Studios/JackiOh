@@ -45,6 +45,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const BOOK: &str = "classicplus-054";
     const FILLER: &str = "core-005";
@@ -192,7 +193,7 @@ mod tests {
             for card in &books {
                 assert_eq!(s.card(&card.id).zone.z(), ZoneName::Graveyard);
             }
-            let hand: Vec<String> = s.hand(PlayerId::P1).into_iter().map(|card| card.def_id).collect();
+            let hand = def_ids(&s.hand(PlayerId::P1));
             assert_eq!(hand, vec![FILLER.to_string()]);
         }
 

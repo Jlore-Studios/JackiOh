@@ -51,7 +51,7 @@ fn sink_for(state: &mut GameState) -> Bench<'_> {
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
     register_catalog(datacenter_catalog(combat_catalog(fixture_catalog(
-        vanilla_catalog(40, 1),
+        vanilla_catalog(2 * DECK_SIZE, 1),
     ))));
     let mut scripts = registered_scripts().clone();
     scripts.extend(fixture_scripts());

@@ -41,7 +41,8 @@ crates/cards
 
 **One card, one file, its tests inside it** (CLAUDE.md rule 6). The file is
 `src/scripts/<set>/<name>.rs`: the spec §5 index in three digits with a `c` in front, then the slug,
-every `-` and `.` an `_`.
+every `-` and `.` an `_`. The build holds the folder and the number, not the slug (§4): a few slugs
+differ from the card's name on purpose (`core/c097_zephyrs.rs` for Zephrys).
 
 | Card | File |
 | --- | --- |
@@ -177,6 +178,12 @@ every Radiant face meets R275's standard (`tests/cross/radiant_standard.rs` agai
 - `params`: the numbers a Nerf, a Buff and KY's Constant may change (R386), per face, written
   `{key}` in the text. A script reads `param(ctx, key)`, never a literal. Players read Nerf and Buff
   for the engine's Degrade and Upgrade, whose verbs keep their names (`degrade`, `upgrade`, R1320).
+  `cry: true` marks a number only the card's Cry reads, which no Nerf or Buff draws on the field
+  (R1748000); `catalog check` holds it to the text. A number a Spell or a Field Spell prints is
+  declared, or `tests/cross/params.rs` names why it stays fixed (R1748003).
+- `dealsDamage: true`: a Spell or a Field Spell that deals damage, which a Buff may give Pierce or
+  Lifesteal (R1748001). `usesPlague: true`: a Field Spell that uses the Plague Counters on itself, on
+  which a Buff places one and from which a Nerf removes one on the field (R1748002).
 - `loc`: the lines of code of the card's script. Frozen data since v0.3.0: nothing recomputes it, C
   #48 and C+ #44, #45 read it, and a card added since takes its number from
   `cargo jackioh catalog loc <script path>`.
@@ -219,8 +226,9 @@ line, cut to the engine's `CODE_BLOCK_MAX_LINES`, which `register_all` hands to 
 Meditative+ #25's code Discover). There is nothing to wire and nothing to
 regenerate by hand: drop the file in its folder and build. The build fails, naming the path, on a file
 without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outside a set folder, a
-file name that is not a Rust identifier, or a catalog id with no file. It also compiles in
-`CATALOG_VERSION`, the newest entry of `patches/patches.json`.
+file name that is not a Rust identifier, a file outside its `ID`'s set's folder or named for another
+card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSION`, the newest entry
+of `patches/patches.json`.
 
 `register_all()` hands the catalog and every script to the engine, once per process, and where the
 older shipped catalogs are found (`register_shipped`); the WASM module, the server and the tools
@@ -288,7 +296,8 @@ Every change to card data is a patch, and every patch is kept.
   shipped X when it was logged, `commit` its key, `kind` `app`, `ai` or `internal`, and `player` the
   line the Patch notes page shows under that X (App and AI only). `cargo jackioh patches log
   <base>..<head> [--bodies <path>]` appends to it (`crates/tools/src/technical.rs`'s header has the
-  rest); nothing else writes it.
+  rest); nothing else writes it, and `cargo jackioh patches check` holds the whole file to that
+  shape on every run.
 - A branch that changes a card claims it with a pending fragment:
   `cargo jackioh patches "<title>" --source "<issue or PR>" --notes "<what changed>"` writes
   `patches/pending/<slug>.json`, named after the title, with no version (R1366000; `--cards` names

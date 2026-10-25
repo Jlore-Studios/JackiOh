@@ -981,6 +981,87 @@ mod r654_public_card_and_player_stats {
     }
 }
 
+/// R1771000: the server keeps the account copy in R1142000's shape, whatever the PUT holds.
+mod r1771000_player_stats_account_copy {
+    use super::*;
+
+    /// PUT `stats` as the caller (`e2e-p1`); answers the echoed and the read-back copy.
+    async fn put_and_read(app: &Arc<App>, stats: Value) -> (Value, Value) {
+        let (status, _, put) = request(
+            app,
+            "PUT",
+            "/api/stats/player",
+            Some(USER_TOKEN),
+            Some(json!({ "stats": stats, "isPrivate": false })),
+        )
+        .await;
+        assert_eq!(status, 200);
+        let (_, _, read) = request(app, "GET", "/api/stats/player", Some(USER_TOKEN), None).await;
+        (put["stats"].clone(), read["stats"].clone())
+    }
+
+    #[tokio::test]
+    async fn r1771000_put_player_stats_keeps_only_catalog_cards_and_whole_counts() {
+        let app = test_app().await;
+        let (put, read) = put_and_read(
+            &app,
+            json!({
+                "games": 12, "wins": "7", "losses": -1, "draws": 2.0,
+                "motto": "Visit example.test for free packs",
+                "cards": {
+                    "core-001": { "played": 9, "playedAgainst": 2.5, "destroyed": "3", "defeated": -4, "seen": 6 },
+                    "Visit example.test for free packs": { "played": 1000 },
+                    "core-002": { "played": 0, "seen": 5 },
+                    "core-003": { "playedAgainst": 4, "destroyed": 1 },
+                },
+            }),
+        )
+        .await;
+        let kept = json!({
+            "games": 12,
+            "draws": 2,
+            "cards": { "core-001": { "played": 9 }, "core-003": { "playedAgainst": 4, "destroyed": 1 } },
+        });
+        assert_eq!(put, kept);
+        assert_eq!(read, kept);
+
+        let (_, _, list) = get_public(&app, "/api/stats/players").await;
+        let player = find(&list["players"], "games", &json!(12)).expect("the caller's summary");
+        assert_eq!(player["wins"], json!(0));
+        assert_eq!(player["losses"], json!(0));
+        assert_eq!(player["draws"], json!(2));
+        assert_eq!(
+            player["favouriteCards"],
+            json!([{ "id": "core-001", "count": 9 }])
+        );
+        assert_eq!(
+            player["funStats"],
+            json!({ "nemesisCardId": "core-003", "totalDestroyed": 1, "totalDefeated": 0 })
+        );
+    }
+
+    #[tokio::test]
+    async fn r1771000_put_player_stats_stores_what_sync_payload_sends_unchanged() {
+        let app = test_app().await;
+
+        let first = json!({ "games": 0, "wins": 0, "losses": 0, "draws": 0, "cards": {} });
+        let (put, read) = put_and_read(&app, first.clone()).await;
+        assert_eq!(put, first);
+        assert_eq!(read, first);
+
+        let synced = json!({
+            "games": 3, "wins": 2, "losses": 1, "draws": 0,
+            "cards": {
+                "core-001": { "played": 4, "playedAgainst": 1, "destroyed": 2, "defeated": 3 },
+                "core-002": { "playedAgainst": 5 },
+            },
+        });
+        let (put, read) = put_and_read(&app, synced.clone()).await;
+        assert_eq!(put, synced);
+        assert_eq!(read, synced);
+    }
+}
+
 mod r978000_kept_card_stats {
     use super::*;
     use std::time::Duration;
@@ -1226,38 +1307,43 @@ mod r1044000_condensed_card_stats {
 
 // R1367000: `GET /api/stats/cards` reads each card over its own window, the build's real patch
 // history deciding the windows: the newest micro that plays a card opens that card's window, while
-// every other card keeps its X's.
+// every other card keeps its X's. The tests ask at a micro's own version (`?patch=`), not at the
+// newest one: a ship can leave the newest X with no micro in it (#1832's v0.4.9), while a micro
+// already in the history stays there, so the shape they need never goes away.
 mod r1367000_card_stats_by_window {
     use super::*;
     use jackioh_engine::wire::stats::{PatchTier, WindowRequest, card_window};
 
-    /// The newest X's first version, and the newest micro in it that plays a card: its version and
-    /// the card, which the micro's window holds alone.
+    /// The newest micro in the history that plays a card whose previous window opens at the micro's
+    /// X: the X's first version, the micro's version and the card, which the micro's window holds
+    /// alone at that version.
     fn x_and_micro() -> (String, String, &'static str) {
         let history = jackioh_cards::patch_history();
-        let at = history.len() - 1;
-        assert_eq!(history[at].version, current_patch());
-        let x = history
-            .iter()
-            .rposition(|step| step.tier != PatchTier::Micro)
-            .expect("a major opens the history");
-        let micro = (x + 1..=at)
-            .rev()
-            .find(|&index| !history[index].plays.is_empty())
-            .expect(
-                "the newest X holds a micro that plays a card; pick another history shape when it does not",
-            );
-        let card: &'static str = history[micro].plays[0].clone().leak();
-        // The card's previous window holds the X's first version.
-        let previous = card_window(
-            &history,
-            &history[micro - 1].version,
-            Some(card),
-            WindowRequest::Gated,
-            |_| 0,
-        );
-        assert_eq!(previous.versions.first(), Some(&history[x].version));
-        (history[x].version.clone(), history[micro].version.clone(), card)
+        for micro in (1..history.len()).rev() {
+            if history[micro].tier != PatchTier::Micro {
+                continue;
+            }
+            let Some(x) = history[..micro]
+                .iter()
+                .rposition(|step| step.tier != PatchTier::Micro)
+            else {
+                continue;
+            };
+            for card in &history[micro].plays {
+                let previous = card_window(
+                    &history,
+                    &history[micro - 1].version,
+                    Some(card),
+                    WindowRequest::Gated,
+                    |_| 0,
+                );
+                if previous.versions.first() == Some(&history[x].version) {
+                    let card: &'static str = card.clone().leak();
+                    return (history[x].version.clone(), history[micro].version.clone(), card);
+                }
+            }
+        }
+        panic!("the history holds a micro that plays a card after its X")
     }
 
     fn live(id: String, patch: &str, card: &'static str) -> Value {
@@ -1272,11 +1358,12 @@ mod r1367000_card_stats_by_window {
         )
     }
 
-    fn dev(id: String, card: &'static str) -> Value {
+    fn dev(id: String, patch: &str, card: &'static str) -> Value {
         make_game_record(
             &id,
             RecordOptions {
                 source: Some("dev"),
+                patch: Some(patch.to_string()),
                 p1_deck: Some(vec![card, "core-001"]),
                 ..RecordOptions::default()
             },
@@ -1284,15 +1371,16 @@ mod r1367000_card_stats_by_window {
     }
 
     /// `x_games` live games on the X's first version, `micro_games` on the micro's, and ten
-    /// development games on the current one, each holding the card and core-001.
+    /// development games on the micro's too, each holding the card and core-001; the cards' figures
+    /// as the route reads them at the micro's version.
     async fn cards(x_games: i64, micro_games: i64) -> (Value, &'static str, String, String) {
         let (x, micro, card) = x_and_micro();
         let app = test_app().await;
         let mut records: Vec<Value> = (0..x_games).map(|n| live(format!("x-{n}"), &x, card)).collect();
         records.extend((0..micro_games).map(|n| live(format!("micro-{n}"), &micro, card)));
-        records.extend((0..10).map(|n| dev(format!("pad-{n}"), card)));
+        records.extend((0..10).map(|n| dev(format!("pad-{n}"), &micro, card)));
         insert_records(&app, records).await;
-        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        let (status, _, data) = get_public(&app, &format!("/api/stats/cards?patch={micro}")).await;
         assert_eq!(status, 200);
         (data, card, x, micro)
     }

@@ -295,7 +295,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         onClick={onOpen}
       >
         {/* A reader hears the row in words and the eye reads it drawn. An aria-label instead would hide
-            the drawn "20/20" from voice control, which axe's label-content-name-mismatch refuses. */}
+            the drawn "<count>/<DECK_SIZE>" from voice control, which axe's label-content-name-mismatch refuses. */}
         <span className="ws-row-words">
           {unsynced ? t("{deck}, {count} of {size} cards, {status}, not saved yet", words) : t("{deck}, {count} of {size} cards, {status}", words)}
         </span>

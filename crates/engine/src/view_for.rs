@@ -103,10 +103,10 @@ use crate::turn::standing_draw_offer;
 use crate::wire::{
     AnimatedView, BackrowCounters, BackrowView, CardDef, CardMark, CardType, CardView, CopiedTextView,
     CreditView, DrawOfferView, FaceDownBackrowView, GameEvent, GameEventType, GameResult, GlitchOutcome,
-    HandView, HeroPowerView, HeroView, LibraryOverflowOutcome, ManaView, ModifierView, MulliganView,
-    PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId, PlayerView,
-    PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView, Zone,
-    ZoneName, opponent_of,
+    HandView, HeroPowerView, HeroView, Keyword, KeywordKind, LibraryOverflowOutcome, ManaView, ModifierView,
+    MulliganView, PLAYER_IDS, PendingElsewhereView, PendingOption, PendingPromptView, PendingView, PlayerId,
+    PlayerView, PreviewValue, PublicBackrowView, Row, RowFlags, Selection, SideView, TuningChange, UnitView,
+    Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     beneath_at, carried_at, carried_units_of, home_of, is_reserved, is_standing_unit, slot_of, slots_of,
@@ -727,6 +727,16 @@ fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> 
     )
 }
 
+/// R940: a unit's keywords as the client reads them. A retired kind (`KeywordKind::RETIRED`) that a shipped
+/// catalog's card still prints is no kind the client's types name, so the view leaves it out.
+fn shown_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
+    keywords
+        .iter()
+        .filter(|keyword| !KeywordKind::RETIRED.contains(&keyword.kind()))
+        .cloned()
+        .collect()
+}
+
 /// The card that acts in a unit zone: the top of the pile (§3.2). `buried` is how many dormant cards
 /// sit under it (R13) — a count, so no buried identity reaches either player.
 fn unit_view_of(
@@ -776,7 +786,7 @@ fn unit_view_of(
         attack: layers.attack,
         max_health: layers.max_health,
         health: layers.health,
-        keywords: layers.keywords.clone(),
+        keywords: shown_keywords(&layers.keywords),
         armor: layers.armor,
         position: layers.position,
         counters: top.counters,

@@ -441,7 +441,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
 
       {/* R1584000: the stats and the footer are one screen below the hero, when there are stats. */}
       <div className="landing-floor">
-        <PlayerStatsCard reduced={motion === "reduced"} />
+        <PlayerStatsCard reduced={motion === "reduced"} random={random} />
 
         {open === null ? null : (
           <Suspense fallback={null}>

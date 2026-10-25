@@ -42,21 +42,22 @@ use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
     CardStatsFilter, GAME_SOURCES, GameMode, PilotFilter, SourceFilter, StatsTotals, card_stats,
-    card_stats_of, sources_of,
+    card_stats_of, parse_game_record, sources_of,
 };
-use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
+use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
     BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
-    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
     SavedCustomCard, SavedDeck, SavedTrio, Season, SeriesRow, StatsTotalsQuery, StoreError, TermsSource,
-    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -137,12 +138,12 @@ macro_rules! both_stores {
 // A fixture catalog big enough for a legal loadout (← test/db/harness.ts)
 // ---------------------------------------------------------------------------
 
-/// SPEC §9.4 L2: `DECK_SIZE` is 20, and L1 says three decks, so 60 ids is the floor.
+/// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
 pub const CATALOG_VERSION: &str = "core-1";
 
-/// `core-001` … `core-064`.
+/// `core-001` … `core-080`, the database suite's fixture catalog (`postgres.rs`, `seed_catalog.rs`).
 pub fn playable_ids() -> Vec<String> {
-    (1..=64).map(|i| format!("core-{i:03}")).collect()
+    (1..=80).map(|i| format!("core-{i:03}")).collect()
 }
 
 /// §9.4 L3: "no Token-tagged cards" — here so the R111 launch grant can be seen skipping them.
@@ -438,6 +439,39 @@ impl StoreHarness {
         }
     }
 
+    /// R1715000: a record written before the totals, not folded, whose detail does not read.
+    pub async fn plant_unreadable_game_record(&self, id: &str) {
+        match &self.ends {
+            Ends::Memory { data, .. } => {
+                let message = parse_game_record(&unreadable_game_record_detail(id))
+                    .expect_err("an unreadable detail")
+                    .message;
+                let mut data = data.lock().await;
+                data.tables
+                    .unreadable_game_records
+                    .insert(id.to_string(), message);
+                data.tables.game_record_ledger.insert(
+                    id.to_string(),
+                    fake::GameRecordLedgerRow {
+                        recorded_at: self.now(),
+                        folded: false,
+                    },
+                );
+            }
+            Ends::Postgres { admin } => {
+                sqlx::query(
+                    "insert into public.game_records (id, source, mode, patch, record, folded)
+                     values ($1, 'live', 'bo1', 'v0.1.1', $2::jsonb, false)",
+                )
+                .bind(id)
+                .bind(unreadable_game_record_detail(id).to_string())
+                .execute(admin)
+                .await
+                .expect("plant an unreadable game record");
+            }
+        }
+    }
+
     /// §14.10: each of a profile's collection grants' `dev` mark, oldest first, which no port read
     /// returns: in Postgres `collection_grants.dev` (migration 0045), in memory the grant's own.
     pub async fn collection_dev_marks(&self, profile_id: &str) -> Vec<bool> {
@@ -471,6 +505,12 @@ impl StoreHarness {
     pub fn now(&self) -> i64 {
         now_ms()
     }
+}
+
+/// R1715000: a game record's detail that no `GameRecord` reads, as a row in an older format might
+/// hold: the copies `game_records_copies_check` asks for and nothing else.
+fn unreadable_game_record_detail(id: &str) -> Value {
+    json!({ "id": id, "source": "live", "mode": "bo1", "patch": "v0.1.1" })
 }
 
 /// Every table the migrations create, children first. `cards` is seeded once and kept. The loadout
@@ -642,7 +682,8 @@ fn board_kind(literal: &str) -> LastBoardKind {
 
 /// The deck at `slot` of a legal three-deck loadout over the fixture catalog (§9.4 L1, L2, L4).
 fn deck_of(harness: &StoreHarness, slot: usize) -> Vec<String> {
-    harness.playable_ids[slot * 20..slot * 20 + 20].to_vec()
+    let size = usize::try_from(DECK_SIZE).expect("a deck size");
+    harness.playable_ids[slot * size..slot * size + size].to_vec()
 }
 
 fn clocks(now: i64) -> MatchClocks {
@@ -930,6 +971,35 @@ mod profiles {
         assert_eq!(q!(harness, t => t.collection_get(&profile.id)), granted);
     }
 
+    /// R1705002: the eleven Core cards the practice presets gained at 25 cards are starter cards, so
+    /// an account that becomes active owns each of them, one copy, and can queue every preset. The
+    /// fixture catalog holds nine of them (core-089 and core-091 lie past its core-080).
+    async fn r1705002_an_account_becoming_active_owns_the_added_starter_cards(harness: &StoreHarness) {
+        const ADDED: [&str; 11] = [
+            "core-002", "core-003", "core-010", "core-031", "core-034", "core-043", "core-047", "core-072",
+            "core-080", "core-089", "core-091",
+        ];
+        assert!(ADDED.iter().all(|id| STARTER_CARDS.contains(id)));
+        let held: Vec<&str> = ADDED
+            .into_iter()
+            .filter(|id| harness.playable_ids.iter().any(|card| card == id))
+            .collect();
+        assert_eq!(held.len(), 9);
+        let profile = pending_profile(harness, None).await;
+        q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
+        let granted = q!(harness, t => t.collection_get(&profile.id));
+        for id in held {
+            assert_eq!(
+                granted
+                    .iter()
+                    .find(|entry| entry.card_id == id)
+                    .map(|entry| entry.quantity),
+                Some(1),
+                "{id}"
+            );
+        }
+    }
+
     both_stores!(
         creates_a_pending_profile_and_reads_it_back_by_id_and_by_user_id,
         returns_null_for_an_unknown_profile,
@@ -938,6 +1008,7 @@ mod profiles {
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
         r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently,
+        r1705002_an_account_becoming_active_owns_the_added_starter_cards,
     );
 }
 
@@ -3624,6 +3695,32 @@ mod matches {
         assert_eq!(seqs, (1..=12).collect::<Vec<i64>>(), "{}", harness.name);
     }
 
+    /// #1825: the question the share route asks, answered without reading the log.
+    async fn tells_whether_a_log_holds_an_action_without_reading_it(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        assert!(
+            !q!(harness, t => t.matches_has_actions(&row.id)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        assert!(
+            q!(harness, t => t.matches_has_actions(&row.id)),
+            "{}",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.matches_has_actions(&id())),
+            "{}",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.matches_has_actions("not-a-uuid")),
+            "{}",
+            harness.name
+        );
+    }
+
     async fn refuses_a_seq_that_already_exists(harness: &StoreHarness) {
         let row = live_match(harness).await;
         q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
@@ -3990,6 +4087,7 @@ mod matches {
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
+        tells_whether_a_log_holds_an_action_without_reading_it,
         refuses_a_seq_that_already_exists,
         r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
@@ -4705,6 +4803,9 @@ mod game_records {
         from(value)
     }
 
+    /// R1715000: a live id that sorts before every id of `mixed_records`, so it heads the fold's queue.
+    const UNREADABLE_ID: &str = "a-unreadable";
+
     /// R376: the mode a record is filed under is read off what made the match.
     async fn r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
@@ -5160,16 +5261,16 @@ mod game_records {
 
         let mut sorted = records.clone();
         sorted.sort_by(|a, b| a.id.cmp(&b.id));
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(2)), 2);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(2)).folded, 2);
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&sorted[..2])
         );
         assert_eq!(
-            q!(harness, t => t.game_records_fold_pending(100)),
+            q!(harness, t => t.game_records_fold_pending(100)).folded,
             records.len() - 2
         );
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 0);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)).folded, 0);
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
@@ -5214,7 +5315,7 @@ mod game_records {
             q!(harness, t => t.game_records_insert_batch(&records)),
             vec![false; records.len()]
         );
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 0);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)).folded, 0);
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records)
@@ -5229,7 +5330,7 @@ mod game_records {
             j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
             json!(0)
         );
-        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)), 1);
+        assert_eq!(q!(harness, t => t.game_records_fold_pending(100)).folded, 1);
         assert_eq!(
             j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
             json!(1)
@@ -5237,6 +5338,69 @@ mod game_records {
         assert_eq!(
             q!(harness, t => t.stats_totals_load(&every_total())),
             loaded(&records[..1])
+        );
+    }
+
+    /// R1715000: a record whose detail does not read is set aside (marked folded with its detail
+    /// emptied, counted nowhere, answered) and the records behind it in the queue are folded.
+    async fn r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        harness.forget_game_record_folds().await;
+        harness.plant_unreadable_game_record(UNREADABLE_ID).await;
+        let message = parse_game_record(&unreadable_game_record_detail(UNREADABLE_ID))
+            .expect_err("an unreadable detail")
+            .message;
+        let mut sorted = records.clone();
+        sorted.sort_by(|a, b| a.id.cmp(&b.id));
+
+        // It heads the queue: the batch of two takes it and the first record behind it.
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(2)),
+            FoldedRecords {
+                folded: 1,
+                unreadable: vec![UnreadableGameRecord {
+                    id: UNREADABLE_ID.into(),
+                    message,
+                }],
+            }
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&sorted[..1])
+        );
+        // The rest fold, and nothing is taken again.
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(100)),
+            FoldedRecords {
+                folded: records.len() - 1,
+                unreadable: Vec::new(),
+            }
+        );
+        assert_eq!(
+            q!(harness, t => t.game_records_fold_pending(100)),
+            FoldedRecords::default()
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // Its detail is gone: the read of the records neither fails on it nor returns it.
+        let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
+        assert_eq!(ids_of(&held), ids_of(&sorted));
+        // Its id is kept: written again it is refused and counts nothing.
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&[game_record(UNREADABLE_ID, json!({}))])),
+            vec![false]
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
         );
     }
 
@@ -5250,6 +5414,7 @@ mod game_records {
         r1044000_folds_the_records_written_before_the_totals_once_a_batch_at_a_time,
         r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
         r1596000_lists_the_finished_matches_whose_record_was_never_filed,
+        r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
     );
 }
 
@@ -7801,7 +7966,7 @@ mod social {
             "not a seat"
         );
         assert_eq!(
-            j(&q!(harness, t => t.shares_for(&b.id))),
+            j(&q!(harness, t => t.shares_for(&b.id, 10))),
             json!([{ "matchId": over, "sharer": a.id, "createdAt": now - 3_000, "endedAt": now - 5_000 }])
         );
 
@@ -7811,7 +7976,7 @@ mod social {
             q!(harness, t => t.shares_sharers(&over, &b.id)),
             vec![a.id.clone(), c.id.clone()]
         );
-        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 2);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 2);
 
         // Unfriended or blocked, a's share is not read; made friends again, it is.
         assert!(q!(harness, t => t.friends_remove(&a.id, &b.id)));
@@ -7861,7 +8026,7 @@ mod social {
             q!(harness, t => t.shares_sharers(&over, &b.id)),
             vec![a.id.clone()]
         );
-        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 1);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 1);
 
         let cutoffs: RetentionPurgeInput = from(json!({
             "codeAttemptsBefore": now - 30 * day,
@@ -7871,8 +8036,52 @@ mod social {
         }));
         q!(harness, t => t.purge_expired(&cutoffs));
         assert!(q!(harness, t => t.matches_actions(&over)).is_empty());
+        assert!(!q!(harness, t => t.matches_has_actions(&over)));
         assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
-        assert!(q!(harness, t => t.shares_for(&b.id)).is_empty());
+        assert!(q!(harness, t => t.shares_for(&b.id, 10)).is_empty());
+    }
+
+    /// #1825: the list is the newest shares, at most `limit` of them.
+    async fn s7_replay_shares_list_the_newest_up_to_the_limit(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 10_000));
+        let mut ids = Vec::new();
+        for n in 0..3_i64 {
+            let over = id();
+            q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+            q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
+            q!(harness, t => t.matches_finish(&over, now - 5_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 3_000 + n * 1_000,
+            }));
+            q!(harness, t => t.shares_put(&share));
+            ids.push(over);
+        }
+
+        let newest_two: Vec<String> = q!(harness, t => t.shares_for(&b.id, 2))
+            .into_iter()
+            .map(|row| row.match_id)
+            .collect();
+        assert_eq!(
+            newest_two,
+            vec![ids[2].clone(), ids[1].clone()],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.shares_for(&b.id, 3)).len(),
+            3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.shares_for(&b.id, 10)).len(),
+            3,
+            "{}",
+            harness.name
+        );
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -8173,6 +8382,7 @@ mod social {
         r1384000_chat_pages_run_in_time_then_id_order_across_a_tie,
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
+        s7_replay_shares_list_the_newest_up_to_the_limit,
         r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
@@ -9265,6 +9475,35 @@ mod economy {
         assert_eq!(rest, EconomyLedger::default());
     }
 
+    /// R1827000: a portrait is an account cosmetic. An account made after migration 0057's grant
+    /// owns none, vanilla being a starter that needs no row, until one is granted on no card, which
+    /// writes its ledger row like any account cosmetic.
+    async fn r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({ "cards": [], "account": [] })
+        );
+        assert!(
+            q!(harness, t => t.economy_cosmetics_grant(&cosmetic(&profile.id, None, "portrait-gary", 1, now)))
+        );
+        assert!(
+            !q!(harness, t => t.economy_cosmetics_grant(&cosmetic(&profile.id, None, "portrait-gary", 1, now)))
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({ "cards": [], "account": ["portrait-gary"] })
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let rows: Vec<(Option<String>, String, i64)> = ledger
+            .cosmetics
+            .iter()
+            .map(|row| (row.card_id.clone(), row.cosmetic_id.clone(), row.delta))
+            .collect();
+        assert_eq!(rows, vec![(None, "portrait-gary".to_string(), 1)]);
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -9279,6 +9518,7 @@ mod economy {
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+        r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
     );
 }
 

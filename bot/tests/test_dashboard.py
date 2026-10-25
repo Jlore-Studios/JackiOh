@@ -38,6 +38,13 @@ def offline(gh: FakeGitHub | None = None):
 class TrainingBoxTests(unittest.TestCase):
     """The training box's lanes in the status diagram, from their pull requests (#1272)."""
 
+    def setUp(self) -> None:
+        # The lanes' drafts as they were drawn until #1677 stopped them, so a lane named again
+        # draws the same way.
+        patch = mock.patch.object(dashboard, "TRAINING_LANES", ("improve", "unban"))
+        patch.start()
+        self.addCleanup(patch.stop)
+
     def boxes(self, gh: FakeGitHub) -> str:
         return "\n".join(dashboard.training_boxes(make_ctx(gh, at=NIGHT, cfg=make_config())))
 
@@ -75,6 +82,19 @@ class TrainingBoxTests(unittest.TestCase):
         self.assertIn(":::next", body)
         self.assertIn('t1["<b>unban</b><br/>⛔ #73 unchanged<br/>updated', body)
         self.assertIn("is the lane running?\"]:::broken", body)
+
+    def test_with_the_lanes_stopped_the_box_shows_gather_alone(self):
+        """#1677: `improve` and `unban` are stopped, so an `ai/` draft left open draws nothing."""
+        gh = FakeGitHub()
+        self.lane(gh, 74, "improve", "AI gen 14 (improve): in training, nothing promoted yet",
+                  draft=True, updated=timedelta(minutes=20))
+        with mock.patch.object(dashboard, "TRAINING_LANES", ()):
+            body = self.boxes(gh)
+        self.assertIn('subgraph training["The training box: gather alone, no model"]', body)
+        self.assertIn('t0["<b>gather</b><br/>no model, no pull request<br/>its log is on the box"]'
+                      ':::closed', body)
+        self.assertNotIn("improve", body)
+        self.assertNotIn("Muse", body)
 
     def test_unreadable_pull_requests_draw_no_training_box(self):
         gh = FakeGitHub()
@@ -292,7 +312,7 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
         # Every subscription as a box, with what it does or why not and its usage, always:
         # the Claude accounts, then the night box's.
-        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 7 working"]',
+        self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 8 working"]',
                       body)
         self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37 · since 21:13<br/>5h ▰▰▱▱▱ 30%"]'
                       ':::busy', body)
@@ -304,12 +324,11 @@ class DashboardTests(unittest.TestCase):
                       '<br/>7d not read yet"]:::busy', body)
         self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3", body)
         self.assertNotIn(":::free", body)  # no empty slot is drawn as a free subscription
-        # The AI's training lanes run outside the harness: their boxes come from their pull
-        # requests, and with none open each says so (#1272).
-        self.assertIn('subgraph training["The training box, on Muse: 0 of 2 lanes working"]', body)
-        self.assertIn('t0["<b>improve</b><br/>no pull request open<br/>between sessions, '
-                      'or stopped"]:::closed', body)
-        self.assertIn("t0 ~~~ t1 ~~~ t2", body)
+        # The training box runs outside the harness, and since #1677 stopped its two LLM lanes
+        # it shows `gather` alone.
+        self.assertIn('subgraph training["The training box: gather alone, no model"]', body)
+        self.assertIn('t0["<b>gather</b><br/>no model, no pull request<br/>its log is on the box"]'
+                      ':::closed', body)
         self.assertIn("machine ~~~ training", body)
         # GitHub's lanes count claude-1's run; Muse's is in the night box's slots.
         self.assertIn("Lanes on GitHub's runners: 1 of 8 in use", body)
@@ -322,7 +341,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("| #9 | Make it so | revise | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "
                       "busy `claude-1` | — |", body)
         self.assertIn("> 🟢 **2 running** · 📋 **1 queued**: 1 waits for a strong model · 🔋 "
-                      "**none of 11 subscriptions can start work now**", body)
+                      "**none of 12 subscriptions can start work now**", body)
         self.assertIn('| <span title="took 4m">Tue 21:30</span> | schedule | ✅ '
                       '| [812](https://github.com/x/y/actions/runs/200) |', body)
         # The full status, folded.

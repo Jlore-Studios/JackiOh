@@ -163,7 +163,7 @@ mod tests {
                 let others = [
                     "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
                     "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
-                    "core-044", "core-053", "core-055",
+                    "core-044", "core-053", "core-055", "core-001", "core-003", "core-004", "core-009", "core-010",
                 ];
                 let mut deck: Vec<String> = others.iter().map(|id| id.to_string()).collect();
                 deck.push(ID.to_string());

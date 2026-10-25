@@ -1,10 +1,10 @@
-// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's takings, lethal blows, Traps fired and survivors.
+// R639 logs only cards the viewer could read (SPEC §10.8, R97; CLAUDE.md rule 7). R1582000 adds Allure's takings, lethal blows, Traps fired and survivors; R1743000 adds the damage, the biggest hit, the overkill, the attacks, the healing, the draws and the Radiant changes of the viewer's cards, and a game's turns.
 
 import type { CardView, GameEvent, PlayerView, SideView } from "@jackioh/shared";
 
 import { ALLURE_MARK, markEventOf } from "../cards/marks.ts";
 import { HIDDEN_ID } from "../game/animations.ts";
-import { logSeen, logWith, outcomeFor, type GameLog, type GameOutcome } from "./model.ts";
+import { logMax, logSeen, logWith, outcomeFor, type GameLog, type GameOutcome } from "./model.ts";
 
 function readable(defId: string): string | null {
   return defId === HIDDEN_ID ? null : defId;
@@ -48,6 +48,16 @@ export function countEvent(log: GameLog, event: GameEvent, viewer: PlayerView["v
     if (id === null || event.controller !== viewer) return log;
     return logWith(log, "sprung", id);
   }
+  // R1743000: the viewer's own draws show the card; the opponent's read as the sentinel (R97).
+  if (event.type === "drawn") {
+    const id = readable(event.defId);
+    return id === null || event.player !== viewer ? log : logWith(log, "drawn", id);
+  }
+  if (event.type === "radiantSet") {
+    const id = readable(event.defId);
+    return id === null || event.zone.player !== viewer ? log : logWith(log, "radiant", id);
+  }
+  if (event.type === "turnStarted") return event.turn > log.turns ? { ...log, turns: event.turn } : log;
   return log;
 }
 
@@ -107,11 +117,72 @@ export function countWin(log: GameLog, view: PlayerView, fresh: readonly GameEve
   return id === null ? next : logWith(next, "lethal", id);
 }
 
-/** Views carry a sliding event window (SPEC §10.8), so callers supply only fresh events. */
-export function observe(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
+/** The health the first of `side`'s hero and units that `targetId` names has; null for anything else, the sentinel included. */
+function healthIn(view: PlayerView, targetId: string): number | null {
+  if (targetId === HIDDEN_ID) return null;
+  for (const side of [view.you, view.opponent]) {
+    if (targetId === `hero-${side.player}`) return side.hero.health;
+    for (const unit of [...side.units, ...(side.carried ?? [])]) {
+      if (unit !== null && unit.instanceId === targetId) return unit.health;
+    }
+  }
+  return null;
+}
+
+/**
+ * R1743000: what the viewer's cards attacked and hit in one batch. An `attackDeclared` by a card on the
+ * viewer's side counts an attack. A `damage` of one counts its amount, may raise the card's biggest hit
+ * and, when it went past what its target had left, its overkill. The target's health is read from the
+ * view before the batch (`before`) less the hits of the batch already walked; with no view before, or a
+ * target the view does not show, there is no overkill. A hidden or opposing source counts nothing.
+ */
+export function countHits(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null): GameLog {
+  const left = new Map<string, number>();
+  let next = log;
+  for (const event of fresh) {
+    if (event.type === "attackDeclared") {
+      const id = defIdOn([view.you], event.attackerId);
+      if (id !== null) next = logWith(next, "attacks", id);
+    } else if (event.type === "damage" && event.amount > 0) {
+      const health = left.get(event.targetId) ?? (before === null ? null : healthIn(before, event.targetId));
+      if (health !== null) left.set(event.targetId, Math.max(0, health - event.amount));
+      const id = defIdOn([view.you], event.sourceId);
+      if (id === null) continue;
+      next = logMax(logWith(next, "damageDealt", id, event.amount), "biggestHit", id, event.amount);
+      if (health !== null && event.amount > health) next = logMax(next, "overkill", id, event.amount - health);
+    }
+  }
+  return next;
+}
+
+/**
+ * R1743000: `healed` names no source, so a heal counts toward the viewer's card whose `cardPlayed`,
+ * `activated` or `trapFired` came last before it in the batch. With none, or one of the opponent's
+ * (or a hidden card's), it counts nothing.
+ */
+export function countHealing(log: GameLog, view: PlayerView, fresh: readonly GameEvent[]): GameLog {
+  let next = log;
+  let source: string | null = null;
+  for (const event of fresh) {
+    if (event.type === "cardPlayed" || event.type === "activated") {
+      source = event.player === view.viewer ? readable(event.defId) : null;
+    } else if (event.type === "trapFired") {
+      source = event.controller === view.viewer ? readable(event.defId) : null;
+    } else if (event.type === "healed" && event.amount > 0 && source !== null) {
+      next = logWith(next, "healing", source, event.amount);
+    }
+  }
+  return next;
+}
+
+/**
+ * Views carry a sliding event window (SPEC §10.8), so callers supply only fresh events. `before` is the
+ * view the batch followed (R1743000's overkill reads the targets' health in it), null for the first.
+ */
+export function observe(log: GameLog, view: PlayerView, fresh: readonly GameEvent[], before: PlayerView | null = null): GameLog {
   let next = logSeen(log, seenIn(view));
   for (const event of fresh) next = countEvent(next, event, view.viewer);
-  return countWin(countAllured(next, view, fresh), view, fresh);
+  return countWin(countHealing(countHits(countAllured(next, view, fresh), view, fresh, before), view, fresh), view, fresh);
 }
 
 export function outcomeOfView(view: PlayerView): GameOutcome | null {

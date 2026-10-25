@@ -15,7 +15,6 @@ import { jlorePillTestid } from "../economy/JlorePill.tsx";
 import type { PacksResponse } from "../net/api.ts";
 import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { packTestid } from "../packs/packs.ts";
 import {
@@ -27,7 +26,7 @@ import {
   walletInfo,
 } from "../shop/fixtures.ts";
 import { shopTestid } from "../shop/shop.ts";
-import { refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, meBody, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { accountTestid } from "./account.tsx";
 import { purchasesTestid } from "./purchases.tsx";
 import ShopRoute, { shopRouteTestid } from "./shop.tsx";
@@ -38,16 +37,6 @@ const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 const SLOW = { timeout: 5_000 } as const;
 
 const TOKEN = "token-1";
-
-function meBody(status: "pending" | "active"): unknown {
-  return {
-    profile: { id: "profile-1", status },
-    needsInviteCode: status === "pending",
-    emailVerified: true,
-    currentMatchId: null,
-    email: "player@example.test",
-  };
-}
 
 /** The six reads the Shop screen's four panels make, answered from the fixtures. */
 function shopRead(call: Call): Reply | undefined {
@@ -73,7 +62,9 @@ function shopRead(call: Call): Reply | undefined {
 /** The gate's read, the account screen's profile and the Shop's six reads, answered from the fixtures. */
 function serveShop(status: "active" | "pending" = "active"): StubServer {
   return stubServer((call) => {
-    if (call.path === "/api/auth/me") return { status: 200, body: meBody(status) };
+    if (call.path === "/api/auth/me") {
+      return { status: 200, body: meBody({ profile: { id: "profile-1", status }, needsInviteCode: status === "pending" }) };
+    }
     if (call.method === "GET" && call.path === "/api/profile") {
       return {
         status: 200,
@@ -88,14 +79,6 @@ function serveShop(status: "active" | "pending" = "active"): StubServer {
     }
     return shopRead(call);
   });
-}
-
-function signedIn(token = "e2e-token"): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 beforeEach(() => {
@@ -138,7 +121,7 @@ describe("#1577 the shop screen", () => {
 
   it("a refused read says why on the screen, which keeps its heading", async () => {
     stubServer((call) => {
-      if (call.path === "/api/auth/me") return { status: 200, body: meBody("active") };
+      if (call.path === "/api/auth/me") return { status: 200, body: meBody() };
       if (call.method === "GET" && call.path === "/api/packs") {
         return refusal(503, "internal", "the shop is closed");
       }
@@ -278,7 +261,7 @@ describe("#1577 the shop screen", () => {
 describe("#1577 the /shop route through the route table", () => {
   it("an active account at /shop sees the shop, not the 404 panel", async () => {
     const server = serveShop();
-    signedIn();
+    signIn();
     at(paths.shop);
     render(<App />);
 
@@ -290,7 +273,7 @@ describe("#1577 the /shop route through the route table", () => {
 
   it("R1310000 an active account the server does not list as dev opens its card packs on the Shop", async () => {
     const server = serveShop();
-    signedIn();
+    signIn();
     at(paths.shop);
     render(<App />);
 
@@ -305,13 +288,13 @@ describe("#1577 the /shop route through the route table", () => {
     const info = packsInfo();
     const globalCosmetic = { chance: 0.1, tiers: { common: 0, rare: 0, epic: 0.9, legendary: 0.08, mythic: 0.02 } };
     stubServer((call) => {
-      if (call.path === "/api/auth/me") return { status: 200, body: meBody("active") };
+      if (call.path === "/api/auth/me") return { status: 200, body: meBody() };
       if (call.method === "GET" && call.path === "/api/packs") {
         return { status: 200, body: { ...info, odds: { ...info.odds, globalCosmetic } } };
       }
       return shopRead(call);
     });
-    signedIn();
+    signIn();
     at(paths.shop);
     render(<App />);
 
@@ -322,7 +305,7 @@ describe("#1577 the /shop route through the route table", () => {
 
   it("following the Shop door from the landing ends on /shop", async () => {
     serveShop();
-    signedIn();
+    signIn();
     at(paths.landing);
     render(<App />);
 
@@ -337,7 +320,7 @@ describe("#1577 the /shop route through the route table", () => {
 describe("R1646000 the account screen links no Shop", () => {
   it("R1646000 the account screen, through the route table, offers no link to /shop", async () => {
     serveShop();
-    signedIn();
+    signIn();
     at(paths.account);
     render(<App />);
 
@@ -353,7 +336,7 @@ describe("R1646000 the account screen links no Shop", () => {
 
   it("R1651000 the account screen's one way to /shop is the Jlore pill in its top bar", async () => {
     serveShop();
-    signedIn();
+    signIn();
     at(paths.account);
     render(<App />);
 

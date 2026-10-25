@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, round_trip, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, round_trip, slot};
 
 // The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
 // so the event list and the rng live here and each call borrows the state again.
@@ -172,13 +172,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> Vec<(String, CardScripts)> {

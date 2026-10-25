@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, in_hand, new_game, put, slot};
 
 const LOG_CARD: &str = "ac-log";
 const ASKER: &str = "ac-asker";
@@ -132,13 +132,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// The ids of `player`'s graveyard cards that are this file's Units.

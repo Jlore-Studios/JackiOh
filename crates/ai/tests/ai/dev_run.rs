@@ -224,7 +224,7 @@ mod the_ais_development_run_9_11 {
             for deck in [holder, other] {
                 assert!(
                     validate_deck(deck, registered_catalog(), "deck", DECK_SIZE).is_ok(),
-                    "game {n}: a deck is not 20 distinct deck-legal cards"
+                    "game {n}: a deck is not {DECK_SIZE} distinct deck-legal cards"
                 );
             }
             // R258's deal with the card banned: the other seat's deck whole, the holder's but for one slot.

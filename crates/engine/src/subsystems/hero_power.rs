@@ -40,7 +40,9 @@ use crate::script::{
     ActivationCost, ActivationDecl, ActivationUses, Effect, EffectContext, EngineSink, hook, read_hook,
 };
 use crate::state::{CardInstance, GameState};
-use crate::subsystems::activate::{ACTIVATIONS_MEMORY_KEY, abilities_of, uses_allowed, uses_this_turn};
+use crate::subsystems::activate::{
+    ACTIVATIONS_MEMORY_KEY, abilities_of, ability_uses_this_turn, uses_allowed, uses_record_after_refund,
+};
 use crate::wire::{CardType, SetName, TargetDecl, opponent_of};
 
 /// R43: where the rolled power lives on the instance.
@@ -416,12 +418,12 @@ pub fn refresh_power() -> Effect {
             return;
         };
         let id = card.id.clone();
+        let spent = power_ability_of(&*ctx.sink.state, &card).map(|decl| decl.id);
+        let refunded = uses_record_after_refund(&*ctx.sink.state, &card, spent.as_deref());
         card.memory
             .insert(POWER_KEY.to_string(), json!(next.name.as_str()));
         write_memory(ctx, &id, POWER_KEY, json!(next.name.as_str()));
-        let used = uses_this_turn(&*ctx.sink.state, &card);
-        if used > 0 {
-            let record = json!({ "turn": ctx.sink.state.turn, "count": used - 1 });
+        if let Some(record) = refunded {
             write_memory(ctx, &id, ACTIVATIONS_MEMORY_KEY, record);
         }
     })
@@ -838,6 +840,6 @@ pub fn power_ability_of(state: &GameState, card: &CardInstance) -> Option<Activa
 pub fn used_this_turn(state: &GameState, card: &CardInstance) -> bool {
     match power_ability_of(state, card) {
         None => false,
-        Some(decl) => uses_this_turn(state, card) >= uses_allowed(card, &decl),
+        Some(decl) => ability_uses_this_turn(state, card, &decl.id) >= uses_allowed(card, &decl),
     }
 }

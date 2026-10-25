@@ -19,14 +19,16 @@ use indexmap::IndexMap;
 use jackioh_engine::testkit::{clear_overrides, register_shipped};
 use jackioh_engine::{PlayerId, ShippedCatalog};
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
-use jackioh_server::api::game_records::record_live_game;
+use jackioh_server::api::game_records::{fold_pending, record_live_game};
 use jackioh_server::api::results::record_result;
 use jackioh_server::api::retention::{refile_unfiled, run_purge};
 use jackioh_server::app::App;
 use jackioh_server::config::GAME_RECORD_REFILE_GRACE_SECONDS;
-use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
+use jackioh_server::db::store::{
+    FoldedRecords, MatchSeat, StartMatchInput, StoreError, UnreadableGameRecord,
+};
 
-use crate::support::deps::{TestAppOptions, test_app, test_app_with};
+use crate::support::deps::{TestAppOptions, record_logs, test_app, test_app_with};
 use crate::support::store::{fake_lock, q, to_json};
 
 const MATCH_ID: &str = "match-records";
@@ -559,5 +561,47 @@ mod live_game_records {
                 .sum::<i64>(),
             1
         );
+    }
+
+    /// R1715000: a record the fold cannot read is alerted once, after its batch committed, and a
+    /// later fold meets it no more.
+    #[tokio::test]
+    async fn r1715000_the_fold_alerts_once_on_each_record_it_sets_aside() {
+        let logs = record_logs();
+        let app = test_app().await;
+        let message = "pilots is not an object";
+        {
+            let mut data = fake_lock(&app).await;
+            data.tables
+                .unreadable_game_records
+                .insert("a-unreadable".to_string(), message.to_string());
+        }
+        let unreadable = UnreadableGameRecord {
+            id: "a-unreadable".to_string(),
+            message: message.to_string(),
+        };
+
+        let done = fold_pending(&app.db).await.expect("the fold");
+        assert_eq!(
+            done,
+            FoldedRecords {
+                folded: 0,
+                unreadable: vec![unreadable],
+            }
+        );
+        let alerts = logs.named("game_records.fold_poison");
+        assert_eq!(alerts.len(), 1, "{alerts:?}");
+        assert_eq!(alerts[0].level, "alert");
+        assert_eq!(
+            alerts[0].data["data"],
+            json!({ "recordId": "a-unreadable", "message": message })
+        );
+        assert!(fake_lock(&app).await.tables.game_record_ledger["a-unreadable"].folded);
+
+        assert_eq!(
+            fold_pending(&app.db).await.expect("the fold again"),
+            FoldedRecords::default()
+        );
+        assert_eq!(logs.named("game_records.fold_poison").len(), 1);
     }
 }

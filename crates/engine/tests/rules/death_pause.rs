@@ -24,7 +24,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::work::owed_work;
 use jackioh_engine::zones::card_at;
 
-use crate::rules::fixtures::harness::{events_of_type, json_of, new_game, put, round_trip, slot};
+use crate::rules::fixtures::harness::{both, events_of_type, json_of, new_game, put, round_trip, slot};
 
 // Fixtures.
 
@@ -192,13 +192,6 @@ fn ask_controller() -> Effect {
             },
         );
     })
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 /// The shape under test: note, ask, and a tail that must run once and only after the answer.

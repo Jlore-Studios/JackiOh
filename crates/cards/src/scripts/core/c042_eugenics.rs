@@ -8,7 +8,11 @@
 //!            price, and a card's cost changes count; each exile is its own (R135). Then
 //!            `radiant_chance` rolls each card left, one independent roll per card in zone order (R60),
 //!            an already-Radiant card skipped; a Lucky given to the card rolls each twice and keeps a
-//!            success (R1438).
+//!            success (R1438). Tunes: chance 30 ↑, a percentage stepping 10 up to 100, on the base face
+//!            only (R1431, R1748003).
+//!
+//! Through v0.4.4b the base face's chance was printed, not declared; `script_v0_4_4b` keeps that
+//! (R767000).
 //!
 //! ORDER MATTERS. The exile runs first and the chance rolls over what is LEFT ("each card left in your
 //! deck"), so an exiled card is never rolled. Two effects in one list is the right shape for that:
@@ -24,17 +28,30 @@ pub const ID: &str = "core-042";
 /// price, R831014). It exiled 7 random cards before.
 const EUGENICS_MAX_COST: i32 = 2;
 
-/// "a 30% chance" on the base face; the Radiant face makes every card left Radiant, so nothing is left
-/// to chance there and it prints no Lucky (patch v0.3.10). The per-card probability `rng.chance` reads.
+/// "a 30% chance" on the base face as v0.4.4b printed it, before it was the declared `chance`
+/// (R1748003); the Radiant face makes every card left Radiant, so nothing is left to chance there and
+/// it prints no Lucky (patch v0.3.10). The per-card probability `rng.chance` reads.
 const BASE_CHANCE: f64 = 0.3;
 const RADIANT_CHANCE: f64 = 1.0;
 
-/// The faces differ only in the chance (§6.1). Any Lucky given (`given_lucky_on`, R1438) still rolls the
-/// base face's chance twice a card. The exile runs first and the chance rolls over what is left.
-fn eugenics(chance: f64) -> Script {
+/// The declared `chance` is a percentage.
+const PERCENT: i32 = 100;
+
+/// The faces differ only in the chance (§6.1): the base face's the declared `chance` (or its printed
+/// 30% when `declared` is off), the Radiant face's certain. Any Lucky given (`given_lucky_on`, R1438)
+/// still rolls the base face's chance twice a card. The exile runs first and the chance rolls over
+/// what is left.
+fn eugenics(radiant: bool, declared: bool) -> Script {
     Script {
         // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
         cry: Some(hook(move |ctx| {
+            let chance = if radiant {
+                RADIANT_CHANCE
+            } else if declared {
+                f64::from(param(&*ctx, "chance")) / f64::from(PERCENT)
+            } else {
+                BASE_CHANCE
+            };
             let lucky = ctx.live_self().map_or(0, given_lucky_on);
             let mut chance_args = json!({ "zone": "library", "chance": chance });
             if lucky > 0 {
@@ -51,8 +68,17 @@ fn eugenics(chance: f64) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: eugenics(BASE_CHANCE),
-        radiant: eugenics(RADIANT_CHANCE),
+        base: eugenics(false, true),
+        radiant: eugenics(true, true),
+    }
+}
+
+/// R767000: through v0.4.4b its base face's chance was printed; `KEPT_SCRIPTS` folds those replays
+/// under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: eugenics(false, false),
+        radiant: eugenics(true, false),
     }
 }
 
@@ -63,7 +89,8 @@ pub fn script() -> CardScripts {
 
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use super::{ID, script, script_v0_4_4b};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -101,17 +128,63 @@ mod tests {
         cast_face(false, library, seed)
     }
 
-    /// The effects a face returns, by `kind`. Neither hook reads its context, so any context will do:
-    /// one built at rest over a scenario's state.
+    /// The effects a face returns, by `kind`. A hook reads no more of its context than its card's
+    /// declared `chance` (R1748003), so a context built at rest over a scenario's state will do, naming
+    /// the card's definition to read it off.
     fn effect_kinds(hook: Option<&Hook>) -> Vec<&'static str> {
         let Some(hook) = hook else {
             return vec![];
         };
+        crate::register_all();
         let mut state = scenario(json!({})).state().clone();
         let mut events = Vec::new();
         let mut rng = Rng::new(&state.seed, state.rng_cursor);
         let mut ctx = EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
+        ctx.def_id = Some(ID.to_string());
         hook(&mut ctx).iter().map(|effect| effect.kind).collect()
+    }
+
+    /// p1 casts the base face over `library` after `buffs` Buffs, or one Nerf for `None`, of its
+    /// declared `chance`; the cards left Radiant.
+    fn converted_tuned(buffs: Option<usize>, seed: &str) -> usize {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": ["core-042", "core-021"], "library": mixed() },
+        }));
+        match buffs {
+            Some(buffs) => {
+                for _ in 0..buffs {
+                    crate::upgrade_number(&mut s, "core-042", "chance");
+                }
+            }
+            None => {
+                crate::degrade_number(&mut s, "core-042", "chance");
+            }
+        }
+        s.play("core-042", json!({}));
+        s.pile(PlayerId::P1, "library").iter().filter(|card| card.radiant).count()
+    }
+
+    #[test]
+    fn r1748003_chance_moves_with_a_buff_or_a_nerf() {
+        crate::register_all();
+        let plain = cast(mixed(), "eugenics-tuned")
+            .pile(PlayerId::P1, "library")
+            .iter()
+            .filter(|card| card.radiant)
+            .count();
+        // A Nerf takes it to 20%: the same rolls keep no more cards (each roll below 0.2 is below 0.3).
+        assert!(converted_tuned(None, "eugenics-tuned") <= plain);
+        // Seven Buffs take it to its bound of 100%: every card left becomes Radiant.
+        assert_eq!(converted_tuned(Some(7), "eugenics-tuned"), 50);
+    }
+
+    #[test]
+    fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_chance() {
+        crate::under_kept(ID, script_v0_4_4b(), || {
+            // The kept script never reads the declared number: seven Buffs leave it at 30%.
+            assert!(converted_tuned(Some(7), "eugenics-tuned") < 50);
+        });
     }
 
     fn radiant_flags(s: &Scenario) -> Vec<bool> {
@@ -121,8 +194,8 @@ mod tests {
             .collect()
     }
 
-    fn def_ids(s: &Scenario, pile: &str) -> Vec<String> {
-        let mut ids: Vec<String> = s.pile(PlayerId::P1, pile).into_iter().map(|card| card.def_id).collect();
+    fn sorted_def_ids(s: &Scenario, pile: &str) -> Vec<String> {
+        let mut ids = def_ids(&s.pile(PlayerId::P1, pile));
         ids.sort();
         ids
     }
@@ -139,8 +212,8 @@ mod tests {
             library.extend(copies(2, STOCKPILE));
             let s = cast(library, "eugenics");
 
-            assert_eq!(def_ids(&s, "exile"), vec![STOCKPILE, STOCKPILE, VANILLA, VANILLA, VANILLA]);
-            assert_eq!(def_ids(&s, "library"), vec![MENACE, MENACE, PLAIN, PLAIN, PLAIN, PLAIN]);
+            assert_eq!(sorted_def_ids(&s, "exile"), vec![STOCKPILE, STOCKPILE, VANILLA, VANILLA, VANILLA]);
+            assert_eq!(sorted_def_ids(&s, "library"), vec![MENACE, MENACE, PLAIN, PLAIN, PLAIN, PLAIN]);
         }
 
         #[test]
@@ -155,8 +228,8 @@ mod tests {
             ];
             let s = cast(library, "eugenics-r65");
 
-            assert_eq!(def_ids(&s, "exile"), vec!["core-019", "core-024", "core-046", "core-056"]);
-            assert_eq!(def_ids(&s, "library"), vec![VANILLA, MENACE]);
+            assert_eq!(sorted_def_ids(&s, "exile"), vec!["core-019", "core-024", "core-046", "core-056"]);
+            assert_eq!(sorted_def_ids(&s, "library"), vec![VANILLA, MENACE]);
         }
 
         #[test]

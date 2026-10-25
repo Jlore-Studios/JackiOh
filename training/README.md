@@ -1,15 +1,24 @@
 # The AI training lanes
 
-Two lanes that keep improving JackiOh's AI (`crates/ai/`, SPEC §9.9), each a Muse session after
-another on the training box, each gated by a fixed number of games against the AI on `main`, and
-nothing else: since generation 9 they play no games against random (R732001). They
+**Since 2026-10-25 the AI improves itself through the `learn` lane alone**, with no LLM in the loop
+([`learn.md`](learn.md)). Every week, on the owner's PC, a script plays the AI on `main` against
+itself, retrains the learned evaluation on those games, and gates the result against the AI on
+`main`. A pass opens its own pull request with auto-merge on. #682's audit
+(`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
+they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
+generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
+17 cards to 1 and #1889's to none, and fixed through ordinary issues.
+
+The lanes below improve JackiOh's AI (`crates/ai/`, SPEC §9.9), each gated by a fixed number of
+games against the AI on `main`, and nothing else: since generation 9 they play no games against
+random (R732001). The two LLM lanes were each a Muse session after another on the training box. They
 succeed #55's ladder (the Python `ladder/` that v0.3.0 replaced and deleted). The design is docs/v0.3.0/README.md §8; the interfaces are
 docs/v0.3.0/SURFACE.md §14.
 
 | Lane | Goal | Standing prompt |
 |---|---|---|
-| `improve` | a stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
-| `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
+| `improve` | **stopped (#1677).** A stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
+| `unban` | **stopped (#1677).** An AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
 | `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports (The gather lane) | [`gather.md`](gather.md) |
 | `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: improve's bar, 220 of 400 paired games, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
@@ -20,8 +29,8 @@ The `gather` lane runs no model session and opens no pull request (The gather la
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
 Meditative set into the AI's decks: it lifted R1390's gate after a sweep of record over the set's 102
-cards, which shadow-banned the ones the AI misplays (at most half the set). Those bans are the unban
-lane's work now. The shadow ban holds Meditative cards only (R732000), and since #1186's sweep, which banned none,
+cards, which shadow-banned the ones the AI misplays (at most half the set). Those bans were the unban
+lane's work until #1677; a sweep of record measures them now (#1675). The shadow ban holds Meditative cards only (R732000), and since #1186's sweep, which banned none,
 Meditative+ cards on the same terms (R1186000): no lane, sweep or person adds a card of an earlier set to
 it, and the lanes only ever remove entries.
 

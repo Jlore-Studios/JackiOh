@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION } from "@jackioh/server-config";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
+import { at, jsonResponse, signIn } from "../test/stubServer.ts";
 import { holdSignUpConsent, heldSignUpConsent, refuseSignUpHere, signUpRefusedHere, utcToday } from "./consent.ts";
 import { CONSENT_TERMS_CHANGED } from "./ConsentPrompt.tsx";
 import { consentTestid, inviteTestid, shellTestid, usernameTestid } from "./testids.ts";
@@ -27,14 +28,6 @@ const NOTHING: Owed = { ageCheckOwed: false, termsOwed: false };
 
 /** A lazily-imported route chunk plus a stubbed round trip can outrun the 1 s default. */
 const SLOW = { timeout: 5_000 } as const;
-
-function jsonResponse(status: number, body: unknown): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    text: () => Promise.resolve(JSON.stringify(body)),
-  } as unknown as Response;
-}
 
 /**
  * The server: `/api/auth/me` answers `me()` (read on every call, so a test can move the account
@@ -87,14 +80,6 @@ function consentPosts(calls: readonly Call[]): Call[] {
   return calls.filter((call) => call.path === "/api/account/consent" && call.method === "POST");
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
-}
-
 /** A year whose January leaves the player one year over the minimum. */
 const OLD_ENOUGH = utcToday().year - MIN_ACCOUNT_AGE_YEARS - 1;
 
@@ -113,7 +98,7 @@ afterEach(() => {
 
 describe("R757000 the age screen at the gate", () => {
   it("R757000 pending meets the consent screen before the code screen", async () => {
-    signedIn();
+    signIn();
     const server = serveAs({ status: "pending", owed: BOTH });
     at("/invite");
     render(<App />);
@@ -148,7 +133,7 @@ describe("R757000 the age screen at the gate", () => {
   });
 
   it("R757000 a held answer posts without asking", async () => {
-    signedIn();
+    signIn();
     holdSignUpConsent({ email: EMAIL, birthYear: OLD_ENOUGH, birthMonth: 6, termsVersion: TERMS_VERSION });
     const server = serveAs({ status: "pending", owed: BOTH });
     at("/invite");
@@ -165,7 +150,7 @@ describe("R757000 the age screen at the gate", () => {
   });
 
   it("R757000 a held answer for another address is not sent", async () => {
-    signedIn();
+    signIn();
     holdSignUpConsent({ email: "other@example.test", birthYear: OLD_ENOUGH, birthMonth: 6, termsVersion: TERMS_VERSION });
     const server = serveAs({ status: "pending", owed: BOTH });
     at("/invite");
@@ -177,7 +162,7 @@ describe("R757000 the age screen at the gate", () => {
   });
 
   it("R757000 under_age signs out and locks", async () => {
-    signedIn();
+    signIn();
     const server = serveAs(
       { status: "pending", owed: BOTH },
       { status: 403, body: { error: { code: "under_age", message: "We can't create an account for you." } } },
@@ -201,7 +186,7 @@ describe("R757000 the age screen at the gate", () => {
   });
 
   it("R757000 a device that refused a sign-up before is not asked again", async () => {
-    signedIn();
+    signIn();
     refuseSignUpHere();
     const server = serveAs({ status: "pending", owed: BOTH });
     at("/invite");
@@ -217,7 +202,7 @@ describe("R757000 the age screen at the gate", () => {
 
 describe("R757001 the terms at the gate", () => {
   it("R757001 asked on /decks, not /account or mid-match", async () => {
-    signedIn();
+    signIn();
     const server = serveAs({ status: "active", owed: TERMS_ONLY });
     at("/decks");
     render(<App />);
@@ -260,7 +245,7 @@ describe("R757001 the terms at the gate", () => {
   });
 
   it("R757001 no fields, nothing owed", async () => {
-    signedIn();
+    signIn();
     serveAs({ status: "active", owed: NOTHING });
     render(<Gated>{() => <p>the gate opened</p>}</Gated>);
     expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
@@ -268,7 +253,7 @@ describe("R757001 the terms at the gate", () => {
   });
 
   it("R757001 a server that sends neither flag owes nothing", async () => {
-    signedIn();
+    signIn();
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -289,7 +274,7 @@ describe("R757001 the terms at the gate", () => {
   });
 
   it("R757001 comes before the username prompt", async () => {
-    signedIn();
+    signIn();
     serveAs({
       status: "active",
       owed: TERMS_ONLY,
@@ -304,7 +289,7 @@ describe("R757001 the terms at the gate", () => {
   });
 
   it("R757001 a re-read that finds the terms owed once the screen is up leaves the screen in place", async () => {
-    signedIn();
+    signIn();
     const server = serveAs({ status: "active", owed: NOTHING });
     render(<Gated>{({ me }) => <p>{me.termsOwed === true ? "the gate read again" : "the gate opened"}</p>}</Gated>);
     expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
@@ -318,7 +303,7 @@ describe("R757001 the terms at the gate", () => {
   });
 
   it("R757001 terms newer than the page's are a reload, not a retry", async () => {
-    signedIn();
+    signIn();
     serveAs(
       { status: "active", owed: TERMS_ONLY },
       { status: 409, body: { error: { code: "update_required", message: CONSENT_TERMS_CHANGED } } },

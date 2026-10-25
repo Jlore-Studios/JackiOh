@@ -15,6 +15,7 @@ pub mod dev_run;
 pub mod duos;
 pub mod evaluate;
 pub mod evaluate_v020;
+pub mod even_trades;
 pub mod features;
 pub mod freeze;
 pub mod ky_competition;

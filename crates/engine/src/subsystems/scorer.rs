@@ -16,7 +16,8 @@
 //! is what R29's Discover and §9.3's replay need. And it is a function of what the viewer may read
 //! (R222): the dry run plays on a copy in which every card §9.1 hides from the viewer — the
 //! opponent's hand, both libraries, a face-down trap of the other side's — stands in as a card that
-//! does nothing, so the three cards it offers never tell the viewer what those cards are.
+//! does nothing, and the copy keeps no record the viewer may not read either (R1714000), so the three
+//! cards it offers never tell the viewer what those cards are.
 //!
 //! Port of `packages/engine/src/subsystems/scorer.ts`. `SCORER_WEIGHTS`, `SCORER_LOW_HEALTH` and
 //! `SCORER_DRY_RUN_PLAYS` live in `crate::config` (CLAUDE.md rule 9, SURFACE §6.4). TS's module
@@ -37,12 +38,13 @@ use crate::config::{DISCOVER_OPTIONS, SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, S
 use crate::damage::DamageTarget;
 use crate::layers::AuraTable;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for};
+use crate::prompts::ANSWER_KEY;
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance};
 use crate::wire::{
-    CardCost, CardDef, CardFace, CardType, KeywordKind, Phase, PlayerId, Rarity, Row, Selection, SetName,
-    Winner, Zone, ZoneChoice, has_keyword, opponent_of,
+    CardCost, CardDef, CardFace, CardType, Counters, KeywordKind, Phase, PlayerId, Rarity, Row, Selection,
+    SetName, Winner, Zone, ZoneChoice, has_keyword, opponent_of,
 };
 
 /// #97's §5 index in the Core set, read only to find #97's id, which the perfect pool leaves out
@@ -571,13 +573,15 @@ pub fn dry_run_base(state: &GameState, viewer: PlayerId) -> Option<GameState> {
     Some(concealed_copy(state, viewer))
 }
 
-/// R222: a copy of the state as `viewer` may read it — every card hidden from them a stand-in with
-/// no text — without the history of actions. `dry_run_base`'s copy, and the autopilot's at any
-/// moment of its turn, a prompt of its player's open included (R1183003).
+/// R222, R1714000: a copy of the state as `viewer` may read it — every card hidden from them a
+/// stand-in with no text, and no record they may not read — without the history of actions.
+/// `dry_run_base`'s copy, and the autopilot's at any moment of its turn, a prompt of its player's
+/// open included (R1183003).
 pub fn concealed_copy(state: &GameState, viewer: PlayerId) -> GameState {
     let mut base = state.clone();
     base.applied = Vec::new();
     conceal_from(&mut base, viewer);
+    forget_hidden_records(state, &mut base, viewer);
     base
 }
 
@@ -611,6 +615,8 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         cost: CardCost::Fixed(0),
         refs: None,
         params: None,
+        deals_damage: None,
+        uses_plague: None,
         loc: None,
         radiant_fallback: None,
         ingredients: None,
@@ -618,6 +624,24 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         base: face.clone(),
         radiant: face,
     }
+}
+
+/// R33: a face-down Trap or Field Trap the viewer does not control, which the viewer may not read.
+fn hidden_trap(state: &GameState, card: &CardInstance, viewer: PlayerId) -> bool {
+    card.controller != viewer
+        && card.face_up != Some(true)
+        && matches!(
+            crate::faces::card_type_of(state, card),
+            CardType::Trap | CardType::FieldTrap
+        )
+}
+
+/// `hide` for a face-down trap a backrow zone shows: its Plague Counters are public wherever they
+/// sit (R471), so its stand-in keeps them.
+fn hide_shown_trap(card: &mut CardInstance) {
+    let plague = card.counters.plague;
+    hide(card, HIDDEN_TRAP_DEF_ID);
+    card.counters.plague = plague;
 }
 
 /// TS `concealFrom`'s `hide(card, defId)`: the card keeps its place and nothing else.
@@ -633,6 +657,21 @@ fn hide(card: &mut CardInstance, def_id: &str) {
     card.buffs.health = 0;
     // R311: the record of what a library card's owner was shown names it as well.
     card.known_as = None;
+    // R1714000: and nothing else the card carries, as the AI's placeholder keeps nothing
+    // (`jackioh_ai::observe::to_placeholder`).
+    card.counters = Counters::default();
+    card.granted_tags = None;
+    card.chinese = None;
+    card.set_as = None;
+    card.created = None;
+    card.damage = 0;
+    card.embiggen_cost_override = None;
+    card.x = None;
+    card.embiggened = None;
+    card.return_to_hand_at_end_of_turn = None;
+    card.tuning = None;
+    card.brittle = None;
+    card.enchantments = None;
 }
 
 /// R222, §9.1, §10.8: the dry run plays on what the viewer may read. The opponent's hand and both
@@ -667,13 +706,7 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
                 .iter()
                 .flatten()
                 .chain(side.backrow_piles.iter().flatten().flatten())
-                .filter(|card| card.controller != viewer && card.face_up != Some(true))
-                .filter(|card| {
-                    matches!(
-                        crate::faces::card_type_of(state, card),
-                        CardType::Trap | CardType::FieldTrap
-                    )
-                })
+                .filter(|card| hidden_trap(state, card, viewer))
                 .map(|card| card.id.clone())
                 .collect()
         };
@@ -683,7 +716,7 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
         let side = &mut base.players[player];
         for card in side.backrow.iter_mut().flatten() {
             if traps.contains(&card.id) {
-                hide(card, HIDDEN_TRAP_DEF_ID);
+                hide_shown_trap(card);
             }
         }
         for card in side.backrow_piles.iter_mut().flatten().flatten() {
@@ -691,6 +724,60 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
                 hide(card, HIDDEN_TRAP_DEF_ID);
             }
         }
+    }
+    // R419, R1714000: Rollback's snapshots hold the field as each turn began, face-down traps
+    // included; a try that restores one sets it down as the stand-in the field shows.
+    let mut history = base.board_history.take();
+    for snapshot in history.iter_mut().flatten() {
+        for player in [viewer, opponent] {
+            let side = &mut snapshot.sides[player];
+            for card in side.backrow.iter_mut().flatten() {
+                if hidden_trap(base, card, viewer) {
+                    hide_shown_trap(card);
+                }
+            }
+            for card in side.backrow_piles.iter_mut().flatten().flatten() {
+                if hidden_trap(base, card, viewer) {
+                    hide(card, HIDDEN_TRAP_DEF_ID);
+                }
+            }
+        }
+    }
+    base.board_history = history;
+}
+
+/// R1714000: the records beside the cards that the viewer may not read either, as the AI's `redact`
+/// drops them for its seat (R185): the decks the match began with (R676) and the Glitch boards
+/// (R678); the other seat's last board (R417; the viewer's own is their own last game); the other
+/// seat's unrevealed secret choices (R865; the viewer's own and a revealed one stay); and, in every
+/// continuation the copy holds, a problem's key (R465), so no answer tried here is judged right,
+/// and the modes of the other seat's in-flight play of a `secret_modes` card (R865). Each
+/// continuation keeps its shape, so a try still resumes it.
+fn forget_hidden_records(state: &GameState, base: &mut GameState, viewer: PlayerId) {
+    let opponent = opponent_of(viewer);
+    base.opening = None;
+    base.glitch_boards = None;
+    if let Some(last_boards) = base.last_boards.as_mut() {
+        *last_boards.slot(opponent) = None;
+        if last_boards.is_empty() {
+            base.last_boards = None;
+        }
+    }
+    for secret in base.secrets.iter_mut().flatten() {
+        if secret.owner == opponent && secret.revealed != Some(true) {
+            secret.choice = None;
+        }
+    }
+    let resumes = base
+        .trigger_queue
+        .iter_mut()
+        .map(|entry| &mut entry.resume)
+        .chain(base.work.iter_mut().map(|item| &mut item.resume))
+        .chain(base.delayed.iter_mut().map(|entry| &mut entry.resume))
+        .chain(base.pending.iter_mut().map(|pending| &mut pending.resume));
+    for resume in resumes {
+        resume.data.shift_remove(ANSWER_KEY);
+        crate::secrets::scrub_secret_modes(state, resume, viewer);
     }
 }
 

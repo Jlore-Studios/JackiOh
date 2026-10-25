@@ -1,0 +1,60 @@
+/* The live-modifier chip and the full list it opens (R169, game/ModifierList.tsx): in the practice and lesson HUDs, and in the board's rail at an online or co-op table, on the watch screen and in the replay player. */
+
+.modifier-list {
+  display: inline-flex;
+  flex: none;
+}
+
+.modifier-list .modifier-list__chip {
+  min-width: 44px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--radiant) 55%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--radiant) 12%, var(--bg-sunken));
+  color: var(--radiant);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.modifier-list__panel {
+  position: fixed;
+  top: calc(max(8px, env(safe-area-inset-top)) + 58px);
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(320px, calc(100vw - 24px));
+  max-height: 60vh;
+  padding: 12px 14px;
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--radiant) 45%, var(--line));
+  border-radius: 12px;
+  background: var(--bg-raised);
+  box-shadow: 0 18px 40px -16px rgb(0 0 0 / 90%);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.modifier-list__side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modifier-list__who {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.modifier-list__item {
+  padding: 4px 8px;
+  border-left: 2px solid var(--radiant);
+  background: var(--bg-sunken);
+  line-height: 1.3;
+}

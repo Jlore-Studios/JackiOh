@@ -13,6 +13,7 @@ import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
 import { testid, type ClickTarget, type Highlight } from "../../game/contract.ts";
 import { patchTestid } from "../../patches/testids.ts";
 import { fullBoardView } from "../../test/fixtures.ts";
+import { must } from "../../test/stubServer.ts";
 import { GLOSSARY, type GlossaryTermId } from "../glossary.ts";
 import { faceModel, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
@@ -128,11 +129,6 @@ function realClick(element: Element): void {
   fireEvent.pointerUp(element, pointerInit("mouse"));
   fireEvent.mouseUp(element);
   fireEvent.click(element);
-}
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
 }
 
 function defOf(id: string): CardDef {

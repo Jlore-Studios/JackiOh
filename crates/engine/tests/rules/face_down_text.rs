@@ -15,7 +15,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::unit_def;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -86,13 +86,6 @@ fn body() -> CardDef {
 /// targeting cost (Classic #89), a Plague multiplier (Classic #27, R471) and a reveal Echo (R1045).
 fn statics() -> CardDef {
     def("statics", 14879)
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn flags(flags: StaticFlags) -> Script {

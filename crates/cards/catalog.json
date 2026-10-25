@@ -133,7 +133,8 @@
         "radiant": 10,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "perHeads",
@@ -141,7 +142,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "perTails",
@@ -149,7 +151,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 13,
@@ -255,7 +258,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 29,
@@ -537,7 +541,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 11,
@@ -735,12 +740,21 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "discards",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
       }
     ],
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1 random card."
+      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard {discards|random card|random cards}."
     },
     "radiant": {
       "keywords": [],
@@ -794,10 +808,21 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "chance",
+        "base": 30,
+        "radiant": 40,
+        "better": "up",
+        "step": 10,
+        "min": 1,
+        "max": 100
+      }
+    ],
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "30% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      "text": "{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
     },
     "radiant": {
       "keywords": [
@@ -806,7 +831,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\n40% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      "text": "Lucky 1\n{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
     }
   },
   "core-024": {
@@ -839,6 +864,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 46,
     "base": {
       "keywords": [],
@@ -1040,6 +1066,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 1,
+    "dealsDamage": true,
     "loc": 56,
     "base": {
       "keywords": [],
@@ -1177,6 +1204,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 21,
     "base": {
       "keywords": [],
@@ -1308,6 +1336,7 @@
     "flavor": "Spirit",
     "token": false,
     "cost": 2,
+    "dealsDamage": true,
     "loc": 18,
     "base": {
       "keywords": [],
@@ -1365,10 +1394,22 @@
     "flavor": "Dark",
     "token": false,
     "cost": 2,
+    "params": [
+      {
+        "key": "chance",
+        "base": 30,
+        "radiant": 100,
+        "better": "up",
+        "step": 10,
+        "min": 1,
+        "max": 100,
+        "tunedOn": "base"
+      }
+    ],
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 30% chance to become Radiant."
+      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a {chance}% chance to become Radiant."
     },
     "radiant": {
       "keywords": [],
@@ -1423,6 +1464,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 12,
     "base": {
       "keywords": [
@@ -1676,9 +1718,9 @@
     "cost": 1,
     "params": [
       {
-        "key": "draw",
-        "base": 1,
-        "radiant": 2,
+        "key": "cards",
+        "base": 3,
+        "radiant": 3,
         "better": "up",
         "step": 1,
         "min": 1
@@ -1687,11 +1729,11 @@
     "loc": 10,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Shuffle {cards|random KY card|random KY cards} into your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}."
+      "text": "Shuffle {cards|random Radiant KY card|random Radiant KY cards} into your deck."
     }
   },
   "core-052": {
@@ -1741,7 +1783,8 @@
         "radiant": 60,
         "better": "up",
         "step": 8,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 15,
@@ -1776,7 +1819,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "cry": true
       }
     ],
     "loc": 16,
@@ -2322,7 +2366,8 @@
         "radiant": 8,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "lowDamage",
@@ -2330,7 +2375,8 @@
         "radiant": 16,
         "better": "up",
         "step": 2,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "threshold",
@@ -2338,7 +2384,8 @@
         "radiant": 10,
         "better": "up",
         "step": 2,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 24,
@@ -2374,16 +2421,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "units",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Recruit 3 Units of ({costLimit}) Cost or less."
+      "text": "Recruit {units|Unit|Units} of ({costLimit}) Cost or less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Recruit 3 Units of ({costLimit}) Cost or less."
+      "text": "Recruit {units|Unit|Units} of ({costLimit}) Cost or less."
     }
   },
   "core-070": {
@@ -2423,6 +2478,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 24,
     "base": {
       "keywords": [],
@@ -2523,7 +2579,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "cap",
@@ -2596,6 +2653,7 @@
         "tunedOn": "radiant"
       }
     ],
+    "dealsDamage": true,
     "loc": 26,
     "base": {
       "keywords": [],
@@ -2628,7 +2686,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 9,
@@ -2685,7 +2744,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 19,
@@ -2813,16 +2873,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "tokens",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 20,
     "base": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Rush Tokens, each with {keywords|random combat keyword|random combat keywords}."
+      "text": "Discard {discard|random card|random cards}. Summon {tokens|Rush Token|Rush Tokens}, each with {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discard {discard|random card|random cards}. Summon 2 Radiant Rush Tokens, each with {keywords|random combat keyword|random combat keywords}."
+      "text": "Discard {discard|random card|random cards}. Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}, each with {keywords|random combat keyword|random combat keywords}."
     }
   },
   "core-081": {
@@ -3259,6 +3327,7 @@
     "refs": [
       "core-093-1"
     ],
+    "dealsDamage": true,
     "loc": 23,
     "base": {
       "keywords": [],
@@ -3292,6 +3361,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 14,
     "base": {
       "keywords": [
@@ -3568,6 +3638,7 @@
         "power": "pluck"
       }
     ],
+    "dealsDamage": true,
     "loc": 11,
     "base": {
       "keywords": [
@@ -3883,6 +3954,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 35,
     "base": {
       "keywords": [],
@@ -3914,7 +3986,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "cry": true
       },
       {
         "key": "setCost",
@@ -3923,7 +3996,8 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 8,
@@ -4128,7 +4202,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 38,
@@ -4322,6 +4397,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 7,
     "base": {
       "keywords": [
@@ -4486,6 +4562,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 7,
     "base": {
       "keywords": [
@@ -4602,6 +4679,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 34,
     "base": {
       "keywords": [],
@@ -4641,6 +4719,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 40,
     "base": {
       "keywords": [],
@@ -4706,7 +4785,8 @@
         "radiant": 4,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "bounces",
@@ -4714,7 +4794,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 32,
@@ -4752,7 +4833,8 @@
         "radiant": 6,
         "better": "down",
         "step": 167,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 30,
@@ -5035,7 +5117,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "units",
@@ -5043,7 +5126,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 8,
@@ -5214,6 +5298,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 20,
     "base": {
       "keywords": [],
@@ -5327,16 +5412,24 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "drawPer",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
       }
     ],
     "loc": 33,
     "base": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
+      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw {drawPer} per Plague Counter on it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
+      "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw {drawPer} per Plague Counter on it."
     }
   },
   "classic-040": {
@@ -5357,7 +5450,8 @@
         "radiant": 4,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 36,
@@ -5819,7 +5913,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "draw",
@@ -5899,6 +5994,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 8,
     "base": {
       "keywords": [],
@@ -5928,7 +6024,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "cry": true
       }
     ],
     "loc": 26,
@@ -6018,7 +6115,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 25,
@@ -6076,7 +6174,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "draw",
@@ -6084,7 +6183,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 7,
@@ -6534,9 +6634,11 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
+    "usesPlague": true,
     "loc": 12,
     "base": {
       "keywords": [],
@@ -6598,7 +6700,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "draw",
@@ -6606,7 +6709,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 5,
@@ -6788,9 +6892,12 @@
         },
         {
           "kind": "Indestructible"
+        },
+        {
+          "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Rush, Trample, Indestructible"
+      "text": "Tribute 3, Rush, Trample, Indestructible, Crater"
     },
     "radiant": {
       "attack": 26,
@@ -6804,9 +6911,12 @@
         },
         {
           "kind": "Indestructible"
+        },
+        {
+          "kind": "Crater"
         }
       ],
-      "text": "Tribute 3, Charge, Trample, Indestructible"
+      "text": "Tribute 3, Charge, Trample, Indestructible, Crater"
     }
   },
   "classic-081": {
@@ -6920,6 +7030,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 7,
     "base": {
       "keywords": [
@@ -6986,7 +7097,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 7,
@@ -7427,9 +7539,11 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
+    "usesPlague": true,
     "loc": 11,
     "base": {
       "keywords": [],
@@ -7656,6 +7770,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 17,
     "base": {
       "keywords": [],
@@ -7726,6 +7841,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 5,
     "base": {
       "keywords": [],
@@ -8192,8 +8308,8 @@
     "params": [
       {
         "key": "chance",
-        "base": 25,
-        "radiant": 50,
+        "base": 100,
+        "radiant": 100,
         "better": "up",
         "step": 10,
         "min": 1,
@@ -8204,14 +8320,22 @@
     "base": {
       "attack": 4,
       "health": 4,
-      "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
-      "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
@@ -8235,7 +8359,8 @@
         "radiant": 10,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "tails",
@@ -8243,7 +8368,8 @@
         "radiant": 2,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "oppMana",
@@ -8251,7 +8377,8 @@
         "radiant": 1,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 18,
@@ -8392,7 +8519,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 13,
@@ -8430,6 +8558,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 8,
     "base": {
       "keywords": [
@@ -8596,7 +8725,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 12,
@@ -8749,14 +8879,14 @@
     "cost": 4,
     "loc": 33,
     "base": {
-      "attack": 3,
-      "health": 3,
+      "attack": 1,
+      "health": 1,
       "keywords": [],
       "text": "Cry: Discover a Felinor Unit, then another. Fuse both into this."
     },
     "radiant": {
-      "attack": 6,
-      "health": 6,
+      "attack": 2,
+      "health": 2,
       "keywords": [],
       "text": "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
     }
@@ -8893,6 +9023,7 @@
         "tunedOn": "radiant"
       }
     ],
+    "dealsDamage": true,
     "loc": 9,
     "base": {
       "keywords": [],
@@ -9035,6 +9166,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 6,
     "base": {
       "keywords": [],
@@ -9146,7 +9278,8 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 8,
@@ -9179,7 +9312,9 @@
     "name": "Book Worm",
     "set": "Classic+",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Plague"
+    ],
     "rarity": "Common",
     "flavor": "Beast",
     "token": false,
@@ -9348,11 +9483,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Fuse {cards|random AI generated card|random AI generated cards} and add the result to your hand. It costs (0)."
+      "text": "Fuse {cards|random (1) Cost AI generated card|random (1) Cost AI generated cards} and add the result to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fuse {cards|random Radiant AI generated card|random Radiant AI generated cards} and add the result to your hand. It costs (0)."
+      "text": "Fuse {cards|random (1) Cost Radiant AI generated card|random (1) Cost Radiant AI generated cards} and add the result to your hand. It costs (0)."
     }
   },
   "classicplus-044": {
@@ -9969,6 +10104,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 15,
     "base": {
       "keywords": [],
@@ -10047,12 +10183,22 @@
     ],
     "loc": 10,
     "base": {
-      "keywords": [],
-      "text": "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Brittle 1\nDeath: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 1
+        }
+      ],
+      "text": "Brittle 1\nDeath: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
     }
   },
   "classicplus-062": {
@@ -10278,6 +10424,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 11,
     "base": {
       "keywords": [],
@@ -10329,6 +10476,7 @@
         "min": 0
       }
     ],
+    "dealsDamage": true,
     "loc": 11,
     "base": {
       "keywords": [],
@@ -10490,7 +10638,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "setCost",
@@ -10499,7 +10648,8 @@
         "better": "down",
         "step": 1,
         "min": 0,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 11,
@@ -10802,7 +10952,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 9,
@@ -10983,14 +11134,24 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random AI generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random AI generated card to your hand. It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs ({setCost})."
     }
   },
   "classicplus-t-ai-01": {
@@ -11146,6 +11307,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
+    "dealsDamage": true,
     "loc": 15,
     "base": {
       "keywords": [],
@@ -11270,7 +11432,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "mana",
@@ -11279,7 +11442,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 21,
@@ -11450,6 +11614,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 21,
     "base": {
       "keywords": [
@@ -11548,6 +11713,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 49,
     "base": {
       "keywords": [],
@@ -11622,6 +11788,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 114,
     "base": {
       "keywords": [],
@@ -11746,7 +11913,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 15,
@@ -11868,7 +12036,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 19,
@@ -12158,7 +12327,7 @@
       {
         "key": "chance",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -12167,7 +12336,7 @@
       {
         "key": "paidChance",
         "base": 5,
-        "radiant": 12,
+        "radiant": 10,
         "better": "up",
         "step": 2,
         "min": 1,
@@ -12181,7 +12350,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
     }
   },
   "meditative-022": {
@@ -12249,6 +12418,7 @@
         "tunedOn": "radiant"
       }
     ],
+    "dealsDamage": true,
     "loc": 0,
     "base": {
       "keywords": [],
@@ -12407,12 +12577,8 @@
     "base": {
       "attack": 12,
       "health": 9,
-      "keywords": [
-        {
-          "kind": "Immune to tribal tag based hate"
-        }
-      ],
-      "text": "Tribute 2, Immune to tribal tag based hate"
+      "keywords": [],
+      "text": "Tribute 2\nImmune to tribal tag based hate."
     },
     "radiant": {
       "attack": 24,
@@ -12420,12 +12586,9 @@
       "keywords": [
         {
           "kind": "Immutable"
-        },
-        {
-          "kind": "Immune to tribal tag based hate"
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to tribal tag based hate"
+      "text": "Tribute 2, Immutable\nImmune to tribal tag based hate."
     }
   },
   "meditative-026": {
@@ -12513,7 +12676,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 19,
@@ -12591,7 +12755,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "curses",
@@ -12602,6 +12767,7 @@
         "min": 1
       }
     ],
+    "usesPlague": true,
     "loc": 29,
     "base": {
       "keywords": [],
@@ -12911,14 +13077,34 @@
     "flavor": "Snack",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "surcharge",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Add a random Radiant card to your hand. It costs (1) more (up to (4))."
+      "text": "Cast on draw: Add a random Radiant card to your hand. It costs ({surcharge}) more (up to (4))."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cast on draw: Add a random Radiant card to your hand. It costs (0)."
+      "text": "Cast on draw: Add a random Radiant card to your hand. It costs ({setCost})."
     }
   },
   "meditative-038": {
@@ -12935,6 +13121,17 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
     "loc": 18,
     "base": {
       "keywords": [],
@@ -12942,7 +13139,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."
+      "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs ({setCost})."
     }
   },
   "meditative-039": {
@@ -13088,6 +13285,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 15,
     "base": {
       "keywords": [],
@@ -13357,7 +13555,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 41,
@@ -13403,7 +13602,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "max": 5
+        "max": 5,
+        "cry": true
       }
     ],
     "loc": 48,
@@ -13580,7 +13780,8 @@
         "step": 1,
         "min": 1,
         "max": 5,
-        "tunedOn": "base"
+        "tunedOn": "base",
+        "cry": true
       },
       {
         "key": "datacenters",
@@ -13588,7 +13789,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "glitches",
@@ -13596,7 +13798,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "setCost",
@@ -13604,7 +13807,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "cry": true
       },
       {
         "key": "nerfs",
@@ -13612,7 +13816,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "viruses",
@@ -13621,7 +13826,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       },
       {
         "key": "radiants",
@@ -13998,7 +14204,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 43,
@@ -14628,7 +14835,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 14,
@@ -14818,7 +15026,8 @@
         "better": "up",
         "step": 1,
         "min": 11,
-        "max": 14
+        "max": 14,
+        "cry": true
       },
       {
         "key": "draw",
@@ -14826,7 +15035,8 @@
         "radiant": 4,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 22,
@@ -14956,7 +15166,8 @@
         "better": "up",
         "step": 1,
         "min": 1,
-        "tunedOn": "radiant"
+        "tunedOn": "radiant",
+        "cry": true
       }
     ],
     "loc": 17,
@@ -15170,7 +15381,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "cry": true
       }
     ],
     "loc": 51,
@@ -15567,7 +15779,7 @@
       {
         "key": "shrinkAttack",
         "base": 3,
-        "radiant": 2,
+        "radiant": 3,
         "better": "down",
         "step": 1,
         "min": 1
@@ -15584,15 +15796,15 @@
     "loc": 29,
     "base": {
       "attack": 9,
-      "health": 11,
+      "health": 9,
       "keywords": [],
       "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
     },
     "radiant": {
       "attack": 18,
-      "health": 22,
+      "health": 18,
       "keywords": [],
-      "text": "Death: Summon a Radiant Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+      "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
     }
   },
   "meditative-095": {
@@ -16283,7 +16495,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       },
       {
         "key": "echo",
@@ -16662,22 +16875,30 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost (0).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost (0).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
     }
   },
   "meditativeplus-004": {
     "id": "meditativeplus-004",
     "index": "4",
-    "name": "Supply Drop",
+    "name": "Jlockeed's Supply Drop",
     "set": "Meditative+",
     "type": "Spell",
     "tags": [
@@ -16749,6 +16970,7 @@
         "tunedOn": "base"
       }
     ],
+    "dealsDamage": true,
     "loc": 101,
     "base": {
       "keywords": [],
@@ -16783,6 +17005,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 23,
     "base": {
       "keywords": [],
@@ -16947,7 +17170,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "cry": true
       }
     ],
     "loc": 24,
@@ -17222,6 +17446,7 @@
         "min": 1
       }
     ],
+    "dealsDamage": true,
     "loc": 42,
     "base": {
       "keywords": [],
@@ -17293,6 +17518,15 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 29,
@@ -17302,7 +17536,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost (0).\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
     }
   },
   "meditativeplus-020": {
@@ -17502,7 +17736,8 @@
         "radiant": 3,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "cry": true
       }
     ],
     "loc": 85,

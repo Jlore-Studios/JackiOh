@@ -205,10 +205,10 @@ mod b3_4_params_the_numbers_a_card_declares {
             &first_param("classic-038"),
             &json!({ "key": "plays", "base": 3, "radiant": 2, "better": "down", "min": 2 })
         ));
-        // A percentage: step 10, never above 100.
+        // A percentage: step 10, never above 100, at its bound on both faces since issue #1828.
         assert!(matches_object(
             &first_param("classicplus-019-2"),
-            &json!({ "key": "chance", "base": 25, "radiant": 50, "step": 10, "max": 100 })
+            &json!({ "key": "chance", "base": 100, "radiant": 100, "step": 10, "max": 100 })
         ));
     }
 
@@ -385,8 +385,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 assert_ne!(read(&s, &plain), param.base, "{} {}", card.id, param.key);
             }
         }
-        // The thirteen numbers patch v0.3.3 marked (issue #556), and the Meditative set's own, which
-        // §8.8 tunes "on the base face only": M #14's draws, M #49.1's picks (#529) and M #76's marks.
+        // The thirteen numbers patch v0.3.3 marked (issue #556) and issue #1748's two (#21's discards and
+        // #42's chance, R1748003), and the Meditative set's own, which §8.8 tunes "on the base face
+        // only": M #14's draws, M #37's surcharge (R1748003), M #49.1's picks (#529) and M #76's marks.
         // The Meditative+ set, held until it ships (R1178000), joins batch by batch (M+ #4's
         // `embiggenedCards`); each of its numbers is held to the rule above, and the pinned lists are
         // the shipped sets'.
@@ -394,11 +395,12 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
-        assert_eq!(shipped.len(), 13, "{shipped:#?}");
+        assert_eq!(shipped.len(), 15, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
                 "meditative-014 draws".to_string(),
+                "meditative-037 surcharge".to_string(),
                 "meditative-049-1 picks".to_string(),
                 "meditative-076 marks".to_string()
             ]
@@ -460,7 +462,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen marked
         // before (C #46's and C #54's among them, R749), less C #59's tokens, which both faces print
         // since patch v0.3.10; and the Meditative set's twenty-three, less M #1's draw, printed on both
-        // faces since then too.
+        // faces since then too, with M #37's and M #38's `setCost` (R1748003).
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
@@ -473,7 +475,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .count();
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (43, 22),
+            (43, 24),
             "{radiant_only:#?}"
         );
     }
@@ -509,5 +511,163 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             owned.iter().all(|entry| entry.starts_with("core-098 ")),
             "{owned:#?}"
         );
+    }
+}
+
+/// R1748003 (issue #1748): every number a Spell or a Field Spell prints is a declared number, written
+/// `{key}`, or is fixed for one of the reasons below, each card's reason named here. A number a reason
+/// no longer covers fails, and so does a card here that prints none any more.
+mod r1748003_the_numbers_a_spell_or_field_spell_prints {
+    use super::*;
+    use jackioh_engine::CardType;
+
+    /// A numbered keyword's count (Lucky, Spell Damage, Echo, …), which the X row tunes (R482).
+    const KEYWORD: &str = "a numbered keyword's count, which the X row tunes";
+    /// A price: a cost a filter or a threshold names, an Embiggened or other dearer play's price, or a
+    /// cap on a cost, which the cost row and R65 own.
+    const PRICE: &str = "a price a filter, a threshold, a dearer play or a cap names";
+    /// A table the engine holds: Call to Chaos's outcomes, Combo-Index's grades, Heroic Power's powers,
+    /// Craft a Card's recipe, Quickstriker's Combo, Auspicious Rock's odds, AI Slop's and Papaya's grids.
+    const ENGINE: &str = "a table the engine holds, not one number the card declares";
+    /// A term of a formula (X+1, Fib, a health step against 30, Book of Tokens' 1–2), which no step moves
+    /// as one number.
+    const FORMULA: &str = "a term of a formula, which no step moves as one number";
+    /// What the card is built on: a list's ordinals, Ascent levels, a quest's count, a duration, a
+    /// floor of one counter, KY's Constant's 3.
+    const STRUCTURE: &str = "what the card's text is built on, not an amount";
+    /// How many cards the play declares (Glowy Jelly Bean's targets).
+    const TARGETS: &str = "how many cards the play declares";
+    /// A number whose better way hangs on the target, so neither a Buff nor a Nerf has a way to move it:
+    /// a hero's health set to 13, Malzahar's Recycler's discard that draws as many, CN Peptides' 50%
+    /// (Buffs on your Unit, a destroy on an enemy's, R902).
+    const EITHER_WAY: &str = "a number whose better way hangs on the target";
+    /// An AI generated card's printed number: B8 gives them no Numbers line (R482).
+    const AI_PRINTED: &str = "an AI generated card's printed number (R482)";
+    /// An Immutable card's number: neither a Buff nor a Nerf reaches it (R386).
+    const IMMUTABLE: &str = "an Immutable card's number, which nothing tunes";
+
+    const FIXED: &[(&str, &str)] = &[
+        ("core-023", KEYWORD),
+        ("classic-023", KEYWORD),
+        ("classic-057", KEYWORD),
+        ("classicplus-025", KEYWORD),
+        ("classicplus-036-1", KEYWORD),
+        ("classicplus-047", KEYWORD),
+        ("classicplus-061", KEYWORD),
+        ("classicplus-065", KEYWORD),
+        ("classicplus-066", KEYWORD),
+        ("meditative-036", KEYWORD),
+        ("meditative-036", EITHER_WAY),
+        ("meditativeplus-006", KEYWORD),
+        ("core-042", PRICE),
+        ("core-046", PRICE),
+        ("core-051", PRICE),
+        ("core-059", PRICE),
+        ("core-084", PRICE),
+        ("core-087", PRICE),
+        ("core-094", PRICE),
+        ("classic-004", PRICE),
+        ("classic-032", PRICE),
+        ("classicplus-036", PRICE),
+        ("classicplus-042-1", PRICE),
+        ("classicplus-043", PRICE),
+        ("meditative-004", PRICE),
+        ("meditative-021", PRICE),
+        ("meditative-037", PRICE),
+        ("meditative-046", PRICE),
+        ("meditative-081", PRICE),
+        ("meditativeplus-003", PRICE),
+        ("meditativeplus-004", PRICE),
+        ("meditativeplus-005", PRICE),
+        ("meditativeplus-019", PRICE),
+        ("meditativeplus-023", PRICE),
+        ("core-038", ENGINE),
+        ("core-093", ENGINE),
+        ("core-095", ENGINE),
+        ("core-098", ENGINE),
+        ("core-099", ENGINE),
+        ("classicplus-043", ENGINE),
+        ("classicplus-062", ENGINE),
+        ("classicplus-073", ENGINE),
+        ("meditative-032", ENGINE),
+        ("meditative-039-1", ENGINE),
+        ("meditative-095", ENGINE),
+        ("core-024", FORMULA),
+        ("core-031", FORMULA),
+        ("core-070", FORMULA),
+        ("classicplus-053", FORMULA),
+        ("core-082", STRUCTURE),
+        ("classic-074", STRUCTURE),
+        ("classicplus-019", STRUCTURE),
+        ("classicplus-024", STRUCTURE),
+        ("classicplus-035", STRUCTURE),
+        ("classicplus-041", STRUCTURE),
+        ("meditative-008", STRUCTURE),
+        ("meditativeplus-020", STRUCTURE),
+        ("meditativeplus-025", STRUCTURE),
+        ("core-026", TARGETS),
+        ("classic-029", EITHER_WAY),
+        ("classic-064", EITHER_WAY),
+        ("classicplus-t-ai-03", AI_PRINTED),
+        ("classicplus-t-ai-04", AI_PRINTED),
+        ("classicplus-t-ai-05", AI_PRINTED),
+        ("classicplus-t-ai-06", AI_PRINTED),
+        ("classicplus-t-ai-07", AI_PRINTED),
+        ("classicplus-t-ai-10", AI_PRINTED),
+        ("meditative-080", IMMUTABLE),
+    ];
+
+    /// A face's text with every `{…}` placeholder taken out: what it prints as a literal.
+    fn literal(text: &str) -> String {
+        let mut out = String::new();
+        let mut depth = 0usize;
+        for ch in text.chars() {
+            match ch {
+                '{' => depth += 1,
+                '}' => depth = depth.saturating_sub(1),
+                _ if depth == 0 => out.push(ch),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn r1748003_every_number_a_spell_or_field_spell_prints_is_declared_or_fixed() {
+        jackioh_cards::register_all();
+        let fixed: IndexSet<&str> = FIXED.iter().map(|(id, _)| *id).collect();
+        let mut printing: IndexSet<String> = IndexSet::new();
+        let mut unexplained: Vec<String> = Vec::new();
+        for card in entries() {
+            if !matches!(card.type_, CardType::Spell | CardType::FieldSpell) {
+                continue;
+            }
+            let prints = [&card.base.text, &card.radiant.text]
+                .iter()
+                .any(|text| literal(text).bytes().any(|byte| byte.is_ascii_digit()));
+            if !prints {
+                continue;
+            }
+            printing.insert(card.id.clone());
+            if !fixed.contains(card.id.as_str()) {
+                unexplained.push(format!("{} {}", card.id, card.name));
+            }
+        }
+        assert_eq!(
+            unexplained,
+            Vec::<String>::new(),
+            "declare it as a param, or name why it is fixed"
+        );
+        let stale: Vec<&str> = fixed
+            .iter()
+            .copied()
+            .filter(|id| !printing.contains(*id))
+            .collect();
+        assert_eq!(
+            stale,
+            Vec::<&str>::new(),
+            "a card here that prints no number any more"
+        );
+        assert!(FIXED.iter().all(|(_, reason)| !reason.is_empty()));
     }
 }

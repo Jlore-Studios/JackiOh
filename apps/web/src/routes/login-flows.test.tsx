@@ -31,6 +31,7 @@ import {
   rememberPendingEmail,
   rememberPendingReset,
 } from "../net/session.ts";
+import { at } from "../test/stubServer.ts";
 import LoginRoute from "./login.tsx";
 
 const URL_ = "https://project.supabase.co";
@@ -207,10 +208,6 @@ const SIGNED_IN = {
 } as const;
 
 // the screen
-
-function at(url: string): void {
-  window.history.replaceState(null, "", url);
-}
 
 function form(): HTMLElement {
   return screen.getByTestId(loginTestid.form);

@@ -65,6 +65,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use crate::def_ids;
 
     use crate::events_json;
     use crate::js;
@@ -185,7 +186,7 @@ mod tests {
         fn r682_the_opponent_discards_1_at_random_then_your_hero_heals_5_past_30_and_the_four_cards_arrive_at_0() {
             let mut s = gift(false, json!({}), json!({}));
             open(&mut s);
-            let grave: Vec<String> = s.pile(P2, "graveyard").into_iter().map(|card| card.def_id).collect();
+            let grave = def_ids(&s.pile(P2, "graveyard"));
             assert_eq!(grave.len(), 1);
             assert!([MENACE, TIMMY].contains(&grave[0].as_str()));
             assert_eq!(s.hand(P2).len(), 1);
@@ -333,7 +334,7 @@ mod tests {
             open(&mut s);
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(P2).len(), 0);
-            let grave: Vec<String> = s.pile(P2, "graveyard").into_iter().map(|card| card.def_id).collect();
+            let grave = def_ids(&s.pile(P2, "graveyard"));
             assert_eq!(grave, vec![TIMMY]);
             s.expect_health(P1, HERO_HEALTH + 10);
         }

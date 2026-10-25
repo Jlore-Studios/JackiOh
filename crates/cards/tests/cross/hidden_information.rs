@@ -1045,14 +1045,15 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
 
     // The server's store hands `createGame` each deck ordered by card id, and `createGame` numbers its
     // cards in that order before §2.1 shuffles. `scenario()` numbers in its own setup order, so this
-    // plays the engine's own path: `createGame` → `beginGame` → mulligans → turns. p2's deck is 18
-    // cards costing 1, #98 Heroic Power and one it never shows: #1 (sorts first) or #100 (sorts last).
-    const P1_DECK: [&str; 20] = [
+    // plays the engine's own path: `createGame` → `beginGame` → mulligans → turns. p2's deck is 23
+    // cheap cards, #98 Heroic Power and one it never shows: #1 (sorts first) or #100 (sorts last).
+    const P1_DECK: [&str; DECK_SIZE as usize] = [
         "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
         "core-018", "core-023", "core-031", "core-035", "core-036", "core-039", "core-041", "core-044",
-        "core-048", "core-050", "core-060", "core-062",
+        "core-048", "core-050", "core-060", "core-062", "core-063", "core-067", "core-072", "core-081",
+        "core-082",
     ];
-    const P2_SHARED: [&str; 19] = [
+    const P2_SHARED: [&str; DECK_SIZE as usize - 1] = [
         "core-003",
         "core-004",
         "core-005",
@@ -1071,6 +1072,11 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         "core-081",
         "core-082",
         "core-086",
+        "core-010",
+        "core-051",
+        "core-067",
+        "core-072",
+        "core-097",
         HEROIC_POWER,
     ];
 
@@ -1188,7 +1194,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
         );
 
         // §9.1 asks that the id tell p1 nothing. Numbered in the store's sort order, the power's id was
-        // its rank (c40 when p2's hidden card sorts before it, c39 after). The seed that orders the
+        // its rank (c50 when p2's hidden card sorts before it, c49 after). The seed that orders the
         // numbers is as hidden as the one that shuffles the library (§2.1), so whatever id p1 reads, the
         // other game shows it under some seed, and the id is not the rank.
         let seeds = seeds();
@@ -1693,12 +1699,16 @@ fn asking(state: &mut GameState) {
     register_scripts(scripts);
 }
 
+/// core-001 to core-026 but #21 Hinder, which casts on draw.
 fn setup_p1_deck() -> Vec<String> {
-    (0..20).map(|at| format!("core-{:03}", at + 1)).collect()
+    (1..=DECK_SIZE + 1)
+        .map(|at| format!("core-{at:03}"))
+        .filter(|id| id != "core-021")
+        .collect()
 }
 
 fn setup_p2_deck() -> Vec<String> {
-    (0..20).map(|at| format!("core-{:03}", at + 30)).collect()
+    (0..DECK_SIZE).map(|at| format!("core-{:03}", at + 30)).collect()
 }
 
 mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {

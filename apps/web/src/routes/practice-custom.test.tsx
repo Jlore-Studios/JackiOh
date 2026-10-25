@@ -7,6 +7,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
+import { DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { opponentOf } from "@jackioh/shared";
 import type { CardDefs, CustomCard, PlayerId } from "@jackioh/shared";
@@ -37,7 +38,7 @@ const IMP: CustomCard = {
 /** The card as a game carries it (R915006): the builder's model is dropped. */
 const IMP_IN_GAME: CustomCard = { id: IMP.id, version: IMP.version, frame: IMP.frame, source: IMP.source };
 
-const CORE = Array.from({ length: 19 }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`);
+const CORE = Array.from({ length: DECK_SIZE - 1 }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`);
 const IMP_DECK = [...CORE, IMP.id];
 
 const FAKE_DEFS: CardDefs = Object.fromEntries(

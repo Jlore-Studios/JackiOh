@@ -38,6 +38,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -47,7 +48,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const MENACE: &str = "core-019";
     const STOCKPILE: &str = "core-005";
-    const NOTEBOOK: &str = "core-051-1"; // Spell 1: draw 1
+    const CURSE: &str = "classic-001"; // Spell 1: no hit against an empty enemy exile (R63), then draw 1
     const MANA_WELL: &str = "core-006"; // Field Spell
     const SHEEPISH: &str = "core-041"; // Trap
 
@@ -76,10 +77,6 @@ mod tests {
 
     fn library_ids(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.pile(player, "library").into_iter().map(|card| card.id).collect()
-    }
-
-    fn library_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "library").into_iter().map(|card| card.def_id).collect()
     }
 
     /// base
@@ -115,10 +112,10 @@ mod tests {
         #[test]
         fn r73_the_fatigue_counts_stay_with_the_players_and_an_empty_deck_swaps_too() {
             let mut s = scenario(json!({
-                "p1": { "hand": [NOTEBOOK, KING, STOCKPILE], "library": [], "mana": 5 },
+                "p1": { "hand": [CURSE, KING, STOCKPILE], "library": [], "mana": 5 },
                 "p2": p2_with(json!([MENACE, TIMMY, VANILLA]))
             }));
-            s.play(NOTEBOOK, json!({}));
+            s.play(CURSE, json!({}));
             assert_eq!(s.state().players.p1.fatigue_count, 1);
             s.play(KING, json!({}));
             assert_eq!(s.pile(P1, "library").len(), 3);
@@ -172,7 +169,7 @@ mod tests {
             let recruit = must(s.unit(P1, 2), "the recruit");
             assert_eq!(recruit.def_id, MENACE);
             assert_eq!(recruit.owner, P1);
-            assert_eq!(library_defs(&s, P1), [STOCKPILE, VANILLA]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [STOCKPILE, VANILLA]);
         }
 
         /// §6.3 no permanent in the new deck, or a full row, recruits nothing
@@ -199,7 +196,7 @@ mod tests {
                 "p2": p2_with(json!([MENACE]))
             }));
             full.play(KING, json!({ "zone": 5 }));
-            assert_eq!(library_defs(&full, P1), [MENACE]);
+            assert_eq!(def_ids(&full.pile(P1, "library")), [MENACE]);
         }
 
         /// R33 a Trap it recruits lands face-down, and the other player is not told which
@@ -231,7 +228,7 @@ mod tests {
                 [s.unit(P1, 2).map(|card| card.def_id), s.unit(P1, 3).map(|card| card.def_id)],
                 [Some(MENACE.to_string()), Some(VANILLA.to_string())]
             );
-            assert_eq!(library_defs(&s, P1), [TIMMY]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TIMMY]);
         }
     }
 }

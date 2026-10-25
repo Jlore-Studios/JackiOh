@@ -195,6 +195,27 @@ mod tactics_b18 {
         assert!(on_field(&run.end, AI, "core-008"), "{}", trace(&run.turn));
     }
 
+    /// #1759: Mr. Vanilla (4/4) loses its next fight against the Archivist (4/5) in Attack Position,
+    /// which takes 4 and survives it, and lives through it in Defense Position (Armor +1 turns the
+    /// Archivist's 4 into 3). The AI stands it down rather than ending its turn with it in Attack.
+    #[test]
+    fn unused_attacker_facing_a_bigger_enemy_ends_in_defense_position() {
+        let run = puzzle(
+            "stand-down-facing-bigger-enemy",
+            json!({ "p1": { "field": ["core-008"] }, "p2": { "field": ["core-030"] } }),
+        );
+        let vanilla = active_units_of(&run.end, AI)
+            .into_iter()
+            .find(|unit| unit.def_id == "core-008")
+            .expect("Mr. Vanilla stands");
+        assert_eq!(
+            unit_view(&run.end, vanilla).position,
+            Position::Def,
+            "{}",
+            trace(&run.turn)
+        );
+    }
+
     /// B18 P8: at 8 health against 7 + 3 on board, the 7/7 deals with the threat and p1 survives the swing back
     #[test]
     fn b18_p8_at_8_health_against_7_plus_3_on_board_the_7_7_deals_with_the_threat_and_p1_survives_the_swing_back()

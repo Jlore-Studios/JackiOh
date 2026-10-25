@@ -19,7 +19,7 @@ use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
-    register_catalog(jade_catalog(fixture_catalog(vanilla_catalog(40, 1))));
+    register_catalog(jade_catalog(fixture_catalog(vanilla_catalog(2 * DECK_SIZE, 1))));
     let mut scripts = FIXTURE_SCRIPTS.clone();
     scripts.extend(JADE_SCRIPTS.clone());
     register_scripts(scripts);

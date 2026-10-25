@@ -861,6 +861,22 @@ pub struct StatsTotalsQuery {
     pub drills: bool,
 }
 
+/// R1715000: what a fold of the records written before the totals did: how many it folded, and each
+/// record it set aside because its detail does not read (marked folded, its detail emptied, counted
+/// in no total), in id order.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FoldedRecords {
+    pub folded: usize,
+    pub unreadable: Vec<UnreadableGameRecord>,
+}
+
+/// R1715000: a record the fold set aside: its id, and why its detail did not read.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UnreadableGameRecord {
+    pub id: String,
+    pub message: String,
+}
+
 // The Conquest series (SPEC §9.5, R330–R338, R262–R264). One row per series, persisted so a series
 // survives a server restart; every transition is a pure function in `api/series_rules.rs` written
 // back with `series_update`, which is compare-and-set on `version`.
@@ -1939,6 +1955,12 @@ impl Tx<'_> {
         dispatch!(self, matches_actions(match_id))
     }
 
+    /// #1825: whether the match's log holds any action, asked without reading the log: false once
+    /// the retention purge has taken it, and for an unknown id.
+    pub async fn matches_has_actions(&mut self, match_id: &str) -> StoreResult<bool> {
+        dispatch!(self, matches_has_actions(match_id))
+    }
+
     /// #1169: stores the match's checkpoint, only while the match is live and its log holds `row.seq`
     /// under `row.nonce`, and in place of an earlier seq's only. Answers whether it was stored.
     pub async fn matches_put_checkpoint(&mut self, row: &MatchCheckpointRow) -> StoreResult<bool> {
@@ -2510,9 +2532,9 @@ impl Tx<'_> {
     }
 
     /// R1044000: folds into the totals up to `limit` records written before the totals were (the
-    /// first in id order), marking each folded, and answers how many it folded. A record is folded
-    /// once: one written since is folded as it is written.
-    pub async fn game_records_fold_pending(&mut self, limit: usize) -> StoreResult<usize> {
+    /// first in id order), marking each folded, and answers how many it folded, and each it set aside
+    /// unread (R1715000). A record is folded once: one written since is folded as it is written.
+    pub async fn game_records_fold_pending(&mut self, limit: usize) -> StoreResult<FoldedRecords> {
         dispatch!(self, game_records_fold_pending(limit))
     }
 
@@ -3079,9 +3101,10 @@ impl Tx<'_> {
         dispatch!(self, shares_sharers(match_id, friend))
     }
 
-    /// B52: every share `friend` may read now (as `shares_sharers` judges each), newest first.
-    pub async fn shares_for(&mut self, friend: &str) -> StoreResult<Vec<SharedReplayRow>> {
-        dispatch!(self, shares_for(friend))
+    /// B52: every share `friend` may read now (as `shares_sharers` judges each), newest first, at most
+    /// `limit` of them (#1825).
+    pub async fn shares_for(&mut self, friend: &str, limit: i64) -> StoreResult<Vec<SharedReplayRow>> {
+        dispatch!(self, shares_for(friend, limit))
     }
 
     /// R1435000: the friends `sharer` shared the finished match `match_id` with who may still read

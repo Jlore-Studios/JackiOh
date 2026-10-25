@@ -20,7 +20,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{in_hand, matches_object, new_game, put, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, matches_object, new_game, put, slot, spread};
 
 // Fixtures
 
@@ -38,17 +38,8 @@ fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
         "base": { "keywords": [], "text": name },
         "radiant": { "keywords": [], "text": name },
     });
-    spread(&mut literal, extra);
+    literal = spread(literal, extra);
     json_as(literal)
-}
-
-/// `{ ...target, ...extra }` on JSON objects.
-fn spread(target: &mut Value, extra: Value) {
-    if let (Some(target), Value::Object(extra)) = (target.as_object_mut(), extra) {
-        for (key, value) in extra {
-            target.insert(key, value);
-        }
-    }
 }
 
 fn unit_def(name: &str, index: i32, extra: Value) -> CardDef {
@@ -56,7 +47,7 @@ fn unit_def(name: &str, index: i32, extra: Value) -> CardDef {
         "base": { "attack": 2, "health": 3, "keywords": [], "text": name },
         "radiant": { "attack": 4, "health": 6, "keywords": [], "text": name },
     });
-    spread(&mut faces, extra);
+    faces = spread(faces, extra);
     def(name, "Unit", index, faces)
 }
 
@@ -333,12 +324,8 @@ fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
         .unwrap_or_else(|| panic!("{instance_id} is not in the viewer's hand"))
 }
 
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 fn has_key<T: serde::Serialize>(card: &T, key: &str) -> bool {
-    to_json(card).get(key).is_some()
+    json_of(card).get(key).is_some()
 }
 
 /// The flag as the view carries it. `true` when the key is present, which must then hold exactly
@@ -348,7 +335,7 @@ fn glows<T: serde::Serialize>(card: Option<&T>) -> bool {
     let Some(card) = card else {
         panic!("no card at that place in the view");
     };
-    match to_json(card).get("conditionActive") {
+    match json_of(card).get("conditionActive") {
         None => false,
         Some(flag) => {
             assert_eq!(flag, &json!(true));
@@ -714,7 +701,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
                 let entry = view.you.backrow[lane].as_ref();
                 assert!(
                     matches_object(
-                        &to_json(&entry),
+                        &json_of(entry),
                         &json!({ "faceDown": false, "instanceId": card.id })
                     ),
                     "{} on {active}'s turn",
@@ -833,7 +820,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
         let view = view_for(&state, P1);
 
         assert!(matches_object(
-            &to_json(&view.you.units[2]),
+            &json_of(&view.you.units[2]),
             &json!({ "instanceId": top_id, "buried": 1 })
         ));
         // The top has no hook, and the hooked card under it lends it nothing.
@@ -857,7 +844,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
         let view = view_for(&state, P1);
 
         assert!(matches_object(
-            &to_json(&view.you.units[3]),
+            &json_of(&view.you.units[3]),
             &json!({ "instanceId": top_id, "buried": 1 })
         ));
         assert!(glows(view.you.units[3].as_ref()));
@@ -928,19 +915,19 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
         hooks.clear(Which::Radiant);
         let theirs = view_for(&state, P2);
 
-        assert_eq!(to_json(&theirs.opponent.hand), json!({ "count": 1 }));
+        assert_eq!(json_of(&theirs.opponent.hand), json!({ "count": 1 }));
         assert!(!glows(theirs.opponent.units[0].as_ref()));
         assert_eq!(
-            to_json(&theirs.opponent.backrow[0]),
+            json_of(&theirs.opponent.backrow[0]),
             json!({ "faceDown": true, "cost": 1 })
         );
         assert!(matches_object(
-            &to_json(&theirs.opponent.backrow[1]),
+            &json_of(&theirs.opponent.backrow[1]),
             &json!({ "faceDown": false, "instanceId": field_spell.id })
         ));
         assert!(!glows(theirs.opponent.backrow[1].as_ref()));
         assert!(matches_object(
-            &to_json(&theirs.opponent.backrow[2]),
+            &json_of(&theirs.opponent.backrow[2]),
             &json!({ "faceDown": false, "instanceId": fired_field_trap.id })
         ));
         assert!(!glows(theirs.opponent.backrow[2].as_ref()));

@@ -1,5 +1,5 @@
 //! The turn cap doubled (docs/classic-sets.md B4.3, R389, rewriting R2): 60 player-turns, 30 each, then
-//! the game is a draw. Its knock-on is proved too: two 20-card decks that do nothing now fatigue out
+//! the game is a draw. Its knock-on is proved too: two 25-card decks that do nothing now fatigue out
 //! before the cap, so fatigue is the usual end of a long game and the cap a backstop for games that
 //! never fatigue (§2.4, R3).
 //!
@@ -88,7 +88,7 @@ mod r389_b4_3_the_turn_cap {
     }
 
     #[test]
-    fn r389_r3_r1156000_two_do_nothing_20_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4()
+    fn r389_r3_r1156000_r1705000_two_do_nothing_25_card_decks_fatigue_out_before_the_cap_so_fatigue_ends_such_a_game_2_4()
      {
         let over = pass_until_over(playing("fatigue"));
         assert_eq!(
@@ -96,9 +96,9 @@ mod r389_b4_3_the_turn_cap {
             Some(GameOverReason::HeroDeath)
         );
         assert!(over.turn < TURN_CAP_PLAYER_TURNS);
-        // B4.3's arithmetic: both libraries hold 16 and empty on each seat's 16th turn; the eighth fatigue
-        // draw kills on a seat's 24th, the first player's first, at player-turn 47.
-        assert_eq!(over.turn, 47);
+        // B4.3's arithmetic at 25 cards (R1705000): both libraries hold 21 and empty on each seat's 21st
+        // turn; the eighth fatigue draw kills on a seat's 29th, the first player's first, at player-turn 57.
+        assert_eq!(over.turn, 57);
         assert_eq!(over.result.map(|result| result.winner), Some(Winner::P2));
     }
 }

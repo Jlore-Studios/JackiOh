@@ -1,7 +1,7 @@
 {
   "id": "30-activate-a",
   "spec": "30-activate.cy.ts",
-  "description": "Player 1 deck for spec 30 (R384, R510). This is spec 03 player 1 deck (03-plays-a) with #28 Knockoff Temu Glowy Jelly Bean swapped for C #81 The Power to Thrive, and #91 Fed Fauci swapped for C #21 Turtinator. Thrive costs 2 and Turtinator 2, and #8 Mr. Vanilla (1 mana, 4/4) is the Unit that pays Turtinator Tribute. Nothing else here has an Activate ability, a Trap, a Cast-on-draw or a Quickdraw, so the only Activate controls on the board are the two this spec asserts.",
+  "description": "Player 1 deck for spec 30 (R384, R510). This is spec 03 player 1 deck (03-plays-a) with #28 Knockoff Temu Glowy Jelly Bean swapped for C #81 The Power to Thrive, and #91 Fed Fauci swapped for C #21 Turtinator. Thrive costs 2 and Turtinator 2, and #8 Mr. Vanilla (1 mana, 4/4) is the Unit that pays Turtinator Tribute. Nothing else here has an Activate ability, a Trap, a Cast-on-draw or a Quickdraw, so the only Activate controls on the board are the two this spec asserts. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-003",
     "core-005",
@@ -23,5 +23,12 @@
     "core-081",
     "classic-021",
     "core-092"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

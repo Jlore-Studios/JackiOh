@@ -25,13 +25,15 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use jackioh_engine::newest_shipped_set;
-use jackioh_engine::wire::{DEFAULT_PORTRAIT, pick_portrait_from_seed};
+use jackioh_engine::wire::{DEFAULT_PORTRAIT, PortraitId, pick_portrait_from_seed};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
+use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{ChallengeRow, CollectionEntry};
+use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{TestAppOptions, add_user, call, record_logs, test_app, test_app_with};
 use crate::support::store::{fake, store, to_json, uuid};
@@ -166,6 +168,29 @@ async fn harness(e2e: bool) -> Harness {
     save_deck(&app, HOST, &uuid(1), &deck(), "host's deck").await;
     save_deck(&app, GUEST, &uuid(2), &deck(), "guest's deck").await;
     Harness { app, host, guest }
+}
+
+/// R1827000: `profile_id` owns `portraits` on its account, as a pack's drop leaves them, so a deck's
+/// save may name them.
+async fn own_portraits(app: &App, profile_id: &str, portraits: &[PortraitId]) {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("a transaction");
+    for portrait in portraits {
+        let granted = tx
+            .economy_cosmetics_grant(&CosmeticGrant {
+                profile_id: profile_id.to_string(),
+                card_id: None,
+                cosmetic_id: portrait_cosmetic_id(*portrait),
+                delta: 1,
+                reason: EconomyReason::PackOpen,
+                reference: None,
+                dev: false,
+                at: now_ms(),
+            })
+            .await
+            .expect("the grant");
+        assert!(granted, "{portrait} was already owned");
+    }
+    tx.commit().await.expect("the commit");
 }
 
 /// The caller's saved deck, Best of 1, under whatever `body` sets.
@@ -1056,7 +1081,10 @@ mod r642_the_portraits_on_a_rooms_match {
             }
         };
 
-        // Host and guest save their decks under portraits, through the endpoint a player would use.
+        // Host and guest save their decks under portraits they own (R1827000), through the endpoint
+        // a player would use.
+        own_portraits(&h.app, HOST, &[PortraitId::Gary, PortraitId::Timmy]).await;
+        own_portraits(&h.app, GUEST, &[PortraitId::Shredder]).await;
         assert_eq!(put_portrait(h.host.clone(), uuid(1), "gary").await, 200);
         assert_eq!(put_portrait(h.guest.clone(), uuid(2), "shredder").await, 200);
 

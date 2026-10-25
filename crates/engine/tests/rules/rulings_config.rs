@@ -184,11 +184,11 @@ fn r180_gives_each_seat_an_optional_handicap_stores_none_equal_to_a_humans_and_f
     assert_eq!(tiers["easy"], human);
     assert_eq!(
         tiers["medium"],
-        json!({ "deckSize": 25, "manaBonus": 1, "manaCap": 5, "extraOpeningCards": 1, "extraDrawsPerTurn": 0 })
+        json!({ "deckSize": 30, "manaBonus": 1, "manaCap": 5, "extraOpeningCards": 1, "extraDrawsPerTurn": 0 })
     );
     assert_eq!(
         tiers["hard"],
-        json!({ "deckSize": 30, "manaBonus": 1, "manaCap": 7, "extraOpeningCards": 1, "extraDrawsPerTurn": 1 })
+        json!({ "deckSize": 35, "manaBonus": 1, "manaCap": 7, "extraOpeningCards": 1, "extraDrawsPerTurn": 1 })
     );
 }
 

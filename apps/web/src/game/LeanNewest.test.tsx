@@ -21,6 +21,9 @@ import {
   writePlayLean,
 } from "./LeanNewest.tsx";
 
+/** R1370's floor in a deck of `DECK_SIZE`: the deck builder's share of it, rounded up. */
+const FLOOR = Math.ceil(DECK_SIZE * AI_DECK.leanMinShare);
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -42,10 +45,12 @@ describe("R1371 the newest set that ships", () => {
 
   it("R1371 the picker's newest choice names it, and the share it asks for is the deck builder's own number", () => {
     expect(AI_DECK.leanMinShare).toBe(0.5);
-    expect(leanFloor()).toBe(Math.ceil(DECK_SIZE * AI_DECK.leanMinShare));
+    expect(leanFloor()).toBe(FLOOR);
     expect(leanFloor(25)).toBe(13);
     expect(leanChoiceLabel(LEAN_NEWEST)).toBe(`The newest set (${newestShippedSet()})`);
-    expect(leanNote(LEAN_NEWEST)).toBe(`At least 10 of your ${String(DECK_SIZE)} cards come from ${newestShippedSet()}.`);
+    expect(leanNote(LEAN_NEWEST)).toBe(
+      `At least ${String(FLOOR)} of your ${String(DECK_SIZE)} cards come from ${newestShippedSet()}.`,
+    );
   });
 });
 
@@ -81,7 +86,7 @@ describe("R924000 the picker's choices", () => {
     const picker = screen.getByTestId("lean") as HTMLSelectElement;
     expect(picker.value).toBe("Core");
     expect(picker).toHaveAccessibleDescription(leanNote("Core"));
-    expect(leanNote("Core")).toBe(`At least 10 of your ${String(DECK_SIZE)} cards come from Core.`);
+    expect(leanNote("Core")).toBe(`At least ${String(FLOOR)} of your ${String(DECK_SIZE)} cards come from Core.`);
   });
 });
 

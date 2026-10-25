@@ -325,14 +325,15 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
 
     /// A real `PlayerView` for `viewer`, its hands and lanes cut down; the rest is a real deal's.
     fn cut_down_view(viewer: PlayerId) -> PlayerView {
+        const DECK_SIZE: usize = jackioh_engine::config::DECK_SIZE as usize;
         jackioh_cards::register_all();
         let pool: Vec<String> = jackioh_cards::CATALOG
             .iter()
             .filter(|(_, def)| !(def.token || def.tags.iter().any(|tag| tag.as_str() == "Token")))
             .map(|(id, _)| id.clone())
-            .take(40)
+            .take(2 * DECK_SIZE)
             .collect();
-        let decks = (pool[..20].to_vec(), pool[20..40].to_vec());
+        let decks = (pool[..DECK_SIZE].to_vec(), pool[DECK_SIZE..].to_vec());
         let state = jackioh_engine::create_game(&jackioh_engine::CreateGameArgs {
             seed: "r738-lanes".to_string(),
             decks,

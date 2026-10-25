@@ -1,7 +1,7 @@
 # JackiOh
 
 A 1v1 card game: Hearthstone-style mana, combat and keywords played on Yu-Gi-Oh-style lanes with
-a hidden trap backrow. Games are short: 20-card decks with no duplicates, 4 max mana, 30 health
+a hidden trap backrow. Games are short: 25-card decks with no duplicates, 4 max mana, 30 health
 and a 30-turn cap. Every card has a stronger Radiant form. A pure, seeded rules engine runs every
 match, so any game replays exactly from its seed and action log. You can play hotseat, online, or
 against a practice AI.
@@ -83,7 +83,7 @@ flowchart LR
 | The database and sign-in | Supabase, in `us-east-2` | Postgres and Auth | [`docs/deploy-cloudflare.md`](docs/deploy-cloudflare.md) |
 | CI | GitHub's runners | the five required checks on every pull request, and the slow suites once a day | [`CLAUDE.md`](CLAUDE.md), CI |
 | The night bot | GitHub Actions | `bot-commands.yml` answers comments and labels within seconds; each `bot-night.yml` run is four jobs: gate, plan, work and deliver. Only the work job runs a model, and it holds no GitHub write token | [`bot/README.md`](bot/README.md) |
-| The Claude accounts' work | GitHub's runners | the work jobs of `claude-1` to `claude-7`, logged in from secrets | [`bot/README.md`](bot/README.md), Subscriptions |
+| The Claude accounts' work | GitHub's runners | the work jobs of `claude-1` to `claude-8`, logged in from secrets | [`bot/README.md`](bot/README.md), Subscriptions |
 | The night box | AWS EC2, `m7i-flex.large`, tagged `jackioh-night-vm` | the work jobs of Codex, agy, Muse and Devin, each a Linux user of its own with its own runners. A Lambda starts it when a job waits, and it powers off after 30 idle minutes | [`bot/machine/README.md`](bot/machine/README.md) |
 | The training box | AWS EC2, `m7i-flex.large`, tagged `jackioh-train-box`, always on | the AI's training lanes, `improve`, `unban` and `gather`, as systemd services outside the night bot | [`training/README.md`](training/README.md), [`bot/machine/README.md`](bot/machine/README.md#the-training-box) |
 | Squishy | GitHub Actions and GitHub's runners | `@squishy-squooby`, the same harness on its own Claude account | [`bot/README.md`](bot/README.md#squishy) |
@@ -96,7 +96,7 @@ architecture: the crates, the wire and the client.
 ## The night bot
 
 `@jgoetzmann-bot` builds the issues you hand it, at any hour, on whichever of its subscriptions is
-free: seven Claude accounts (Opus and Sonnet), and ChatGPT through Codex, Gemini through agy, Muse
+free: eight Claude accounts (Opus and Sonnet), and ChatGPT through Codex, Gemini through agy, Muse
 and Devin on the night box. Label an issue `bot:build`, assign it the bot, or comment
 `/harness build` or `@jgoetzmann-bot <what you want>`.
 

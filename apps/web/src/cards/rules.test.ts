@@ -224,7 +224,6 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Brittle: "BR",
   "Spell Damage": "SD",
   "Immune to Spells": "IS",
-  "Immune to tribal tag based hate": "IT",
   Windfury: "WF",
   Temporary: "TE",
   Deft: "DE",

@@ -27,7 +27,8 @@ use jackioh_engine::testkit::{
 use super::support::{ai_pool, register_cards};
 
 const SEEDS: usize = 200;
-const SIZES: [i32; 3] = [20, 25, 30];
+/// R380, R1705000: a human's deck and Medium's and Hard's, `DECK_SIZE` and five and ten past it.
+const SIZES: [i32; 3] = [25, 30, 35];
 const BUCKETS: [&str; 4] = ["0-1", "2", "3", "4+"];
 
 /// TS's object literal as `AiDeckOptions`.
@@ -128,17 +129,23 @@ mod build_ai_deck_b22 {
     }
 
     #[test]
-    fn r380_b22_deals_exactly_20_distinct_non_token_ids_of_every_set_with_no_banned_card_over_200_seeds() {
+    fn r380_r1705000_b22_deals_exactly_25_distinct_non_token_ids_of_every_set_with_no_banned_card_over_200_seeds()
+     {
+        assert_eq!(SIZES[0], DECK_SIZE);
         deals_exactly(SIZES[0]);
     }
 
     #[test]
-    fn r380_b22_deals_exactly_25_distinct_non_token_ids_of_every_set_with_no_banned_card_over_200_seeds() {
+    fn r380_r1705000_b22_deals_exactly_30_distinct_non_token_ids_of_every_set_with_no_banned_card_over_200_seeds()
+     {
+        assert_eq!(SIZES[1], AI_DIFFICULTY.medium.deck_size);
         deals_exactly(SIZES[1]);
     }
 
     #[test]
-    fn r380_b22_deals_exactly_30_distinct_non_token_ids_of_every_set_with_no_banned_card_over_200_seeds() {
+    fn r380_r1705000_b22_deals_exactly_35_distinct_non_token_ids_of_every_set_with_no_banned_card_over_200_seeds()
+     {
+        assert_eq!(SIZES[2], AI_DIFFICULTY.hard.deck_size);
         deals_exactly(SIZES[2]);
     }
 
@@ -826,9 +833,10 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     #[test]
-    fn r1370_at_20_cards_half_the_deck_is_of_the_newest_set_on_every_seed_with_no_theme_or_a_rolled_one() {
+    fn r1370_at_25_cards_half_the_deck_is_of_the_newest_set_on_every_seed_with_no_theme_or_a_rolled_one() {
         let newest = newest_shipped_set();
-        assert_eq!(floor_of(DECK_SIZE, AI_DECK.lean_min_share), 10);
+        // 13 of a human's 25, rounded up from 12.5 (R1705000).
+        assert_eq!(floor_of(DECK_SIZE, AI_DECK.lean_min_share), 13);
         // A human's random deck (nothing banned and no gate, R1390), with a theme rolled (absent) and
         // with none (null).
         every_floor_holds(
@@ -848,7 +856,7 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     #[test]
-    fn r1370_at_20_cards_with_every_theme_the_pool_offers_the_lean_the_theme_and_the_units_all_hold() {
+    fn r1370_at_25_cards_with_every_theme_the_pool_offers_the_lean_the_theme_and_the_units_all_hold() {
         let newest = newest_shipped_set();
         let themes = themes(&[], &[]);
         assert!(themes.len() > 5, "{themes:?}");
@@ -891,12 +899,12 @@ mod r1370_a_deck_that_leans_on_a_set {
                 );
             }
         }
-        // Medium's 25 cards owe 13 of the set, rounded up from 12.5; Hard's 30 owe 15.
+        // Medium's 30 cards owe 15 of the set; Hard's 35 owe 18, rounded up from 17.5 (R1705000).
         assert_eq!(
             floor_of(AI_DIFFICULTY.medium.deck_size, AI_DECK.lean_min_share),
-            13
+            15
         );
-        assert_eq!(floor_of(AI_DIFFICULTY.hard.deck_size, AI_DECK.lean_min_share), 15);
+        assert_eq!(floor_of(AI_DIFFICULTY.hard.deck_size, AI_DECK.lean_min_share), 18);
     }
 
     #[test]
@@ -945,7 +953,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             .map(|def| def.id.clone())
             .collect();
         of_newest.sort();
-        // Ban all but six of the set's cards, short of the ten a 20-card deck owes. A player's deck, so
+        // Ban all but six of the set's cards, short of the 13 a 25-card deck owes. A player's deck, so
         // the AI's soft gate (R1390) neither empties the set nor moves the lean elsewhere. Re-pinned for
         // v0.3.15 (Meditative+ ships, #1187): the newest set is Meditative+, whose first six ids are all
         // Spells, so beside a rolled theme of Spells the three floors owed more than 20 cards and R1370
@@ -991,15 +999,15 @@ mod r1370_a_deck_that_leans_on_a_set {
     #[test]
     fn r1370_the_lean_boost_seldom_leaves_the_floor_to_force_a_card() {
         register_cards();
-        // `AI_DECK.leanBoost`'s measurement, at every tier's size: a human's 20 cards, Easy's 20 (the
-        // shadow ban kept out), Medium's 25 at cap 5 and Hard's 30 at cap 7. Re-measured for v0.3.15
-        // (Meditative+ ships, #1187): every set that ships, not the newest alone, since a small newest
-        // set and a big pool moved the boost the newest set had needed.
+        // `AI_DECK.leanBoost`'s measurement, at every tier's size: a human's 25 cards, Easy's 25 (the
+        // shadow ban kept out), Medium's 30 at cap 5 and Hard's 35 at cap 7 (R1705000). Re-measured for
+        // v0.3.15 (Meditative+ ships, #1187): every set that ships, not the newest alone, since a small
+        // newest set and a big pool moved the boost the newest set had needed.
         let sizes: [(i32, Option<i32>, bool); 4] = [
-            (20, None, true),
-            (20, None, false),
-            (25, Some(5), false),
-            (30, Some(7), false),
+            (25, None, true),
+            (25, None, false),
+            (30, Some(5), false),
+            (35, Some(7), false),
         ];
         let seeds = 500;
         let mut measured_somewhere = false;
@@ -1025,7 +1033,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                 measured_somewhere |= forced > 0;
                 // Fewer than one deck in ten needs the floor to force a card, wherever the floor owes
                 // at most two of the set's cards in five. Where it owes more (Meditative+'s 26 cards
-                // owe 13 of a Medium deck's 25 and 15 of a Hard deck's 30), forcing is the floor's job.
+                // owe 15 of a Medium deck's 30 and 18 of a Hard deck's 35), forcing is the floor's job.
                 if owed * 5 <= cards * 2 {
                     assert!(
                         forced * 10 < seeds,

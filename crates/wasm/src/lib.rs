@@ -22,8 +22,8 @@
 //! is this crate's: `ai_decide` hands the body `js_sys::Date::now` against the deadline the page
 //! computed, as TypeScript's `shouldStop` read `performance.now()`.
 
-use jackioh_engine::CreateGameArgs;
 use jackioh_engine::prelude::IndexMap;
+use jackioh_engine::{CreateGameArgs, SetupKind};
 use jackioh_wasm_core as wasm_core;
 use wasm_bindgen::prelude::*;
 
@@ -37,12 +37,12 @@ fn js<T>(answer: Result<T, String>) -> Result<T, JsError> {
 /// before the engine is called: Rust's `create_game` panics where TypeScript threw (SURFACE §6.1),
 /// and a panic in WebAssembly is a trap the page cannot catch as the error TypeScript gave it. The
 /// functions are the engine's own (`state.rs`), so the messages are the engine's verbatim.
-fn check_setup(args: &CreateGameArgs) -> Result<(), String> {
+fn check_setup(args: &CreateGameArgs, kind: SetupKind) -> Result<(), String> {
     // R915009: this module holds no Luau, so a game with custom cards runs in the Luau module.
     if args.custom_cards.as_ref().is_some_and(|cards| !cards.is_empty()) {
         return Err("a game with custom cards plays in the Luau module, not this one (R915009)".to_owned());
     }
-    wasm_core::check_decks(args, &IndexMap::new())
+    wasm_core::check_decks(args, &IndexMap::new(), kind)
 }
 
 // ---------------------------------------------------------------------------------------------

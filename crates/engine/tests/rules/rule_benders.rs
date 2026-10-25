@@ -46,10 +46,6 @@ impl Sink {
     }
 }
 
-fn immune(s: &mut Scenario, id: &str) {
-    s.card_mut(id).granted_keywords.push(Keyword::ImmuneToTribalHate);
-}
-
 fn books(s: &Scenario) -> usize {
     s.pile(P1, "graveyard")
         .into_iter()
@@ -60,6 +56,8 @@ fn books(s: &Scenario) -> usize {
 mod r940 {
     use super::*;
 
+    const FELINOR: &str = "meditative-025";
+
     fn hunting(seed: &str, hand: Value) -> Scenario {
         jackioh_cards::register_all();
         scenario(json!({
@@ -67,7 +65,7 @@ mod r940 {
             "p1": { "mana": 10, "hand": hand, "library": library() },
             "p2": {
                 "hand": [FILLER],
-                "field": [{ "def": PLAIN, "lane": 1 }, { "def": PLAIN, "lane": 2 }],
+                "field": [{ "def": FELINOR, "lane": 1 }, { "def": PLAIN, "lane": 2 }],
                 "library": library(),
             },
         }))
@@ -80,7 +78,6 @@ mod r940 {
             json!([{ "def": BIGOT, "radiant": true }, FILLER]),
         );
         let spared = s.unit(P2, 1).expect("victim").id.clone();
-        immune(&mut s, &spared);
         s.play(BIGOT, json!({}));
         // Radiant Bigot's destroy_all over notTags [Human] passes the immune unit by.
         assert_eq!(s.unit(P2, 1).expect("stands").id, spared);
@@ -91,7 +88,6 @@ mod r940 {
     fn r940_a_scope_with_no_tribal_tag_still_reaches_it() {
         let mut s = hunting("benders-hitjob", json!([{ "def": HIT_JOB }, FILLER]));
         let target = s.unit(P2, 1).expect("victim").id.clone();
-        immune(&mut s, &target);
         // Hit Job names no tag: the immunity does not apply.
         s.play(
             HIT_JOB,
@@ -107,7 +103,6 @@ mod r940 {
             json!([{ "def": BIGOT }, { "def": RCTA }, FILLER]),
         );
         let target = s.unit(P2, 1).expect("victim").id.clone();
-        immune(&mut s, &target);
         // Bigot's pick aims harm at notTags [Human]: refused.
         s.expect_refused(|s| {
             s.play(
@@ -132,12 +127,12 @@ mod r940 {
             "p1": { "mana": 10, "hand": [FILLER], "library": library() },
             "p2": {
                 "hand": [FILLER],
-                "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                "field": [{ "def": FELINOR, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
                 "library": library(),
             },
         }));
         let spared = s.unit(P2, 1).expect("victim").id.clone();
-        immune(&mut s, &spared);
+        s.card_mut(&spared).granted_tags = Some(vec![Tag::Human]);
         let scope = CardScope {
             side: Some(ScopeSide::Enemy),
             zones: vec![CardZone::Field],
@@ -183,12 +178,12 @@ mod r940 {
             "seed": "benders-hand",
             "p1": { "mana": 10, "hand": [FILLER], "library": library() },
             "p2": {
-                "hand": [{ "def": VANILLA }, { "def": VANILLA }],
+                "hand": [{ "def": FELINOR }, { "def": VANILLA }],
                 "library": library(),
             },
         }));
         let held = s.hand(P2)[0].id.clone();
-        immune(&mut s, &held);
+        s.card_mut(&held).granted_tags = Some(vec![Tag::Human]);
         // A harmful card-scope walk over the hand still matches the immune card: it is no unit there.
         let scope = CardScope {
             side: Some(ScopeSide::Enemy),
@@ -221,7 +216,7 @@ mod r940 {
         .into_iter()
         .map(|scoped| scoped.card.id)
         .collect();
-        assert!(matched.contains(&held), "in a hand the keyword protects nothing");
+        assert!(matched.contains(&held), "in a hand the ability protects nothing");
         assert_eq!(matched.len(), 2);
     }
 
@@ -229,7 +224,6 @@ mod r940 {
     fn r940_gaokao_still_buffs_what_its_destroy_passes_by() {
         let mut s = hunting("benders-gaokao", json!([{ "def": GAOKAO }, FILLER]));
         let spared = s.unit(P2, 1).expect("victim").id.clone();
-        immune(&mut s, &spared);
         let mark = s.events().len();
         s.play(GAOKAO, json!({}));
         // Neither-CN-nor-KY destroy passes the immune unit by and kills the plain one …
@@ -241,6 +235,40 @@ mod r940 {
             .filter(|event| matches!(event, GameEvent::Upgraded { .. }))
             .count();
         assert_eq!(upgraded, 0, "nothing tagged, nothing buffed");
+    }
+
+    #[test]
+    fn r940_a_shipped_catalog_that_printed_the_keyword_still_reads_and_the_view_leaves_it_out() {
+        // Through v0.4.4b the Felinor printed the immunity as a keyword; a game folded under such a catalog
+        // (R767000) reads it, the unit stays immune, and the client, whose types no longer name it, is not
+        // shown it.
+        jackioh_cards::register_all();
+        let shipped = jackioh_cards::catalog_at("v0.4.4").expect("v0.4.4 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            let mut s = hunting(
+                "benders-shipped",
+                json!([{ "def": BIGOT, "radiant": true }, FILLER]),
+            );
+            let felinor = s.unit(P2, 1).expect("victim").id.clone();
+            assert!(
+                s.stats(&felinor)
+                    .keywords
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::ImmuneToTribalHate),
+                "that catalog prints it"
+            );
+            let shown = s.view(P1).opponent.units[0]
+                .clone()
+                .expect("the Felinor")
+                .keywords;
+            assert!(
+                shown
+                    .iter()
+                    .all(|keyword| keyword.kind() != KeywordKind::ImmuneToTribalHate)
+            );
+            s.play(BIGOT, json!({}));
+            assert_eq!(s.unit(P2, 1).expect("stands").id, felinor);
+        });
     }
 }
 
@@ -376,13 +404,7 @@ mod r943 {
         let mut cursor: u32 = 1;
         let minted = new_instance(&mut cursor, "core-001", P1, Zone::Hand { player: P1 });
         assert_eq!(minted.created, Some(true), "a minted instance is Created");
-        let deck: Vec<String> = [
-            "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
-            "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
-            "core-017", "core-018", "core-019", "core-020",
-        ]
-        .map(String::from)
-        .to_vec();
+        let deck: Vec<String> = (1..=DECK_SIZE).map(|n| format!("core-{n:03}")).collect();
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: "benders-created-shipped".to_string(),
             decks: (deck.clone(), deck),

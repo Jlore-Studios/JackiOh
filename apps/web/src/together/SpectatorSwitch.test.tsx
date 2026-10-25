@@ -12,8 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
-import { must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 
 /** A stubbed round trip can outrun the 1 s default under load. */
@@ -39,10 +38,6 @@ function serve(allow: boolean | undefined, put?: (call: Call) => Reply | undefin
   });
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-spectators" }));
-}
-
 function theSwitch(): HTMLInputElement {
   return screen.getByTestId(SWITCH) as HTMLInputElement;
 }
@@ -59,7 +54,7 @@ async function settle(): Promise<void> {
 
 beforeEach(() => {
   window.localStorage.clear();
-  signedIn();
+  signIn("tok-spectators");
 });
 
 afterEach(() => {

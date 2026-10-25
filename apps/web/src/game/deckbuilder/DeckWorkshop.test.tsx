@@ -8,6 +8,7 @@ import { checkImportRoom, validateDeck, validateTrio, type Collection } from "@j
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
@@ -171,6 +172,19 @@ describe("the rail", () => {
     expect(part).toHaveTextContent(`7/${String(DECK_SIZE)}`);
     expect(screen.getByTestId(trioRowId("t"))).toHaveAttribute("data-ready", "false");
     expect(syncState()).toBe("saved");
+  });
+
+  it("R1705001 shows a saved EARLIER_DECK_SIZE-card deck as incomplete", () => {
+    // A deck saved complete before #1705 is a draft now: it keeps its cards and counts toward DECK_SIZE.
+    const earlier = ONE.slice(0, EARLIER_DECK_SIZE);
+    expect(earlier).toHaveLength(EARLIER_DECK_SIZE);
+    mount({ decks: [savedDeck("earlier", "Old Aggro", earlier, 1)] });
+    const row = screen.getByTestId(deckRowId("earlier"));
+    expect(row).toHaveAttribute("data-count", String(EARLIER_DECK_SIZE));
+    expect(row).toHaveAttribute("data-status", "incomplete");
+    expect(row).toHaveTextContent(`${String(EARLIER_DECK_SIZE)}/${String(DECK_SIZE)}`);
+    expect(row).not.toHaveTextContent("Ready");
+    expect(screen.getByRole("button", { name: new RegExp(`^Old Aggro, ${String(EARLIER_DECK_SIZE)} of ${String(DECK_SIZE)} cards`) })).toBe(row);
   });
 
   it("each row is named in words, with no aria-label to hide its drawn count from voice control", () => {
@@ -381,6 +395,86 @@ describe("comparing a deck with others (R251)", () => {
     expect(screen.getByTestId(deckCardId(ONE[0] ?? ""))).not.toHaveAttribute("data-conflict");
     expect(screen.getByTestId(DECK_CONFLICTS)).toHaveAttribute("data-count", "1");
     expect(screen.getByTestId(DECK_COUNT)).toHaveAttribute("data-count", "4");
+  });
+});
+
+// The deck list marks the cards the verdict names
+
+describe("the deck list marks each card that keeps the deck from being queued", () => {
+  function errorsOf(cards: readonly string[], owned: Collection) {
+    const verdict = validateDeck({ deck: { name: "Aggro", cards }, catalog, collection: owned });
+    return verdict.ok ? [] : verdict.errors;
+  }
+
+  it("a card the collection owns none of is marked L5 with the validator's sentence; a card with no error is not marked", () => {
+    const unowned = ONE[0] ?? "";
+    const missing: Collection = Object.fromEntries(Object.entries(collection).filter(([id]) => id !== unowned));
+    const cards = ONE.slice(0, 4);
+    mount({ decks: [savedDeck("a", "Aggro", cards, 1)], collection: missing, initialOpen: { kind: "deck", id: "a" } });
+
+    const issue = errorsOf(cards, missing).find((error) => error.rule === "L5" && error.cardId === unowned);
+    expect(issue).toBeDefined();
+    const message = issue?.message ?? "";
+    const marked = screen.getByTestId(deckCardId(unowned));
+    expect(marked).toHaveAttribute("data-issue", "L5");
+    expect(marked).toHaveAccessibleName(`Remove ${nameOf(unowned)} from Aggro: ${message}`);
+    expect(marked).toHaveAttribute("title", message);
+    expect(marked.querySelector(".db-tile-flag")).not.toBeNull();
+
+    const other = ONE[1] ?? "";
+    const plain = screen.getByTestId(deckCardId(other));
+    expect(plain).not.toHaveAttribute("data-issue");
+    expect(plain).not.toHaveAttribute("title");
+    expect(plain).toHaveAccessibleName(`Remove ${nameOf(other)} from Aggro`);
+    expect(plain.querySelector(".db-tile-flag")).toBeNull();
+
+    // L2 names no card, so it stays in the verdict box only.
+    expect(within(screen.getByTestId(DECK_VERDICT)).getByTestId(loadoutErrorId("L2"))).toBeInTheDocument();
+  });
+
+  it("a card two errors name shows the first: a token is L3 before L5", () => {
+    const cards = [...ONE.slice(0, 3), TOKEN_ID];
+    mount({ decks: [savedDeck("a", "Aggro", cards, 1)], initialOpen: { kind: "deck", id: "a" } });
+
+    const named = errorsOf(cards, collection).filter((error) => error.cardId === TOKEN_ID);
+    expect(named.map((error) => error.rule)).toEqual(["L3", "L5"]);
+    const tile = screen.getByTestId(deckCardId(TOKEN_ID));
+    expect(tile).toHaveAttribute("data-issue", "L3");
+    expect(tile).toHaveAttribute("title", named[0]?.message);
+  });
+
+  it("a card that clashes with a compared deck and has an error gives both reasons", () => {
+    const clash = TWO[0] ?? "";
+    const missing: Collection = Object.fromEntries(Object.entries(collection).filter(([id]) => id !== clash));
+    const cards = [...ONE.slice(0, 3), clash];
+    mount({
+      decks: [savedDeck("a", "Aggro", cards, 1), savedDeck("c", "Control", TWO, 2)],
+      collection: missing,
+      initialOpen: { kind: "deck", id: "a" },
+    });
+    fireEvent.change(screen.getByTestId(DECK_COMPARE_SELECT), { target: { value: "deck:c" } });
+
+    const message = errorsOf(cards, missing).find((error) => error.cardId === clash)?.message ?? "";
+    expect(message).not.toBe("");
+    const tile = screen.getByTestId(deckCardId(clash));
+    expect(tile).toHaveAttribute("data-conflict", "true");
+    expect(tile).toHaveAttribute("data-issue", "L5");
+    expect(tile).toHaveAccessibleName(`Remove ${nameOf(clash)} from Aggro (also in Control): ${message}`);
+    expect(tile).toHaveAttribute("title", `Also in Control. ${message}`);
+    expect(tile.querySelectorAll(".db-tile-flag")).toHaveLength(1);
+  });
+
+  it("with no collection no ownership mark appears, the other marks stay, and the hint says why", () => {
+    const cards = [...ONE.slice(0, 3), TOKEN_ID];
+    mount({ decks: [savedDeck("a", "Aggro", cards, 1)], collection: null, initialOpen: { kind: "deck", id: "a" } });
+
+    for (const cardId of ONE.slice(0, 3)) {
+      expect(screen.getByTestId(deckCardId(cardId))).not.toHaveAttribute("data-issue");
+    }
+    expect(screen.getByTestId(deckCardId(TOKEN_ID))).toHaveAttribute("data-issue", "L3");
+    const verdict = screen.getByTestId(DECK_VERDICT);
+    expect(within(verdict).queryAllByTestId(loadoutErrorId("L5"))).toHaveLength(0);
+    expect(verdict).toHaveTextContent("Your collection couldn");
   });
 });
 

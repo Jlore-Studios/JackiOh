@@ -93,8 +93,14 @@ fn token_def() -> CardDef {
     serde_json::from_value(value).expect("fixture error: the token def is a CardDef")
 }
 
-/// Every deckable id in the catalog: the decks draw from these, the rest are spares.
-pub static POOL_IDS: LazyLock<Vec<CardId>> = LazyLock::new(|| (1..=POOL_SIZE).map(pool_id).collect());
+/// Every deckable id in the catalog: the decks draw from these, the rest are spares. `POOL_SIZE` of
+/// them, numbered from 1 past `CEASELESS_VOID`'s, which the pool reaches at four decks of 25.
+pub static POOL_IDS: LazyLock<Vec<CardId>> = LazyLock::new(|| {
+    (1..=POOL_SIZE + 1)
+        .map(pool_id)
+        .filter(|id| id != CEASELESS_VOID)
+        .collect()
+});
 
 pub fn catalog() -> CatalogSnapshot {
     let mut cards: CardDefs = CardDefs::new();

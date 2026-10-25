@@ -184,6 +184,7 @@ pub fn script_v0_3_16() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -235,10 +236,6 @@ mod tests {
 
     fn fired(s: &Scenario) -> bool {
         s.events().iter().any(|event| event.event_type() == GameEventType::TrapFired)
-    }
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
     }
 
     fn drawn_by(events: &[GameEvent], who: PlayerId) -> usize {
@@ -314,8 +311,8 @@ mod tests {
             let felinors = s.hand(P1).into_iter().find(|card| card.def_id == FELINORS);
             let seven = s.hand(P1).into_iter().find(|card| card.def_id == SEVEN);
             s.answer(json!(menace.id));
-            assert_eq!(hand_defs(&s, P1), [MENACE]);
-            assert_eq!(hand_defs(&s, P2), [VANILLA, FELINORS, SEVEN]);
+            assert_eq!(def_ids(&s.hand(P1)), [MENACE]);
+            assert_eq!(def_ids(&s.hand(P2)), [VANILLA, FELINORS, SEVEN]);
             for card in [felinors, seven] {
                 let card = must(card, "a moved card");
                 let moved = s.card(&card);
@@ -374,7 +371,7 @@ mod tests {
             answer_with(&mut s, MENACE);
             s.expect_in_zone(TAX, "graveyard");
             // The owed start-of-turn draw landed after the keep resolved.
-            assert_eq!(hand_defs(&s, P1), [MENACE, TIMMY]);
+            assert_eq!(def_ids(&s.hand(P1)), [MENACE, TIMMY]);
             // The turn's draw waits behind the open keep, so 3 cards move: the Radiant discount
             // rode the delay's data, and p2's own card is untouched.
             assert_eq!(s.hand(P2).len(), 4);
@@ -415,7 +412,7 @@ mod tests {
                 assert_eq!(keep.resume.def_id, TAX);
                 answer_with(&mut s, MENACE);
                 s.expect_in_zone(TAX, "graveyard");
-                assert_eq!(hand_defs(&s, P1), [MENACE]);
+                assert_eq!(def_ids(&s.hand(P1)), [MENACE]);
             });
         }
 
@@ -586,8 +583,8 @@ mod tests {
             s.play(STOCKPILE, json!({}));
             assert!(fired(&s));
             assert!(s.state().pending.is_none());
-            assert_eq!(hand_defs(&s, P1), [FELINORS]);
-            assert_eq!(hand_defs(&s, P2), [VANILLA]);
+            assert_eq!(def_ids(&s.hand(P1)), [FELINORS]);
+            assert_eq!(def_ids(&s.hand(P2)), [VANILLA]);
         }
 
         #[test]

@@ -130,7 +130,7 @@ function expectVerdict(verdict: string, rule: string, message: string): void {
 
 type Legal = { a: string[]; b: string[]; c: string[] };
 
-/** Three disjoint fixtures: SPEC §8 #1–#20, #21–#40, and #41–#60. */
+/** Three disjoint fixtures of DECK_SIZE: SPEC §8 #1–#25, #26–#50, and #51–#75. */
 function legalDecks(): Cypress.Chainable<Legal> {
   return cy.fixture<FixtureDeck>("decks/09-deckbuilder-a.json").then((a) =>
     cy.fixture<FixtureDeck>("decks/09-deckbuilder-b.json").then((b) =>
@@ -143,8 +143,8 @@ function legalDecks(): Cypress.Chainable<Legal> {
   );
 }
 
-/** A Core card none of the three legal decks holds (SPEC §8 #61 onwards). */
-const FREE_CARD = cardId(61);
+/** A Core card none of the three legal decks holds: the first one past them in SPEC §8 order. */
+const FREE_CARD = cardId(TRIO_DECKS * DECK_SIZE + 1);
 
 /** Wait for the workshop, not merely the route. */
 function openWorkshop(account: E2EAccount, options: Partial<Cypress.VisitOptions> = {}): void {

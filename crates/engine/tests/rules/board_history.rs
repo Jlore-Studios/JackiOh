@@ -612,6 +612,7 @@ mod e29_through_reduce_s9_3 {
 
     #[test]
     fn r419_a_game_that_rolls_back_survives_json_and_folds_to_the_same_hash_from_its_log() {
+        const SEED: &str = "bh-fold-0";
         // TS leaned on the catalog an earlier test had registered (the vanilla fixtures); each Rust test
         // starts on a fresh thread, so it registers them itself first.
         setup_catalog();
@@ -619,8 +620,10 @@ mod e29_through_reduce_s9_3 {
         let mut first_deck = vec![rewind.id.clone()];
         first_deck.extend(vanilla_deck(DECK_SIZE - 1, 1));
         let decks = (first_deck, vanilla_deck(DECK_SIZE, 21));
+        // A seed whose deal brings the fixture to p1's hand before a full board leaves its hand to burn
+        // it (R1705000's 25-card decks put it out of reach on "bh-fold").
         let mut state = begin_game(&create_game(&CreateGameOptions {
-            seed: "bh-fold".into(),
+            seed: SEED.into(),
             decks: decks.clone(),
             ..CreateGameOptions::default()
         }))
@@ -663,7 +666,7 @@ mod e29_through_reduce_s9_3 {
                 &mut log,
                 input(json!({ "type": "endTurn", "playerId": player })),
             );
-            if state.turn > 20 {
+            if state.turn > 2 * DECK_SIZE {
                 panic!("p1 never held the fixture");
             }
         }
@@ -692,7 +695,7 @@ mod e29_through_reduce_s9_3 {
         );
 
         let replayed = fold(&FoldArgs {
-            seed: "bh-fold".into(),
+            seed: SEED.into(),
             decks,
             log,
             ..FoldArgs::default()

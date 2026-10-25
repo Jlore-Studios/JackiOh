@@ -14,15 +14,7 @@ use jackioh_engine::subsystems::quests::{
 };
 use jackioh_engine::testkit::*;
 
-/// `b`'s keys replace `a`'s.
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
-    base
-}
+use super::harness::{both, spread};
 
 fn def(index: u32, name: &str, type_: &str, extra: Value) -> CardDef {
     json_as(spread(
@@ -41,13 +33,6 @@ fn def(index: u32, name: &str, type_: &str, extra: Value) -> CardDef {
         }),
         extra,
     ))
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 // One goal kind per card

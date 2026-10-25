@@ -19,7 +19,7 @@ use jackioh_engine::state::{
 use jackioh_engine::zones::{PlaceOnFieldOptions, card_at, place_on_field};
 
 use super::fixtures::catalog::token_def;
-use super::fixtures::harness::{in_hand, new_game, put, slot};
+use super::fixtures::harness::{both, events_json, in_hand, new_game, put, slot};
 
 // Fixture cards.
 
@@ -64,13 +64,6 @@ fn rush_token() -> CardDef {
 
 fn defs() -> Vec<CardDef> {
     vec![noisy(), gifted(), hand_token()]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn local_scripts() -> IndexMap<String, CardScripts> {
@@ -165,16 +158,8 @@ fn chosen() -> Value {
     json!({ "target": { "of": "chosen" } })
 }
 
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
-
 fn ids_of_type(events: &[GameEvent], kind: &str) -> Vec<String> {
-    of_type(events, kind)
+    events_json(events, kind)
         .iter()
         .map(|event| event["instanceId"].as_str().unwrap_or_default().to_string())
         .collect()
@@ -247,7 +232,7 @@ mod exile_s6_3_m3_t1 {
         assert_eq!(state.players.p1.graveyard.len(), 0);
         assert_eq!(state.counters.exiled, 1);
         assert_eq!(
-            of_type(&events, "exiled"),
+            events_json(&events, "exiled"),
             vec![json!({ "type": "exiled", "instanceId": victim.id, "defId": "fx-1", "owner": "p1" })]
         );
     }
@@ -310,8 +295,8 @@ mod exile_s6_3_m3_t1 {
         );
 
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
-        assert!(of_type(&events, "damage").is_empty());
-        assert!(of_type(&events, "destroyed").is_empty());
+        assert!(events_json(&events, "damage").is_empty());
+        assert!(events_json(&events, "destroyed").is_empty());
     }
 
     #[test]
@@ -421,7 +406,7 @@ mod bounce_s6_3_m3_t1 {
         assert_eq!(now.cost_mod, -1);
         assert!(now.radiant);
         assert_eq!(
-            of_type(&events, "bounced"),
+            events_json(&events, "bounced"),
             vec![json!({ "type": "bounced", "instanceId": victim.id, "defId": "fx-1", "owner": "p1" })]
         );
         assert_eq!(ids_of_type(&events, "addedToHand"), vec![victim.id.clone()]);
@@ -448,7 +433,7 @@ mod bounce_s6_3_m3_t1 {
         assert_eq!(state.players.p1.hand.len(), 0);
         assert_eq!(state.players.p1.graveyard.len(), 0);
         assert_eq!(ids_of_type(&events, "bounced"), vec![token.id.clone()]);
-        assert!(of_type(&events, "addedToHand").is_empty());
+        assert!(events_json(&events, "addedToHand").is_empty());
     }
 
     #[test]
@@ -490,11 +475,11 @@ mod bounce_s6_3_m3_t1 {
         assert_eq!(now.controller, PlayerId::P1);
         assert_eq!(now.zone, Zone::Hand { player: PlayerId::P1 });
         assert_eq!(
-            of_type(&events, "bounced"),
+            events_json(&events, "bounced"),
             vec![json!({ "type": "bounced", "instanceId": theirs.id, "defId": "fx-4", "owner": "p1" })]
         );
         assert_eq!(
-            of_type(&events, "addedToHand"),
+            events_json(&events, "addedToHand"),
             vec![json!({ "type": "addedToHand", "player": "p1", "instanceId": theirs.id, "defId": "fx-4" })]
         );
     }
@@ -537,7 +522,7 @@ mod bounce_s6_3_m3_t1 {
         );
 
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
-        assert!(of_type(&events, "damage").is_empty());
+        assert!(events_json(&events, "damage").is_empty());
     }
 
     #[test]
@@ -578,7 +563,7 @@ mod r16_discard_s6_3_m3_t1 {
         assert_eq!(ids(&state.players.p1.hand), vec![keep.id.clone()]);
         assert_eq!(ids(&state.players.p1.graveyard), vec![toss.id.clone()]);
         assert_eq!(types(&events), vec!["discarded", "enteredGraveyard"]);
-        assert_eq!(of_type(&events, "discarded")[0]["owner"], json!("p1"));
+        assert_eq!(events_json(&events, "discarded")[0]["owner"], json!("p1"));
     }
 
     #[test]
@@ -743,7 +728,7 @@ mod r448_counter_s6_3_m3_t1_b5_e1 {
         assert_eq!(ids(&state.players.p1.graveyard), vec![card.id.clone()]);
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH);
         assert_eq!(types(&events), vec!["countered", "enteredGraveyard"]);
-        assert!(of_type(&events, "destroyed").is_empty());
+        assert!(events_json(&events, "destroyed").is_empty());
     }
 
     #[test]

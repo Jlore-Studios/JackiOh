@@ -215,7 +215,7 @@ mod tests {
         }
 
         #[test]
-        fn r386_r129_a_public_card_the_floors_have_emptied_is_left_alone_with_no_event_mr_vanilla_bottoms_out_at_0_attack_1_health_and_4() {
+        fn r386_r129_r1748000_a_public_card_the_floors_have_emptied_is_left_alone_with_no_event_mr_vanilla_bottoms_out_at_0_attack_1_health_its_cost_untouched() {
             crate::register_all();
             let mut emptied = 0;
             for n in 0..8 {
@@ -232,9 +232,9 @@ mod tests {
                 assert_eq!(s.unit(P2, 1).map(|card| card.id), Some(unit.id.clone()));
                 assert!(stats.attack >= 0);
                 assert!(stats.health >= 1);
-                let cost = cost_now(s.state(), s.card(&unit.id));
-                assert!(cost <= 4);
-                if stats.attack != 0 || stats.health != 1 || cost != 4 {
+                // R1748000: on the field no Nerf moves its cost, which stays its printed (1).
+                assert_eq!(cost_now(s.state(), s.card(&unit.id)), 1);
+                if stats.attack != 0 || stats.health != 1 {
                     continue;
                 }
                 emptied += 1;

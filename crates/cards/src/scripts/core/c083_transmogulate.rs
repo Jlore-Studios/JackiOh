@@ -134,6 +134,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -367,7 +368,7 @@ mod tests {
 
             assert_eq!(unit_def(&s, P2, 1), "core-011");
             assert_eq!(
-                s.pile(P2, "library").into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+                def_ids(&s.pile(P2, "library")),
                 vec!["core-020".to_string()]
             );
         }

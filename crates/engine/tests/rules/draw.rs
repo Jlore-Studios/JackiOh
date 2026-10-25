@@ -4,7 +4,7 @@ use jackioh_engine::draw::{DrawOutcome, ShuffleInOutcome, draw, draw_one, shuffl
 use jackioh_engine::effects::draw as draw_effect;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{events_json, new_game, put, set_library, slot};
 use crate::rules::fixtures::scripts::{anti_oneshot, cn_virus, hinder, infinite_reserves};
 
 /// TS `sinkFor(state, events)`: a sink's events and rng (from the state's cursor), lent with the state
@@ -31,14 +31,6 @@ fn strings(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
 }
 
-/// `eventsOfType(events, type)`, each event as its JSON, so a test reads its fields by TS's names.
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
-}
-
 fn def_ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
 }
@@ -61,7 +53,7 @@ mod draw_m1_t7 {
         assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-1"]));
         assert_eq!(def_ids(&state.players.p1.library), strings(&["fx-2"]));
         assert_eq!(state.counters.drawn, 1);
-        assert_eq!(of_type(&events, GameEventType::Drawn).len(), 1);
+        assert_eq!(events_json(&events, GameEventType::Drawn).len(), 1);
     }
 
     #[test]
@@ -76,7 +68,7 @@ mod draw_m1_t7 {
         assert_eq!(state.counters.played, 1);
         assert_eq!(state.counters.drawn, 2);
         assert_eq!(
-            of_type(&events, GameEventType::CardPlayed)
+            events_json(&events, GameEventType::CardPlayed)
                 .first()
                 .map(|event| event["costPaid"].clone()),
             Some(json!(0))
@@ -89,7 +81,7 @@ mod draw_m1_t7 {
         let events = draw_from(&mut state, &[], 3);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH - 6);
         assert_eq!(state.players.p1.fatigue_count, 3);
-        let amounts: Vec<Value> = of_type(&events, GameEventType::Damage)
+        let amounts: Vec<Value> = events_json(&events, GameEventType::Damage)
             .iter()
             .map(|event| event["amount"].clone())
             .collect();
@@ -108,7 +100,7 @@ mod draw_m1_t7 {
             vec![format!("fx-{}", HAND_CAP + 1)]
         );
         assert_eq!(state.counters.drawn, HAND_CAP + 1);
-        assert_eq!(of_type(&events, GameEventType::Burned).len(), 1);
+        assert_eq!(events_json(&events, GameEventType::Burned).len(), 1);
     }
 
     #[test]
@@ -128,7 +120,7 @@ mod draw_m1_t7 {
             2
         );
         assert_eq!(def_ids(&state.players.p1.hand), strings(&["fx-2"]));
-        assert_eq!(of_type(&events, GameEventType::ShuffledIn).len(), 2);
+        assert_eq!(events_json(&events, GameEventType::ShuffledIn).len(), 2);
         assert_eq!(def_ids(&state.players.p1.graveyard), vec![cn_virus().id]);
     }
 
@@ -145,7 +137,7 @@ mod draw_m1_t7 {
         let events = draw_from(&mut state, &[cn_virus().id, "fx-2".to_string()], 1);
 
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
-        assert_eq!(of_type(&events, GameEventType::Damage).len(), 0);
+        assert_eq!(events_json(&events, GameEventType::Damage).len(), 0);
         assert_eq!(
             state
                 .players
@@ -166,7 +158,7 @@ mod draw_m1_t7 {
         let events = draw_from(&mut state, &library, 1);
 
         assert_eq!(
-            of_type(&events, GameEventType::CardPlayed).len(),
+            events_json(&events, GameEventType::CardPlayed).len(),
             CAST_ON_DRAW_CHAIN_CAP as usize
         );
         assert_eq!(def_ids(&state.players.p1.hand), vec![cn_virus().id]);
@@ -213,7 +205,7 @@ mod draw_m1_t7 {
         // One draw set all of it off, so it is one chain: 20 casts, however deeply they nested, and the
         // cast-on-draw card each open draw then met went to the hand uncast (R58).
         assert_eq!(
-            of_type(&events, GameEventType::CardPlayed).len(),
+            events_json(&events, GameEventType::CardPlayed).len(),
             CAST_ON_DRAW_CHAIN_CAP as usize
         );
         assert!(state.players.p1.hand.iter().all(|card| card.def_id == drawer.id));
@@ -235,7 +227,7 @@ mod draw_m1_t7 {
         assert_eq!(state.players.p1.fatigue_count, 0);
         assert_eq!(state.players.p1.hero.health, HERO_HEALTH);
         assert_eq!(state.players.p1.hand.len(), 1);
-        assert_eq!(of_type(&events, GameEventType::Damage).len(), 0);
+        assert_eq!(events_json(&events, GameEventType::Damage).len(), 0);
     }
 
     #[test]
@@ -255,9 +247,9 @@ mod draw_m1_t7 {
 
         assert_eq!(state.players.p1.hand.len(), HAND_CAP as usize);
         assert_eq!(state.players.p2.mana.next_turn_mod, -1); // it was cast, not burned
-        assert_eq!(of_type(&events, GameEventType::CardPlayed).len(), 1);
+        assert_eq!(events_json(&events, GameEventType::CardPlayed).len(), 1);
         // The card drawn behind it had nowhere to go, so that one burned.
-        assert_eq!(of_type(&events, GameEventType::Burned).len(), 1);
+        assert_eq!(events_json(&events, GameEventType::Burned).len(), 1);
         assert!(def_ids(&state.players.p1.graveyard).contains(&hinder().id));
     }
 
@@ -377,7 +369,7 @@ mod r1061_named_draw_radiant_rider {
         let burned = find_instance(&state, &second).expect("the burned card");
         assert_eq!(burned.zone.z(), ZoneName::Graveyard);
         assert!(!burned.radiant);
-        assert_eq!(of_type(&bench.events, GameEventType::RadiantSet).len(), 1);
+        assert_eq!(events_json(&bench.events, GameEventType::RadiantSet).len(), 1);
     }
 
     fn in_hand_draw_filler(state: &mut GameState) {

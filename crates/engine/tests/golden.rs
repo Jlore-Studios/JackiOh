@@ -25,7 +25,8 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::replay::fnv1a32_utf16;
 use jackioh_engine::testkit::golden::{HOTSEAT, HOTSEAT_HASH, Mismatch, check_hotseat, replay_game};
 use jackioh_engine::{
-    Action, FoldArgs, FoldResult, GameOverReason, GameResult, Phase, Winner, fold, hash_state,
+    Action, EARLIER_DECK_SIZE, FoldArgs, FoldResult, GameOverReason, GameResult, Phase, Winner, fold,
+    hash_state,
 };
 
 // The golden traces (§13)
@@ -340,9 +341,11 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
                 "every action names its seat: {action}"
             );
         }
+        // Recorded before #1705, so each deck held EARLIER_DECK_SIZE cards and folds as made (R1705003).
+        let size = EARLIER_DECK_SIZE as usize;
         for deck in [&recording.decks.0, &recording.decks.1] {
-            assert_eq!(deck.len(), 20);
-            assert_eq!(deck.iter().collect::<BTreeSet<_>>().len(), 20);
+            assert_eq!(deck.len(), size);
+            assert_eq!(deck.iter().collect::<BTreeSet<_>>().len(), size);
             for id in deck {
                 assert!(CATALOG.contains_key(id), "{id} is a catalog card");
             }

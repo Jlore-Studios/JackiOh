@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::effects::{cast_rounds_until_death, damage_all};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
 
 /// TS's module `let nextIndex = 5960`, written out: each def takes the index it had.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
@@ -81,13 +81,6 @@ fn defs() -> Vec<CardDef> {
         tank(),
         plain(),
     ]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn cry(f: impl Fn(&mut EffectContext<'_>) -> Vec<Effect> + Send + Sync + 'static) -> Script {

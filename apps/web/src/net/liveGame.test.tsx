@@ -20,7 +20,7 @@ import {
   useQueued,
 } from "./liveGame.ts";
 import { navigate, paths } from "./navigate.ts";
-import { E2E_SESSION_STORAGE_KEY } from "./session.ts";
+import { signIn } from "../test/stubServer.ts";
 
 vi.mock("./navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./navigate.ts")>();
@@ -62,10 +62,6 @@ async function advance(ms: number): Promise<void> {
     vi.advanceTimersByTime(ms);
     for (let i = 0; i < 10; i += 1) await Promise.resolve();
   });
-}
-
-function signIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "e2e-token" }));
 }
 
 beforeEach(() => {

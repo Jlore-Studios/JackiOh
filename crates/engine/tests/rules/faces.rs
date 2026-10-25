@@ -11,12 +11,8 @@ use jackioh_engine::effects::{cards_in_card_scope, summon};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{in_hand, matches_object, put, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, matches_object, put, slot};
 use crate::rules::fixtures::instance_data::{billy, blood_moon, instance_game};
-
-fn to_json<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
 
 /// The instance as the state holds it now (TS reads its live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
@@ -158,11 +154,11 @@ mod b2_7_a_face_with_its_own_type {
         );
         let own = view_for(&state, P1).you.backrow;
         assert!(matches_object(
-            &to_json(&own[0]),
+            &json_of(&own[0]),
             &json!({ "faceDown": false, "type": "Trap" })
         ));
         assert!(matches_object(
-            &to_json(&own[1]),
+            &json_of(&own[1]),
             &json!({ "faceDown": false, "type": "Field Trap" })
         ));
         let HandView::Cards(hand) = view_for(&state, P1).you.hand else {
@@ -189,7 +185,7 @@ mod b2_7_a_face_with_its_own_type {
         // The other player reads the face-down cards as zones only (R351).
         let opponent = view_for(&state, P2).opponent.backrow;
         assert_eq!(
-            to_json(&opponent[0..2].to_vec()),
+            json_of(opponent[0..2].to_vec()),
             json!([{ "faceDown": true, "cost": 1 }, { "faceDown": true, "cost": 1 }])
         );
     }
@@ -263,7 +259,7 @@ mod b2_7_x_in_the_stats_buff_billy {
         // 6/6 from the X, and two Upgrades from its Cry on top.
         let tuning_keys = match &unit.tuning {
             None => 0,
-            Some(tuning) => to_json(tuning).as_object().map_or(0, |keys| keys.len()),
+            Some(tuning) => json_of(tuning).as_object().map_or(0, |keys| keys.len()),
         };
         assert!(tuning_keys > 0);
         let view = unit_view(&state, &unit);

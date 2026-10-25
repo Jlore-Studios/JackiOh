@@ -1,5 +1,6 @@
 // Vitest setup for the web package: jsdom matchers, a `matchMedia` stub, which jsdom lacks and the
-// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), and the engine.
+// animation table needs for `prefers-reduced-motion` (BUILD M5-T4), a silent `window.scrollTo`, and
+// the engine.
 //
 // The engine, the AI and the validator are the Rust ones, compiled to WebAssembly
 // (docs/v0.3.0/SURFACE.md §10.3). jsdom cannot fetch the module from a file URL the way the page
@@ -49,6 +50,13 @@ if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
         dispatchEvent: () => false,
       }) as unknown as MediaQueryList,
   });
+}
+
+// jsdom's `window.scrollTo` only logs "Not implemented" on the console, and `navigate` scrolls every
+// new screen to the top (#1756), so each test that follows a link would log it. `net/navigate.test.ts`
+// spies on this no-op.
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "scrollTo", { configurable: true, writable: true, value: () => {} });
 }
 
 beforeEach(() => {

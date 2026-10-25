@@ -40,6 +40,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -56,10 +57,6 @@ mod tests {
     const ARMOR: &str = "core-073"; // (2) Field Spell: a permanent, not a Unit.
     const BUFF_BILLY: &str = "classicplus-069"; // (X) Unit.
     const ANCHOR: &str = "core-010";
-
-    fn library_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "library").into_iter().map(|card| card.def_id).collect()
-    }
 
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
@@ -97,7 +94,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), Some(FELINORS), None, None, None]));
-                assert_eq!(library_defs(&s, P1), vec![MENACE, STOCKPILE, ARMOR, TEMPO]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![MENACE, STOCKPILE, ARMOR, TEMPO]);
             }
 
             #[test]
@@ -141,7 +138,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), Some(MENACE), None, None, None]));
-                assert_eq!(library_defs(&s, P1), vec![TEMPO]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![TEMPO]);
             }
 
             #[test]
@@ -156,7 +153,7 @@ mod tests {
 
                 assert!(summoned_defs(&s).contains(&TEMPO.to_string()));
                 assert!(!summoned_defs(&s).contains(&BUFF_BILLY.to_string()));
-                assert_eq!(library_defs(&s, P1), vec![MENACE, BUFF_BILLY]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![MENACE, BUFF_BILLY]);
             }
 
             #[test]
@@ -167,7 +164,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert!(summoned_defs(&s).contains(&BUFF_BILLY.to_string()));
-                assert_eq!(library_defs(&s, P1), vec![MENACE]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![MENACE]);
             }
 
             #[test]
@@ -181,7 +178,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), None, None, None, None]));
-                assert_eq!(library_defs(&s, P1), vec![MENACE, STOCKPILE, ARMOR]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![MENACE, STOCKPILE, ARMOR]);
             }
 
             #[test]
@@ -198,7 +195,7 @@ mod tests {
                     unit_defs(&s, P1),
                     lanes([Some(MENACE), Some(MENACE), Some(MENACE), Some(MENACE), Some(GUILD)])
                 );
-                assert_eq!(library_defs(&s, P1), vec![TEMPO]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![TEMPO]);
             }
 
             #[test]
@@ -244,7 +241,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), Some(TEMPO), None, None, None]));
-                assert_eq!(library_defs(&s, P1), vec![FELINORS]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![FELINORS]);
             }
         }
 
@@ -268,7 +265,7 @@ mod tests {
                     unit_defs(&s, P1),
                     lanes([Some(GUILD), Some(FELINORS), Some(TEMPO), None, None])
                 );
-                assert_eq!(library_defs(&s, P1), vec![MENACE, STOCKPILE, BIG_D, VANILLA]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![MENACE, STOCKPILE, BIG_D, VANILLA]);
             }
 
             #[test]
@@ -302,7 +299,7 @@ mod tests {
                     unit_defs(&s, P1),
                     lanes([Some(MENACE), Some(MENACE), Some(MENACE), Some(GUILD), Some(TEMPO)])
                 );
-                assert_eq!(library_defs(&s, P1), vec![VANILLA, BIG_D]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![VANILLA, BIG_D]);
             }
 
             #[test]
@@ -317,7 +314,7 @@ mod tests {
                 s.play(GUILD, json!({}));
 
                 assert_eq!(unit_defs(&s, P1), lanes([Some(GUILD), Some(TEMPO), None, None, None]));
-                assert_eq!(library_defs(&s, P1), vec![VANILLA, BIG_D]);
+                assert_eq!(def_ids(&s.pile(P1, "library")), vec![VANILLA, BIG_D]);
             }
         }
     }

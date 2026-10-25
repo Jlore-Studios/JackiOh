@@ -1,6 +1,7 @@
 // Tutorial path coverage (SPEC §9.10; R290, R291, R294, R314).
 // BUILD M8: each lesson has its own seed and retried waits.
 
+import { TUTORIAL_HUMAN } from "../../../apps/web/src/wire/engineConfig.ts";
 import { TUTORIAL_HANDICAP, TUTORIAL_PROGRESS_VERSION, constants, timeouts } from "../../support/config.ts";
 import {
   COACH,
@@ -117,7 +118,10 @@ function expectLessonGame(data: TutorialData, lesson: TutorialLessonData): void 
     expect(debug.decks[human], "the human plays the lesson's humanDeck").to.deep.eq(lesson.humanDeck);
     expect(debug.decks[1 - human], "the AI plays the lesson's aiDeck").to.deep.eq(lesson.aiDeck);
     expect(debug.handicaps[aiSeat], "the AI seat's handicap is the tutorial's (R290)").to.deep.eq(TUTORIAL_HANDICAP);
-    expect(debug.handicaps[lesson.humanSeat], "the human plays unhandicapped").to.eq(undefined);
+    expect(
+      debug.handicaps[lesson.humanSeat],
+      "the human plays a human's resources with the lesson's smaller deck (R1705005)",
+    ).to.deep.eq(TUTORIAL_HUMAN);
     expect(data.aiTutorial, "AI_TUTORIAL in the engine still says the same").to.deep.eq(TUTORIAL_HANDICAP);
     expect(lesson.aiDeck, "the AI's deck is exactly the handicap's deck size (R184)").to.have.length(TUTORIAL_HANDICAP.deckSize);
   });

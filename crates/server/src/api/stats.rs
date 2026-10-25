@@ -12,6 +12,9 @@
 //!
 //! R1583000: `GET /api/stats/play-rates` is each card's play rate among the human seats of every
 //! live game, read off every patch's totals and kept for `PLAY_RATES_REFRESH_SECONDS`.
+//!
+//! R1771000: `PUT /api/stats/player` keeps R1142000's summary inputs alone, for catalog cards, and
+//! drops every other key, id and value (`account_copy`).
 
 use std::cmp::Ordering;
 use std::sync::{Arc, Mutex};
@@ -1100,12 +1103,59 @@ pub async fn get_player(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&body)
 }
 
+/// R1771000: the game totals the account copy keeps (R1142000), in `syncPayload`'s order.
+const ACCOUNT_STATS_TOTALS: [&str; 4] = ["games", "wins", "losses", "draws"];
+/// R1771000: the counters each card of the account copy keeps (R1142000), in `syncPayload`'s order.
+const ACCOUNT_STATS_CARD_COUNTERS: [&str; 4] = ["played", "playedAgainst", "destroyed", "defeated"];
+
+/// TS `Number.isSafeInteger(value) && value >= 0` on a JSON value, as the count it is.
+fn whole_count(value: &Value) -> Option<u64> {
+    const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+    let number = value.as_f64()?;
+    if number.fract() != 0.0 || !(0.0..=MAX_SAFE_INTEGER).contains(&number) {
+        return None;
+    }
+    Some(number as u64)
+}
+
+/// R1771000: the account copy of a PUT's `stats`, in R1142000's shape: each game total that is a
+/// whole number of 0 or more and, under `cards`, each catalog card's counters that are whole
+/// numbers above 0, a card left with none dropped. Every other key, id and value is dropped, so
+/// the public summary (R654) only ever names a card the catalog holds.
+fn account_copy(stats: &Map<String, Value>, defs: &CardDefs) -> IndexMap<String, Value> {
+    let mut copy = IndexMap::new();
+    for key in ACCOUNT_STATS_TOTALS {
+        if let Some(count) = stats.get(key).and_then(whole_count) {
+            copy.insert(key.to_string(), Value::from(count));
+        }
+    }
+    if let Some(Value::Object(entries)) = stats.get("cards") {
+        let mut cards = Map::new();
+        for (id, counters) in entries {
+            if !defs.contains_key(id) {
+                continue;
+            }
+            let mut kept = Map::new();
+            for key in ACCOUNT_STATS_CARD_COUNTERS {
+                if let Some(count) = counters.get(key).and_then(whole_count).filter(|count| *count > 0) {
+                    kept.insert(key.to_string(), Value::from(count));
+                }
+            }
+            if !kept.is_empty() {
+                cards.insert(id.clone(), Value::Object(kept));
+            }
+        }
+        copy.insert("cards".to_string(), Value::Object(cards));
+    }
+    copy
+}
+
 /// The body's length as `JSON.stringify(body).length`: UTF-16 code units.
 fn stringified_length(body: &Value) -> usize {
     body.to_string().encode_utf16().count()
 }
 
-/// PUT /api/stats/player: the caller updates their statistics and privacy setting.
+/// PUT /api/stats/player: the caller updates their statistics and privacy setting, the statistics kept in R1142000's shape (R1771000).
 pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX {
@@ -1122,10 +1172,7 @@ pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     let stats: IndexMap<String, Value> = match req.body.get("stats") {
-        Some(Value::Object(map)) => map
-            .iter()
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect(),
+        Some(Value::Object(map)) => account_copy(map, &app.catalog.defs),
         _ => existing.as_ref().map(|row| row.stats.clone()).unwrap_or_default(),
     };
 

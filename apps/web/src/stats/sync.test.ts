@@ -8,7 +8,7 @@ import { clearSession, writeSession } from "../net/session.ts";
 import { resetSettings, writeSettings } from "../settings/store.ts";
 import { PLAYER_STATS_BYTES_MAX } from "../wire/serverConfig.ts";
 import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION } from "./config.ts";
-import { NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
+import { EMPTY_STATS, NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
 import { dropPlayerStatsCache } from "./store.ts";
 import { syncPayload, syncPlayerStats } from "./sync.ts";
 
@@ -83,6 +83,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     }
 
     const fullStats: PlayerStats = {
+      ...EMPTY_STATS,
       games: 1000,
       wins: 700,
       losses: 250,
@@ -127,6 +128,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     });
 
     const stats: PlayerStats = {
+      ...EMPTY_STATS,
       games: 250,
       wins: 150,
       losses: 90,
@@ -154,6 +156,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
   it("R1142000 drops lowest-count cards first when cap is too small for payload", () => {
     const stats: PlayerStats = {
+      ...EMPTY_STATS,
       games: 10,
       wins: 8,
       losses: 2,
@@ -195,6 +198,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
   it("R1142000 omits seen, zero counters, and all-zero cards from sync payload", () => {
     const stats: PlayerStats = {
+      ...EMPTY_STATS,
       games: 5,
       wins: 3,
       losses: 2,
@@ -229,6 +233,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     writeSettings({ publicStats: true });
 
     setStoredStats({
+      ...EMPTY_STATS,
       games: 1,
       wins: 1,
       losses: 0,
@@ -265,6 +270,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     writeSettings({ publicStats: false });
 
     setStoredStats({
+      ...EMPTY_STATS,
       games: 2,
       wins: 1,
       losses: 1,
@@ -296,6 +302,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
 
   it("R1582000 the new counters stay on the device: the sync payload leaves them out", () => {
     const stats: PlayerStats = {
+      ...EMPTY_STATS,
       games: 2,
       wins: 1,
       losses: 1,
@@ -307,5 +314,46 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     };
     const payload = syncPayload(stats);
     expect(payload.cards).toEqual({ "card-a": { played: 1 } });
+  });
+
+  it("R1743000 the new counters and totals are not sent: the payload and the request body leave them out", async () => {
+    const stats: PlayerStats = {
+      ...EMPTY_STATS,
+      games: 3,
+      wins: 2,
+      losses: 1,
+      draws: 0,
+      cards: {
+        "card-a": {
+          ...NO_COUNTS,
+          played: 4,
+          damageDealt: 30,
+          biggestHit: 9,
+          overkill: 4,
+          attacks: 8,
+          healing: 12,
+          drawn: 6,
+          radiant: 2,
+          playedInWin: 3,
+          playedInLoss: 1,
+        },
+        "card-b": { ...NO_COUNTS, damageDealt: 5, drawn: 2, playedInWin: 1 },
+      },
+      streak: 2,
+      bestStreak: 5,
+      longestGame: 21,
+      longestGamePlayed: { "card-a": 3 },
+    };
+    const payload = syncPayload(stats);
+    expect(payload).toEqual({ games: 3, wins: 2, losses: 1, draws: 0, cards: { "card-a": { played: 4 } } });
+    expect(Object.keys(payload).sort()).toEqual(["cards", "draws", "games", "losses", "wins"]);
+
+    writeSession({ accessToken: "token-new", refreshToken: "refresh-new", expiresAt: Date.now() + 60000 });
+    setStoredStats(stats);
+    await syncPlayerStats();
+    const sent = JSON.stringify(vi.mocked(putPlayerStats).mock.calls);
+    for (const word of ["streak", "bestStreak", "longestGame", "damageDealt", "biggestHit", "overkill", "attacks", "healing", "drawn", "radiant", "playedInWin", "playedInLoss"]) {
+      expect(sent).not.toContain(word);
+    }
   });
 });

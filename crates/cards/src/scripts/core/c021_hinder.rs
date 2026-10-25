@@ -1,5 +1,6 @@
 //! #21 Hinder (SPEC §8.2): "Cast on draw: Your opponent has 1 less mana next turn. Discard 1 random card.",
 //! radiant "Cast on draw: Your opponent has 2 less mana next turn." Only the base face discards (R431).
+//! Tunes: mana 1 ↑ (Radiant 2); discards 1 ↓, on the base face only (R1431, R1748003).
 //!
 //! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that. The
 //! engine casts it, repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58) and counts the free cast as a
@@ -10,14 +11,20 @@
 //! caster's hand (R682): no declaration travels in the play action (R81) and a cast on a draw asks
 //! nothing as it begins (R70), so no prompt pauses the draw. It comes second, after the mana clause;
 //! with an empty hand there is nothing to discard and the mana clause still lands.
+//!
+//! Through v0.4.4b the discard was printed, not declared; `script_v0_4_4b` keeps that (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-021";
 
-/// One Hinder face: whether the caster discards 1. How much lower the opponent's refresh is, is the
-/// declared number `mana` (R386): 1, 2 on the Radiant face.
-fn hinder(discards: bool) -> Script {
+/// "Discard 1 random card" as v0.4.4b printed it, before it was the declared `discards` (R1748003).
+const PRINTED_DISCARDS: i32 = 1;
+
+/// One Hinder face: whether the caster discards, how many being the declared number `discards` (1,
+/// R1748003), or the printed 1 when `declared` is off. How much lower the opponent's refresh is, is
+/// the declared number `mana` (R386): 1, 2 on the Radiant face.
+fn hinder(discards: bool, declared: bool) -> Script {
     let static_flags = Some(StaticFlags {
         cast_on_draw: Some(true),
         ..StaticFlags::default()
@@ -33,11 +40,16 @@ fn hinder(discards: bool) -> Script {
     }
     Script {
         static_flags,
-        // R682: "Discard 1" — one random card of the caster's own hand.
-        cry: Some(hook(|ctx| {
+        // R682: "Discard 1" — random cards of the caster's own hand.
+        cry: Some(hook(move |ctx| {
+            let count = if declared {
+                param(&*ctx, "discards")
+            } else {
+                PRINTED_DISCARDS
+            };
             vec![
                 next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "mana"), "player": "enemy" }))),
-                discard_random(json_as(json!({ "count": 1 }))),
+                discard_random(json_as(json!({ "count": count }))),
             ]
         })),
         ..Script::default()
@@ -46,8 +58,16 @@ fn hinder(discards: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: hinder(true),
-        radiant: hinder(false),
+        base: hinder(true, true),
+        radiant: hinder(false, true),
+    }
+}
+
+/// R767000: through v0.4.4b its discard was printed; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_4_4b() -> CardScripts {
+    CardScripts {
+        base: hinder(true, false),
+        radiant: hinder(false, false),
     }
 }
 
@@ -296,6 +316,37 @@ mod tests {
         }
 
         #[test]
+        fn r1748003_discards_moves_with_a_buff_or_a_nerf() {
+            crate::register_all();
+            let mut s = hinder_on_top("hinder-discards", false, None, &[P1_FILLER, P1_SECOND, P1_FILLER]);
+            // A Buff finds it at its floor of 1 (an amount never drops below 1, R386); a Nerf raises it.
+            assert!(!crate::can_upgrade_number(&s, HINDER, "discards"));
+            assert_eq!(crate::degrade_number(&mut s, HINDER, "discards"), 2);
+            let s = draw_hinder(s);
+            let discarded = s
+                .events()
+                .iter()
+                .filter(|event| matches!(event, GameEvent::Discarded { .. }))
+                .count();
+            assert_eq!(discarded, 2);
+        }
+
+        #[test]
+        fn r1748003_r767000_the_v0_4_4b_kept_script_keeps_its_printed_discards() {
+            crate::under_kept(HINDER, super::super::script_v0_4_4b(), || {
+                let mut s = hinder_on_top("hinder-kept", false, None, &[P1_FILLER, P1_SECOND, P1_FILLER]);
+                crate::degrade_number(&mut s, HINDER, "discards");
+                let s = draw_hinder(s);
+                let discarded = s
+                    .events()
+                    .iter()
+                    .filter(|event| matches!(event, GameEvent::Discarded { .. }))
+                    .count();
+                assert_eq!(discarded, 1, "the kept script discards its printed 1");
+            });
+        }
+
+        #[test]
         fn r431_both_faces_are_cast_on_draw_neither_declares_a_discard_pick_r682_random() {
             let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
@@ -311,11 +362,11 @@ mod tests {
     // hold none; turn 1's draw is what meets it, discarding at random with no prompt (R682), and
     // the log folds back to the same game (§9.3).
 
-    /// Twenty legal Core cards with no other cast-on-draw card among them, Hinder first.
-    const DECK: [&str; 20] = [
-        HINDER, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013", "core-015",
-        "core-016", "core-019", "core-020", "core-025", "core-026", "core-032", "core-036", "core-043",
-        "core-044", "core-053", "core-055",
+    /// DECK_SIZE legal Core cards with no other cast-on-draw card among them, Hinder first.
+    const DECK: [&str; DECK_SIZE as usize] = [
+        HINDER, "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-008", "core-009",
+        "core-010", "core-011", "core-012", "core-013", "core-015", "core-016", "core-019", "core-020", "core-025",
+        "core-026", "core-032", "core-036", "core-043", "core-044", "core-053", "core-055",
     ];
 
     /// Apply one action with the next nonce, refusing loudly, and log it.

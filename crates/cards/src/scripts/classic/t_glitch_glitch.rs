@@ -34,6 +34,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -104,7 +105,7 @@ mod tests {
             assert_eq!(g.state().system_plays, Some(1));
             g.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR);
             g.play("core-057", json!({}));
-            let hand: Vec<String> = g.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+            let hand = def_ids(&g.hand(P1));
             assert_eq!(hand, vec![GLITCH_DEF_ID, GLITCH_DEF_ID, GLITCH_DEF_ID]);
         }
 
@@ -117,7 +118,7 @@ mod tests {
             }));
             g.play("core-057", json!({}));
             assert_eq!(g.state().system_plays, None);
-            let hand: Vec<String> = g.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+            let hand = def_ids(&g.hand(P1));
             assert!(!hand.iter().any(|id| id == GLITCH_DEF_ID));
         }
 

@@ -89,6 +89,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{ID, JOURNEY_COMPLETE, JOURNEY_KEY};
+    use crate::def_ids;
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -185,10 +186,7 @@ mod tests {
                     Some(&json!([pointmaster, seven]))
                 );
                 assert_eq!(
-                    s.hand(P1)
-                        .iter()
-                        .map(|card| card.def_id.as_str())
-                        .collect::<Vec<_>>(),
+                    def_ids(&s.hand(P1)),
                     vec![MENACE, FILLER]
                 );
                 s.expect_in_zone(ID, "graveyard");

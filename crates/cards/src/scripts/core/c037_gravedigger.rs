@@ -61,6 +61,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const GRAVEDIGGER: &str = "core-037";
     /// Three distinct graveyard cards, so a random pick and a Discover are both readable by defId.
@@ -78,10 +79,6 @@ mod tests {
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
-    }
-
-    fn def_ids_in_hand(s: &Scenario) -> Vec<String> {
-        s.hand("p1").into_iter().map(|card| card.def_id).collect()
     }
 
     fn sorted(mut ids: Vec<String>) -> Vec<String> {
@@ -108,7 +105,7 @@ mod tests {
 
             // One card in the graveyard, so the seeded pick is forced: Stockpile moves GY → hand.
             assert!(s.pile("p1", "graveyard").is_empty());
-            assert_eq!(sorted(def_ids_in_hand(&s)), sorted(strings(&[STOCKPILE, DRAWN])));
+            assert_eq!(sorted(def_ids(&s.hand("p1"))), sorted(strings(&[STOCKPILE, DRAWN])));
             // §2.2/R62: the start-of-turn hooks run before the draw, so the add is logged first.
             s.expect_events(json!(["addedToHand", "drawn"]));
         }
@@ -133,7 +130,7 @@ mod tests {
             let second = build();
 
             let moved = |s: &Scenario| -> Vec<String> {
-                def_ids_in_hand(s).into_iter().filter(|id| id != DRAWN).collect()
+                def_ids(&s.hand("p1")).into_iter().filter(|id| id != DRAWN).collect()
             };
 
             // The seed above picks Mana Well out of the three; the point of the assertion is that the
@@ -161,7 +158,7 @@ mod tests {
             s.start_turn();
 
             // Only the turn's draw reached the hand.
-            assert_eq!(def_ids_in_hand(&s), strings(&[DRAWN]));
+            assert_eq!(def_ids(&s.hand("p1")), strings(&[DRAWN]));
             assert!(s.pile("p1", "graveyard").is_empty());
         }
 
@@ -202,7 +199,7 @@ mod tests {
             assert_eq!(picked.cost_mod, -1);
             assert_eq!(effective_cost(s.state(), s.card(&picked.id), Default::default()), 2);
             // The other two are still in the graveyard: Discover moves the pick alone.
-            let left: Vec<String> = s.pile("p1", "graveyard").into_iter().map(|card| card.def_id).collect();
+            let left = def_ids(&s.pile("p1", "graveyard"));
             assert_eq!(sorted(left), sorted(strings(&[HIT_JOB, STOCKPILE])));
         }
 
@@ -227,7 +224,7 @@ mod tests {
             assert!(s.state().pending.is_none());
             assert!(s.state().work.is_empty());
             // The draw that follows the start-of-turn hook happened, and the picked card is there too.
-            assert_eq!(sorted(def_ids_in_hand(&s)), sorted(strings(&[DRAWN, MANA_WELL])));
+            assert_eq!(sorted(def_ids(&s.hand("p1"))), sorted(strings(&[DRAWN, MANA_WELL])));
             assert_eq!(s.state().phase, Phase::Main);
             // R62's order, as a subsequence: the Discover opens, is answered and puts its pick in hand,
             // and only then does the turn draw. Red until the engine owes the draw to `state.work`.
@@ -245,7 +242,7 @@ mod tests {
             s.start_turn();
 
             assert!(s.state().pending.is_none());
-            assert_eq!(def_ids_in_hand(&s), strings(&[DRAWN]));
+            assert_eq!(def_ids(&s.hand("p1")), strings(&[DRAWN]));
         }
 
         #[test]

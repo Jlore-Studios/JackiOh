@@ -431,6 +431,7 @@ pub fn script_v0_3_16() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{QUESTS, script};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
     use std::collections::BTreeMap;
 
@@ -441,8 +442,8 @@ mod tests {
 
     /// Spell 1: draw 2, heal your hero 2
     const STOCKPILE: &str = "core-005";
-    /// Spell 1: draw 1
-    const NOTEBOOK: &str = "core-051-1";
+    /// Spell 1: no hit against an empty enemy exile (R63), then draw 1
+    const CURSE: &str = "classic-001";
     /// Spell 3: destroy target Unit
     const HIT_JOB: &str = "core-016";
     /// Spell 4: destroy all permanents
@@ -470,7 +471,7 @@ mod tests {
     const RUSH_TOKEN: &str = "core-t-rush";
 
     /// The cards a side holds so §2.5 never ends a turn on its own.
-    const SPARE_HAND: [&str; 3] = [NOTEBOOK, STOCKPILE, TIMMY];
+    const SPARE_HAND: [&str; 3] = [CURSE, STOCKPILE, TIMMY];
     const SPARE_LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
     /// Spell 4: steal target enemy permanent
     const MIND_CONTROL: &str = "core-049";
@@ -575,9 +576,9 @@ mod tests {
         set_line(s, memory);
     }
 
-    /// The Notebook's draw on a deck of spares: one action, so one state check after it.
+    /// The Curse's draw on a deck of spares: one action, so one state check after it.
     fn any_action(s: &mut Scenario) {
-        s.play(NOTEBOOK, json!({}));
+        s.play(CURSE, json!({}));
     }
 
     /// The In Too Deep card view as `viewer` is shown it.
@@ -878,14 +879,14 @@ mod tests {
             #[test]
             fn r541_a_draw_burned_at_the_hand_cap_and_a_draw_cast_on_draw_are_draws_of_yours() {
                 crate::register_all();
-                // Eleven cards: the Notebook leaves ten, and its draw comes to a full hand (§2.4, R4).
-                let mut hand = vec![NOTEBOOK];
+                // Eleven cards: the Curse leaves ten, and its draw comes to a full hand (§2.4, R4).
+                let mut hand = vec![CURSE];
                 hand.extend([VANILLA; 10]);
                 let mut burn = scenario(json!({
                     "p1": { "backrow": [ITD], "hand": hand, "library": [VANILLA] },
                     "p2": spare(json!({})),
                 }));
-                burn.play(NOTEBOOK, json!({}));
+                burn.play(CURSE, json!({}));
                 assert!(
                     burn.last_events()
                         .iter()
@@ -894,10 +895,10 @@ mod tests {
                 assert_eq!(progress_of(&burn), json!({ "1": 1 }));
 
                 let mut cast = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [NOTEBOOK, TIMMY], "library": [VIRUS, VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [CURSE, TIMMY], "library": [VIRUS, VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
-                cast.play(NOTEBOOK, json!({}));
+                cast.play(CURSE, json!({}));
                 // The virus is drawn and cast (R58), and the draw goes on: two draws of yours.
                 assert_eq!(
                     cast.last_events()
@@ -1005,7 +1006,7 @@ mod tests {
                 }));
                 on_quest(&mut s, "2", 2, json!({}));
                 any_action(&mut s);
-                // The Notebook has drawn and gone to the graveyard: four cards lie there, three in hand.
+                // The Curse has drawn and gone to the graveyard: four cards lie there, three in hand.
                 assert_eq!([s.hand(P1).len(), s.pile(P1, "graveyard").len()], [3, 4]);
                 s.answer(json!("C"));
                 let back: IndexSet<String> = s
@@ -1030,11 +1031,11 @@ mod tests {
                 }));
                 on_quest(&mut s, "2", 2, json!({}));
                 any_action(&mut s);
-                // The Notebook itself reached the graveyard before the reward: two cards lie there now.
+                // The Curse itself reached the graveyard before the reward: two cards lie there now.
                 s.answer(json!("C"));
-                let hand: Vec<String> = s.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+                let hand = def_ids(&s.hand(P1));
                 assert!(hand.iter().any(|id| id == MENACE));
-                assert!(hand.iter().any(|id| id == NOTEBOOK));
+                assert!(hand.iter().any(|id| id == CURSE));
                 assert!(s.pile(P1, "graveyard").is_empty());
             }
 
@@ -1203,7 +1204,7 @@ mod tests {
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
             }
@@ -1249,7 +1250,7 @@ mod tests {
                 // Their hand is empty when the delayed stage runs, before their turn's draw: nothing
                 // to discard and nothing asked, and G's path opens all the same.
                 assert!(s.state().pending.is_none());
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![VANILLA]);
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
             }
@@ -1275,7 +1276,7 @@ mod tests {
                     let first = must(hand.first().cloned(), "a card");
                     let second = must(hand.get(1).cloned(), "a card");
                     s.answer(json!([first.id, second.id]));
-                    let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                    let left = def_ids(&s.hand(P2));
                     assert_eq!(left, vec![MENACE]);
                     // The answer drained the queue, so the parked path opened quest 8.
                     expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
@@ -1306,7 +1307,7 @@ mod tests {
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // G's path opened with the answer, exactly once; H's path was never chosen.
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["5"] }));
@@ -1377,7 +1378,7 @@ mod tests {
                 let first = must(hand.first().cloned(), "a card");
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // Quest 8 was the old stay's path: the card that came back is not on it (R174).
                 assert_eq!(active_of(&s), ids(&["1"]));
@@ -1431,11 +1432,11 @@ mod tests {
             fn r404_reward_h_that_empties_your_deck_opens_quest_9_on_an_empty_deck_which_completes_it_at_once() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [NOTEBOOK, TIMMY], "library": [VANILLA, VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [CURSE, TIMMY], "library": [VANILLA, VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "5", QUESTS.damage, json!({}));
-                s.play(NOTEBOOK, json!({}));
+                s.play(CURSE, json!({}));
                 s.answer(json!("H"));
                 assert!(s.pile(P1, "library").is_empty());
                 assert_eq!(completed_in(s.last_events()), vec!["9"]);
@@ -1469,17 +1470,17 @@ mod tests {
                     "p1": {
                         "backrow": [ITD],
                         "field": [MENACE, VANILLA],
-                        "hand": [NOTEBOOK, TIMMY],
+                        "hand": [CURSE, TIMMY],
                         "library": [STOCKPILE, STOCKPILE, VANILLA, MENACE],
                     },
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "6", 0, json!({}));
-                s.play(NOTEBOOK, json!({}));
+                s.play(CURSE, json!({}));
                 s.answer(json!("I"));
-                // The Notebook drew the top Stockpile; the Recruit passes the next one over for the Vanilla.
+                // The Curse drew the top Stockpile; the Recruit passes the next one over for the Vanilla.
                 assert_eq!(must(s.unit(P1, 3), "the recruit").def_id, VANILLA);
-                let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+                let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![STOCKPILE, MENACE]);
                 expect_line_matches(&s, json!({ "active": ["10"], "done": ["6"] }));
             }
@@ -1573,7 +1574,7 @@ mod tests {
                 any_action(&mut s);
                 s.answer(json!("K"));
                 assert!(s.pile(P2, "library").is_empty());
-                let mut exiled: Vec<String> = s.pile(P2, "exile").iter().map(|card| card.def_id.clone()).collect();
+                let mut exiled = def_ids(&s.pile(P2, "exile"));
                 exiled.sort();
                 let mut want = vec![MENACE, TIMMY, VANILLA];
                 want.sort();
@@ -1585,18 +1586,18 @@ mod tests {
             fn r404_quest_9_only_the_draw_of_yours_that_takes_your_decks_last_card_a_deck_emptied_any_other_way_does_not() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [NOTEBOOK, NOTEBOOK, TIMMY], "library": [VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [CURSE, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut s, "9", 0, json!({}));
-                s.play(NOTEBOOK, json!({}));
+                s.play(CURSE, json!({}));
                 assert_eq!(progress_of(&s), json!({ "9": 0 }));
-                s.play(NOTEBOOK, json!({}));
+                s.play(CURSE, json!({}));
                 assert_eq!(completed_in(s.last_events()), vec!["9"]);
                 assert_eq!(reward_keys(&s, P1), vec!["mode:L"]);
 
                 let mut milled = scenario(json!({
-                    "p1": { "backrow": [ITD], "hand": [EUGENICS, NOTEBOOK, TIMMY], "library": [VANILLA, VANILLA] },
+                    "p1": { "backrow": [ITD], "hand": [EUGENICS, CURSE, TIMMY], "library": [VANILLA, VANILLA] },
                     "p2": spare(json!({})),
                 }));
                 on_quest(&mut milled, "9", 0, json!({}));
@@ -1604,7 +1605,7 @@ mod tests {
                 assert!(milled.pile(P1, "library").is_empty());
                 assert_eq!(progress_of(&milled), json!({ "9": 0 }));
                 // A fatigue draw takes no card either.
-                milled.play(NOTEBOOK, json!({}));
+                milled.play(CURSE, json!({}));
                 assert!(must(line(&milled), "a quest line").done.is_empty());
             }
 
@@ -1649,7 +1650,7 @@ mod tests {
                         let mut s = scenario(json!({
                             "seed": format!("r766-book-of-stats-{n}"),
                             "p1": {
-                                "hand": [BOOK_OF_BOOKS, NOTEBOOK, STOCKPILE, TIMMY],
+                                "hand": [BOOK_OF_BOOKS, CURSE, STOCKPILE, TIMMY],
                                 "library": SPARE_LIBRARY,
                                 "backrow": [ITD],
                                 "field": [VANILLA],
@@ -1875,7 +1876,8 @@ mod tests {
                 let deck: Vec<&str> = vec![
                     ITD, "core-002", "core-005", "core-006", "core-008", "core-011", "core-012", "core-013",
                     "core-015", "core-016", "core-019", "core-020", "core-025", "core-026", "core-032",
-                    "core-036", "core-043", "core-044", "core-053", "core-055",
+                    "core-036", "core-043", "core-044", "core-053", "core-055", "core-001", "core-004", "core-009",
+                    "core-010", "core-047",
                 ];
                 let other: Vec<&str> = deck.iter().map(|id| if *id == ITD { "core-003" } else { *id }).collect();
                 let seed = "itd-replay";
@@ -2036,7 +2038,7 @@ mod tests {
                 let b = must(hand.get(1).cloned(), "b");
                 s.answer(json!([a.id, b.id]));
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // H's path opened at the trigger, G's behind the deferred prompt.
                 expect_line_matches(
