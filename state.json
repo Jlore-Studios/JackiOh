@@ -13201,7 +13201,7 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
+      "question": "`web (unit 2/3)` on #1815 fails in apps/web/src/patches/source.test.ts ('R388 the real source reads crates/cards/patches/: the file's order, the index and every snapshot'): the test hits vitest's 5000 ms timeout. This branch changes nothing that test reads, and main's own commit 2bcd74f93 fails the same way locally under CI's exact command (`pnpm exec vitest run --project web --shard=2/3`). Even alone on an idle machine the test takes 4.07 s of its 5 s, almost all of it (4.1 s) loading the 49 patch snapshots through the vite glob, so CI load pushes it over. A person needs to fix this test on main: either give it a longer timeout (the bot may not raise one) or make the snapshot loads cheaper. Then re-run `web (unit 2/3)` on #1815, or let the bot merge main into the branch. I have no GitHub access, so I could not link a failing run of this check on main (CLAUDE.md rule 12); please confirm against main's latest push run.",
       "queued_at": "2026-10-24T23:52:07Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
