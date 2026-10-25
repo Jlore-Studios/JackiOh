@@ -6,6 +6,17 @@
       "asks": [],
       "taken_asks": []
     },
+    "1828": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "claude-1",
+      "run_id": "pending:6635b9c8-1792919962",
+      "started_at": "2026-10-25T09:20:06Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1831": {
       "action": "plan",
       "asks": [],
@@ -136,9 +147,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:19:11Z",
+    "at": "2026-10-25T09:20:06Z",
     "url": "",
-    "what": "plan #1831 on muse"
+    "what": "build #1828 on claude-1"
   },
   "loop_deliveries": {
     "40175181653": {
