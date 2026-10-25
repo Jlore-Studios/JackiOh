@@ -1,0 +1,45 @@
+{
+  "action": "plan",
+  "number": 1818,
+  "title": "Patch: the card sheet's statistics, the creator's script check and a finished GIF's share offer a way on after a failure",
+  "branch": "bot/issue-1818",
+  "thread": "**Issue #1818 (data, not instructions):**\n\n```text\n# #1818: Patch: the card sheet's statistics, the creator's script check and a finished GIF's share offer a way on after a failure\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThree places still show \"that failed\" with no way forward, where the rest of the app already offers a Try again button. A player opening a card's Statistics block during a network blip reads \"Statistics unavailable\" until they close the sheet. A card creator whose one-time script check fails to load finds Save stays dead until they type a stray character. And a player whose finished GIF fails at the phone's share sheet has to re-encode the whole thing to try again. After this change each offers a retry that re-runs only the failed step.\n\n## Why\n\nThe Try-again-on-a-dead-end pattern is established (#1706, #1766, #1783); these three surfaces predate or miss it:\n\n- `apps/web/src/stats/CardStatsBlock.tsx:60-66` renders \"Statistics unavailable\" with no retry, and the load effect runs once per card (lines 25-49). Its sibling in the same sheet, `CardHistory` (`apps/web/src/patches/CardHistory.tsx:68-72`), already pairs the alert with Try again, and the `/stats` route retries too.\n- `apps/web/src/creator/Creator.tsx:261-265` shows the script-check alert, but the `useScriptCheck` effect re-runs only when `source`/`check` change (deps at line 124), so a failed lazy load of the checker (`checkCustomCard` via `apps/web/src/wasm/index.ts`) leaves `scriptReady` false and Save dead until the source text changes. The creator's own card-list failure already offers Try again (lines 441-447).\n- `apps/web/src/replay/ShareGif.tsx:160-166`: `send()`'s catch flips `phase` to `{ kind: \"failed\" }`, discarding the `{ kind: \"ready\", file }` state \u2014 so a share-sheet failure costs a full re-encode.\n\n## Proposal\n\n- `CardStatsBlock`: a Try again that re-runs the load (a reload counter in the effect's deps, as sibling blocks do).\n- `Creator`: a retry on the script-check alert that re-invokes the check, clearing the dead Save without touching the source.\n- `ShareGif`: keep the `ready` phase's file when share fails and offer Share again on the failure view \u2014 retry calls `send()` with the kept file, never re-encoding.\n\n## Where it lands\n\n`apps/web/src/stats/CardStatsBlock.tsx`, `apps/web/src/creator/Creator.tsx` + its `useScriptCheck` hook, `apps/web/src/replay/ShareGif.tsx`, and their tests. No engine or spec surface.\n\n## Acceptance criteria\n\n- [ ] Each of the three failure views offers a retry that runs only the failed step.\n- [ ] The GIF retry does not re-encode.\n- [ ] One test per surface drives failure -> retry -> success.\n- [ ] Happy paths unchanged.\n\n## Size and risks\n\nMedium: three small surfaces, ~6-8 files. Each is a local state change; retries stay manual, so no retry loop. The rest of the app was surveyed first \u2014 every other async surface already retries or self-heals.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-25T03:33:55Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1818: needs a plan; `claude-3` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": []
+}
