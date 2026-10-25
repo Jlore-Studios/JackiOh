@@ -1,9 +1,11 @@
 // The replay player (#511): its controls reach the steps they name, the board it draws offers nothing,
 // a step forward animates and any other move remounts, Play follows the table's speed, the last step
-// shows both hands, and each way a replay can fail says so. Over a fake source of one seeded game's
-// steps (`test/replay.ts`), the player's own contract: no log, seed or state reaches it.
+// shows both hands, the rail's modifier list follows the step on the board (R169), and each way a
+// replay can fail says so. Over a fake source of one seeded game's steps (`test/replay.ts`), the
+// player's own contract: no log, seed or state reaches it.
 
 import { CATALOG } from "@jackioh/cards";
+import type { ReplayStep } from "@jackioh/engine";
 import type { CardView, PlayerView, SideView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,8 +17,10 @@ import { ANIMATIONS, newEventsSince } from "../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
 import Game from "../game/Game.tsx";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import { revealTestid } from "../game/reveal.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
+import { opponentModifiers, yourModifiers } from "../test/fixtures.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import type { FakeReplaySource } from "../test/replay.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
@@ -453,6 +457,46 @@ describe("the board a replay draws", () => {
     expect(screen.getByTestId(testid.result)).toBeInTheDocument();
     for (const card of theirs) expect(screen.getByTestId(revealTestid.handCard(card.instanceId))).toBeInTheDocument();
     for (const card of yours) expect(screen.getByTestId(testid.handCard(card.instanceId))).toBeInTheDocument();
+  });
+});
+
+/** `steps` with no modifier live on either side but at step `at`, where both carry R169's fixture badges. */
+function withModifiersAt(at: number): ReplayStep[] {
+  return steps.map((step, index) => ({
+    ...step,
+    view: {
+      ...step.view,
+      you: { ...step.view.you, modifiers: index === at ? yourModifiers : [] },
+      opponent: { ...step.view.opponent, modifiers: index === at ? opponentModifiers : [] },
+    },
+  }));
+}
+
+describe("R169 the modifier list in the replay", () => {
+  it("R169 the rail's chip follows the step on the board and hides on a step with no modifier", async () => {
+    await open(fakeReplaySource(withModifiersAt(1)));
+    expect(shownStep()).toBe(0);
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+
+    await press(replayTestid.forwardStep);
+    expect(shownStep()).toBe(1);
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", String(yourModifiers.length + opponentModifiers.length));
+
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of yourModifiers) {
+      expect(panel.querySelector('[data-side="you"]')).toHaveTextContent(modifier.label);
+    }
+    for (const modifier of opponentModifiers) {
+      expect(panel.querySelector('[data-side="opponent"]')).toHaveTextContent(modifier.label);
+    }
+    expect(Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent)).toEqual(["You", "Opponent"]);
+
+    await press(replayTestid.backStep);
+    expect(shownStep()).toBe(0);
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+    expect(screen.queryByTestId(modifierListTestid.panel)).toBeNull();
   });
 });
 

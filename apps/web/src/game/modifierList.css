@@ -1,4 +1,4 @@
-/* The live-modifier chip and the full list it opens (R169, game/ModifierList.tsx): in the practice and lesson HUDs, and in the board's rail at an online or co-op table. */
+/* The live-modifier chip and the full list it opens (R169, game/ModifierList.tsx): in the practice and lesson HUDs, and in the board's rail at an online or co-op table, on the watch screen and in the replay player. */
 
 .modifier-list {
   display: inline-flex;

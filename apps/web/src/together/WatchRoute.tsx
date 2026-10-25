@@ -23,6 +23,7 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import Game from "../game/Game.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { createWakeProbe, parseServerFrame } from "../game/net.ts";
@@ -283,7 +284,13 @@ export function WatchRoute({ matchId, friendId }: { matchId: string; friendId: s
                 ) : null}
               </>
             }
-            boardRail={<BackLink to={paths.together} label="← Play together" showSettings={false} />}
+            boardRail={
+              <>
+                <BackLink to={paths.together} label="← Play together" showSettings={false} />
+                {/* R169: the friend's seat's live modifiers in full, one tap away, from the newest view. */}
+                <ModifierList view={view} opponentLabel={t("Opponent")} />
+              </>
+            }
           />
         </CatalogContext.Provider>
       </div>
