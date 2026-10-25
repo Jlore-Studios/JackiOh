@@ -538,6 +538,9 @@ string_union! {
         Brittle = "Brittle",
         SpellDamage = "Spell Damage",
         ImmuneToSpells = "Immune to Spells",
+        /// A retired historical keyword from v0.3.0..v0.4.4b, kept only to deserialize historical snapshots.
+        #[cfg_attr(feature = "ts", ts(skip))]
+        ImmuneToTribalHate = "Immune to tribal tag based hate",
         Windfury = "Windfury",
         Temporary = "Temporary",
         Deft = "Deft",
@@ -583,7 +586,7 @@ impl Keyword {
             Keyword::Brittle { .. } => KeywordKind::Brittle,
             Keyword::SpellDamage { .. } => KeywordKind::SpellDamage,
             Keyword::ImmuneToSpells => KeywordKind::ImmuneToSpells,
-            Keyword::ImmuneToTribalHate => panic!("historical keyword ImmuneToTribalHate has no KeywordKind"),
+            Keyword::ImmuneToTribalHate => KeywordKind::ImmuneToTribalHate,
             Keyword::Windfury => KeywordKind::Windfury,
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
@@ -634,6 +637,7 @@ impl Keyword {
             KeywordKind::Brittle => Keyword::Brittle { n },
             KeywordKind::SpellDamage => Keyword::SpellDamage { n },
             KeywordKind::ImmuneToSpells => Keyword::ImmuneToSpells,
+            KeywordKind::ImmuneToTribalHate => Keyword::ImmuneToTribalHate,
             KeywordKind::Windfury => Keyword::Windfury,
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,
