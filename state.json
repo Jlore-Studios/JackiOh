@@ -483,7 +483,7 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-25T12:42:07Z",
-      "run_id": "pending:fdcb00de-1792934470",
+      "run_id": "40197279577",
       "self_check_findings": [],
       "started_at": "2026-10-25T13:21:59Z",
       "stop_requested": false,
