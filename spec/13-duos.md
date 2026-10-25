@@ -17,7 +17,7 @@ Four seats in two teams, paired for the whole game; a Glitch's seat swap moves n
 | B1 | B, the AI | 0 | Player 2 | B2 | A1 |
 | B2 | B, the AI | 1 | Player 2 | B1 | A2 |
 
-So team A goes first and team B second in both duels. Each seat has its own 20-card deck, mana, hand, library, graveyard, exile, hero and zones, exactly as a 1v1 player has ([[§3]]).
+So team A goes first and team B second in both duels. Each seat has its own `DECK_SIZE`-card deck (an AI seat's its tier's, [[§9.9]]), mana, hand, library, graveyard, exile, hero and zones, exactly as a 1v1 player has ([[§3]]).
 
 Card words resolve inside your own duel. "Opponent", "enemy" and "the other player" are the player across from you; "each player", "both players", "all Units", "the field" and every other word for the game's players or cards mean your duel's two players and their cards; Silly Silas's rings ([[§3.1]]) are your duel's ten unit zones and ten backrow zones; a steal ([[§6.3]], [[R12]]) takes from the player across; and Pocket Chaos's swaps ([[R73]]) are with the player across, its health swap as [[§13.4]] says. Your teammate is not a player of your duel: no card targets, counts, damages, heals, reads or copies anything of theirs, and nothing in the catalog reaches the other duel.
 
@@ -123,7 +123,7 @@ The difficulty sets the AI team's rules ([[§13.4]]) and each AI seat's handicap
 | Passes per seat per turn | 10 | 10 | 10 |
 | Each AI seat's handicap (`AI_DIFFICULTY`, [[§9.9]]) | Easy's | Medium's | Hard's |
 
-The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh gate --duos`) holds the AI team to a floor: the Easy AI team must beat a team playing [[§10.7]]'s random policy in at least `DUOS_GATE_WIN_FLOOR` (80%) of `DUOS_GATE_GAMES_SMOKE` (20) games. Every action of an AI seat in those games must be the decision this section describes: one that comes off a fallback path instead (the seat's own fallback when the 1v1 decision answers nothing the seat may send, or the 1v1 decision's own fallback, as when its search scores nothing) is counted for its game and for the run, and any one fails the gate, which names each such game's seed and its count and no card. A panic caught inside an AI seat's search fails the gate too, as it fails the 1v1 gates ([[§9.9]]): the gate names the game's seed, the seat and the first panic's message.
+The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh gate --duos`) holds the AI team to two floors, each over `DUOS_GATE_GAMES_SMOKE` (20) games: the Easy AI team must beat a team playing [[§10.7]]'s random policy in at least `DUOS_GATE_WIN_FLOOR` (80%) of them, and a team whose seats each play [[§9.9]]'s one-ply greedy baseline in their own duel and never pass in at least `DUOS_GATE_GREEDY_WIN_FLOOR` (70%), the count an AI team as strong as measured on fresh deals reaches in 95% of runs. Every action of an AI seat in those games must be the decision this section describes: one that comes off a fallback path instead (the seat's own fallback when the 1v1 decision answers nothing the seat may send, or the 1v1 decision's own fallback, as when its search scores nothing) is counted for its game and for the run, and any one fails the gate, which names each such game's seed and its count and no card. A panic caught inside an AI seat's search fails the gate too, as it fails the 1v1 gates ([[§9.9]]): the gate names the game's seed, the seat and the first panic's message.
 
 ### 13.8 Leaving
 

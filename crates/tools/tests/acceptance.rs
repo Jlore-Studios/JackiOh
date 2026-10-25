@@ -39,6 +39,12 @@
 //!  - README: `crates/tools/README.md`'s command table is the built `jackioh`'s clap surface, read
 //!    off each command's `-h` page: every subcommand, flag and listed value a row names is the
 //!    CLI's, and every command, flag and possible value of the CLI is in some row.
+//!
+//! And one for the engine's rules tests (#1777):
+//!
+//!  - Helpers: no file under `crates/engine/tests/rules/` but `fixtures/harness.rs` defines its own
+//!    `both` or `spread`; each takes the harness's, so a test file copied from an old one brings no
+//!    copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -942,6 +948,70 @@ mod tests {
         unread_constants(config, &readers),
         ["ONLY_IN_A_COMMENT", "SHORT", "ONLY_IN_TESTS"]
     );
+}
+
+/// The helpers every engine rules test takes from `crates/engine/tests/rules/fixtures/harness.rs`.
+const SHARED_RULES_HELPERS: &[&str] = &["both", "spread"];
+
+/// The 1-based lines of `text` that define one of SHARED_RULES_HELPERS (`fn both(`, `pub fn
+/// spread<`, at any indent), a `//` comment aside.
+fn shared_helper_definitions(text: &str) -> Vec<usize> {
+    text.lines()
+        .enumerate()
+        .filter(|(_, line)| {
+            let code: Vec<&str> = line.split("//").next().unwrap_or("").split_whitespace().collect();
+            code.windows(2).any(|pair| {
+                pair[0] == "fn"
+                    && SHARED_RULES_HELPERS.iter().any(|name| {
+                        pair[1]
+                            .strip_prefix(name)
+                            .is_some_and(|rest| rest.starts_with(['(', '<']))
+                    })
+            })
+        })
+        .map(|(index, _)| index + 1)
+        .collect()
+}
+
+#[test]
+fn helpers_the_rules_tests_take_both_and_spread_from_the_harness() {
+    let root = repo();
+    let mut files = Vec::new();
+    rust_sources(&root.join("crates/engine/tests/rules"), &mut files);
+    assert!(
+        files.len() > 200,
+        "only {} files found under crates/engine/tests/rules/",
+        files.len()
+    );
+    let mut copies = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        let lines = shared_helper_definitions(&text);
+        if file.ends_with("fixtures/harness.rs") {
+            assert_eq!(
+                lines.len(),
+                SHARED_RULES_HELPERS.len(),
+                "crates/engine/tests/rules/fixtures/harness.rs defines each of {SHARED_RULES_HELPERS:?} once"
+            );
+            continue;
+        }
+        for line in lines {
+            copies.push(format!(
+                "{}:{line}",
+                file.strip_prefix(&root).unwrap_or(file).display()
+            ));
+        }
+    }
+    assert!(
+        copies.is_empty(),
+        "a rules test defines its own {SHARED_RULES_HELPERS:?} (#1777): import the one in crates/engine/tests/rules/fixtures/harness.rs, or give a helper whose body differs another name: {copies:?}"
+    );
+}
+
+#[test]
+fn helpers_the_scan_finds_each_local_copy() {
+    let text = "fn both(script: Script) -> CardScripts {\n}\n    pub fn spread(mut base: Value, extra: Value) -> Value {\n}\npub(crate) fn both<T>(script: T) {}\nfn both_faces() {}\nfn spreads(x: i32) {}\n// fn both(script)\nlet scripts = both(script);\n";
+    assert_eq!(shared_helper_definitions(text), [1, 3, 5]);
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).

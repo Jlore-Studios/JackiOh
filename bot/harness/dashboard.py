@@ -351,7 +351,7 @@ def lanes_boxes(ctx: Context, state: dict[str, Any], live: dict[int, str],
     runs: dict[str, list[int]] = {}
     for number, provider_id in _by_start(ctx, state, live):
         runs.setdefault(provider_id, []).append(number)
-    # By name (claude-1 to claude-7), so each keeps its place from one rewrite to the next.
+    # By name (claude-1 to claude-8), so each keeps its place from one rewrite to the next.
     hosted = sorted((p for p in pool.ordered() if not pool.on_machine(p.id)), key=lambda p: p.id)
     machine = sorted((p for p in pool.ordered() if pool.on_machine(p.id)), key=lambda p: p.id)
     busy_hosted = sum(1 for p in hosted if runs.get(p.id))

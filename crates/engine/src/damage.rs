@@ -69,6 +69,12 @@ pub struct DamageFlags {
     /// without the source having the keyword. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub poisonous: Option<bool>,
+    /// #1750, R1750000: the hit is the attacker's own strike (its hit on the defender and its
+    /// Cleave's), the only damage a Unit's Trample applies to: a defender's strike back and the
+    /// damage a Unit's text deals never trample. A Spell's printed Trample and an effect's stated
+    /// `trample` do not need it. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attacking: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -360,11 +366,11 @@ fn credit_killer(unit: &mut CardInstance, source: Option<&CardInstance>, killed_
 }
 
 /// R346: whether a hit skips §4.4 step 2. Pierce is a keyword of the source — a unit's, read through
-/// the layers like its Lifesteal and Trample (§10.4), or a spell's printed on its face (#44 True
-/// Strike), which the same reading finds on the card while it resolves — or the effect's own
-/// `ignore_armor`, which states that its damage pierces without the source having the keyword, as
-/// R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine Shield, the hero
-/// cap and Indestructible all still apply.
+/// the layers like its Lifesteal and Trample (§10.4), or a spell's, printed on its face (#44 True
+/// Strike) or given by a Buff (R1748001), which the same reading finds on the card while it resolves —
+/// or the effect's own `ignore_armor`, which states that its damage pierces without the source having
+/// the keyword, as R85's `lifesteal` does for Lifesteal. It skips step 2 and nothing else: Divine
+/// Shield, the hero cap and Indestructible all still apply.
 pub fn pierces(state: &GameState, source: Option<&CardInstance>, flags: Option<&DamageFlags>) -> bool {
     if flags.is_some_and(|flags| flags.ignore_armor == Some(true)) {
         return true;
@@ -568,8 +574,12 @@ fn land_hit(
     if let Some(live) = &unit {
         let view = crate::layers::unit_view(sink.state, live);
         // E6: a Spell's printed Trample is read off it while it resolves, as a unit's is, or stated.
+        // R1750000: a Unit's own Trample is for the hits of its attack only, never for a strike back
+        // or for the damage of its text.
         let trample = flags.is_some_and(|flags| flags.trample == Some(true))
-            || source_has(sink.state, source, KeywordKind::Trample);
+            || (source_has(sink.state, source, KeywordKind::Trample)
+                && (flags.is_some_and(|flags| flags.attacking == Some(true))
+                    || crate::restrictions::is_spell_source(sink.state, source)));
         if trample && amount > view.health {
             dealt = view.health.max(0);
             trample_excess = amount - dealt;

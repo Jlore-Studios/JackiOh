@@ -19,16 +19,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::harness::{in_hand, json_of, new_game};
-
-fn spread(mut base: Value, extra: Value) -> Value {
-    if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
-        for (key, value) in extra {
-            base.insert(key, value);
-        }
-    }
-    base
-}
+use crate::rules::fixtures::harness::{in_hand, json_of, new_game, spread};
 
 fn face(text: &str, extra: Value) -> Value {
     spread(json!({ "keywords": [], "text": text }), extra)
@@ -267,7 +258,7 @@ fn playing(seed: &str) -> GameState {
         )
         .state;
     }
-    let mut catalog = vanilla_catalog(40, 1);
+    let mut catalog = vanilla_catalog(2 * DECK_SIZE, 1);
     for entry in defs() {
         catalog.insert(entry.id.clone(), entry);
     }

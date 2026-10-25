@@ -38,7 +38,7 @@ use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instanc
 use jackioh_engine::zones::{card_at, lock_zone};
 
 use super::fixtures::feng_shui::{FS, register_feng_shui};
-use super::fixtures::harness::{new_game, put, set_library, slot};
+use super::fixtures::harness::{events_json, new_game, put, set_library, slot};
 
 // ---------------------------------------------------------------------------
 // Fixture cards. Indices start above 1600 so they never collide with another test file's locals.
@@ -196,17 +196,8 @@ fn as_p1() -> RunOptions {
     }
 }
 
-/// `fixtures/harness.ts`'s `eventsOfType`, as JSON: the events of one type, each as TS writes it.
-fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
-    events
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .filter(|event| event["type"] == kind)
-        .collect()
-}
-
 fn ids_of_type(events: &[GameEvent], kind: &str) -> Vec<String> {
-    of_type(events, kind)
+    events_json(events, kind)
         .iter()
         .map(|event| event["instanceId"].as_str().unwrap_or_default().to_string())
         .collect()
@@ -272,7 +263,7 @@ mod r32_flip_coins_s8_1_c4_s10_4_layer_4_s10_7 {
         assert_eq!(stats_of(&state, &unit), (5, 2));
         // One `buffed` event carrying the whole result (§10.10 animates it).
         assert_eq!(
-            of_type(&ran.events, "buffed"),
+            events_json(&ran.events, "buffed"),
             vec![json!({ "type": "buffed", "instanceId": unit.id, "attack": 4, "health": 1 })]
         );
     }
@@ -498,7 +489,7 @@ mod r32_r130_flip_coin_keyword_s8_1_c4_s10_4_s10_7 {
         assert_eq!(live(&state, &unit.id).granted_keywords, vec![Keyword::Rush]);
         // §10.4: the grant is a granted keyword, cued by one `keywordGranted` event (§10.10).
         assert_eq!(
-            of_type(&ran.events, "keywordGranted"),
+            events_json(&ran.events, "keywordGranted"),
             vec![json!({ "type": "keywordGranted", "instanceId": unit.id, "keyword": { "kind": "Rush" } })]
         );
     }
@@ -866,7 +857,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
         // The played permanent is gone exactly once, with no death (R77).
         assert!(find_instance(&state, &played.id).is_none());
-        assert!(of_type(&run(&mut state, &[], as_p1()).events, "destroyed").is_empty());
+        assert!(events_json(&run(&mut state, &[], as_p1()).events, "destroyed").is_empty());
     }
 
     #[test]
@@ -1000,7 +991,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
         assert!(state.players.p2.hand.is_empty());
 
         // One `fused` event, naming the ingredients and the result, and nothing else the wrapper made.
-        let fused_events = of_type(&ran.events, "fused");
+        let fused_events = events_json(&ran.events, "fused");
         assert_eq!(fused_events.len(), 1);
         let event = &fused_events[0];
         assert!(event["instanceIds"].is_array());
@@ -1026,7 +1017,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             as_p1(),
         );
 
-        let fused_event = of_type(&ran.events, "fused")
+        let fused_event = events_json(&ran.events, "fused")
             .into_iter()
             .next()
             .expect("expected a fused event");
@@ -1133,8 +1124,8 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
 
         assert!(state.transient_defs.is_empty());
         assert!(state.players.p1.hand.is_empty());
-        assert!(of_type(&too_few.events, "fused").is_empty());
-        assert!(of_type(&nowhere.events, "fused").is_empty());
+        assert!(events_json(&too_few.events, "fused").is_empty());
+        assert!(events_json(&nowhere.events, "fused").is_empty());
     }
 }
 
@@ -1191,7 +1182,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
         assert_eq!(where_is(&state, &trap), "p2 backrow 5");
 
         assert_eq!(
-            of_type(&ran.events, "rotated"),
+            events_json(&ran.events, "rotated"),
             vec![json!({ "type": "rotated", "direction": "right" })]
         );
         let mut changed = ids_of_type(&ran.events, "controlChanged");
@@ -1279,7 +1270,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
         let crossed = live(&state, &crosser.id);
         assert_eq!(crossed.cost_override, Some(0));
         assert_eq!(crossed.controller, PlayerId::P1);
-        assert!(of_type(&ran.events, "controlChanged").is_empty());
+        assert!(events_json(&ran.events, "controlChanged").is_empty());
         // The card that stayed on this side still rotated.
         assert_eq!(where_is(&state, &stayer), "p1 units 2");
     }
@@ -1330,7 +1321,7 @@ mod r1085_grant_keywords_random_unit {
         let first_has = has(&first_kinds, KeywordKind::Taunt) && has(&first_kinds, KeywordKind::Rush);
         let second_has = has(&second_kinds, KeywordKind::Taunt) && has(&second_kinds, KeywordKind::Rush);
         assert!(first_has ^ second_has);
-        assert_eq!(of_type(&ran.events, "keywordGranted").len(), 2);
+        assert_eq!(events_json(&ran.events, "keywordGranted").len(), 2);
     }
 
     #[test]

@@ -22,8 +22,15 @@ use crate::wire::{
     DuosTeamRules, GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
 };
 
-/// §2.6
-pub const DECK_SIZE: i32 = 20;
+/// §2.6, R1705000
+pub const DECK_SIZE: i32 = 25;
+/// R1705003: §2.6's deck size before #1705 raised it to DECK_SIZE. A game made then, folded again
+/// (`create_recorded_game`), holds a seat with no handicap to this.
+pub const EARLIER_DECK_SIZE: i32 = 20;
+/// R1705000: the cards a Medium AI seat's deck holds past DECK_SIZE (§9.9).
+pub const MEDIUM_EXTRA_DECK_CARDS: i32 = 5;
+/// R1705000: the cards a Hard AI seat's deck holds past DECK_SIZE (§9.9).
+pub const HARD_EXTRA_DECK_CARDS: i32 = 10;
 /// §2.6, §9.4
 pub const MAX_COPIES: i32 = 1;
 /// §2.3
@@ -36,7 +43,7 @@ pub const HERO_HEALTH: i32 = 30;
 /// belongs to a turn of its controller's (R155, R241).
 pub const SETUP_TURN: i32 = 0;
 /// §2.5, R2, R389 (patch v0.2.0, docs/classic-sets.md B4.3): the cap counts player-turns, so 60 means
-/// 30 each. Two 20-card decks that do nothing fatigue out at player-turn 47 (§2.4, R3, R1156000), so the
+/// 30 each. Two 25-card decks that do nothing fatigue out at player-turn 57 (§2.4, R3, R1156000), so the
 /// cap is a backstop for games that heal, gain Armor or refill a deck, and fatigue is a long game's usual
 /// end.
 pub const TURN_CAP_PLAYER_TURNS: i32 = 60;
@@ -362,7 +369,7 @@ impl Index<Difficulty> for AiDifficulty {
 pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
     easy: HUMAN_HANDICAP,
     medium: Handicap {
-        deck_size: 25,
+        deck_size: DECK_SIZE + MEDIUM_EXTRA_DECK_CARDS,
         mana_bonus: 1,
         mana_cap: 5,
         extra_opening_cards: 1,
@@ -370,7 +377,7 @@ pub const AI_DIFFICULTY: AiDifficulty = AiDifficulty {
         hero_health: None,
     },
     hard: Handicap {
-        deck_size: 30,
+        deck_size: DECK_SIZE + HARD_EXTRA_DECK_CARDS,
         mana_bonus: 1,
         mana_cap: 7,
         extra_opening_cards: 1,
@@ -392,6 +399,15 @@ pub const AI_TUTORIAL: Handicap = Handicap {
     extra_opening_cards: 0,
     extra_draws_per_turn: 0,
     hero_health: Some(20),
+};
+
+/// §9.10, R1705005: the human seat's handicap in a lesson, whose fixed deal (R291) holds
+/// EARLIER_DECK_SIZE cards. It is a human's resources but for the deck's size, so a lesson's deal
+/// stays the one each lesson was written for while every other seat with no handicap holds
+/// DECK_SIZE. A seat stores it (it is not a human's), so a lesson folds as it was played.
+pub const TUTORIAL_HUMAN: Handicap = Handicap {
+    deck_size: EARLIER_DECK_SIZE,
+    ..HUMAN_HANDICAP
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -430,6 +446,14 @@ pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Brittle,
     KeywordKind::Untributable,
 ];
+/// R1748001: the keywords a Buff's keyword row may add to a Field Spell.
+pub const TUNE_FIELD_SPELL_KEYWORDS: &[KeywordKind] = &[KeywordKind::Indestructible];
+/// R1748001: the keywords a Buff's keyword row may add to a Spell or a Field Spell that deals damage
+/// (`CardDef.deals_damage`).
+pub const TUNE_DAMAGE_KEYWORDS: &[KeywordKind] = &[KeywordKind::Pierce, KeywordKind::Lifesteal];
+/// R1748002: the Plague Counters one Buff places on, or one Nerf removes from, a card that uses its
+/// own (`CardDef.uses_plague`).
+pub const TUNE_PLAGUE_STEP: i32 = 1;
 
 /// `{ upTo, step }`: one band of `PARAM_DEFAULT_STEP`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -490,7 +514,7 @@ pub const LAST_FACE_UP_SKIPPED_TAGS: &[Tag] = &[Tag::Ai];
 
 // ---- v0.2.0 constants: activate and turn (B3.2, B4.3, E3, E10) ----
 
-/// B3.2 rule 7, R384: "Activate ♾️" is any number of uses per card per turn, bounded here so a game
+/// B3.2 rule 7, R384: "Activate ♾️" is any number of uses of each ability per turn, bounded here so a game
 /// still ends (a fuzz game's random policy may keep activating). Every ♾️ card in the sets is bounded
 /// by a resource too (units to Tribute, Plague Counters to consume).
 /// R884000: an "Activate N" a Buff or KY's Constant took past it counts this many uses too.

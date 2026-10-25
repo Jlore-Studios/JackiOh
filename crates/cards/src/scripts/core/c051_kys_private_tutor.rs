@@ -324,6 +324,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use crate::js;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -406,10 +407,6 @@ mod tests {
                 _ => None,
             })
             .collect()
-    }
-
-    fn hand_def_ids(s: &Scenario) -> Vec<String> {
-        s.hand(P1).iter().map(|card| card.def_id.clone()).collect()
     }
 
     fn hand_ids(s: &Scenario) -> Vec<String> {
@@ -687,7 +684,7 @@ mod tests {
             // No type has a match exactly when the library is empty, since every card in it has one of the
             // five types and all five map onto the four options.
             assert!(s.state().pending.is_none());
-            assert!(hand_def_ids(&s).contains(&NOTEBOOK.to_string()));
+            assert!(def_ids(&s.hand(P1)).contains(&NOTEBOOK.to_string()));
             expect_chain_finished(&mut s);
             s.expect_events(json!(["cardPlayed", "addedToHand", "cardResolved"]));
         }
@@ -793,7 +790,7 @@ mod tests {
 
             // Neither resolution finds a match, and neither opens a prompt.
             assert!(s.state().pending.is_none());
-            assert_eq!(hand_def_ids(&s).iter().filter(|def_id| *def_id == NOTEBOOK).count(), 2);
+            assert_eq!(def_ids(&s.hand(P1)).iter().filter(|def_id| *def_id == NOTEBOOK).count(), 2);
             expect_chain_finished(&mut s);
         }
 

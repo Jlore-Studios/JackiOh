@@ -26,7 +26,7 @@
 //!     A `redirected` attack targets the Unit it was re-aimed at, where its combat is fought (R1122;
 //!     fuzz seed 9123 of the handicapped wave, #1645).
 //!
-//! The eight checks:
+//! The nine checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
@@ -100,6 +100,16 @@
 //!      with one choice made impossible its `malformed-action` probe (`malformed_actions`, #1694). Under a Mayor (R1200) a named target is
 //!      refused. Its first run, every state of seeds 1–1000 of both waves (2026-10-18), found nothing.
 //!      `I8_GATE_STRIDE` is how often the 1,000-seed waves run it.
+//!   I9 the wire tells the truth (§10.3: every visible state change emits an event; §10.10: every client
+//!      renders from them; #1719). A payload wrong the same way every time folds to the same hash, so the
+//!      replay check cannot see it. In the stream, a `turnEnded` or `turnAutoEnded` names the turn under
+//!      way, the shadow's `turn` and player (§2.2). On the state an action left, its last `turnStarted`
+//!      names `state.turn` and `state.active` (§2.2), each `gameOver` is `state.result` (§2.5), and each
+//!      seat's last `manaChanged` is its `mana.current` and `mana.max` (§2.3): every mana write announces
+//!      one (the refresh, a gain, a refresh of spent mana, a payment, a Duos pass, the sandbox's). A
+//!      Glitch's reset (R676) starts the game again once the action has settled, at setup, announcing
+//!      neither a turn nor mana, so an action that reset the game (`state.resets` moved) has its
+//!      `turnStarted` and `manaChanged` left unread: they named the game it took.
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -122,9 +132,9 @@ use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
     Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
-    Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlagueSpend, PlayerId, PlayerView, PromptKind,
-    RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, ZoneChoice, ZoneName, has_keyword,
-    opponent_of,
+    Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, Phase, PlagueSpend, PlayerId, PlayerView,
+    PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, ZoneChoice, ZoneName,
+    has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -970,9 +980,10 @@ fn field_cards_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
 /// I8's forged activations of one card for `player` (#1574), each with the `activate` the list would hold
 /// for it: every ability the card has (`abilities_of`) crossed with the target and mode combinations it
 /// declares (`play_choice_combinations`, the list's own bound, R90), spelled as `legal_actions` spells
-/// one (the ability named, a Tribute paid with the first of `player`'s units other than the card); and for
-/// the ability an `activatePower` names (the card's power, or its only ability, `reduce::activate_card`),
-/// each combination with no mode and no Tribute as that alias too (§10.2, R43, R384).
+/// one (the ability named, a Tribute paid with the first of `player`'s units other than the card, an
+/// empty pick list while a Mayor acts as none, R1200); and for the ability an `activatePower` names (the
+/// card's power, or its only ability, `reduce::activate_card`), each combination with no mode and no
+/// Tribute as that alias too (§10.2, R43, R384).
 fn forged_activations(
     state: &GameState,
     player: PlayerId,
@@ -990,6 +1001,7 @@ fn forged_activations(
         .filter(|unit| unit.id != card.id)
         .map(|unit| unit.id.clone())
         .collect();
+    let random = crate::random_targets::targets_random(state);
     let mut out: Vec<(ActionBody, ActionBody)> = Vec::new();
     for decl in &abilities {
         let need = usize::try_from(decl.cost.and_then(|cost| cost.tribute).unwrap_or(0)).unwrap_or(0);
@@ -1006,14 +1018,27 @@ fn forged_activations(
                 modes: choice.modes.clone(),
                 tributes: tributes.clone(),
             };
+            // R1200: while a Mayor acts the list spells an activation left with no pick as no picks at
+            // all (`play_choices::without_target_picks`), and the reducer reads the two alike.
+            let listed = if random && choice.targets.as_ref().is_some_and(Vec::is_empty) {
+                ActionBody::Activate {
+                    instance_id: card.id.clone(),
+                    ability: Some(decl.id.clone()),
+                    targets: None,
+                    modes: choice.modes.clone(),
+                    tributes: tributes.clone(),
+                }
+            } else {
+                activate.clone()
+            };
             if aliased.as_deref() == Some(decl.id.as_str()) && choice.modes.is_none() && tributes.is_none() {
                 let alias = ActionBody::ActivatePower {
                     instance_id: card.id.clone(),
                     targets: choice.targets.clone(),
                 };
-                out.push((alias, activate.clone()));
+                out.push((alias, listed.clone()));
             }
-            out.push((activate.clone(), activate));
+            out.push((activate, listed));
         }
     }
     out
@@ -1370,7 +1395,7 @@ fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyw
 
 /// TS `InvariantMonitor`, made by `create_invariant_monitor`: the shadow of this file's header and
 /// the checks run against it. `before` is I1 and I3, `after` feeds one action's events into the
-/// shadow and runs I2, I4, I5 and I7, `hidden` is I6 for both seats and `unlisted` is I8.
+/// shadow and runs I2, I4, I5, I7 and I9, `hidden` is I6 for both seats and `unlisted` is I8.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
@@ -1399,6 +1424,8 @@ pub struct InvariantMonitor {
     readied: IndexSet<String>,
     /// R424: the latest declared attack, and whether its attacker destroyed its target (R42).
     attack: Option<ShadowAttack>,
+    /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
+    resets: Option<i32>,
 }
 
 /// SURFACE §8's name for the monitor (`testkit::invariants::Monitor`).
@@ -1422,6 +1449,7 @@ impl InvariantMonitor {
             fired: IndexSet::new(),
             readied: IndexSet::new(),
             attack: None,
+            resets: start.resets,
         }
     }
 
@@ -1520,6 +1548,66 @@ impl InvariantMonitor {
         ))
     }
 
+    /// I9 on the state one action left: its last `turnStarted` names the state's turn and player, each
+    /// `gameOver` is its result, and each seat's last `manaChanged` is that seat's mana. `reset` (a
+    /// Glitch's, R676) leaves the turn and the mana unread: the action announced them in the game it took.
+    fn announced_state(events: &[GameEvent], state: &GameState, reset: bool) -> Vec<String> {
+        let mut found: Vec<String> = Vec::new();
+        for event in events {
+            let GameEvent::GameOver { winner, reason } = event else {
+                continue;
+            };
+            let announced = GameResult {
+                winner: *winner,
+                reason: *reason,
+            };
+            if state.result != Some(announced) {
+                let held = match state.result {
+                    Some(result) => format!("{} by {}", result.winner, result.reason),
+                    None => "none".to_string(),
+                };
+                found.push(format!(
+                    "I9 wrong game over: gameOver names {winner} by {reason} on turn {}, but the result is \
+                     {held} (§2.5, §10.3)",
+                    state.turn
+                ));
+            }
+        }
+        if reset {
+            return found;
+        }
+        let started = events.iter().rev().find_map(|event| match event {
+            GameEvent::TurnStarted { player, turn, .. } => Some((*player, *turn)),
+            _ => None,
+        });
+        if let Some((player, turn)) = started
+            && (player, turn) != (state.active, state.turn)
+        {
+            found.push(format!(
+                "I9 wrong turn start: turnStarted names {player}'s turn {turn}, but the state is at {}'s \
+                 turn {} (§2.2, §10.3)",
+                state.active, state.turn
+            ));
+        }
+        for seat in PLAYER_IDS {
+            let announced = events.iter().rev().find_map(|event| match event {
+                GameEvent::ManaChanged { player, current, max } if *player == seat => Some((*current, *max)),
+                _ => None,
+            });
+            let mana = &state.players[seat].mana;
+            if let Some((current, max)) = announced
+                && (current, max) != (mana.current, mana.max)
+            {
+                found.push(format!(
+                    "I9 wrong mana: {seat}'s last manaChanged says {current}/{max} on turn {}, but {seat} \
+                     holds {}/{} (§2.3, §10.3)",
+                    state.turn, mana.current, mana.max
+                ));
+            }
+        }
+        found
+    }
+
     /// I1 and I3 on the state the next action is chosen in. Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
@@ -1613,7 +1701,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4, I5 and I7 against the resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5, I7 and I9 against the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
@@ -1644,6 +1732,18 @@ impl InvariantMonitor {
                     self.active = *player;
                     self.attack = None;
                     self.fired.clear();
+                }
+                GameEvent::TurnEnded { player, turn, .. } | GameEvent::TurnAutoEnded { player, turn } => {
+                    // I9: a turn ends as the turn under way, the shadow's (§2.2).
+                    if (*player, *turn) != (self.active, self.turn) {
+                        found.push(format!(
+                            "I9 wrong turn end: {} names {player}'s turn {turn}, but the turn under way is {}'s \
+                             turn {} (§2.2, §10.3)",
+                            event.event_type().as_str(),
+                            self.active,
+                            self.turn
+                        ));
+                    }
                 }
                 GameEvent::CardPlayed { instance_id, .. }
                 | GameEvent::Summoned { instance_id, .. }
@@ -1814,6 +1914,11 @@ impl InvariantMonitor {
         }
 
         self.note_windfury(state);
+
+        // I9: what the action announced is the state it left (§10.3); a Glitch's reset moves `resets` (R676).
+        let reset = state.resets != self.resets;
+        self.resets = state.resets;
+        found.extend(InvariantMonitor::announced_state(events, state, reset));
 
         // I4: the engine's bookkeeping agrees with the shadow.
         for card in field_cards(state) {
@@ -2014,7 +2119,7 @@ impl DuosInvariantMonitor {
             .collect()
     }
 
-    /// Feeds one action's events into the monitors, asserts I2, I4, I5, and I7 against both duels,
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, I7 and I9 against both duels,
     /// and checks pool bounds (§13.4) for both teams.
     pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
         let mut found = Vec::new();

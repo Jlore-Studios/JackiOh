@@ -44,7 +44,7 @@ use jackioh_engine::wire::{
     CardStatsFilter, GAME_SOURCES, GameMode, PilotFilter, SourceFilter, StatsTotals, card_stats,
     card_stats_of, parse_game_record, sources_of,
 };
-use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
+use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
 use jackioh_server::config::PersonaName;
 use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
@@ -138,12 +138,12 @@ macro_rules! both_stores {
 // A fixture catalog big enough for a legal loadout (← test/db/harness.ts)
 // ---------------------------------------------------------------------------
 
-/// SPEC §9.4 L2: `DECK_SIZE` is 20, and L1 says three decks, so 60 ids is the floor.
+/// SPEC §9.4 L2: `DECK_SIZE` is 25, and L1 says three decks, so 75 ids is the floor.
 pub const CATALOG_VERSION: &str = "core-1";
 
-/// `core-001` … `core-064`.
+/// `core-001` … `core-080`, the database suite's fixture catalog (`postgres.rs`, `seed_catalog.rs`).
 pub fn playable_ids() -> Vec<String> {
-    (1..=64).map(|i| format!("core-{i:03}")).collect()
+    (1..=80).map(|i| format!("core-{i:03}")).collect()
 }
 
 /// §9.4 L3: "no Token-tagged cards" — here so the R111 launch grant can be seen skipping them.
@@ -682,7 +682,8 @@ fn board_kind(literal: &str) -> LastBoardKind {
 
 /// The deck at `slot` of a legal three-deck loadout over the fixture catalog (§9.4 L1, L2, L4).
 fn deck_of(harness: &StoreHarness, slot: usize) -> Vec<String> {
-    harness.playable_ids[slot * 20..slot * 20 + 20].to_vec()
+    let size = usize::try_from(DECK_SIZE).expect("a deck size");
+    harness.playable_ids[slot * size..slot * size + size].to_vec()
 }
 
 fn clocks(now: i64) -> MatchClocks {
@@ -970,6 +971,35 @@ mod profiles {
         assert_eq!(q!(harness, t => t.collection_get(&profile.id)), granted);
     }
 
+    /// R1705002: the eleven Core cards the practice presets gained at 25 cards are starter cards, so
+    /// an account that becomes active owns each of them, one copy, and can queue every preset. The
+    /// fixture catalog holds nine of them (core-089 and core-091 lie past its core-080).
+    async fn r1705002_an_account_becoming_active_owns_the_added_starter_cards(harness: &StoreHarness) {
+        const ADDED: [&str; 11] = [
+            "core-002", "core-003", "core-010", "core-031", "core-034", "core-043", "core-047", "core-072",
+            "core-080", "core-089", "core-091",
+        ];
+        assert!(ADDED.iter().all(|id| STARTER_CARDS.contains(id)));
+        let held: Vec<&str> = ADDED
+            .into_iter()
+            .filter(|id| harness.playable_ids.iter().any(|card| card == id))
+            .collect();
+        assert_eq!(held.len(), 9);
+        let profile = pending_profile(harness, None).await;
+        q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
+        let granted = q!(harness, t => t.collection_get(&profile.id));
+        for id in held {
+            assert_eq!(
+                granted
+                    .iter()
+                    .find(|entry| entry.card_id == id)
+                    .map(|entry| entry.quantity),
+                Some(1),
+                "{id}"
+            );
+        }
+    }
+
     both_stores!(
         creates_a_pending_profile_and_reads_it_back_by_id_and_by_user_id,
         returns_null_for_an_unknown_profile,
@@ -978,6 +1008,7 @@ mod profiles {
         r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
         r111_r1310000_grants_one_copy_of_each_starter_card_on_pending_active_idempotently,
+        r1705002_an_account_becoming_active_owns_the_added_starter_cards,
     );
 }
 
@@ -3664,6 +3695,32 @@ mod matches {
         assert_eq!(seqs, (1..=12).collect::<Vec<i64>>(), "{}", harness.name);
     }
 
+    /// #1825: the question the share route asks, answered without reading the log.
+    async fn tells_whether_a_log_holds_an_action_without_reading_it(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        assert!(
+            !q!(harness, t => t.matches_has_actions(&row.id)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        assert!(
+            q!(harness, t => t.matches_has_actions(&row.id)),
+            "{}",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.matches_has_actions(&id())),
+            "{}",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.matches_has_actions("not-a-uuid")),
+            "{}",
+            harness.name
+        );
+    }
+
     async fn refuses_a_seq_that_already_exists(harness: &StoreHarness) {
         let row = live_match(harness).await;
         q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
@@ -4030,6 +4087,7 @@ mod matches {
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
+        tells_whether_a_log_holds_an_action_without_reading_it,
         refuses_a_seq_that_already_exists,
         r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
@@ -7908,7 +7966,7 @@ mod social {
             "not a seat"
         );
         assert_eq!(
-            j(&q!(harness, t => t.shares_for(&b.id))),
+            j(&q!(harness, t => t.shares_for(&b.id, 10))),
             json!([{ "matchId": over, "sharer": a.id, "createdAt": now - 3_000, "endedAt": now - 5_000 }])
         );
 
@@ -7918,7 +7976,7 @@ mod social {
             q!(harness, t => t.shares_sharers(&over, &b.id)),
             vec![a.id.clone(), c.id.clone()]
         );
-        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 2);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 2);
 
         // Unfriended or blocked, a's share is not read; made friends again, it is.
         assert!(q!(harness, t => t.friends_remove(&a.id, &b.id)));
@@ -7968,7 +8026,7 @@ mod social {
             q!(harness, t => t.shares_sharers(&over, &b.id)),
             vec![a.id.clone()]
         );
-        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 1);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 1);
 
         let cutoffs: RetentionPurgeInput = from(json!({
             "codeAttemptsBefore": now - 30 * day,
@@ -7978,8 +8036,52 @@ mod social {
         }));
         q!(harness, t => t.purge_expired(&cutoffs));
         assert!(q!(harness, t => t.matches_actions(&over)).is_empty());
+        assert!(!q!(harness, t => t.matches_has_actions(&over)));
         assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
-        assert!(q!(harness, t => t.shares_for(&b.id)).is_empty());
+        assert!(q!(harness, t => t.shares_for(&b.id, 10)).is_empty());
+    }
+
+    /// #1825: the list is the newest shares, at most `limit` of them.
+    async fn s7_replay_shares_list_the_newest_up_to_the_limit(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 10_000));
+        let mut ids = Vec::new();
+        for n in 0..3_i64 {
+            let over = id();
+            q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+            q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
+            q!(harness, t => t.matches_finish(&over, now - 5_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 3_000 + n * 1_000,
+            }));
+            q!(harness, t => t.shares_put(&share));
+            ids.push(over);
+        }
+
+        let newest_two: Vec<String> = q!(harness, t => t.shares_for(&b.id, 2))
+            .into_iter()
+            .map(|row| row.match_id)
+            .collect();
+        assert_eq!(
+            newest_two,
+            vec![ids[2].clone(), ids[1].clone()],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.shares_for(&b.id, 3)).len(),
+            3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.shares_for(&b.id, 10)).len(),
+            3,
+            "{}",
+            harness.name
+        );
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -8280,6 +8382,7 @@ mod social {
         r1384000_chat_pages_run_in_time_then_id_order_across_a_tie,
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
+        s7_replay_shares_list_the_newest_up_to_the_limit,
         r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,

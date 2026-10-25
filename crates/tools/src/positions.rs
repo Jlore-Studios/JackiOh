@@ -37,7 +37,7 @@ use jackioh_ai::{
 };
 use jackioh_engine::{
     ActionBody, CreateGameOptions, GameResult, GameState, Phase, PlayerId, begin_game, catalog_for,
-    create_game, hash_state, reduce, seat_to_act, with_shipped,
+    create_recorded_game, hash_state, reduce, seat_to_act, with_shipped,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -261,7 +261,7 @@ pub(crate) fn fold_game(
                 decks: game.decks.clone(),
                 ..Default::default()
             };
-            let mut state = begin_game(&create_game(&options)).state;
+            let mut state = begin_game(&create_recorded_game(&options)).state;
             let mut rows: Vec<PositionRow> = Vec::new();
             let mut turned: Vec<(i32, PlayerId)> = Vec::new();
             for (step, action) in game.log.iter().enumerate() {

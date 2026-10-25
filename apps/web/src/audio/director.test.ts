@@ -4,6 +4,7 @@
 // come from the real `planEntries`, and views from the web fixtures, so an event is the very object
 // the view carries: the director matches events by identity, as the runner hands them out.
 
+import { DECK_SIZE } from "@jackioh/engine/config";
 import type { ActionBody, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,6 +26,7 @@ import { answerPrompts, devDeck, handDefId, playOf, realGame, type RealGame } fr
 import type { AudioEngine, CardAudioTable, CardHook, PlayableLineKind, SfxId, SfxParams, SoundSink } from "./types.ts";
 import { newEventsSince, planEntries, sameOccurrence, type AnimationEntry } from "../game/animations.ts";
 import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 
 // Fixtures
 
@@ -154,11 +156,6 @@ function begin(director: SoundDirector, events: GameEvent[], first: PlayerView =
 
 function entriesOf(view: PlayerView, events: readonly GameEvent[], reducedMotion = false): AnimationEntry[] {
   return planEntries(events, view, reducedMotion);
-}
-
-function must<T>(value: T | undefined, what: string): T {
-  if (value === undefined) throw new Error(`expected ${what}`);
-  return value;
 }
 
 // B24: cues play when an entry starts
@@ -712,10 +709,10 @@ const SHEEPISH = "core-041";
 /** A real game where p1 sets #41 Sheepish and p2 then plays a unit into it. */
 function sheepishGame(): { set: Heard; fire: Heard } | null {
   const cheap = devDeck("cheap20");
-  const p1Deck = [SHEEPISH, ...cheap.filter((id) => id !== SHEEPISH)].slice(0, 20);
+  const p1Deck = [SHEEPISH, ...cheap.filter((id) => id !== SHEEPISH)].slice(0, DECK_SIZE);
   const p2Deck = cheap.filter((id) => id !== SHEEPISH);
   for (let seed = 1; seed <= 40; seed += 1) {
-    const game = realGame(`audio-sheepish-${String(seed)}`, [p1Deck, p2Deck.slice(0, 20)]);
+    const game = realGame(`audio-sheepish-${String(seed)}`, [p1Deck, p2Deck.slice(0, DECK_SIZE)]);
     let set: Heard | null = null;
     for (let step = 0; step < 16; step += 1) {
       answerPrompts(game);

@@ -3,10 +3,11 @@
 //!
 //! Port of `packages/engine/test/combat-resolution.test.ts`.
 
+use jackioh_engine::combat::resolve_combat;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::combat::{big_body, first_striker, moths, plain, taunter};
+use crate::rules::fixtures::combat::{big_body, first_striker, moths, plain, taunter, trampler};
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
 
 /// p1's main phase on turn 4, so nothing placed with `put` is summoning sick (§4.1).
@@ -579,5 +580,97 @@ mod r53_forced_attacks_m2_t4 {
             vec![by_id(&state, &first.id).damage, by_id(&state, &second.id).damage],
             vec![2, 2]
         );
+    }
+}
+
+mod r1750000_trample_is_for_the_attack_alone {
+    use super::*;
+
+    /// §4.4 steps 5 and 9, R1750000: the unit that is attacked takes no Trample onto its attacker's
+    /// hero. Its strike back deals its whole 6 to the 3/3 that hit it, which dies of it, and no
+    /// second instance follows.
+    #[test]
+    fn r1750000_a_defender_with_trample_strikes_back_without_trampling_into_the_attacker_s_hero() {
+        let mut state = board("r1750000-strike-back");
+        let attacker = put(&mut state, &plain.id, slot(P1, Row::Units, 1), Default::default()); // 3/3
+        let defender = put(
+            &mut state,
+            &trampler.id,
+            slot(P2, Row::Units, 1),
+            Default::default(),
+        ); // 6/4 Trample
+        let hero_before = state.players[P1].hero.health;
+
+        let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
+        assert_eq!(refused, None);
+
+        assert_eq!(
+            hits(&events),
+            vec![
+                (Some(attacker.id.clone()), defender.id.clone(), 3, true),
+                (Some(defender.id.clone()), attacker.id.clone(), 6, true),
+            ]
+        );
+        assert_eq!(graveyard_ids(&state, P1), vec![attacker.id.clone()]);
+        assert_eq!(state.players[P1].hero.health, hero_before);
+    }
+
+    /// The same Trample unit as the one that attacks: 6 into a 3/3 leaves 3 for its controller's
+    /// opponent's hero, as before.
+    #[test]
+    fn r1750000_an_attacker_with_trample_still_tramples_into_the_defender_s_hero() {
+        let mut state = board("r1750000-attack");
+        let attacker = put(
+            &mut state,
+            &trampler.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 6/4 Trample
+        let defender = put(&mut state, &plain.id, slot(P2, Row::Units, 1), Default::default()); // 3/3
+        let hero_before = state.players[P2].hero.health;
+
+        let (refused, events) = run(&mut state, |sink| declare(sink, &attacker.id, Some(&defender.id)));
+        assert_eq!(refused, None);
+
+        assert_eq!(
+            hits(&events),
+            vec![
+                (Some(attacker.id.clone()), defender.id.clone(), 3, true),
+                (Some(attacker.id.clone()), "hero-p2".to_string(), 3, true),
+                (Some(defender.id.clone()), attacker.id.clone(), 3, true),
+            ]
+        );
+        assert_eq!(state.players[P2].hero.health, hero_before - 3);
+    }
+
+    /// A Trample unit that attacks a unit of its own side, as Traitorous Blood's re-aimed attack has it
+    /// do (R1122), is the one attacking: the excess goes to "the target's controller's hero", which is
+    /// its own (§4.4 step 9). A forced attack never has an ally for its target (R173), so the combat is
+    /// resolved as that redirect leaves it.
+    #[test]
+    fn r1750000_an_attack_on_an_ally_tramples_into_its_own_hero() {
+        let mut state = board("r1750000-ally");
+        let attacker = put(
+            &mut state,
+            &trampler.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        ); // 6/4 Trample
+        let ally = put(&mut state, &plain.id, slot(P1, Row::Units, 2), Default::default()); // 3/3
+        let hero_before = state.players[P1].hero.health;
+
+        let (_, events) = run(&mut state, |sink| {
+            resolve_combat(sink, &attacker, &on_unit(&ally))
+        });
+
+        assert_eq!(
+            hits(&events),
+            vec![
+                (Some(attacker.id.clone()), ally.id.clone(), 3, true),
+                (Some(attacker.id.clone()), "hero-p1".to_string(), 3, true),
+                (Some(ally.id.clone()), attacker.id.clone(), 3, true),
+            ]
+        );
+        assert_eq!(state.players[P1].hero.health, hero_before - 3);
     }
 }

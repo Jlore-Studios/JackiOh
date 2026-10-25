@@ -994,8 +994,11 @@ mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
         }));
         let mut monitor = create_invariant_monitor(g.state());
         let token = g.unit(PlayerId::P2, 1).expect("p2's Rush Token").id;
-        // Turn 11 begins on p1's side, and its snapshot holds the token as a token (R419).
-        g.end_turn().end_turn();
+        // Turn 11 begins on p1's side, and its snapshot holds the token as a token (R419). The
+        // monitor reads both turn ends: I9 holds each `turnEnded` to the turn the shadow has under way.
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.end_turn();
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
         // p1's Vanilla trips the trap, which fuses it onto the token: the token's id, a fused definition.
         g.play(VANILLA, json!({ "zone": 2 }));
@@ -1374,5 +1377,63 @@ mod r1122_r424_a_redirected_classic_golem_that_kills_its_new_defender {
             "R424: it may attack again"
         );
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+}
+
+mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
+    use super::*;
+
+    const FUSION_LAB: &str = "classicplus-031"; // C+ #31 Fusion Lab: Activate, choose a card in your hand
+    const MAYOR: &str = "meditative-086"; // M #86 Mayor Medinamogger: all targets are chosen at random
+
+    /// Fuzz seed 2870's board (#1728): p1's Fusion Lab with nothing in p1's hand while p2's Mayor acts.
+    /// The list spells its activation with no targets (`play_choices::without_target_picks`), and I8's
+    /// forged copy carries an empty list, which the reducer reads alike.
+    fn board() -> (Scenario, CardInstance) {
+        let g = scenario(json!({
+            "p1": { "hand": [], "backrow": [FUSION_LAB], "library": [VANILLA, VANILLA] },
+            "p2": { "hand": [VANILLA], "field": [MAYOR], "library": [VANILLA, VANILLA] },
+        }));
+        let lab = g.card(FUSION_LAB).clone();
+        (g, lab)
+    }
+
+    fn fuse(lab: &CardInstance) -> ActionBody {
+        ActionBody::Activate {
+            instance_id: lab.id.clone(),
+            ability: Some("fuse".to_string()),
+            targets: None,
+            modes: None,
+            tributes: None,
+        }
+    }
+
+    #[test]
+    fn r1200_i8_is_clean_on_an_activation_the_list_spells_with_no_targets() {
+        let (g, lab) = board();
+        let legal = legal_actions(g.state(), PlayerId::P1);
+        assert!(legal.contains(&fuse(&lab)), "{legal:?}");
+        assert_eq!(
+            unlisted_accepted(g.state(), PlayerId::P1, &legal),
+            no_violations()
+        );
+    }
+
+    #[test]
+    fn r1200_i8_still_fires_on_that_activation_and_its_alias_when_the_list_leaves_it_out() {
+        let (g, lab) = board();
+        let legal: Vec<ActionBody> = legal_actions(g.state(), PlayerId::P1)
+            .into_iter()
+            .filter(|body| *body != fuse(&lab))
+            .collect();
+        let found = unlisted_accepted(g.state(), PlayerId::P1, &legal);
+        assert_eq!(found.len(), 2, "{found:?}");
+        for message in &found {
+            assert!(
+                message.starts_with("I8 unlisted activation accepted"),
+                "{message}"
+            );
+            assert!(message.contains(&lab.id), "{message}");
+        }
     }
 }

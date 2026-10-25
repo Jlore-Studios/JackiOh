@@ -32,7 +32,7 @@ use jackioh_server::config::{
     MATCH_ACTION_RETENTION_DAYS, REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE,
     REPLAY_REQUESTS_PER_MINUTE,
 };
-use jackioh_server::db::store::{MatchActionRow, MatchRow, ResultRow, Room};
+use jackioh_server::db::store::{MatchActionRow, MatchRow, ResultRow, Room, StoreError};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{
@@ -649,6 +649,10 @@ mod r768_the_list {
         )
         .await;
 
+        // The list folds nothing (#1825): it says `rules_changed` once an opening has found it.
+        let (status, opened) = get(&app, "/api/replays/m-bad-hash", &tokens.a).await;
+        assert_eq!(status, 422, "{opened}");
+
         let (status, body) = get(&app, "/api/replays", &tokens.a).await;
         assert_eq!(status, 200, "{body}");
         let ids: Vec<&str> = body["replays"]
@@ -716,6 +720,45 @@ mod r768_the_list {
         }
         let (_, renamed) = get(&app, "/api/replays", &tokens.a).await;
         assert_eq!(renamed["replays"][3]["opponent"]["username"], "Beatrix");
+    }
+
+    #[tokio::test]
+    async fn r768_the_list_folds_nothing_and_says_rules_changed_once_an_opening_found_it() {
+        let (app, tokens) = app_with_players().await;
+        let played = played_game("replay-route-10", 6);
+        let now = now_ms();
+        let bad_hash = Finish {
+            hash: Some("not-the-hash".to_string()),
+            ..Finish::new("m-bad-hash", &played, now - 2_000)
+        };
+        seed_finished(&app, bad_hash, &played).await;
+        let old_patch = Finish {
+            row: json!({ "catalogVersion": OLD_CATALOG }),
+            ..Finish::new("m-old-patch", &played, now - 1_000)
+        };
+        seed_finished(&app, old_patch, &played).await;
+        fake_lock(&app).await.on_call = Some(Arc::new(|called: &str| {
+            if called == "matches.actions" {
+                Err(StoreError::Other("the list read a log".to_string()))
+            } else {
+                Ok(())
+            }
+        }));
+
+        let (status, list) = get(&app, "/api/replays", &tokens.a).await;
+
+        assert_eq!(status, 200, "{list}");
+        assert_eq!(list["replays"][0]["matchId"], "m-old-patch");
+        assert_eq!(list["replays"][0]["unavailable"], "earlier_patch");
+        assert_eq!(list["replays"][1]["matchId"], "m-bad-hash");
+        assert!(list["replays"][1].get("unavailable").is_none(), "{list}");
+        assert_eq!(app.replays.cache.held(now_ms()), 0, "the list opened no replay");
+
+        fake_lock(&app).await.on_call = None;
+        let (status, opened) = get(&app, "/api/replays/m-bad-hash", &tokens.a).await;
+        assert_eq!(status, 422, "{opened}");
+        let (_, again) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(again["replays"][1]["unavailable"], "rules_changed");
     }
 
     #[tokio::test]

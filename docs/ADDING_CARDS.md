@@ -57,7 +57,10 @@ Also grep the Markdown for the stated totals (`396 cards`, `86 tokens`, `482`) a
 ## 2. Templates
 
 **Catalog entry** (C+ #6). `loc` is the script's lines of code, from `cargo jackioh catalog loc <script path>` once the script is written
-([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`. A token has
+([§3](#3-the-patch-and-its-order)); text is the printed text, with `{key}` where a number is declared in `params`, marked `"cry": true` when only the card's Cry
+writes it (R1748000). A Spell or a Field Spell declares every number it prints unless `tests/cross/params.rs` names why it is fixed
+(R1748003); one that deals damage carries `"dealsDamage": true` (R1748001), and a Field Spell that uses its own Plague Counters
+`"usesPlague": true` (R1748002). A token has
 `"token": true`, `"rarity": "Token"` and the `Token` tag. A new entry, a token's too, carries a `flavor` (§1 row 2).
 
 ```json

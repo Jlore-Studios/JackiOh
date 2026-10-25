@@ -6,7 +6,7 @@ use jackioh_engine::mana::effective_cost;
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, matches_object, put, slot};
+use crate::rules::fixtures::harness::{events_json, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
     only, pb_act, pb_playing, pb_reduce, plantation, plays_of, quest_card, round_trip, second_wind,
@@ -31,16 +31,8 @@ fn with_player(body: Value, player: PlayerId) -> Value {
     body
 }
 
-/// The events of `kind`, each as its JSON.
-fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
-    events_of_type(events, kind)
-        .iter()
-        .map(|event| serde_json::to_value(event).expect("an event serialises"))
-        .collect()
-}
-
 fn view_events_of(state: &GameState, viewer: PlayerId, kind: GameEventType) -> Vec<Value> {
-    of_type(&view_for(state, viewer).events, kind)
+    events_json(&view_for(state, viewer).events, kind)
 }
 
 /// A refusal's text (`""` when the action was not refused, which no pattern matches).
@@ -129,10 +121,10 @@ mod r454_e11_play_from_the_graveyard {
         assert_eq!(after.counters.played, played + 1);
         assert!(after.players.p1.turn_log.played_ids.contains(&spell.id));
         assert_eq!(after.players.p1.mana.current, 3);
-        let card_played = only(&of_type(&result.events, GameEventType::CardPlayed));
+        let card_played = only(&events_json(&result.events, GameEventType::CardPlayed));
         assert_eq!(card_played["from"], json!("graveyard"));
         assert_eq!(card_played["costPaid"], json!(1));
-        let resolved: Vec<Value> = of_type(&result.events, GameEventType::CardResolved)
+        let resolved: Vec<Value> = events_json(&result.events, GameEventType::CardResolved)
             .iter()
             .map(|event| event["instanceId"].clone())
             .collect();
@@ -230,7 +222,7 @@ mod r454_e11_play_from_the_graveyard {
         let result = pb_reduce(&state, with_player(only(&offered), PlayerId::P1));
         assert_eq!(result.error, None);
         assert_eq!(
-            only(&of_type(&result.events, GameEventType::CardPlayed))["costPaid"],
+            only(&events_json(&result.events, GameEventType::CardPlayed))["costPaid"],
             json!(2)
         );
         assert!(
@@ -263,7 +255,7 @@ mod r454_e11_play_from_the_graveyard {
             json!({ "type": "play", "instanceId": again.id, "playerId": "p1" }),
         );
         assert_eq!(
-            only(&of_type(&paid.events, GameEventType::CardPlayed))["costPaid"],
+            only(&events_json(&paid.events, GameEventType::CardPlayed))["costPaid"],
             json!(2)
         );
     }
@@ -401,7 +393,7 @@ mod r454_e11_play_from_the_graveyard {
         let after = &result.state;
         // The price was the whole (2): one token and one mana.
         assert_eq!(
-            only(&of_type(&result.events, GameEventType::CardPlayed))["costPaid"],
+            only(&events_json(&result.events, GameEventType::CardPlayed))["costPaid"],
             json!(2)
         );
         assert_eq!(after.players.p1.mana.current, 0);
@@ -410,7 +402,7 @@ mod r454_e11_play_from_the_graveyard {
             Some(1)
         );
         assert!(
-            of_type(&result.events, GameEventType::CounterChanged).contains(&json!({
+            events_json(&result.events, GameEventType::CounterChanged).contains(&json!({
                 "type": "counterChanged",
                 "instanceId": field.id,
                 "counter": "plague",
@@ -503,10 +495,10 @@ mod r454_e11_play_from_the_graveyard {
         // R227) — no identity, no former id — with the pile it came from, which the public graveyard
         // already showed.
         assert_eq!(
-            only(&of_type(&result.events, GameEventType::CardPlayed))["formerId"],
+            only(&events_json(&result.events, GameEventType::CardPlayed))["formerId"],
             json!(trap.id)
         );
-        let shown = only(&of_type(&theirs.events, GameEventType::CardPlayed));
+        let shown = only(&events_json(&theirs.events, GameEventType::CardPlayed));
         assert!(matches_object(
             &shown,
             &json!({ "instanceId": HIDDEN_ID, "defId": HIDDEN_ID, "from": "graveyard" })
@@ -580,7 +572,7 @@ mod r454_e11_play_from_the_graveyard {
         );
         assert_eq!(result.error, None);
         assert_eq!(
-            of_type(&result.events, GameEventType::CardPlayed),
+            events_json(&result.events, GameEventType::CardPlayed),
             Vec::<Value>::new()
         );
         assert!(ids(&result.state.players.p1.exile).contains(&titan_card.id));

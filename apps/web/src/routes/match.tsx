@@ -30,6 +30,7 @@ import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Clock, { turnKeyOf, useFrameFor } from "../game/Clock.tsx";
 import Game from "../game/Game.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { OnceRevealed } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
 import { announceWallet } from "../economy/wallet.ts";
@@ -40,6 +41,7 @@ import { CatalogContext } from "../game/catalog.ts";
 import { currentCatalogLookup } from "../game/currentCatalog.ts";
 import {
   installDevHandle,
+  awaitsYou,
   remainingMs,
   useMatch,
   viewDerivedState,
@@ -321,11 +323,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     );
   }, [readOnly]);
 
-  // The tab says when it is the player's turn, so a match in a background tab can be found.
-  const yourTurn = view !== null && view.result === null && view.active === view.viewer;
+  // #1792: the tab says when the game waits on the player (its mulligan, a prompt it holds, or its
+  // turn: `awaitsYou`), so a match in a background tab can be found.
+  const yourMove = view !== null && awaitsYou(view);
   useEffect(() => {
-    document.title = yourTurn ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
-  }, [yourTurn, matchId, locale]);
+    document.title = yourMove ? `${t("Your turn")} · ${SITE_NAME}` : documentTitleFor(paths.match(matchId));
+  }, [yourMove, matchId, locale]);
 
   if (view === null) {
     if (match.connection === "refused") {
@@ -489,6 +492,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           <BackLink showSettings={false} />
           {/* #936 B58: chat with a friend without leaving the board. */}
           <InMatchChat />
+          {/* R169: every live modifier in full, one tap away; on a phone the badges beside each hero are cut short. */}
+          <ModifierList view={view} opponentLabel={t("Opponent")} />
           <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
           {/*
             The rematch navigation that survives "View the board": the buttons above live in the

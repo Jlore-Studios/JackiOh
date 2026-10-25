@@ -1,7 +1,7 @@
 {
   "id": "02-prompts-a",
   "spec": "02-prompts.cy.ts",
-  "description": "The deck BUILD M8 names for spec 02, card for card: #7 Jewelosco Scarab (discover), #16 Hit Job (target), #17 Flood (mode, on its radiant face), #30 Archivist (mode, the second source), #26 Glowy Jelly Bean (hand - and the card that makes Flood radiant), #67 Zoomerbin Oomen (zone), #55 Lava Golem (tribute), #52 Silly Silas (direction), #24 Efficiency Dividend (x) and #46 Suppressive Aura (embiggen); the opening mulligan is the tenth picker and needs no card. The other ten are the bodies those pickers need: #15 Me and Mr Token is two units for one mana, #3, #8, #11, #20, #25, #45 and #91 are cheap units that fill the board so Lava Golem's Tribute 3 has more than one minimal paying set (R101, R123) and Hit Job has a unit to destroy, and #5 Stockpile and #10 Rapid Replenish are the only two cards here that ask nothing at all.",
+  "description": "The deck BUILD M8 names for spec 02, card for card: #7 Jewelosco Scarab (discover), #16 Hit Job (target), #17 Flood (mode, on its radiant face), #30 Archivist (mode, the second source), #26 Glowy Jelly Bean (hand - and the card that makes Flood radiant), #67 Zoomerbin Oomen (zone), #55 Lava Golem (tribute), #52 Silly Silas (direction), #24 Efficiency Dividend (x) and #46 Suppressive Aura (embiggen); the opening mulligan is the tenth picker and needs no card. The other ten are the bodies those pickers need: #15 Me and Mr Token is two units for one mana, #3, #8, #11, #20, #25, #45 and #91 are cheap units that fill the board so Lava Golem's Tribute 3 has more than one minimal paying set (R101, R123) and Hit Job has a unit to destroy, and #5 Stockpile and #10 Rapid Replenish are the only two cards here that ask nothing at all. Its seat plays under the handicap below, TUTORIAL_HUMAN's (R1705005): a human's resources with a deck of 20, the size every deck had before #1705, so these cards and the deal the spec's seed was tuned on stand.",
   "cards": [
     "core-003",
     "core-005",
@@ -23,5 +23,12 @@
     "core-055",
     "core-067",
     "core-091"
-  ]
+  ],
+  "handicap": {
+    "deckSize": 20,
+    "manaBonus": 0,
+    "manaCap": 4,
+    "extraOpeningCards": 0,
+    "extraDrawsPerTurn": 0
+  }
 }

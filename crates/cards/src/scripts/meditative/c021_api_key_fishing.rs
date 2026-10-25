@@ -73,6 +73,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -129,7 +130,7 @@ mod tests {
             s.play(FISHING, json!({}));
 
             assert!(s.hand(P2).is_empty());
-            let taken: Vec<String> = s.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+            let taken = def_ids(&s.hand(P1));
             assert!(taken.contains(&FILLER.to_string()));
             assert!(taken.contains(&VANILLA.to_string()));
         }

@@ -183,11 +183,9 @@ fn falls_to_first_strike(state: &GameState, attacker: &CardInstance, defender: &
 /// Strike destroys first (§4.3 step 1), a defender a Ranged attacker takes nothing back from (R783000),
 /// or a hit the attacker's Divine Shield, Indestructible or Armor stops.
 ///
-/// Lifesteal heals the damage actually dealt, which is the hit as §4.4 splits it. A strike back with
-/// Trample counts on the attacker only up to its health (step 5, R63), and the rest is its own
-/// instance on the attacking hero, through that hero's Armor and cap (step 9) — so Going Long's Armor
-/// can stop it at 0, and a 0 heals nothing. Counting the whole strike as healed called a swing
-/// survivable that leaves the defending hero at 0.
+/// Lifesteal heals the damage actually dealt. A strike back never tramples, Trample being a Unit's
+/// for its own attack only (R1750000, which revised R176), so all of it lands on the attacker and
+/// heals whole, whatever the defender's keywords.
 fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> i32 {
     let defender = match target {
         DamageTarget::Unit { instance } => instance,
@@ -212,16 +210,11 @@ fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackT
         return 0;
     }
     let pierce = piercing(state, defender);
-    let strike = if pierce {
+    if pierce {
         theirs.attack
     } else {
         (theirs.attack - armor_of(&mine.keywords)).max(0)
-    };
-    if strike <= 0 || !has_keyword(&theirs.keywords, KeywordKind::Trample) || strike <= mine.health {
-        return strike;
     }
-    let on_unit = mine.health.max(0);
-    on_unit + projected_hero_damage(state, attacker.controller, strike - on_unit, pierce)
 }
 
 /// R44: the projection against the defending hero's health. §4.5 step 2 ends the game at 0 or less

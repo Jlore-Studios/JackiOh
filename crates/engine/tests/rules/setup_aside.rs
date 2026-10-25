@@ -336,9 +336,11 @@ mod r635_cast_on_draw_cards_sit_out_the_deal_and_are_shuffled_in_after_the_mulli
             }
         }
         assert_eq!(seen, 150 * 6);
+        // At random places, a card's mean place is the middle of the library.
+        let middle = f64::from(DECK_SIZE - OPENING_DRAW[1] - 1) / 2.0;
         let mean = places as f64 / seen as f64;
-        assert!(mean > 7.0, "{mean}");
-        assert!(mean < 8.0, "{mean}");
+        assert!(mean > middle - 0.5, "{mean}");
+        assert!(mean < middle + 0.5, "{mean}");
         assert!(at_top > 0);
     }
 
@@ -467,7 +469,17 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
     #[test]
     fn r748_an_all_cast_on_draw_deck_deals_a_full_hand_of_them_uncast_and_casts_them_at_the_start_of_the_game()
      {
-        let begun = start("r748-all", (deck_of(0, DECK_SIZE, None), other()), None);
+        // A 20-card deck (TUTORIAL_HUMAN's, R1705005), so the library past the hand is one chain under
+        // R58's cap (the next test is a library past it).
+        let size = TUTORIAL_HUMAN.deck_size;
+        let begun = start(
+            "r748-all",
+            (deck_of(0, size, Some(size)), other()),
+            Some(PerPlayerOpt {
+                p1: Some(TUTORIAL_HUMAN),
+                p2: None,
+            }),
+        );
         let state = &begun.state;
         let hand = &state.players.p1.hand;
 
@@ -477,10 +489,7 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             drawn_by(&begun.events, PlayerId::P1).len() as i32,
             OPENING_DRAW[0]
         );
-        assert_eq!(
-            state.players.p1.library.len() as i32,
-            DECK_SIZE - hand.len() as i32
-        );
+        assert_eq!(state.players.p1.library.len() as i32, size - hand.len() as i32);
         assert_eq!(state.players.p1.fatigue_count, 0);
         assert_eq!(count(&begun.events, GameEventType::Fatigue), 0);
         assert_eq!(count(&begun.events, GameEventType::CardPlayed), 0);
@@ -506,9 +515,9 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
         assert!(answered.state.turn >= 1);
         assert_eq!(
             count(turn_one, GameEventType::CardPlayed) as i32,
-            DECK_SIZE - hand.len() as i32
+            size - hand.len() as i32
         );
-        assert_eq!(answered.state.players.p1.graveyard.len() as i32, DECK_SIZE);
+        assert_eq!(answered.state.players.p1.graveyard.len() as i32, size);
         assert!(answered.state.players.p1.library.is_empty());
         assert_eq!(answered.state.players.p1.fatigue_count, 1);
         assert!(answered.state.result.is_none());
@@ -522,9 +531,10 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             decks: (deck_of(0, DECK_SIZE, None), other()),
             ..Default::default()
         });
-        // Six more, as a Unstable Clone Machine's or a CN-Virus's copies would add: 26 cards, all of them
-        // cast on draw.
-        for def_id in [cod(1), cod(2), cod(3), cod(4), cod(5), cod(6)] {
+        // More, as a Unstable Clone Machine's or a CN-Virus's copies would add, until the library past the
+        // hand holds R58's cap and two: all of them cast on draw.
+        let more = OPENING_DRAW[0] + CAST_ON_DRAW_CHAIN_CAP + 2 - DECK_SIZE;
+        for def_id in (1..=more).map(cod) {
             let card = new_instance(
                 &mut game,
                 &def_id,
@@ -537,7 +547,7 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
         assert_eq!(begun.state.players.p1.hand.len() as i32, OPENING_DRAW[0]);
         assert_eq!(
             begun.state.players.p1.library.len() as i32,
-            DECK_SIZE + 6 - OPENING_DRAW[0]
+            DECK_SIZE + more - OPENING_DRAW[0]
         );
 
         let settled = answer_both(&begun.state, keep_all()).state;
@@ -824,9 +834,15 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
     #[test]
     fn r640_the_quickdraw_cards_that_were_not_dealt_are_ordinary_cards_a_mulligans_replacements_can_draw_them()
      {
+        // Twice the hand's Quickdraw cards, so the ones not dealt reach the top of the library on some
+        // seeds: the shuffle deals the hand the first four it meets, and a mulligan draws from the top.
         let mut drawn_surplus = 0;
         for n in 0..60 {
-            let begun = start(&format!("r636-surplus-{n}"), (deck_of(5, 0, None), other()), None);
+            let begun = start(
+                &format!("r636-surplus-{n}"),
+                (deck_of(2 * OPENING_DRAW[0] + 2, 0, None), other()),
+                None,
+            );
             let dealt: IndexSet<String> = begun
                 .state
                 .players
@@ -849,12 +865,12 @@ mod r640_a_quickdraw_card_replaces_one_of_the_opening_draws {
 
     #[test]
     fn r640_r748_two_quickdraw_cards_and_two_cast_on_draw_cards_fill_the_hand_uncast() {
-        let begun = start("r636-mixed", (deck_of(2, 18, None), other()), None);
+        let begun = start("r636-mixed", (deck_of(2, DECK_SIZE - 2, None), other()), None);
         let side = &begun.state.players.p1;
         assert_eq!(defs_of(&side.hand).iter().filter(|d| is_qd(d)).count(), 2);
         assert_eq!(defs_of(&side.hand).iter().filter(|d| is_cod(d)).count(), 2);
         assert_eq!(side.hand.len() as i32, OPENING_DRAW[0]);
-        assert_eq!(side.library.len(), 16);
+        assert_eq!(side.library.len() as i32, DECK_SIZE - OPENING_DRAW[0]);
         assert_eq!(side.fatigue_count, 0);
         assert_eq!(count(&begun.events, GameEventType::Fatigue), 0);
         assert_eq!(count(&begun.events, GameEventType::CardPlayed), 0);

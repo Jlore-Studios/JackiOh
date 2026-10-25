@@ -45,6 +45,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const RESOURCES: &str = "classic-058";
     const MACHINE: &str = "classic-049"; // Radiant: your opponent can't draw more than 1 card each turn.
@@ -103,7 +104,7 @@ mod tests {
                 assert_eq!(js(&s.card(&bottom).owner), "p1");
                 assert!(s.hand(PlayerId::P1).iter().any(|card| card.id == bottom));
                 assert_eq!(
-                    s.pile(PlayerId::P2, "library").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.pile(PlayerId::P2, "library")),
                     vec![VANILLA],
                 );
                 // Then the turn's own draw, from your own deck.
@@ -227,7 +228,7 @@ mod tests {
                 assert_eq!(pending["kind"], "hand");
                 s.answer(json!([{ "pick": "instance", "instanceId": taken }]));
                 assert_eq!(s.hand(PlayerId::P1).iter().map(|card| card.id.clone()).collect::<Vec<String>>(), vec![taken.clone()]);
-                let mut theirs: Vec<String> = s.hand(PlayerId::P2).iter().map(|card| card.def_id.clone()).collect();
+                let mut theirs = def_ids(&s.hand(PlayerId::P2));
                 theirs.sort();
                 let mut expected = vec![FILLER, FILLER, STOCKPILE, VANILLA];
                 expected.sort();
@@ -299,7 +300,7 @@ mod tests {
                     vec![json!(MENACE), json!(VANILLA), json!(STOCKPILE)],
                 );
                 assert_eq!(
-                    s.pile(PlayerId::P2, "library").iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.pile(PlayerId::P2, "library")),
                     vec![STOCKPILE],
                 );
             }

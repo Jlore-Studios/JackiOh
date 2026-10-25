@@ -61,19 +61,20 @@ mod tests {
         (0..count).map(|at| format!("core-{:03}", from + at)).collect()
     }
 
-    /// Two legal 20-card decks with no cast-on-draw card (#21, #27, #90.1) and no Quickdraw card (#65,
-    /// #84, #98), so the opening hands are exactly §2.1's table and nothing asks during setup (R224).
+    /// Two legal DECK_SIZE-card decks with no cast-on-draw card (#21, #27, #90.1) and no Quickdraw card
+    /// (#65, #84, #98), so the opening hands are exactly §2.1's table and nothing asks during setup
+    /// (R224): core-001 to core-026 but #21, and core-036 to core-060.
     fn deck_a() -> Vec<String> {
-        run(1, 20)
+        run(1, DECK_SIZE + 1).into_iter().filter(|id| id != "core-021").collect()
     }
 
     fn deck_b() -> Vec<String> {
-        run(41, 20)
+        run(36, DECK_SIZE)
     }
 
-    /// 30 cards for a Hard seat (R184), from the same card-free-of-casts stretch.
+    /// A Hard seat's deck (R184), from the same card-free-of-casts stretch: core-028 onwards.
     fn deck_hard() -> Vec<String> {
-        run(31, 30)
+        run(28, AI_DIFFICULTY.hard.deck_size)
     }
 
     fn opening_draw(seat: usize) -> usize {
@@ -169,7 +170,8 @@ mod tests {
         #[test]
         fn r245_is_never_in_a_deck_creategame_refuses_one_that_holds_it_s2_6_s9_4_l3() {
             crate::register_all();
-            let mut deck = run(1, 19);
+            let mut deck = deck_a();
+            deck.truncate(DECK_SIZE as usize - 1);
             deck.push(COIN_DEF_ID.to_string());
             expect_throw_with(
                 || {

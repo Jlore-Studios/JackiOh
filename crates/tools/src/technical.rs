@@ -26,6 +26,10 @@
 //!   A line that breaks the note rules (R724001) is left out and named on stderr. The Patch notes page
 //!   shows the App and AI entries that have one, under their X; Internal entries are the record's only.
 //!
+//! `patches check` holds the whole file to this shape on every run (`check_technical`): each commit
+//! once, each version one of `patches.json`'s, no `cards` entry, no pull request 0, and each player
+//! line by the note rules (R724001). A file that does not parse, an unknown `kind` included, fails it.
+//!
 //! The newest shipped X is the last entry of `patches.json` whose tier is a patch or a major. An entry
 //! records its `tier` from #1366 on; one that does not is a major when it adds a card of a set no
 //! earlier entry held, a patch when `PATCH_MIN_CARDS` or more families play differently by its
@@ -207,6 +211,56 @@ fn read_technical(path: &Path) -> Result<Vec<Entry>> {
         }
         Err(_) => Ok(Vec::new()),
     }
+}
+
+/// R1369000: every way the technical log breaks the shape `patches log` writes, each naming the
+/// entry's commit, or [] when it keeps it: a commit logged twice, a version `versions` (patches.json's)
+/// does not hold, a `cards` entry, a pull request numbered 0, or a player line that breaks the note
+/// rules (R724001). Pure: `patches check` reads the files and prints what this returns.
+pub(crate) fn check_technical(entries: &[Entry], versions: &[String]) -> Vec<String> {
+    let mut problems = Vec::new();
+    let mut seen = HashSet::new();
+    for entry in entries {
+        let commit = &entry.commit;
+        if !seen.insert(commit.as_str()) {
+            problems.push(format!(
+                "technical.json logs {commit} twice, but a commit is logged once (R1369000)"
+            ));
+        }
+        if !versions.contains(&entry.version) {
+            problems.push(format!(
+                "technical.json logs {commit} on {}, a version patches.json does not hold (R1369000)",
+                entry.version
+            ));
+        }
+        if entry.kind == Kind::Cards {
+            problems.push(format!(
+                "technical.json logs {commit} as a cards commit, but a card commit's patch records it (R1369000)"
+            ));
+        }
+        if entry.pr == Some(0) {
+            problems.push(format!(
+                "technical.json logs {commit} under pull request 0, which is no pull request (R1369000)"
+            ));
+        }
+        if let Some(line) = &entry.player {
+            for problem in line_problems(line) {
+                problems.push(format!(
+                    "technical.json's {commit}'s player line {problem} (R724001)"
+                ));
+            }
+        }
+    }
+    problems
+}
+
+/// R1369000: `check_technical` over `root`'s technical log. A log that is not there holds no entry;
+/// one that does not parse, an unknown `kind` among them, is an error.
+pub(crate) fn technical_problems(root: &Path, versions: &[String]) -> Result<Vec<String>> {
+    Ok(check_technical(
+        &read_technical(&root.join(TECHNICAL_PATH))?,
+        versions,
+    ))
 }
 
 /// What one run logged.
@@ -440,6 +494,22 @@ mod tests {
             .to_string()
     }
 
+    /// A log entry that keeps its shape, logged on v1.
+    fn entry(commit: &str) -> Entry {
+        Entry {
+            version: "v1".to_string(),
+            commit: commit.to_string(),
+            pr: Some(11),
+            title: "the menu remembers its tab".to_string(),
+            kind: Kind::App,
+            player: Some("The main menu opens on the tab you left it on.".to_string()),
+        }
+    }
+
+    fn shipped() -> Vec<String> {
+        vec!["v1".to_string(), "v2".to_string()]
+    }
+
     /// A range of an App, an AI, an Internal and a Card commit, and the base it starts from.
     fn four_commits(repo: &Repo) -> (String, [String; 4]) {
         let base = repo.git(&["rev-parse", "HEAD"]);
@@ -606,5 +676,108 @@ mod tests {
         assert_eq!(player_line("No note here."), None);
         assert!(line_problems("Duos games load faster.").is_empty());
         assert!(!line_problems("Fixed #88 (R656).").is_empty());
+    }
+
+    #[test]
+    fn r1369000_check_technical_passes_a_log_that_keeps_its_shape() {
+        assert!(check_technical(&[], &shipped()).is_empty());
+        let log = [
+            entry("c1"),
+            Entry {
+                version: "v2".to_string(),
+                kind: Kind::Internal,
+                pr: None,
+                player: None,
+                ..entry("c2")
+            },
+        ];
+        assert!(check_technical(&log, &shipped()).is_empty());
+    }
+
+    #[test]
+    fn r1369000_check_technical_names_a_commit_logged_twice() {
+        let log = [
+            entry("c1"),
+            entry("c2"),
+            Entry {
+                version: "v2".to_string(),
+                ..entry("c1")
+            },
+        ];
+        assert_eq!(
+            check_technical(&log, &shipped()),
+            vec!["technical.json logs c1 twice, but a commit is logged once (R1369000)"]
+        );
+    }
+
+    #[test]
+    fn r1369000_check_technical_names_a_version_patches_json_does_not_hold() {
+        let log = [Entry {
+            version: "v0.9.9".to_string(),
+            ..entry("c1")
+        }];
+        assert_eq!(
+            check_technical(&log, &shipped()),
+            vec!["technical.json logs c1 on v0.9.9, a version patches.json does not hold (R1369000)"]
+        );
+    }
+
+    #[test]
+    fn r1369000_check_technical_names_a_cards_entry_and_pull_request_0() {
+        let log = [
+            Entry {
+                kind: Kind::Cards,
+                ..entry("c1")
+            },
+            Entry {
+                pr: Some(0),
+                ..entry("c2")
+            },
+        ];
+        assert_eq!(
+            check_technical(&log, &shipped()),
+            vec![
+                "technical.json logs c1 as a cards commit, but a card commit's patch records it (R1369000)",
+                "technical.json logs c2 under pull request 0, which is no pull request (R1369000)",
+            ]
+        );
+    }
+
+    #[test]
+    fn r1369000_check_technical_names_a_player_line_players_cannot_read() {
+        let log = [
+            Entry {
+                player: Some("Fixed #88 (R656).".to_string()),
+                ..entry("c1")
+            },
+            Entry {
+                player: Some(String::new()),
+                ..entry("c2")
+            },
+        ];
+        assert_eq!(
+            check_technical(&log, &shipped()),
+            vec![
+                "technical.json's c1's player line cites a ruling in \"Fixed #88 (R656).\" (R724001)",
+                "technical.json's c1's player line cites an issue or card number in \"Fixed #88 (R656).\" (R724001)",
+                "technical.json's c2's player line has an empty line (R724001)",
+            ]
+        );
+    }
+
+    #[test]
+    fn r1369000_the_committed_log_keeps_its_shape() {
+        let root = crate::patches::repo_root();
+        let patches: Vec<Value> =
+            serde_json::from_str(&fs::read_to_string(root.join(PATCHES_PATH)).unwrap()).unwrap();
+        let versions: Vec<String> = patches
+            .iter()
+            .filter_map(|patch| patch["version"].as_str().map(str::to_string))
+            .collect();
+        assert!(!versions.is_empty());
+        assert_eq!(
+            technical_problems(&root, &versions).unwrap(),
+            Vec::<String>::new()
+        );
     }
 }

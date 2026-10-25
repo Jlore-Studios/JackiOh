@@ -115,6 +115,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -162,7 +163,7 @@ mod tests {
             // Costs 0, 1, 2 and 4 draw, in that order; 3 and 5 have no Meditative match.
             assert_eq!(drawn_defs(&s), vec![GIFT, CUTS, DISRUPTOR, INTROSPECTION]);
             assert_eq!(s.hand(P1).len(), 5);
-            let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![MENACE, BIG]);
             s.expect_health(P1, HERO_HEALTH);
             assert_eq!(s.state().players.p1.fatigue_count, 0);
@@ -184,7 +185,7 @@ mod tests {
             s.play(MELON, json!({}));
 
             assert_eq!(drawn_defs(&s), vec![GIFT, CUTS]);
-            let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![CHEAP, FILLER]);
         }
 
@@ -226,7 +227,7 @@ mod tests {
             // The embiggen card is read at its base price (0), not its paid price (1): it is the (0),
             // and the (1) is still the topmost Meditative (1).
             assert_eq!(drawn_defs(&s), vec![FISHING, CUTS]);
-            let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, vec![DIVIDEND]);
         }
 

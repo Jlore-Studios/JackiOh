@@ -3,29 +3,63 @@
 // out. This module only chooses and words them; StatShowcase.tsx draws them and showcaseStage.ts
 // plays the board's animation for each. It takes the stage's types and nothing else of it, so the
 // effects layer stays off the first screen until the showcase is drawn.
+//
+// R1743000: there are 35 of them, and a stat's card is never a token: every choice passes over a card
+// whose catalog entry is a token, as it does one the catalog no longer holds. The order they come in
+// is the showcase's (`nextInBag`), a shuffled bag drawn from the page's random source.
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
 
 import { t } from "../i18n/i18n.ts";
 import type { Side } from "../game/contract.ts";
-import { topCards, winPercent, type CardCounter, type PlayerStats } from "./model.ts";
+import { ROTATION_POOL, below, shuffled, type RandomSource } from "../routes/landingFan.ts";
+import { SHOWCASE_MIN_PLAYS } from "./config.ts";
+import { NO_COUNTS, winPercent, type CardCounter, type CardCounters, type CardTally, type PlayerStats } from "./model.ts";
 import type { PocketPick } from "./pocketPick.ts";
 import type { StageAnimation } from "./showcaseStage.ts";
 
 const CATALOG = catalogJson as unknown as CardDefs;
 
-export type ShowcaseKey =
-  | "toppled"
-  | "coveted"
-  | "pocketPick"
-  | "faithful"
-  | "nemesis"
-  | "fallen"
-  | "record"
-  | "lastLaugh"
-  | "springloaded"
-  | "survivor";
+/** The stats, the ten of R1584000 first and R1743000's twenty-five after. */
+export const SHOWCASE_KEYS = [
+  "toppled",
+  "coveted",
+  "pocketPick",
+  "faithful",
+  "nemesis",
+  "fallen",
+  "record",
+  "lastLaugh",
+  "springloaded",
+  "survivor",
+  "glassCannon",
+  "unbreakable",
+  "grudgeMatch",
+  "neverTried",
+  "easyTarget",
+  "closer",
+  "hairTrigger",
+  "rideOrDie",
+  "familiarFace",
+  "oneHitWonder",
+  "secondFiddle",
+  "bronzeMedal",
+  "explorer",
+  "collector",
+  "workhorse",
+  "heavyHitter",
+  "overkill",
+  "brawler",
+  "medic",
+  "cardShark",
+  "shineOn",
+  "comebackKid",
+  "jinx",
+  "hotStreak",
+  "marathon",
+] as const;
+export type ShowcaseKey = (typeof SHOWCASE_KEYS)[number];
 
 export type ShowcaseStat = {
   readonly key: ShowcaseKey;
@@ -60,29 +94,123 @@ export function pocketLine(pick: PocketPick): string {
   return t("you play it {n}× as often as everyone else", { n: Math.round((pick.playerRate / pick.baseRate) * 10) / 10 });
 }
 
-/** The card with the most of one counter that the catalog still holds; ties go to the lower id (`topCards`'s order). */
-function topCard(stats: PlayerStats, counter: CardCounter): { id: string; count: number } | undefined {
-  return topCards(stats, counter, Object.keys(stats.cards).length).find((tally) => CATALOG[tally.id] !== undefined);
+/** R1743000: a stat's card is one the catalog holds and that is not a token. */
+function showable(id: string): boolean {
+  const def = CATALOG[id];
+  return def !== undefined && !def.token;
 }
 
-/** A stat about the card the device logged most under one counter, worded with that count. */
-function counted(
+function byId(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** The showable cards with a count above 0, the most first, a tie going to the lower id (`topCards`'s order). */
+function ranked(counts: Readonly<Record<string, number>>): CardTally[] {
+  return Object.entries(counts)
+    .filter(([id, count]) => count > 0 && showable(id))
+    .map(([id, count]) => ({ id, count }))
+    .sort((a, b) => b.count - a.count || byId(a.id, b.id));
+}
+
+/** Each card's score by id. */
+function column(stats: PlayerStats, score: (counts: CardCounters) => number): Record<string, number> {
+  return Object.fromEntries(Object.entries(stats.cards).map(([id, counts]) => [id, score(counts)]));
+}
+
+/** The showable card with the most of one counter, or, with `at`, the one that many places below it. */
+function topCard(stats: PlayerStats, counter: CardCounter, at = 0): CardTally | undefined {
+  return ranked(column(stats, (counts) => counts[counter]))[at];
+}
+
+type Share = { readonly id: string; readonly part: number; readonly whole: number };
+
+/**
+ * R1743000: the showable card with the highest `part` per `whole`, among those with a `whole` of at
+ * least SHOWCASE_MIN_PLAYS and a `part` above 0. The part is capped at the whole (a card can be
+ * destroyed more often than it was played); a tie goes to the lower id.
+ */
+function topShare(
   stats: PlayerStats,
-  counter: CardCounter,
-  stat: Omit<ShowcaseStat, "cardId" | "line">,
-  line: (n: number) => string,
-): ShowcaseStat[] {
-  const top = topCard(stats, counter);
+  part: (counts: CardCounters) => number,
+  whole: (counts: CardCounters) => number,
+): Share | undefined {
+  let best: Share | undefined;
+  for (const [id, counts] of Object.entries(stats.cards).sort(([a], [b]) => byId(a, b))) {
+    const total = whole(counts);
+    const share = Math.min(part(counts), total);
+    if (!showable(id) || total < SHOWCASE_MIN_PLAYS || share === 0) continue;
+    if (best === undefined || share * best.whole > best.part * total) best = { id, part: share, whole: total };
+  }
+  return best;
+}
+
+/** R1743000: one of `ids`, by the page's random source, none (and no draw) when there are none. */
+function drawOne(ids: readonly string[], random: RandomSource): string | undefined {
+  return ids.length === 0 ? undefined : [...ids].sort(byId)[below(random, ids.length)];
+}
+
+type StatMeta = Omit<ShowcaseStat, "cardId" | "line">;
+
+/** A stat about a card tallied under one number, worded with that number. */
+function tallied(top: CardTally | undefined, stat: StatMeta, line: (n: number) => string): ShowcaseStat[] {
   return top === undefined ? [] : [{ ...stat, cardId: top.id, line: () => line(top.count) }];
 }
 
+/** A stat about the card the device logged most under one counter, worded with that count. */
+function counted(stats: PlayerStats, counter: CardCounter, stat: StatMeta, line: (n: number) => string): ShowcaseStat[] {
+  return tallied(topCard(stats, counter), stat, line);
+}
+
+/** A stat about the card with the highest share of one number, worded with the part and the whole. */
+function shared(share: Share | undefined, stat: StatMeta, line: (part: number, whole: number) => string): ShowcaseStat[] {
+  return share === undefined ? [] : [{ ...stat, cardId: share.id, line: () => line(share.part, share.whole) }];
+}
+
+/** A stat about a card whose line states its own numbers. */
+function about(id: string | undefined, stat: StatMeta, line: () => string): ShowcaseStat[] {
+  return id === undefined ? [] : [{ ...stat, cardId: id, line }];
+}
+
+/** The tally of a card, all zeros for one the device holds none of. */
+function countsOf(stats: PlayerStats, id: string): CardCounters {
+  return stats.cards[id] ?? NO_COUNTS;
+}
+
+/** R1584000: the Pocket Pick, once its request has answered with a card the catalog holds (a token never is one, R1743000); none before a game. */
+export function pocketStat(stats: PlayerStats, pocket: PocketPick | null): ShowcaseStat[] {
+  if (stats.games === 0 || pocket === null || !showable(pocket.id)) return [];
+  return [
+    {
+      key: "pocketPick",
+      cardId: pocket.id,
+      title: () => t("Pocket Pick"),
+      line: () => pocketLine(pocket),
+      animation: "trap",
+      side: "you",
+    },
+  ];
+}
+
 /**
- * The stats to show, in the order the floor tells them: one for each the device has data for, none
- * before the first finished game. The Pocket Pick comes from R1583000's request, so it is absent
- * until that answers, when it names nothing, or when the catalog no longer holds its card.
+ * The stats there are to show: one for each the device has data for, none before the first finished
+ * game. The Pocket Pick comes from R1583000's request, so it is absent until that answers (or from
+ * `pocketStat`, which a caller adds after the draw so its answer redraws nothing), when it names
+ * nothing, or when the catalog no longer holds its card. R1743000: the order is not the stats'; and
+ * each stat that picks a card at random draws once from `random`, and only when it has a candidate.
  */
-export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null): ShowcaseStat[] {
+export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null, random: RandomSource): ShowcaseStat[] {
   if (stats.games === 0) return [];
+  const played = ranked(column(stats, (counts) => counts.played));
+  const ids = (keep: (counts: CardCounters) => boolean): string[] =>
+    Object.entries(stats.cards)
+      .filter(([id, counts]) => showable(id) && keep(counts))
+      .map(([id]) => id);
+  const seenInPool = ROTATION_POOL.filter((def) => countsOf(stats, def.id).seen > 0).map((def) => def.id);
+  const seen = topCard(stats, "seen");
+  const grudge = ranked(column(stats, (c) => Math.min(c.played, c.playedAgainst)))[0];
+  const faced = countsOf(stats, grudge?.id ?? "");
+  const explored = ids((c) => c.played > 0);
+  const longest = ranked(stats.longestGamePlayed)[0] ?? played[0];
   const out: ShowcaseStat[] = [
     ...counted(stats, "defeated", { key: "toppled", title: () => t("Most Toppled"), animation: "death", side: "opponent" }, (n) =>
       t("taken down {n}×", { n }),
@@ -90,18 +218,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null): Sh
     ...counted(stats, "allured", { key: "coveted", title: () => t("Most Coveted"), animation: "allure", side: "you" }, (n) =>
       t("stolen {n}×", { n }),
     ),
-  ];
-  if (pocket !== null && CATALOG[pocket.id] !== undefined) {
-    out.push({
-      key: "pocketPick",
-      cardId: pocket.id,
-      title: () => t("Pocket Pick"),
-      line: () => pocketLine(pocket),
-      animation: "trap",
-      side: "you",
-    });
-  }
-  out.push(
+    ...pocketStat(stats, pocket),
     ...counted(stats, "played", { key: "faithful", title: () => t("Old Faithful"), animation: "entrance", side: "you" }, (n) =>
       t("played {n}×", { n }),
     ),
@@ -111,19 +228,7 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null): Sh
     ...counted(stats, "destroyed", { key: "fallen", title: () => t("Fallen Hero"), animation: "death", side: "you" }, (n) =>
       t("lost {n}×", { n }),
     ),
-  );
-  const seen = topCard(stats, "seen");
-  if (seen !== undefined) {
-    out.push({
-      key: "record",
-      cardId: seen.id,
-      title: () => t("The Record"),
-      line: () => recordLine(stats),
-      animation: "radiant",
-      side: "you",
-    });
-  }
-  out.push(
+    ...about(seen?.id, { key: "record", title: () => t("The Record"), animation: "radiant", side: "you" }, () => recordLine(stats)),
     ...counted(stats, "lethal", { key: "lastLaugh", title: () => t("Last Laugh"), animation: "lunge", side: "you" }, (n) =>
       t("dealt the winning blow {n}×", { n }),
     ),
@@ -133,6 +238,136 @@ export function showcaseStats(stats: PlayerStats, pocket: PocketPick | null): Sh
     ...counted(stats, "survived", { key: "survivor", title: () => t("Survivor"), animation: "shield", side: "you" }, (n) =>
       t("survived to the end {n}×", { n }),
     ),
-  );
+    // R1743000: from the counters the device already kept.
+    ...shared(
+      topShare(stats, (c) => c.destroyed, (c) => c.played),
+      { key: "glassCannon", title: () => t("Glass Cannon"), animation: "death", side: "you" },
+      (n, m) => t("destroyed {n} of the {m} times you played it", { n, m }),
+    ),
+    ...tallied(
+      ranked(column(stats, (c) => (c.destroyed === 0 ? c.played : 0)))[0],
+      { key: "unbreakable", title: () => t("Unbreakable"), animation: "shield", side: "you" },
+      (n) => t("played {n}×, never destroyed", { n }),
+    ),
+    ...about(grudge?.id, { key: "grudgeMatch", title: () => t("Grudge Match"), animation: "lunge", side: "you" }, () =>
+      t("you {n}×, them {m}×", { n: faced.played, m: faced.playedAgainst }),
+    ),
+    ...tallied(
+      ranked(column(stats, (c) => (c.played === 0 ? c.playedAgainst : 0)))[0],
+      { key: "neverTried", title: () => t("Never Tried It"), animation: "lunge", side: "opponent" },
+      (n) => t("faced {n}×, never played it yourself", { n }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.defeated, (c) => c.playedAgainst),
+      { key: "easyTarget", title: () => t("Easy Target"), animation: "death", side: "opponent" },
+      (n, m) => t("taken down {n} of the {m} times you faced it", { n, m }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.lethal, (c) => c.played),
+      { key: "closer", title: () => t("The Closer"), animation: "lunge", side: "you" },
+      (n, m) => t("the winning blow in {n} of {m} plays", { n, m }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.sprung, (c) => c.played),
+      { key: "hairTrigger", title: () => t("Hair Trigger"), animation: "trap", side: "you" },
+      (n, m) => t("sprung {n} of the {m} times you set it", { n, m }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.survived, (c) => c.played),
+      { key: "rideOrDie", title: () => t("Ride or Die"), animation: "shield", side: "you" },
+      (n, m) => t("still standing {n} of the {m} times you played it", { n, m }),
+    ),
+    ...tallied(seen, { key: "familiarFace", title: () => t("Familiar Face"), animation: "radiant", side: "you" }, (n) =>
+      stats.games === 1 ? t("in {n} of your {m} game", { n, m: stats.games }) : t("in {n} of your {m} games", { n, m: stats.games }),
+    ),
+    ...about(
+      drawOne(ids((c) => c.played === 1), random),
+      { key: "oneHitWonder", title: () => t("One-Hit Wonder"), animation: "entrance", side: "you" },
+      () => t("played once. Just once."),
+    ),
+    ...tallied(played[1], { key: "secondFiddle", title: () => t("Second Fiddle"), animation: "entrance", side: "you" }, (n) =>
+      t("your #2, played {n}×", { n }),
+    ),
+    ...tallied(played[2], { key: "bronzeMedal", title: () => t("Bronze Medal"), animation: "entrance", side: "you" }, (n) =>
+      t("your #3, played {n}×", { n }),
+    ),
+    ...about(drawOne(explored, random), { key: "explorer", title: () => t("Explorer"), animation: "entrance", side: "you" }, () =>
+      explored.length === 1 ? t("{n} different card played", { n: 1 }) : t("{n} different cards played", { n: explored.length }),
+    ),
+    ...about(
+      drawOne(seenInPool, random),
+      { key: "collector", title: () => t("Collector"), animation: "radiant", side: "you" },
+      () => t("seen {n} of {m} cards", { n: seenInPool.length, m: ROTATION_POOL.length }),
+    ),
+    // R1743000: from the counters read off the views' events.
+    ...counted(stats, "damageDealt", { key: "workhorse", title: () => t("Workhorse"), animation: "lunge", side: "you" }, (n) =>
+      t("dealt {n} damage", { n }),
+    ),
+    ...counted(stats, "biggestHit", { key: "heavyHitter", title: () => t("Heavy Hitter"), animation: "lunge", side: "you" }, (n) =>
+      t("hit for {n} once", { n }),
+    ),
+    ...counted(stats, "overkill", { key: "overkill", title: () => t("Overkill"), animation: "lunge", side: "you" }, (n) =>
+      t("hit {n} harder than it needed to", { n }),
+    ),
+    ...counted(stats, "attacks", { key: "brawler", title: () => t("Brawler"), animation: "lunge", side: "you" }, (n) =>
+      t("attacked {n}×", { n }),
+    ),
+    ...counted(stats, "healing", { key: "medic", title: () => t("Medic"), animation: "shield", side: "you" }, (n) =>
+      t("healed {n}", { n }),
+    ),
+    ...counted(stats, "drawn", { key: "cardShark", title: () => t("Card Shark"), animation: "entrance", side: "you" }, (n) =>
+      t("drawn {n}×", { n }),
+    ),
+    ...counted(stats, "radiant", { key: "shineOn", title: () => t("Shine On"), animation: "radiant", side: "you" }, (n) =>
+      t("made Radiant {n}×", { n }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.playedInWin, (c) => c.playedInWin + c.playedInLoss),
+      { key: "comebackKid", title: () => t("Comeback Kid"), animation: "radiant", side: "you" },
+      (n, m) => t("won {n} of the {m} games you played it in", { n, m }),
+    ),
+    ...shared(
+      topShare(stats, (c) => c.playedInLoss, (c) => c.playedInWin + c.playedInLoss),
+      { key: "jinx", title: () => t("Jinx"), animation: "death", side: "you" },
+      (n, m) => t("lost {n} of the {m} games you played it in", { n, m }),
+    ),
+    // R1743000: from the game-level totals.
+    ...about(
+      stats.bestStreak > 0 ? played[0]?.id : undefined,
+      { key: "hotStreak", title: () => t("Hot Streak"), animation: "radiant", side: "you" },
+      () =>
+        stats.bestStreak === 1
+          ? t("best streak: {n} win", { n: stats.bestStreak })
+          : t("best streak: {n} wins", { n: stats.bestStreak }),
+    ),
+    ...about(
+      stats.longestGame > 0 ? longest?.id : undefined,
+      { key: "marathon", title: () => t("Marathon"), animation: "entrance", side: "you" },
+      () =>
+        stats.longestGame === 1
+          ? t("longest game: {n} turn", { n: stats.longestGame })
+          : t("longest game: {n} turns", { n: stats.longestGame }),
+    ),
+  ];
   return out;
+}
+
+/** R1743000: the order the showcase tells its stats in: what is left of this round, and the stat shown now. */
+export type ShowcaseBag = { readonly shown: ShowcaseKey | null; readonly left: readonly ShowcaseKey[] };
+
+export const EMPTY_BAG: ShowcaseBag = Object.freeze({ shown: null, left: Object.freeze([]) });
+
+/**
+ * R1743000: the bag after one stat more. What is left of the round (those of it that `keys` still holds)
+ * gives the next; with none left the stats are shuffled by `random` into a new round, and a round never
+ * starts with the stat just shown (it goes to the round's end), so none shows twice in a row.
+ */
+export function nextInBag(bag: ShowcaseBag, keys: readonly ShowcaseKey[], random: RandomSource): ShowcaseBag {
+  let left = bag.left.filter((key) => keys.includes(key));
+  if (left.length === 0) {
+    left = shuffled(keys, random);
+    const first = left[0];
+    if (first !== undefined && first === bag.shown && left.length > 1) left = [...left.slice(1), first];
+  }
+  return { shown: left[0] ?? null, left: left.slice(1) };
 }

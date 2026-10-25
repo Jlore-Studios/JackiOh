@@ -16,7 +16,7 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, act, dealt_game, is_legal};
+use super::support::{AI, act, dealt_game, is_legal, trace};
 
 const SKIPPED: &[ActionType] = &[
     ActionType::Concede,
@@ -445,6 +445,141 @@ mod candidate_actions_b14 {
         );
     }
 
+    /// R1759000: three units, each with a hero attack, a trade and a stand-down, and three cards to play
+    /// push every position switch past a level's `branching` moves. The cut keeps the first
+    /// `AI_SEARCH.position_switches` of the stand-downs beside endTurn, and keeps none twice where the
+    /// width holds them all.
+    #[test]
+    fn r1759000_position_switches_survive_truncation_up_to_named_constant() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-switches-survive",
+            "p1": { "field": ["core-008", "core-008", "core-008"], "hand": ["core-003", "core-004", "core-011"], "mana": 5 },
+            "p2": { "field": ["core-030"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let width = AI_BUDGET.branching;
+        let stand_downs: Vec<ActionBody> = candidates
+            .iter()
+            .filter(|action| stands_down(&state, action))
+            .cloned()
+            .collect();
+        assert_eq!(stand_downs.len(), 3);
+        assert!(
+            candidates
+                .iter()
+                .position(|action| stands_down(&state, action))
+                .is_some_and(|first| first > width)
+        );
+        let kept = AI_SEARCH.position_switches as usize;
+        assert!(0 < kept && kept < stand_downs.len());
+
+        for order in [MoveOrder::Heuristic, MoveOrder::Learned] {
+            let expanded = expansion(&state, AI, width, order, &POLICY_PRIOR);
+            assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
+            assert_eq!(expanded[..width], candidates[..width]);
+            assert_eq!(expanded[width..width + kept], stand_downs[..kept]);
+            assert_eq!(expanded.last(), Some(&ActionBody::EndTurn));
+        }
+
+        // Wide enough to hold every candidate, nothing is cut and nothing is added twice.
+        assert_eq!(
+            expansion(&state, AI, candidates.len(), MoveOrder::Heuristic, &POLICY_PRIOR),
+            candidates
+        );
+    }
+
+    /// R1759000: the stand-downs kept are the first the cut left out, not the first overall. With one
+    /// stand-down inside the width, the next `AI_SEARCH.position_switches` after it are added.
+    #[test]
+    fn r1759000_the_kept_stand_downs_are_the_first_the_cut_left_out() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-switches-left-out",
+            "p1": { "field": ["core-008", "core-008", "core-008"], "hand": ["core-003", "core-004", "core-011"], "mana": 5 },
+            "p2": { "field": ["core-030"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let stand_downs: Vec<ActionBody> = candidates
+            .iter()
+            .filter(|action| stands_down(&state, action))
+            .cloned()
+            .collect();
+        let first = candidates
+            .iter()
+            .position(|action| stands_down(&state, action))
+            .expect("a stand-down");
+        let width = first + 1;
+        let kept = AI_SEARCH.position_switches as usize;
+        assert!(stand_downs.len() > kept);
+        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        assert_eq!(expanded[..width], candidates[..width]);
+        assert_eq!(expanded[width..width + kept], stand_downs[1..1 + kept]);
+        assert_eq!(expanded.len(), width + kept + 1, "{expanded:?}");
+    }
+
+    /// R1759000: a unit no enemy unit would beat is not stood down: the same board against an equal
+    /// 4/4 has three switches to Defense and none of them is a stand-down, so the cut drops them all.
+    #[test]
+    fn r1759000_a_unit_no_enemy_would_beat_is_not_stood_down() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-switch-unthreatened",
+            "p1": { "field": ["core-008", "core-008", "core-008"], "hand": ["core-003", "core-004", "core-011"], "mana": 5 },
+            "p2": { "field": ["core-008"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let width = AI_BUDGET.branching;
+        assert!(
+            candidates
+                .iter()
+                .any(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+        );
+        assert!(!candidates.iter().any(|action| stands_down(&state, action)));
+        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        assert_eq!(expanded.len(), width + 1, "{expanded:?}");
+    }
+
+    /// R1759000: only a stand-down is kept past the cut. A unit already in Defense Position keeps its
+    /// switch back to Attack where the cut leaves it, as before.
+    #[test]
+    fn r1759000_a_switch_back_to_attack_is_cut_with_the_rest() {
+        jackioh_cards::register_all();
+        let defending = json!({ "def": "core-008", "position": "DEF" });
+        let state = scenario(json!({
+            "seed": "search-switch-back-cut",
+            "p1": { "field": [defending, defending, defending], "hand": ["core-003", "core-004", "core-011", "core-015"], "mana": 5 },
+            "p2": { "field": ["core-030"] },
+        }))
+        .state()
+        .clone();
+        let candidates = candidate_actions(&state, AI);
+        let width = AI_BUDGET.branching;
+        let switches = |actions: &[ActionBody]| {
+            actions
+                .iter()
+                .filter(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+                .count()
+        };
+        assert_eq!(switches(&candidates), 3);
+        assert!(!candidates.iter().any(|action| stands_down(&state, action)));
+        assert!(
+            candidates
+                .iter()
+                .position(|action| matches!(action, ActionBody::SwitchPosition { .. }))
+                .is_some_and(|first| first > width)
+        );
+        let expanded = expansion(&state, AI, width, MoveOrder::Heuristic, &POLICY_PRIOR);
+        assert_eq!(switches(&expanded), 0, "{expanded:?}");
+        assert_eq!(expanded.len(), width + 1);
+    }
+
     /// B14: a seat answering its own prompt gets exactly the prompt's answers and no endTurn
     #[test]
     fn b14_a_seat_answering_its_own_prompt_gets_exactly_the_prompts_answers_and_no_end_turn() {
@@ -818,6 +953,147 @@ mod lanes_that_play_differently {
         .clone();
         assert!(!offered_lanes(&state, "classicplus-020").contains(&4));
         assert_eq!(root_offered_lanes(&state, "classicplus-020"), vec![1, 2, 4]);
+    }
+
+    /// Mr. Vanilla, 4/4 with no text.
+    const VANILLA: &str = "core-008";
+
+    /// One of the AI's Mr. Vanillas in lane 1, another in its hand, and the enemy's Radiant Nurse
+    /// Cleaver (classic-073, 6/12 Cleave) opposite lane 1. The vanilla's placements are lanes 2, 3 and 5
+    /// (3 and 4 are one); only lane 2 is beside the unit, where the Cleaver's reply would kill both.
+    fn cleaver_board() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-cleaver-lanes",
+            "p1": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
+            "p2": { "field": [{ "def": "classic-073", "radiant": true, "lane": 1 }], "library": LIBRARY },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// #1797: two orders of the same two plays into the same lanes are one position, for the lethal
+    /// solver (`search_signature`) and the beam (`unit_lanes` beside it); the second play into another
+    /// lane is the lethal solver's same position, and the beam's another.
+    #[test]
+    fn two_orders_of_two_plays_into_the_same_lanes_are_one_position_and_another_lane_is_another() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-two-orders",
+            "p1": { "hand": [VANILLA, VANILLA], "library": LIBRARY },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        let first = state.players[AI].hand[0].id.clone();
+        let second = state.players[AI].hand[1].id.clone();
+        let play = |id: &str, lane: i32| {
+            body(json!({ "type": "play", "instanceId": id, "zone": { "row": "units", "lane": lane } }))
+        };
+        let (a1, b2, b3) = (play(&first, 1), play(&second, 2), play(&second, 3));
+
+        let one = act(&act(&state, AI, &a1), AI, &b2);
+        let other = act(&act(&state, AI, &b2), AI, &a1);
+        let apart = act(&act(&state, AI, &a1), AI, &b3);
+        assert_eq!(search_signature(&one, AI), search_signature(&other, AI));
+        assert_eq!(unit_lanes(&one), unit_lanes(&other));
+        assert_eq!(search_signature(&one, AI), search_signature(&apart, AI));
+        assert_ne!(unit_lanes(&one), unit_lanes(&apart));
+    }
+
+    /// #1797: beside an enemy Cleaver, the beam keeps a line that plays the vanilla away from its
+    /// neighbour (lane 3), which the duplicate check once merged into lane 2's, and opens with at most
+    /// `AI_SEARCH.zone_variants` of the vanilla's placements.
+    #[test]
+    fn the_beam_plays_a_vanilla_away_from_its_neighbour_and_opens_with_at_most_zone_variants_of_its_lanes() {
+        let state = cleaver_board();
+        let placements = vec![2, 3, 5];
+        assert_eq!(root_offered_lanes(&state, VANILLA), placements);
+
+        let lines = beam_search(&state, AI, &create_node_counter(AI_BUDGET.nodes, None), AI_BUDGET);
+        let keys = lines
+            .iter()
+            .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+            .collect::<Vec<_>>()
+            .join(" | ");
+        assert!(
+            lines.iter().any(|line| lanes_of(&state, VANILLA, &line.actions)
+                .iter()
+                .any(|lane| *lane >= 3)),
+            "{keys}"
+        );
+        let opening: Vec<i32> = lines
+            .iter()
+            .flat_map(|line| lanes_of(&state, VANILLA, line.actions.get(..1).unwrap_or_default()))
+            .collect();
+        for lane in &placements[AI_SEARCH.zone_variants as usize..] {
+            assert!(!opening.contains(lane), "lane {lane}: {keys}");
+        }
+    }
+
+    /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line.
+    /// At 3 mana with Midrange Menace (core-019, 3) and a vanilla (1) in hand and a beam one line wide,
+    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 2 is a line,
+    /// below lane 1's, and no line plays the vanilla at all. The same one depth deep, where lane 1's
+    /// line is still open when the loop ends and is closed after it.
+    #[test]
+    fn a_lane_variant_is_closed_only_beside_a_line_the_beam_keeps_and_ranks_below_it() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-lane-variants-kept",
+            "p1": { "hand": ["core-019", VANILLA], "mana": 3, "library": LIBRARY },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        let narrow = SearchBudget {
+            beam_width: 1,
+            ..AI_BUDGET
+        };
+        for budget in [
+            narrow,
+            SearchBudget {
+                max_depth: 1,
+                ..narrow
+            },
+        ] {
+            let lines = beam_search(&state, AI, &create_node_counter(budget.nodes, None), budget);
+            let keys = lines
+                .iter()
+                .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+                .collect::<Vec<_>>()
+                .join(" | ");
+            let menace_openings: Vec<i32> = lines
+                .iter()
+                .flat_map(|line| lanes_of(&state, "core-019", line.actions.get(..1).unwrap_or_default()))
+                .collect();
+            assert_eq!(menace_openings.first(), Some(&1), "{keys}");
+            assert!(menace_openings.contains(&2), "{keys}");
+            assert!(
+                lines
+                    .iter()
+                    .all(|line| lanes_of(&state, VANILLA, &line.actions).is_empty()),
+                "{keys}"
+            );
+        }
+    }
+
+    /// #1797: when the enemy Cleaver's reply would splash the vanilla's neighbour, the AI's turn plays
+    /// the vanilla away from it.
+    #[test]
+    fn decide_plays_a_vanilla_where_the_enemy_cleaver_cannot_splash_it_from_its_neighbour() {
+        let state = cleaver_board();
+        let vanilla = hand_id(&state, VANILLA);
+        let neighbour = active_units_of(&state, AI)[0].id.clone();
+
+        let turn = play_ai_turn(&state, AI, &mut ai_options("search-cleaver-lanes", AI_BUDGET));
+        let lane = |id: &str| {
+            find_instance(&turn.state, id)
+                .and_then(|card| slot_of(&turn.state, card))
+                .map(|slot| slot.lane)
+        };
+        assert_eq!(lane(&neighbour), Some(1), "{}", trace(&turn));
+        assert!(lane(&vanilla).is_some_and(|lane| lane >= 3), "{}", trace(&turn));
     }
 }
 
@@ -1450,5 +1726,222 @@ mod rescored_own_prompts_1636 {
         assert!(cut.is_some());
         assert_eq!(cut, stopped);
         assert_eq!(cut_counter.used(), stopped_counter.used());
+    }
+}
+
+mod ways_of_being_played {
+    use super::*;
+
+    /// Acceptance criterion 1: On a hand wide enough to fill the root (10 cards),
+    /// root_expansion at AI_BUDGET.root_branching holds Buff Billy (classicplus-069)
+    /// at x == mana, an Embiggened play, and a Cloaked card's face-down set (#1778).
+    #[test]
+    fn buff_billy_embiggen_and_cloaked_set_survive_root_expansion() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "ways-root-wide",
+            "p1": {
+                "hand": [
+                    "classicplus-069", // Buff Billy (X cost)
+                    "core-084",        // Going Long (Embiggen 4 vs base 2)
+                    "classic-006",     // Cloaked Toe Cracker (Cloaked unit, cost 2)
+                    "core-008",
+                    "core-011",
+                    "core-017",
+                    "core-005",
+                    "core-020",
+                    "core-025",
+                    "core-035"
+                ],
+                "mana": 6,
+                "library": ["core-008", "core-011"],
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "library": ["core-008", "core-011"],
+            }
+        }))
+        .state()
+        .clone();
+
+        let expanded = root_expansion(
+            &state,
+            AI,
+            AI_BUDGET.root_branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+
+        let billy_id = hand_id(&state, "classicplus-069");
+        let going_long_id = hand_id(&state, "core-084");
+        let toe_cracker_id = hand_id(&state, "classic-006");
+
+        // Holds Buff Billy at x == mana (x == 6)
+        let has_billy_max_x = expanded.iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, x: Some(6), .. } if *instance_id == billy_id)
+        });
+        assert!(
+            has_billy_max_x,
+            "root_expansion must hold Buff Billy at x == mana (6)"
+        );
+
+        // Holds an Embiggened play of Going Long
+        let has_embiggened = expanded.iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, embiggen: Some(true), .. } if *instance_id == going_long_id)
+        });
+        assert!(
+            has_embiggened,
+            "root_expansion must hold an Embiggened play of Going Long"
+        );
+
+        // Holds Cloaked Toe Cracker's face-down set
+        let has_face_down = expanded.iter().any(|action| {
+            matches!(action, ActionBody::Play { instance_id, face_down: Some(_), .. } if *instance_id == toe_cracker_id)
+        });
+        assert!(
+            has_face_down,
+            "root_expansion must hold a Cloaked card's face-down set"
+        );
+    }
+
+    /// Acceptance criterion 2: decide with 6 mana, Buff Billy and three 2-drops plays Billy at X=6 (#1778).
+    /// Billy at X=4 beside a 2-drop is among the root's moves too, so the search weighs the two.
+    #[test]
+    fn decide_with_six_mana_and_buff_billy_plays_billy_at_x_six() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "ways-billy-decide",
+            "p1": {
+                "hand": [
+                    "classicplus-069", // Buff Billy
+                    "core-001",        // Big D-fender, a 2-cost Unit
+                    "core-020",        // Pointmaster, a 2-cost Unit
+                    "core-030"         // Archivist, a 2-cost Unit
+                ],
+                "mana": 6,
+                "library": ["core-008", "core-011"],
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "library": ["core-008", "core-011"],
+            }
+        }))
+        .state()
+        .clone();
+
+        let billy_id = hand_id(&state, "classicplus-069");
+        let root = root_expansion(
+            &state,
+            AI,
+            AI_BUDGET.root_branching,
+            MoveOrder::Heuristic,
+            &POLICY_PRIOR,
+        );
+        assert!(
+            root.iter().any(|action| {
+                matches!(action, ActionBody::Play { instance_id, x: Some(4), .. } if *instance_id == billy_id)
+            }),
+            "the root must also try Billy at X=4, which leaves 2 mana for a 2-drop"
+        );
+
+        let mut options = ai_options("billy-decide-seed", AI_BUDGET);
+        let decision = decide(&state, AI, &mut options).expect("a decision is reached");
+
+        assert!(
+            matches!(&decision.action, ActionBody::Play { instance_id, x: Some(6), .. } if *instance_id == billy_id),
+            "decision should be playing Buff Billy at X=6, got: {:?}",
+            decision.action
+        );
+    }
+
+    /// Tribute sets prefer cheaper sacrificed units (#1778).
+    #[test]
+    fn tribute_sets_prefer_cheaper_units() {
+        jackioh_cards::register_all();
+        // The Rock (core-066) requires Tribute 1.
+        // Field has a 3-cost unit (core-013) in lane 1 and a 1-cost unit (core-003) in lane 2:
+        // legal_actions lists the lane-1 unit's set first, so only the sort puts the cheap set first.
+        let state = scenario(json!({
+            "seed": "ways-tribute-prefer",
+            "p1": {
+                "hand": ["core-066"],
+                "field": [
+                    { "def": "core-013", "lane": 1 },
+                    { "def": "core-003", "lane": 2 }
+                ],
+                "mana": 4,
+                "library": ["core-008", "core-011"],
+            },
+            "p2": {
+                "hand": ["core-005"],
+                "library": ["core-008", "core-011"],
+            }
+        }))
+        .state()
+        .clone();
+
+        let rock_id = hand_id(&state, "core-066");
+        let unit_1cost_id = state.players[AI]
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .find(|c| c.def_id == "core-003")
+            .map(|c| c.id.clone())
+            .unwrap();
+        let unit_3cost_id = state.players[AI]
+            .units
+            .iter()
+            .flatten()
+            .flatten()
+            .find(|c| c.def_id == "core-013")
+            .map(|c| c.id.clone())
+            .unwrap();
+
+        let first_tributing = |actions: &[ActionBody], unit_id: &String| {
+            actions.iter().position(|a| {
+                matches!(a, ActionBody::Play { instance_id, tributes: Some(t), .. }
+                    if *instance_id == rock_id && t.contains(unit_id))
+            })
+        };
+        let listed = legal_actions(&state, AI);
+        let listed_dear = first_tributing(&listed, &unit_3cost_id).expect("a set tributing the 3-cost unit");
+        let listed_cheap = first_tributing(&listed, &unit_1cost_id).expect("a set tributing the 1-cost unit");
+        assert!(
+            listed_dear < listed_cheap,
+            "legal_actions lists the lane-1 (dearer) unit's set first, so the order below is the sort's"
+        );
+
+        let candidates = candidate_actions(&state, AI);
+        let rock_plays: Vec<&ActionBody> = candidates
+            .iter()
+            .filter(|a| matches!(a, ActionBody::Play { instance_id, .. } if *instance_id == rock_id))
+            .collect();
+
+        assert!(!rock_plays.is_empty(), "Rock should have candidate plays");
+
+        let first_tributes_cheap = rock_plays.iter().position(|a| match a {
+            ActionBody::Play {
+                tributes: Some(t), ..
+            } => t.contains(&unit_1cost_id),
+            _ => false,
+        });
+        let first_tributes_expensive = rock_plays.iter().position(|a| match a {
+            ActionBody::Play {
+                tributes: Some(t), ..
+            } => t.contains(&unit_3cost_id),
+            _ => false,
+        });
+
+        assert!(
+            first_tributes_cheap.is_some() && first_tributes_expensive.is_some(),
+            "both tribute combinations should be present in candidate plays"
+        );
+        assert!(
+            first_tributes_cheap.unwrap() < first_tributes_expensive.unwrap(),
+            "tributing cheaper unit (index {:?}) must come before tributing expensive unit (index {:?})",
+            first_tributes_cheap,
+            first_tributes_expensive
+        );
     }
 }

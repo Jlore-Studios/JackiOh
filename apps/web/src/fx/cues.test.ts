@@ -15,6 +15,7 @@ import { ANIMATIONS, MIN_ENTRY_MS, planEntries, type AnimationEntry } from "../g
 import { testid, type Side } from "../game/contract.ts";
 import { damageFeel } from "../game/damageFeel.ts";
 import { baseView, emptySide, fullBoardView, withEvents } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import {
   FX_ARROWS_TAIL_MS,
   FX_BANNER_TAIL_MS,
@@ -56,11 +57,6 @@ import type { FxAnchor, FxCardFacts, FxCue, FxPlanEnv, FxPoint } from "./types.t
 /* ------------------------------------------------------------------------------------------- *
  * Fixture ids, read off the M5-T1 board rather than guessed
  * ------------------------------------------------------------------------------------------- */
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`the fixture is missing ${what}`);
-  return value;
-}
 
 const VIEW: PlayerView = fullBoardView();
 

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_SESSION_REFRESH_MARGIN_SECONDS } from "@jackioh/server-config";
 import { clearConsumedAuthRedirect } from "../auth/redirect.ts";
 import { loginTestid } from "../auth/testids.ts";
+import { at, jsonResponse, meBody } from "../test/stubServer.ts";
 import { AUTH_NOTICES } from "./auth.ts";
 import { loginPath, loginReasonOf, paths } from "./navigate.ts";
 import { E2E_SESSION_STORAGE_KEY, SESSION_STORAGE_KEY, readSession } from "./session.ts";
@@ -31,30 +32,6 @@ const SLOW_TEST = { timeout: 30_000 } as const;
 
 type Call = { url: string; token: string | null; body: unknown };
 type Reply = { status: number; body?: unknown } | "reject" | "hang";
-
-function jsonResponse(status: number, body?: unknown): Response {
-  const text = body === undefined ? "" : JSON.stringify(body);
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: String(status),
-    headers: new Headers({ "content-type": "application/json" }),
-    json: () =>
-      text === "" ? Promise.reject(new SyntaxError("empty body")) : Promise.resolve(JSON.parse(text)),
-    text: () => Promise.resolve(text),
-    clone: () => jsonResponse(status, body),
-  } as unknown as Response;
-}
-
-function meBody(status: "pending" | "active") {
-  return {
-    profile: { id: "profile-1", status },
-    needsInviteCode: status === "pending",
-    emailVerified: true,
-    currentMatchId: null,
-    email: "player@example.test",
-  };
-}
 
 const UNAUTHORIZED = { status: 401, body: { error: { code: "unauthorized", message: "sign in first" } } };
 
@@ -110,15 +87,11 @@ function serve(server: Server): { meCalls: Call[]; refreshCalls: Call[] } {
 
 /** `me` accepts only the renewed token; the old one is refused as unauthorised. */
 function acceptsOnlyNew(token: string | null): Reply {
-  return token === NEW ? { status: 200, body: meBody("active") } : UNAUTHORIZED;
+  return token === NEW ? { status: 200, body: meBody() } : UNAUTHORIZED;
 }
 
 function store(session: { accessToken: string; refreshToken?: string | null; expiresAt?: number | null }): void {
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 /** A gated screen that prints the token it was opened with. */
@@ -173,7 +146,7 @@ describe("R194 B32 renewal", () => {
   it("R194 a session inside the margin is renewed, and the read carries the new token", async () => {
     store({ accessToken: OLD, refreshToken: OLD_REFRESH, expiresAt: Date.now() + MARGIN_MS - 5_000 });
     const { meCalls, refreshCalls } = serve({
-      me: (token) => (token === null ? UNAUTHORIZED : { status: 200, body: meBody("active") }),
+      me: (token) => (token === null ? UNAUTHORIZED : { status: 200, body: meBody() }),
       refresh: () => RENEWED,
     });
     renderGated();
@@ -195,7 +168,7 @@ describe("R194 B32 renewal", () => {
   it("R194 a session well outside the margin is not renewed", async () => {
     store({ accessToken: OLD, refreshToken: OLD_REFRESH, expiresAt: Date.now() + MARGIN_MS + 10 * 60_000 });
     const { refreshCalls } = serve({
-      me: () => ({ status: 200, body: meBody("active") }),
+      me: () => ({ status: 200, body: meBody() }),
       refresh: () => RENEWED,
     });
     renderGated();
@@ -209,7 +182,7 @@ describe("R194 B32 renewal", () => {
     const lead = 300;
     store({ accessToken: OLD, refreshToken: OLD_REFRESH, expiresAt: Date.now() + MARGIN_MS + lead });
     const { refreshCalls } = serve({
-      me: () => ({ status: 200, body: meBody("active") }),
+      me: () => ({ status: 200, body: meBody() }),
       refresh: () => RENEWED,
     });
     const realSetTimeout = window.setTimeout.bind(window);
@@ -364,7 +337,7 @@ describe("R194 B33 a refused renewal", () => {
       E2E_SESSION_STORAGE_KEY,
       JSON.stringify({ accessToken: "e2e-token", refreshToken: null, expiresAt: Date.now() - 1_000 }),
     );
-    const { refreshCalls } = serve({ me: () => ({ status: 200, body: meBody("active") }), refresh: () => RENEWED });
+    const { refreshCalls } = serve({ me: () => ({ status: 200, body: meBody() }), refresh: () => RENEWED });
     renderGated();
     expect((await screen.findByTestId("opened", undefined, SLOW)).textContent).toBe("e2e-token");
     expect(refreshCalls).toHaveLength(0);

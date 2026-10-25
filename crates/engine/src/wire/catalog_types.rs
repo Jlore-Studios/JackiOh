@@ -484,8 +484,9 @@ pub enum Keyword {
     /// E35: a Spell can't target this and doesn't affect it.
     #[serde(rename = "Immune to Spells")]
     ImmuneToSpells,
-    /// MD-B1, R940: harmful effects that pick cards by a tribal tag can't target or affect this.
+    /// R940: retired, now `StaticFlags::immune_to_tribal_hate`; see `KeywordKind::RETIRED`.
     #[serde(rename = "Immune to tribal tag based hate")]
+    #[cfg_attr(feature = "ts", ts(skip))]
     ImmuneToTribalHate,
     /// R636: a Unit may attack twice each turn.
     Windfury,
@@ -537,6 +538,8 @@ string_union! {
         Brittle = "Brittle",
         SpellDamage = "Spell Damage",
         ImmuneToSpells = "Immune to Spells",
+        /// R940: retired, see `KeywordKind::RETIRED`.
+        #[cfg_attr(feature = "ts", ts(skip))]
         ImmuneToTribalHate = "Immune to tribal tag based hate",
         Windfury = "Windfury",
         Temporary = "Temporary",
@@ -554,7 +557,15 @@ string_union! {
     }
 }
 
-/// Every keyword kind. R21's random pool is the narrower list in engine config.
+impl KeywordKind {
+    /// Kinds no card carries any more, each now an ability of its card's script. They stay in `ALL` and in
+    /// `Keyword`, and out of the client's types (`ts(skip)`): a shipped catalog (R767000, `patches/*.json`)
+    /// that printed one still reads, and the AI's dense features, one per kind of `ALL`, keep the length the
+    /// learned weights were fitted on. Immune to tribal tag based hate left with #1816.
+    pub const RETIRED: &'static [KeywordKind] = &[KeywordKind::ImmuneToTribalHate];
+}
+
+/// Every keyword kind, the retired ones included. R21's random pool is the narrower list in engine config.
 pub const KEYWORD_KINDS: &[KeywordKind] = KeywordKind::ALL;
 
 impl Keyword {
@@ -792,6 +803,11 @@ pub struct Param {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub power: Option<String>,
+    /// R1748000: only the card's Cry reads it, so while the card is on the field no Nerf or Buff draws
+    /// it (KY's Constant still may). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cry: Option<bool>,
 }
 
 impl Param {
@@ -1013,6 +1029,18 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub params: Option<Vec<Param>>,
+    /// R1748001: this Spell or Field Spell deals damage, so a Buff may give it Pierce or Lifesteal
+    /// (`TUNE_DAMAGE_KEYWORDS`). Absent on every other card, a fused or crafted definition included.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deals_damage: Option<bool>,
+    /// R1748002: this Field Spell uses the Plague Counters on itself, so on the field a Buff places one
+    /// on it and a Nerf removes one (`TUNE_PLAGUE_STEP`). Absent on every other card, a fused or
+    /// crafted definition included. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub uses_plague: Option<bool>,
     /// E36: the non-blank, non-comment lines of this card's script file, imports excluded. Frozen
     /// gameplay data since v0.3.0 (SURFACE §7.5): C+ #44, C+ #45 and Classic #48 read it. Public (the
     /// inspect overlay prints it) and part of the card's patch history (B4.2). Absent while the card
@@ -1527,6 +1555,8 @@ mod tests {
             cost: CardCost::Fixed(1),
             refs: None,
             params: Some(params),
+            deals_damage: None,
+            uses_plague: None,
             loc: None,
             radiant_fallback: None,
             ingredients: None,
@@ -1547,6 +1577,7 @@ mod tests {
             max: None,
             tuned_on: None,
             power: None,
+            cry: None,
         }
     }
 

@@ -539,6 +539,8 @@ fn build_def(
             .unwrap_or_else(|| CardCost::Fixed(fused_cost(state, ingredients))),
         refs,
         params: None,
+        deals_damage: None,
+        uses_plague: None,
         loc,
         radiant_fallback: None,
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from
@@ -1125,6 +1127,7 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_be_attacked: flags(|f| f.cant_be_attacked),
                 attacked_only_from_lane: flags(|f| f.attacked_only_from_lane),
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
+                immune_to_tribal_hate: flags(|f| f.immune_to_tribal_hate),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
                 random_targets: flags(|f| f.random_targets),

@@ -100,6 +100,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -234,7 +235,7 @@ mod tests {
             s.play(RISKY, json!({}));
             assert_eq!(drawn_ids(s.last_events(), P1).len(), 1);
             s.expect_in_zone(MENACE, "exile");
-            let library: Vec<String> = s.pile(P1, "library").into_iter().map(|card| card.def_id).collect();
+            let library = def_ids(&s.pile(P1, "library"));
             assert_eq!(library, [STOCKPILE, FILLER]);
         }
 

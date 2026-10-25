@@ -10,9 +10,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend } from "../net/social.ts";
-import { must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ShareWithFriend } from "./ShareReplay.tsx";
 
 /** A stubbed round trip can outrun the 1 s default under load. */
@@ -39,10 +38,6 @@ function serve(friends: Friend[], special?: (call: Call) => Reply | undefined, s
   });
 }
 
-function signedIn(): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: "tok-share" }));
-}
-
 /** Render the control and open it. */
 async function opened(): Promise<void> {
   render(<ShareWithFriend matchId="m-done" />);
@@ -54,7 +49,7 @@ async function opened(): Promise<void> {
 
 beforeEach(() => {
   window.localStorage.clear();
-  signedIn();
+  signIn("tok-share");
 });
 
 afterEach(() => {

@@ -23,7 +23,7 @@ import {
   viewFor,
 } from "@jackioh/engine";
 import type { GameState, Rng } from "@jackioh/engine";
-import type { Difficulty } from "@jackioh/engine/config";
+import { AI_TUTORIAL, TUTORIAL_HUMAN, type Difficulty } from "@jackioh/engine/config";
 import { AI_DECK, AI_GATE_BUDGET, FIXTURE_BANNED_IDS, SHADOW_BAN_IDS, aiToAct, buildAiDeck } from "@jackioh/ai";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { Action, ActionBody, PlayerId } from "@jackioh/shared";
@@ -34,6 +34,7 @@ import { createPracticeCore } from "./core.ts";
 import { memorySaveStore, type PracticeSaveStore } from "./saveStore.ts";
 import { PRACTICE_PRESETS } from "./decks.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
+import { lessonStartConfig } from "../tutorial/start.ts";
 import type { PracticeCore, PracticeCoreEnv } from "./core.ts";
 import type {
   PracticeDebug,
@@ -279,7 +280,7 @@ describe("B34 the core answers with the human's view and nothing else", () => {
   });
 
   it("B34 a start with a saved deck holding a duplicate answers `failed`", () => {
-    // A legal 20-card deck from a random start, with its last card replaced by its first.
+    // A legal DECK_SIZE-card deck from a random start, with its last card replaced by its first.
     const probe = driver();
     probe.send({ type: "start", config: config({ seed: "b34-dup-source", humanSeat: "p1" }) });
     const legal = debugOf(probe).decks[0];
@@ -776,7 +777,7 @@ describe("R187 B38 a practice game folds from (seed, decks, handicaps, log) to i
     });
   }
 
-  it("B38 the handicaps are part of the replay: a Hard game folded without them throws on its 30-card deck", { timeout: 60_000 }, () => {
+  it(`B38 the handicaps are part of the replay: a Hard game folded without them throws on its ${String(AI_DIFFICULTY.hard.deckSize)}-card deck`, { timeout: 60_000 }, () => {
     const human: PlayerId = "p1";
     const d = driver();
     const started = snapshotOf(
@@ -940,6 +941,31 @@ describe("R508 a practice game's last board", () => {
     const over = snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
     expect(over.view.result).not.toBeNull();
     expect(over.lastBoard).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R1705005: a lesson's human seat plays its fixed deck under TUTORIAL_HUMAN
+// ---------------------------------------------------------------------------------------------
+
+describe("R1705005 a lesson's fixed human deck is smaller than DECK_SIZE", () => {
+  it("R1705005 a lesson seats the human under TUTORIAL_HUMAN", () => {
+    for (const lesson of TUTORIAL_LESSONS) {
+      const human = lesson.humanSeat;
+      const d = driver();
+      expect(d.send({ type: "start", config: lessonStartConfig(lesson) }).type, lesson.id).toBe("started");
+      const debug = debugOf(d);
+      expect(debug.handicaps, lesson.id).toEqual({ [opponentOf(human)]: AI_TUTORIAL, [human]: TUTORIAL_HUMAN });
+      expect(debug.decks[seatIndex(human)], lesson.id).toHaveLength(TUTORIAL_HUMAN.deckSize);
+      // The handicap is part of the game: it folds back to the same hash with it.
+      const replayed = fold({ seed: debug.seed, decks: debug.decks, handicaps: debug.handicaps, log: debug.log });
+      expect(hashState(replayed.state), lesson.id).toBe(debug.hash);
+    }
+
+    // A free game puts no handicap on the human's seat, only the difficulty's on the AI's.
+    const free = driver();
+    free.send({ type: "start", config: config({ seed: "r1705005-free", humanSeat: "p1" }) });
+    expect(debugOf(free).handicaps).toEqual({ p2: AI_DIFFICULTY.easy });
   });
 });
 

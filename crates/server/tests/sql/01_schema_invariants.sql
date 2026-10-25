@@ -829,6 +829,9 @@ declare
     -- 0050, R1310001: app.grant_launch_collection_all and app.on_catalog_version_stamped, the
     -- catalog stamp's grant (0016, R481), are gone, so the stray check below fails if either
     -- comes back as DEFINER; 29_going_live.sql asserts both are gone.
+    -- 0055, R1705002: the starter grant to every active account, DEFINER like the grant it calls,
+    -- and service_role's alone (31_deck_size.sql asserts a client cannot call it).
+    ['grant_starter_cards_to_active', 'definer'],
     ['handle_new_user',             'definer'],
     ['join_room',                   'definer'],
     ['live_matches',                'definer'],
@@ -1012,6 +1015,67 @@ begin
 
   raise notice 'OK (CHECK 18): all % catalog tags admitted, alone and together; an unknown tag refused',
     array_length(catalog_tags, 1);
+end $$;
+
+\echo '=== CHECK 19: every foreign key in public, but those into the catalog, has an index that leads with its columns ==='
+-- A delete of a referenced row (an account, a match, a deck) looks up the rows that point at it
+-- by the key's columns, as the server's reads by such a link do, and with no index leading with
+-- those columns each such lookup reads the whole table (#1800, migration 0056). An index counts
+-- only if it is a valid btree whose leading key columns are the foreign key's, in any order, and
+-- it is whole or partial on nothing but one of the key's own columns `is not null`: a lookup by
+-- the key never matches a null, so that predicate never hides a row it needs, while any other one
+-- (tickets_profile_queued_key's `status = 'queued'`) does. The keys into the catalog tables
+-- (`cards`, `cosmetics`) are exempt: the server never deletes a catalog row.
+create temp view check19_foreign_keys as
+select c.conrelid::regclass::text as tbl,
+       c.conname,
+       (select string_agg(a.attname, ', ' order by k.ord)
+          from unnest(c.conkey) with ordinality k(attnum, ord)
+          join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) as cols,
+       c.confrelid::regclass::text as refs,
+       exists (
+         select 1
+           from pg_index x
+           join pg_class ic on ic.oid = x.indexrelid
+           join pg_am am on am.oid = ic.relam
+          where x.indrelid = c.conrelid
+            and x.indisvalid
+            and am.amname = 'btree'
+            and x.indnkeyatts >= cardinality(c.conkey)
+            and (select array_agg(k order by k)
+                   from unnest((x.indkey::int2[])[0:cardinality(c.conkey) - 1]) k)
+                = (select array_agg(k order by k) from unnest(c.conkey) k)
+            and (x.indpred is null
+                 or pg_get_expr(x.indpred, x.indrelid) in (
+                      select format('(%s IS NOT NULL)', quote_ident(a.attname))
+                        from pg_attribute a
+                       where a.attrelid = c.conrelid and a.attnum = any (c.conkey)))) as indexed
+  from pg_constraint c
+  join pg_namespace n on n.oid = c.connamespace
+ where c.contype = 'f'
+   and n.nspname = 'public'
+   and c.confrelid <> all (array['public.cards'::regclass, 'public.cosmetics'::regclass]);
+select tbl, conname, cols, refs from check19_foreign_keys where not indexed order by 1, 2;
+do $$
+declare
+  total     int;
+  offenders text;
+begin
+  select count(*),
+         string_agg(format('%s.%s (%s) -> %s', tbl, conname, cols, refs), '; ' order by tbl, conname)
+           filter (where not indexed)
+    into total, offenders
+    from check19_foreign_keys;
+  if total = 0 then
+    raise exception 'FAIL (CHECK 19): no foreign key in public outside the catalog — the migrations did not apply';
+  end if;
+  if offenders is not null then
+    raise exception
+      'FAIL (CHECK 19): foreign key(s) with no index leading with their columns: % — add one in a new migration',
+      offenders;
+  end if;
+  raise notice 'OK (CHECK 19): all % foreign keys in public outside the catalog have an index leading with their columns',
+    total;
 end $$;
 
 \echo '=== ALL CHECKS RAN ==='

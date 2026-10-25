@@ -184,7 +184,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Lifesteal: keyword("Lifesteal", "Damage dealt heals your hero"),
   Reborn: keyword("Reborn", "First death: return at 1 health without Reborn"),
   "Divine Shield": keyword("Divine Shield", "Negate the first damage instance, then lose it"),
-  Trample: keyword("Trample", "Excess damage hits the hero"),
+  Trample: keyword("Trample", "Excess damage to a unit hits its hero; a unit tramples only when it attacks"),
   Cleave: keyword("Cleave", "Also damages units adjacent to the target"),
   Pierce: keyword("Pierce", "Its damage ignores Armor"),
   Indestructible: keyword("Indestructible", "Can't be destroyed or damaged; can be exiled or tributed"),
@@ -214,10 +214,6 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   ),
   "Spell Damage": keyword("Spell Damage", "Your Spells deal X more damage per hit", { row: "Spell Damage X" }),
   "Immune to Spells": keyword("Immune to Spells", "Spells can't target it or affect it"),
-  "Immune to tribal tag based hate": keyword(
-    "Immune to tribal tag based hate",
-    "Harmful effects that pick cards by a tribal tag can't target or affect it",
-  ),
   // R636, R637: the keyword rules patch (§6.1).
   Windfury: keyword("Windfury", "Can attack twice each turn"),
   Temporary: keyword("Temporary", "Discarded from its owner's hand at the end of their turn"),
@@ -397,7 +393,6 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Brittle: "BR",
   "Spell Damage": "SD",
   "Immune to Spells": "IS",
-  "Immune to tribal tag based hate": "IT",
   Windfury: "WF",
   Temporary: "TE",
   Deft: "DE",

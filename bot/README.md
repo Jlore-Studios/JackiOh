@@ -1,7 +1,7 @@
 # The JackiOh night bot
 
 `@jgoetzmann-bot` works through the issues you hand it, on whichever of your subscriptions is
-free: up to seven Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
+free: up to eight Claude accounts (Opus at extra-high effort), ChatGPT through the Codex CLI,
 Google through the Antigravity CLI (`agy`), Meta through Muse Code and Cognition through the
 Devin CLI, each with its own hours
 and limits ([Subscriptions](#subscriptions)). Up to eleven items run at once on GitHub's runners
@@ -442,6 +442,7 @@ The bot spends whichever of your subscriptions is free. They are listed in
 | `claude-5` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_5` | any time | 40% of 5 hours, 60% of the week |
 | `claude-6` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_6` | any time: 03:00–15:00 up to its cap, and outside it while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
 | `claude-7` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_7` | any time: 01:00–10:00 up to its cap, and outside it (10:00–01:00) while under 50% of 5 hours (`off_hours`) | 70% of 5 hours, no weekly cap |
+| `claude-8` | the same as claude-1 | the secret `CLAUDE_CODE_OAUTH_TOKEN_8` | any time | 85% of 5 hours, no weekly cap |
 | `gpt` | Codex (`codex exec`), `gpt-5.6-sol` at `xhigh` (`gpt-5.6-terra` until 2026-10-20); medium, and weak only from 2026-10-11 to 2026-10-20, on Terra | on the machine, as `agent-gpt` | any time | all of 5 hours (100%), all of the week (Codex reports both; #798) |
 | `agy` | Antigravity (`agy`), `gemini-3.8-flash-high` (Gemini 3.8 Flash) at `high` | on the machine, as `agent-agy` | any time | all of 5 hours (100%), all of the week (its own `agy -p /usage`, the Gemini pool's row; #798) |
 | `devin` | Devin (`devin -p`), `swe-2-max` (SWE-2), on the Devin plan that came with Windsurf, which is canceled; off from 2026-10-05 to 2026-10-06 (#311: every call failed in seconds), on again since a `devin -p` call answered on the machine (#318) | on the machine, as `agent-devin` | any time until 2026-11-02 (`off_from`), when the plan runs out | none: until it refuses |
@@ -552,7 +553,7 @@ subscriptions' own lanes (the planning lane, below; 6), each still on a runner o
 slot, or one of `max_parallel`; `priority` the usage order within a tier (below), `balance` the load balancer
 that comes before it (below; on), and `tiers` each tier's models, which the router tries
 weakest-first inside the subscription. A subscription's own `lanes`
-(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the seven Claude ones,
+(default 1) is how many items it may work on at once, each on its own runner: Devin's is 6, so it can fill its box alone, Muse's is 2, and claude-3's is 2. A `secret` must be one of the names the workflows hand over (the eight Claude ones,
 `CODEX_AUTH_JSON` and `MUSE_AUTH`; `providers.SECRETS`), because they hand over no other.
 
 **Who takes what.** Each run takes one item on one subscription, and a subscription works on as
@@ -611,7 +612,8 @@ build it, so planner and builder are the same; an easy item still goes weak-firs
 medium planner must not spend its lane building what a weak seat builds. Inside a tier, after the
 load balancer (below), the owner's order holds: spend claude-3 (any hour, no caps), claude-7
 (held to half its 5-hour session from 10:00 to 01:00 and to 70% of it from 01:00 to 10:00, with
-no weekly cap) and claude-1 first, up to their caps; then claude-4, claude-6 and
+no weekly cap), claude-8 (any hour, up to 85% of its 5-hour session, no weekly cap) and
+claude-1 first, up to their caps; then claude-4, claude-6 and
 then claude-5, last of the Claude accounts (claude-4 and claude-6 held to half their 5-hour session outside 03:00–15:00 and to 70% of it inside it, with
 no weekly cap, claude-5 to 40% of its 5-hour session and 60% of its week); then the medium models,
 Muse first (the most reliable builder, #305), then agy and Codex; then claude-2, kept back
@@ -628,7 +630,7 @@ services on the training box, [`machine/`](machine/README.md#the-training-box).)
 subscriptions instead of spending the first in the usage order up to its cap while the rest sit
 idle: claude-3, first, took 168 runs in a week to claude-5's 13, and ran into its limit while
 the others read 0%. Where the router would otherwise go by the usage order alone (between
-subscriptions whose seat is the same model, the seven Claude accounts' Sonnet or Opus; between
+subscriptions whose seat is the same model, the eight Claude accounts' Sonnet or Opus; between
 the reviewers and the planners of a tier), it puts first the one with the most **room**: the
 share of its allowance its last reading leaves free under the caps that hold now (a window with
 no cap counts the whole allowance), its tightest window counting, a window reset since the
@@ -901,7 +903,7 @@ loses nothing now, a build or revision starts only 5 points under a 5-hour cap
 
 None of these is an API key: each is the login of one account.
 
-- **Claude** (`claude-1` to `claude-7`), a GitHub secret each.
+- **Claude** (`claude-1` to `claude-8`), a GitHub secret each.
   1. Log in to the account with `claude`.
   2. Run `claude setup-token` and paste the token it prints (good for a year) into the secret.
 

@@ -137,7 +137,7 @@ mod tests {
         }))
     }
 
-    fn def_ids(cards: Vec<Option<CardInstance>>) -> Vec<Option<String>> {
+    fn slot_def_ids(cards: Vec<Option<CardInstance>>) -> Vec<Option<String>> {
         cards.into_iter().map(|card| card.map(|card| card.def_id)).collect()
     }
 
@@ -158,7 +158,7 @@ mod tests {
             // Lane Eater stays; lanes 1 and 3 are untouched.
             assert_eq!(s.unit(P1, 2).map(|card| card.def_id).as_deref(), Some(LANE_EATER));
             assert_eq!(
-                def_ids(vec![s.unit(P1, 1), s.backrow(P1, 1), s.unit(P2, 3), s.backrow(P2, 3)]),
+                slot_def_ids(vec![s.unit(P1, 1), s.backrow(P1, 1), s.unit(P2, 3), s.backrow(P2, 3)]),
                 vec![
                     Some(TIMMY.to_string()),
                     Some(GIFTED.to_string()),

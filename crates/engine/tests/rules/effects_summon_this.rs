@@ -7,10 +7,9 @@
 //! entry, like a hand card's, takes no number from the counter both seats read (R177).
 
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{events_of_type, in_hand, put, slot};
+use super::fixtures::harness::{events_of_type, in_hand, json_of, put, slot};
 use super::fixtures::prompt_harness::{
     act, answer_keys, board, expect_replays, hand_card, open_as, replayable, round_trip,
 };
@@ -85,10 +84,6 @@ fn ids_of(cards: &[CardInstance]) -> Vec<String> {
 
 fn def_ids_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.def_id.clone()).collect()
-}
-
-fn to_json<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn summoned_ids(events: &[GameEvent]) -> Vec<String> {
@@ -329,7 +324,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         state = act(&state, play_body(PlayerId::P1, &card.id), None);
         open_as(&state, PromptKind::Mode, PlayerId::P1);
         assert_eq!(
-            to_json(view_for(&state, PlayerId::P2))["pending"],
+            json_of(view_for(&state, PlayerId::P2))["pending"],
             json!({ "forYou": false, "pendingFor": "p1" })
         );
         // The Spell resolved (its 1 landed) before the trigger answered it; the tail's 1 waits.

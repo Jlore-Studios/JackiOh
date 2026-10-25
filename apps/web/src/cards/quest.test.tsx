@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CATALOG } from "@jackioh/cards";
+import { DECK_SIZE } from "@jackioh/engine/config";
 import type { ActionBody, BackrowView, CardView, PlayerId, PlayerView, QuestView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -21,6 +22,7 @@ import { testid } from "../game/contract.ts";
 import Log from "../game/Log.tsx";
 import Prompt from "../game/Prompt.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
+import { must } from "../test/stubServer.ts";
 import { questProgress, questWords } from "./cardState.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
@@ -36,11 +38,6 @@ afterEach(() => {
 
 const ITD = "classic-090";
 const lookup = lookupFromDefs(CATALOG);
-
-function must<T>(value: T | null | undefined, what: string): T {
-  if (value === null || value === undefined) throw new Error(`expected ${what}`);
-  return value;
-}
 
 function withCatalog(node: ReactElement, catalog = lookup): ReactElement {
   return <CatalogContext.Provider value={catalog}>{node}</CatalogContext.Provider>;
@@ -288,7 +285,7 @@ function progressOf(game: RealGame): number | undefined {
 
 describe("R404 In Too Deep through the real engine", () => {
   it("R404 its view's quest line becomes the badge, the notes, the log and the reward picker, and the picked reward opens the next quest", () => {
-    const deck = [ITD, ...devDeck("cheap20").filter((id) => id !== ITD)].slice(0, 20);
+    const deck = [ITD, ...devDeck("cheap20").filter((id) => id !== ITD)].slice(0, DECK_SIZE);
     const game = realGame("quest-panel", [deck, devDeck("first20")]);
     const catalog = lookupFromDefs(game.catalog);
     // Quickdraw: it starts in p1's opening hand, and p1 plays it on turn 1.

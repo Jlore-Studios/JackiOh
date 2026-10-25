@@ -8,7 +8,7 @@
 use jackioh_engine::effects::{damage, summon, summon_copy, summon_random};
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{events_of_type, new_game, put, slot};
+use super::fixtures::harness::{both, events_of_type, new_game, put, slot, spread};
 
 // Fixture cards.
 
@@ -26,17 +26,8 @@ fn def_of_kind(name: &str, index: i32, type_: &str, overrides: Value) -> CardDef
         "base": { "attack": 2, "health": 2, "keywords": [], "text": name },
         "radiant": { "attack": 4, "health": 4, "keywords": [], "text": format!("{name} radiant") },
     });
-    spread(&mut def, overrides);
+    def = spread(def, overrides);
     json_as(def)
-}
-
-/// The override's keys replace the base's.
-fn spread(target: &mut Value, overrides: Value) {
-    if let (Some(into), Value::Object(from)) = (target.as_object_mut(), overrides) {
-        for (key, value) in from {
-            into.insert(key, value);
-        }
-    }
 }
 
 /// The body every copy test duplicates: a plain 2/2 with nothing of its own.
@@ -76,13 +67,6 @@ const RUSH_TOKEN: &str = "fx-token-rush";
 
 fn defs() -> Vec<CardDef> {
     vec![body(), crier(), pool_a(), pool_b(), pool_trap()]
-}
-
-fn both(script: Script) -> CardScripts {
-    CardScripts {
-        base: script.clone(),
-        radiant: script,
-    }
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {

@@ -11,8 +11,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 
 import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
-import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import { tokenFromProtocols } from "../net/socketProtocols.ts";
+import { at, jsonResponse, meBody, signIn } from "../test/stubServer.ts";
 
 // `main.tsx` is the app's entry point and mounts itself, except under vitest — see the guard at the
 // foot of that file. This assertion is what makes the guard's condition explicit: if vitest ever
@@ -29,27 +29,8 @@ const { App, Gated, redirectFor, resetUsernamePromptForTests } = await import(".
 
 type Status = "pending" | "active" | "banned";
 
-function jsonResponse(status: number, body: unknown): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    text: () => Promise.resolve(JSON.stringify(body)),
-  } as unknown as Response;
-}
-
 /** R1435: the caller's own username on `/api/auth/me`; omitted, as a server before it would. */
 type OwnUsername = { name: string; nextChangeAt: number | null; promptOwed: boolean };
-
-function meBody(status: Status, username?: OwnUsername) {
-  return {
-    profile: { id: "profile-1", status },
-    needsInviteCode: status === "pending",
-    emailVerified: true,
-    currentMatchId: null,
-    email: "player@example.test",
-    ...(username === undefined ? {} : { username }),
-  };
-}
 
 /** Stub `/api/auth/me` (and the catalog the match route reads) for one account status. */
 function serveAs(status: Status | "unauthorized", username?: OwnUsername): void {
@@ -63,7 +44,8 @@ function serveAs(status: Status | "unauthorized", username?: OwnUsername): void 
             jsonResponse(401, { error: { code: "unauthorized", message: "sign in first" } }),
           );
         }
-        return Promise.resolve(jsonResponse(200, meBody(status, username)));
+        const me = meBody({ profile: { id: "profile-1", status }, needsInviteCode: status === "pending", username });
+        return Promise.resolve(jsonResponse(200, me));
       }
       if (url.endsWith("/api/catalog")) {
         return Promise.resolve(jsonResponse(200, { version: "v1", defs: {} }));
@@ -86,11 +68,6 @@ function serveAs(status: Status | "unauthorized", username?: OwnUsername): void 
   );
 }
 
-/** The key the M8 specs seed in `cy.visit`'s `onBeforeLoad` (`net/session.ts`). */
-function signedIn(token = "e2e-token"): void {
-  window.localStorage.setItem(E2E_SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-}
-
 /**
  * A lazily-imported route chunk plus a stubbed round trip can outrun testing-library's 1 s default
  * when the whole suite runs at once. Still an assertion retried against the DOM, never a sleep.
@@ -109,10 +86,6 @@ async function gateOpened(): Promise<void> {
   await waitFor(() => {
     expect(screen.queryByTestId("gate-loading")).toBeNull();
   }, SLOW);
-}
-
-function at(path: string): void {
-  window.history.replaceState(null, "", path);
 }
 
 function pathname(): string {
@@ -147,17 +120,19 @@ describe("redirectFor", () => {
   });
 
   it("sends a pending account to the code screen (§9.4)", () => {
-    const pending = { kind: "ready", token: "t", me: meBody("pending") } as const;
+    const me = meBody({ profile: { id: "profile-1", status: "pending" }, needsInviteCode: true });
+    const pending = { kind: "ready", token: "t", me } as const;
     expect(redirectFor(pending, false)).toBe("/invite");
   });
 
   it("leaves a pending account on /invite: that is the one screen §9.4 allows it", () => {
-    const pending = { kind: "ready", token: "t", me: meBody("pending") } as const;
+    const me = meBody({ profile: { id: "profile-1", status: "pending" }, needsInviteCode: true });
+    const pending = { kind: "ready", token: "t", me } as const;
     expect(redirectFor(pending, true)).toBeNull();
   });
 
   it("leaves an active account alone", () => {
-    const active = { kind: "ready", token: "t", me: meBody("active") } as const;
+    const active = { kind: "ready", token: "t", me: meBody() } as const;
     expect(redirectFor(active, false)).toBeNull();
     expect(redirectFor(active, true)).toBeNull();
   });
@@ -201,7 +176,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("a token the server no longer accepts is the same as having none", async () => {
-    signedIn("stale");
+    signIn("stale");
     serveAs("unauthorized");
     at("/play");
     render(<App />);
@@ -211,7 +186,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("spec 10: a pending account visiting /decks lands on /invite", async () => {
-    signedIn();
+    signIn();
     serveAs("pending");
     at("/decks");
     render(<App />);
@@ -223,7 +198,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("spec 10: a pending account visiting /shop lands on /invite", async () => {
-    signedIn();
+    signIn();
     serveAs("pending");
     at("/shop");
     render(<App />);
@@ -235,7 +210,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("spec 10: /invite is reachable by a pending account and stays put", async () => {
-    signedIn();
+    signIn();
     serveAs("pending");
     at("/invite");
     render(<App />);
@@ -244,7 +219,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("spec 09 and 10: an active account stays on /decks, neither on /login nor on /invite", async () => {
-    signedIn();
+    signIn();
     serveAs("active");
     at("/decks");
     render(<App />);
@@ -255,7 +230,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("an active account may also open /invite", async () => {
-    signedIn();
+    signIn();
     serveAs("active");
     at("/invite");
     render(<App />);
@@ -264,7 +239,7 @@ describe("the gate, as specs 09 and 10 read it", () => {
   });
 
   it("holds the screen while /api/auth/me is in flight, instead of guessing", () => {
-    signedIn();
+    signIn();
     serveAs("active");
     at("/decks");
     render(
@@ -287,7 +262,7 @@ describe("R1435 the username prompt at the gate", () => {
   const OWED: OwnUsername = { name: "Player#7", nextChangeAt: null, promptOwed: true };
 
   it("R1435 an active account that owes the prompt meets it before the screen it asked for", async () => {
-    signedIn();
+    signIn();
     serveAs("active", OWED);
     at("/decks");
     render(<App />);
@@ -299,7 +274,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 the prompt stands in front of a gated screen's own content", async () => {
-    signedIn();
+    signIn();
     serveAs("active", OWED);
     render(<Gated>{() => <p>the gate opened</p>}</Gated>);
 
@@ -308,7 +283,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 an active account that has picked or skipped goes straight through", async () => {
-    signedIn();
+    signIn();
     serveAs("active", { ...OWED, promptOwed: false });
     render(<Gated>{() => <p>the gate opened</p>}</Gated>);
 
@@ -317,7 +292,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 a server that sends no username owes no prompt", async () => {
-    signedIn();
+    signIn();
     serveAs("active");
     render(<Gated>{() => <p>the gate opened</p>}</Gated>);
 
@@ -326,7 +301,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 a re-read that finds the prompt owed once the screen is up leaves the screen in place", async () => {
-    signedIn();
+    signIn();
     serveAs("active");
     render(<Gated>{({ me }) => <p>{me.username === undefined ? "the gate opened" : "the gate read again"}</p>}</Gated>);
     expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
@@ -340,7 +315,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 a screen shown to the account keeps the prompt off every screen after it on the page", async () => {
-    signedIn();
+    signIn();
     serveAs("active");
     render(<Gated>{() => <p>the first screen</p>}</Gated>);
     expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
@@ -356,12 +331,12 @@ describe("R1435 the username prompt at the gate", () => {
 
   it("R1435 an account in a match or a Conquest series goes to its screen, prompt owed or not", async () => {
     for (const playing of [{ currentMatchId: "m-1" }, { currentSeriesId: "s-1" }]) {
-      signedIn();
+      signIn();
       vi.stubGlobal(
         "fetch",
         vi.fn((input: unknown) =>
           String(input).endsWith("/api/auth/me")
-            ? Promise.resolve(jsonResponse(200, { ...meBody("active", OWED), ...playing }))
+            ? Promise.resolve(jsonResponse(200, { ...meBody({ username: OWED }), ...playing }))
             : Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: "no stub" } })),
         ),
       );
@@ -374,7 +349,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 a skip opens the screen, even when the read of the account after it fails", async () => {
-    signedIn();
+    signIn();
     let skipped = false;
     vi.stubGlobal(
       "fetch",
@@ -384,7 +359,7 @@ describe("R1435 the username prompt at the gate", () => {
           skipped = true;
           return Promise.resolve(jsonResponse(200, { username: { ...OWED, promptOwed: false } }));
         }
-        if (url.endsWith("/api/auth/me") && !skipped) return Promise.resolve(jsonResponse(200, meBody("active", OWED)));
+        if (url.endsWith("/api/auth/me") && !skipped) return Promise.resolve(jsonResponse(200, meBody({ username: OWED })));
         return Promise.resolve(jsonResponse(503, { error: { code: "internal", message: "down" } }));
       }),
     );
@@ -397,7 +372,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 a redemption on a screen open to the pending account is followed by the prompt", async () => {
-    signedIn();
+    signIn();
     serveAs("pending");
     render(<Gated allowPending>{() => <p>the code screen</p>}</Gated>);
     expect(await screen.findByText("the code screen", undefined, SLOW)).toBeInTheDocument();
@@ -409,7 +384,7 @@ describe("R1435 the username prompt at the gate", () => {
   });
 
   it("R1435 a pending account sees only the code screen, never the prompt", async () => {
-    signedIn();
+    signIn();
     serveAs("pending", OWED);
     at("/decks");
     render(<App />);
@@ -472,7 +447,7 @@ describe("/match/<id>", () => {
   });
 
   it("routes the id out of the path and opens a socket for it", async () => {
-    signedIn("tok-1");
+    signIn("tok-1");
     serveAs("active");
     at("/match/m-42");
     render(<App />);
@@ -491,7 +466,7 @@ describe("/match/<id>", () => {
   });
 
   it("R765 a tab queued on /play is taken from any other screen to its game once the queue pairs it", async () => {
-    signedIn("tok-1");
+    signIn("tok-1");
     rememberQueued("bo1");
     let paired = false;
     vi.stubGlobal(
@@ -499,7 +474,7 @@ describe("/match/<id>", () => {
       vi.fn((input: unknown) => {
         const url = String(input);
         if (url.endsWith("/api/auth/me")) {
-          return Promise.resolve(jsonResponse(200, { ...meBody("active"), currentMatchId: paired ? "m-77" : null }));
+          return Promise.resolve(jsonResponse(200, { ...meBody(), currentMatchId: paired ? "m-77" : null }));
         }
         if (url.endsWith("/api/catalog")) return Promise.resolve(jsonResponse(200, { version: "v1", defs: {} }));
         return Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: `no stub for ${url}` } }));
@@ -521,7 +496,7 @@ describe("/match/<id>", () => {
   });
 
   it("a pending account cannot reach a match either (§9.4: 'no ... queue or match')", async () => {
-    signedIn();
+    signIn();
     serveAs("pending");
     at("/match/m-42");
     render(<App />);

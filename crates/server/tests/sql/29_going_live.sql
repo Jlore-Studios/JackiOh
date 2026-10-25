@@ -1,6 +1,6 @@
 -- Going live (migration 0050, SPEC §14.12, §14.2, §14.11; R1310000, R1310001, R1310002; issue #1310).
 -- Runs after 26_dev_accounts.sql; profiles 1 and 2 are active by then (03 activated them), profile 1
--- owns all 60 non-Token cards of 'core-1' (01's CHECK 10 and 03's CHECK 2), 03b's legacy profile has
+-- owns all 75 non-Token cards of 'core-1' (01's CHECK 10 and 03's CHECK 2), 03b's legacy profile has
 -- owned its 60 'core-0' cards since before run.sh applied 0050, and app.settings.starter_cards is
 -- 01's ["core-001","core-002"], written where seed-catalog would write it.
 \set ON_ERROR_STOP on
@@ -345,8 +345,8 @@ begin
     raise exception 'FAIL (R1310002): the launch changed what is owned';
   end if;
   select count(*) into n from public.collection where profile_id = p1;
-  if n <> 60 then
-    raise exception 'FAIL (R1310002): profile 1 owns % of its 60 cards after the launch', n;
+  if n <> 75 then
+    raise exception 'FAIL (R1310002): profile 1 owns % of its 75 cards after the launch', n;
   end if;
   select count(*) into n from public.collection_grants;
   if n <> (select r.n from r1310002_rows r where r.tbl = 'collection_grants') then

@@ -107,6 +107,7 @@ pub fn script_v0_3_7b() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -422,7 +423,7 @@ mod tests {
                 let selection = pick(&s, &[FILLER]);
                 s.answer(selection);
                 assert_eq!(
-                    s.hand(P1).iter().map(|card| card.def_id.clone()).collect::<Vec<String>>(),
+                    def_ids(&s.hand(P1)),
                     vec![FILLER.to_string()],
                 );
                 assert_eq!(

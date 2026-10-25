@@ -6,7 +6,7 @@ import type { Mock } from "vitest";
 
 import { AI_GATE_BUDGET, FIXTURE_BANNED_IDS } from "@jackioh/ai";
 import { CATALOG_VERSION } from "@jackioh/cards";
-import { dealEmoteHand } from "@jackioh/engine";
+import { DECK_SIZE, dealEmoteHand } from "@jackioh/engine";
 import { newestShippedSet, opponentOf } from "@jackioh/shared";
 import type { ActionBody, CardDefs, GameEvent, PlayerId } from "@jackioh/shared";
 
@@ -104,11 +104,10 @@ const T = {
 
 const PRESET_VALUES = PRACTICE_PRESETS.map((preset) => `preset:${preset.id}`);
 
-const SAVED_DECKS: string[][] = [
-  Array.from({ length: 20 }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`),
-  Array.from({ length: 20 }, (_, i) => `core-${String(i + 21).padStart(3, "0")}`),
-  Array.from({ length: 20 }, (_, i) => `core-${String(i + 41).padStart(3, "0")}`),
-];
+/** Three complete saved decks of distinct Core cards: #1 to #DECK_SIZE, then the next DECK_SIZE, and so on. */
+const SAVED_DECKS: string[][] = [0, 1, 2].map((deck) =>
+  Array.from({ length: DECK_SIZE }, (_, i) => `core-${String(deck * DECK_SIZE + i + 1).padStart(3, "0")}`),
+);
 
 const SAVED_NAMES = ["Humans Rising", "Burn Pile", "Big Guys"] as const;
 
@@ -118,7 +117,7 @@ const SAVED: PracticeSavedDeck[] = SAVED_DECKS.map((cards, i) => ({ name: SAVED_
 
 const ANONYMOUS: Account = { kind: "anonymous" };
 
-function signedIn(status: "active" | "pending" | "banned"): Account {
+function readyAccount(status: "active" | "pending" | "banned"): Account {
   return {
     kind: "ready",
     token: "tok-1",
@@ -521,7 +520,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
   it("B32 an active signed-in account with saved decks also gets saved:1..3", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
 
     await waitFor(() => {
       expect(savedOptions().sort()).toEqual(["saved:1", "saved:2", "saved:3"]);
@@ -532,7 +531,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
   it("offers each saved deck from GET /api/decks by its name, in the saved list's order", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
 
     await waitFor(() => {
       expect(savedOptions()).toEqual(["saved:1", "saved:2", "saved:3"]);
@@ -548,7 +547,7 @@ describe("B32 /practice shows setup to anyone", () => {
     const short = { name: "Half Built", cards: (SAVED_DECKS[0] ?? []).slice(0, 12) };
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse([short, ...SAVED.slice(1)])));
     window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "easy", deck: "saved:1" }));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
 
     await waitFor(() => {
       expect(savedOptions()).toEqual(["saved:1", "saved:2", "saved:3"]);
@@ -562,14 +561,14 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(deckChoiceFromValue("saved:1", [short])).toBeNull();
   });
 
-  it("lists 20-card saved decks the engine refuses, disabled, says why under the picker with a link to Decks, and starts none of them", async () => {
+  it("lists DECK_SIZE-card saved decks the engine refuses, disabled, says why under the picker with a link to Decks, and starts none of them", async () => {
     const cards = SAVED_DECKS[0] ?? [];
     const repeated = { name: "Twice Over", cards: [...cards.slice(0, -1), cards[0] ?? ""] };
     const unknown = { name: "Lost Card", cards: [...cards.slice(0, -1), "core-999"] };
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse([repeated, unknown, ...SAVED.slice(2)])));
     window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "easy", deck: "saved:1" }));
     const host = routeHost();
-    renderRoute(host, { account: signedIn("active"), loadDecks });
+    renderRoute(host, { account: readyAccount("active"), loadDecks });
 
     await waitFor(() => {
       expect(savedOptions()).toEqual(["saved:1", "saved:2", "saved:3"]);
@@ -598,7 +597,7 @@ describe("B32 /practice shows setup to anyone", () => {
     const cards = SAVED_DECKS[0] ?? [];
     const repeated = { name: "Twice Over", cards: [...cards.slice(0, -1), cards[0] ?? ""] };
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse([...SAVED.slice(0, 1), repeated])));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
 
     await waitFor(() => {
       expect(savedOptions()).toEqual(["saved:1", "saved:2"]);
@@ -612,7 +611,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
   it("B32 a pending account gets no saved decks", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
-    renderRoute(routeHost(), { account: signedIn("pending"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("pending"), loadDecks });
     await settle();
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
@@ -621,7 +620,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
   it("B32 a banned account gets no saved decks", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(SAVED)));
-    renderRoute(routeHost(), { account: signedIn("banned"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("banned"), loadDecks });
     await settle();
 
     expect(screen.getByTestId(T.setup)).toBeInTheDocument();
@@ -630,7 +629,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
   it("B32 an active account that has saved no deck gets no saved options", async () => {
     const loadDecks = vi.fn(() => Promise.resolve(decksResponse(null)));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
     await settle();
 
     expect(savedOptions()).toEqual([]);
@@ -639,7 +638,7 @@ describe("B32 /practice shows setup to anyone", () => {
 
   it("B32 saved decks that fail to load simply show no saved options", async () => {
     const loadDecks = vi.fn(() => Promise.reject(new Error("503 service unavailable")));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
     await settle();
 
     expect(loadDecks).toHaveBeenCalled();
@@ -707,7 +706,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
 
   it("an active account that never saved a deck is sent to Decks, not to sign in", async () => {
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
     });
     await settle();
@@ -718,7 +717,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
 
   it("a pending or banned account hears that its decks come once it is active", async () => {
     for (const status of ["pending", "banned"] as const) {
-      renderRoute(routeHost(), { account: signedIn(status) });
+      renderRoute(routeHost(), { account: readyAccount(status) });
       await settle();
       expect(hint()).toMatch(/once your account is active/);
       expect(hint()).not.toMatch(/sign in/i);
@@ -733,7 +732,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     cleanup();
 
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => new Promise<DecksResponse>(() => undefined)),
     });
     await settle();
@@ -742,7 +741,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
 
   it("saved decks that fail to load, or an account that cannot be read, are reported as such", async () => {
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.reject(new Error("503"))),
     });
     await settle();
@@ -760,7 +759,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
       .fn<() => Promise<DecksResponse>>()
       .mockRejectedValueOnce(new Error("503"))
       .mockResolvedValue(decksResponse(SAVED));
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
     await settle();
     expect(hint()).toMatch(/could not be loaded/);
     expect(screen.getByTestId(practiceTestid.savedRetry)).toBeEnabled();
@@ -778,7 +777,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
     const loadDecks = vi.fn(() =>
       Promise.reject(new ApiRequestError(429, { code: "rate_limited", message: "slow down", details: { retryAfterMs: 60_000 } })),
     );
-    renderRoute(routeHost(), { account: signedIn("active"), loadDecks });
+    renderRoute(routeHost(), { account: readyAccount("active"), loadDecks });
     await settle();
     const retry = screen.getByTestId(practiceTestid.savedRetry);
     expect(retry).toBeDisabled();
@@ -805,7 +804,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
 
   it("an active account with saved decks gets them and no hint", async () => {
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))),
     });
     await waitFor(() => {
@@ -901,7 +900,7 @@ describe("the setup previews the chosen deck", () => {
 
   it("a saved deck previews exactly its own cards", async () => {
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))),
     });
     await waitFor(() => {
@@ -1148,7 +1147,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
 
   it("B33 a saved deck chosen in setup travels as that deck's cards", async () => {
     const host = routeHost();
-    renderRoute(host, { account: signedIn("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))) });
+    renderRoute(host, { account: readyAccount("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))) });
     await waitFor(() => {
       expect(savedOptions()).toContain("saved:2");
     });
@@ -1887,8 +1886,8 @@ describe("R765 the practice menu offers the way back into a live online game", (
     currentSeriesId: string | null = null,
     currentDuosMatchId: string | null = null,
   ): Account {
-    const base = signedIn("active");
-    if (base.kind !== "ready") throw new Error("signedIn is ready");
+    const base = readyAccount("active");
+    if (base.kind !== "ready") throw new Error("readyAccount is ready");
     return { ...base, me: { ...base.me, currentMatchId, currentSeriesId, currentDuosMatchId } };
   }
 
@@ -2021,7 +2020,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
     return { api: { requestSeed, claim }, requestSeed, claim };
   }
 
-  function renderEarning(host: RouteHost, earning: FakeEarning, account: Account = signedIn("active")): void {
+  function renderEarning(host: RouteHost, earning: FakeEarning, account: Account = readyAccount("active")): void {
     renderRoute(host, {
       account,
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
@@ -2297,7 +2296,7 @@ describe("R1303000 earning: an active account's free game on a server seed, clai
 
     const host = routeHost();
     // No `practiceEarning`: the route's own default, which is the server's while the economy is live.
-    renderRoute(host, { account: signedIn("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))), practiceEarning: undefined });
+    renderRoute(host, { account: readyAccount("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))), practiceEarning: undefined });
     await startFromSetup();
     expect(sent("/api/practice/seeds", 0)).toEqual({
       method: "POST",
@@ -2880,7 +2879,7 @@ describe("R321 /practice keeps an active account's tutorial progress level with 
     markLessonComplete(first);
     const account = tutorialAccount([second]);
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
       tutorialAccount: account,
     });
@@ -2898,7 +2897,7 @@ describe("R321 /practice keeps an active account's tutorial progress level with 
   it("R321 an anonymous visitor or a pending account asks the account nothing, and the path is the device's", async () => {
     if (first === undefined) throw new Error("the tutorial has a lesson");
     markLessonComplete(first);
-    for (const account of [ANONYMOUS, signedIn("pending")]) {
+    for (const account of [ANONYMOUS, readyAccount("pending")]) {
       const tutorial = tutorialAccount([]);
       renderRoute(routeHost(), { account, tutorialAccount: tutorial });
       await settle();
@@ -2919,7 +2918,7 @@ describe("R321 /practice keeps an active account's tutorial progress level with 
       save: vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))),
     };
     renderRoute(routeHost(), {
-      account: signedIn("active"),
+      account: readyAccount("active"),
       loadDecks: vi.fn(() => Promise.resolve(decksResponse(null))),
       tutorialAccount: unreachable,
     });

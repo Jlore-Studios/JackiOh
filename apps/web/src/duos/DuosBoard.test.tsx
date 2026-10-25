@@ -20,9 +20,10 @@ import { PING_SHOW_MS } from "@jackioh/server-config";
 import { closeInspect } from "../cards/index.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { testid } from "../game/contract.ts";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import type { PingKind, PingTarget } from "../net/duos.ts";
 import { __resetSettingsForTests } from "../settings/store.ts";
-import { baseView, card, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, unit, withEvents, yourModifiers } from "../test/fixtures.ts";
 import { must, showsNumber } from "../test/stubServer.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -715,6 +716,49 @@ describe("R1483000 the result panel names the daily cap only for a capped seat",
 });
 
 // ---------------------------------------------------------------------------------------------
+// R169: the live-modifier chip in the rail
+// ---------------------------------------------------------------------------------------------
+
+describe("R169 the modifier list on the co-op board", () => {
+  const TEAMMATE_MODIFIER = { id: "m9", label: "Your Spells cost (1) less" };
+
+  it("R169 the chip counts the seat's own duel and opens it under You and Opponent, never AI", () => {
+    const base = duosView();
+    const view: DuosView = {
+      ...base,
+      own: {
+        ...base.own,
+        you: { ...base.own.you, modifiers: yourModifiers },
+        opponent: { ...base.own.opponent, modifiers: opponentModifiers },
+      },
+      teammate: { ...base.teammate, you: { ...base.teammate.you, modifiers: [TEAMMATE_MODIFIER] } },
+    };
+    renderBoard({ view });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip, "the teammate's duel is no part of the count").toHaveAttribute("data-count", "3");
+
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of [...yourModifiers, ...opponentModifiers]) {
+      expect(panel).toHaveTextContent(modifier.label);
+    }
+    expect(panel).not.toHaveTextContent(TEAMMATE_MODIFIER.label);
+    expect(Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent)).toEqual(["You", "Opponent"]);
+  });
+
+  it("R169 no chip while the own duel has no modifier, though the teammate's has one", () => {
+    const base = duosView();
+    const view: DuosView = {
+      ...base,
+      teammate: { ...base.teammate, you: { ...base.teammate.you, modifiers: [TEAMMATE_MODIFIER] } },
+    };
+    renderBoard({ view });
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
 // #1664: the result panel plays the seat's economy
 // ---------------------------------------------------------------------------------------------
 
@@ -759,6 +803,79 @@ describe("#1664 the result panel plays what the game paid the seat's person", ()
     board.rerender({ economy: { ...economy } });
     expect(screen.getAllByTestId("xp-reveal")).toHaveLength(1);
     expect(announced).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// #1755: the result panel takes the focus, folds to the rail's Result and opens again
+// ---------------------------------------------------------------------------------------------
+
+describe("#1755 the result panel takes the focus and opens again", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+  const ECONOMY = {
+    jlore: 30,
+    xp: 540,
+    jloreCapped: false,
+    tracks: [
+      {
+        setId: "Core" as const,
+        before: { level: 1, xp: 60, levelXp: 100, xpToNext: 40 },
+        after: { level: 2, xp: 130, levelXp: 200, xpToNext: 170 },
+        levels: [{ level: 2, rewards: { jlore: 25, setPacks: 2, cardTokens: 3 } }],
+      },
+    ],
+    quests: [{ questId: "win-3", title: "Win 3 games", jlore: 80, xp: 4000 }],
+  };
+
+  it("#1755 the panel takes the focus on its first way on as it comes in", () => {
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
+    expect(screen.getByTestId("duos-result-board")).toHaveFocus();
+  });
+
+  it("#1755 View the board still dismisses to the board, and the rail's Result takes the focus", () => {
+    renderBoard({ view: OVER }, { onWatchReplay: vi.fn<() => void>(), onLeave: vi.fn<() => void>() });
+    fireEvent.click(screen.getByTestId("duos-result-board"));
+    expect(screen.queryByTestId("duos-result")).toBeNull();
+    expect(screen.getByTestId("game")).toBeInTheDocument();
+    expect(screen.getByTestId("duos-result-reopen")).toHaveFocus();
+  });
+
+  it("#1755 Result opens the panel again, its replay door and XP reveal with it, and the panel takes the focus", () => {
+    const onWatchReplay = vi.fn<() => void>();
+    renderBoard({ view: OVER, economy: ECONOMY }, { onWatchReplay });
+    fireEvent.click(screen.getByTestId("duos-result-board"));
+    expect(screen.queryByTestId("xp-reveal")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("duos-result-reopen"));
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+    expect(screen.getByTestId("duos-result-board")).toHaveFocus();
+    expect(screen.getByTestId("xp-reveal-quest-win-3")).toHaveTextContent("Win 3 games");
+
+    fireEvent.click(screen.getByTestId("duos-result-replay"));
+    expect(onWatchReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it("#1755 the rail's Result is on the teammate's board too", () => {
+    renderBoard({ view: OVER });
+    fireEvent.click(screen.getByTestId("duos-result-board"));
+    flipPortal();
+    expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("duos-result-reopen"));
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+  });
+
+  it("#1755 no Result before the game ends, while the panel is up, or in replay mode", () => {
+    renderBoard();
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+    cleanup();
+
+    renderBoard({ view: OVER });
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
+    cleanup();
+
+    renderBoard({ replay: true, view: OVER });
+    expect(screen.queryByTestId("duos-result-reopen")).toBeNull();
   });
 });
 
