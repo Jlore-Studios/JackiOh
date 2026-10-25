@@ -204,6 +204,11 @@
       }
     }
   },
+  "pruned": {
+    "at": "2026-10-25T09:13:53Z",
+    "dropped": 0,
+    "shed": 0
+  },
   "rate_limited_until": null,
   "secrets": {
     "at": "2026-10-25T09:13:52Z",
