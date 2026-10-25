@@ -1,0 +1,66 @@
+{
+  "title": "Meditative+ balance changes III",
+  "sources": "#1828",
+  "notes": "R1828000: API Key Fishing's Radiant face adds a Radiant copy, at 4% (Embiggened 10%); R1828001: AI Slop fuses (1) Cost AI generated cards; R1828002: KY's Empty Notebook shuffles 3 random KY cards into your deck; R1828003: Shrinking Felinor is 9/9 (18/18), both faces shrinking 3/3 into a base body; Jungle Loser has Can't attack and a 100% end-of-turn attack; Bauble Bubble has Brittle 1, BOOM! Big Max Crater, Book Worm the Plague tag; Felinor Fuser is 1/1 (2/2); Supply Drop is renamed Jlockeed's Supply Drop. plays: the families classify's stage 2 names in its unforced games with these cards (pools they join or leave, Devin Bot's 1/1 pool and Permanent Upperclassman's (4) Cost pool among them, and the views those games show). rule: no rule changes; stage 2 finds divergences that name no card, a library view ordered by name putting the renamed Jlockeed's Supply Drop in a new place and a fused BOOM! Big Max whose Crater Lock outlasts it, so the claim matches classify (R1370000).",
+  "player": {
+    "title": "Meditative+ balance changes III",
+    "new": [],
+    "balance": [
+      "Shrinking Felinor is 9/9, down from 9/11, and 18/18 on its Radiant face, down from 18/22.",
+      "Shrinking Felinor's Radiant face shrinks by 3/3, up from 2/3.",
+      "Felinor Fuser is 1/1, down from 3/3, and 2/2 on its Radiant face, down from 6/6.",
+      "API Key Fishing's Radiant face has a 4% chance, down from 5%, and 10% Embiggened, down from 12%.",
+      "Jungle Loser attacks at the end of every turn of yours, up from a 25% chance (50% on its Radiant face).",
+      "Jungle Loser has Can't attack.",
+      "Bauble Bubble has Brittle 1.",
+      "BOOM! Big Max has Crater."
+    ],
+    "changes": [
+      "AI Slop fuses only (1) Cost AI generated cards.",
+      "KY's Empty Notebook shuffles 3 random KY cards into your deck instead of drawing, Radiant ones on its Radiant face.",
+      "API Key Fishing's Radiant face adds a Radiant API Key Fishing to your hand.",
+      "Shrinking Felinor's Radiant face summons a base Shrinking Felinor.",
+      "Book Worm is a Plague card.",
+      "Devin Bot can summon Felinor Fuser, now a 1/1."
+    ],
+    "text": [
+      "Supply Drop is renamed Jlockeed's Supply Drop."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "core-051-1",
+    "classic-080",
+    "classicplus-019-2",
+    "classicplus-030",
+    "classicplus-039",
+    "classicplus-043",
+    "classicplus-061",
+    "meditative-021",
+    "meditative-094",
+    "meditativeplus-004"
+  ],
+  "plays": [
+    "classic-040",
+    "classic-041",
+    "classicplus-020",
+    "classicplus-031",
+    "classicplus-038",
+    "classicplus-040",
+    "classicplus-077",
+    "core-007",
+    "core-012",
+    "core-047",
+    "core-055",
+    "meditative-034",
+    "meditative-039",
+    "meditative-051",
+    "meditative-059",
+    "meditative-067",
+    "meditative-082",
+    "meditative-091",
+    "meditative-095",
+    "meditativeplus-010"
+  ],
+  "rule": true
+}
