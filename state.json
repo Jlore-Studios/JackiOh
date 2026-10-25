@@ -532,6 +532,20 @@
         "status": "allowed"
       }
     },
+    "claude-5": {
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T14:10:00Z",
+          "utilization": 0.0
+        },
+        "observed_at": "2026-10-25T09:39:02Z",
+        "seven_day": {
+          "resets_at": "2026-10-26T09:00:00Z",
+          "utilization": 0.74
+        },
+        "status": "allowed"
+      }
+    },
     "claude-6": {
       "spent": [
         {
