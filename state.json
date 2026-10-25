@@ -13512,12 +13512,12 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-7",
       "queued_at": "2026-10-25T03:30:25Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "40158893078",
-      "started_at": "2026-10-25T03:37:20Z",
+      "run_id": "pending:eefba6ea-1792900858",
+      "started_at": "2026-10-25T04:01:13Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -13544,9 +13544,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-25T03:52:55Z",
+    "at": "2026-10-25T04:01:13Z",
     "url": "",
-    "what": "plan #1829 on claude-3"
+    "what": "plan #1828 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-25T03:51:34Z",
