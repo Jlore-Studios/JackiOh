@@ -13535,6 +13535,13 @@
     "1829": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T04:20:23Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "engine rules in crates/engine/src/ (zones.rs, fuse.rs) plus the fuzz oracle, a new ruling and possibly re-blessed golden traces: the 'hard: engine rules' line holds without doubt"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
