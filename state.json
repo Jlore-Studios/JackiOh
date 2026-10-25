@@ -434,6 +434,9 @@
     "1908": {
       "action": "review",
       "asks": [],
+      "ci_reruns": {
+        "8edd52e416353d0ab22b4fad609fd14f0f097899": 1
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-25T09:25:06Z",
