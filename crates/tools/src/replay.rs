@@ -166,7 +166,7 @@ mod tests {
         "/../engine/tests/golden/01-hotseat-full-game.json"
     );
     /// Its pinned hash (`packages/cards/test/hotseat-replay.test.ts`).
-    const HOTSEAT_HASH: &str = "8784adae";
+    const HOTSEAT_HASH: &str = "7044d528";
 
     #[test]
     fn folds_the_hotseat_game_to_its_pinned_hash_with_no_errors() {

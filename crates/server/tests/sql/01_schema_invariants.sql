@@ -923,21 +923,24 @@ begin
     array_length(expected, 1);
 end $$;
 
-\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Wincon and Potion included, and refuses any other ==='
+\echo '=== CHECK 18 (R278): the cards tag check admits every catalog tag, Jlockeed, Book, Pancake, AI, Plague, Catalyst, Prime, Acclaimed, Wincon, Potion, Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean included, and refuses any other ==='
 \echo '### R1411: cards_tags_check admits Wincon and a Meditative row as seed-catalog writes it ###'
 \echo '### R1178000: cards_tags_check admits Potion and a Meditative+ row as seed-catalog writes it ###'
+\echo '### R1837000: cards_tags_check admits the five tags #1837 puts on shipped cards, rows as seed-catalog writes them ###'
 -- 0002's cards_tags_check had no 'Jlockeed', so `db:seed-catalog` failed on #13 and #14; 0010
 -- re-adds the check with it, 0015 with patch v0.2.0's Book, Pancake and AI (B2.4), 0020 with the
 -- mechanics patch's Plague, 0026 with patch v0.2.Y's Catalyst, Prime and Acclaimed, 0030 with
--- the Meditative set's Wincon (R1411), and 0043 with the Meditative+ set's Potion (R1178000). Each
--- probe row is removed before the next, and each probe runs in a block of its own, so later checks
--- see only the cards CHECK 10 seeded.
+-- the Meditative set's Wincon (R1411), 0043 with the Meditative+ set's Potion (R1178000), and 0058
+-- with #1837's Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean (R1837000). Each probe
+-- row is removed before the next, and each probe runs in a block of its own, so later checks see
+-- only the cards CHECK 10 seeded.
 do $$
 declare
   -- The `Tag` union in crates/engine/src/wire/catalog_types.rs, in its order.
   catalog_tags constant text[] := array[
     'Human', 'Felinor', 'KY', 'CN', 'Fruit', 'Call to Chaos', 'Quickdraw', 'Jlockeed', 'Book', 'Pancake',
-    'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Token'];
+    'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
+    'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -953,14 +956,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All eighteen on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All twenty-three on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all eighteen tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all twenty-three tags';
   end;
   delete from public.cards where id = 'check18-probe';
 
@@ -993,6 +996,23 @@ begin
     raise exception 'FAIL (CHECK 18): a Meditative+ row was refused (R1178000)';
   end;
   delete from public.cards where id in ('check18-probe', 'check18-probe-token');
+
+  -- Rows as `seed-catalog` writes Core #26 Glowy Jelly Bean, a Jelly Bean Spell, Classic #90 In Too
+  -- Deep, a Quickdraw and Quest Field Spell, and Classic+ #32.1 Execute, an Other-Origins token,
+  -- are admitted (R1837000).
+  begin
+    insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
+                              catalog_version)
+    values ('check18-probe', '26', 'Check 18 probe', 'Core', 'Spell', array['Jelly Bean'], 'Rare',
+            false, '3'::jsonb, 'core-1'),
+           ('check18-probe-quest', '90', 'Check 18 probe quest', 'Classic', 'Field Spell',
+            array['Quickdraw', 'Quest'], 'Mythic', false, '1'::jsonb, 'core-1'),
+           ('check18-probe-token', '32.1', 'Check 18 probe token', 'Classic+', 'Spell',
+            array['Other-Origins', 'Token'], 'Token', true, '1'::jsonb, 'core-1');
+  exception when check_violation then
+    raise exception 'FAIL (CHECK 18): a row carrying a tag of #1837 was refused (R1837000)';
+  end;
+  delete from public.cards where id in ('check18-probe', 'check18-probe-quest', 'check18-probe-token');
 
   -- A near miss is still refused: the check was widened by one name, not dropped.
   refused := false;

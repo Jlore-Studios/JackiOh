@@ -230,14 +230,16 @@ fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         Tag::Human => 39 + meditative(16) + meditative_plus(5),
-        Tag::Felinor => 11 + meditative(11),
+        // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
+        Tag::Felinor => 9 + meditative(11),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         Tag::Ky => 9 + meditative(6) + meditative_plus(3),
         // Meditative+ #21 Harmony Spirit.
         Tag::Cn => 7 + meditative(33) + meditative_plus(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831). Meditative+ #23 Enormous Elderberry.
-        Tag::Fruit => 14 + meditative(2) + meditative_plus(1),
+        // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
+        // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
+        Tag::Fruit => 12 + meditative(2) + meditative_plus(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         Tag::CallToChaos => 2 + meditative(1),
         // Meditative+ #1 Bob's Plan.
@@ -263,6 +265,14 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Wincon => meditative(2),
         // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
         Tag::Potion => meditative_plus(3),
+        // #1837, ahead of the Stinkyscape set (R1837000): Core #100 Ceaseless Void; Classic #90 In Too
+        // Deep; Classic+ #32 Otherworldly Removal; its three tokens, #32.1 Execute, #32.2 Brawl and
+        // #32.3 Blade Storm; and Core #26 to #29, the four Glowy Jelly Beans.
+        Tag::Terminus => 1,
+        Tag::Quest => 1,
+        Tag::Otherworldly => 1,
+        Tag::OtherOrigins => 3,
+        Tag::JellyBean => 4,
         Tag::Token => 50 + meditative(30) + meditative_plus(6),
     }
 }

@@ -919,7 +919,9 @@
     "name": "Glowy Jelly Bean",
     "set": "Core",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Jelly Bean"
+    ],
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
@@ -940,7 +942,9 @@
     "name": "Blood Ridden Glowy Jelly Bean",
     "set": "Core",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Jelly Bean"
+    ],
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
@@ -980,7 +984,9 @@
     "name": "Knockoff Temu Glowy Jelly Bean",
     "set": "Core",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Jelly Bean"
+    ],
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
@@ -1011,7 +1017,9 @@
     "name": "GIGA Glowy Jelly Bean",
     "set": "Core",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Jelly Bean"
+    ],
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
@@ -2106,9 +2114,7 @@
     "name": "Friend of Felinors",
     "set": "Core",
     "type": "Spell",
-    "tags": [
-      "Felinor"
-    ],
+    "tags": [],
     "rarity": "Common",
     "flavor": "Beast",
     "token": false,
@@ -3684,7 +3690,9 @@
     "name": "Ceaseless Void",
     "set": "Core",
     "type": "Unit",
-    "tags": [],
+    "tags": [
+      "Terminus"
+    ],
     "rarity": "Mythic",
     "flavor": "Dark",
     "token": false,
@@ -5150,9 +5158,7 @@
     "name": "Felinor Feelings",
     "set": "Classic",
     "type": "Spell",
-    "tags": [
-      "Felinor"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "flavor": "Beast",
     "token": false,
@@ -7242,7 +7248,8 @@
     "set": "Classic",
     "type": "Field Spell",
     "tags": [
-      "Quickdraw"
+      "Quickdraw",
+      "Quest"
     ],
     "rarity": "Mythic",
     "flavor": "Physical",
@@ -8904,7 +8911,9 @@
     "name": "Otherworldly Removal",
     "set": "Classic+",
     "type": "Spell",
-    "tags": [],
+    "tags": [
+      "Otherworldly"
+    ],
     "rarity": "Epic",
     "flavor": "Dark",
     "token": false,
@@ -8931,6 +8940,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [
+      "Other-Origins",
       "Token"
     ],
     "rarity": "Token",
@@ -8955,6 +8965,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [
+      "Other-Origins",
       "Token"
     ],
     "rarity": "Token",
@@ -8979,6 +8990,7 @@
     "set": "Classic+",
     "type": "Spell",
     "tags": [
+      "Other-Origins",
       "Token"
     ],
     "rarity": "Token",
@@ -10205,9 +10217,7 @@
     "name": "Fruit Tree",
     "set": "Classic+",
     "type": "Field Spell",
-    "tags": [
-      "Fruit"
-    ],
+    "tags": [],
     "rarity": "Rare",
     "flavor": "Snack",
     "token": false,
@@ -10598,9 +10608,7 @@
     "name": "Organic Produce",
     "set": "Classic+",
     "type": "Field Spell",
-    "tags": [
-      "Fruit"
-    ],
+    "tags": [],
     "rarity": "Epic",
     "flavor": "Snack",
     "token": false,
