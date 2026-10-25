@@ -49,6 +49,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -75,10 +76,6 @@ mod tests {
         added(events).into_iter().map(|(def_id, _)| def_id).collect()
     }
 
-    fn hand_defs(s: &Scenario) -> Vec<String> {
-        s.hand(P1).iter().map(|card| card.def_id.clone()).collect()
-    }
-
     mod c_n32_otherworldly_removal {
         use super::*;
 
@@ -90,7 +87,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [REMOVAL, FILLER] } }));
                 s.play(REMOVAL, json!({}));
-                assert_eq!(hand_defs(&s), [FILLER, EXECUTE, BRAWL, STORM]);
+                assert_eq!(def_ids(&s.hand(P1)), [FILLER, EXECUTE, BRAWL, STORM]);
                 assert!(s.hand(P1).iter().all(|card| !card.radiant));
                 assert_eq!(added_defs(s.events()), [EXECUTE, BRAWL, STORM]);
                 s.expect_in_zone(REMOVAL, "graveyard");
@@ -103,7 +100,7 @@ mod tests {
                 hand.extend((0..8).map(|_| json!(FILLER)));
                 let mut s = scenario(json!({ "p1": { "hand": hand } }));
                 s.play(REMOVAL, json!({}));
-                let held = hand_defs(&s);
+                let held = def_ids(&s.hand(P1));
                 assert_eq!(held.len(), 10);
                 assert_eq!(held[8..], [EXECUTE, BRAWL]);
                 assert!(
@@ -111,7 +108,7 @@ mod tests {
                         .iter()
                         .any(|event| matches!(event, GameEvent::Burned { def_id, .. } if def_id == STORM))
                 );
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").iter().map(|card| card.def_id.clone()).collect();
+                let graveyard = def_ids(&s.pile(P1, "graveyard"));
                 assert!(graveyard.iter().any(|id| id == STORM));
             }
 

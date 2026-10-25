@@ -126,7 +126,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn('for dir in "/home/$user"/actions-runner*; do', self.night)
         self.assertIn('echo "/home/$user/.cargo/bin:/usr/local/bin:', self.night)
 
-    def test_the_training_box_runs_three_lanes_forever_and_never_powers_off(self):
+    def test_the_training_box_keeps_three_lanes_starts_only_gather_and_never_powers_off(self):
         self.assertIn('TRAIN_LANES="improve unban gather"', self.text)
         self.assertIn('user="agent-train-$lane"', self.training)
         self.assertIn("apt-get install -y -qq gh", self.training)
@@ -140,8 +140,9 @@ class SetupTests(unittest.TestCase):
                      "Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i",
                      "WantedBy=multi-user.target"):
             self.assertIn(f"\n{line}\n", f"\n{unit}\n", line)
-        self.assertIn("systemctl enable --now jackioh-train@improve jackioh-train@unban"
-                      " jackioh-train@gather\n", self.training)
+        # #1677: the two LLM lanes are stopped, and setup never starts them again.
+        self.assertIn("systemctl enable --now jackioh-train@gather\n", self.training)
+        self.assertNotIn("systemctl enable --now jackioh-train@improve", self.training)
         # No idle stop, no runner and no CloudWatch agent: those are the night box's alone.
         for night_only in ("night-vm-idle-stop.timer <<", "actions-runner", "amazon-cloudwatch-agent"):
             self.assertNotIn(night_only, self.training, night_only)

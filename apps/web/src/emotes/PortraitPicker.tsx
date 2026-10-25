@@ -1,9 +1,11 @@
 // The deck builder's portrait picker (issue §8, R641): the deck's current portrait, and on tap a
-// grid of all six. Each tile has a Preview button that lists the whole pool in that portrait's
-// voice — its five voice lines and the nineteen emoji, any of which a game may deal (R1343) — and a
-// press on one plays it exactly as in a match — the voice channel's line plus the speech bubble
-// for a voice emote, the effects channel's synth plus the sticker for an emoji. Picking a tile
-// reports the id; the caller saves it through the deck store's usual upsert (D5).
+// grid of the portraits the account owns and the deck's own, in roster order (R1827000,
+// `useOfferedPortraits`; all six where ownership does not decide). Each tile has a Preview button
+// that lists the whole pool in that portrait's voice — its five voice lines and the nineteen emoji,
+// any of which a game may deal (R1343) — and a press on one plays it exactly as in a match — the
+// voice channel's line plus the speech bubble for a voice emote, the effects channel's synth plus
+// the sticker for an emoji. Picking a tile reports the id; the caller saves it through the deck
+// store's usual upsert (D5), which the server refuses for a portrait the account does not own.
 //
 // The preview runs the same pieces the board does — `emoteShowInfo` for the bubble's text and
 // span, `playEmote` for the sound, `EmoteShow` for what draws — so a preview can't drift from a
@@ -12,12 +14,13 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
 
 import type { EmoteId, PortraitId } from "@jackioh/shared";
-import { EMOJI_EMOTE_IDS, PORTRAIT_IDS, PORTRAITS, VOICE_EMOTE_IDS } from "@jackioh/shared";
+import { EMOJI_EMOTE_IDS, PORTRAITS, VOICE_EMOTE_IDS } from "@jackioh/shared";
 
 import { getAudioEngine } from "../audio/index.ts";
 import { readerName } from "../cards/chinese.ts";
 import { t } from "../i18n/i18n.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
+import { useOfferedPortraits } from "./ownedPortraits.ts";
 import { emoteShowInfo, playEmote } from "./play.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
 import { PORTRAIT_DEFS } from "./portraits.ts";
@@ -89,6 +92,7 @@ export function PortraitPicker({
   const toggle = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const panelId = useId();
+  const offered = useOfferedPortraits(portrait);
 
   // Outside press and Escape close the picker, like the match's emote menu does (issue §2's
   // lifetime carried over — the picker's a menu of the same kind). Escape gives the focus back to the
@@ -157,7 +161,7 @@ export function PortraitPicker({
       {open ? (
         <div className="portrait-menu" id={menuId} role="dialog" aria-label={t("Choose a hero portrait")}>
           <div className="portrait-grid" role="listbox" aria-label={t("Portraits")}>
-            {PORTRAIT_IDS.map((id) => (
+            {offered.map((id) => (
               <PortraitTile
                 key={id}
                 portrait={id}

@@ -5,8 +5,9 @@
 //! purge has not taken yet (`MATCH_ACTION_RETENTION_DAYS`), newest first, `REPLAY_LIST_PAGE` to a
 //! page: each one's id, mode, end, the seat the caller began in, the result for the caller, its turns
 //! and steps, both seats' portraits (R641, R642), the opponent's profile id and username, read now as
-//! the match screen reads them (R1436), and, when this build cannot show it, part 1's reason
-//! (`unavailable`).
+//! the match screen reads them (R1436), and, when it is known without folding it that this build
+//! cannot show it, part 1's reason (`unavailable`): a catalog version it neither is nor carries
+//! (R767000), or an opening still kept that refused it (#1825).
 //!
 //! `GET /api/replays/:matchId?from=&count=` answers steps `[from, from + n)` of the caller's replay,
 //! `n` at most `count` and `REPLAY_PAGE_STEPS`, and fewer where a Glitch's swap moves the caller to
@@ -28,7 +29,7 @@
 //!
 //! Bounded cost: an opened replay (its checkpoints, R768) is kept in memory for at most
 //! `REPLAY_CACHE_TTL_SECONDS`, at most `REPLAY_CACHE_MATCHES` of them, the one used longest ago going
-//! first; a list opens at most `REPLAY_LIST_PAGE` of them; and both routes together are held to
+//! first; a list opens none; and both routes together are held to
 //! `REPLAY_REQUESTS_PER_MINUTE` an account, a second limiter of the kind R109's is.
 
 use std::sync::{Arc, Mutex};
@@ -349,6 +350,20 @@ async fn open_replay(
     open
 }
 
+/// R768000: why a listed match cannot be shown, as far as is known without folding it (#1825): a
+/// catalog version this build neither is nor carries (R767000), else the refusal of an opening
+/// still kept. Any other match lists as one to open, and opening it says why if it cannot be
+/// shown, as practice's list does.
+fn known_refusal(app: &App, replay: &ReplayRow, now: i64) -> Option<ReplayRefusal> {
+    if let Err(reason) = Pinned::of(&replay.row.catalog_version) {
+        return Some(reason);
+    }
+    match app.replays.cache.get(&replay.row.id, now)?.as_ref() {
+        ReplayOpen::Refused { reason } => Some(*reason),
+        ReplayOpen::Ready { .. } => None,
+    }
+}
+
 /// R677: the seat the account that began in `home` plays at step `from`, and for how many steps
 /// from there, up to `count`, it goes on playing it, so a page never spans a Glitch's swap and every
 /// step of it is one seat's view. Read off the states as `replay_page` reads them, from the kept state
@@ -407,26 +422,16 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     let offset = i64::try_from(offset).map_err(|_| bad_request("offset is too large"))?;
     let page = REPLAY_LIST_PAGE as i64;
 
-    // One past the page, to know whether another follows. A replay already open needs no log.
+    // One past the page, to know whether another follows. No row's log is read and no replay opened:
+    // `known_refusal` folds nothing (#1825).
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
     let mut rows = tx.replays_list(&profile.id, page + 1, offset).await?;
     let more = rows.len() > REPLAY_LIST_PAGE;
     rows.truncate(REPLAY_LIST_PAGE);
-    let mut reads = Vec::with_capacity(rows.len());
+    let mut modes = Vec::with_capacity(rows.len());
     for replay in &rows {
-        let mode = tx.matches_mode_of(&replay.row.id).await?;
-        let kept = app.replays.cache.get(&replay.row.id, now);
-        let log = match kept {
-            Some(_) => Vec::new(),
-            None => tx
-                .matches_actions(&replay.row.id)
-                .await?
-                .into_iter()
-                .map(|row| row.action)
-                .collect(),
-        };
-        reads.push((mode, kept, log));
+        modes.push(tx.matches_mode_of(&replay.row.id).await?);
     }
     // R1436: every read joins the username in, so a rename shows on past games too.
     let opponents: Vec<String> = rows
@@ -439,8 +444,7 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     tx.commit().await?;
 
     let mut replays = Vec::with_capacity(rows.len());
-    for (replay, (mode, kept, log)) in rows.iter().zip(reads) {
-        let open = open_replay(app, replay, kept, log, mode).await;
+    for (replay, mode) in rows.iter().zip(modes) {
         let opponent = opponent_of(replay, &profile.id);
         let portraits = replay
             .row
@@ -463,10 +467,7 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
                     .map(Profile::username)
                     .unwrap_or_default(),
             },
-            unavailable: match open.as_ref() {
-                ReplayOpen::Refused { reason } => Some(*reason),
-                ReplayOpen::Ready { .. } => None,
-            },
+            unavailable: known_refusal(app, replay, now),
         });
     }
     ok_of(&ReplayList {

@@ -63,7 +63,8 @@ one redaction (R1184002).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks, and once none is worth making the switches to Defense Position
+it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
+less the body it comes back as, #1796), and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
@@ -73,7 +74,14 @@ its first `branching`, End Turn always among them. Inside one card's plays, each
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
 first (#1778). Its root tries a play in every distinct placement;
-deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). Position
+deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
+drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
+are one position). A line that differs from an earlier one only in where its units stand is a lane variant
+(#1797): the evaluation reads no lane, so it takes no place in the beam, but when the beam keeps the earlier
+line, the first `AI_SEARCH.zone_variants` - 1 of them end their turn where they stand after it, below that
+line on a tie. So the placements the beam tries reach the reply, which prices a Cleave into a unit's
+neighbours; a lane the reply scores the same as a better one of that play is not a finalist of its own. The
+lethal solver's visited set still reads a position without its units' lanes. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit would kill and survive, `kills_and_survives`) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. An action the

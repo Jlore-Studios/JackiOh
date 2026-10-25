@@ -14,7 +14,8 @@
 //!  - R256: `PUT` is an idempotent upsert keyed by the client's id;
 //!  - R341: a trio import is checked like every save and written all or nothing, under both caps
 //!    (R340);
-//!  - R165: a profile with nothing saved is refused as a deck failure, not a missing resource.
+//!  - R165: a profile with nothing saved is refused as a deck failure, not a missing resource;
+//!  - R1827000: a deck's portrait is one its account owns, on top of D5.
 //!
 //! The test app serves the compiled-in catalog and the handlers call the shared validator directly
 //! (SURFACE §11.3), so the cards here are the real catalog's playable ids.
@@ -32,14 +33,16 @@ use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::validator::{
     DeckDraftInput, check_deck_draft, check_import_room, check_trio_draft, normalize_name, validate_deck,
 };
-use jackioh_engine::wire::emotes::{PORTRAIT_IDS, is_portrait_id};
+use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId, is_portrait_id};
 use jackioh_server::api::decks::{assert_free_to_play, freeze_choice, read_mode_choice};
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
     DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
 };
+use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::store::{CollectionEntry, SavedDeck, SavedTrio, SeriesRow, StoreError};
+use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{add_user, call, test_app};
 use crate::support::store::{fake_lock, q, uuid};
@@ -241,6 +244,26 @@ impl Ctx {
             .map(json_of)
             .collect()
     }
+}
+
+/// R1827000: `profile` owns `portrait` on its account, as a pack's drop would leave it.
+async fn own_portrait(app: &App, profile: &str, portrait: PortraitId) {
+    let mut tx = app.db.begin(Some(profile)).await.expect("a transaction");
+    let granted = tx
+        .economy_cosmetics_grant(&CosmeticGrant {
+            profile_id: profile.to_string(),
+            card_id: None,
+            cosmetic_id: portrait_cosmetic_id(portrait),
+            delta: 1,
+            reason: EconomyReason::PackOpen,
+            reference: None,
+            dev: false,
+            at: now_ms(),
+        })
+        .await
+        .expect("the grant");
+    assert!(granted, "{portrait} was already owned");
+    tx.commit().await.expect("the commit");
 }
 
 fn names(listed: &Value, list: &str, key: &str) -> Vec<Value> {
@@ -668,6 +691,13 @@ mod the_deck_s_portrait_r641_d5 {
     #[tokio::test(start_paused = true)]
     async fn d5_saves_every_portrait_id_and_echoes_it_on_the_deck() {
         let ctx = setup().await;
+        // R1827000: the account owns them all, vanilla as a starter.
+        for portrait in PORTRAIT_IDS
+            .iter()
+            .filter(|portrait| **portrait != DEFAULT_PORTRAIT)
+        {
+            own_portrait(&ctx.app, PROFILE, *portrait).await;
+        }
         for (index, portrait) in PORTRAIT_IDS.iter().enumerate() {
             let body = merged(
                 deck_body(json!({})),
@@ -742,6 +772,9 @@ mod the_deck_s_portrait_r641_d5 {
     #[tokio::test(start_paused = true)]
     async fn r641_refuses_a_portrait_that_is_not_a_string_and_keeps_a_saved_one_on_re_save() {
         let ctx = setup().await;
+        // R1827000: the two the saves below name are owned.
+        own_portrait(&ctx.app, PROFILE, PortraitId::Gary).await;
+        own_portrait(&ctx.app, PROFILE, PortraitId::Felinors).await;
         let (status, body) = ctx
             .put_deck(deck_body(json!({ "portrait": 42 })), &uuid(1), &ctx.token)
             .await;
@@ -763,6 +796,83 @@ mod the_deck_s_portrait_r641_d5 {
         assert_eq!(status, 200);
         assert_eq!(again["deck"]["portrait"], json!("felinors"));
         assert_eq!(ctx.decks_table().await.len(), 1);
+    }
+}
+
+/// R1827000: on top of D5, a saved deck's portrait is one its account owns: vanilla, a starter, or
+/// one the account holds a cosmetics ledger row for, on no card.
+mod r1827000_the_deck_s_portrait_is_one_the_account_owns {
+    use super::*;
+
+    const UNOWNED: &str = "\"portrait\" is a portrait this account does not own.";
+
+    #[tokio::test(start_paused = true)]
+    async fn r1827000_refuses_an_unowned_portrait_with_a_d5_issue_naming_the_field_and_writes_nothing() {
+        let ctx = setup().await;
+        let expected = json!([{ "rule": "D5", "message": UNOWNED }]);
+        for portrait in PORTRAIT_IDS
+            .iter()
+            .filter(|portrait| **portrait != DEFAULT_PORTRAIT)
+        {
+            let (status, body) = ctx
+                .put_deck(deck_body(json!({ "portrait": portrait })), &uuid(1), &ctx.token)
+                .await;
+            assert_eq!(status, 400, "{portrait}");
+            assert_eq!(*error_code(&body), json!("bad_request"), "{portrait}");
+            assert_eq!(body["error"]["details"], expected, "{portrait}");
+            assert_eq!(body["error"]["message"], json!(UNOWNED), "{portrait}");
+        }
+        assert!(ctx.decks_table().await.is_empty());
+
+        // One another account owns is not this one's.
+        own_portrait(&ctx.app, OTHER, PortraitId::Timmy).await;
+        let (status, body) = ctx
+            .put_deck(deck_body(json!({ "portrait": "timmy" })), &uuid(1), &ctx.token)
+            .await;
+        assert_eq!(status, 400);
+        assert_eq!(body["error"]["details"], expected);
+        assert!(ctx.decks_table().await.is_empty());
+        // The account that owns it saves it.
+        let (status, saved) = ctx
+            .put_deck(
+                deck_body(json!({ "portrait": "timmy" })),
+                &uuid(2),
+                &ctx.other_token,
+            )
+            .await;
+        assert_eq!(status, 200);
+        assert_eq!(saved["deck"]["portrait"], json!("timmy"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1827000_saves_null_vanilla_and_an_owned_portrait() {
+        let ctx = setup().await;
+        own_portrait(&ctx.app, PROFILE, PortraitId::Gary).await;
+        for (index, portrait) in [Value::Null, json!("vanilla"), json!("gary")]
+            .into_iter()
+            .enumerate()
+        {
+            let (status, saved) = ctx
+                .put_deck(
+                    deck_body(json!({ "portrait": portrait })),
+                    &uuid(10 + index),
+                    &ctx.token,
+                )
+                .await;
+            assert_eq!(status, 200, "{portrait}");
+            assert_eq!(saved["deck"]["portrait"], portrait);
+        }
+        assert_eq!(ctx.decks_table().await.len(), 3);
+        // Owning Gary owns no other.
+        let (status, _) = ctx
+            .put_deck(
+                deck_body(json!({ "portrait": "shredder" })),
+                &uuid(20),
+                &ctx.token,
+            )
+            .await;
+        assert_eq!(status, 400);
+        assert_eq!(ctx.decks_table().await.len(), 3);
     }
 }
 

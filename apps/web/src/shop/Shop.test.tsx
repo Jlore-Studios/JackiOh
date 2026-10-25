@@ -440,6 +440,42 @@ describe("#1309 the cosmetic packs", () => {
     expect(onChanged).toHaveBeenCalledTimes(1);
   });
 
+  it("R1827000 an opened cosmetic pack's portrait shows its name and its art", async () => {
+    const opened = openedCosmeticPack();
+    cosmeticServer({
+      open: {
+        status: 200,
+        body: {
+          ...opened,
+          slots: [
+            {
+              rarity: "Epic",
+              grant: { kind: "cosmetic", cosmeticId: "portrait-timmy", cosmeticRarity: "Epic", cardId: null, cardGranted: false },
+            },
+            ...opened.slots.slice(1),
+          ],
+        },
+      },
+    });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+
+    const slot = screen.getByTestId(T.slot(0));
+    expect(slot).toHaveTextContent("New cosmetic: Tempo Timmy portrait");
+    // An account cosmetic: on no card, so no card line.
+    expect(slot).not.toHaveTextContent("On ");
+    const art = slot.querySelector('[data-portrait-art="timmy"]');
+    expect(art).not.toBeNull();
+    expect(art).toHaveClass("pack-slot__portrait");
+    // The art follows the outcome's words.
+    const outcome = slot.querySelector(".pack-slot__outcome");
+    expect(outcome?.nextElementSibling).toBe(art);
+    // Every other slot shows none.
+    expect(screen.getByTestId(T.slot(1)).querySelector("[data-portrait-art]")).toBeNull();
+  });
+
   it("R1579000 an opened cosmetic pack links to the Collection's cosmetics", async () => {
     cosmeticServer();
     render(<CosmeticPacks token={TOKEN} />);

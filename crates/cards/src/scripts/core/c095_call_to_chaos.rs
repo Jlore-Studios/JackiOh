@@ -73,6 +73,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use crate::events_json;
     use jackioh_engine::testkit::*;
 
@@ -451,7 +452,7 @@ mod tests {
             );
             assert!(s.pile(P1, "library").is_empty());
             assert_eq!(
-                sorted(s.hand(P1).into_iter().map(|card| card.def_id).collect()),
+                sorted(def_ids(&s.hand(P1))),
                 sorted(vec![MENACE.to_string(), RENO.to_string(), JAMMED.to_string(), MENACE.to_string()]),
             );
             s.expect_mana(P1, 8); // 8 − 4 paid + 4 gained

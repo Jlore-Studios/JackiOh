@@ -69,6 +69,7 @@ pub fn script_v0_4_4b() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
+    use crate::def_ids;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -82,10 +83,6 @@ mod tests {
     use crate::scenario;
 
     use crate::js;
-
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
 
     fn taken(s: &Scenario) -> Vec<CardInstance> {
         s.hand(P1).into_iter().filter(|card| card.owner == P1 && card.def_id != FILLER).collect()
@@ -102,7 +99,7 @@ mod tests {
         s.play(GLOVES, json!({}));
         assert_eq!(s.state().rng_cursor, cursor);
         // The top 2 in order: Menace, then Lunar.
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE, LUNAR]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR]);
         let taken = taken(&s);
         assert_eq!(taken.len(), 2);
         for card in &taken {
@@ -110,7 +107,7 @@ mod tests {
             assert_eq!(card.controller, P1);
         }
         assert_eq!(
-            s.pile(P2, "library").into_iter().map(|card| card.def_id).collect::<Vec<_>>(),
+            def_ids(&s.pile(P2, "library")),
             vec![VANILLA]
         );
     }
@@ -123,7 +120,7 @@ mod tests {
             "p2": { "hand": [FILLER], "library": [MENACE] },
         }));
         s.play(GLOVES, json!({}));
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE]);
         assert!(s.pile(P2, "library").is_empty());
     }
 
@@ -137,7 +134,7 @@ mod tests {
         let cursor = s.state().rng_cursor;
         s.play(GLOVES, json!({}));
         assert_eq!(s.state().rng_cursor, cursor);
-        assert_eq!(hand_defs(&s, P1), [FILLER]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER]);
         assert_eq!(s.state().players.p2.fatigue_count, 0);
         assert!(
             !s.events().iter().any(|event| event.event_type() == GameEventType::Fatigue),
@@ -155,7 +152,7 @@ mod tests {
         s.play(GLOVES, json!({ "embiggen": true }));
         s.expect_mana(P1, 2);
         // Both cards of their hand, in whatever order the shuffle took them.
-        let mut hand = hand_defs(&s, P1);
+        let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, MENACE, LUNAR]);
         let taken = taken(&s);
@@ -163,7 +160,7 @@ mod tests {
         for card in &taken {
             assert_eq!(card.owner, P1);
         }
-        assert_eq!(hand_defs(&s, P2), Vec::<String>::new());
+        assert_eq!(def_ids(&s.hand(P2)), Vec::<String>::new());
     }
 
     #[test]
@@ -215,7 +212,7 @@ mod tests {
         }));
         step_param(s.card_mut(GLOVES), "cards", 1);
         s.play(GLOVES, json!({}));
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE, LUNAR, VANILLA]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR, VANILLA]);
     }
 
     #[test]
@@ -226,7 +223,7 @@ mod tests {
             "p2": { "hand": [FILLER], "library": [MENACE, LUNAR, VANILLA] },
         }));
         s.play(GLOVES, json!({}));
-        assert_eq!(hand_defs(&s, P1), [FILLER, MENACE, LUNAR, VANILLA]);
+        assert_eq!(def_ids(&s.hand(P1)), [FILLER, MENACE, LUNAR, VANILLA]);
         for card in taken(&s) {
             assert_eq!(card.cost_override, Some(0));
             assert_eq!(effective_cost(s.state(), &card, Default::default()), 0);
@@ -273,7 +270,7 @@ mod tests {
         }));
         s.play(GLOVES, json!({ "embiggen": true }));
         // All three cards of their hand, in whatever order the shuffle took them.
-        let mut hand = hand_defs(&s, P1);
+        let mut hand = def_ids(&s.hand(P1));
         hand.sort_unstable();
         assert_eq!(hand, vec![FILLER, VANILLA, MENACE, LUNAR]);
         let taken = taken(&s);
@@ -282,6 +279,6 @@ mod tests {
             assert_eq!(card.cost_override, Some(0));
             assert_eq!(card.owner, P1);
         }
-        assert_eq!(hand_defs(&s, P2), Vec::<String>::new());
+        assert_eq!(def_ids(&s.hand(P2)), Vec::<String>::new());
     }
 }

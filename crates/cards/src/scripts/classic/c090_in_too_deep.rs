@@ -431,6 +431,7 @@ pub fn script_v0_3_16() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::{QUESTS, script};
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
     use std::collections::BTreeMap;
 
@@ -1032,7 +1033,7 @@ mod tests {
                 any_action(&mut s);
                 // The Notebook itself reached the graveyard before the reward: two cards lie there now.
                 s.answer(json!("C"));
-                let hand: Vec<String> = s.hand(P1).iter().map(|card| card.def_id.clone()).collect();
+                let hand = def_ids(&s.hand(P1));
                 assert!(hand.iter().any(|id| id == MENACE));
                 assert!(hand.iter().any(|id| id == NOTEBOOK));
                 assert!(s.pile(P1, "graveyard").is_empty());
@@ -1203,7 +1204,7 @@ mod tests {
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
             }
@@ -1249,7 +1250,7 @@ mod tests {
                 // Their hand is empty when the delayed stage runs, before their turn's draw: nothing
                 // to discard and nothing asked, and G's path opens all the same.
                 assert!(s.state().pending.is_none());
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![VANILLA]);
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
             }
@@ -1275,7 +1276,7 @@ mod tests {
                     let first = must(hand.first().cloned(), "a card");
                     let second = must(hand.get(1).cloned(), "a card");
                     s.answer(json!([first.id, second.id]));
-                    let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                    let left = def_ids(&s.hand(P2));
                     assert_eq!(left, vec![MENACE]);
                     // The answer drained the queue, so the parked path opened quest 8.
                     expect_line_matches(&s, json!({ "active": ["8"], "done": ["4"] }));
@@ -1306,7 +1307,7 @@ mod tests {
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // G's path opened with the answer, exactly once; H's path was never chosen.
                 expect_line_matches(&s, json!({ "active": ["8"], "done": ["5"] }));
@@ -1377,7 +1378,7 @@ mod tests {
                 let first = must(hand.first().cloned(), "a card");
                 let second = must(hand.get(1).cloned(), "a card");
                 s.answer(json!([first.id, second.id]));
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // Quest 8 was the old stay's path: the card that came back is not on it (R174).
                 assert_eq!(active_of(&s), ids(&["1"]));
@@ -1479,7 +1480,7 @@ mod tests {
                 s.answer(json!("I"));
                 // The Notebook drew the top Stockpile; the Recruit passes the next one over for the Vanilla.
                 assert_eq!(must(s.unit(P1, 3), "the recruit").def_id, VANILLA);
-                let library: Vec<String> = s.pile(P1, "library").iter().map(|card| card.def_id.clone()).collect();
+                let library = def_ids(&s.pile(P1, "library"));
                 assert_eq!(library, vec![STOCKPILE, MENACE]);
                 expect_line_matches(&s, json!({ "active": ["10"], "done": ["6"] }));
             }
@@ -1573,7 +1574,7 @@ mod tests {
                 any_action(&mut s);
                 s.answer(json!("K"));
                 assert!(s.pile(P2, "library").is_empty());
-                let mut exiled: Vec<String> = s.pile(P2, "exile").iter().map(|card| card.def_id.clone()).collect();
+                let mut exiled = def_ids(&s.pile(P2, "exile"));
                 exiled.sort();
                 let mut want = vec![MENACE, TIMMY, VANILLA];
                 want.sort();
@@ -2037,7 +2038,7 @@ mod tests {
                 let b = must(hand.get(1).cloned(), "b");
                 s.answer(json!([a.id, b.id]));
                 // The prompt opens in their turn's delayed stage; its draw comes after the discard (§2.2).
-                let left: Vec<String> = s.hand(P2).iter().map(|card| card.def_id.clone()).collect();
+                let left = def_ids(&s.hand(P2));
                 assert_eq!(left, vec![MENACE, VANILLA]);
                 // H's path opened at the trigger, G's behind the deferred prompt.
                 expect_line_matches(

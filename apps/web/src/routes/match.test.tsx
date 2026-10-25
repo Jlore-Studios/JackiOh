@@ -12,14 +12,15 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 import { registeredCatalog } from "@jackioh/engine";
-import type { ActionBody } from "@jackioh/shared";
+import type { ActionBody, PlayerView } from "@jackioh/shared";
 
 import { MULLIGAN_CLOCK_MS, SERIES_MAX_GAMES, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
-import { baseView, card, emptySide } from "../test/fixtures.ts";
+import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
+import { modifierListTestid } from "../game/ModifierList.tsx";
 import { resultRevealMs } from "../game/Result.tsx";
 import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate } from "../net/navigate.ts";
@@ -83,6 +84,13 @@ function attach(extra: Record<string, unknown> = {}): void {
     live().onmessage?.({
       data: JSON.stringify({ type: "view", view: baseView({ viewer: "p1", active: "p1" }), ...extra }),
     });
+  });
+}
+
+/** A later `view` frame on the open socket, with nothing legal. */
+function pushView(view: PlayerView): void {
+  act(() => {
+    live().onmessage?.({ data: JSON.stringify({ type: "view", view, legal: [] }) });
   });
 }
 
@@ -566,6 +574,66 @@ describe("the match screen in a player's words", () => {
     });
     expect(document.title).toBe("Match · JackiOh");
   });
+
+  it("#1792 puts Your turn in the tab while the seat still owes its mulligan, and takes it off once it is ready", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    const p2: Partial<PlayerView> = {
+      viewer: "p2",
+      active: "p1",
+      turn: 0,
+      phase: "mulligan",
+      you: emptySide("p2"),
+      opponent: emptySide("p1", { hand: { count: 4 } }),
+    };
+    attach({
+      view: baseView({
+        ...p2,
+        mulligan: { youReady: false, opponentReady: false },
+        pending: pendingFor("mulligan", [], { min: 0, max: 0 }),
+      }),
+      legal: [],
+    });
+    expect(document.title).toBe("Your turn · JackiOh");
+    pushView(
+      baseView({
+        ...p2,
+        mulligan: { youReady: true, opponentReady: false, kept: [] },
+        pending: { forYou: false, pendingFor: "p1" },
+      }),
+    );
+    expect(document.title).toBe("Match · JackiOh");
+  });
+
+  it("#1792 keeps Your turn off Player 1's tab once its mulligan is in, though the view names it active", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        turn: 0,
+        phase: "mulligan",
+        mulligan: { youReady: true, opponentReady: false, kept: [] },
+        pending: { forYou: false, pendingFor: "p2" },
+      }),
+      legal: [],
+    });
+    expect(document.title).toBe("Match · JackiOh");
+  });
+
+  it("#1792 flags the tab for a prompt the viewer holds on the opponent's turn, and not for the opponent's on its own", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p2",
+        pending: pendingFor("discover", [{ key: "mode:core-043", label: "Flood", defId: "core-043" }]),
+      }),
+      legal: [],
+    });
+    expect(document.title).toBe("Your turn · JackiOh");
+    pushView(baseView({ viewer: "p1", active: "p1", pending: { forYou: false, pendingFor: "p2" } }));
+    expect(document.title).toBe("Match · JackiOh");
+  });
 });
 
 describe("the match screen's ranks (R604, R612)", () => {
@@ -729,6 +797,62 @@ describe("the daily Jlore cap on a finished ladder match (R1483000)", () => {
       expect(screen.queryByTestId("result-daily-jlore")).toBeNull();
       cleanup();
     }
+  });
+});
+
+describe("R169 the modifier list at the online table", () => {
+  /** The panel's headings, in order: who each group of labels belongs to. */
+  function headings(panel: HTMLElement): (string | null)[] {
+    return Array.from(panel.querySelectorAll(".modifier-list__who"), (who) => who.textContent);
+  }
+
+  it("R169 shows the chip with both sides' count and opens every label under You and Opponent, never AI", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        you: emptySide("p1", { modifiers: yourModifiers }),
+        opponent: emptySide("p2", { hand: { count: 4 }, modifiers: opponentModifiers }),
+      }),
+    });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", String(yourModifiers.length + opponentModifiers.length));
+
+    fireEvent.click(chip);
+    const panel = screen.getByTestId(modifierListTestid.panel);
+    for (const modifier of yourModifiers) {
+      expect(panel.querySelector('[data-side="you"]')).toHaveTextContent(modifier.label);
+    }
+    for (const modifier of opponentModifiers) {
+      expect(panel.querySelector('[data-side="opponent"]')).toHaveTextContent(modifier.label);
+    }
+    expect(headings(panel)).toEqual(["You", "Opponent"]);
+  });
+
+  it("R169 a long modifier on the opponent's side alone shows the chip too", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({
+      view: baseView({
+        viewer: "p1",
+        active: "p1",
+        opponent: emptySide("p2", { hand: { count: 4 }, modifiers: opponentModifiers }),
+      }),
+    });
+
+    const chip = screen.getByTestId(modifierListTestid.chip);
+    expect(chip).toHaveAttribute("data-count", "1");
+    expect(chip).toHaveAccessibleName("1 active modifier");
+
+    fireEvent.click(chip);
+    expect(headings(screen.getByTestId(modifierListTestid.panel))).toEqual(["Opponent"]);
+  });
+
+  it("R169 shows no chip while no modifier is live", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    expect(screen.queryByTestId(modifierListTestid.chip)).toBeNull();
   });
 });
 

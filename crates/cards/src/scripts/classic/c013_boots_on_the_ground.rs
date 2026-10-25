@@ -44,6 +44,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -62,10 +63,6 @@ mod tests {
     const A: &str = "core-020";
     const B: &str = "core-001";
 
-    fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.hand(player).into_iter().map(|card| card.def_id).collect()
-    }
-
     /// Lanes 1–5, `None` for an empty zone.
     fn unit_defs(s: &Scenario, player: PlayerId) -> Vec<Option<String>> {
         (1..=5).map(|lane| s.unit(player, lane).map(|card| card.def_id)).collect()
@@ -80,10 +77,6 @@ mod tests {
             .iter()
             .filter(|event| matches!(event, GameEvent::Drawn { player, .. } if *player == who))
             .count()
-    }
-
-    fn library_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
-        s.pile(player, "library").into_iter().map(|card| card.def_id).collect()
     }
 
     fn has_charge(s: &Scenario, card: &str) -> bool {
@@ -102,7 +95,7 @@ mod tests {
             s.attack(BOOTS, "hero");
 
             s.expect_health(P2, 28);
-            assert_eq!(hand_defs(&s, P1), [ANCHOR, A]);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
             s.expect_events(json!(["attackDeclared", "damage", "drawn"]));
         }
 
@@ -136,7 +129,7 @@ mod tests {
             s.attack(BOOTS, MENACE);
 
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(hand_defs(&s, P1), [ANCHOR, A]);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
             assert_eq!(draws_by(&s, P1), 1);
         }
 
@@ -151,7 +144,7 @@ mod tests {
 
             assert!(s.events().iter().any(|event| matches!(event, GameEvent::AttackDeclared { forced: true, .. })));
             s.expect_in_zone(BOOTS, "graveyard");
-            assert_eq!(hand_defs(&s, P1), [ANCHOR, A]);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A]);
         }
 
         #[test]
@@ -190,7 +183,7 @@ mod tests {
 
             s.attack(BOOTS, "hero");
 
-            assert_eq!(hand_defs(&s, P1), [ANCHOR, A, B]);
+            assert_eq!(def_ids(&s.hand(P1)), [ANCHOR, A, B]);
         }
     }
 
@@ -210,7 +203,7 @@ mod tests {
 
             s.expect_health(P2, 26);
             assert_eq!(unit_defs(&s, P1), lanes([Some(BOOTS), Some(TEMPO), None, None, None]));
-            assert_eq!(library_defs(&s, P1), [STOCKPILE, VANILLA]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [STOCKPILE, VANILLA]);
             assert_eq!(draws_by(&s, P1), 0);
         }
 
@@ -242,7 +235,7 @@ mod tests {
                 None => s.attack(TEMPO, BOOTS),
             };
 
-            assert_eq!(library_defs(&s, P1), [TEMPO]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TEMPO]);
             assert_eq!(unit_defs(&s, P1), lanes([None, None, None, None, None]));
         }
 
@@ -256,7 +249,7 @@ mod tests {
             s.attack(BOOTS, "hero");
 
             assert_eq!(unit_defs(&s, P1), lanes([Some(BOOTS), None, None, None, None]));
-            assert_eq!(library_defs(&s, P1), [STOCKPILE]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [STOCKPILE]);
         }
 
         #[test]
@@ -272,7 +265,7 @@ mod tests {
 
             s.attack(BOOTS, "hero");
 
-            assert_eq!(library_defs(&s, P1), [TEMPO]);
+            assert_eq!(def_ids(&s.pile(P1, "library")), [TEMPO]);
         }
 
         #[test]

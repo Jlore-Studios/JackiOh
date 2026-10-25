@@ -41,7 +41,8 @@ crates/cards
 
 **One card, one file, its tests inside it** (CLAUDE.md rule 6). The file is
 `src/scripts/<set>/<name>.rs`: the spec §5 index in three digits with a `c` in front, then the slug,
-every `-` and `.` an `_`.
+every `-` and `.` an `_`. The build holds the folder and the number, not the slug (§4): a few slugs
+differ from the card's name on purpose (`core/c097_zephyrs.rs` for Zephrys).
 
 | Card | File |
 | --- | --- |
@@ -225,8 +226,9 @@ line, cut to the engine's `CODE_BLOCK_MAX_LINES`, which `register_all` hands to 
 Meditative+ #25's code Discover). There is nothing to wire and nothing to
 regenerate by hand: drop the file in its folder and build. The build fails, naming the path, on a file
 without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outside a set folder, a
-file name that is not a Rust identifier, or a catalog id with no file. It also compiles in
-`CATALOG_VERSION`, the newest entry of `patches/patches.json`.
+file name that is not a Rust identifier, a file outside its `ID`'s set's folder or named for another
+card's number, or a catalog id with no file. It also compiles in `CATALOG_VERSION`, the newest entry
+of `patches/patches.json`.
 
 `register_all()` hands the catalog and every script to the engine, once per process, and where the
 older shipped catalogs are found (`register_shipped`); the WASM module, the server and the tools

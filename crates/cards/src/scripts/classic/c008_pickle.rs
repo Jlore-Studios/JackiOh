@@ -289,6 +289,7 @@ pub fn script_v0_3_16() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::def_ids;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -356,10 +357,6 @@ mod tests {
         }))
     }
 
-    fn defs(s: &Scenario, player: PlayerId, zone: &str) -> Vec<String> {
-        s.pile(player, zone).into_iter().map(|card| card.def_id).collect()
-    }
-
     fn reduce_json(state: &GameState, action: Value) -> ReduceResult {
         reduce(state, &json_as::<Action>(action))
     }
@@ -414,12 +411,12 @@ mod tests {
                 s.answer(json!("discard"));
                 s.answer(json!("draw"));
                 assert!(s.state().pending.is_none());
-                assert_eq!(defs(&s, P2, "exile"), vec![THEIR_DECK[3]]);
-                let grave = defs(&s, P2, "graveyard");
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![THEIR_DECK[3]]);
+                let grave = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(grave.len(), 1);
                 // The questions open in their turn's delayed stage, before its draw (§2.2).
                 assert!(THEIR_HAND.contains(&grave[0].as_str()));
-                assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0]]);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
             }
 
             #[test]
@@ -447,7 +444,7 @@ mod tests {
                 assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
                 s.answer(json!("draw"));
                 assert_eq!(open(&s).player_id, P2);
-                assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0]]);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
             }
 
             #[test]
@@ -500,7 +497,7 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 let mut expected = vec![FILLER];
                 expected.extend_from_slice(&MY_DECK[..3]);
-                assert_eq!(defs(&s, P1, "hand"), expected);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), expected);
                 s.expect_in_zone(PICKLE, "graveyard");
             }
 
@@ -513,7 +510,7 @@ mod tests {
                 s.answer(json!("discard"));
                 // No follow-up pick: the random discard landed and the next question is open.
                 assert_eq!(open(&s).kind, PromptKind::Mode);
-                let grave = defs(&s, P2, "graveyard");
+                let grave = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(grave.len(), 1);
                 // The questions open in their turn's delayed stage, before its draw (§2.2).
                 assert!(THEIR_HAND.contains(&grave[0].as_str()));
@@ -529,8 +526,8 @@ mod tests {
                 s.answer(json!("exile"));
                 // The turn's draw waits behind the open question, so the deck is whole: the
                 // exile takes the bottom card and the library keeps the top three.
-                assert_eq!(defs(&s, P2, "exile"), vec![THEIR_DECK[3]]);
-                assert_eq!(defs(&s, P2, "library"), THEIR_DECK[..3].to_vec());
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![THEIR_DECK[3]]);
+                assert_eq!(def_ids(&s.pile(P2, "library")), THEIR_DECK[..3].to_vec());
             }
 
             #[test]
@@ -543,13 +540,13 @@ mod tests {
                 s.answer(json!("discard"));
                 s.answer(json!("draw"));
                 assert!(s.state().pending.is_none());
-                assert_eq!(defs(&s, P2, "exile"), vec![THEIR_DECK[3]]);
-                let grave = defs(&s, P2, "graveyard");
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![THEIR_DECK[3]]);
+                let grave = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(grave.len(), 1);
                 let mut possible = THEIR_HAND.to_vec();
                 possible.push(THEIR_DECK[0]);
                 assert!(possible.contains(&grave[0].as_str()));
-                assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0]]);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0]]);
             }
 
             #[test]
@@ -593,7 +590,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(modes(&s), vec!["discard", "draw"]);
                 s.answer(json!("discard"));
-                assert_eq!(defs(&s, P2, "graveyard"), vec!["core-008"]);
+                assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec!["core-008"]);
                 assert_eq!(modes(&s), vec!["draw"]);
             }
 
@@ -768,7 +765,7 @@ mod tests {
                 assert!(s.state().pending.is_none());
                 let mut expected = vec![FILLER];
                 expected.extend_from_slice(&MY_DECK);
-                assert_eq!(defs(&s, P1, "hand"), expected);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), expected);
             }
 
             #[test]
@@ -779,7 +776,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("draw"));
-                assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0], MY_DECK[1]]);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0], MY_DECK[1]]);
             }
 
             #[test]
@@ -791,7 +788,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("discard"));
-                let grave = defs(&s, P2, "graveyard");
+                let grave = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(grave.len(), 2);
                 let mut possible = THEIR_HAND.to_vec();
                 possible.push(THEIR_DECK[0]);
@@ -799,7 +796,7 @@ mod tests {
                     assert!(possible.contains(&def_id.as_str()));
                 }
                 s.answer(json!("exile"));
-                assert_eq!(defs(&s, P2, "exile"), vec![THEIR_DECK[3], THEIR_DECK[2]]);
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![THEIR_DECK[3], THEIR_DECK[2]]);
             }
 
             #[test]
@@ -832,7 +829,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(modes(&s), vec!["discard", "exile", "draw"]);
                 s.answer(json!("discard"));
-                assert_eq!(defs(&s, P2, "graveyard").len(), 1);
+                assert_eq!(def_ids(&s.pile(P2, "graveyard")).len(), 1);
                 assert_eq!(
                     s.events()
                         .iter()
@@ -858,7 +855,7 @@ mod tests {
                 );
                 s.answer(json!("discard"));
                 assert_eq!(open(&s).kind, PromptKind::Mode);
-                let grave = defs(&s, P2, "graveyard");
+                let grave = def_ids(&s.pile(P2, "graveyard"));
                 assert_eq!(grave.len(), 2);
                 let mut possible = THEIR_HAND.to_vec();
                 possible.push(THEIR_DECK[0]);
@@ -879,7 +876,7 @@ mod tests {
                 s.end_turn();
                 s.answer(json!("discard"));
                 assert!(s.hand(P2).is_empty());
-                assert_eq!(defs(&s, P2, "graveyard"), vec!["core-008"]);
+                assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec!["core-008"]);
             }
 
             #[test]
@@ -889,7 +886,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("exile"));
-                assert_eq!(defs(&s, P2, "exile"), vec![THEIR_DECK[3], THEIR_DECK[2]]);
+                assert_eq!(def_ids(&s.pile(P2, "exile")), vec![THEIR_DECK[3], THEIR_DECK[2]]);
             }
 
             #[test]
@@ -899,7 +896,7 @@ mod tests {
                 s.play(PICKLE, json!({}));
                 s.end_turn();
                 s.answer(json!("draw"));
-                assert_eq!(defs(&s, P1, "hand"), vec![FILLER, MY_DECK[0], MY_DECK[1]]);
+                assert_eq!(def_ids(&s.pile(P1, "hand")), vec![FILLER, MY_DECK[0], MY_DECK[1]]);
             }
 
             #[test]

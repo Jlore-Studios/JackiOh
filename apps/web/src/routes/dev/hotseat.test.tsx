@@ -15,6 +15,7 @@ import { testid } from "../../game/contract.ts";
 import { setEnginePort } from "../../game/engine.ts";
 import type { CreateGameArgs, EnginePort, EngineState } from "../../game/engine.ts";
 import { baseView, emptySide } from "../../test/fixtures.ts";
+import { at } from "../../test/stubServer.ts";
 import {
   DEFAULT_SEED,
   E2E_DECKS_KEY,
@@ -130,13 +131,9 @@ function makeEngine(options: { catalog?: CardDefs | "throws"; pendingAfterBegin?
 
 // Mounting
 
-function at(search: string): void {
-  window.history.replaceState({}, "", `/dev/hotseat${search}`);
-}
-
 /** Render the route and wait for the engine promise the route resolves in an effect. */
 async function mount(search = "?seed=42&a=first20&b=cheap20"): Promise<void> {
-  at(search);
+  at(`/dev/hotseat${search}`);
   await act(async () => {
     render(<HotseatRoute />);
   });
@@ -149,7 +146,7 @@ afterEach(() => {
   delete window.__jackioh;
   delete window.__jackiohE2E;
   window.localStorage.clear();
-  at("");
+  at("/dev/hotseat");
   vi.unstubAllEnvs();
   vi.resetModules();
 });
@@ -351,7 +348,7 @@ describe("the route starts one game from the URL", () => {
 
     try {
       const route = await import("./hotseat.tsx");
-      at("?seed=42&a=first20&b=first20");
+      at("/dev/hotseat?seed=42&a=first20&b=first20");
       await act(async () => {
         render(<route.HotseatRoute />);
       });
@@ -522,7 +519,7 @@ describe("window.__jackioh outside a production build", () => {
   it("is removed when the route unmounts, so a stale handle cannot answer a later spec", async () => {
     const fake = makeEngine();
     setEnginePort(fake.port);
-    at("?seed=42&a=first20&b=first20");
+    at("/dev/hotseat?seed=42&a=first20&b=first20");
     let view!: ReturnType<typeof render>;
     await act(async () => {
       view = render(<HotseatRoute />);
@@ -550,7 +547,7 @@ describe("window.__jackioh in a production build", () => {
 
     const fake = makeEngine();
     engine.setEnginePort(fake.port);
-    at("?seed=42&a=first20&b=first20");
+    at("/dev/hotseat?seed=42&a=first20&b=first20");
     await act(async () => {
       render(<route.HotseatRoute />);
     });

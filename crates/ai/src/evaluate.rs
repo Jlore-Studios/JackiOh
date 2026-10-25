@@ -747,16 +747,35 @@ fn falls_to_first_strike(
     dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
 }
 
-/// §4.5 step 4: the body a destroyed Reborn Taunt comes back as, a reset instance (R78) without
-/// Reborn at `REBORN_HEALTH`, and its view — or nothing when the body has no Taunt. A printed Divine
-/// Shield comes back with it; a granted Taunt, or Defense Position's, is gone.
-fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance, UnitView)> {
-    let mut body = taunt.clone();
+/// §4.5 step 4: the body a destroyed Reborn unit comes back as, a reset instance (R78) without Reborn
+/// at `REBORN_HEALTH`, and its view. A printed Divine Shield comes back with it; a granted keyword, a
+/// buff, or Defense Position's Taunt, is gone.
+pub(crate) fn reborn_return(state: &GameState, unit: &CardInstance) -> (CardInstance, UnitView) {
+    let mut body = unit.clone();
     reset_instance(&mut body);
     body.reborn_spent = Some(true);
     body.damage = (unit_view(state, &body).max_health - REBORN_HEALTH).max(0);
     let view = unit_view(state, &body);
+    (body, view)
+}
+
+/// §4.5 step 4: the body a destroyed Reborn Taunt comes back as (`reborn_return`), or nothing when
+/// the body has no Taunt.
+fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance, UnitView)> {
+    let (body, view) = reborn_return(state, taunt);
     has_keyword(&view.keywords, KeywordKind::Taunt).then_some((body, view))
+}
+
+/// What destroying `unit` takes off the board (#1796): its `unit_worth`, less the worth of the body it
+/// comes back as while its Reborn is unspent (§4.5 step 4, `reborn_return`). A spent Reborn is gone
+/// from its keywords (§10.4), so such a unit is worth its whole `unit_worth`.
+pub(crate) fn kill_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f64 {
+    let worth = unit_worth(state, unit, w);
+    if !unit_has(state, unit, KeywordKind::Reborn) {
+        return worth;
+    }
+    let (body, _) = reborn_return(state, unit);
+    worth - unit_worth(state, &body, w)
 }
 
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end
