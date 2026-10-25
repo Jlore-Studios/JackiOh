@@ -64,6 +64,17 @@
       "planned_by_id": "claude-3",
       "planned_tier": "strong"
     },
+    "1845": {
+      "action": "plan",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "claude-8",
+      "run_id": "pending:83233186-1792919696",
+      "started_at": "2026-10-25T09:15:34Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1847": {
       "asks": [],
       "taken_asks": []
@@ -89,9 +100,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:14:45Z",
+    "at": "2026-10-25T09:15:34Z",
     "url": "",
-    "what": "plan #1841 on claude-7"
+    "what": "plan #1845 on claude-8"
   },
   "loop_deliveries": {
     "40175181653": {
