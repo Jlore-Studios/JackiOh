@@ -76,6 +76,7 @@ import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jac
 import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
+import { seatOutcome } from "../game/outcome.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeReplay, PracticeReplaySetup, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
@@ -530,7 +531,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       summary: {
         game: Math.max(0, ...kept.map((old) => old.summary.game)) + 1,
         endedAt: env.now(),
-        result: result.winner === "draw" ? "draw" : result.winner === endSeat ? "win" : "loss",
+        // R1843004: the AI's `fled` is the human's draw.
+        result: seatOutcome(result.winner, result.reason, endSeat),
         turns: active.state.turn,
         steps: active.log.length + 1,
         portraits: { ...(active.config.portraits ?? { p1: DEFAULT_PORTRAIT, p2: DEFAULT_PORTRAIT }) },
@@ -633,7 +635,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     return {
       seed: active.config.seed,
       // R677: read from the seat the human ended in, as `keepFinished` reads it.
-      result: result.winner === "draw" ? "draw" : result.winner === endSeat ? "win" : "loss",
+      // R1843004: the AI's `fled` is the human's draw, as the server's fold reads it.
+      result: seatOutcome(result.winner, result.reason, endSeat),
       log: JSON.parse(JSON.stringify(active.log)) as Action[],
     };
   }

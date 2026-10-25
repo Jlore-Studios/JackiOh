@@ -123,6 +123,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Answer questions in a row",
     "Alternative win condition",
     "Win the game",
+    // #1843 (R1843000, R1843002): no shipped card shows either until the Stinkyscape set does.
+    "Vote to remove",
+    "Escape the Universe",
     "Switch position",
     "Forced attack",
     "Cancel an attack",

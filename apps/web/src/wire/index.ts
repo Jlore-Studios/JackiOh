@@ -219,6 +219,10 @@ export const GAME_EVENT_TYPES = [
   // (issue #1852, R1852000, R1852003).
   "starshipFused",
   "starshipLaunched",
+  // Issue #1843's two endings: a vote, the agreement that removes a player, the escape (R1843000, R1843002).
+  "voteCast",
+  "votedOut",
+  "fled",
 ] as const satisfies readonly GameEventType[];
 
 /**

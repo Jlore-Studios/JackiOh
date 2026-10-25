@@ -1890,6 +1890,21 @@ pub const STARSHIP_NAMES: &[(&str, Option<Tag>)] = &[
     ("The Silent Choir", None),
 ];
 
+// ---------------------------------------------------------------------------------------------
+// Two new endings, voted out and fled (#1843, SPEC §2.5, R1843000–R1843005)
+// ---------------------------------------------------------------------------------------------
+
+/// R1843000: the votes of different cards in one turn that remove a player from the game, a loss for
+/// them (Stinkyscape #18's three Brains, MELCHIOR, BALTHASAR and CASPER).
+pub const VOTE_TALLY_SIZE: i32 = 3;
+
+/// R1843004: the endings that are a win for the winner and a draw, not a loss, for the other player
+/// (Stinkyscape #148.1 Edge of the Universe's `fled`). The ladder rates the two sides so, and a game
+/// of one with no winner (two fleers at once, or a fleer who has since deleted their account) is a
+/// draw for the player left. Every other ending is the same for both sides: the winner's win and the
+/// other's loss, or a draw for both. The client reads it (`engineConfig.ts`).
+pub const LOSER_DRAWS_REASONS: &[crate::wire::GameOverReason] = &[crate::wire::GameOverReason::Fled];
+
 #[cfg(test)]
 mod tests {
     use super::*;

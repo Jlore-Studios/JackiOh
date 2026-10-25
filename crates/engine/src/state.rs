@@ -1282,6 +1282,35 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub market_credits: Option<i32>,
+    /// R1843000 (Stinkyscape #18's Brains): the votes cast this turn to remove this player from the
+    /// game (`effects::vote_out`). Absent until a first vote, so a game without one hashes as before
+    /// this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub votes: Option<VoteTally>,
+    /// R1843002 (Stinkyscape #148.1 Edge of the Universe): set when this player flees
+    /// (`effects::flee`), with what it leaves the other player; the state check's game-end point ends
+    /// the game on it. Absent otherwise, so a game without one hashes as before this field existed
+    /// (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fled: Option<crate::wire::FleeOpponent>,
+}
+
+/// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
+/// A tally kept for an earlier turn counts nothing: the first vote of a later turn starts it again.
+/// `ballots` holds one card per definition, in the order they voted; `VOTE_TALLY_SIZE` of them remove
+/// the player at the state check's game-end point (`win_conditions::vote_check`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct VoteTally {
+    pub turn: i32,
+    pub ballots: Vec<crate::wire::Ballot>,
 }
 
 string_union! {
@@ -1846,6 +1875,8 @@ pub fn create_player_state() -> PlayerState {
         trades_per_turn: None,
         resource_tray: None,
         market_credits: None,
+        votes: None,
+        fled: None,
     }
 }
 

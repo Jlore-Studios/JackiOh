@@ -244,6 +244,10 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   // Stinkyscape's Starship (R1852000, R1852003).
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
   starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
+  // Issue #1843 (R1843000, R1843002).
+  voteCast: { type: "voteCast", player: "p2", instanceId: "u1", defId: "core-073", votes: 1, needed: 3 },
+  votedOut: { type: "votedOut", player: "p2", ballots: [{ instanceId: "u1", defId: "core-073" }] },
+  fled: { type: "fled", player: "p1", opponent: "draw" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -341,6 +345,9 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   marketCreditsChanged: "uiClick",
   starshipFused: "buff",
   starshipLaunched: "entrance",
+  voteCast: "uiClick",
+  votedOut: "trapSting",
+  fled: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -378,6 +385,9 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "marketCreditsChanged",
   "starshipFused",
   "starshipLaunched",
+  "voteCast",
+  "votedOut",
+  "fled",
   "countered",
   "stolen",
   "unlocked",
@@ -849,6 +859,13 @@ describe("B23 seat-relative rows", () => {
   it("B23 gameOver on a draw plays notify on both seats", () => {
     expect(shape({ type: "gameOver", winner: "draw", reason: "draw-accepted" })).toEqual([sfx("notify")]);
     expect(shape({ type: "gameOver", winner: "draw", reason: "both-heroes-dead" }, p2Seat())).toEqual([sfx("notify")]);
+  });
+
+  it("R1843004 the other player's flight sounds the draw it is, and the fleer's own the win", () => {
+    expect(shape({ type: "gameOver", winner: "p2", reason: "fled" })).toEqual([sfx("notify")]);
+    expect(shape({ type: "gameOver", winner: "p2", reason: "fled" }, p2Seat())).toEqual([sfx("victory")]);
+    expect(shape({ type: "gameOver", winner: "p2", reason: "fled-decisive" })).toEqual([sfx("defeat")]);
+    expect(shape({ type: "gameOver", winner: "p2", reason: "voted-out" })).toEqual([sfx("defeat")]);
   });
 
   it("B23 promptOpened sounds only for the player holding the prompt", () => {

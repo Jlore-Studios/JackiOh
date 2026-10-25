@@ -904,6 +904,30 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "brand" },
     target: (e, view) => locateInstance(view, e.instanceId),
   },
+  // Issue #1843 (R1843000): a card votes to remove a player; it flares where it stands, or the voted
+  // player's backrow when the viewer cannot see it, and the log counts the tally.
+  voteCast: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId> | backrow-<side>",
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
+  },
+  // R1843000: the cards agree, and the banner says the player is voted out before the result.
+  votedOut: {
+    animation: "jk-banner",
+    durationMs: 1200,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
+  // R1843002: the fleer's hero fades out of the universe under a banner, before the result.
+  fled: {
+    animation: "jk-exile-fade",
+    durationMs: 900,
+    testid: "hero-<side>",
+    fx: { recipe: "banner" },
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /**

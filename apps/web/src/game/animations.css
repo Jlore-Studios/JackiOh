@@ -1286,6 +1286,25 @@
   animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
+/* --- voteCast / votedOut / fled: issue #1843's endings (R1843000, R1843002) ----------- */
+/* A vote flares its card (400 ms); the agreement holds the banner (1200 ms); the fleer's hero
+   fades out of the universe (900 ms). */
+
+[data-animating="voteCast"] {
+  animation-name: jk-radiant-pulse;
+  animation-duration: calc(400ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
+[data-animating="votedOut"] {
+  animation-name: jk-banner;
+  animation-duration: calc(1200ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
+[data-animating="fled"] {
+  animation-name: jk-exile-fade;
+  animation-duration: calc(900ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
 /* --- locked: chain icon closes over the zone (250 ms) -------------------------------- */
 
 @keyframes jk-chain-close {

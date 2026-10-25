@@ -115,6 +115,7 @@ pub mod effects_turn_end;
 pub mod embiggen_cost;
 pub mod emotes;
 pub mod endgame;
+pub mod endings;
 pub mod enters_hand;
 pub mod equip;
 pub mod exile_on_damage;

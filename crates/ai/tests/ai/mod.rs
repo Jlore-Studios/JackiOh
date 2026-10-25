@@ -13,6 +13,7 @@ pub mod deck;
 pub mod determinize_shown_cost;
 pub mod dev_run;
 pub mod duos;
+pub mod endings;
 pub mod evaluate;
 pub mod evaluate_v020;
 pub mod even_trades;

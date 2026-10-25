@@ -30,6 +30,7 @@ import { GLITCH_WORDS } from "../cards/glitch.ts";
 import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
+import { seatOutcome } from "../game/outcome.ts";
 import { brandCues } from "./brand.ts";
 import { castOnDrawCues, planCardFx } from "./cardFx.ts";
 import { chaosCues } from "./chaos.ts";
@@ -916,6 +917,10 @@ const turnBanner: Recipe = (event, p) => {
   if (event.type === "turnCutShort") return [banner(p.D, FX_TEXT.turnCutShort, "muted")];
   // R1183002: the AI plays the rest of the turn.
   if (event.type === "autopilotEngaged") return [banner(p.D, FX_TEXT.autopilot, "muted")];
+  // R1843000, R1843002: the agreement that removes a player, and the escape, in the removed or the
+  // fleeing player's colours.
+  if (event.type === "votedOut") return [banner(p.D, FX_TEXT.votedOut, sideOf(p.view, event.player))];
+  if (event.type === "fled") return [banner(p.D, FX_TEXT.escaped, sideOf(p.view, event.player))];
   // R676: a Glitch's banner is its own corrupted name (cards/glitch.ts), whatever it did.
   if (event.type === "glitched") return [banner(p.D, GLITCH_WORDS.name, "muted")];
   // R983: a Feng Shui judgement is 吉 or 凶 on the turn banner.
@@ -1339,9 +1344,10 @@ export function planResult(view: PlayerView, env: Pick<FxPlanEnv, "intensity">):
   if (!(i > 0) || view.result === null) return [];
   const you = anchor(testid.hero("you"));
   const opponent = anchor(testid.hero("opponent"));
-  const winner = view.result.winner;
+  // R1843004: as the game ended for this seat, so the other player's `fled` plays as a draw.
+  const outcome = seatOutcome(view.result.winner, view.result.reason, view.viewer);
 
-  if (winner === "draw") {
+  if (outcome === "draw") {
     return [
       resultCue("draw", FX_TEXT.draw),
       burst(i, "dust", you, "area", 0, "resultDust"),
@@ -1350,7 +1356,7 @@ export function planResult(view: PlayerView, env: Pick<FxPlanEnv, "intensity">):
   }
 
   const cues: FxCue[] = [];
-  if (winner === view.viewer) {
+  if (outcome === "win") {
     const rayCue: FxRaysCue = { kind: "rays", tone: "victory", at: viewportCenter(), delayMs: 0, durationMs: FX_RESULT_MS };
     cues.push(
       resultCue("victory", FX_TEXT.victory),

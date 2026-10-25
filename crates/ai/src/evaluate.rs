@@ -28,12 +28,12 @@ use jackioh_engine::config::{
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::{
     AltWinCondition, AttackTarget, CardDef, CardInstance, CardType, CostOptions, GameState, Keyword,
-    KeywordKind, ModifierKind, PlayerId, PlayerState, Position, UnitView, active_brittle_count,
+    KeywordKind, ModifierKind, PlayerId, PlayerState, Position, SeatOutcome, UnitView, active_brittle_count,
     active_units_of, animated_kind_of, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_keywords, card_type_of_face, credit_lapsing, effective_cost,
     effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card,
-    lost_refreshes_left, owed_mana_of, own_cost, pierces, query_cost, reset_instance, stats_with_buffs,
-    subsystems, takes_strike_back, unit_has, unit_view,
+    lost_refreshes_left, outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
+    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -797,10 +797,11 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
     let opp = seat.opponent();
     if let Some(result) = &state.result {
         let turn = f64::from(state.turn);
-        return match result.winner.player() {
-            Some(winner) if winner == seat => w.win - turn,
-            Some(winner) if winner == opp => -w.win + turn,
-            _ => w.drawn,
+        // R1843004: the game as it ended for this seat, so the opponent's flight is a draw here.
+        return match outcome_for(result, seat) {
+            SeatOutcome::Win => w.win - turn,
+            SeatOutcome::Loss => -w.win + turn,
+            SeatOutcome::Draw => w.drawn,
         };
     }
 

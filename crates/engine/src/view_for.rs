@@ -2139,13 +2139,36 @@ fn redact_event(
         | GameEventType::Burned
         | GameEventType::Discarded
         | GameEventType::Drawn
-        | GameEventType::AddedToHand => {
+        | GameEventType::AddedToHand
+        // R1843000: a vote names its card as the card itself is named, a face-down voter hidden.
+        | GameEventType::VoteCast => {
             if !hidden(&instance) {
                 return event.clone();
             }
             hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
+
+        // R1843000: the cards that agreed, each named as the card itself is.
+        GameEventType::VotedOut => match event {
+            GameEvent::VotedOut { player, ballots } => GameEvent::VotedOut {
+                player: *player,
+                ballots: ballots
+                    .iter()
+                    .map(|ballot| {
+                        if hidden(&ballot.instance_id) {
+                            crate::wire::Ballot {
+                                instance_id: HIDDEN_ID.to_string(),
+                                def_id: HIDDEN_ID.to_string(),
+                            }
+                        } else {
+                            ballot.clone()
+                        }
+                    })
+                    .collect(),
+            },
+            other => other.clone(),
+        },
 
         // R177: a Make Radiant on a card in a library (#42's roll over every card, top down) is one nobody
         // could read where it happened (§3), and read openly once the card does, its place in the batch
@@ -2387,7 +2410,9 @@ fn redact_event(
         // Starship on the field, and a launch names the Starship and the pieces it holds: all public, as
         // the Starship's memory is on both seats' views.
         | GameEventType::StarshipFused
-        | GameEventType::StarshipLaunched => event.clone(),
+        | GameEventType::StarshipLaunched
+        // R1843002: a flight names a player and what it leaves the other.
+        | GameEventType::Fled => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

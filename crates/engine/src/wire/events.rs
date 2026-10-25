@@ -149,6 +149,30 @@ string_union! {
     }
 }
 
+string_union! {
+    /// R1843002: what fleeing leaves the other player (`fled.opponent`, `PlayerState.fled`): a draw,
+    /// the ending `fled`, or a loss, `fled-decisive` (Stinkyscape #148.1 Edge of the Universe's Radiant
+    /// face lets the fleer choose).
+    pub enum FleeOpponent {
+        Draw = "draw",
+        Loss = "loss",
+    }
+}
+
+/// R1843000: one vote in a player's tally (`VoteTally.ballots`, `votedOut.ballots`): the card that
+/// cast it, by its id when it voted and its definition, which is what a tally counts once.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Ballot {
+    pub instance_id: String,
+    pub def_id: String,
+}
+
 /// `{ winner: PlayerId | "draw"; reason: GameOverReason }`: how a game ended (`GameState.result`,
 /// `PlayerView.result`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -987,6 +1011,34 @@ pub enum GameEvent {
         name: String,
         pieces: Vec<String>,
     },
+    // -------------------------------------------------------------------------------------------
+    // Issue #1843: two new endings, voted out and fled (R1843000–R1843005)
+    // -------------------------------------------------------------------------------------------
+    /// R1843000: a card voted to remove `player` from the game (`effects::vote_out`): the tally's
+    /// `votes` this turn now and the `needed` that removes them (`VOTE_TALLY_SIZE`). A vote that adds
+    /// nothing (its card's definition already voted against them this turn) has no event. The card is
+    /// named as the card itself is (R97).
+    VoteCast {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        votes: i32,
+        needed: i32,
+    },
+    /// R1843000: `player`'s tally was full at the state check's game-end point, so they are removed
+    /// from the game: the cards that agreed, in the order they voted, just before the `gameOver` it
+    /// brings. Each card is named as the card itself is (R97).
+    VotedOut {
+        player: PlayerId,
+        ballots: Vec<Ballot>,
+    },
+    /// R1843002: `player` escaped the universe at the state check's game-end point (`effects::flee`),
+    /// leaving the other player a draw or a loss, just before the `gameOver` it brings. Public: a
+    /// player and a choice.
+    Fled {
+        player: PlayerId,
+        opponent: FleeOpponent,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1129,6 +1181,9 @@ string_union! {
         MarketCreditsChanged = "marketCreditsChanged",
         StarshipFused = "starshipFused",
         StarshipLaunched = "starshipLaunched",
+        VoteCast = "voteCast",
+        VotedOut = "votedOut",
+        Fled = "fled",
     }
 }
 
@@ -1304,6 +1359,9 @@ impl GameEvent {
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
             GameEvent::StarshipFused { .. } => GameEventType::StarshipFused,
             GameEvent::StarshipLaunched { .. } => GameEventType::StarshipLaunched,
+            GameEvent::VoteCast { .. } => GameEventType::VoteCast,
+            GameEvent::VotedOut { .. } => GameEventType::VotedOut,
+            GameEvent::Fled { .. } => GameEventType::Fled,
         }
     }
 }
@@ -1341,6 +1399,16 @@ string_union! {
         AltWin = "alt-win",
         /// R850 (Meditative #8): an effect won the game for a player outright.
         WonByEffect = "won-by-effect",
+        /// R1843000 (Stinkyscape #18's Brains): a player's vote tally filled, so they were removed
+        /// from the game, a loss for them and a win for the other player.
+        VotedOut = "voted-out",
+        /// R1843001: both players' tallies filled at the same check, a draw.
+        BothVotedOut = "both-voted-out",
+        /// R1843002 (Stinkyscape #148.1 Edge of the Universe): a player fled, a win for them and a
+        /// draw for the other player (R1843004); two fleers at once draw.
+        Fled = "fled",
+        /// R1843002: a player fled and chose a loss for the other player (the card's Radiant face).
+        FledDecisive = "fled-decisive",
     }
 }
 
@@ -1378,9 +1446,10 @@ mod tests {
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
         // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
-        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); and the
-        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003).
-        assert_eq!(GAME_EVENT_TYPES.len(), 87);
+        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
+        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); and #1843's
+        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002).
+        assert_eq!(GAME_EVENT_TYPES.len(), 90);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

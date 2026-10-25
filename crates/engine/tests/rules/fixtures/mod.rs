@@ -16,6 +16,7 @@ pub mod craft;
 pub mod credit;
 pub mod damage_combat;
 pub mod datacenter;
+pub mod endings;
 pub mod feng_shui;
 pub mod field;
 pub mod freeze;
