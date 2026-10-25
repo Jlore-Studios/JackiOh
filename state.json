@@ -37,7 +37,9 @@
     "1817": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-25T11:47:31Z",
         "family": "muse",
