@@ -2904,7 +2904,13 @@
         "issue": 1907,
         "reason": "the muse CLI failed at once: muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1831 (explicit)\nmuse: workspace trust: trusted source=run-flag\nmuse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-1831/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\nagent loop failed: model failed: API error 429 [request_id=56218d6c-e234-400b-",
         "streak": 5
-      }
+      },
+      "spent": [
+        {
+          "at": "2026-10-25T20:14:41Z",
+          "minutes": 0.1
+        }
+      ]
     }
   },
   "pruned": {
