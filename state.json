@@ -1135,6 +1135,8 @@
       }
     },
     "1924": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "at": "2026-10-25T16:03:26Z",
         "by": "`claude` (strong)",
@@ -1145,10 +1147,15 @@
       "feedback_since": "2026-10-25T14:07:31Z",
       "issue": 1842,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "claude-2",
       "queued_at": "2026-10-25T16:03:55Z",
+      "run_id": "pending:cf24013f-1792944231",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-25T16:04:33Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -1171,9 +1178,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T15:53:20Z",
+    "at": "2026-10-25T16:04:33Z",
     "url": "",
-    "what": "build #1898 on devin"
+    "what": "revise #1924 on claude-2"
   },
   "last_sweep": {
     "at": "2026-10-25T15:48:32Z",
