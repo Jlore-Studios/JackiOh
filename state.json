@@ -1203,10 +1203,10 @@
       "question": "",
       "queued_at": "2026-10-25T17:04:31Z",
       "round_tier": "strong",
-      "run_id": "40209942978",
+      "run_id": "pending:5ff9a134-1792947867",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-25T16:04:33Z",
+      "started_at": "2026-10-25T17:05:02Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -1288,9 +1288,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T16:30:10Z",
+    "at": "2026-10-25T17:05:02Z",
     "url": "",
-    "what": "review #1926 on agy"
+    "what": "revise #1924 on claude-2"
   },
   "last_sweep": {
     "at": "2026-10-25T16:53:30Z",
