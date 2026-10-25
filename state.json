@@ -13379,6 +13379,13 @@
     "1821": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T04:52:27Z",
+        "difficulty": "hard",
+        "provider": "claude-8",
+        "tier": "strong",
+        "why": "only ~90 lines in 5 files, but it changes the AI's move order in crates/ai/src/, the rule's 'AI's search' line for hard; torn with medium, so the higher"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
