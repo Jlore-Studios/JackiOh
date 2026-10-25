@@ -19,10 +19,10 @@ docs/v0.3.0/SURFACE.md §14.
 
 | Lane | Goal | Standing prompt |
 |---|---|---|
-| `improve` | **stopped (#1677).** A stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
-| `unban` | **stopped (#1677).** An AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
+| `improve` | **stopped (#1677).** A stronger AI: pass the sequential test against its predecessor on paired deals (R850000, R1679000) | [`improve.md`](improve.md) |
+| `unban` | **stopped (#1677).** An AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, and the same test passed | [`unban.md`](unban.md) |
 | `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports (The gather lane) | [`gather.md`](gather.md) |
-| `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: improve's bar, 220 of 400 paired games, on deals of its own (R1012000) | [`learn.md`](learn.md) |
+| `learn` | a stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: the same test, on deals of its own (R1012000) | [`learn.md`](learn.md) |
 
 The `gather` lane runs no model session and opens no pull request (The gather lane, below). The
 `learn` lane runs no model session either and needs no box: it is a GitHub workflow,
@@ -45,7 +45,9 @@ The lanes played 100 games against SPEC §10.7's random policy too, needing 90, 
 the first AI dealt the Meditative set, beat random in at least 90 of 100 (R732001). Since then they
 measure a candidate against its parent alone: `unban` at 60 of 100, and `improve` at 65 of 100 until
 issue #850 lowered its bar to 220 of 400 paired games (R850000), so that the few points a change
-gains can bank and compound. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
+gains can bank and compound. Since #1679 every lane's gate is a sequential test on paired deals
+(R1679000, The gate, below), which banks a 53% gain about nine times in ten where 220 of 400 banked
+it about one time in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
 on `main` to their floor against random, so an AI that forgets how to beat random fails the daily
 run.
 
@@ -208,15 +210,14 @@ shrinks: no lane adds an entry, and no card of an earlier set is ever banned aga
 ## The gate
 
 `cargo jackioh promote --lane <lane> --parent-bin <parent> [--dry-run] [--verify]` plays the lane's
-games against the parent (`TRAINING_IMPROVE.games`, 400; `TRAINING_UNBAN.games`, 100):
+deals against the parent until its sequential test decides (R1679000, `TRAINING_GATE`):
 
-- game `k`'s seed is `<lane>:<tree>:<k>`, where `<tree>` is `git rev-parse HEAD:crates/ai/src`, so
+- deal `d`'s seed is `<lane>:<tree>:<d>`, where `<tree>` is `git rev-parse HEAD:crates/ai/src`, so
   the seeds name the AI being measured and committing `generation.json` does not move them;
-- the candidate sits p1 on odd games and p2 on even ones;
-- the improve lane's gate is paired (R850000): its `k` is a deal, and each deal is played twice
-  with the seats swapped, game `2k − 1` with the candidate on p1 and game `2k` with it on p2, the
-  same decks, shuffles and first seat in both. Its 200 deals are the lane's hold-out set (R850001):
-  named for the committed AI and read only by it, never by a screen;
+- each deal is played twice with the seats swapped (R850000), game `2d − 1` with the candidate on p1
+  and game `2d` with it on p2, the same decks, shuffles and first seat in both. The deals are the
+  lane's hold-out set (R850001): named for the committed AI and read only by it, never by a screen.
+  Every lane's gate is paired since #1679, the unban lane's too;
 - each seat's deck is `build_ai_deck` over every set that ships (Meditative included since
   generation 9) minus its own AI's shadow ban, with no handicap (Easy both). Both seats are dealt
   by that one rule, and neither is shaped by the lane's dealt-quality table (`DEALT_Q`; the deck
@@ -226,32 +227,47 @@ games against the parent (`TRAINING_IMPROVE.games`, 400; `TRAINING_UNBAN.games`,
   still mulligan by `mulligan_keep_shaped`, which is part of how the AI plays;
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 
+**The test.** Each deal gives the candidate an edge, its wins less the parent's over the deal's two
+games, halved, from −1 to 1. The test weighs H0, a mean edge of 0 (a successor no stronger than its
+parent), against H1, +0.06 (a 53% win rate, about +21 Elo), with a 5% chance of promoting the first
+and 5% of failing the second, by the log-likelihood ratio of two normal laws with the deals' own
+variance. It plays the deals 100 at a time and reads them in deal order; from the 100th deal on it
+stops at the first whose ratio reaches `ln(19)` (about 2.94), a pass, or falls to `−ln(19)`, a fail,
+and a test still undecided at the 1,000th deal fails. The games of a batch past the deal it stopped at
+are set aside, so where it stops never depends on the thread count and `--verify` stops at the same
+deal; a promotion's `vsParent` is the wins out of the games of the deals it read.
+
 | Lane | vs parent | Shadow bans |
 |---|---|---|
-| `improve` | ≥ 220 of 400 paired games (`TRAINING_IMPROVE.vs_parent`) | — |
-| `unban` | ≥ 60 of 100 (`TRAINING_UNBAN.vs_parent`) | strictly fewer than the parent's |
+| `improve` | the test passes | — |
+| `unban` | the test passes | strictly fewer than the parent's |
+| `learn` | the test passes, on deals of its own | — |
 
-220 of 400 is about two standard deviations above an equal successor's 200: one passes at most about
-2.6% of the time, less with the luck pairing cancels, while a successor that truly wins 55% passes
-about half the time and one at 58% nine times in ten (R850000). It was 65 of 100 until issue #850.
+On #1058's paired deals (of 200, 25 won twice, 146 split and 29 lost twice), it promotes an equal
+successor about 4.5% of the time, and one that truly wins 52%, 53% or 55% about 60%, 91% or nearly all
+of it, where the fixed bar of 220 of 400 it replaced let those through about 6%, 15% and 53%. It plays
+about 800 games at H0 and at H1, 1,050 between them, about 300 for a clear loser, and never more than
+2,000. The bar was 65 of 100 until issue #850, then 220 of 400 paired games until #1679 (the unban
+lane's 60 of 100 unpaired); a tree gets one test, since the same tree plays the same deals to the same
+verdict.
 
 It plays no games against random (R732001), and a promotion records `"vsRandom": null`. A draw is not
 a win, and neither is a game that ended without a result. Every game must also be clean on either
 seat: no refused action, throw, fallback or panic caught in an AI's search, and a log that folds back
 to its hash (R1489000). The parent's counts come from its verbose answers; each other game is a
 failure naming its seed and the candidate's seat. Exit 0 on a pass, 1 on a failed gate. The
-report (Markdown) goes to stdout; a paired gate's report and latest pass add the paired edge, the
-candidate's wins less the parent's over each deal's two games, in points of the games, with its 95%
-interval.
+report (Markdown) goes to stdout; it and the latest pass add the paired edge, the candidate's wins
+less the parent's over each deal's two games, in points of the games, with its 95% interval, and the
+test's line: the deals it read, its log-likelihood ratio and its bounds.
 
 Against a parent whose shadow ban is empty, the unban lane's gate cannot pass (strictly fewer than
 none), so `promote --lane unban` says the lane has nothing to do and exits 1 before it plays a game,
 whatever the flag, writing nothing and printing no report.
 
-- `--dry-run` measures and writes nothing. The unban lane's runs on a working copy with uncommitted
-  changes in `crates/ai/src` (on HEAD's seeds, and says so). The improve lane's refuses one: its
-  deals are read only by the committed AI they are named for (R850001), so a dry run on a clean
-  checkout plays exactly the games the promotion would.
+- `--dry-run` measures and writes nothing. It refuses a working copy with uncommitted changes in
+  `crates/ai/src`: the deals are read only by the committed AI they are named for (R850001), so a dry
+  run on a clean checkout plays exactly the games the promotion would. Until #1679 the unban lane's
+  unpaired gate measured uncommitted changes on HEAD's seeds.
 - Without a flag, a pass writes `crates/ai/generation.json` and appends the same object to
   `training/history/<lane>.jsonl`. It refuses to run while `crates/ai/src` has uncommitted changes,
   since the seeds come from the committed tree: commit the change first, then run it, then commit

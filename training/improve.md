@@ -8,9 +8,9 @@
 > is kept for the record, and for a person who starts the lane again by hand.
 
 You are improving JackiOh's Rust AI in `crates/ai/` (SPEC §9.9 and the doc comments of
-`crates/ai/src/`). Your goal is a stronger AI: one that beats its predecessor, the AI on `main`, in
-at least 220 of 400 games on the gate's 200 hold-out deals, each deal played twice with the seats
-swapped (R850000). The gate plays no games against random (R732001): generation 9 beat random in at
+`crates/ai/src/`). Your goal is a stronger AI: one that passes the gate's sequential test against
+its predecessor, the AI on `main`, on the gate's hold-out deals, each deal played twice with the seats
+swapped (R850000, R1679000; until #1679, 220 of 400 games on 200 deals). The gate plays no games against random (R732001): generation 9 beat random in at
 least 90 of 100, and the daily quality gates still check that every AI on `main` does. The lane is
 described in `training/README.md`; read it first, and its section The improve stack above all.
 
@@ -182,8 +182,8 @@ about even (95-105, 101-99) when their pieces were re-screened at 200 games agai
 Fresh-seed reads ran about 10 points above the gate's in every session from s40 to s48. A change
 that wins by chance is reverted by the next fair measure. So:
 
-- the gate needs 220 of 400 on its hold-out deals: an equal successor passes it at most about 2.6%
-  of the time, a stack that truly wins 55% about half the time, one at 58% nine times in ten;
+- the gate's sequential test (R1679000) passes an equal successor about 5% of the time, a stack that
+  truly wins 52% about 60% of the time and one at 53% about nine times in ten, in about 800 games;
 - 400 paired games put a change's edge within about ±0.1 of its true value when a deal's two games
   fall independently, and closer when the deal's luck cancels, so a screen keeps a gain of a few
   points only when pairing has narrowed the interval, or on a larger screen decided in advance;
@@ -246,7 +246,7 @@ differently.
    1. When the stack's screen against the parent has its `edgeLow` above 0 (Before the gate), every
       kept change is committed and nothing in `crates/ai/src` is left uncommitted, run the gate once:
       `cargo jackioh promote --lane improve --parent-bin ~/parent-jackioh`. It plays the committed
-      stack's hold-out deals, 400 games, as long as a screen. A dry run (`--dry-run`) plays the very
+      stack's hold-out deals until its sequential test decides, about 800 games. A dry run (`--dry-run`) plays the very
       same games and is no second chance, so run the gate for real.
    2. If it exits 0, it has written `crates/ai/generation.json` and
       `training/history/improve.jsonl`: commit those two alone, on top of the stack,
@@ -254,8 +254,8 @@ differently.
       where `<N>` is the `generation` it wrote and `<what changed>` sums up the stack in one line.
       That is the promotion commit; nothing else may be committed after it. The loop folds the stack
       into it and checks it against the parent again before it goes up.
-   3. If it exits 1, it wrote nothing. Record its numbers in `attempts.md` (the wins and the 220
-      needed, the paired edge and its interval) and go on improving the stack. Never run it again on
+   3. If it exits 1, it wrote nothing. Record its numbers in `attempts.md` (the deals it read, its
+      log-likelihood ratio and bounds, the paired edge and its interval) and go on improving the stack. Never run it again on
       the same tip: it would read the same games.
 3. Commit nothing but kept changes to the stack and, after a passing gate, the promotion commit.
    Do not push, open a pull request or touch other branches: the loop (`training/loop.sh`) does that
