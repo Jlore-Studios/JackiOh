@@ -1416,11 +1416,38 @@ cells: {ZoneRef},
 player: PlayerId,
 turn: number,
 } | {
+["type"]: "awakened",
+player: PlayerId,
+instanceId: string,
+defId: string,
+} | {
 ["type"]: "traded",
 player: PlayerId,
+} | {
+["type"]: "resourceGained",
+player: PlayerId,
+instanceId: string,
+defId: string,
+radiant: true?,
+} | {
+["type"]: "resourceSold",
+player: PlayerId,
+instanceId: string,
+defId: string,
+radiant: true?,
+credits: number,
+} | {
+["type"]: "resourceDiscarded",
+player: PlayerId,
+instanceId: string,
+defId: string,
+} | {
+["type"]: "marketCreditsChanged",
+player: PlayerId,
+value: number,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "traded"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect"
 
@@ -1742,7 +1769,7 @@ target: TargetSpec?,
 amount: number,
 }
 
-export type PlayedFrom = "graveyard"
+export type PlayedFrom = "graveyard" | "tray"
 
 export type PlayerId = "p1" | "p2"
 
@@ -2217,6 +2244,7 @@ spellDamageAura: SpellDamageAura?,
 doublesHealing: boolean?,
 answersTargetedSpells: boolean?,
 embiggenGarden: number?,
+slumber: SlumberText?,
 }
 
 export type StealAllArgs = {
@@ -2517,9 +2545,12 @@ player: PlayerId,
 } | {
 ["z"]: "gone",
 player: PlayerId,
+} | {
+["z"]: "tray",
+player: PlayerId,
 }
 
-export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone"
+export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone" | "tray"
 
 export type ZoneRef = {
 player: PlayerId,

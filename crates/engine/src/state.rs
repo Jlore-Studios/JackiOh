@@ -1189,6 +1189,19 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub answer_chain: Option<AnswerChain>,
+    // ---- Stinkyscape player fields (#1840, `resources`) ----
+    /// R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
+    /// at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
+    /// `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub resource_tray: Option<Vec<CardInstance>>,
+    /// R1840005: this player's Credits, public, gained by selling Resources and spent at the
+    /// Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+    /// Absent until first gained, so a game without Credits hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub market_credits: Option<i32>,
 }
 
 string_union! {
@@ -1750,6 +1763,8 @@ pub fn create_player_state() -> PlayerState {
         answer_chain: None,
         trades: None,
         trades_per_turn: None,
+        resource_tray: None,
+        market_credits: None,
     }
 }
 
@@ -2337,6 +2352,8 @@ fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
         // B5 E21: a backrow pile's dormant cards and a carrier's Unit are on the board too (R446).
         .chain(side.backrow_piles.iter().flatten().flatten())
         .chain(side.carried.iter().flatten().flatten())
+        // R1840000: a Resource in the tray is a card the state holds, as a hand card is.
+        .chain(side.resource_tray.iter().flatten())
         // R98: a card that asks a question mid-resolution is still itself, and §10.5 parks it here
         // between its play and its destination, so a resumed step finds `ctx.self` rather than null.
         .chain(side.resolving.iter())
@@ -2352,6 +2369,7 @@ fn side_cards_mut(side: &mut PlayerState) -> impl Iterator<Item = &mut CardInsta
         .chain(side.backrow.iter_mut().flatten())
         .chain(side.backrow_piles.iter_mut().flatten().flatten())
         .chain(side.carried.iter_mut().flatten().flatten())
+        .chain(side.resource_tray.iter_mut().flatten())
         .chain(side.resolving.iter_mut())
 }
 

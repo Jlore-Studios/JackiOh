@@ -179,6 +179,11 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
+  // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
+  resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
+  resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -312,6 +317,11 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   awakened: "brand",
   // Issue #1838 (R1838001): a Trade sends a card back from the hand into the deck.
   traded: "shuffle",
+  // Issue #1840 (R1840000–R1840005): the tray, a sale and the Credits badge animate with no effect.
+  resourceGained: null,
+  resourceSold: null,
+  resourceDiscarded: null,
+  marketCreditsChanged: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -438,10 +448,14 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   autopilotEngaged: ["jk-banner", 600, "turn-banner"],
   awakened: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   traded: ["jk-shuffle-in", 300, "library-<side>"],
+  resourceGained: ["jk-hand-edge", 250, "hand-<side>"],
+  resourceSold: ["jk-hand-full", 700, "hand-<side>"],
+  resourceDiscarded: ["jk-hand-edge", 250, "hand-<side>"],
+  marketCreditsChanged: ["jk-badge-tick", 200, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 61 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002) and the Trade (R1838001) carry fx with the listed recipe and the other 20 carry none", () => {
+  it("B1 exactly the 61 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002) and the Trade (R1838001) carry fx with the listed recipe and the other 24 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(61);
@@ -456,9 +470,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 20 rows without an effect have no fx value at all", () => {
+  it("B1 the 24 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(20);
+    expect(bare).toHaveLength(24);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

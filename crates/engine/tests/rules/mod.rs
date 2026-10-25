@@ -189,6 +189,7 @@ pub mod replacements;
 pub mod replay;
 pub mod replay_scripted;
 pub mod replay_steps;
+pub mod resources;
 pub mod restrictions;
 pub mod rng;
 pub mod rotation;

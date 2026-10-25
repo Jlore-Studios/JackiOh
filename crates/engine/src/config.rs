@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, Tag, string_union,
 };
 
 /// §2.6, R1705000
@@ -1096,6 +1096,24 @@ pub const NIGHT_MARKET_CN_LOTS: i32 = 3;
 pub const NIGHT_MARKET_ROCK_LOTS: i32 = 2;
 /// R1000: the stall's random AI generated card.
 pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape's Resources and Credits (#1840, `resources`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1840000: the most Resources a player's Resource tray holds. A Resource gained past it is sold at
+/// once (R1840001).
+pub const RESOURCE_TRAY_CAP: i32 = 8;
+/// R1840002: "Gain a random Resource" rolls a rarity by these weights (Common 55, Rare 25, Epic 14,
+/// Legendary 5, Mythic 1, out of 100), over the rarities the pool holds, then a Resource of that
+/// rarity uniformly.
+pub const RESOURCE_RARITY_ODDS: &[(PrintedRarity, i32)] = &[
+    (PrintedRarity::Common, 55),
+    (PrintedRarity::Rare, 25),
+    (PrintedRarity::Epic, 14),
+    (PrintedRarity::Legendary, 5),
+    (PrintedRarity::Mythic, 1),
+];
 
 // ---------------------------------------------------------------------------------------------
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).

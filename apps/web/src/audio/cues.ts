@@ -680,6 +680,14 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   // R1838001: a Trade sends a card into the deck, the whoosh a shuffle-in makes; it names no card, so
   // both seats hear the same (R203).
   traded: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R1840000, R1840004: a Resource reaches or leaves the tray as a card reaches or leaves a hand; it
+  // names no card the other seat may not read, so both seats hear the same (R203).
+  resourceGained: { sfx: "draw", cues: () => [sfx("draw")] },
+  // R1840001: a Resource gained past the cap is sold at once, as a full hand burns a card.
+  resourceSold: { sfx: "burn", cues: () => [sfx("burn")] },
+  resourceDiscarded: { sfx: "draw", cues: () => [sfx("draw")] },
+  // R1840005: the Credits count ticks, as the Jade Counter's does.
+  marketCreditsChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

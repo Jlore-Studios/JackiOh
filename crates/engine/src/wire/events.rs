@@ -21,9 +21,11 @@ string_union! {
 }
 
 string_union! {
-    /// `cardPlayed.from`: B5 E11, R454 — the card was played from its player's graveyard.
+    /// `cardPlayed.from`: B5 E11, R454 — the card was played from its player's graveyard; R1840003 —
+    /// a Resource played from its player's Resource tray.
     pub enum PlayedFrom {
         Graveyard = "graveyard",
+        Tray = "tray",
     }
 }
 
@@ -920,6 +922,49 @@ pub enum GameEvent {
     Traded {
         player: PlayerId,
     },
+    // -------------------------------------------------------------------------------------------
+    // Stinkyscape's Resources and Credits (#1840, `resources`). Their BUILD M5-T4 rows, `ANIMATIONS`
+    // and `SOUND_CUES` rows came with them.
+    // -------------------------------------------------------------------------------------------
+    /// R1840000: `player` gained a Resource into their Resource tray. It names the card as
+    /// `addedToHand` does, so a view hides the card where the viewer may not read it, its face with
+    /// it (R97): the other player learns that a Resource was gained and not which.
+    ResourceGained {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        /// Set when the Resource is Radiant (a Radiant gain, R1840002). It is the card's, so a view
+        /// that hides the card hides this too (R97). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        radiant: Option<bool>,
+    },
+    /// R1840001: a Resource `player` gained past `RESOURCE_TRAY_CAP` was sold at once for `credits`
+    /// Credits and ceased to exist; the `marketCreditsChanged` after it says the new count. Public,
+    /// as a card a full hand burns is (R317): it never entered the tray.
+    ResourceSold {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        /// Set when the Resource sold is Radiant (R1840001: its Radiant face's price). Only ever
+        /// `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        radiant: Option<bool>,
+        credits: i32,
+    },
+    /// R1840004: `player` discarded a Resource from their Resource tray, and it ceased to exist.
+    /// Public: a discarded card is shown as it goes.
+    ResourceDiscarded {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+    },
+    /// R1840005: `player`'s Credits are now `value`. Public: a player and a number.
+    MarketCreditsChanged {
+        player: PlayerId,
+        value: i32,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1056,6 +1101,10 @@ string_union! {
         AutopilotEngaged = "autopilotEngaged",
         Awakened = "awakened",
         Traded = "traded",
+        ResourceGained = "resourceGained",
+        ResourceSold = "resourceSold",
+        ResourceDiscarded = "resourceDiscarded",
+        MarketCreditsChanged = "marketCreditsChanged",
     }
 }
 
@@ -1225,6 +1274,10 @@ impl GameEvent {
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
             GameEvent::Awakened { .. } => GameEventType::Awakened,
             GameEvent::Traded { .. } => GameEventType::Traded,
+            GameEvent::ResourceGained { .. } => GameEventType::ResourceGained,
+            GameEvent::ResourceSold { .. } => GameEventType::ResourceSold,
+            GameEvent::ResourceDiscarded { .. } => GameEventType::ResourceDiscarded,
+            GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
         }
     }
 }
@@ -1298,8 +1351,9 @@ mod tests {
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
-        // (R1838001).
-        assert_eq!(GAME_EVENT_TYPES.len(), 81);
+        // (R1838001); and its Resources' four, `resourceGained` (R1840000), `resourceSold`
+        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005).
+        assert_eq!(GAME_EVENT_TYPES.len(), 85);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

@@ -144,6 +144,12 @@ graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Pl
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
 play is built as a hand card's.
 
+**The Resource tray and Credits** (issue #1840, R1840000, R1840003, R1840005). `ResourceTray.tsx` draws
+each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
+the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
+opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
+A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
+
 ## Commands
 
 ```

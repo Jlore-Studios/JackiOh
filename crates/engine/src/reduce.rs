@@ -12,7 +12,8 @@
 //!   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
 //!                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
 //!                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
-//!                      lets its player play (E11, R454). Step 1's validation is
+//!                      lets its player play (E11, R454), and by `playActionsFor` again for a
+//!                      Resource in its player's tray (R1840003). Step 1's validation is
 //!                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
 //!                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
 //!                      reads the cost, so the refusal a client's greyed-out button comes from and
@@ -928,6 +929,13 @@ pub(crate) fn each_legal_action(
     // it (`graveyardPlay.ts`) — the same `play` action, naming a graveyard card.
     for card in &side.graveyard {
         for play in graveyard_play_actions_for(state, player, card) {
+            visit(ActionBody::from(play))?;
+        }
+    }
+    // R1840003: a Resource in the player's tray, played as from hand — the same `play` action, naming
+    // a tray card.
+    for card in side.resource_tray.iter().flatten() {
+        for play in play_actions_for(state, player, card) {
             visit(ActionBody::from(play))?;
         }
     }

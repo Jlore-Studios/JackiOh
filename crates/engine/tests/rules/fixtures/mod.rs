@@ -41,6 +41,7 @@ pub mod play_pipeline_b;
 pub mod prompt_harness;
 pub mod prompts;
 pub mod quests;
+pub mod resources;
 pub mod rng_child;
 pub mod scripts;
 pub mod slumber;

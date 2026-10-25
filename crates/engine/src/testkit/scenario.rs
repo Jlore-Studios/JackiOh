@@ -35,6 +35,7 @@
 //! SIDE SETUP  (what `p1`/`p2` accept)
 //! ---------------------------------------------------------------------------------------------
 //!   hand, library, graveyard, exile   (string | { def?, defId?, radiant?, costMod?, costOverride? })[]
+//!   tray                              (string | { def?, defId?, radiant? })[] — R1840000's Resources
 //!   field, backrow                    (string | { def?, defId?, radiant?, row?, lane?, stack?,
 //!                                                 position?, damage?, counters?, faceUp?,
 //!                                                 statsOverride?, costMod?, costOverride?,
@@ -81,7 +82,7 @@
 //!      the ACTIVE player first, then the opponent, and within a side:
 //!      hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
 //!      backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
-//!      resolving.
+//!      resolving → Resource tray (R1840000).
 //!      A method that needs the card somewhere particular narrows the search to that place first:
 //!      `play` looks in hands only, `attack`/`switch_position` on the field only. Nothing matching panics
 //!      naming the string and listing what was there instead. Holding several copies of one def?
@@ -558,6 +559,9 @@ pub struct SideSetup {
     pub graveyard: Option<Vec<PileSetup>>,
     #[serde(default)]
     pub exile: Option<Vec<PileSetup>>,
+    /// R1840000: the Resources in the side's Resource tray, oldest first.
+    #[serde(default)]
+    pub tray: Option<Vec<PileSetup>>,
     #[serde(default)]
     pub health: Option<i32>,
     #[serde(default)]
@@ -733,6 +737,7 @@ fn side_order(state: &GameState, player: PlayerId, scope: Where) -> Vec<&CardIns
             .chain(side.exile.iter())
             .chain(side.library.iter())
             .chain(side.resolving.iter())
+            .chain(side.resource_tray.iter().flatten())
             .collect(),
     }
 }
@@ -1211,6 +1216,16 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
         setup.exile.as_deref().unwrap_or(&[]),
         &format!("{seat}.exile"),
     )?;
+    // R1840000: the tray's Resources, placed as the engine's own gain places one (no sale: the setup
+    // holds what it lists).
+    for (at, entry) in setup.tray.iter().flatten().enumerate() {
+        let at_ = format!("{seat}.tray[{at}]");
+        let def_id = setup_def_id(sink.state, &ref_of(pile_ref(entry), &at_)?, &at_)?;
+        let radiant = matches!(entry, PileSetup::Entry(fields) if fields.radiant == Some(true));
+        let mut card = new_instance(&mut *sink.state, &def_id, player, Zone::Tray { player });
+        card.radiant = radiant;
+        crate::resources::put_in_tray(&mut *sink.state, &mut card);
+    }
     Ok(())
 }
 
@@ -1463,7 +1478,8 @@ impl Scenario {
         ))
     }
 
-    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone".
+    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone", and
+    /// "tray" for a Resource in a Resource tray (R1840000).
     fn locate(&self, id: &str) -> &'static str {
         for player in PLAYER_IDS {
             let side = &self.current.players[player];
@@ -1481,6 +1497,9 @@ impl Scenario {
             }
             if side.resolving.iter().any(|card| card.id == id) {
                 return "resolving";
+            }
+            if side.resource_tray.iter().flatten().any(|card| card.id == id) {
+                return "tray";
             }
             if side.units.iter().flatten().flatten().any(|card| card.id == id) {
                 return "field";
@@ -1858,7 +1877,7 @@ impl Scenario {
             .clone()
     }
 
-    /// `zone`: "hand", "library", "graveyard" or "exile" (TS `PileName`).
+    /// `zone`: "hand", "library", "graveyard", "exile" (TS `PileName`) or "tray" (R1840000).
     pub fn pile(&self, player: impl SeatRef, zone: &str) -> Vec<CardInstance> {
         let side = &self.current.players[player.seat_or(self.current.active)];
         match zone {
@@ -1866,8 +1885,11 @@ impl Scenario {
             "library" => side.library.clone(),
             "graveyard" => side.graveyard.clone(),
             "exile" => side.exile.clone(),
+            "tray" => side.resource_tray.clone().unwrap_or_default(),
             other => {
-                panic!("pile(): \"{other}\" is not a pile; piles are hand, library, graveyard and exile")
+                panic!(
+                    "pile(): \"{other}\" is not a pile; piles are hand, library, graveyard, exile and tray"
+                )
             }
         }
     }
@@ -1884,7 +1906,7 @@ impl Scenario {
 
     // --- assertions -----------------------------------------------------------------------------
 
-    /// `zone`: "hand", "library", "graveyard", "exile", "field" or "gone" (TS `ZoneName`).
+    /// `zone`: "hand", "library", "graveyard", "exile", "field", "gone" (TS `ZoneName`) or "tray".
     pub fn expect_in_zone(&mut self, card: impl Into<CardRef>, zone: &str) -> &mut Scenario {
         let id = or_fail(self.ref_id(&card.into(), zone));
         let actual = self.locate(&id);

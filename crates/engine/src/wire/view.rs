@@ -1018,6 +1018,17 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// R1840000: this seat's Resource tray beside its hand — the viewer's own in full, the
+    /// opponent's as a count, both in full once the game is over (R434), as `hand` is. Absent while
+    /// the tray holds none, so a game without a Resource sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub resource_tray: Option<HandView>,
+    /// R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
+    /// apart from the credit line's `credit` (R1223).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub market_credits: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
     /// game without one serialises as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -541,6 +541,7 @@ fn build_def(
         params: None,
         deals_damage: None,
         uses_plague: None,
+        resource: None,
         loc,
         radiant_fallback: None,
         // R179, R468: the list the id names, kept on the definition so the scripts can be rebuilt from

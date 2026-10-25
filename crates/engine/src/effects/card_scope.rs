@@ -100,7 +100,8 @@ pub struct CardScopeOptions {
 pub fn readers_of(state: &GameState, card: &CardInstance) -> Readers {
     match card.zone {
         Zone::Library { .. } => Readers::Nobody,
-        Zone::Hand { .. } => Readers::Owner,
+        // R1840000: a Resource tray is read as a hand is.
+        Zone::Hand { .. } | Zone::Tray { .. } => Readers::Owner,
         Zone::Field {
             row: Row::Backrow, ..
         } if is_face_down(state, card) => Readers::Owner,
@@ -120,7 +121,7 @@ pub fn unreadable_by(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
         return Vec::new();
     }
     let reader = match card.zone {
-        Zone::Hand { player } => player,
+        Zone::Hand { player } | Zone::Tray { player } => player,
         _ => card.controller,
     };
     vec![opponent_of(reader)]

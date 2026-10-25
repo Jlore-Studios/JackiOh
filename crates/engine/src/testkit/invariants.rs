@@ -250,6 +250,8 @@ fn cards_of(state: &GameState) -> Vec<&CardInstance> {
         out.extend(side.backrow_piles.iter().flatten().flatten());
         out.extend(side.carried.iter().flatten().flatten());
         out.extend(side.resolving.iter());
+        // R1840000: a Resource in a Resource tray.
+        out.extend(side.resource_tray.iter().flatten());
     }
     out
 }
@@ -574,9 +576,9 @@ fn is_token_def(state: &GameState, def_id: &str, viewer: PlayerId) -> bool {
 }
 
 /// The hidden set, worked out from the state's zones on their own terms and never from `view_for`'s
-/// rules (the oracle must not be the fix restated): the other seat's hand while the game is live
-/// (R434), both libraries (§9.1), the other seat's face-down traps (dormant ones under a backrow top
-/// included, B5 E21), a card the other seat is setting face-down (R448), mulligan returns waiting for
+/// rules (the oracle must not be the fix restated): the other seat's hand and Resource tray while the
+/// game is live (R434, R1840000), both libraries (§9.1), the other seat's face-down traps (dormant
+/// ones under a backrow top included, B5 E21), a card the other seat is setting face-down (R448), mulligan returns waiting for
 /// their shuffle (R224), and every former id whose card is now one of these (R227, R177). Then it
 /// takes out every definition the viewer reads through a card: one the state holds and the viewer
 /// reads, one the log names that the viewer reads where it is now, its own library's cards as it was
@@ -597,6 +599,16 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
     if state.result.is_none() {
         for card in &state.players[rival].hand {
             hide(&mut ids, &card.id, &card.def_id, format!("{rival}'s hand"), true);
+        }
+        // R1840000: the rival's Resource tray is as hidden as their hand.
+        for card in state.players[rival].resource_tray.iter().flatten() {
+            hide(
+                &mut ids,
+                &card.id,
+                &card.def_id,
+                format!("{rival}'s Resource tray"),
+                true,
+            );
         }
     }
     for player in PLAYER_IDS {

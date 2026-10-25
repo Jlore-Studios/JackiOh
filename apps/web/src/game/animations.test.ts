@@ -129,6 +129,11 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   awakened: 400,
   // Issue #1838 (Tradable, R1838001).
   traded: 300,
+  // Issue #1840 (Resources and Credits).
+  resourceGained: 250,
+  resourceSold: 700,
+  resourceDiscarded: 250,
+  marketCreditsChanged: 200,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -243,6 +248,11 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
   awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
   traded: { type: "traded", player: "p1" },
+  // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
+  resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
+  resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -313,7 +323,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(81);
+    expect(rows).toHaveLength(85);
   });
 
   it("gives every row an animation name and a testid template", () => {

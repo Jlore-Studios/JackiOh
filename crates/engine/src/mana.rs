@@ -294,9 +294,14 @@ pub fn garden_reaches(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R1181002, R1563004: the premium a Garden asks of a play of this card now — any card played face-up
-/// from a hand, or from a graveyard (R454), while a Garden acts.
+/// from a hand, from a graveyard (R454) or from a Resource tray (R1840003), while a Garden acts.
 fn garden_premium_for(state: &GameState, card: &CardInstance) -> Option<i32> {
-    if card.set_as.is_some() || !matches!(card.zone, Zone::Hand { .. } | Zone::Graveyard { .. }) {
+    if card.set_as.is_some()
+        || !matches!(
+            card.zone,
+            Zone::Hand { .. } | Zone::Graveyard { .. } | Zone::Tray { .. }
+        )
+    {
         return None;
     }
     garden_premium(state)
@@ -372,9 +377,10 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
     }) + instance.cost_mod;
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
-    // graveyard, while a permission lets its player play it from there (E11, R454).
+    // graveyard, while a permission lets its player play it from there (E11, R454), or from its
+    // Resource tray (R1840003).
     let for_play = options.as_play == Some(true)
-        || matches!(instance.zone, Zone::Hand { .. })
+        || matches!(instance.zone, Zone::Hand { .. } | Zone::Tray { .. })
         || (matches!(instance.zone, Zone::Graveyard { .. }) && playable_from_graveyard(state, instance));
     if !for_play {
         return Price {

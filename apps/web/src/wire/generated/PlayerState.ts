@@ -132,4 +132,16 @@ autopilot?: Autopilot,
  * player's Spells and how many answers led to it. Absent but while one is, so a game without an
  * answering card hashes as before this field existed (D9).
  */
-answerChain?: AnswerChain, };
+answerChain?: AnswerChain, 
+/**
+ * R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
+ * at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
+ * `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
+ */
+resourceTray?: Array<CardInstance>, 
+/**
+ * R1840005: this player's Credits, public, gained by selling Resources and spent at the
+ * Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+ * Absent until first gained, so a game without Credits hashes as it did before this field existed.
+ */
+marketCredits?: number, };

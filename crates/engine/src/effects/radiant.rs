@@ -44,7 +44,8 @@ pub enum RadiantZone {
 /// and a library nobody's (§9.1), and a face-down trap is read by its controller only (R33, §10.8).
 fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     match card.zone {
-        Zone::Hand { .. } | Zone::Library { .. } => return true,
+        // R1840000: a Resource tray is read as a hand is.
+        Zone::Hand { .. } | Zone::Tray { .. } | Zone::Library { .. } => return true,
         Zone::Field {
             row: Row::Backrow, ..
         } => {}

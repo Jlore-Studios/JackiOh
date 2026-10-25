@@ -210,6 +210,11 @@ export const GAME_EVENT_TYPES = [
   "awakened",
   // Issue #1838's Trade (R1838001).
   "traded",
+  // Issue #1840's Resources and Credits (R1840000, R1840001, R1840004, R1840005).
+  "resourceGained",
+  "resourceSold",
+  "resourceDiscarded",
+  "marketCreditsChanged",
 ] as const satisfies readonly GameEventType[];
 
 /**

@@ -1122,6 +1122,18 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
             note_moved(state, &instance.id);
             return;
         }
+        // R1840000: a Resource leaves its tray the same way, and an emptied tray is absent again (D14).
+        let side = &mut state.players[player];
+        if let Some(tray) = side.resource_tray.as_mut()
+            && let Some(at) = tray.iter().position(|card| card.id == instance.id)
+        {
+            tray.remove(at);
+            if tray.is_empty() {
+                side.resource_tray = None;
+            }
+            note_moved(state, &instance.id);
+            return;
+        }
     }
 }
 

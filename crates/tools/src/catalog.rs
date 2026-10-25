@@ -1381,6 +1381,8 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "params",
             "dealsDamage",
             "usesPlague",
+            // R1840000: a Resource's rarity and prices (`CardDef.resource`).
+            "resource",
             "loc",
             "radiantFallback",
             "base",
@@ -2441,6 +2443,21 @@ mod tests {
         assert_eq!(
             failures("classic-039"),
             ["catalog[\"classic-039\"]: `usesPlague` marks a Field Spell, not a Spell"]
+        );
+    }
+
+    #[test]
+    fn r1840000_catalog_check_admits_resource_data() {
+        // The Coin, a (0) Spell token, made a Resource: the check admits the field.
+        let resource = parse_object(
+            r#"{"rarity":"Common","base":{"sellMin":1,"sellMax":3,"buy":3},"radiant":{"sellMin":10,"sellMax":20,"buy":20}}"#,
+        );
+        let catalog = with_field("core-t-coin", "resource", Json::Object(resource));
+        assert_eq!(check_catalog(&catalog).failures, Vec::<String>::new());
+        // A field it does not know still fails.
+        assert_eq!(
+            check_catalog(&with_field("core-t-coin", "resourceTray", Json::Bool(true))).failures,
+            ["catalog[\"core-t-coin\"]: unknown field(s) resourceTray"]
         );
     }
 
