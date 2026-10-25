@@ -402,6 +402,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1908": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-25T09:25:06Z",
+      "issue": 1803,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
