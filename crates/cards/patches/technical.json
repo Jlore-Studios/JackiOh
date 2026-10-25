@@ -1009,5 +1009,68 @@
     "pr": 1832,
     "title": "patches ship: v0.4.5, v0.4.6, v0.4.7, v0.4.8, v0.4.9",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "a2a53daac0d5d2599486bcf51a1524caa503453d",
+    "pr": 1892,
+    "title": "a patches ship promotion still red 2 hours on opens a hard issue for the night bot",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "41fe673f4bfc7818f815c12a753cdd09b6bc8b0c",
+    "pr": 1894,
+    "title": "patches log: 36ac34b..526e981",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "86430e35493dc2a7026b206e3ece57fd070e96f7",
+    "pr": 1905,
+    "title": "the training box becomes the Muse box, one Muse runner on each box (#1677)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "2d780934c526d247cb0a42816ee79608bbac4f47",
+    "pr": 1906,
+    "title": "the AI's decisions stay under 2 s on a state made wide by a many-ingredient fused card (The Maestro)",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "c786880ac495f29361b09310295a17a59789d044",
+    "pr": 1909,
+    "title": "the watch and replay tables can open the full list of live modifiers, as the others do",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "876a4c9a81287d5ebd176f1e1388cd76db7d2bbe",
+    "pr": 1912,
+    "title": "patches ship: v0.4.10",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "09360eea5db769681177f2e13d5b080ef6c2fc74",
+    "pr": 1910,
+    "title": "the card sheet's statistics, the creator's script check and a finished GIF's share offer a way on after a failure",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "08f032c9987c6b018dc481800a1383bd90e7bce1",
+    "pr": 1915,
+    "title": "patches log: 526e981..09360ee",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "4134f4c4f285343a2818ec46befee3aacbb83108",
+    "pr": 1918,
+    "title": "every \"cards on the field\" read sees a Unit a carrier holds, once",
+    "kind": "app"
   }
 ]

@@ -210,7 +210,8 @@ class Deliverer:
             return
         reported = str((self.result.get("disk") or {}).get("runner") or "")
         runner = reported if re.fullmatch(r"[\w.-]{1,80}", reported) else self.provider.runs_on
-        self.ctx.store.update(lambda s: memory.note(s, found, runner), "machine memory")
+        box = memory.box_of(runner, self.provider.runs_on)
+        self.ctx.store.update(lambda s: memory.note(s, found, runner, box), "machine memory")
 
     def _login_works(self) -> None:
         """A model call went through on this run's subscription: any streak of runs that could
