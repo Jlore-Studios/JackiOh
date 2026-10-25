@@ -434,7 +434,8 @@
         "observed_at": "2026-10-25T09:12:38Z",
         "status": "allowed"
       }
-    }
+    },
+    "muse": {}
   },
   "pruned": {
     "at": "2026-10-25T09:13:53Z",
