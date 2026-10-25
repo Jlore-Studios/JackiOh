@@ -142,9 +142,9 @@
       },
       "kind": "build",
       "pending_request": false,
-      "provider": "muse",
-      "run_id": "40189951820",
-      "started_at": "2026-10-25T11:41:51Z",
+      "provider": "gpt",
+      "run_id": "pending:bb0af3a2-1792929857",
+      "started_at": "2026-10-25T12:04:59Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -441,9 +441,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T11:43:40Z",
+    "at": "2026-10-25T12:04:59Z",
     "url": "",
-    "what": "build #1817 on muse"
+    "what": "plan #1826 on gpt"
   },
   "last_sweep": {
     "at": "2026-10-25T11:50:45Z",
