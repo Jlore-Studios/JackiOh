@@ -142,6 +142,9 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Flashback" },
   // Issue #1838's keyword (R1838000).
   { kind: "Tradable" },
+  // Stinkyscape's Starship keywords (R1852000, R1852003).
+  { kind: "Starship Piece" },
+  { kind: "Starship" },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

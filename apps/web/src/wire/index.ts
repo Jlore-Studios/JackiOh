@@ -215,6 +215,10 @@ export const GAME_EVENT_TYPES = [
   "resourceSold",
   "resourceDiscarded",
   "marketCreditsChanged",
+  // Stinkyscape's Starship: a piece fused into its owner's Dormant Starship, and a Starship launched
+  // (issue #1852, R1852000, R1852003).
+  "starshipFused",
+  "starshipLaunched",
 ] as const satisfies readonly GameEventType[];
 
 /**

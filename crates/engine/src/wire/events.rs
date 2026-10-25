@@ -965,6 +965,28 @@ pub enum GameEvent {
         player: PlayerId,
         value: i32,
     },
+    /// R1852000 (Stinkyscape's Starship, §6.1 Starship Piece): `player`'s Starship Piece `piece_id`
+    /// (of `def_id`) died, and a copy of it fused into their Dormant Starship `instance_id`, which now
+    /// holds `pieces` pieces (after the `fused` the Fuse itself reports). Public: the death and the
+    /// Starship are.
+    StarshipFused {
+        player: PlayerId,
+        instance_id: String,
+        piece_id: String,
+        def_id: String,
+        pieces: u32,
+    },
+    /// R1852003 (§6.3 Launch): `player` launched their Starship `instance_id` — the Dormant Starship
+    /// awakened — which took the Starship keyword and the name `name`; `pieces` are the definitions of
+    /// the pieces it holds, oldest first. Its fused Cries fire next, then its fused "When launched",
+    /// which answer this (§6.2). Public.
+    StarshipLaunched {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        name: String,
+        pieces: Vec<String>,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1105,6 +1127,8 @@ string_union! {
         ResourceSold = "resourceSold",
         ResourceDiscarded = "resourceDiscarded",
         MarketCreditsChanged = "marketCreditsChanged",
+        StarshipFused = "starshipFused",
+        StarshipLaunched = "starshipLaunched",
     }
 }
 
@@ -1278,6 +1302,8 @@ impl GameEvent {
             GameEvent::ResourceSold { .. } => GameEventType::ResourceSold,
             GameEvent::ResourceDiscarded { .. } => GameEventType::ResourceDiscarded,
             GameEvent::MarketCreditsChanged { .. } => GameEventType::MarketCreditsChanged,
+            GameEvent::StarshipFused { .. } => GameEventType::StarshipFused,
+            GameEvent::StarshipLaunched { .. } => GameEventType::StarshipLaunched,
         }
     }
 }
@@ -1351,9 +1377,10 @@ mod tests {
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
         // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
         // `autopilotEngaged` (R1183002); and Stinkyscape's two, `awakened` (R1839002) and `traded`
-        // (R1838001); and its Resources' four, `resourceGained` (R1840000), `resourceSold`
-        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005).
-        assert_eq!(GAME_EVENT_TYPES.len(), 85);
+        // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
+        // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); and the
+        // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003).
+        assert_eq!(GAME_EVENT_TYPES.len(), 87);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

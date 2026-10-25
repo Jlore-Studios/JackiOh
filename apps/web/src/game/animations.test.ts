@@ -134,6 +134,9 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   resourceSold: 700,
   resourceDiscarded: 250,
   marketCreditsChanged: 200,
+  // Stinkyscape's Starship (R1852000, R1852003).
+  starshipFused: 400,
+  starshipLaunched: 600,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -253,6 +256,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
+  starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -323,7 +328,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(85);
+    expect(rows).toHaveLength(87);
   });
 
   it("gives every row an animation name and a testid template", () => {

@@ -93,6 +93,12 @@ so a fold of a game played on an older catalog version reads that version's card
   `preview::lasting_text_off` turns its text off, so a new rule that reads Units, acting cards or
   lasting text through them gets Dormant right for nothing. Its identifiers say slumber and awaken,
   never dormant, which names a card beneath a Stack pile (`zones::dormant_units_of`, R13).
+- `starship.rs` is the Starship (§6.1 Starship Piece and Starship, §6.2 When launched, §6.3 Launch,
+  R1852000–R1852007): a piece that dies fuses a copy of itself into its owner's Dormant Starship at
+  the death pass's end (`state_check`'s last step), summoning `DORMANT_STARSHIP_DEF_ID` first; a
+  Dormant Starship's one ability is the engine's launch (`launch_decl`, priced by `launch_cost`), and
+  its awakening, however it comes, is its launch (`slumber::awaken_card` calls `launch`). Its memory is
+  `CardInstance.starship`, absent on every other card.
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).

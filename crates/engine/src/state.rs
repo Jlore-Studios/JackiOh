@@ -134,6 +134,49 @@ pub struct Slumber {
     pub turns: Option<i32>,
 }
 
+/// R1852000, R1852005: a Starship's memory (`CardInstance.starship`, `starship.rs`): the Starship
+/// Pieces fused into it, in the order they fused, and — once it has launched (R1852003) — the name it
+/// took and when. Started as the Dormant Starship enters the field; a status, so R78's reset takes it
+/// off as the card leaves the field. Absent on every other card, so a game with no Starship serializes
+/// and hashes as before (D14).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipMemory {
+    /// R1852005: each piece a copy of which fused into it, oldest first.
+    pub pieces: Vec<StarshipPieceRecord>,
+    /// R1852004: the name it took as it launched; absent while it is Dormant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub name: Option<String>,
+    /// R1852005: the order it launched in among every Starship of the game (`GameState.next_seq` as it
+    /// launched), so "the launched Starship" is the latest; absent while it is Dormant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub launched: Option<u32>,
+}
+
+/// R1852005: one piece a Starship holds — the definition its copy fused in on, and whether on its
+/// Radiant face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipPieceRecord {
+    pub def_id: String,
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant: Option<bool>,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -299,6 +342,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub slumber: Option<Slumber>,
+    /// R1852000, R1852005: the card is a Starship — the Dormant Starship, whose hull text
+    /// (`StaticFlags.starshipHull`) started this as it entered the field — and this is its memory: the
+    /// pieces fused into it and, once it has launched, its name. A status, never text: R78's reset takes
+    /// it off with the card leaving the field. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starship: Option<StarshipMemory>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -605,6 +655,13 @@ pub enum ModifierKind {
     /// spends it. Expiry `thisTurn`; several are each spent by that one Spell.
     KeywordNextSpell {
         keyword: Keyword,
+    },
+    // ---- Stinkyscape's Starship (issue #1852) ----
+    /// R1852006: "Your Starship launch costs (N)": this player's next launch by the Activate costs
+    /// `cost` (`starship::launch_cost`), the least of several, until a launch it prices spends it
+    /// (expiry `used`).
+    StarshipLaunchCost {
+        cost: i32,
     },
 }
 
@@ -2096,6 +2153,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         berserk: None,
         frozen: None,
         slumber: None,
+        starship: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,

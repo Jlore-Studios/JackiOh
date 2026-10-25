@@ -688,6 +688,11 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   resourceDiscarded: { sfx: "draw", cues: () => [sfx("draw")] },
   // R1840005: the Credits count ticks, as the Jade Counter's does.
   marketCreditsChanged: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
+  // R1852000: a dead piece's copy docks into its owner's Dormant Starship, which grows by it (the
+  // `fused` before it plays the fuse itself).
+  starshipFused: { sfx: "buff", cues: () => [sfx("buff")] },
+  // R1852003: a Starship launches, with the entrance a big arrival makes.
+  starshipLaunched: { sfx: "entrance", cues: () => [sfx("entrance")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */
@@ -716,6 +721,10 @@ function unitOf(event: GameEvent): string | null {
       return event.targetId;
     case "fused":
       return event.resultInstanceId;
+    // R1852000, R1852003: the Starship docked into or launched.
+    case "starshipFused":
+    case "starshipLaunched":
+      return event.instanceId;
     case "attackDeclared":
       return event.attackerId;
     case "divineShieldLost":

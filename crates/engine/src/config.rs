@@ -1855,6 +1855,35 @@ pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
 /// card's Tribute X, whatever the Float's size (`float::float_lowers_tribute`).
 pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
 
+// ---------------------------------------------------------------------------------------------
+// The Starship (Stinkyscape, issue #1852; SPEC §6.1, §6.2, §6.3; R1852000–R1852007)
+// ---------------------------------------------------------------------------------------------
+
+/// R1852000: the card the engine summons for a player whose Starship Piece dies while they have no
+/// Dormant Starship — Stinkyscape's Dormant Starship, a 0/0 Unit that prints Dormant and the hull
+/// (`StaticFlags.starshipHull`). Its catalog entry ships with the set's cards (S02); until then no
+/// catalog holds it, and a piece's death summons nothing.
+pub const DORMANT_STARSHIP_DEF_ID: &str = "stinkyscape-t-dormant-starship";
+/// R1852000: the unit zone a Dormant Starship is stacked onto when its player's unit row is full
+/// ("stack it on top of your Lane 3 front row, regardless if it's Locked or not").
+pub const STARSHIP_FULL_ROW_LANE: i32 = 3;
+/// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (3) to awaken").
+pub const STARSHIP_LAUNCH_COST: i32 = 3;
+/// R1852003: how many times a turn the launch may be activated (once; a launched Starship has no
+/// launch left to activate).
+pub const STARSHIP_LAUNCH_USES: i32 = 1;
+/// R1852004: the names a launched Starship takes, one drawn at random, each with the tag a Starship
+/// must hold for the name to be in the draw (`None` suits any ship). The names are names only.
+pub const STARSHIP_NAMES: &[(&str, Option<Tag>)] = &[
+    ("The Ninth Life", Some(Tag::Felinor)),
+    ("Frontier's Promise", Some(Tag::Human)),
+    ("The Celestial Archive", Some(Tag::Ky)),
+    ("The Lantern Ferry", Some(Tag::Cn)),
+    ("The Jlockeed Skylark", Some(Tag::Jlockeed)),
+    ("Ember of Departure", None),
+    ("The Silent Choir", None),
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -184,6 +184,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
+  starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -322,6 +324,9 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   resourceSold: null,
   resourceDiscarded: null,
   marketCreditsChanged: null,
+  // R1852000: a piece's fusion is drawn by the `fused` before it; R1852003: a launch brands.
+  starshipFused: null,
+  starshipLaunched: "brand",
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -452,13 +457,15 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   resourceSold: ["jk-hand-full", 700, "hand-<side>"],
   resourceDiscarded: ["jk-hand-edge", 250, "hand-<side>"],
   marketCreditsChanged: ["jk-badge-tick", 200, "hero-<side>"],
+  starshipFused: ["jk-fuse-merge", 400, "card-<instanceId>"],
+  starshipLaunched: ["jk-radiant-pulse", 600, "card-<instanceId>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 61 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002) and the Trade (R1838001) carry fx with the listed recipe and the other 24 carry none", () => {
+  it("B1 exactly the 62 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001) and the launch (R1852003) carry fx with the listed recipe and the other 25 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(61);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(62);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {
@@ -470,9 +477,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 24 rows without an effect have no fx value at all", () => {
+  it("B1 the 25 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(24);
+    expect(bare).toHaveLength(25);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

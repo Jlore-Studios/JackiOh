@@ -853,6 +853,8 @@ fn unit_view_of(
         slumber: top.slumber,
         // R1848000: and whether it never thaws, public the same way.
         frozen_forever: crate::freeze::frozen_forever(top).then_some(true),
+        // R1852005: a Starship's memory, public on the field like the unit itself.
+        starship: top.starship.clone(),
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
@@ -1204,6 +1206,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
         ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
         // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.
+        // R1852006: Stinkyscape #144 Prepare For Liftoff's price.
+        ModifierKind::StarshipLaunchCost { cost } => format!("Your Starship launch costs ({cost})"),
         ModifierKind::HealthPrice { multiple, echo } => match echo {
             Some(echo) if *echo > 0 => format!(
                 "Your next Spell costs health equal to {multiple} times its cost instead of mana, and has Echo {echo}"
@@ -2379,6 +2383,11 @@ fn redact_event(
         | GameEventType::ResourceSold
         | GameEventType::ResourceDiscarded
         | GameEventType::MarketCreditsChanged => event.clone(),
+        // R1852000, R1852003: a piece's fusion names the dead card in its graveyard and the Dormant
+        // Starship on the field, and a launch names the Starship and the pieces it holds: all public, as
+        // the Starship's memory is on both seats' views.
+        | GameEventType::StarshipFused
+        | GameEventType::StarshipLaunched => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

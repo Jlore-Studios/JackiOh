@@ -524,6 +524,16 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "marketCreditsChanged":
       // R1840005: Credits are public.
       return capitalised(t("{whose} Credits are {value}", { whose: name.whose(event.player), value: event.value }));
+    case "starshipFused":
+      // R1852000: a piece died, and a copy of it fused into its owner's Dormant Starship.
+      return t("{card} fused into {whose} Dormant Starship ({n} pieces)", {
+        card: name.def(event.defId),
+        whose: name.whose(event.player),
+        n: event.pieces,
+      });
+    case "starshipLaunched":
+      // R1852003: the Starship launched under the name it took.
+      return capitalised(t("{whose} Starship launched as {name}", { whose: name.whose(event.player), name: event.name }));
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

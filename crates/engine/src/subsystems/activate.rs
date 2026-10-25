@@ -204,6 +204,10 @@ pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDec
     if crate::alt_play::is_cloaked_set(card) {
         return vec![cloaked_reveal_decl()];
     }
+    // R1852003: a Dormant Starship has the engine's launch, and nothing its text declares.
+    if crate::starship::is_dormant_starship(card) {
+        return vec![crate::starship::launch_decl(state, card)];
+    }
     // R1839002: a Dormant card has the one ability it keeps while it sleeps (`wakesBy`), and none if it
     // keeps none.
     let wakes_by = if crate::slumber::is_slumbering(card) {
@@ -1116,6 +1120,16 @@ pub fn activate_ability(
     if paused(sink) {
         if sink.state.result.is_none() {
             owe_effect(sink, &run);
+        }
+        return Ok(());
+    }
+    // R1852003, R1852006: a Dormant Starship's launch is the engine's, not its script's: paid for, it
+    // spends its price rules and awakens the Starship, which launches it. The state check follows the
+    // whole launch, as it follows any ability (R59).
+    if crate::starship::is_launch(&card, &decl.id) {
+        crate::starship::pay_launch(sink, player, &card.id);
+        if !paused(sink) {
+            state_check(sink);
         }
         return Ok(());
     }

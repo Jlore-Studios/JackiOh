@@ -49,6 +49,7 @@ pub mod scripts;
 pub mod slumber;
 pub mod spell_power;
 pub mod spell_verbs;
+pub mod starship;
 pub mod tradable;
 pub mod trigger_multipliers;
 pub mod turn;

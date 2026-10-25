@@ -884,6 +884,10 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
             if let Some(slumber) = unit.slumber {
                 parts.push(format!("z{}:{:?}", unit.id, slumber.turns));
             }
+            // R1852000: and a Dormant Starship is the pieces fused into it, which its definition names.
+            if let Some(ship) = unit.starship.as_ref().filter(|_| unit.slumber.is_some()) {
+                parts.push(format!("s{}:{}:{}", unit.id, unit.def_id, ship.pieces.len()));
+            }
         }
         let backrow = state.players[player]
             .backrow

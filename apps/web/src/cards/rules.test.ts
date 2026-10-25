@@ -172,6 +172,7 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "Float",
   "Activate",
   "When this awakens",
+  "When launched",
 ];
 
 /** R512: §6.1's statuses that are not keyword kinds, which patch v0.2.0's cards print. */
@@ -211,6 +212,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Allure",
   "Freeze",
   "Awaken",
+  "Launch",
   "Jade Counter",
   "Exile",
   "Hand size",
@@ -256,6 +258,8 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Crater: "CR",
   Flashback: "FB",
   Tradable: "TD",
+  "Starship Piece": "SP",
+  Starship: "SS",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -969,6 +973,17 @@ describe("R1839000: Dormant, When this awakens and Awaken", () => {
     expect(termsIn("Activate: Awaken this.")).toEqual(["Activate", "Awaken"]);
     // A card under a Stack pile's top is buried to a player: plain words, never the keyword.
     expect(termsIn("the dormant cards beneath it")).toEqual([]);
+  });
+});
+
+describe("R1852000: Starship Piece, Starship, When launched and Launch", () => {
+  it("R1852000 R1852003 Starship Piece and Starship are §6.1 keywords, When launched a §6.2 trigger and Launch a §6.3 verb, each bold where a card prints it", () => {
+    expect(GLOSSARY["Starship Piece"].section).toBe("§6.1");
+    expect(GLOSSARY.Starship.section).toBe("§6.1");
+    expect(GLOSSARY["When launched"].section).toBe("§6.2");
+    expect(GLOSSARY.Launch.section).toBe("§6.3");
+    expect(termsIn("Starship Piece. When launched, gain 2 random Combat Keywords.")).toEqual(["Starship Piece", "When launched"]);
+    expect(termsIn("If you are building a ship, Launch it.")).toEqual(["Launch"]);
   });
 });
 

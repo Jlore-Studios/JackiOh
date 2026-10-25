@@ -688,6 +688,14 @@ pub struct StaticFlags {
     /// until it awakens (`slumber.rs`). What it prints is a `SlumberText`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub slumber: Option<SlumberText>,
+    // ---- Stinkyscape's Starship (issue #1852) ----
+    /// R1852000, R1852003: this is a Starship's hull — the Dormant Starship (`DORMANT_STARSHIP_DEF_ID`),
+    /// and every fusion it keeps. Entering the field from off it as a Unit, the card starts a Starship's
+    /// memory (`CardInstance.starship`); while it is Dormant its one ability is the engine's launch
+    /// (`starship::launch_decl`), a Stack card played onto it is exiled before it resolves (R1852007),
+    /// and its awakening launches it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub starship_hull: Option<bool>,
 }
 
 /// R1839000–R1839002: what a card's "Dormant" prints (`StaticFlags.slumber`). `turns` is "Dormant for

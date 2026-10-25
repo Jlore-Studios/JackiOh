@@ -528,6 +528,14 @@ pub enum Keyword {
     /// R1838000: a card its owner may Trade from their hand in their main phase — put into their deck
     /// at a random position for a draw, at `TRADE_COST` — up to their Trades a turn (`trade.rs`).
     Tradable,
+    /// R1852000: Stinkyscape's Starship Piece — no rule of its own until the card dies, when a copy
+    /// of it fuses into its owner's Dormant Starship (`starship.rs`). Never passed on by a Fuse onto a
+    /// card that is not one, so an Equip does not pass it on (R1852001).
+    #[serde(rename = "Starship Piece")]
+    StarshipPiece,
+    /// R1852003: what a launched Starship takes as it launches. No rule of its own; the cards that
+    /// name "your Starship" read it.
+    Starship,
 }
 
 string_union! {
@@ -573,6 +581,9 @@ string_union! {
         Flashback = "Flashback",
         /// R1838000: the Trade's keyword (`trade.rs`).
         Tradable = "Tradable",
+        /// Stinkyscape's Starship (R1852000, R1852003).
+        StarshipPiece = "Starship Piece",
+        Starship = "Starship",
     }
 }
 
@@ -625,6 +636,8 @@ impl Keyword {
             Keyword::Crater => KeywordKind::Crater,
             Keyword::Flashback => KeywordKind::Flashback,
             Keyword::Tradable => KeywordKind::Tradable,
+            Keyword::StarshipPiece => KeywordKind::StarshipPiece,
+            Keyword::Starship => KeywordKind::Starship,
         }
     }
 
@@ -677,6 +690,8 @@ impl Keyword {
             KeywordKind::Crater => Keyword::Crater,
             KeywordKind::Flashback => Keyword::Flashback,
             KeywordKind::Tradable => Keyword::Tradable,
+            KeywordKind::StarshipPiece => Keyword::StarshipPiece,
+            KeywordKind::Starship => Keyword::Starship,
         }
     }
 }

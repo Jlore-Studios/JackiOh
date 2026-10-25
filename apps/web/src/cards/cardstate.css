@@ -90,6 +90,15 @@
   background: radial-gradient(circle, #8a7bd8 0%, #261b5c 100%);
 }
 
+/* R1852000: a Starship, the comet and its piece count on a deep-space disc, brighter once launched. */
+.cf .cf-state[data-state="starship"] {
+  background: radial-gradient(circle, #5b8cff 0%, #10183d 100%);
+}
+
+.cf .cf-state[data-state="starship"][data-starship="launched"] {
+  background: radial-gradient(circle, #ffd36b 0%, #7a3d00 100%);
+}
+
 /* R386: the card's tuned mark, ▲ Buffed, ▼ Nerfed, ◆ Tuned (R1320). */
 .cf .cf-state[data-state="tuned"][data-tuned="upgraded"] .cf-state-text {
   color: var(--cf-state-better);

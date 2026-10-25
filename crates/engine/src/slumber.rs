@@ -69,7 +69,10 @@ pub fn wakes_by_of(state: &GameState, card: &CardInstance) -> Option<String> {
 /// (a card beneath a Stack pile acts for nothing, §3.2, R13) with an ability it keeps while it sleeps.
 /// `subsystems::activate` lets it activate that ability and no other.
 pub fn acts_to_awaken(state: &GameState, card: &CardInstance) -> bool {
-    is_slumbering(card) && !crate::zones::is_buried(state, card) && wakes_by_of(state, card).is_some()
+    is_slumbering(card)
+        && !crate::zones::is_buried(state, card)
+        // R1852003: a Dormant Starship keeps its launch, the engine's ability.
+        && (wakes_by_of(state, card).is_some() || crate::starship::is_dormant_starship(card))
 }
 
 /// R1839002: the card awakens: its status comes off, it is not summoning sick (it entered the field
@@ -99,6 +102,8 @@ pub fn awaken_card(sink: &mut EngineSink<'_>, instance_id: &str) -> bool {
         def_id: live.def_id.clone(),
     };
     sink.events.push(event);
+    // R1852003: a Starship's awakening is its launch, whatever awakened it.
+    crate::starship::launch(sink, instance_id);
     true
 }
 

@@ -888,6 +888,22 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R1852000: a dead piece's copy merges into its owner's Dormant Starship, which the `fused` before it
+  // drew; the Starship's piece count rises with the next view.
+  starshipFused: {
+    animation: "jk-fuse-merge",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R1852003: the Starship launches where it stands, its Dormant badge gone and its name on its face.
+  starshipLaunched: {
+    animation: "jk-radiant-pulse",
+    durationMs: 600,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
 };
 
 /**

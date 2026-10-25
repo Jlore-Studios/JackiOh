@@ -241,6 +241,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  // Stinkyscape's Starship (R1852000, R1852003).
+  starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
+  starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -336,6 +339,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   resourceSold: "burn",
   resourceDiscarded: "draw",
   marketCreditsChanged: "uiClick",
+  starshipFused: "buff",
+  starshipLaunched: "entrance",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -371,6 +376,8 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "resourceSold",
   "resourceDiscarded",
   "marketCreditsChanged",
+  "starshipFused",
+  "starshipLaunched",
   "countered",
   "stolen",
   "unlocked",

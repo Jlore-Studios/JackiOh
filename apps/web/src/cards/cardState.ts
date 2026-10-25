@@ -29,6 +29,7 @@ export type StateBadgeKind =
   | "berserk"
   | "frozen"
   | "dormant"
+  | "starship"
   | "created";
 
 export type StateBadge = {
@@ -100,6 +101,15 @@ export const DORMANT_NEXT_TURN_WORDS =
 
 /** R1839000: the Dormant badge's glyph, a crescent moon in text presentation (U+FE0E). */
 export const DORMANT_GLYPH = "\u263E\uFE0E";
+
+/** R1852000: the Starship badge's glyph, a comet in text presentation (U+FE0E). */
+export const STARSHIP_GLYPH = "\u2604\uFE0E";
+
+/** R1852000, R1852003, R1852005: a Starship's badge words — the pieces it holds, and whether it has launched. */
+export function starshipWords(pieces: number, launched: boolean): string {
+  if (launched) return t("Starship: launched with {n} Starship Pieces fused into it", { n: pieces });
+  return t("Dormant Starship: {n} Starship Pieces fused into it; its Activate launches it", { n: pieces });
+}
 
 /** R1839000, R1839001: a Dormant card's badge words, with its countdown when it has one. */
 export function dormantWords(turns: number | null): string {
@@ -212,6 +222,20 @@ export function stateBadges(face: FaceModel): StateBadge[] {
       icon: null,
       words: dormantWords(dormant.turns),
       data: { "data-dormant": dormant.turns === null ? "true" : String(dormant.turns) },
+    });
+  }
+  // R1852000, R1852005: a Starship, the count of the pieces fused into it beside the comet.
+  const starship = face.starship;
+  if (starship !== undefined && starship !== null) {
+    badges.push({
+      kind: "starship",
+      text: `${STARSHIP_GLYPH}${String(starship.pieces)}`,
+      icon: null,
+      words: starshipWords(starship.pieces, starship.launched),
+      data: {
+        "data-starship": starship.launched ? "launched" : "dormant",
+        "data-starship-pieces": String(starship.pieces),
+      },
     });
   }
   // MD-B6, R943: a Created card, made during the game.
