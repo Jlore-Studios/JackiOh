@@ -1412,6 +1412,7 @@
         "resolved_by": "`claude` (strong)",
         "sha": "b59f4336339333a31a2fbe8b559321bd792bdf70"
       },
+      "closed_at": "2026-10-25T20:43:10Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -1421,6 +1422,7 @@
       "issue": 1833,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
