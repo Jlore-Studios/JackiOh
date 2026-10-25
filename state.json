@@ -990,22 +990,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40231387643",
-            "tier": "strong"
-          }
-        ],
+        "reviews": [],
         "sha": "c1ee98ba45bfe0d750de6f3fac26d472821f3adc",
-        "tiers": {
-          "claude": "strong"
-        }
+        "tiers": {}
       }
     },
     "1909": {
