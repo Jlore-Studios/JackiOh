@@ -666,9 +666,7 @@
     },
     "1904": {
       "action": "plan",
-      "asks": [
-        "c:6398744247"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -684,14 +682,16 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-10-25T14:16:07Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40202249216",
-      "started_at": "2026-10-25T14:26:31Z",
+      "run_id": "pending:ecbc8f3a-1792940387",
+      "started_at": "2026-10-25T15:00:24Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6398744247"
+      ]
     },
     "1906": {
       "cleared": {
@@ -954,9 +954,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T14:41:42Z",
+    "at": "2026-10-25T15:00:24Z",
     "url": "",
-    "what": "plan #1903 on claude-8"
+    "what": "plan #1904 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-25T14:51:01Z",
