@@ -597,7 +597,9 @@
     },
     "1900": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6398752424"
+      ],
       "difficulty_by": {
         "at": "2026-10-25T15:33:09Z",
         "difficulty": "medium",
@@ -630,9 +632,7 @@
       "started_at": "2026-10-25T15:16:42Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6398752424"
-      ]
+      "taken_asks": []
     },
     "1902": {
       "action": "plan",
