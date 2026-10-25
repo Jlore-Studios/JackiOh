@@ -1058,5 +1058,19 @@
     "pr": 1910,
     "title": "the card sheet's statistics, the creator's script check and a finished GIF's share offer a way on after a failure",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "08f032c9987c6b018dc481800a1383bd90e7bce1",
+    "pr": 1915,
+    "title": "patches log: 526e981..09360ee",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "4134f4c4f285343a2818ec46befee3aacbb83108",
+    "pr": 1918,
+    "title": "every \"cards on the field\" read sees a Unit a carrier holds, once",
+    "kind": "app"
   }
 ]
