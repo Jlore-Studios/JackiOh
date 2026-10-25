@@ -12,7 +12,7 @@ from datetime import timedelta
 from unittest import mock
 
 from harness import __main__ as main_mod
-from harness import dashboard, providers, status
+from harness import cardsets, dashboard, providers, status
 from harness.__main__ import cmd_dashboard
 from harness.clock import iso
 from harness.config import LABEL_BUILD, LABEL_PR, LABEL_REVISE, LABEL_WORKING
@@ -433,6 +433,8 @@ class DashboardTests(unittest.TestCase):
             main_mod.cmd_stats(make_config(), argparse.Namespace(force=True))
         self.assertEqual([(c["stats"], c.get("force_stats", False)) for c in calls],
                          [(True, False), (True, True)])
+        # Both read which set's cards win most from production (cardsets.py).
+        self.assertEqual([c["read_cards"] for c in calls], [cardsets.fetch_json] * 2)
         self.assertIn("dashboard: rewrote #148", out.getvalue())
 
     def test_each_idle_account_says_why_in_its_box(self):

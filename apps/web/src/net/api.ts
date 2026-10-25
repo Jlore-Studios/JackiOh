@@ -1434,6 +1434,22 @@ export function getPlayRates(signal?: AbortSignal): Promise<PlayRatesResponse> {
   return apiRequest<PlayRatesResponse>("/api/stats/play-rates", { signal });
 }
 
+/** R1935000: one daily super run as `GET /api/stats/ci` lists it, with a failed run's jobs that did not pass. */
+export type CiRun = {
+  id: number;
+  url: string;
+  /** ISO 8601, as GitHub writes it. */
+  startedAt: string;
+  commit: string;
+  result: "running" | "passed" | "failed";
+  failedJobs: { name: string; url: string; conclusion: string }[];
+};
+
+/** R1935000: `GET /api/stats/ci`: the daily super run's last runs on main, newest first. */
+export function getCiRuns(signal?: AbortSignal): Promise<{ runs: CiRun[] }> {
+  return apiRequest<{ runs: CiRun[] }>("/api/stats/ci", { signal });
+}
+
 export type PlayerStatsAccountResponse = {
   stats: Record<string, unknown>;
   isPrivate: boolean;

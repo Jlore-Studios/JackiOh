@@ -67,7 +67,7 @@ const SELFPLAY_GAMES: u32 = 8;
 const SELFPLAY_SEED: &str = "classify";
 
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
-const SETS_PATH: &str = "crates/engine/src/wire/catalog_types.rs";
+pub(crate) const SETS_PATH: &str = "crates/engine/src/wire/catalog_types.rs";
 
 #[derive(clap::Args, Debug)]
 pub struct Args {
@@ -226,7 +226,7 @@ pub(crate) fn family(id: &str) -> String {
 }
 
 /// The sets `SHIPPED_SETS` names in one side's `catalog_types.rs`.
-fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
+pub(crate) fn shipped_sets(source: &str) -> Result<Vec<SetName>> {
     let start = source
         .find("pub const SHIPPED_SETS")
         .context("no `pub const SHIPPED_SETS`")?;

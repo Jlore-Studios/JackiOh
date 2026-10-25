@@ -79,6 +79,11 @@
 //! (R600), so `SHADOW_BAN` is empty and `SHADOW_WATCH` gains its row. training/history/sweep-2026-10-25.md
 //! has the report and where the slow decision's time went.
 //!
+//! From #1678 on (R1678000), a sweep of record follows every push to `main` that moves the AI's
+//! generation or ships a set, run by `.github/workflows/sweep.yml` over the cards `cargo jackioh sweep
+//! --due` names. Those sweeps write no paragraph here: each report under training/history/ says what
+//! ran and why, and the header block below names it.
+//!
 //! Port of `packages/ai/src/shadowBan.ts` (SURFACE §9): TS's `Record<string, string>` is a slice of
 //! `(defId, reason)` pairs sorted by id, the order `Object.keys` gave it.
 

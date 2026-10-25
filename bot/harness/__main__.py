@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from harness import cardsets as cardsets_mod
 from harness import config as config_mod
 from harness import context as context_mod
 from harness import controller as controller_mod
@@ -521,7 +522,8 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
         try:
             note = dashboard_mod.update(_ctx(cfg), extra,
                                         stats=bool(getattr(args, "stats", False)),
-                                        stats_extra=_stats_sections(cfg, args))
+                                        stats_extra=_stats_sections(cfg, args),
+                                        read_cards=cardsets_mod.fetch_json)
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
@@ -556,7 +558,7 @@ def cmd_stats(cfg: Config, args: argparse.Namespace) -> int:
     extra = _companions(cfg, sweep=False) if getattr(args, "companions", False) else ()
     print(redact("dashboard: " + dashboard_mod.update(
         _ctx(cfg), extra, stats=True, force_stats=bool(getattr(args, "force", False)),
-        stats_extra=_stats_sections(cfg, args))))
+        stats_extra=_stats_sections(cfg, args), read_cards=cardsets_mod.fetch_json)))
     return 0
 
 
