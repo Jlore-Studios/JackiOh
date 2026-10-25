@@ -124,9 +124,9 @@
       },
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-8",
-      "run_id": "40188028374",
-      "started_at": "2026-10-25T11:14:27Z",
+      "provider": "muse",
+      "run_id": "pending:54fbac0e-1792928467",
+      "started_at": "2026-10-25T11:41:51Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -406,9 +406,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T11:14:27Z",
+    "at": "2026-10-25T11:41:51Z",
     "url": "",
-    "what": "plan #1826 on claude-8"
+    "what": "plan #1826 on muse"
   },
   "last_sweep": {
     "at": "2026-10-25T11:32:23Z",
