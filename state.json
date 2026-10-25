@@ -21930,10 +21930,6 @@
     "claude-6": {
       "spent": [
         {
-          "at": "2026-10-05T09:20:32Z",
-          "minutes": 25.8
-        },
-        {
           "at": "2026-10-05T12:37:08Z",
           "minutes": 66.8
         },
@@ -22728,6 +22724,10 @@
         {
           "at": "2026-10-24T23:37:47Z",
           "minutes": 77.8
+        },
+        {
+          "at": "2026-10-25T01:12:18Z",
+          "minutes": 5.8
         }
       ],
       "tokens_spent": [
@@ -23626,14 +23626,21 @@
           "cost": 7.3038,
           "input": 270,
           "output": 83739
+        },
+        {
+          "at": "2026-10-25T01:12:18Z",
+          "cache": 785350,
+          "cost": 16.8035,
+          "input": 28,
+          "output": 9818
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-25T03:20:00Z",
-          "utilization": 0.1
+          "utilization": 0.5
         },
-        "observed_at": "2026-10-24T23:37:47Z",
+        "observed_at": "2026-10-25T01:12:18Z",
         "status": "allowed"
       }
     },
