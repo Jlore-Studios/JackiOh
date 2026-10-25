@@ -1295,6 +1295,7 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
+      "question": "a person makes the whole fix, because it lives in `.github/workflows/ci.yml` (the `rust-test` matrix) and no bot may change `.github/`. In one pull request, replace the matrix's `tools, wasm` entry with the three entries in Step 1 and reword two lines of `scripts/ci-scope.sh`'s header (Step 2). No other file changes.",
       "run_id": "40216510734",
       "started_at": "2026-10-25T17:26:51Z",
       "stop_requested": false,
