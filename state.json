@@ -200,6 +200,31 @@
     "url": "",
     "what": "build #1803 on gpt"
   },
+  "last_sweep": {
+    "at": "2026-10-25T09:10:47Z",
+    "notes": [
+      "delivered build #1828 on claude-3 (run 40177993404): interrupted",
+      "delivered plan #1845 on claude-3 (run 40177932921): interrupted",
+      "delivered plan #1844 on claude-3 (run 40177864479): planned",
+      "delivered plan #1841 on claude-6 (run 40177284419): failed",
+      "delivered plan #1833 on claude-1 (run 40176688434): planned",
+      "delivered plan #1889 on claude-4 (run 40175181653): planned",
+      "started plan #1841 on claude-7 (run 40179843109)",
+      "started plan #1845 on claude-8 (run 40179902870)",
+      "started plan #1847 on claude-4 (run 40179964186)",
+      "started plan #1849 on claude-5 (run 40180022645)",
+      "started plan #1850 on claude-2 (run 40180084172)",
+      "started plan #1831 on muse (run 40180147879)",
+      "started build #1828 on claude-1 (run 40180213152)",
+      "started build #1889 on claude-6 (run 40180283152)",
+      "started build #1817 on muse (run 40180350668)",
+      "started build #1818 on agy (run 40180419342)",
+      "started build #1824 on claude-3 (run 40180487895)",
+      "started build #1803 on gpt (run 40180558600)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is idle, but nothing queued is for it; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` is busy; `gpt` is busy; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
+    ],
+    "since": "2026-09-30T11:21:05Z"
+  },
   "loop_deliveries": {
     "40175181653": {
       "at": "2026-10-25T09:13:09Z",
@@ -230,6 +255,7 @@
       "tries": 1
     }
   },
+  "loop_tick": "2026-10-25T09:10:47Z",
   "planning": null,
   "providers": {
     "claude-1": {
