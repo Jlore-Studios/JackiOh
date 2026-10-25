@@ -60,6 +60,31 @@
     }
   },
   "providers": {
+    "claude-1": {
+      "spent": [
+        {
+          "at": "2026-10-25T09:12:58Z",
+          "minutes": 20.7
+        }
+      ],
+      "tokens_spent": [
+        {
+          "at": "2026-10-25T09:12:58Z",
+          "cache": 26576750,
+          "cost": 10.4451,
+          "input": 258,
+          "output": 123769
+        }
+      ],
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T13:20:00Z",
+          "utilization": 0.3
+        },
+        "observed_at": "2026-10-25T09:12:58Z",
+        "status": "allowed"
+      }
+    },
     "claude-3": {
       "spent": [
         {
