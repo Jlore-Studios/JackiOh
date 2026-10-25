@@ -3,6 +3,7 @@
   "halted": false,
   "items": {
     "1841": {
+      "failures": 1,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
