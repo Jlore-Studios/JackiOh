@@ -13280,9 +13280,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-25T01:13:03Z",
+    "at": "2026-10-25T01:50:08Z",
     "url": "",
-    "what": "build #1816 on claude-2"
+    "what": "suggestions on devin"
   },
   "last_sweep": {
     "at": "2026-10-25T01:41:27Z",
@@ -27776,11 +27776,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-25T01:19:00Z",
-    "last_run": "2026-10-24T23:20:06Z",
-    "provider": null,
+    "idle_since": "2026-10-25T01:50:08Z",
+    "last_run": "2026-10-25T01:50:08Z",
+    "provider": "devin",
     "requested": false,
-    "run_id": null,
+    "run_id": "pending:cc353ca3-1792893000",
     "taken_asks": []
   },
   "usage": {
