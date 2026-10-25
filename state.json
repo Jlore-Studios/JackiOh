@@ -8,13 +8,19 @@
     "1803": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
+      "pr": 1908,
       "provider": "gpt",
+      "question": "",
+      "round_tier": "medium",
       "run_id": "40180558600",
       "started_at": "2026-10-25T09:25:06Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 3
     },
     "1817": {
       "action": "build",
