@@ -38,7 +38,7 @@ use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
 use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
-use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of, slots_of};
+use crate::zones::{OffFieldZone, active_units_of, card_at, slot_of};
 
 /// A hero's block as a card may see it: §10.1's `{ health, armor }`, copied, so a script cannot
 /// write a hero's health by assigning through the result (which the acceptance grep could not catch
@@ -404,12 +404,12 @@ pub fn armor_on_field(state: &GameState) -> i32 {
 // The yellow glow's facts for the cards R195 left out (R662)
 // ---------------------------------------------------------------------------
 
-/// Every permanent that acts for this player: the tops of their unit piles and their backrow (§3.2).
+/// Every permanent that acts for this player: the tops of their unit piles, the Units their carriers
+/// hold (R446, R1824000) and their backrow (§3.2), in `zones::acting_on`'s order.
 fn permanents_held_by(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    [Row::Units, Row::Backrow]
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane)
         .into_iter()
-        .flat_map(|row| slots_of(player, row))
-        .filter_map(|slot| card_at(state, slot).cloned())
+        .cloned()
         .collect()
 }
 
@@ -565,10 +565,11 @@ pub fn redirect_neighbours(state: &GameState, attacker: &CardInstance) -> Vec<Ca
 }
 
 /// R901 (Meditative #30 Fickle E-Kitten's "a more expensive permanent than you"): the highest cost
-/// among the permanents acting for this player, the tops of their unit piles and their backrow (R13),
-/// each read at R396's `cost_now`: an X card at the X it was played for, 0 without one, any other at
-/// its cost as it stands. A face-down card is never an X card, so it counts at `effective_cost`, the
-/// cost R351's view shows both players. `None` when the side holds no permanent.
+/// among the permanents acting for this player, the tops of their unit piles, the Units their carriers
+/// hold and their backrow (R13, R1824000), each read at R396's `cost_now`: an X card at the X it was
+/// played for, 0 without one, any other at its cost as it stands. A face-down card is never an X card,
+/// so it counts at `effective_cost`, the cost R351's view shows both players. `None` when the side
+/// holds no permanent.
 pub fn highest_permanent_cost(state: &GameState, player: PlayerId) -> Option<i32> {
     permanents_held_by(state, player)
         .iter()

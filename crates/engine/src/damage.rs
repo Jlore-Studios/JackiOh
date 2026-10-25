@@ -156,27 +156,17 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
         })
 }
 
-/// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
-/// card, a face-down Trap left out — its text is in nobody's use until it fires (R33) or is revealed
-/// (R1487000). What E6's hero guards read.
+/// The cards acting on a player's side of the field (§3.2), each once (`zones::acting_on`): the top of
+/// each unit pile, the Units its carriers hold (R446), a Unit standing in the backrow among them
+/// (R1081000), and each backrow card, a face-down Trap left out — its text is in nobody's use until it
+/// fires (R33) or is revealed (R1487000). What E6's hero guards read.
 pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    let mut out: Vec<CardInstance> = crate::zones::active_units_of(state, player)
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
         .into_iter()
-        .cloned()
-        .collect();
-    for slot in crate::zones::slots_of(player, Row::Backrow) {
-        let Some(card) = crate::zones::card_at(state, slot) else {
-            continue;
-        };
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        let face_down = crate::preview::lasting_text_dormant(state, card);
-        // R1081000: a Unit standing in the backrow is already above, among the active units — its
-        // text must not answer twice.
-        if !face_down && !out.iter().any(|held| held.id == card.id) {
-            out.push(card.clone());
-        }
-    }
-    out
+        .filter(|card| !crate::preview::lasting_text_dormant(state, card))
+        .cloned()
+        .collect()
 }
 
 /// E6: every hero guard a player's cards set on their hero now (`Script.heroGuard`).
