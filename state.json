@@ -472,7 +472,25 @@
       "feedback_since": "2026-10-25T12:22:55Z",
       "issue": 1817,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "gpt"
+        ],
+        "builder": "gpt",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "gpt",
+            "run": "40192855516",
+            "tier": "medium"
+          }
+        ],
+        "sha": "34a6c45d018fc623fc69fc786964c6b29fc09d9a",
+        "tiers": {
+          "gpt": "medium"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
