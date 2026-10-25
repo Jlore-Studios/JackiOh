@@ -517,16 +517,19 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T10:12:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "round_tier": "strong",
       "run_id": "40224990817",
       "started_at": "2026-10-25T19:13:18Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "1889": {
       "action": "build",
