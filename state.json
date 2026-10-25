@@ -13838,14 +13838,20 @@
       }
     },
     "1840": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-10-25T05:18:10Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:90bd502f-1792906276",
+      "started_at": "2026-10-25T05:31:31Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "1841": {
       "failures": 0,
@@ -14304,9 +14310,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-25T05:17:19Z",
+    "at": "2026-10-25T05:31:31Z",
     "url": "",
-    "what": "build #1828 on claude-3"
+    "what": "plan #1840 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-25T05:15:08Z",
