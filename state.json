@@ -287,6 +287,20 @@
   "loop_tick": "2026-10-25T09:10:47Z",
   "planning": null,
   "providers": {
+    "agy": {
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T14:24:15Z",
+          "utilization": 0.0
+        },
+        "observed_at": "2026-10-25T09:37:19Z",
+        "seven_day": {
+          "resets_at": "2026-10-30T22:00:08Z",
+          "utilization": 0.99
+        },
+        "status": "allowed"
+      }
+    },
     "claude-1": {
       "spent": [
         {
