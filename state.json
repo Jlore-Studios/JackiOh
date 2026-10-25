@@ -1734,6 +1734,16 @@
       "stall_some": 146.7,
       "swapped": 1070814,
       "total": 8153976832
+    },
+    {
+      "at": "2026-10-25T16:25:05Z",
+      "high_swap": 45056,
+      "low_available": 6641659904,
+      "runner": "night-vm-devin-3",
+      "stall_full": 0.3,
+      "stall_some": 0.5,
+      "swapped": 14,
+      "total": 8153968640
     }
   ],
   "planning": null,
