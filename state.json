@@ -345,10 +345,10 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-6",
       "round_tier": "strong",
-      "run_id": "40200019195",
-      "started_at": "2026-10-25T13:57:55Z",
+      "run_id": "pending:4938f777-1792945255",
+      "started_at": "2026-10-25T16:21:33Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0
@@ -1218,9 +1218,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T16:12:58Z",
+    "at": "2026-10-25T16:21:33Z",
     "url": "",
-    "what": "build #1833 on claude-8"
+    "what": "build #1834 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-25T16:11:16Z",
