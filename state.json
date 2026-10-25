@@ -50,6 +50,12 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong"
+    },
+    "1889": {
+      "planned_at": "2026-10-25T09:13:20Z",
+      "planned_by": "`claude-4` (claude, `opus`, strong)",
+      "planned_by_id": "claude-4",
+      "planned_tier": "strong"
     }
   },
   "last_run": null,
