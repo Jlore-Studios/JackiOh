@@ -182,6 +182,7 @@ thread_local! {
         const { Cell::new(None) };
     static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
+    static CARD_METRICS_OVERRIDE: Cell<Option<crate::catalog::CardMetrics>> = const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -266,6 +267,38 @@ pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
     SHIPPED_OVERRIDE.with(Cell::get)
 }
 
+/// R1846000: card metrics for this thread, in place of the compiled ones (`catalog::card_metrics`),
+/// until the thread ends or `clear_overrides()` runs: each fixture card's code lines, by catalog id,
+/// and the BUSTED and complicated lists `crates/cards/build.rs` would compile from them (more than
+/// `BUSTED_CODE_LINES`, more than `COMPLICATED_CODE_LINES`). Leaked, like the catalog, and sorted
+/// by id as the compiled tables are.
+pub fn register_code_lines(lines: Vec<(&str, usize)>) {
+    let mut owned: Vec<(&'static str, usize)> = lines
+        .into_iter()
+        .map(|(id, count)| (&*Box::leak(id.to_string().into_boxed_str()), count))
+        .collect();
+    owned.sort_by(|a, b| a.0.cmp(b.0));
+    let over = |threshold: usize| -> &'static [&'static str] {
+        let ids: Vec<&'static str> = owned
+            .iter()
+            .filter(|(_, count)| *count > threshold)
+            .map(|(id, _)| *id)
+            .collect();
+        Box::leak(ids.into_boxed_slice())
+    };
+    let metrics = crate::catalog::CardMetrics {
+        busted: over(crate::config::BUSTED_CODE_LINES),
+        complicated: over(crate::config::COMPLICATED_CODE_LINES),
+        code_lines: Box::leak(owned.into_boxed_slice()),
+    };
+    CARD_METRICS_OVERRIDE.with(|cell| cell.set(Some(metrics)));
+}
+
+/// The card metrics this thread registered, if any.
+pub fn card_metrics_override() -> Option<crate::catalog::CardMetrics> {
+    CARD_METRICS_OVERRIDE.with(Cell::get)
+}
+
 /// #1035: one thread's registry overrides (`thread_overrides`), for another thread to take
 /// (`install`), so work a test hands to a blocking pool reads the test's own cards. Each is the
 /// leaked `&'static` the override already holds: nothing is copied.
@@ -277,6 +310,7 @@ pub struct ThreadOverrides {
     win_rates: Option<&'static crate::win_rates::WinRateTable>,
     code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
+    card_metrics: Option<crate::catalog::CardMetrics>,
 }
 
 impl ThreadOverrides {
@@ -289,6 +323,7 @@ impl ThreadOverrides {
         WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
         CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
+        CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
     }
 }
 
@@ -301,6 +336,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         win_rates: win_rates_override(),
         code_blocks: code_blocks_override(),
         shipped: shipped_override(),
+        card_metrics: card_metrics_override(),
     }
 }
 
@@ -313,6 +349,7 @@ pub fn clear_overrides() {
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
+    CARD_METRICS_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------

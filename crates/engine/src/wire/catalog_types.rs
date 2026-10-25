@@ -291,6 +291,12 @@ pub fn set_ships(set: SetName) -> bool {
     SHIPPED_SETS.contains(&set)
 }
 
+/// R1846001: the sets made for single-player modes (dungeon runs and their bosses, planned), reserved
+/// in `SetName` and holding no card yet. `SHIPPED_SETS` never lists one, so no deck holds its cards
+/// and no pool that names no set reaches them, but a catalog query's `everySet` ("every set,
+/// single-player ones too") does.
+pub const SINGLE_PLAYER_SETS: [SetName; 2] = [SetName::Boss, SetName::BossX];
+
 /// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
 /// until the Meditative set shipped, Meditative until Meditative+ did, then whichever set ships
 /// after it. "More cards from the newest
