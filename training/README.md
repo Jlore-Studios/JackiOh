@@ -7,7 +7,9 @@ itself, retrains the learned evaluation on those games, and gates the result aga
 (`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
 they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
 generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
-17 cards to 1 and #1889's to none, and fixed through ordinary issues.
+17 cards to 1 and #1889's to none, and fixed through ordinary issues. Since #1678 a sweep of record runs
+by itself after every promotion and every set that ships, on GitHub's runners
+(`.github/workflows/sweep.yml`, R1678000), so the table keeps step with the AI the learn lane promotes.
 
 The lanes below improve JackiOh's AI (`crates/ai/`, SPEC §9.9), each gated by a fixed number of
 games against the AI on `main`, and nothing else: since generation 9 they play no games against
@@ -32,7 +34,8 @@ Meditative set into the AI's decks: it lifted R1390's gate after a sweep of reco
 cards, which shadow-banned the ones the AI misplays (at most half the set). Those bans were the unban
 lane's work until #1677; a sweep of record measures them now (#1675). The shadow ban holds Meditative cards only (R732000), and since #1186's sweep, which banned none,
 Meditative+ cards on the same terms (R1186000): no lane, sweep or person adds a card of an earlier set to
-it, and the lanes only ever remove entries.
+it, and the lanes only ever remove entries; the sweep after a promotion may ban a Meditative or
+Meditative+ card again when the new AI is slow with it (R1678000).
 
 While the table is empty the unban lane idles: no AI can keep strictly fewer cards out of its decks
 than none, so `promote --lane unban` refuses to play its games (The gate), and `loop.sh` starts no
