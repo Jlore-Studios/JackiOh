@@ -598,6 +598,13 @@
     "1900": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T15:33:09Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Line 9 (stands alone) is in doubt: apps/web/src/i18n/zh-CN.json, which the new sentence must go into, is also changed on origin/claude/stoic-planck-f1rvyy (2026-10-25), and the planner cannot see open PRs. Every other line would allow easy (4 files, ~80 lines, one app, unit-tested, nothing left to d"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
