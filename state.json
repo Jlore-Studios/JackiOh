@@ -1221,6 +1221,7 @@
     "1926": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "easy",
       "failures": 0,
       "feedback_since": "2026-10-25T15:53:20Z",
