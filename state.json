@@ -895,6 +895,7 @@
     "1908": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "c189986b058983c3f31c23e035e5f84ae0389eeb",
       "ci_fixes": 1,
       "ci_reruns": {
         "8edd52e416353d0ab22b4fad609fd14f0f097899": 1
@@ -903,7 +904,7 @@
       "ci_sha": "8edd52e416353d0ab22b4fad609fd14f0f097899",
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-25T09:25:06Z",
+      "feedback_since": "2026-10-25T14:06:12Z",
       "forced": false,
       "handoff": {
         "at": "2026-10-25T14:03:14Z",
@@ -920,16 +921,17 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-10-25T12:33:27Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "40200665548",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-25T14:06:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [],
         "builder": "gpt",
