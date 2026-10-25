@@ -249,6 +249,7 @@
     "1829": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-10-25T14:43:23Z",
         "family": "claude",
@@ -262,13 +263,15 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
+      "pr": 1931,
       "provider": "claude-4",
+      "question": "",
       "round_tier": "strong",
       "run_id": "40209011667",
       "started_at": "2026-10-25T15:52:33Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1831": {
       "action": "plan",
