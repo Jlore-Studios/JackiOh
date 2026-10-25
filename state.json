@@ -293,6 +293,7 @@
     "1834": {
       "action": "build",
       "asks": [],
+      "interruptions": 0,
       "kind": "build",
       "pending_request": false,
       "provider": "claude-1",
