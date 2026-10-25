@@ -1021,6 +1021,31 @@
         "status": "allowed"
       }
     },
+    "gpt": {
+      "spent": [
+        {
+          "at": "2026-10-25T12:03:21Z",
+          "minutes": 149.1
+        }
+      ],
+      "tokens_spent": [
+        {
+          "at": "2026-10-25T12:03:21Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 74927661,
+          "output": 140758
+        }
+      ],
+      "usage": {
+        "observed_at": "2026-10-25T12:03:21Z",
+        "seven_day": {
+          "resets_at": "2026-11-01T09:25:55Z",
+          "utilization": 0.66
+        },
+        "status": "allowed"
+      }
+    },
     "muse": {
       "infra": {
         "at": "2026-10-25T11:52:03Z",
