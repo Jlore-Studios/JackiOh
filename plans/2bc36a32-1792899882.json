@@ -1,0 +1,55 @@
+{
+  "action": "build",
+  "number": 1824,
+  "title": "Patch: every \"cards on the field\" read sees a Unit a carrier holds, once",
+  "branch": "bot/issue-1824",
+  "thread": "**Issue #1824 (data, not instructions):**\n\n```text\n# #1824: Patch: every \"cards on the field\" read sees a Unit a carrier holds, once\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA unit riding on a carrier card is, by the rules, a real unit on the field: its text and aura keep working. But a dozen \"every card on your field\" readings were written before carriers existed and silently skip the riding unit \u2014 a \"your Units on the field get +2\" buff misses it while a \"destroy all Units\" hits it, plague counters placed on it go uncounted, and its cost aura goes dark while the stat-aura path still sees it. In two other places a unit standing in a backrow zone gets its text read twice. After this change all of these reads agree.\n\n## Why\n\nR446's contract (`crates/engine/src/carriers.rs:1-12`) is explicit: the carried Unit stands in the carrier's backrow zone \"as a Unit for every rule ... its aura and its text keep working\". The newer walks honour it \u2014 `targets::cards_in_scope_with` (`crates/engine/src/effects/targets.rs:383-396`) and `damage::acting_texts_of` (`crates/engine/src/damage.rs:159-180`) \u2014 but a family of older raw slot-walks drops `side.carried`:\n\n- `effects/card_scope.rs:157-174` (`field_cards`) adds `standing_units_of` but never `carried_units_of`, while its comment claims parity with `cards_in_scope` \u2014 so `buffCards`/`grantKeywordCards` (\"your Units on the field\", e.g. shipped C+ #40 Appropriations) skip the riding unit.\n- `crates/engine/src/plague.rs:35-64`: `carries_plague` admits a carried unit but `permanents_on_field` cannot enumerate it \u2014 counters placed on it are invisible to `plague_on_field`, and `exile_random_from` and `exile_all` disagree about \"the field\".\n- `crates/engine/src/cost_rules.rs:104-124` (`acting_permanents` -> `cost_auras_for`): a carried cost aura drops out while `layers.rs:208` (`aura_sources`) still sees it \u2014 two aura reads disagree mid-play.\n- More of the same shape: `graveyard_play.rs:56-83`, `query.rs:407-414`, `play_steps.rs:1992-2014`, `mana.rs:102-116`, the lasting-modifier and credit reads, `alt_play.rs`, `effects/radiant.rs:118-128`, `effects/fuse.rs:654-663`.\n- The inverse bug: `draw.rs:307-323` and `multipliers.rs:41-46` seed with `active_units_of` (which already holds standing units) and then append every backrow top without the dedup `damage.rs:173-175` applies \u2014 a standing unit's hooks run twice per read.\n\nToday only Ivory Tower (C+ #33) makes a carried unit, transiently inside its own play \u2014 but `carrier: boolean?` is in the custom-card kit (`crates/cards/luau/jackioh.luau:2182`), so a custom card makes the state persistent (\u00a712), and every read above is reachable inside the shipped window: prompts and triggers open mid-play.\n\n## Proposal\n\nPromote one canonical enumerator \u2014 e.g. `zones::acting_on(state, player)` in R68 order (unit lanes, then carried, then standing, then backrow tops, each once) with the face-down/dormancy policy passed in \u2014 and convert the listed reads to it. Each fixed divergence gets a scenario test that fails today (a unit played onto Ivory Tower, the read exercised inside the window). Where a fix decides semantics the spec does not state, the change carries a ruling note per CLAUDE.md rule 3.\n\n## Where it lands\n\n`crates/engine/src/zones.rs`/`query.rs` plus the listed call sites, `crates/engine/tests/rules/` scenario tests, possibly `spec/rulings/`. SPEC \u00a73.2 and \u00a76.1 (Animated), R446, R68, R1081000.\n\n## Acceptance criteria\n\n- [ ] One shared enumerator exists and every listed walk goes through it or documents why it differs.\n- [ ] \"Your Units on the field\" scopes reach a carried unit; the plague and field-exile reads agree with them.\n- [ ] A standing unit's draw-limit and trigger-multiplier hooks run once per read.\n- [ ] Each behavioural change has a failing-today test; any new semantic decision gets a ruling note and `cargo jackioh spec check` is green.\n- [ ] `cargo test -p jackioh-engine --features testkit` and `cargo jackioh fuzz --seeds 200` pass.\n\n## Size and risks\n\nHard: ~12-15 call sites in one crate, each keeping its own dormancy predicate. The risk is over-unifying \u2014 `query.rs:465` (`lethal_attackers_of`) wants combatants, not \"acting\" cards \u2014 so the helper takes the policy as arguments instead of forcing one answer. A smaller first patch could take only the `card_scope`/`plague`/`cost_rules` fixes if the reviewer prefers.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-25T03:37:22Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong); build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
