@@ -13,6 +13,7 @@ tribute: number?,
 tributeSelf: boolean?,
 tributeExcludesSelf: boolean?,
 eitherPlayer: boolean?,
+extraTurnCooldown: boolean?,
 }
 
 export type ActivationUses = number | "unlimited"
@@ -96,7 +97,6 @@ chinese: boolean?,
 lucky: number?,
 copyOf: string?,
 memory: {[string]: JsonValue}?,
-fixedX: number?,
 }
 
 export type AfterStateCheckArgs = {
@@ -294,9 +294,6 @@ withTokens: boolean?,
 defId: (string | {string})?,
 token: boolean?,
 tribute: boolean?,
-busted: boolean?,
-complicated: boolean?,
-everySet: boolean?,
 }
 
 export type CellScope = {
@@ -518,7 +515,7 @@ ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
 trample: boolean?,
-trampleOnto: TrampleOnto?,
+halfToHeroes: boolean?,
 side: ScopeSide?,
 rows: {Row}?,
 types: {CardType}?,
@@ -534,7 +531,7 @@ ignoreArmor: boolean?,
 combat: boolean?,
 lifesteal: boolean?,
 trample: boolean?,
-trampleOnto: TrampleOnto?,
+halfToHeroes: boolean?,
 }
 
 export type DamageEnemyOrHealFriendArgs = {
@@ -903,7 +900,6 @@ spec: TargetSpec,
 
 export type FreezeArgs = {
 target: TargetSpec,
-forever: boolean?,
 }
 
 export type FuseCardsArgs = {
@@ -1419,39 +1415,9 @@ cells: {ZoneRef},
 ["type"]: "autopilotEngaged",
 player: PlayerId,
 turn: number,
-} | {
-["type"]: "awakened",
-player: PlayerId,
-instanceId: string,
-defId: string,
-} | {
-["type"]: "traded",
-player: PlayerId,
-} | {
-["type"]: "resourceGained",
-player: PlayerId,
-instanceId: string,
-defId: string,
-radiant: true?,
-} | {
-["type"]: "resourceSold",
-player: PlayerId,
-instanceId: string,
-defId: string,
-radiant: true?,
-credits: number,
-} | {
-["type"]: "resourceDiscarded",
-player: PlayerId,
-instanceId: string,
-defId: string,
-} | {
-["type"]: "marketCreditsChanged",
-player: PlayerId,
-value: number,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect"
 
@@ -1638,11 +1604,9 @@ n: number,
 ["kind"]: "Crater",
 } | {
 ["kind"]: "Flashback",
-} | {
-["kind"]: "Tradable",
 }
 
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable"
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback"
 
 export type LaneSpec = number | TargetSpec
 
@@ -1773,7 +1737,7 @@ target: TargetSpec?,
 amount: number,
 }
 
-export type PlayedFrom = "graveyard" | "tray"
+export type PlayedFrom = "graveyard"
 
 export type PlayerId = "p1" | "p2"
 
@@ -1860,10 +1824,6 @@ expiry: ModifierExpiry,
 ["kind"]: "healthPrice",
 multiple: number,
 echo: number?,
-} | {
-expiry: ModifierExpiry,
-["kind"]: "keywordNextSpell",
-keyword: Keyword,
 }
 
 export type PlayerSpec = "self" | "enemy"
@@ -2252,7 +2212,6 @@ spellDamageAura: SpellDamageAura?,
 doublesHealing: boolean?,
 answersTargetedSpells: boolean?,
 embiggenGarden: number?,
-slumber: SlumberText?,
 }
 
 export type StealAllArgs = {
@@ -2333,7 +2292,7 @@ to: Position?,
 target: TargetSpec,
 }
 
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Token"
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Token"
 
 export type TakeExtraTurnArgs = {
 player: PlayerSpec?,
@@ -2407,8 +2366,6 @@ index: number?,
 }
 
 export type TargetedWhat = "attack" | "target"
-
-export type TrampleOnto = "adjacent" | "adjacentAndHero"
 
 export type TransformArgs = {
 defId: string,
@@ -2555,12 +2512,9 @@ player: PlayerId,
 } | {
 ["z"]: "gone",
 player: PlayerId,
-} | {
-["z"]: "tray",
-player: PlayerId,
 }
 
-export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone" | "tray"
+export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone"
 
 export type ZoneRef = {
 player: PlayerId,

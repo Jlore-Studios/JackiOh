@@ -55,7 +55,11 @@ So the workflow also runs whenever CI completes on main, and every check starts 
 a lost event is made up by the next). It promotes only if the commit changes `render.yaml`'s
 `CATALOG_VERSION` compared to what `production` has, through the same kind of pull request, and **a
 hold does not stop it** (the server already runs the new catalog, so holding the client back is what
-breaks production). It comments on the open countdown issue and leaves its time alone. Every other
+breaks production). It does wait while the live server serves another catalog than the one it would
+bring, as when Render could not deploy (out of build pipeline minutes, a failed build or boot): a
+client ahead of the server is refused just as much. The scheduled merge waits the same way, and the
+first check once the server serves it merges; running *promote production* by hand merges past it.
+It comments on the open countdown issue and leaves its time alone. Every other
 change waits for the countdown. The gap that remains is the time for CI plus a Cloudflare build
 after Render has deployed (roughly 10 to 20 minutes). Section 7 discusses closing that gap.
 
@@ -197,11 +201,12 @@ GitHub -> Actions -> **promote production** -> **Run workflow** (leave `sha` emp
 `production` at the newest green commit of main. Check that the branch exists before step 3, because
 Cloudflare needs a branch to point at.
 
-Then protect it: Settings -> Rules -> Rulesets -> New branch ruleset, target `production`, and enable
-**Restrict deletions** and **Block force pushes**. Do **not** enable "Require a pull request" or
-required status checks on it; those would block the push that creates the branch and hold back the
-promotion pull requests, which no check runs on. Merging a pull request still works under these two
-rules, and they make an accidental `git push -f` to production impossible.
+Then protect it. The `production` ruleset, **Restrict deletions** and **Block force pushes** on
+`production`, lives in `infra/github.tf` (`github_repository_ruleset.production`) and is changed
+there (`infra/README.md`), not in Settings -> Rules -> Rulesets. Do **not** add "Require a pull
+request" or required status checks to it; those would block the push that creates the branch and
+hold back the promotion pull requests, which no check runs on. Merging a pull request still works
+under these two rules, and they make an accidental `git push -f` to production impossible.
 
 ### Step 3: Set up Cloudflare
 
@@ -232,8 +237,10 @@ The Worker's name is `jackioh` (`wrangler.jsonc`), and its account is `CLOUDFLAR
 the workflow. **Never** put `SUPABASE_SECRET_KEY`, `DATABASE_URL` or `CODE_PEPPER` in the web build
 or in Cloudflare: anything the web build reads is readable by every visitor.
 
-**Custom domain:** Worker -> Settings -> Domains & Routes -> Add -> Custom domain. Until you add one,
-the site is on `jackioh.<your-account>.workers.dev`.
+**Custom domain:** `jackioh.com`, and the zone's DNS records, live in `infra/cloudflare.tf` and are
+changed there (`infra/README.md`), not under Worker -> Settings -> Domains & Routes. Without a custom
+domain the site is on `jackioh.<your-account>.workers.dev`, which stays on either way: the deploy
+job's `check the live site` step reads it.
 
 ### Step 4: Tell the backend about the new origin
 
@@ -249,8 +256,8 @@ the site is on `jackioh.<your-account>.workers.dev`.
 - **Render API key** (once, recommended): Render -> Account Settings -> API Keys -> Create API Key,
   saved as the GitHub repository secret `RENDER_API_KEY`. With it `deploy-watch.yml` starts each
   deploy through Render's API with the pushed commit (`commitId`), and its `Render deploy of this
-  push` job follows that deploy with `Bounceapp/render-action`, so a failed build or boot shows in
-  the run with a link to its Render log. Without it the hook names the commit with `ref`. Either way
+  push` job follows that deploy by the id Render's API gives it, so a failed or canceled build
+  shows in the run and in the issue with a link to its Render log. Without it the hook names the commit with `ref`. Either way
   Render clones the public repository itself, which is what keeps deploys going while its GitHub
   access is broken: its log then says "It looks like we don't have access to your repo" and, given
   no commit, rebuilt `9809419` all through 2026-10-04.
@@ -259,11 +266,14 @@ the site is on `jackioh.<your-account>.workers.dev`.
   `https://jackioh.vercel.app,https://play.example.com`. This list gates both CORS and the WebSocket
   Origin check (R162), so a missing entry breaks matches, not just page loads. Saving restarts the
   server.
-- **Supabase** -> Authentication -> URL Configuration -> **Redirect URLs**: add
-  `https://<cloudflare-domain>/login`. Emailed links (sign-up confirmation, password reset) are
-  built from the page's own origin (`auth.ts` `authRedirectUrl`), and Supabase silently replaces any
-  `redirect_to` that is not on this list with the Site URL. Keep the Vercel entry for staging.
-- **Supabase Site URL:** change it to the Cloudflare domain at cut-over (step 6), not before.
+- **Supabase Redirect URLs** (Authentication -> URL Configuration) live in `infra/supabase.tf`
+  (`uri_allow_list`) and are changed there (`infra/README.md`): `https://<cloudflare-domain>/login`
+  is on it. Emailed links (sign-up confirmation, password reset) are built from the page's own origin
+  (`auth.ts` `authRedirectUrl`), and Supabase silently replaces any `redirect_to` that is not on this
+  list with the Site URL. Staging's `https://jackioh.vercel.app/login` is not on it, so staging's
+  emailed links land on jackioh.com.
+- **Supabase Site URL:** `site_url` in the same file. It moves to the Cloudflare domain at cut-over
+  (step 6), not before.
 - **`TRUSTED_PROXY_HOPS` on Render does not change.** Browsers talk to Render directly; Cloudflare
   only serves the static files. It would change only if Render itself were put behind Cloudflare.
 
@@ -302,7 +312,8 @@ production: `crates/server/tests/deploy/rehearse.sh` boots with
 `PUBLIC_ORIGINS=https://jackioh.com,https://www.jackioh.com`, and the usage comment of
 `e2e/cypress/e2e/99-online-smoke.cy.ts` shows `E2E_BASE_URL=https://jackioh.com`.
 
-What is left is the dashboards' half (#256): set the Supabase Site URL to `https://jackioh.com`.
+The dashboards' half (#256) was the Supabase Site URL, `https://jackioh.com`. It is `site_url` in
+`infra/supabase.tf` now, and is changed there (`infra/README.md`).
 
 ### Step 7: Let the countdown issue start Vercel's builds
 
@@ -351,7 +362,8 @@ past the hour.
   or main was rewritten. Compare with `git log --oneline --graph origin/main origin/production`. If
   nothing on `production` needs keeping, an admin can reset it with
   `git push --force origin <green-main-sha>:production` (temporarily allowing force pushes in the
-  ruleset), and the next run continues normally. The hourly check fails the same way until then.
+  ruleset; `terraform -chdir=infra apply` puts the rule back, `infra/README.md`), and the next run
+  continues normally. The hourly check fails the same way until then.
 - **A run says "main has N newer commit(s) whose CI has not passed yet":** production has every
   green commit and `main` is ahead. The countdown stays due (a `/fast-forward` too), and the next
   green CI run on `main` merges. CI on `main` is never cancelled by a newer push (`ci.yml`'s
@@ -375,7 +387,10 @@ past the hour.
   `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
   runs an older commit: Render is not receiving pushes, or a deploy failed. jackioh-server, Events
   shows a "Deploy started" for every push it receives, and a failed deploy names its step in the
-  log. The server runs the pushed commit but another catalog version: render.yaml's start command
+  log; a deploy that never started, or a build cut off, can be the workspace out of build pipeline
+  minutes (Workspace, Billing: buy more, or wait for the month's reset; nothing in the repository
+  fixes it), and production holds a catalog bump meanwhile (section 2.1). The server runs the
+  pushed commit but another catalog version: render.yaml's start command
   takes the version from `patches.json`, so `render.yaml`'s `CATALOG_VERSION` and that list
   disagree, or the service is not running render.yaml's start command (Settings, Build & Deploy;
   Blueprints). The server reports no commit: it predates the check, or `RENDER_GIT_COMMIT` is not

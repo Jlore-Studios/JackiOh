@@ -23,7 +23,7 @@ use crate::preview::is_face_down;
 use crate::script::EffectContext;
 use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, PlayerId, Row, Tag, Zone, opponent_of};
-use crate::zones::{card_at, is_standing_unit, slots_of, standing_units_of};
+use crate::zones::{active_units_of, card_at, is_standing_unit, slots_of};
 
 /// The piles a card scope reaches: the field (both rows unless `rows` narrows it), a hand, a deck.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -158,20 +158,21 @@ pub fn matches_card_scope(ctx: &EffectContext<'_>, card: &CardInstance, scope: &
 fn field_cards(state: &GameState, player: PlayerId, rows: &[Row]) -> Vec<CardInstance> {
     rows.iter()
         .flat_map(|row| {
-            let mut cards: Vec<CardInstance> = slots_of(player, *row)
+            // R446, R1081000, R1824000: the unit row is the side's Units, as `zones::acting_on` lists them
+            // among the Units — unit zones' tops, carried Units, standing Units — and as
+            // `targets::cards_in_scope` has them. A scope goes row by row, so it takes that half of the walk.
+            if *row == Row::Units {
+                return active_units_of(state, player).into_iter().cloned().collect();
+            }
+            slots_of(player, *row)
                 .into_iter()
                 .filter_map(|slot| card_at(state, slot))
-                // R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated)…
-                .filter(|card| !(*row == Row::Backrow && is_standing_unit(state, card)))
+                // R1081000: a Unit standing in a backrow zone is no backrow card (§6.1 Animated).
+                .filter(|card| !is_standing_unit(state, card))
                 .cloned()
-                .collect();
-            // …but one of the side's Units, after its unit zones', as `targets::cards_in_scope` has it.
-            if *row == Row::Units {
-                cards.extend(standing_units_of(state, player).into_iter().cloned());
-            }
-            // R1839000: a Dormant card is in no card scope (`restrictions::unaffected_by`).
-            cards.retain(|card| !crate::slumber::is_slumbering(card));
-            cards
+                // R1839000: a Dormant card is in no card scope (`restrictions::unaffected_by`).
+                .filter(|card| !crate::slumber::is_slumbering(card))
+                .collect::<Vec<CardInstance>>()
         })
         .collect()
 }

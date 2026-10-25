@@ -11,9 +11,7 @@ use crate::state::{
     CardInstance, GameState, ModifierExpiry, ModifierKind, PlayerModifier, PlayerState, handicap_of,
 };
 use crate::triggers::{TriggerZone, holders_answering};
-use crate::wire::{
-    CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Row, Zone,
-};
+use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PLAYER_IDS, PlayerId, Zone};
 
 /// §2.3, R181: max mana is min(turns started + the seat's mana bonus, its mana cap), plus persistent
 /// modifiers, floored at 0. With no handicap the bonus is 0 and the cap is MAX_MANA, which is §2.3's
@@ -98,17 +96,15 @@ pub fn spend_lost_refresh(side: &mut PlayerState) -> bool {
 }
 
 /// MD-B2, R941: whether any player generates mana naturally now — false while a card holding
-/// `no_natural_mana` acts on the field (face-up, top of its pile), on either side and in either row.
+/// `no_natural_mana` acts on the field (face-up, top of its pile or a Unit a carrier holds, R446,
+/// R1824000), on either side and in either row.
 pub fn natural_mana_on(state: &GameState) -> bool {
     for player in PLAYER_IDS {
-        for row in [Row::Units, Row::Backrow] {
-            for slot in crate::zones::slots_of(player, row) {
-                if let Some(card) = crate::zones::card_at(state, slot)
-                    && !crate::preview::is_face_down(state, card)
-                    && crate::scripts::flags_of(state, card).no_natural_mana == Some(true)
-                {
-                    return false;
-                }
+        for card in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
+            if !crate::preview::is_face_down(state, card)
+                && crate::scripts::flags_of(state, card).no_natural_mana == Some(true)
+            {
+                return false;
             }
         }
     }

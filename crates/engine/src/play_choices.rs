@@ -793,14 +793,17 @@ pub fn legal_embiggen_choices(state: &GameState, card: &CardInstance) -> Vec<boo
 // declares `tribute_enemies` itself, so the flags are read directly. The flag defaults to false,
 // which is every other card.
 
-/// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none.
+/// §6.3 "Tribute X": the number of units playing this card sacrifices, 0 when it asks for none, less
+/// what its owner's Floats took off (R1841003).
 pub fn tribute_cost_of(state: &GameState, card: &CardInstance) -> i32 {
     let declared = declared_targets(state, card)
         .into_iter()
         .find(|decl| decl.kind == PromptKind::Tribute)
         .and_then(|decl| decl.amount);
     let flagged = crate::scripts::script_of(state, card).flags();
-    declared.or(flagged.tribute).unwrap_or(0).max(0)
+    let printed = declared.or(flagged.tribute).unwrap_or(0).max(0);
+    // R1841003: each of its owner's Floats took one off, never below 0.
+    (printed - crate::float::tribute_lowered(card)).max(0)
 }
 
 pub fn may_tribute_enemy_units(state: &GameState, card: &CardInstance) -> bool {

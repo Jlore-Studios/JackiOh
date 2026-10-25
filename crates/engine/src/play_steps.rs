@@ -101,7 +101,7 @@ use crate::work::{begin_work_cascade, drain_work, drop_work, paused, paused_of, 
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, card_at, cease_to_exist, first_free_zone, fresh_face_down_id, is_open,
     lands_face_down, place_on_field, place_standing_on_field, release_zone, remove_from_any_zone,
-    reserve_zone, slots_of,
+    reserve_zone,
 };
 
 /// TS `Extract<ActionBody, { type: "play" }>`. `play_choices.rs` names the same type (TS declared it in
@@ -2063,31 +2063,24 @@ fn still_resolving(state: &GameState, run: &PlayRun) -> Option<CardInstance> {
 /// Quickstriker being played is on the field by step 5. Nor is one that arrived on the field during
 /// the play (`arrived_during`): a copy a tributed Cube's Death summoned at step 2, one #95's first
 /// resolution summoned, met again by the Echo repeat of that same play (R119). Nor is a face-down card,
-/// whose text sleeps (R1487000).
+/// whose text sleeps (R1487000). A Unit a carrier holds grants as any permanent does (R446, R1824000).
 fn quickstriker_grants(state: &GameState, run: &PlayRun, played: &CardInstance) -> Vec<i32> {
     let arrived: IndexSet<String> = arrived_during(state, run).into_iter().collect();
     let mut multiples: Vec<i32> = Vec::new();
-    for row in [Row::Units, Row::Backrow] {
-        for slot in slots_of(run.player, row) {
-            let Some(held) = card_at(state, slot) else {
-                continue;
-            };
-            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-            if held.id == played.id
-                || arrived.contains(&held.id)
-                || crate::preview::lasting_text_off(state, held)
-            {
-                continue;
-            }
-            let grants = match crate::scripts::flags_of(state, held).quickstriker {
-                Some(FlagOrCount::Flag(true)) => 1,
-                Some(FlagOrCount::Count(count)) => count.max(0),
-                _ => 0,
-            };
-            let multiple = QUICKSTRIKER_COMBO_MULTIPLE.on(held.radiant);
-            for _ in 0..grants {
-                multiples.push(multiple);
-            }
+    for held in crate::zones::acting_on(state, run.player, crate::zones::StandingAt::ItsLane) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if held.id == played.id || arrived.contains(&held.id) || crate::preview::lasting_text_off(state, held)
+        {
+            continue;
+        }
+        let grants = match crate::scripts::flags_of(state, held).quickstriker {
+            Some(FlagOrCount::Flag(true)) => 1,
+            Some(FlagOrCount::Count(count)) => count.max(0),
+            _ => 0,
+        };
+        let multiple = QUICKSTRIKER_COMBO_MULTIPLE.on(held.radiant);
+        for _ in 0..grants {
+            multiples.push(multiple);
         }
     }
     multiples

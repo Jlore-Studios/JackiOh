@@ -2430,8 +2430,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Felinor],
         R::Epic,
-        st(3, 3),
-        st(6, 6),
+        st(1, 1),
+        st(2, 2),
     ),
     row(
         "31",
@@ -2568,7 +2568,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Book Worm",
         c(1),
         T::Unit,
-        &[],
+        &[G::Plague],
         R::Common,
         st(1, 4),
         st(2, 8),
@@ -4288,8 +4288,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Felinor],
         R::Rare,
-        st(9, 11),
-        st(18, 22),
+        st(9, 9),
+        st(18, 18),
     ),
     row(
         "95",
@@ -4543,7 +4543,7 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     ),
     row(
         "4",
-        "Supply Drop",
+        "Jlockeed's Supply Drop",
         emb(2, 4),
         T::Spell,
         &[G::Jlockeed],
@@ -5973,10 +5973,11 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .map(|entry| entry.id.clone())
             .collect();
         named.sort();
-        // Meditative+ #4 Supply Drop, the designer's "Jlockheed" Spell, names no faction either.
+        // Meditative+ #4, the designer's "Jlockheed" Spell, names the faction since issue #1828 renamed
+        // it Jlockeed's Supply Drop.
         let expected: Vec<String> = tagged
             .into_iter()
-            .filter(|id| id != "classic-004" && id != "meditative-087" && id != "meditativeplus-004")
+            .filter(|id| id != "classic-004" && id != "meditative-087")
             .collect();
         assert_eq!(named, expected, "entries whose name names Jlockeed");
     }

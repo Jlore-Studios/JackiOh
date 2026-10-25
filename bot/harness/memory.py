@@ -16,11 +16,14 @@ The deliver job keeps the last `KEEP` runs' figures in the state file (`machine_
 status issue shows the last day of them (`line`): with stalls and swapping near zero the box has
 memory to spare and `machine_parallel` is held by its CPU; with seconds of `full` stall a run, it
 is short of memory, and fewer machine lanes or a bigger box is the answer
-(`bot/machine/README.md`, Memory).
+(`bot/machine/README.md`, Memory). Each box's runs are its own (#1677): a run on the second box
+keeps its runner's suffix as its `box` (`box_of`), and the line gives each box its own verdict, so
+a box short of memory is not hidden by one with memory to spare.
 """
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
@@ -112,10 +115,18 @@ def summary(record: Mapping[str, Any] | None) -> dict[str, Any] | None:
             "swapped": int(delta("swapped"))}
 
 
-def note(state: dict[str, Any], found: Mapping[str, Any], runner: str) -> None:
+def box_of(runner: str, label: str) -> str:
+    """The box a runner is on, from its name (`bot/machine/register-runners.sh`): its label, then
+    its lane past the first, then the second box's suffix (`night-vm-muse-2-b2`). "" is the night
+    box, whose names end at the label or the lane."""
+    rest = runner[len(label):] if runner.startswith(label) else ""
+    return re.sub(r"^(-\d+)?-?", "", rest)
+
+
+def note(state: dict[str, Any], found: Mapping[str, Any], runner: str, box: str = "") -> None:
     """Keep one machine run's summary, the newest `KEEP` of them."""
     kept = [entry for entry in state.get("machine_memory") or [] if isinstance(entry, dict)]
-    kept.append({**found, "runner": runner})
+    kept.append({**found, "runner": runner, **({"box": box} if box else {})})
     state["machine_memory"] = kept[-KEEP:]
 
 
@@ -123,22 +134,33 @@ def _gib(value: int) -> str:
     return f"{value / GIB:.1f} GB"
 
 
+def _verdict(runs: list[Mapping[str, Any]]) -> str:
+    """One box's runs: the run count, whether it ran short, the least available, the stalls."""
+    total = max(int(e.get("total") or 0) for e in runs)
+    low = min(int(e.get("low_available") or 0) for e in runs)
+    short = [e for e in runs if float(e.get("stall_full") or 0) >= SHORT_FULL_S]
+    swapped = [e for e in runs if int(e.get("swapped") or 0) > 0]
+    worst = max(float(e.get("stall_full") or 0) for e in runs)
+    verdict = ("**short of memory**: fewer machine lanes (`machine_parallel`) or a bigger box"
+               if short else "memory to spare: its CPU, not its memory, sets `machine_parallel`")
+    return (f"({len(runs)} runs): {verdict}. Least available "
+            f"{_gib(low)} of {_gib(total)}; {len(short)} run(s) stalled on memory for "
+            f"{SHORT_FULL_S:.0f} s or more (longest {worst:.0f} s); {len(swapped)} swapped.")
+
+
 def line(state: Mapping[str, Any], now: datetime) -> str:
-    """The status issue's line on the machine's memory over the last day, or ""."""
-    recent = []
+    """The status issue's line on the machine's memory over the last day, one verdict a box, or
+    ""."""
+    boxes: dict[str, list[Mapping[str, Any]]] = {}
     for entry in state.get("machine_memory") or []:
         at = parse_iso(str((entry or {}).get("at") or "")) if isinstance(entry, dict) else None
         if at is not None and now - at <= WINDOW:
-            recent.append(entry)
-    if not recent:
+            boxes.setdefault(str(entry.get("box") or ""), []).append(entry)
+    if not boxes:
         return ""
-    total = max(int(e.get("total") or 0) for e in recent)
-    low = min(int(e.get("low_available") or 0) for e in recent)
-    short = [e for e in recent if float(e.get("stall_full") or 0) >= SHORT_FULL_S]
-    swapped = [e for e in recent if int(e.get("swapped") or 0) > 0]
-    worst = max(float(e.get("stall_full") or 0) for e in recent)
-    verdict = ("**short of memory**: fewer machine lanes (`machine_parallel`) or a bigger box"
-               if short else "memory to spare: its CPU, not its memory, sets `machine_parallel`")
-    return (f"**Machine memory, last 24 hours** ({len(recent)} runs): {verdict}. Least available "
-            f"{_gib(low)} of {_gib(total)}; {len(short)} run(s) stalled on memory for "
-            f"{SHORT_FULL_S:.0f} s or more (longest {worst:.0f} s); {len(swapped)} swapped.")
+    head = "**Machine memory, last 24 hours**"
+    if list(boxes) == [""]:
+        return f"{head} {_verdict(boxes[''])}"
+    return "\n".join([f"{head}, a line a box:"] + [
+        f"- {'the night box' if not box else f'the `{box}` box'} {_verdict(runs)}"
+        for box, runs in sorted(boxes.items())])

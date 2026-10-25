@@ -967,6 +967,8 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "classic-033",
         "classic-082",
         "classicplus-006",
+        // C+ #30 Felinor Fuser, a 1/1 since issue #1828.
+        "classicplus-030",
         "classicplus-076",
     ];
 

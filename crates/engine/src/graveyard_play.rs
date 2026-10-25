@@ -28,7 +28,7 @@ use crate::config::{MIN_PLAGUE_PAYMENT, PLAGUE_TOKEN_MANA};
 use crate::script::EngineSink;
 use crate::script::{GraveyardPlayPermission, HookArgs};
 use crate::state::{CardInstance, EngineError, GameState};
-use crate::wire::{CardType, CounterKind, GameEvent, KeywordKind, PlayerId, Row, Zone};
+use crate::wire::{CardType, CounterKind, GameEvent, KeywordKind, PlayerId, Zone};
 
 /// The Plague Counters a play from the graveyard spends: the play action's `plague` (part 1 put the
 /// type in the wire, where the action names it).
@@ -50,34 +50,30 @@ pub struct PlayPayment {
 }
 
 /// E11: every permission the player has now — from each card acting on their side of the field (the
-/// top of a pile, a backrow card) whose running face grants one, in lane order, units first. A Vanilla
-/// card grants nothing (`script_of`, R115); a card dormant under a Stack pile is not on the field for
-/// effects (§3.2, R13), and a face-down card's text sleeps (R1487000).
+/// top of a pile, a Unit a carrier holds (R446, R1824000), a backrow card) whose running face grants one,
+/// in `zones::acting_on`'s order, units first. A Vanilla card grants nothing (`script_of`, R115); a card
+/// dormant under a Stack pile is not on the field for effects (§3.2, R13), and a face-down card's text
+/// sleeps (R1487000).
 pub fn graveyard_grants_of(state: &GameState, player: PlayerId) -> Vec<GraveyardGrant> {
     let mut out: Vec<GraveyardGrant> = Vec::new();
-    for row in [Row::Units, Row::Backrow] {
-        for slot in crate::zones::slots_of(player, row) {
-            let Some(source) = crate::zones::card_at(state, slot) else {
-                continue;
-            };
-            // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-            if source.controller != player || crate::preview::lasting_text_off(state, source) {
-                continue;
-            }
-            let script = crate::scripts::script_of(state, source);
-            let Some(hook) = script.graveyard_play.as_ref() else {
-                continue;
-            };
-            for permission in hook(HookArgs {
-                state,
-                self_: source,
-                radiant: source.radiant,
-            }) {
-                out.push(GraveyardGrant {
-                    source: source.clone(),
-                    permission,
-                });
-            }
+    for source in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
+        // R1487000: a face-down card's text sleeps until it is revealed or face-up.
+        if source.controller != player || crate::preview::lasting_text_off(state, source) {
+            continue;
+        }
+        let script = crate::scripts::script_of(state, source);
+        let Some(hook) = script.graveyard_play.as_ref() else {
+            continue;
+        };
+        for permission in hook(HookArgs {
+            state,
+            self_: source,
+            radiant: source.radiant,
+        }) {
+            out.push(GraveyardGrant {
+                source: source.clone(),
+                permission,
+            });
         }
     }
     out

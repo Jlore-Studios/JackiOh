@@ -30,14 +30,20 @@ export const gifTestid = {
   tooBig: "replay-gif-too-big",
   failed: "replay-gif-failed",
   share: "replay-gif-share",
+  retry: "replay-gif-retry",
 } as const;
+
+/** A made GIF, and whether the device can hand it to the share sheet (else Share downloads it). */
+type GifReady = { kind: "ready"; file: File; share: boolean };
 
 export type GifPhase =
   | { kind: "idle" }
   | { kind: "working"; frame: number; frames: number; attempt: number; attempts: number }
-  | { kind: "ready"; file: File; share: boolean }
+  | GifReady
   | { kind: "tooBig" }
-  | { kind: "failed"; message: string };
+  // `ready`: the made GIF whose share failed, which Try again shares again without drawing it anew;
+  // null when the export itself failed, where Make GIF is the way on.
+  | { kind: "failed"; message: string; ready: GifReady | null };
 
 export type GifExport = {
   open: boolean;
@@ -119,7 +125,7 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
         setPhase(result.kind === "ready" ? { kind: "ready", file: result.file, share: gif.canShareFile(result.file) } : { kind: "tooBig" });
       } catch (cause) {
         if (controller.signal.aborted || isAbort(cause)) return;
-        setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause) });
+        setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause), ready: null });
       }
     })();
   }, [cache, current, from, to, preset, lookup]);
@@ -158,10 +164,13 @@ export function useGifExport(cache: StepCache, current: number): GifExport {
       setPhase(IDLE);
     },
     send: () => {
-      if (phase.kind !== "ready" || loaded.current === null) return;
-      loaded.current.shareGif(phase.file).catch((cause: unknown) => {
+      // Share, or Try again after a share that failed: the made GIF either way, never drawn again.
+      const ready = phase.kind === "ready" ? phase : phase.kind === "failed" ? phase.ready : null;
+      if (ready === null || loaded.current === null) return;
+      setPhase(ready);
+      loaded.current.shareGif(ready.file).catch((cause: unknown) => {
         // A dismissed share sheet is the viewer's answer, not a failure.
-        if (!isAbort(cause)) setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause) });
+        if (!isAbort(cause)) setPhase({ kind: "failed", message: cause instanceof Error ? cause.message : String(cause), ready });
       });
     },
   };
@@ -247,6 +256,11 @@ export function ShareGif({ gif }: { gif: GifExport }): ReactElement {
             <span role="alert" data-testid={gifTestid.failed}>
               {phase.message}
             </span>
+          ) : null}
+          {phase.kind === "failed" && phase.ready !== null ? (
+            <button type="button" data-testid={gifTestid.retry} onClick={gif.send}>
+              {t("Try again")}
+            </button>
           ) : null}
           {phase.kind === "ready" ? (
             <button type="button" data-testid={gifTestid.share} onClick={gif.send}>

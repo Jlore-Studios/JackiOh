@@ -18,15 +18,15 @@
 //! needed (R703); the Radiant face declares no target, so its play gate (`play_allowed`, R1851000)
 //! asks for a Radiant enemy card on the field its player can see, a face-down one hiding its face
 //! (§9.1, R440). A cast of either face is never refused (R70, R1851001) and clears what there is, and
-//! a Trade is no play (R1838002), so either face is Traded with nothing to clear. Through v0.4.9 R90
-//! let either face play and fizzle (R1103); `script_v0_4_9` keeps that (R767000).
+//! a Trade is no play (R1838002), so either face is Traded with nothing to clear. Through v0.4.10b R90
+//! let either face play and fizzle (R1103); `script_v0_4_10b` keeps that (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-053";
 
 /// The base face's pick: a Radiant Unit or face-up backrow card on either side, or a Radiant card
-/// in your hand. R1851003: the play needs it (R703), unless `needed` is off (through v0.4.9).
+/// in your hand. R1851003: the play needs it (R703), unless `needed` is off (through v0.4.10b).
 fn targets(needed: bool) -> Vec<TargetDecl> {
     let mut pick = TargetDecl::target(
         1,
@@ -127,9 +127,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.4.9 either face could be played with nothing to De-Radiant (R90, R1103);
+/// R767000: through v0.4.10b either face could be played with nothing to De-Radiant (R90, R1103);
 /// `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_4_9() -> CardScripts {
+pub fn script_v0_4_10b() -> CardScripts {
     CardScripts {
         base: prestige(false),
         radiant: prestige_radiant(false),

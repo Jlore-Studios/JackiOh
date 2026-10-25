@@ -31,7 +31,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
+use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HALF_DAMAGE_TO_HEROES_DIVISOR, HERO_ARMOR};
 use crate::replacements::LethalHitTo;
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
@@ -75,6 +75,11 @@ pub struct DamageFlags {
     /// `trample` do not need it. Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attacking: Option<bool>,
+    /// #1841, R1841001: "deals half damage to heroes": a hit on a hero is divided by
+    /// `HALF_DAMAGE_TO_HEROES_DIVISOR`, rounded down, before Armor (step 2); a Unit takes it whole.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub half_to_heroes: Option<bool>,
     /// R1848001 (Stinkyscape #3 Meteor, "Tramples onto adjacent Units"): the hit tramples, and its
     /// excess goes onto the Units adjacent to its target instead of its controller's hero
     /// (`trample_onto_adjacent`), on to that hero after them where it says so.
@@ -172,27 +177,17 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
         })
 }
 
-/// The cards acting on a player's side of the field (§3.2): the top of each unit pile and each backrow
-/// card, a face-down Trap left out — its text is in nobody's use until it fires (R33) or is revealed
-/// (R1487000). What E6's hero guards read.
+/// The cards acting on a player's side of the field (§3.2), each once (`zones::acting_on`): the top of
+/// each unit pile, the Units its carriers hold (R446), a Unit standing in the backrow among them
+/// (R1081000), and each backrow card, a face-down Trap left out — its text is in nobody's use until it
+/// fires (R33) or is revealed (R1487000). What E6's hero guards read.
 pub(crate) fn acting_texts_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
-    let mut out: Vec<CardInstance> = crate::zones::active_units_of(state, player)
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
         .into_iter()
-        .cloned()
-        .collect();
-    for slot in crate::zones::slots_of(player, Row::Backrow) {
-        let Some(card) = crate::zones::card_at(state, slot) else {
-            continue;
-        };
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        let face_down = crate::preview::lasting_text_off(state, card);
-        // R1081000: a Unit standing in the backrow is already above, among the active units — its
-        // text must not answer twice.
-        if !face_down && !out.iter().any(|held| held.id == card.id) {
-            out.push(card.clone());
-        }
-    }
-    out
+        .filter(|card| !crate::preview::lasting_text_off(state, card))
+        .cloned()
+        .collect()
 }
 
 /// E6: every hero guard a player's cards set on their hero now (`Script.heroGuard`).
@@ -494,15 +489,21 @@ fn land(
     // Step 3 on a hero, with E6's divisors between the two: `hero_hit_amount`.
     // R1360: `absorbed` is what the Armor took off the hit at step 2, and nothing after it — not a
     // hero's divisors or cap — so a hit that pierces has none.
+    // R1841001: `struck` is the hit as it meets Armor — a hit that deals half damage to heroes is
+    // halved on a hero here, rounded down, and whole on a Unit.
+    let mut struck = amount_in;
     let mut amount = amount_in;
     let mut absorbed = 0;
     match (target, &unit) {
         (DamageTarget::Hero { player }, _) => {
+            if flags.is_some_and(|flags| flags.half_to_heroes == Some(true)) {
+                struck = amount_in / HALF_DAMAGE_TO_HEROES_DIVISOR;
+            }
             let pierce = pierces(sink.state, source, flags);
             if !pierce {
-                absorbed = hero_armor_of(sink.state, *player).clamp(0, amount_in);
+                absorbed = hero_armor_of(sink.state, *player).clamp(0, struck);
             }
-            amount = hero_hit_amount(sink.state, *player, amount, pierce);
+            amount = hero_hit_amount(sink.state, *player, struck, pierce);
         }
         (DamageTarget::Unit { .. }, Some(live)) => {
             if !pierces(sink.state, source, flags) {
@@ -552,7 +553,7 @@ fn land(
     // The rule stands before step 4, as §4.4 orders it, so an Indestructible unit's Armor that takes
     // a hit whole reports it like any other unit's.
     if amount <= 0 {
-        if absorbed > 0 && absorbed >= amount_in {
+        if absorbed > 0 && absorbed >= struck {
             sink.events.push(GameEvent::DamageAbsorbed {
                 source_id: source.map(|card| card.id.clone()),
                 target_id: target_id(target),

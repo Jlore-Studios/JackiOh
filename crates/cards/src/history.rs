@@ -21,16 +21,19 @@ use crate::scripts::classic::{
     c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
-    c007_the_house, c033_ivory_tower, c040_appropriations, c062_kys_papaya, c078_claudes_datacenter,
+    c007_the_house, c033_ivory_tower, c040_appropriations, c043_ai_slop, c062_kys_papaya,
+    c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c042_eugenics,
-    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c054_straaza, c069_call_to_arms, c080_zao_gao,
+    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c054_straaza,
+    c069_call_to_arms, c080_zao_gao,
 };
 use crate::scripts::meditative::{
-    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c030_fickle_e_kitten, c037_cn_in_a_bottle,
-    c038_h1b_printer, c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant,
-    c080_aluneth, c097_2_wishing_well, c097_8_prison,
+    c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
+    c030_fickle_e_kitten, c037_cn_in_a_bottle, c038_h1b_printer, c049_yilegpt_tamed, c053_prestige,
+    c054_money_machine, c074_montana_giant, c080_aluneth, c094_shrinking_felinor, c097_2_wishing_well,
+    c097_8_prison,
 };
 use crate::scripts::meditative_plus::{c001_bobs_plan, c003_wondrous_wand, c019_grubby_gloves};
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -66,8 +69,11 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// v0.4.4b with the numbers printed that they now declare (R1748003): Hinder's discard, Reoccurring
 /// Dream's and Eugenics' chances, Call to Arms' recruits, Zao Gao's tokens, Outbreak's draws per
 /// counter, the cost Claude's Datacenter, H1B Printer, Wondrous Wand and Grubby Gloves set, and CN in a
-/// Bottle's raise and its Radiant face's cost. #1851's ran its through v0.4.9: Prestige could be played
-/// on either face with nothing to De-Radiant (R1103, R1851003).
+/// Bottle's raise and its Radiant face's cost. #1828's four ran theirs through v0.4.9: API Key Fishing's
+/// Radiant face added a base copy (R1828000), AI Slop fused from every AI generated card (R1828001), KY's
+/// Empty Notebook drew 1, or 2 on its Radiant face (R1828002), and Shrinking Felinor's Radiant face
+/// summoned a Radiant body (R1828003). #1851's ran its through v0.4.10b: Prestige could be played on
+/// either face with nothing to De-Radiant (R1103, R1851003).
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -208,7 +214,23 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.4b",
         c019_grubby_gloves::script_v0_4_4b,
     ),
-    (c053_prestige::ID, "v0.4.9", c053_prestige::script_v0_4_9),
+    (
+        c021_api_key_fishing::ID,
+        "v0.4.9",
+        c021_api_key_fishing::script_v0_4_9,
+    ),
+    (c043_ai_slop::ID, "v0.4.9", c043_ai_slop::script_v0_4_9),
+    (
+        c051_1_kys_empty_notebook::ID,
+        "v0.4.9",
+        c051_1_kys_empty_notebook::script_v0_4_9,
+    ),
+    (
+        c094_shrinking_felinor::ID,
+        "v0.4.9",
+        c094_shrinking_felinor::script_v0_4_9,
+    ),
+    (c053_prestige::ID, "v0.4.10b", c053_prestige::script_v0_4_10b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
