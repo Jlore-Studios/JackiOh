@@ -1552,15 +1552,15 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-25T21:26:38Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "40230204910",
+      "run_id": "pending:d79b76d8-1792965329",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-25T20:19:11Z",
+      "started_at": "2026-10-25T21:56:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -1642,9 +1642,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T21:25:00Z",
+    "at": "2026-10-25T21:56:35Z",
     "url": "",
-    "what": "build #1831 on claude-2"
+    "what": "revise #1945 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-25T21:52:58Z",
