@@ -236,6 +236,40 @@ mod r940 {
             .count();
         assert_eq!(upgraded, 0, "nothing tagged, nothing buffed");
     }
+
+    #[test]
+    fn r940_a_shipped_catalog_that_printed_the_keyword_still_reads_and_the_view_leaves_it_out() {
+        // Through v0.4.4b the Felinor printed the immunity as a keyword; a game folded under such a catalog
+        // (R767000) reads it, the unit stays immune, and the client, whose types no longer name it, is not
+        // shown it.
+        jackioh_cards::register_all();
+        let shipped = jackioh_cards::catalog_at("v0.4.4").expect("v0.4.4 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            let mut s = hunting(
+                "benders-shipped",
+                json!([{ "def": BIGOT, "radiant": true }, FILLER]),
+            );
+            let felinor = s.unit(P2, 1).expect("victim").id.clone();
+            assert!(
+                s.stats(&felinor)
+                    .keywords
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::ImmuneToTribalHate),
+                "that catalog prints it"
+            );
+            let shown = s.view(P1).opponent.units[0]
+                .clone()
+                .expect("the Felinor")
+                .keywords;
+            assert!(
+                shown
+                    .iter()
+                    .all(|keyword| keyword.kind() != KeywordKind::ImmuneToTribalHate)
+            );
+            s.play(BIGOT, json!({}));
+            assert_eq!(s.unit(P2, 1).expect("stands").id, felinor);
+        });
+    }
 }
 
 mod r941 {

@@ -484,7 +484,7 @@ pub enum Keyword {
     /// E35: a Spell can't target this and doesn't affect it.
     #[serde(rename = "Immune to Spells")]
     ImmuneToSpells,
-    /// A retired historical keyword from v0.3.0..v0.4.4b, kept only to deserialize historical snapshots.
+    /// R940: retired, now `StaticFlags::immune_to_tribal_hate`; see `KeywordKind::RETIRED`.
     #[serde(rename = "Immune to tribal tag based hate")]
     #[cfg_attr(feature = "ts", ts(skip))]
     ImmuneToTribalHate,
@@ -538,7 +538,7 @@ string_union! {
         Brittle = "Brittle",
         SpellDamage = "Spell Damage",
         ImmuneToSpells = "Immune to Spells",
-        /// A retired historical keyword from v0.3.0..v0.4.4b, kept only to deserialize historical snapshots.
+        /// R940: retired, see `KeywordKind::RETIRED`.
         #[cfg_attr(feature = "ts", ts(skip))]
         ImmuneToTribalHate = "Immune to tribal tag based hate",
         Windfury = "Windfury",
@@ -557,7 +557,15 @@ string_union! {
     }
 }
 
-/// Every keyword kind. R21's random pool is the narrower list in engine config.
+impl KeywordKind {
+    /// Kinds no card carries any more, each now an ability of its card's script. They stay in `ALL` and in
+    /// `Keyword`, and out of the client's types (`ts(skip)`): a shipped catalog (R767000, `patches/*.json`)
+    /// that printed one still reads, and the AI's dense features, one per kind of `ALL`, keep the length the
+    /// learned weights were fitted on. Immune to tribal tag based hate left with #1816.
+    pub const RETIRED: &'static [KeywordKind] = &[KeywordKind::ImmuneToTribalHate];
+}
+
+/// Every keyword kind, the retired ones included. R21's random pool is the narrower list in engine config.
 pub const KEYWORD_KINDS: &[KeywordKind] = KeywordKind::ALL;
 
 impl Keyword {

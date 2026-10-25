@@ -1582,8 +1582,6 @@ n: number,
 } | {
 ["kind"]: "Immune to Spells",
 } | {
-["kind"]: "Immune to tribal tag based hate",
-} | {
 ["kind"]: "Windfury",
 } | {
 ["kind"]: "Temporary",
@@ -1605,7 +1603,7 @@ n: number,
 ["kind"]: "Flashback",
 }
 
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Immune to tribal tag based hate" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback"
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback"
 
 export type LaneSpec = number | TargetSpec
 
@@ -2186,6 +2184,7 @@ copiesLastSpell: boolean?,
 cantBeAttacked: boolean?,
 attackedOnlyFromLane: boolean?,
 cantAttackOrBeAttacked: boolean?,
+immuneToTribalHate: boolean?,
 neverBerserk: boolean?,
 healToDamage: boolean?,
 randomTargets: boolean?,

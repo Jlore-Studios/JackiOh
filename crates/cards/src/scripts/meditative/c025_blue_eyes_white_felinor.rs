@@ -65,6 +65,7 @@ mod tests {
 
     use jackioh_engine::effects::{degrade, transform, upgrade, vanilla};
     use jackioh_engine::resolve::{HookOptions, make_context};
+    use jackioh_engine::subsystems::{self, FuseArgs};
 
     fn library() -> Value {
         json!([FILLER, FILLER, FILLER, FILLER])
@@ -327,18 +328,47 @@ mod tests {
 
     #[test]
     fn r940_a_nerf_does_not_remove_the_immunity() {
-        // A Nerf degrades stats or cost (it cannot remove the immunity since it is not a keyword);
-        // Bigot's radiant destroy still passes it by.
-        let mut s = hunting("felinor-nerfed", BIGOT, true, json!([]));
-        let felinor = felinor_id(&s);
-        run_as(&mut s, degrade(json_as(json!({ "instanceId": felinor }))), P1);
-        assert!(s.card(&felinor).tuning.is_some(), "it is Nerfed");
+        // A Nerf draws one row at random, and the immunity is no keyword row: whichever it draws, Bigot's
+        // Radiant destroy still passes the Nerfed Felinor by.
+        for cursor in 0..16 {
+            let mut s = hunting("felinor-nerfed", BIGOT, true, json!([]));
+            let felinor = felinor_id(&s);
+            s.state_mut().rng_cursor = cursor;
+            run_as(&mut s, degrade(json_as(json!({ "instanceId": felinor }))), P1);
+            assert!(s.card(&felinor).tuning.is_some(), "cursor {cursor}: it is Nerfed");
+            s.play(BIGOT, json!({}));
+            assert_eq!(
+                s.unit(P2, 1).expect("stands").id,
+                felinor,
+                "cursor {cursor}: the Nerfed Felinor remains immune"
+            );
+        }
+    }
+
+    #[test]
+    fn r940_a_card_fused_onto_it_keeps_the_immunity() {
+        // R77: a Fuse combines its ingredients' static flags, so the fused Felinor is as immune as it was.
+        let mut s = hunting("felinor-fused", BIGOT, true, json!([]));
+        let felinor = s.card(felinor_id(&s)).clone();
+        let mut events: Vec<GameEvent> = vec![];
+        let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
+        let fused = {
+            let state = s.state_mut();
+            let other = new_instance(&mut *state, VANILLA, P2, Zone::Gone { player: P2 });
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let args = FuseArgs {
+                ingredients: vec![felinor.clone(), other],
+                target: Some(felinor),
+                ..FuseArgs::default()
+            };
+            subsystems::fuse(&mut sink, args)
+        }
+        .expect("the fused card");
+        s.state_mut().rng_cursor = rng.cursor();
+        assert_ne!(fused.def_id, FELINOR, "its definition is the fusion's own");
+        assert!(immune_to_tribal_hate(s.state(), s.card(&fused.id)));
         s.play(BIGOT, json!({}));
-        assert_eq!(
-            s.unit(P2, 1).expect("stands").def_id,
-            FELINOR,
-            "the Nerfed Felinor remains immune"
-        );
+        assert_eq!(s.unit(P2, 1).expect("stands").id, fused.id, "Bigot's destroy passes it by");
     }
 
     #[test]
