@@ -20,8 +20,8 @@
 
 use crate::config::{STARSCAPE_EDGE_TRAVELS, STARSCAPE_REWARDS, STARSCAPE_TRAVEL_MANA};
 use crate::effects::{
-    AddToHandArgs, DamageEffectArgs, DamageFlagArgs, DrawArgs, GainManaArgs, HealArgs, TargetSpec, add_to_hand,
-    damage, draw, gain_mana, heal,
+    AddToHandArgs, DamageEffectArgs, DamageFlagArgs, DrawArgs, GainManaArgs, HealArgs, TargetSpec,
+    add_to_hand, damage, draw, gain_mana, heal,
 };
 use crate::rng::Rng;
 use crate::script::{
@@ -98,7 +98,9 @@ pub fn travel_starscape(edge_def_id: &'static str) -> Effect {
         let Some(&reward) = map.nodes.get((node - 1) as usize) else {
             return;
         };
-        ctx.sink.events.push(GameEvent::StarscapeTravelled { player, node, reward });
+        ctx.sink
+            .events
+            .push(GameEvent::StarscapeTravelled { player, node, reward });
         let amount = starscape_amount(reward).unwrap_or(0);
         let effect = match reward {
             StarscapeReward::Heal => heal(HealArgs::Amount {

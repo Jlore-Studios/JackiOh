@@ -842,6 +842,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R1847001 (Stinkyscape #148): a player travelled one node of their starscape map; their hero ticks
+  // as on `jadeChanged`, no fx, and the map redraws from the view.
+  starscapeTravelled: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /**

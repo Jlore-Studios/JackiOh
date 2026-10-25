@@ -232,6 +232,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
+  // #1847 (R1847001).
+  starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -321,6 +323,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   scriptFailed: "notify",
   curveDrawn: "whoosh",
   autopilotEngaged: "notify",
+  starscapeTravelled: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

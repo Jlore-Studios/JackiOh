@@ -6,8 +6,6 @@
 //!
 //! Ids are prefixed `ss-` and indexed from 18470, so they collide with no other fixture file's.
 
-#![allow(non_upper_case_globals)]
-
 use std::sync::LazyLock;
 
 use jackioh_engine::subsystems;
@@ -22,7 +20,7 @@ pub const EDGE_ID: &str = "ss-edge";
 
 /// A Field Spell: "Activate ♾️ (1): Travel one node of your starscape map"; Radiant, the first travel
 /// each turn free.
-pub static reach: LazyLock<CardDef> = LazyLock::new(|| {
+pub static REACH: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
         18470,
         json!({ "id": REACH_ID, "name": "Fixture Starscape Reach", "type": "Field Spell", "cost": 1 }),
@@ -30,7 +28,7 @@ pub static reach: LazyLock<CardDef> = LazyLock::new(|| {
 });
 
 /// The edge's card: a Spell token that does nothing.
-pub static edge: LazyLock<CardDef> = LazyLock::new(|| {
+pub static EDGE: LazyLock<CardDef> = LazyLock::new(|| {
     spell_def(
         18471,
         json!({
@@ -46,7 +44,7 @@ pub static edge: LazyLock<CardDef> = LazyLock::new(|| {
 
 static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
     IndexMap::from([(
-        reach.id.clone(),
+        REACH.id.clone(),
         CardScripts {
             base: Script {
                 activations: subsystems::starscape_abilities(false, EDGE_ID),
@@ -64,7 +62,7 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
 pub fn register_starscape_fixtures() {
     super::harness::setup_catalog();
     let mut defs: CardDefs = registered_catalog().clone();
-    for def in [reach.clone(), edge.clone()] {
+    for def in [REACH.clone(), EDGE.clone()] {
         defs.insert(def.id.clone(), def);
     }
     register_catalog(defs);

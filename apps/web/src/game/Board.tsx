@@ -48,6 +48,7 @@ import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
+import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
@@ -464,6 +465,8 @@ function Seat({
         emotes={emotes?.(side)}
       />
       <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
+      {/* R1847000: the seat's starscape map, both seats' once its player has first travelled. */}
+      {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
       <span className="piles">
         {/* R373: the rules' library is shown to players as the Deck. */}
         <Pile
