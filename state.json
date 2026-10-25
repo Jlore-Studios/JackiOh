@@ -41,7 +41,9 @@
   "loop_deliveries": {
     "40177284419": {
       "at": "2026-10-25T09:12:31Z",
+      "done": true,
       "ref": "88bce644-1792917331",
+      "status": "failed",
       "tries": 1
     },
     "40177864479": {
