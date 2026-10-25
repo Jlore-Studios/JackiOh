@@ -501,14 +501,14 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "gpt",
+      "provider": "claude-7",
       "queued_at": "2026-10-25T12:33:27Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "40196471607",
+      "run_id": "pending:7596d219-1792937131",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-10-25T13:11:19Z",
+      "started_at": "2026-10-25T14:06:12Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -673,9 +673,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T13:57:55Z",
+    "at": "2026-10-25T14:06:12Z",
     "url": "",
-    "what": "build #1834 on claude-1"
+    "what": "revise #1908 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-25T13:56:17Z",
