@@ -529,6 +529,14 @@
           "gpt": "medium"
         }
       }
+    },
+    "1911": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-25T11:42:45Z",
+      "issue": 1828,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
