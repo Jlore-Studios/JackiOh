@@ -275,7 +275,9 @@ jobs:
                     "" \
                     "Until its entries are on main, the $(wc -l <<<"$missing") commit(s) it logs are missing from the technical log, and nothing logs them again: a later log holds only what went live after it." \
                     "" \
-                    "Fix it on a branch from main: add the entries this pull request adds to \`$TECHNICAL\` as they are, each after the entry it follows here, and keep main's, each commit once (\`cargo jackioh patches check\` holds the file's shape). Keep their \`version\`, the patch that was live when they went live (R1369000): \`cargo jackioh patches log\` run again would log them on today's. Fix too any check red here that is red on main. Close this issue with that pull request; the watch in \`.github/workflows/patches-ship.yml\` then closes this one.")
+                    "Fix it on a branch from main: add the entries this pull request adds to \`$TECHNICAL\` as they are, each after the entry it follows here, and keep main's, each commit once (\`cargo jackioh patches check\` holds the file's shape). Keep their \`version\`, the patch that was live when they went live (R1369000): \`cargo jackioh patches log\` run again would log them on today's. Fix too any check red here that is red on main. Close this issue with that pull request; the watch in \`.github/workflows/patches-ship.yml\` then closes this one." \
+                    "" \
+                    "If they are red for a reason outside the repository (CI or Render out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
                 else
                   note=$(printf '%s\n' \
                     "$marker" \
@@ -285,7 +287,9 @@ jobs:
                     "" \
                     "Until it merges, the patches it ships are not live as versions: \`CATALOG_VERSION\` stays where it was and the patch notes do not show them." \
                     "" \
-                    "Fix it on a branch from main: a check that only fails here usually reads the shipped history (\`crates/cards/patches/\`) and must hold for the history this promotion ships, so check out its branch and run the failing tests there to see it fail first, then show them pass there with the fix. A conflict alone needs no fix. Close this issue with the fix's pull request (or, for a conflict alone, by hand); the watch in \`.github/workflows/patches-ship.yml\` then ships again from the newer main, and that promotion supersedes this one.")
+                    "Fix it on a branch from main: a check that only fails here usually reads the shipped history (\`crates/cards/patches/\`) and must hold for the history this promotion ships, so check out its branch and run the failing tests there to see it fail first, then show them pass there with the fix. A conflict alone needs no fix. Close this issue with the fix's pull request (or, for a conflict alone, by hand); the watch in \`.github/workflows/patches-ship.yml\` then ships again from the newer main, and that promotion supersedes this one." \
+                    "" \
+                    "If they are red for a reason outside the repository (CI or Render out of minutes, a spending limit, billing, an account, a runner that never started), no change here fixes it: open the plan with a \`**Human required:**\` line saying what a person must do, and build nothing.")
                 fi
                 if [ -n "$open" ]; then
                   gh issue comment "$open" --repo "$REPO" --body "$note"

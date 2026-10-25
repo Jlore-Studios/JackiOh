@@ -1253,5 +1253,19 @@
     "pr": 1918,
     "title": "every \"cards on the field\" read sees a Unit a carrier holds, once",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "6cf366afbbc4e2ad1d8033e8e98aebfc6db33481",
+    "pr": 1917,
+    "title": "the status issue's memory line gives each box its own verdict (#1677)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.10",
+    "commit": "a128d139ebce150396c636c3d23861e04ce19d0f",
+    "pr": 1919,
+    "title": "patches ship: v0.4.10b",
+    "kind": "app"
   }
 ]
