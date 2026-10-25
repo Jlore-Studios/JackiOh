@@ -27752,11 +27752,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-25T00:39:41Z",
-    "last_run": "2026-10-25T00:39:41Z",
-    "provider": "claude-8",
+    "idle_since": "2026-10-25T00:02:07Z",
+    "last_run": "2026-10-24T23:20:06Z",
+    "provider": null,
     "requested": false,
-    "run_id": "40147560978",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
