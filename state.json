@@ -143,7 +143,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "gpt",
-      "run_id": "pending:bb0af3a2-1792929857",
+      "run_id": "40191571946",
       "started_at": "2026-10-25T12:04:59Z",
       "stop_requested": false,
       "taken_asks": []
