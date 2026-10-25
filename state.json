@@ -531,6 +531,17 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "1853": {
+      "action": "plan",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "claude-6",
+      "run_id": "pending:89d1085d-1792967228",
+      "started_at": "2026-10-25T22:27:59Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1889": {
       "action": "build",
       "asks": [],
@@ -1637,9 +1648,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T21:56:35Z",
+    "at": "2026-10-25T22:27:59Z",
     "url": "",
-    "what": "revise #1945 on claude-8"
+    "what": "plan #1853 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-25T22:17:32Z",
