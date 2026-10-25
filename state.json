@@ -1281,6 +1281,13 @@
     "1929": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T18:31:14Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails easy line 6: the change is all in .github/workflows/ci.yml plus a comment in scripts/ci-scope.sh; not hard: no engine, AI, migration or cross-crate design"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-4",
