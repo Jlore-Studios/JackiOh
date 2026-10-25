@@ -149,6 +149,11 @@ defId: string | nil,
 exceptDefId: string | nil,
 }
 
+export type Ballot = {
+instanceId: string,
+defId: string,
+}
+
 export type BoardScope = {
 side: ScopeSide?,
 rows: {Row}?,
@@ -838,6 +843,8 @@ export type FilterSide = "ally" | "enemy" | "any"
 
 export type FlagOrCount = boolean | number
 
+export type FleeOpponent = "draw" | "loss"
+
 export type FlickerArgs = {
 target: TargetSpec?,
 scope: BoardScope?,
@@ -1452,11 +1459,40 @@ defId: string,
 ["type"]: "marketCreditsChanged",
 player: PlayerId,
 value: number,
+} | {
+["type"]: "starshipFused",
+player: PlayerId,
+instanceId: string,
+pieceId: string,
+defId: string,
+pieces: number,
+} | {
+["type"]: "starshipLaunched",
+player: PlayerId,
+instanceId: string,
+defId: string,
+name: string,
+pieces: {string},
+} | {
+["type"]: "voteCast",
+player: PlayerId,
+instanceId: string,
+defId: string,
+votes: number,
+needed: number,
+} | {
+["type"]: "votedOut",
+player: PlayerId,
+ballots: {Ballot},
+} | {
+["type"]: "fled",
+player: PlayerId,
+opponent: FleeOpponent,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled"
 
-export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect"
+export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect" | "voted-out" | "both-voted-out" | "fled" | "fled-decisive"
 
 export type GiveBrittleArgs = {
 n: number,
@@ -1643,9 +1679,13 @@ n: number,
 ["kind"]: "Flashback",
 } | {
 ["kind"]: "Tradable",
+} | {
+["kind"]: "Starship Piece",
+} | {
+["kind"]: "Starship",
 }
 
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable"
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback" | "Tradable" | "Starship Piece" | "Starship"
 
 export type LaneSpec = number | TargetSpec
 
@@ -1867,6 +1907,10 @@ echo: number?,
 expiry: ModifierExpiry,
 ["kind"]: "keywordNextSpell",
 keyword: Keyword,
+} | {
+expiry: ModifierExpiry,
+["kind"]: "starshipLaunchCost",
+cost: number,
 }
 
 export type PlayerSpec = "self" | "enemy"
@@ -2261,6 +2305,7 @@ doublesHealing: boolean?,
 answersTargetedSpells: boolean?,
 embiggenGarden: number?,
 slumber: SlumberText?,
+starshipHull: boolean?,
 }
 
 export type StealAllArgs = {
