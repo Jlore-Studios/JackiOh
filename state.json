@@ -1557,7 +1557,7 @@
       "queued_at": "2026-10-25T21:26:38Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:d79b76d8-1792965329",
+      "run_id": "40237837895",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-25T21:56:35Z",
