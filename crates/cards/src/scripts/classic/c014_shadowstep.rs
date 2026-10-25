@@ -9,9 +9,10 @@
 //! event's `controller`, R172). A token is gone by then (R11), a Reborn unit is back; the cards still in
 //! a graveyard go to their owner's hand (§3.2, R12, §2.4; a full hand burns, R4, R317) at `setCost` (R78).
 //! RADIANT: a replacement at "would die" (B5 E5): your collected units Flicker (E22: reset, full health,
-//! no Cry, no Death), then a copy of each joins your hand with what R57 gives a copy in a hand (its radiant
-//! flag, `statsOverride` and `tuning`, and R175's `armorOverride` with the size: a token summoned at a size
-//! is still that size, #1803), unread by them (R97).
+//! no Cry, no Death), then a definition-remade copy of each joins your hand with what R57 gives a copy
+//! in a hand (its radiant flag, `statsOverride` and `tuning`, and R175's `armorOverride` with the size:
+//! a token summoned at a size is still that size, #1803), but not its Chinese flag (R1300), unread by
+//! them (R97).
 
 use jackioh_engine::prelude::*;
 
@@ -72,7 +73,7 @@ fn shadowstep() -> TriggerDef {
     .with_when(|ctx, event| matches!(event, GameEvent::Destroyed { controller, .. } if *controller == ctx.controller))
 }
 
-pub fn script() -> CardScripts {
+fn scripts(copy_face: bool) -> CardScripts {
     let base = Script { triggers: vec![shadowstep()], ..Script::default() };
 
     let radiant = Script {
@@ -87,19 +88,32 @@ pub fn script() -> CardScripts {
         }],
         resume: IndexMap::from([(
             "copies",
-            hook(|ctx| {
+            hook(move |ctx| {
                 let cost = param(&*ctx, "setCost");
                 replacement_of(&*ctx)
                     .map(|record| record.flickered.clone().unwrap_or_default())
                     .unwrap_or_default()
                     .into_iter()
                     .map(|card| {
-                        add_to_hand(json_as(json!({
-                            "copyOf": card.instance_id,
+                        let mut args = json!({
                             "defId": card.def_id,
                             "radiant": card.radiant,
                             "costOverride": cost,
-                        })))
+                        });
+                        if copy_face
+                            && let Some(source) = find_instance(ctx.state, &card.instance_id)
+                        {
+                            if let Some(stats) = source.stats_override {
+                                args["statsOverride"] = json!(stats);
+                            }
+                            if let Some(armor) = source.armor_override {
+                                args["armorOverride"] = json!(armor);
+                            }
+                            if let Some(tuning) = &source.tuning {
+                                args["tuning"] = json!(tuning);
+                            }
+                        }
+                        add_to_hand(json_as(args))
                     })
                     .collect()
             }),
@@ -107,6 +121,16 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
     CardScripts { base, radiant }
+}
+
+pub fn script() -> CardScripts {
+    scripts(true)
+}
+
+/// R767000: v0.4.9 and every version before it made Shadowstep's hand card from only its definition
+/// and Radiant flag; `KEPT_SCRIPTS` folds those replays under that script.
+pub fn script_v0_4_9() -> CardScripts {
+    scripts(false)
 }
 
 // C #14 Shadowstep — SPEC §8.6 row 14, BUILD M9 Classic row C 14: face-down (R33); one firing per pass
@@ -454,6 +478,17 @@ mod tests {
         }
 
         #[test]
+        fn r1300_a_shadowstep_definition_copy_of_a_chinese_card_is_not_chinese() {
+            let mut s = wipe(true, json!([VANILLA]), json!({}));
+            let source = s.card(VANILLA).id.clone();
+            s.card_mut(&source).chinese = Some(true);
+            s.play(BIG_FELINOR, json!({}));
+            assert_eq!(s.card(&source).chinese, Some(true), "the flickered card keeps its flag");
+            let copy = copies(&s).into_iter().find(|card| card.def_id == VANILLA).expect("copy in hand");
+            assert_eq!(copy.chinese, None, "R1300: Shadowstep remakes the copy from its definition");
+        }
+
+        #[test]
         fn r97_the_copies_are_never_named_in_the_opponent_s_view() {
             let mut s = wipe(true, json!([VANILLA, MENACE]), json!({}));
             s.play(BIG_FELINOR, json!({}));
@@ -490,6 +525,20 @@ mod tests {
             let copy = s.hand(P1).into_iter().find(|card| card.def_id == MENACE);
             assert_eq!(copy.and_then(|card| card.cost_override), Some(1));
         }
+    }
+
+    #[test]
+    fn r767000_v0_4_9_kept_script_uses_the_old_definition_copy() {
+        crate::under_kept(SHADOWSTEP, script_v0_4_9(), || {
+            let mut s = wipe(true, json!([RUSH_TOKEN]), json!({}));
+            let source = s.card(RUSH_TOKEN).id.clone();
+            s.card_mut(&source).stats_override = Some(AttackHealth { attack: 4, health: 4 });
+            s.card_mut(&source).armor_override = Some(2);
+            s.play(BIG_FELINOR, json!({}));
+            let copy = s.hand(P1).into_iter().find(|card| card.def_id == RUSH_TOKEN).expect("copy in hand");
+            assert_eq!(copy.stats_override, None);
+            assert_eq!(copy.armor_override, None);
+        });
     }
 
     /// R1081000: a Unit of yours standing in the backrow that would die is one of your Units in the

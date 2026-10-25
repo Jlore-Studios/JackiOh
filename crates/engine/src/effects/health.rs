@@ -89,6 +89,9 @@ fn set_stats_on(ctx: &mut crate::script::EffectContext<'_>, id: &str, stats: Att
     let Some(mut set) = find_instance(ctx.state, id).cloned() else {
         return;
     };
+    // R175, R444: Set Stats is temporary across a reset, but an X/X token must still know the face it
+    // was summoned with when Reborn or Flicker returns it.
+    crate::zones::remember_summoned_token_face(ctx.state, &mut set);
     crate::effects::transform::to_printed_stats(&mut set);
     set.stats_override = Some(stats);
     set.damage = 0;

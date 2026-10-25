@@ -1158,9 +1158,8 @@ struct CheckpointReport {
 /// checkpoint step, round-trips that state through JSON requiring identical hashes, then applies
 /// the rest of the log from the restored state and requires the live hash and ending — so the
 /// existing invariant, termination, growth and replay checks cover the restored game. Fails in
-/// the "checkpoint" stage, and past `CHECKPOINT_TIME_BOUND_MS`, which bounds the round trip (the
-/// serialisation and the two hashes) and not the fold nor the continuation: those two are the game's
-/// own replay, which costs what the game costs and grows with its length (#1803).
+/// the "checkpoint" stage, and past `CHECKPOINT_TIME_BOUND_MS`, which bounds the round trip and
+/// restored continuation, but not the prefix fold that reconstructs the checkpoint state (#1803).
 fn check_serial_restart(
     setup: &GameSetup,
     decks: &(Vec<String>, Vec<String>),
@@ -1190,7 +1189,6 @@ fn check_serial_restart(
     let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, hash_state, round_trip)
         .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
-    let ms = started_at.elapsed().as_millis();
     for action in &log[step..] {
         let result = reduce(&state, action);
         if let Some(error) = &result.error {
@@ -1227,6 +1225,7 @@ fn check_serial_restart(
             at,
         ));
     }
+    let ms = started_at.elapsed().as_millis();
     if ms > CHECKPOINT_TIME_BOUND_MS {
         return Err(FuzzFailure::new(
             FailureStage::Checkpoint,
@@ -1244,12 +1243,10 @@ fn check_serial_restart(
 // Growth inside one action (#1254)
 // ---------------------------------------------------------------------------------------------
 
-/// The most wall-clock time one game's serialization checkpoint may take (#1387): the state's round
-/// trip through JSON and its two hashes. A round trip is normally milliseconds — the state is already
-/// in memory, with no I/O — so this bound only fires on pathological serialization blowup. It does not
-/// time the fold that rebuilds the checkpoint state, nor the continuation from it: each replays the
-/// game's own log, so its cost grows with the game's length and a loaded runner stretches it (#1803:
-/// seed 1557 handicapped, 293 actions, folds for 3.7 s idle and took 6.6 s in the daily run).
+/// The most wall-clock time one game's serialized restart may take (#1387): the state's round trip
+/// through JSON, its hashes, and the continuation from the restored state. It does not time the prefix
+/// fold that rebuilds the checkpoint state from turn 0: that setup cost grows with the checkpoint's
+/// position and a loaded runner stretched it past the bound (#1803: seed 1557 handicapped).
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
 /// The most events one action may emit. Set from a 10,000-seed sweep of `main` at d981885 (seeds

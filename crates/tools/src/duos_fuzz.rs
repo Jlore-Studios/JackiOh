@@ -725,7 +725,6 @@ fn check_duos_serial_restart(
     stream: &str,
     paused: &[usize],
 ) -> Result<(usize, bool, u128), String> {
-    let started_at = Instant::now();
     let (step, was_paused) = checkpoint_step(stream, paused, log.len());
     let prefix = duos_fold(&DuosReplayInput {
         options: options.clone(),
@@ -738,6 +737,7 @@ fn check_duos_serial_restart(
             log.get(at).map(|action| &action.body)
         ));
     }
+    let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, duos_hash, round_trip)
         .map_err(|error| format!("checkpoint: {error}"))?;
     for action in &log[step..] {

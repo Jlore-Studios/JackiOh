@@ -7,6 +7,7 @@
 //! Port of `packages/engine/test/effects-flicker.test.ts`.
 
 use jackioh_engine::effects::flicker::{flicker, flicker_card};
+use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::effects::steal::steal;
 use jackioh_engine::testkit::*;
 
@@ -200,7 +201,7 @@ mod b5_e22_flicker {
     }
 
     #[test]
-    fn r444_r175_a_flickered_unit_token_preserves_stats_and_armor_override() {
+    fn r444_r175_a_flickered_unit_token_restores_its_summoned_face_after_set_stats() {
         let mut state = playing("flicker-token-stats-override");
         let mut token = new_instance(
             &mut state,
@@ -216,8 +217,18 @@ mod b5_e22_flicker {
             slot(PlayerId::P1, Row::Units, 2),
             Default::default(),
         );
-        live_mut(&mut state, &token.id).damage = 1;
         let mut sink = sink_for(&state);
+        sink.apply(
+            &mut state,
+            set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))),
+            PlayerId::P1,
+        );
+        assert_eq!(
+            by_id(&state, &token.id).stats_override,
+            Some(AttackHealth { attack: 3, health: 3 }),
+            "R1185002: Set Stats replaces the token's current layer-1 stats"
+        );
+        live_mut(&mut state, &token.id).damage = 1;
         assert!(sink.flicker_card(&mut state, &token.id));
         let flickered = by_id(&state, &token.id);
         assert_eq!(
@@ -231,6 +242,11 @@ mod b5_e22_flicker {
             "R175/R444: armor_override survives flicker"
         );
         assert_eq!(flickered.damage, 0);
+        assert_eq!(
+            flickered.memory,
+            IndexMap::<String, Value>::new(),
+            "R78 resets the saved face with the other memory"
+        );
         let view = jackioh_engine::layers::unit_view(&state, flickered);
         assert_eq!(view.attack, 5);
         assert_eq!(view.health, 5);

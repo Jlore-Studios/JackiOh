@@ -596,6 +596,58 @@ pub fn is_unit_token(state: &GameState, instance: &CardInstance) -> bool {
     def.token && card_type_of(state, instance) == CardType::Unit
 }
 
+/// The X/X (and Bread Token Armor X) a token was summoned with. `setStatsAll` temporarily replaces
+/// `stats_override` (R1185002), so it remembers this face until R78 resets the card; Flicker and
+/// Reborn read it before that reset (R175, R444).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TokenFace {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats_override: Option<AttackHealth>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub armor_override: Option<i32>,
+}
+
+const TOKEN_FACE_MEMORY_KEY: &str = "__tokenFace";
+
+/// The token's summoned face, distinct from a later Set Stats override. With no saved face, its
+/// current override is still the face it entered with.
+pub(crate) fn summoned_token_face(state: &GameState, instance: &CardInstance) -> Option<TokenFace> {
+    if !is_unit_token(state, instance) {
+        return None;
+    }
+    if let Some(face) = instance
+        .memory
+        .get(TOKEN_FACE_MEMORY_KEY)
+        .and_then(|value| serde_json::from_value(value.clone()).ok())
+    {
+        return Some(face);
+    }
+    if instance.stats_override.is_none() && instance.armor_override.is_none() {
+        return None;
+    }
+    Some(TokenFace {
+        stats_override: instance.stats_override,
+        armor_override: instance.armor_override,
+    })
+}
+
+/// Save the summoned face before Set Stats replaces layer 1. An empty face is meaningful: a token
+/// with printed stats must return to those printed stats, not to the temporary set value.
+pub(crate) fn remember_summoned_token_face(state: &GameState, instance: &mut CardInstance) {
+    if !is_unit_token(state, instance) || instance.memory.contains_key(TOKEN_FACE_MEMORY_KEY) {
+        return;
+    }
+    let face = TokenFace {
+        stats_override: instance.stats_override,
+        armor_override: instance.armor_override,
+    };
+    instance.memory.insert(
+        TOKEN_FACE_MEMORY_KEY.to_string(),
+        serde_json::to_value(face).expect("a token face is plain JSON (§10.1)"),
+    );
+}
+
 /// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (TS `{ stack? }`, which a
 /// test builds with `json_as`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -1744,17 +1796,13 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     // R1040: a card set face-down as a Trap re-enters its backrow zone the Trap it was set as, since
     // a Unit or a Spell face never stands there on its own.
     let set_as = current.set_as.filter(|_| row == Row::Backrow);
-    // R444, R175: an X/X token's X/X is its printed face, so the reset keeps it.
-    let token_face = if is_unit_token(state, &current) {
-        Some((current.stats_override, current.armor_override))
-    } else {
-        None
-    };
+    // R444, R175: an X/X token's summoned face survives the reset; R1185002's later Set Stats does not.
+    let token_face = summoned_token_face(state, &current);
     if let Some(live) = find_instance_mut(state, &current.id) {
         reset_instance(live);
-        if let Some((stats, armor)) = token_face {
-            live.stats_override = stats;
-            live.armor_override = armor;
+        if let Some(face) = token_face {
+            live.stats_override = face.stats_override;
+            live.armor_override = face.armor_override;
         }
         live.set_as = set_as;
         live.controller = player;

@@ -17,7 +17,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c032_felinor_feelings, c039_outbreak, c052_final_gambit,
+    c008_pickle, c009_income_tax, c014_shadowstep, c032_felinor_feelings, c039_outbreak, c052_final_gambit,
     c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
@@ -66,7 +66,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// v0.4.4b with the numbers printed that they now declare (R1748003): Hinder's discard, Reoccurring
 /// Dream's and Eugenics' chances, Call to Arms' recruits, Zao Gao's tokens, Outbreak's draws per
 /// counter, the cost Claude's Datacenter, H1B Printer, Wondrous Wand and Grubby Gloves set, and CN in a
-/// Bottle's raise and its Radiant face's cost.
+/// Bottle's raise and its Radiant face's cost. #1803's Shadowstep ran through v0.4.9 with its
+/// definition-remade hand cards carrying none of the flickered unit's stats, Armor or tuning.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -207,6 +208,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.4b",
         c019_grubby_gloves::script_v0_4_4b,
     ),
+    (c014_shadowstep::ID, "v0.4.9", c014_shadowstep::script_v0_4_9),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
