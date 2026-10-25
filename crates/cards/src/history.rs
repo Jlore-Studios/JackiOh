@@ -71,7 +71,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Bottle's raise and its Radiant face's cost. #1828's four ran theirs through v0.4.9: API Key Fishing's
 /// Radiant face added a base copy (R1828000), AI Slop fused from every AI generated card (R1828001), KY's
 /// Empty Notebook drew 1, or 2 on its Radiant face (R1828002), and Shrinking Felinor's Radiant face
-/// summoned a Radiant body (R1828003). #1803's Shadowstep ran through v0.4.10 with its
+/// summoned a Radiant body (R1828003). #1803's Shadowstep ran through v0.4.10b with its
 /// definition-remade hand cards carrying none of the flickered unit's stats, Armor or tuning.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
@@ -229,7 +229,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.9",
         c094_shrinking_felinor::script_v0_4_9,
     ),
-    (c014_shadowstep::ID, "v0.4.10", c014_shadowstep::script_v0_4_10),
+    (c014_shadowstep::ID, "v0.4.10b", c014_shadowstep::script_v0_4_10b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
