@@ -1150,7 +1150,7 @@
       "pending_request": false,
       "provider": "claude-2",
       "queued_at": "2026-10-25T16:03:55Z",
-      "run_id": "pending:cf24013f-1792944231",
+      "run_id": "40209942978",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-25T16:04:33Z",
