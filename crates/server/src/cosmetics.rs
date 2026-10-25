@@ -367,6 +367,16 @@ pub enum PickRefusal {
     NotOwned,
 }
 
+impl PickRefusal {
+    /// The words a write's 400 `bad_request` answers with, naming the field the pick came in.
+    pub fn message(self, key: &str) -> String {
+        match self {
+            PickRefusal::WrongKind => format!("\"{key}\" is not a cosmetic id of its kind"),
+            PickRefusal::NotOwned => format!("\"{key}\" is not a cosmetic the account owns"),
+        }
+    }
+}
+
 /// R1834001: a pick of `id` for a `kind` slot, worn on `card` (or on every card, or the account,
 /// when `None`), as every write of a pick checks it. A full art names its card, so a full art of
 /// another card is the wrong kind for this one.

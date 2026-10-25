@@ -37,6 +37,8 @@ use jackioh_engine::{
 
 use crate::db::store::MatchClocks;
 use crate::economy::rewards::GameEconomy;
+use crate::economy::store::CardPicks;
+use crate::loadout::{Loadout, SeatCards, SeatLoadout};
 
 // ---------------------------------------------------------------------------
 // Client -> server
@@ -239,6 +241,18 @@ pub enum ServerMessage {
     /// R738: the opponent's aim, relayed — never to the sender, never part of `PlayerView`, and only
     /// once the actor has checked that every end names something the receiver may see.
     Aim { from: PlayerId, aim: Option<Aim> },
+    /// R1834002, R1834003: both seats' loadouts as the match froze them, seat-level half only (the
+    /// deck slots and the account's card picks, none naming a card), sent on join and again on
+    /// reconnect before the view, as `portraits` rides — and to a watcher as it attaches. A row on the
+    /// match, never a field of `PlayerView` (cosmetics are no rule, CLAUDE.md rule 7). Every id is one
+    /// the seat's account owned as the match began, else its kind's default.
+    Loadouts { p1: SeatLoadout, p2: SeatLoadout },
+    /// R1834003: the own picks of cards of `seat`'s deck, each sent after the first view to this
+    /// socket that shows a card that deck dealt, still as the card it was dealt as, and never again
+    /// on the same socket until a hello or an attach (`loadout::cards_due`). A card a view has not
+    /// shown never travels, so no frame says more about a deck than the views did (§10.8). A card
+    /// with no pick of its own is never listed; a kind an entry leaves out wears the seat's.
+    CardLoadouts { seat: PlayerId, cards: Vec<CardPicks> },
 }
 
 // ---------------------------------------------------------------------------
@@ -287,6 +301,22 @@ pub fn portraits_message(p1: PortraitId, p2: PortraitId, emotes: &[EmoteId]) -> 
         p1,
         p2,
         emotes: emotes.to_vec(),
+    }
+}
+
+/// R1834002: the seat-level loadouts frame, the same for every receiver.
+pub fn loadouts_message(loadouts: &(Loadout, Loadout)) -> ServerMessage {
+    ServerMessage::Loadouts {
+        p1: loadouts.0.seat.clone(),
+        p2: loadouts.1.seat.clone(),
+    }
+}
+
+/// R1834003: one seat's due card picks (`loadout::cards_due`).
+pub fn card_loadouts_message(cards: SeatCards) -> ServerMessage {
+    ServerMessage::CardLoadouts {
+        seat: cards.seat,
+        cards: cards.cards,
     }
 }
 

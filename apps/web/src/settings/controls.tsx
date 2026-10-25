@@ -149,7 +149,7 @@ export function FxControls(): ReactElement {
 }
 
 /** A card presentation switch in Task 6's words (cards/settings.ts), so the panel and the module agree. */
-function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" }): ReactElement {
+function CardSettingSwitch({ setting }: { setting: "animatedFoil" | "fullArt" | "opponentCosmetics" }): ReactElement {
   const settings = useCardSettings();
   const hintId = useId();
   const field = CARD_SETTINGS_FIELDS.find((entry) => entry.key === setting);
@@ -186,6 +186,11 @@ export function AnimatedFoilSwitch(): ReactElement {
 /** R1017001: the hero portraits' cards drawn as full art, or with their text like any card. */
 export function FullArtSwitch(): ReactElement {
   return <CardSettingSwitch setting="fullArt" />;
+}
+
+/** R1834004: the other seats' cards and side wearing what they equipped, or drawn plain. */
+export function OpponentCosmeticsSwitch(): ReactElement {
+  return <CardSettingSwitch setting="opponentCosmetics" />;
 }
 
 /** R669: the vibration on a drop, a hit and the viewer's turn start, on a phone that has one. */

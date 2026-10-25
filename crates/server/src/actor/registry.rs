@@ -40,6 +40,7 @@ use crate::db::store::{
     BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
     StoreError, Tx,
 };
+use crate::loadout::SeatPicks;
 
 /// Why `attach` could not hand the socket to a seat. `ws_server.rs` closes with 4404 for an
 /// `Api` error whose code is `not_found`, 4403 for any other `Api` error, and 1011 for `Internal`
@@ -201,7 +202,7 @@ impl Registry {
         let now = now_ms();
         let profile_ids = vec![first.profile_id.clone(), second.profile_id.clone()];
         let players = (first.profile_id.clone(), second.profile_id.clone());
-        let (boards, sampled, derived_mode, bots) = one_tx!(app.db, |t| {
+        let (boards, sampled, derived_mode, bots, picks) = one_tx!(app.db, |t| {
             // R417: each seat's last server-match board, frozen on the match as it starts.
             let boards = (
                 t.last_boards_get(&first.profile_id, LastBoardKind::Server)
@@ -227,14 +228,20 @@ impl Registry {
             };
             // R1452: the ladder bot at either seat, which the actor plays.
             let bots = bots_of(&mut t, &players).await?;
-            (boards, sampled, derived_mode, bots)
+            // R1834002: what each seat's loadout freezes from, as the match starts; R1834005: a
+            // bot's from its own row, through the same path.
+            let picks = (
+                SeatPicks::read(&mut t, &first.profile_id, bots.p1.as_ref()).await?,
+                SeatPicks::read(&mut t, &second.profile_id, bots.p2.as_ref()).await?,
+            );
+            (boards, sampled, derived_mode, bots, picks)
         })?;
 
         let glitch_boards = (
             sampled.first().cloned().unwrap_or_default(),
             sampled.get(1).cloned().unwrap_or_default(),
         );
-        let match_row = MatchRow {
+        let mut match_row = MatchRow {
             id: input.match_id.clone(),
             seed: input.seed.clone(),
             players: (first.profile_id.clone(), second.profile_id.clone()),
@@ -266,6 +273,8 @@ impl Registry {
                 portrait_or_default(first.portrait.as_deref()),
                 portrait_or_default(second.portrait.as_deref()),
             )),
+            // R1834002: frozen below, once the opening shows which cards each deck dealt.
+            loadouts: None,
             // R768: written with the result, never at the start.
             final_hash: None,
         };
@@ -293,6 +302,20 @@ impl Registry {
             engine::begin_game(pinned, &engine::create_game(pinned, &args)).state
         }))
         .map_err(|payload| ApiError::internal(panic_text(payload)))?;
+        // R1834002: each seat's loadout, frozen on the row beside its portrait, over the cards its
+        // deck dealt (an All Random seat's dealt deck among them).
+        let dealt_cards = engine::dealt_cards(&state);
+        let deck_cards = |seat: PlayerId| -> Vec<String> {
+            dealt_cards
+                .values()
+                .filter(|(owner, _)| *owner == seat)
+                .map(|(_, def)| def.clone())
+                .collect()
+        };
+        match_row.loadouts = Some((
+            picks.0.freeze(first.deck_slots.as_ref(), &deck_cards(PlayerId::P1)),
+            picks.1.freeze(second.deck_slots.as_ref(), &deck_cards(PlayerId::P2)),
+        ));
 
         one_tx!(app.db, |t| t.matches_create(&match_row).await?)?;
         let match_id = match_row.id.clone();
@@ -310,6 +333,7 @@ impl Registry {
                 // R641000: a series game draws its bot no rematch plan.
                 series_game: derived_mode == Some(QueueMode::Bo3),
                 pinned,
+                dealt_cards,
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -356,13 +380,33 @@ impl Registry {
             glitch_boards,
             dealt.clone(),
         );
+        // R1834003: the cards each deck dealt, read off the opening, when a loadout names a card of
+        // its own (a match from before 0058 names none, and sends no card's picks).
+        let opening = match_row
+            .loadouts
+            .as_ref()
+            .is_some_and(|(first, second)| !first.cards.is_empty() || !second.cards.is_empty())
+            .then(|| {
+                let (last_boards, glitch_boards) = last_boards_of(&match_row);
+                engine::fold_args(
+                    &match_row.seed,
+                    &match_row.decks,
+                    Vec::new(),
+                    last_boards,
+                    glitch_boards,
+                    dealt.clone(),
+                )
+            });
         let live = match_row.status == MatchStatus::Live;
         let has_bot = bots.p1.is_some() || bots.p2.is_some();
         let saved_seq = saved.as_ref().map(|saved| saved.seq);
         let (row, rows) = (match_row.clone(), log.clone());
         // #1035: the three folds in one job off the runtime, as Duos's rebuild folds: a long log is a
         // long fold. A panic in the first is the rebuild's internal error.
-        let (folded, replayed, bot_turns, from) = engine::off_runtime(app.engine_thread, move || {
+        let (folded, replayed, bot_turns, from, dealt_cards) = engine::off_runtime(app.engine_thread, move || {
+            let dealt_cards = opening
+                .map(|opening| engine::dealt_cards(&engine::fold(pinned, &opening).state))
+                .unwrap_or_default();
             // #1169: a checkpoint that passes every check resumes all three folds after its row, and
             // they fold only the rows after it; any other folds the whole log, as before. `Ok` is the
             // seq they resumed after, `Err` the refusal of a checkpoint (`None` when there was none).
@@ -383,7 +427,7 @@ impl Registry {
                     }))
                     .map_err(panic_text)
                 });
-                return (folded, replayed, bot_turns, Ok(seq));
+                return (folded, replayed, bot_turns, Ok(seq), dealt_cards);
             }
             let folded = engine::fold(pinned, &args);
             // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A
@@ -399,7 +443,13 @@ impl Registry {
                 std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(pinned, &row, &rows, dealt)))
                     .map_err(panic_text)
             });
-            (folded, replayed, bot_turns, Err(verified.and_then(Result::err)))
+            (
+                folded,
+                replayed,
+                bot_turns,
+                Err(verified.and_then(Result::err)),
+                dealt_cards,
+            )
         })
         .await
         .map_err(RebuildError::Internal)?;
@@ -461,6 +511,7 @@ impl Registry {
                 bot_moved_turn,
                 series_game: mode == Some(QueueMode::Bo3),
                 pinned,
+                dealt_cards,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

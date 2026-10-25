@@ -38,6 +38,7 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{DECK_NAME_MAX_LENGTH, DRAFT_ISSUES_REPORTED_MAX, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
 use crate::cosmetics::{self, CosmeticKind};
+use crate::loadout::DeckSlots;
 use crate::db::store::{
     FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
@@ -500,6 +501,23 @@ pub async fn put_deck(app: &Arc<App>, req: Req) -> ApiResult {
                 card_id: None,
             }])?;
             return Err(draft_refused(UNOWNED_PORTRAIT, &issues));
+        }
+    }
+    // R1834001: each slot's pick is one the account owns (a default, a starter or a ledger row),
+    // since a match shows it to the other seat.
+    let picks = [
+        ("tableCosmetic", CosmeticKind::Table, &table_cosmetic),
+        ("fieldCosmetic", CosmeticKind::Field, &field_cosmetic),
+        ("cardBackCosmetic", CosmeticKind::CardBack, &card_back_cosmetic),
+    ];
+    if picks.iter().any(|(_, _, pick)| pick.is_some()) {
+        let owned = tx.economy_cosmetics_get(&profile.id).await?;
+        for (key, kind, pick) in picks {
+            if let Some(id) = pick
+                && let Err(refusal) = cosmetics::check_pick(cosmetics::registry(), &owned, kind, id, None)
+            {
+                return Err(bad_request(refusal.message(key)));
+            }
         }
     }
     // `created_at` is only read on a create; an update keeps the stored one (the store's contract).
@@ -1008,10 +1026,13 @@ pub fn assert_no_custom_cards(decks: &[&[String]]) -> Result<(), ApiError> {
 /// A copy, so a frozen deck can never alias the stored one.
 fn freeze(deck: &SavedDeck) -> FrozenDeck {
     // R642: the portrait freezes with the deck, present (a saved deck always has one, or null).
+    // R1834002: and its slots, as the deck carries them; the loadout judges them when the match
+    // begins.
     FrozenDeck {
         name: deck.name.clone(),
         cards: deck.cards.clone(),
         portrait: Some(deck.portrait.clone()),
+        slots: DeckSlots::of_deck(deck),
     }
 }
 

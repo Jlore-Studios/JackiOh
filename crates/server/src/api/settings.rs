@@ -9,7 +9,10 @@
 //! strictly later, and a group not named is left alone. The same body twice changes nothing. The
 //! merge is the store's (`app.merge_player_settings`, migration 0018), under a lock on the profile.
 //! The server does not know the settings, so a body is checked for shape only (`PLAYER_SETTINGS_*`
-//! limits). None of it is a rule: nothing the engine does reads a setting.
+//! limits), but for the `cosmetics` group (R1834001): each of its six picks, where the body names
+//! it, must be a text, an id of the registry under its kind that the account owns (a default, a
+//! starter or a ledger row), since a match shows the account's picks to the other seat. None of it
+//! is a rule: nothing the engine does reads a setting.
 
 use std::sync::Arc;
 
@@ -21,6 +24,9 @@ use serde_json::{Value, json};
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, log_info, now_ms, ok_of};
 use crate::app::App;
+use crate::cosmetics::{self, PickRefusal};
+use crate::economy::store::OwnedCosmetics;
+use crate::loadout::{CARD_SLOT_KINDS, COSMETICS_GROUP, DECK_SLOT_KINDS, setting_key};
 use crate::config::{
     PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PLAYER_SETTINGS_KEYS_MAX,
     PLAYER_SETTINGS_NAME_MAX_LENGTH, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
@@ -177,6 +183,24 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
     Ok(groups)
 }
 
+/// R1834001: the `cosmetics` group's picks, each where it is present: a text naming an id of its
+/// kind the account owns, on every card for a card kind. Any other key is left to the shape check.
+fn check_cosmetics_group(group: &PlayerSettingsGroup, owned: &OwnedCosmetics) -> Result<(), ApiError> {
+    for kind in CARD_SLOT_KINDS.into_iter().chain(DECK_SLOT_KINDS) {
+        let key = setting_key(kind);
+        let field = format!("{COSMETICS_GROUP}.{key}");
+        match group.values.get(key) {
+            None => {}
+            Some(PlayerSettingValue::Text(id)) => {
+                cosmetics::check_pick(cosmetics::registry(), owned, kind, id, None)
+                    .map_err(|refusal| bad_request(refusal.message(&field)))?;
+            }
+            Some(_) => return Err(bad_request(PickRefusal::WrongKind.message(&field))),
+        }
+    }
+    Ok(())
+}
+
 // `GET` and `PUT /api/settings` are two rows of `app.rs`'s `ROUTES`, both `AuthLevel::Active`, so a
 // pending account gets 403 from each (§9.4).
 
@@ -207,6 +231,10 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let sent = groups.len();
 
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    if let Some(picks) = groups.get(COSMETICS_GROUP) {
+        let owned = tx.economy_cosmetics_get(&profile.id).await?;
+        check_cosmetics_group(picks, &owned)?;
+    }
     let outcome = tx
         .player_settings_merge(
             &PlayerSettingsMergeInput {

@@ -74,6 +74,7 @@ fn bot(id: &str, created_at: i64, retired_at: Option<i64>) -> BotRow {
         in_match_id: None,
         grinding: false,
         grind_wins: 0,
+        cosmetics: None,
     }
 }
 
@@ -677,6 +678,7 @@ async fn r641000_a_trio_takes_the_bot_s_own_disjoint_decks_first() {
     let own_deck = |from: usize, portrait: &str| BotDeck {
         cards: pool[from..from + size].to_vec(),
         portrait: portrait.to_string(),
+        slots: None,
     };
     // B shares half its cards with A, so it is passed over; C shares none with A.
     let (a, b, c) = (
@@ -1030,6 +1032,7 @@ fn r1555000_the_bot_pair_is_the_lowest_grinder_and_its_closest_ready_bot() {
         decks: vec![BotDeck {
             cards: playable()[..deck_size()].to_vec(),
             portrait: "vanilla".to_string(),
+            slots: None,
         }],
         decks_catalog_version: Some("v".to_string()),
         ..rated_bot(id, rating, grinding)

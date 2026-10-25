@@ -2,8 +2,8 @@
  * R1297000: the deck slots the viewer's own side wears (cards/cosmetics.ts): a table (the playmat)
  * and a field (the ambient backdrop). A board wearing the defaults carries neither `data-table` on
  * its `.field` nor `data-backdrop` on its `.board`, so nothing here reaches it and it is the board
- * it was before. This sheet loads after board.css and covers the viewer's half only: the
- * opponent's zones and the top of the mat keep their own look.
+ * it was before. This sheet loads after board.css; the viewer's half alone reads those two, and the
+ * opponent's zones and the top of the mat keep their own look but where R1834004 (below) dresses them.
  *
  * A table is a surface under the viewer's half of the field (`.field::before`, behind the lanes
  * and the sand) and a set of custom properties the viewer's zones read: the lane line, the unit
@@ -19,15 +19,23 @@
  * Each field's still version comes first, particles at their places; it moves only inside the
  * motion gate below, by transform and opacity alone. Under reduced motion (the media query, or
  * the settings' Reduce motion on <html>) every field holds its still version.
+ *
+ * R1834004: an online board's other half wears its seat's frozen loadout the same way: a second
+ * backdrop behind the upper half (`data-their-backdrop` on the board, `data-half="theirs"` on the
+ * layer) and a second mat under the opponent's rows (`data-their-table` on the field, drawn by
+ * `.field-their-mat`, the viewer's mat mirrored, since `.field::after` is the centre line), whose
+ * custom properties the opponent's zones read as the viewer's read theirs.
  */
 
 /* --------------------------------------------------------------------------- backdrops --- */
 
+.board[data-their-backdrop],
 .board[data-backdrop] {
   position: relative;
   background: none;
 }
 
+.board[data-their-backdrop]::before,
 .board[data-backdrop]::before {
   content: "";
   position: absolute;
@@ -45,6 +53,11 @@
   overflow: hidden;
   border-radius: 0 0 16px 16px;
   pointer-events: none;
+}
+
+.board-backdrop[data-half="theirs"] {
+  inset: 0 0 50%;
+  border-radius: 16px 16px 0 0;
 }
 
 .board-backdrop-particle {
@@ -149,9 +162,10 @@
 /* ------------------------------------------------------------------------------ tables --- */
 
 /* The surface sits in the field's lower half, behind the lanes (a positioned, later sibling
-   paints over it) and is never a hit target. */
+   paints over it) and is never a hit target. The other seat's is the same surface turned over the
+   centre line into the upper half. */
+.field-their-mat,
 .field[data-table]::before {
-  content: "";
   position: absolute;
   inset: 50% 0 0;
   z-index: 0;
@@ -159,7 +173,17 @@
   pointer-events: none;
 }
 
-.field[data-table="table-wood"] {
+.field[data-table]::before {
+  content: "";
+}
+
+.field-their-mat {
+  inset: 0 0 50%;
+  transform: scaleY(-1);
+}
+
+.field[data-table="table-wood"],
+.field[data-their-table="table-wood"] .zone[data-side="opponent"] {
   --table-line: rgb(66 38 16 / 45%);
   --table-lane: rgb(255 214 150 / 55%);
   --table-zone: rgb(255 226 178 / 12%);
@@ -167,13 +191,15 @@
   --table-mark: rgb(255 226 178 / 24%);
 }
 
-.field[data-table="table-wood"]::before {
+.field[data-table="table-wood"]::before,
+.field[data-their-table="table-wood"] > .field-their-mat {
   background:
     linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 28%)),
     repeating-linear-gradient(90deg, #a47142 0 46px, #7d5328 46px 48px, #9a672f 48px 94px, #774e24 94px 96px);
 }
 
-.field[data-table="table-felt"] {
+.field[data-table="table-felt"],
+.field[data-their-table="table-felt"] .zone[data-side="opponent"] {
   --table-line: rgb(214 238 220 / 22%);
   --table-lane: rgb(244 238 214 / 60%);
   --table-zone: rgb(10 50 28 / 38%);
@@ -181,11 +207,13 @@
   --table-mark: rgb(214 238 220 / 28%);
 }
 
-.field[data-table="table-felt"]::before {
+.field[data-table="table-felt"]::before,
+.field[data-their-table="table-felt"] > .field-their-mat {
   background: radial-gradient(90% 75% at 50% 35%, #2f8a55, #1c5a37 68%, #123d26);
 }
 
-.field[data-table="table-neon-grid"] {
+.field[data-table="table-neon-grid"],
+.field[data-their-table="table-neon-grid"] .zone[data-side="opponent"] {
   --table-line: rgb(0 229 255 / 35%);
   --table-lane: rgb(255 61 200 / 75%);
   --table-zone: rgb(0 229 255 / 7%);
@@ -193,15 +221,18 @@
   --table-mark: rgb(0 229 255 / 45%);
 }
 
-.field[data-table="table-neon-grid"]::before {
+.field[data-table="table-neon-grid"]::before,
+.field[data-their-table="table-neon-grid"] > .field-their-mat {
   background:
     linear-gradient(rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 28px 28px,
     linear-gradient(90deg, rgb(0 229 255 / 30%) 1px, transparent 1px) 0 0 / 28px 28px,
     linear-gradient(180deg, #0b1230, #050920);
 }
 
-/* The viewer's zones: the line between the sides, the unit pads and the backrow slots. */
-.field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow]) {
+/* The viewer's zones, and the other seat's on its own mat: the line between the sides (on the edge of
+   each side's unit row that faces it), the unit pads and the backrow slots. */
+.field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow]),
+.field[data-their-table] .zone[data-side="opponent"]:not(.zone-locked, .zone-reserved, [data-glow]) {
   border-color: var(--table-line);
   background: var(--table-zone);
 }
@@ -210,14 +241,21 @@
   border-top: 2px solid var(--table-lane);
 }
 
-.field[data-table] .zone[data-side="you"][data-row="backrow"]:not(.zone-locked, .zone-reserved, [data-glow]) {
+.field[data-their-table] .zone[data-side="opponent"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow]) {
+  border-bottom: 2px solid var(--table-lane);
+}
+
+.field[data-table] .zone[data-side="you"][data-row="backrow"]:not(.zone-locked, .zone-reserved, [data-glow]),
+.field[data-their-table] .zone[data-side="opponent"][data-row="backrow"]:not(.zone-locked, .zone-reserved, [data-glow]) {
   background: var(--table-slot);
 }
 
-.field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
+.field[data-table] .zone[data-side="you"]:not(.zone-locked, .zone-reserved, [data-glow])::before,
+.field[data-their-table] .zone[data-side="opponent"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
   border-color: var(--table-mark);
 }
 
-.field[data-table] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
+.field[data-table] .zone[data-side="you"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow])::before,
+.field[data-their-table] .zone[data-side="opponent"][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow])::before {
   background: radial-gradient(closest-side, var(--table-mark), transparent);
 }

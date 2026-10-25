@@ -6,8 +6,10 @@
 // Hovering or focusing an item shows it on the large card; clicking one the card owns equips it on
 // this card alone (`writeCardPick`, `writeCardFullArt`), and a locked one, which `useCanEquip` says no
 // to, equips nothing. `Use default` of a kind clears the card's pick, which leaves the card to the
-// account's. The view decides nothing (CLAUDE.md rule 7): it sets a device pick that only the
-// viewer's own faces wear, and `GET /api/cosmetics` is the answer to what the viewer owns.
+// account's. The view decides nothing (CLAUDE.md rule 7): it sets a pick in the device's store, which
+// `cards/cardPicksSync.ts` sends to the account (R1834000), for the viewer's own faces and, frozen as
+// an online match begins, the opponent's sight of them (R1834002); `GET /api/cosmetics` is the answer
+// to what the viewer owns.
 //
 // A preview writes no pick. A face wears only what the store holds, and `cards/cosmetics.ts` has no
 // seam to draw one wearing an id it does not, so a preview of a foil, finish or border is a second

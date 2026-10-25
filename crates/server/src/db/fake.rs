@@ -109,7 +109,7 @@ use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
     CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
     EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase,
+    InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase,
     MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
@@ -120,6 +120,7 @@ use crate::db::store::{
     TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
     UsernameClaimOutcome,
 };
+use crate::bots::cosmetics::BotCosmetics;
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
 use crate::ranked::season::{ResetChange, ResetPlayer};
@@ -200,6 +201,8 @@ pub struct BotTableRow {
     /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0053).
     pub grinding: bool,
     pub grind_wins: i32,
+    /// R1834005: its wardrobe and picks (migration 0058).
+    pub cosmetics: Option<BotCosmetics>,
 }
 
 /// R1450: a match id a queue pairing reserved (`tickets_claim_pair`) and when it was claimed; in
@@ -1384,6 +1387,44 @@ pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreErr
     });
     keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != row.id);
     Ok(())
+}
+
+/// R1834006: each person's seat of every match begun at or after `since` that froze loadouts,
+/// oldest match first (ties on id), seat order, as Postgres reads them: a seat whose profile is not
+/// a person's (a bot's, a deleted account's) is left out.
+pub fn matches_loadout_samples(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<LoadoutSample>, StoreError> {
+    call(f, "matches.loadoutSamples")?;
+    let tables = f.tables();
+    let mut matches: Vec<&MatchRow> = tables
+        .matches
+        .iter()
+        .filter(|row| row.created_at >= since && row.loadouts.is_some())
+        .collect();
+    matches.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id)));
+    let mut samples = Vec::new();
+    for row in matches {
+        let Some((first, second)) = &row.loadouts else { continue };
+        for (profile_id, deck, loadout) in [
+            (&row.players.0, &row.decks.0, first),
+            (&row.players.1, &row.decks.1, second),
+        ] {
+            let Some(profile) = tables
+                .profiles
+                .iter()
+                .find(|profile| profile.id == *profile_id && profile.kind == ProfileKind::Human)
+            else {
+                continue;
+            };
+            samples.push(LoadoutSample {
+                profile_id: profile_id.clone(),
+                account_created_at: profile.created_at,
+                match_created_at: row.created_at,
+                deck: deck.clone(),
+                loadout: loadout.clone(),
+            });
+        }
+    }
+    Ok(samples)
 }
 
 pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
@@ -3711,6 +3752,7 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 in_match_id: profile.in_match_id.clone(),
                 grinding: bot.grinding,
                 grind_wins: bot.grind_wins,
+                cosmetics: bot.cosmetics.clone(),
             })
         })
         .collect();
@@ -3766,6 +3808,7 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         retired_at: None,
         grinding: false,
         grind_wins: 0,
+        cosmetics: None,
     });
     let rating = BotRating {
         bot_id: bot.profile_id.clone(),
@@ -3809,6 +3852,12 @@ pub fn bots_set_decks(
     let row = bot_row_of(f.tables(), profile_id)?;
     row.decks = decks.to_vec();
     row.decks_catalog_version = Some(catalog_version.to_string());
+    Ok(())
+}
+
+pub fn bots_set_cosmetics(f: &mut FakeTx<'_>, profile_id: &str, cosmetics: &BotCosmetics) -> Result<(), StoreError> {
+    call(f, "bots.setCosmetics")?;
+    bot_row_of(f.tables(), profile_id)?.cosmetics = Some(cosmetics.clone());
     Ok(())
 }
 

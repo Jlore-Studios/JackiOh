@@ -213,7 +213,7 @@ export type CardProps = {
   controller?: PlayerId;
   /** R1295000: a card in the viewer's own hand, which wears the device's cosmetics: `CardView` names no owner. */
   inOwnHand?: boolean;
-  /** R1834004: the seat whose hand a revealed card lies in (R434), whose loadout it wears: `CardView` names no owner. */
+  /** R1834004: the seat whose hand the card lies in, whose loadout it wears where it is not `worn`: `CardView` names no owner. */
   inHandOf?: PlayerId;
   /**
    * R1297000, R1834004: the seat whose card back a back wears: the viewer's own pick on the wearer's

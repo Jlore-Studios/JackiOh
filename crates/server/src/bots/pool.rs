@@ -345,9 +345,11 @@ pub fn draw_decks(seed: &str, lists: &[ListTotal], catalog: &Catalog, strength: 
         if !deck_is_legal(&mut input, &cards) {
             continue;
         }
+        // R1834005: dealt with no slots, which the refresh's cosmetics step draws next.
         decks.push(BotDeck {
             portrait: pick_portrait_from_seed(&format!("{seed}:portrait:{}", decks.len())).to_string(),
             cards,
+            slots: None,
         });
     }
     decks
@@ -393,6 +395,7 @@ pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) 
                 portrait: pick_portrait_from_seed(&format!("{seed}:trio-portrait:{}", kept.len()))
                     .to_string(),
                 cards,
+                slots: None,
             });
         }
     }
@@ -417,6 +420,8 @@ pub fn draw_trio(seed: &str, own: &[BotDeck], catalog: &Catalog, strength: f64) 
         name: format!("Deck {}", slot + 1),
         cards: deck.cards,
         portrait: Some(Some(deck.portrait)),
+        // R1834005: a Best-of-1 deck the trio keeps keeps its slots; a deck dealt for it has none yet.
+        slots: deck.slots,
     });
     let (Some(first), Some(second), Some(third)) = (decks.next(), decks.next(), decks.next()) else {
         return None;

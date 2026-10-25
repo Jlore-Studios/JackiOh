@@ -70,12 +70,14 @@ use jackioh_engine::wire::{
 use jackioh_engine::{Action, CustomCard, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
+use crate::bots::cosmetics::BotCosmetics;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
     CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FoldedRecords,
-    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample,
+    MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
     PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
@@ -87,6 +89,7 @@ use crate::db::store::{
     TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
     UsernameClaimOutcome,
 };
+use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
 use crate::ranked::season::{ResetChange, ResetPlayer};
@@ -259,10 +262,18 @@ fn frozen_trio_of(value: &Value) -> Result<FrozenTrio, StoreError> {
             Some(Value::Null) => Some(None),
             Some(other) => Some(Some(text_of(Some(other))?)),
         };
+        // R1834002: the deck's slots freeze with it the same way; absent stays absent.
+        let slots = match entry.get("slots") {
+            None | Some(Value::Null) => None,
+            Some(slots) => Some(serde_json::from_value(slots.clone()).map_err(|error| {
+                StoreError::from(format!("expected a frozen deck's slots: {error}"))
+            })?),
+        };
         frozen.push(FrozenDeck {
             name,
             cards,
             portrait,
+            slots,
         });
     }
     let mut decks = frozen.into_iter();
@@ -282,6 +293,29 @@ fn lean_or_none(value: Option<&str>) -> Result<Option<LeanPick>, StoreError> {
     value
         .map(|text| {
             LeanPick::parse(text).ok_or_else(|| StoreError::from(format!("expected a lean, got {text:?}")))
+        })
+        .transpose()
+}
+
+/// R1834002: a frozen deck's slots (`tickets.deck_cosmetics`, `matches.room_deck_cosmetics`):
+/// `null` is none, and the columns' checks hold the rest to an object.
+fn deck_slots_or_none(value: Option<Value>) -> Result<Option<DeckSlots>, StoreError> {
+    value
+        .filter(|value| !value.is_null())
+        .map(|value| {
+            serde_json::from_value(value)
+                .map_err(|error| StoreError::from(format!("expected a deck's slots: {error}")))
+        })
+        .transpose()
+}
+
+/// R1834002: `matches.loadouts`, both seats' in seat order, or `null` on a match from before 0058.
+fn loadouts_or_none(value: Option<Value>) -> Result<Option<(Loadout, Loadout)>, StoreError> {
+    value
+        .filter(|value| !value.is_null())
+        .map(|value| {
+            serde_json::from_value(value)
+                .map_err(|error| StoreError::from(format!("expected both seats' loadouts: {error}")))
         })
         .transpose()
 }
@@ -591,6 +625,8 @@ struct MatchDbRow {
     stake: Option<i16>,
     /// R768 (migration 0035): the final state's hash, written with the result.
     final_hash: Option<String>,
+    /// R1834002 (migration 0058): both seats' loadouts; null on every older row.
+    loadouts: Option<Value>,
 }
 
 impl MatchDbRow {
@@ -621,6 +657,7 @@ impl MatchDbRow {
             mode: get(row, "mode")?,
             stake: get(row, "stake")?,
             final_hash: get(row, "final_hash")?,
+            loadouts: get(row, "loadouts")?,
         })
     }
 }
@@ -631,7 +668,7 @@ macro_rules! match_columns {
         "id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
   ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, ranked, p1_portrait, p2_portrait,
-  mode, stake, p1_glitch_board, p2_glitch_board, final_hash"
+  mode, stake, p1_glitch_board, p2_glitch_board, final_hash, loadouts"
     };
 }
 
@@ -727,6 +764,8 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         mode: row.mode.as_deref().map(queue_mode_of).transpose()?,
         stake: row.stake.map(stake_of).transpose()?,
         portraits,
+        // R1834002 (migration 0058): absent on a match from before it.
+        loadouts: loadouts_or_none(row.loadouts)?,
         // R768 (migration 0035): absent until the result writes it.
         final_hash: row.final_hash,
     })
@@ -751,6 +790,7 @@ struct TicketRow {
     mode: String,
     frozen_deck: Value,
     portrait: Option<String>,
+    deck_cosmetics: Option<Value>,
     frozen_trio: Option<Value>,
     lean_set: Option<String>,
     catalog_version: String,
@@ -768,6 +808,7 @@ impl TicketRow {
             mode: get(row, "mode")?,
             frozen_deck: get(row, "frozen_deck")?,
             portrait: get(row, "portrait")?,
+            deck_cosmetics: get(row, "deck_cosmetics")?,
             frozen_trio: get(row, "frozen_trio")?,
             lean_set: get(row, "lean_set")?,
             catalog_version: get(row, "catalog_version")?,
@@ -781,8 +822,8 @@ impl TicketRow {
 /// TS's `TICKET_COLUMNS`.
 macro_rules! ticket_columns {
     () => {
-        "id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, lean_set, catalog_version,
-  status, enqueued_at, match_id"
+        "id, profile_id, rating, mode, frozen_deck, portrait, deck_cosmetics, frozen_trio, lean_set,
+  catalog_version, status, enqueued_at, match_id"
     };
 }
 
@@ -806,6 +847,8 @@ fn to_ticket(row: TicketRow) -> Result<Ticket, StoreError> {
         mode: queue_mode_of(&row.mode)?,
         deck: card_list_of(&row.frozen_deck)?,
         portrait: Some(row.portrait),
+        // R1834002 (migration 0058): null for none, and on a ticket from before it.
+        deck_slots: deck_slots_or_none(row.deck_cosmetics)?,
         trio: trio_or_null(row.frozen_trio.as_ref())?,
         // R1372, R924000: migration 0036's column (0027's boolean, `true` read as "newest").
         lean: lean_or_none(row.lean_set.as_deref())?,
@@ -876,6 +919,7 @@ struct RoomRow {
     p2_profile_id: Option<String>,
     p1_deck: Value,
     p1_portrait: Option<String>,
+    room_deck_cosmetics: Option<Value>,
     room_lean_set: Option<String>,
     catalog_version: String,
     created_at: OffsetDateTime,
@@ -893,6 +937,7 @@ impl RoomRow {
             p2_profile_id: uuid_text_or_null(row, "p2_profile_id")?,
             p1_deck: get(row, "p1_deck")?,
             p1_portrait: get(row, "p1_portrait")?,
+            room_deck_cosmetics: get(row, "room_deck_cosmetics")?,
             room_lean_set: get(row, "room_lean_set")?,
             catalog_version: get(row, "catalog_version")?,
             created_at: get(row, "created_at")?,
@@ -905,7 +950,7 @@ impl RoomRow {
 macro_rules! room_columns {
     () => {
         "id, room_code, room_mode, room_trio, p1_profile_id, p2_profile_id, p1_deck,
-  p1_portrait, room_lean_set, catalog_version, created_at, ceiling_at"
+  p1_portrait, room_deck_cosmetics, room_lean_set, catalog_version, created_at, ceiling_at"
     };
 }
 
@@ -928,6 +973,8 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
         host_deck: card_list_of(&row.p1_deck)?,
         // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
         host_portrait: Some(row.p1_portrait),
+        // R1834002: the host deck's slots wait beside it (migration 0058).
+        host_deck_slots: deck_slots_or_none(row.room_deck_cosmetics)?,
         host_trio: trio_or_null(row.room_trio.as_ref())?,
         // R1372, R924000: the host's lean waits in the open row too (migrations 0027 and 0036).
         host_lean: lean_or_none(row.room_lean_set.as_deref())?,
@@ -3013,12 +3060,13 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
                id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
                turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
                grace_deadline_at, ceiling_at, created_at, ended_at, p1_last_board, p2_last_board,
-               p1_portrait, p2_portrait, mode, stake, ranked, started_at, last_seq, p1_glitch_board, p2_glitch_board)
+               p1_portrait, p2_portrait, mode, stake, ranked, started_at, last_seq, p1_glitch_board, p2_glitch_board,
+               loadouts)
              values ($1::uuid, ",
             match_values!(),
             ", $21::boolean, ",
             ts!("$15"),
-            ", 0, $24::jsonb, $25::jsonb)"
+            ", 0, $24::jsonb, $25::jsonb, $26::jsonb)"
         )
     } else {
         concat!(
@@ -3050,7 +3098,7 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
              p1_last_board = $17::jsonb, p2_last_board = $18::jsonb,
              p1_portrait = $19::text, p2_portrait = $20::text, ranked = $21::boolean,
              mode = $22::text, stake = $23::smallint,
-             p1_glitch_board = $24::jsonb, p2_glitch_board = $25::jsonb
+             p1_glitch_board = $24::jsonb, p2_glitch_board = $25::jsonb, loadouts = $26::jsonb
            where id = $1::uuid"
         )
     };
@@ -3109,10 +3157,44 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
         .bind(json(
             m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1),
         )?)
+        // R1834002: the loadouts frozen as the match began (migration 0058), null when absent.
+        .bind(json_or_null(&m.loadouts)?)
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
     Ok(())
+}
+
+/// R1834006: one row per person's seat of a match that froze loadouts, read off `matches.loadouts`
+/// by the seat's index; a bot's seat and a deleted account's (a null profile) join no person.
+pub async fn matches_loadout_samples(t: &mut PgTx<'_>, since: i64) -> Result<Vec<LoadoutSample>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select p.id as profile_id, p.created_at as account_created_at, m.created_at as match_created_at,
+                case s.seat when 0 then m.p1_deck else m.p2_deck end as deck, m.loadouts -> s.seat as loadout
+           from public.matches m
+           cross join lateral (values (0, m.p1_profile_id), (1, m.p2_profile_id)) as s(seat, profile_id)
+           join public.profiles p on p.id = s.profile_id and p.kind = 'human'
+          where m.loadouts is not null and m.status <> 'open' and m.created_at >= ",
+        ts!("$1"),
+        "
+          order by m.created_at, m.id, s.seat"
+    ))
+    .bind(since)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            Ok(LoadoutSample {
+                profile_id: uuid_text(row, "profile_id")?,
+                account_created_at: ms_of(get(row, "account_created_at")?),
+                match_created_at: ms_of(get(row, "match_created_at")?),
+                deck: card_list_of(&get::<Value>(row, "deck")?)?,
+                loadout: json_col(row, "loadout")?,
+            })
+        })
+        .collect()
 }
 
 pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<MatchRow>, StoreError> {
@@ -3634,13 +3716,13 @@ pub async fn rooms_create(t: &mut PgTx<'_>, room: &Room) -> Result<bool, StoreEr
     let done = sqlx::query(concat!(
         "insert into public.matches (
            room_code, room_mode, room_trio, status, seed, p1_profile_id, p1_deck, p1_portrait,
-           catalog_version, ceiling_at, created_at, room_lean_set)
+           catalog_version, ceiling_at, created_at, room_lean_set, room_deck_cosmetics)
          values ($1::text, $2::text, $3::jsonb, 'open', '', $4::uuid, $5::jsonb, $6::text,
                  $7::text, ",
         ts!("$8"),
         ", ",
         ts!("$9"),
-        ", $10::text)
+        ", $10::text, $11::jsonb)
          on conflict (room_code) where room_code is not null and status <> 'over' do nothing"
     ))
     .bind(room.code.as_str())
@@ -3653,6 +3735,7 @@ pub async fn rooms_create(t: &mut PgTx<'_>, room: &Room) -> Result<bool, StoreEr
     .bind(room.expires_at)
     .bind(room.created_at)
     .bind(room.host_lean.map(LeanPick::as_str))
+    .bind(json_or_null(&room.host_deck_slots)?)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -3794,11 +3877,11 @@ pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), Sto
     sqlx::query(concat!(
         "insert into public.tickets
            (id, profile_id, rating, mode, frozen_deck, portrait, frozen_trio, catalog_version, status,
-            enqueued_at, match_id, lean_set)
+            enqueued_at, match_id, lean_set, deck_cosmetics)
          values ($1::uuid, $2::uuid, $3::double precision, $4::text, $5::jsonb, $6::text, $7::jsonb, $8::text,
                  $9::text, ",
         ts!("$10"),
-        ", $11::uuid, $12::text)"
+        ", $11::uuid, $12::text, $13::jsonb)"
     ))
     .bind(ticket.id.as_str())
     .bind(ticket.profile_id.as_str())
@@ -3812,6 +3895,7 @@ pub async fn tickets_insert(t: &mut PgTx<'_>, ticket: &Ticket) -> Result<(), Sto
     .bind(ticket.enqueued_at)
     .bind(ticket.match_id.as_deref())
     .bind(ticket.lean.map(LeanPick::as_str))
+    .bind(json_or_null(&ticket.deck_slots)?)
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -5820,6 +5904,7 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
         in_match_id: uuid_text_or_null(row, "current_match_id")?,
         grinding: get(row, "grinding")?,
         grind_wins: get(row, "grind_wins")?,
+        cosmetics: get::<Option<Json<BotCosmetics>>>(row, "cosmetics")?.map(|cosmetics| cosmetics.0),
     })
 }
 
@@ -5829,7 +5914,7 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     let rows = sqlx::query(
         "select b.profile_id, b.strength, b.speed, b.persona, b.active_from_hour, b.active_hours,
                 b.decks, b.decks_catalog_version, b.trio, b.trio_catalog_version, b.retired_at,
-                b.grinding, b.grind_wins, p.created_at, p.current_match_id, r.rating
+                b.grinding, b.grind_wins, b.cosmetics, p.created_at, p.current_match_id, r.rating
            from public.bots b
            join public.profiles p on p.id = b.profile_id
            left join public.bot_ratings r on r.bot_id = b.profile_id::text
@@ -5939,6 +6024,24 @@ pub async fn bots_set_decks(
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(StoreError::from(format!("no bot {profile_id}")));
+    }
+    Ok(())
+}
+
+pub async fn bots_set_cosmetics(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    cosmetics: &BotCosmetics,
+) -> Result<(), StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query("update public.bots set cosmetics = $2::jsonb where profile_id = $1::uuid")
+        .bind(profile_id)
+        .bind(json(cosmetics)?)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
     if done.rows_affected() == 0 {
         return Err(StoreError::from(format!("no bot {profile_id}")));
     }

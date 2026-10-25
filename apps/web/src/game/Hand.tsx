@@ -30,8 +30,9 @@
 // revealed card is read, never played: it has its own testid (`revealed-hand-card-<id>`), no click
 // and no drag, and a resting mouse or a long-press opens it as any face does.
 //
-// R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a revealed card
-// its seat's loadout, where the board carries one (game/wearer.ts).
+// R1297000, R1834004: the opponent's backs wear their seat's card back (`seat`), and a card in a hand
+// its seat's loadout where the board carries one and the card is not the viewer's own (game/wearer.ts):
+// a revealed one, or the lower hand of a watched or replayed game.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from "react";
 
@@ -184,6 +185,7 @@ export default function Hand(props: HandProps): ReactElement {
             card={card}
             className="card-hand"
             inOwnHand={yours}
+            inHandOf={props.seat}
             target={{ on: "hand", instanceId: card.instanceId }}
             touchHold={props.touchHold}
             highlight={props.highlight}

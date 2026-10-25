@@ -2,6 +2,7 @@
 //! Written once by part 1 (SURFACE §1).
 
 pub mod auth;
+pub mod card_picks;
 pub mod catalog;
 pub mod codes;
 pub mod collection;

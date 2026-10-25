@@ -288,7 +288,11 @@ async fn all_steps(app: &Arc<App>, match_id: &str, token: &str) -> Vec<Value> {
         .await;
         assert_eq!(status, 200, "{body}");
         let keys: Vec<&String> = body.as_object().expect("an object").keys().collect();
-        assert_eq!(keys, vec!["from", "matchId", "steps", "total"]);
+        // R1834002, R1834003: the seats' loadouts and the page's card picks ride beside the steps.
+        assert_eq!(
+            keys,
+            vec!["cardLoadouts", "from", "loadouts", "matchId", "steps", "total"]
+        );
         assert_eq!(body["matchId"], match_id);
         assert_eq!(body["from"], steps.len());
         let page = body["steps"].as_array().expect("steps").clone();

@@ -16,7 +16,7 @@
 // else the view's viewer) keeps its look and every other draws the defaults. Practice, hotseat and
 // Duos carry no loadouts, so there every other seat draws the defaults, as before.
 
-import { createContext, createElement, useContext, type ReactElement, type ReactNode } from "react";
+import { createContext, createElement, useContext, useMemo, type ReactElement, type ReactNode } from "react";
 
 import type { PlayerId } from "@jackioh/shared";
 
@@ -64,7 +64,8 @@ export function WearerProvider({
   viewer?: PlayerId | null;
   children?: ReactNode;
 }): ReactElement {
-  return createElement(WearContext.Provider, { value: { seat, deck, loadouts, viewer } }, children);
+  const value = useMemo(() => ({ seat, deck, loadouts, viewer }), [seat, deck, loadouts, viewer]);
+  return createElement(WearContext.Provider, { value }, children);
 }
 
 /** The seat whose own cards wear the device's cosmetics, or null when no card does. */

@@ -1,5 +1,5 @@
 // R1834002: the loadout each seat of an online match wears, frozen by the server when the match
-// began: the six picks of its account (its deck's deck slots over them) and, for each card of its
+// began: the six picks of its account (its deck's deck slots over them) and, for each of its cards
 // the receiver has been shown, that card's own picks. R1834003: the server sends the seats' picks in
 // a `loadouts` frame on every join and reconnect, before the view, and the picks of each card the
 // view has shown in a `cardLoadouts` frame after it, once per socket; a replay's page carries both
@@ -35,12 +35,6 @@ export type SeatLoadouts = Readonly<Record<PlayerId, SeatLoadout>>;
 
 /** R1834003: one `cardLoadouts` payload: the picks of cards owned by `seat`, by card id. */
 export type CardLoadouts = { seat: PlayerId; cards: Readonly<Record<string, CardPicks>> };
-
-/** R1834003: the card picks each seat has been sent so far, by card id. */
-export type SeatCards = Readonly<Record<PlayerId, Readonly<Record<string, CardPicks>>>>;
-
-/** No card picks sent yet, for either seat. */
-export const NO_SEAT_CARDS: SeatCards = Object.freeze({ p1: Object.freeze({}), p2: Object.freeze({}) });
 
 /** Every kind's default, for a seat a replay from before R1834002 names nothing of. */
 const DEFAULT_SEAT: CardCosmetics = Object.freeze({ ...DEFAULT_CARD_COSMETICS });
@@ -88,35 +82,52 @@ export function parseCardLoadouts(raw: unknown): CardLoadouts | null {
   return { seat: raw.seat, cards };
 }
 
-/** R1834003: `held` with `update`'s cards merged in, a card sent again replacing its entry. */
-export function withCardLoadouts(held: SeatCards, update: CardLoadouts): SeatCards {
-  return { ...held, [update.seat]: { ...held[update.seat], ...update.cards } };
-}
-
-/** R1834002: both seats' loadouts from their picks and the card picks sent so far; null before any picks came. */
-export function seatLoadouts(seats: Record<PlayerId, CardCosmetics> | null, cards: SeatCards): SeatLoadouts | null {
-  if (seats === null) return null;
-  return { p1: { seat: seats.p1, cards: cards.p1 }, p2: { seat: seats.p2, cards: cards.p2 } };
-}
-
 /**
- * R1834002, R1834003: a replay page's two fields, read leniently: the seats' picks (every kind's
- * default where the page names none, as a match from before R1834002's does) and its card picks,
- * merged into `cards`; a malformed entry is skipped.
+ * R1834003: what one socket, or one replay's pages, have sent so far: the seats' picks, the newest
+ * standing, and every card's picks merged in by seat and card id, a card sent again replacing its
+ * entry. A `cardLoadouts` that comes before any `loadouts` is kept for it. Each verb answers what
+ * `current()` then holds: both seats' loadouts, or null until the seats' picks have come.
  */
-export function replayLoadouts(
-  page: { loadouts?: unknown; cardLoadouts?: unknown },
-  cards: SeatCards,
-): { seats: Record<PlayerId, CardCosmetics>; cards: SeatCards } {
-  const seats = parseSeatPicks(page.loadouts) ?? { p1: DEFAULT_SEAT, p2: DEFAULT_SEAT };
-  let merged = cards;
-  if (Array.isArray(page.cardLoadouts)) {
-    for (const raw of page.cardLoadouts as unknown[]) {
-      const update = parseCardLoadouts(raw);
-      if (update !== null) merged = withCardLoadouts(merged, update);
-    }
-  }
-  return { seats, cards: merged };
+export type LoadoutsHolder = {
+  seats(picks: Record<PlayerId, CardCosmetics>): SeatLoadouts;
+  cards(update: CardLoadouts): SeatLoadouts | null;
+  /**
+   * R1834002, R1834003: a replay page's two fields, read leniently: its seats' picks (every kind's
+   * default where the page names none, as a match from before R1834002's does) and its cards'.
+   */
+  page(page: { loadouts?: unknown; cardLoadouts?: unknown }): SeatLoadouts;
+  current(): SeatLoadouts | null;
+};
+
+export function createLoadoutsHolder(): LoadoutsHolder {
+  let seats: Record<PlayerId, CardCosmetics> | null = null;
+  const cards: Record<PlayerId, Readonly<Record<string, CardPicks>>> = { p1: {}, p2: {} };
+  let held: SeatLoadouts | null = null;
+  const build = (picks: Record<PlayerId, CardCosmetics>): SeatLoadouts => {
+    seats = picks;
+    held = { p1: { seat: picks.p1, cards: cards.p1 }, p2: { seat: picks.p2, cards: cards.p2 } };
+    return held;
+  };
+  const merge = (update: CardLoadouts): void => {
+    cards[update.seat] = { ...cards[update.seat], ...update.cards };
+  };
+  return {
+    seats: build,
+    cards(update) {
+      merge(update);
+      return seats === null ? null : build(seats);
+    },
+    page(page) {
+      if (Array.isArray(page.cardLoadouts)) {
+        for (const raw of page.cardLoadouts as unknown[]) {
+          const update = parseCardLoadouts(raw);
+          if (update !== null) merge(update);
+        }
+      }
+      return build(parseSeatPicks(page.loadouts) ?? { p1: DEFAULT_SEAT, p2: DEFAULT_SEAT });
+    },
+    current: () => held,
+  };
 }
 
 /** R1834004: the faces below it wear `loadout` where they are not the viewer's own; none with null. */

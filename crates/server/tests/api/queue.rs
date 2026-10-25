@@ -1999,6 +1999,7 @@ mod a_failed_start_does_not_end_the_sweep {
                 &[BotDeck {
                     cards: lone,
                     portrait: pick_portrait_from_seed("bot-deck").to_string(),
+                    slots: None,
                 }],
                 &app.catalog.version
             )

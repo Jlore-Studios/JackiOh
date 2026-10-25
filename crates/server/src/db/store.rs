@@ -35,7 +35,9 @@ use jackioh_engine::wire::{
 };
 
 use super::{fake, pg};
+use crate::bots::cosmetics::BotCosmetics;
 use crate::config::PersonaName;
+use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::{RankTier, SeasonRank, VisibleRank};
 use crate::ranked::season::{ResetChange, ResetPlayer};
@@ -579,7 +581,9 @@ impl<T> IndexMut<QueueMode> for PerMode<T> {
 /// One deck as a match or a series freezes it: the cards and the name the player gave them.
 /// `portrait` freezes the deck's hero portrait with them (R642: "the queued deck's portrait ...
 /// frozen into the ticket or room with the deck"); absent on rows frozen before portraits existed,
-/// so absence stays absent and reads as `vanilla` downstream.
+/// so absence stays absent and reads as `vanilla` downstream. R1834002: `slots` freezes the deck's
+/// playmat, backdrop and card back with it the same way; absent on a deck that carried none and on
+/// rows frozen before them.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FrozenDeck {
@@ -587,6 +591,8 @@ pub struct FrozenDeck {
     pub cards: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
     pub portrait: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slots: Option<DeckSlots>,
 }
 
 /// R259: a Conquest player's trio, frozen at enqueue (or at room create/join).
@@ -651,6 +657,13 @@ pub struct MatchRow {
     /// portraits existed; both seats then read as `vanilla`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portraits: Option<(PortraitId, PortraitId)>,
+    /// R1834002: the loadouts the seats froze as the match began, seat order like `decks`
+    /// (`matches.loadouts`, migration 0058). Cosmetic only, like `portraits`: sent in the `loadouts`
+    /// and `cardLoadouts` frames and on a replay's pages, never part of `PlayerView`, the log, a
+    /// replay hash or a game record. Absent on matches started before them, which read as
+    /// `Loadout::defaults`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loadouts: Option<(Loadout, Loadout)>,
     /// R768: `hash_state` of the final state, written with the result (`matches_record_final_hash`,
     /// migration 0035) and never by `matches_create`. Absent on a match that ended before it, on one
     /// the reaper resolved (R112) and on one not over yet.
@@ -747,6 +760,10 @@ pub struct Room {
     /// R642: the host deck's portrait, frozen with it.
     #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
     pub host_portrait: Option<Option<String>>,
+    /// R1834002: the host deck's slots, frozen with it (`matches.room_deck_cosmetics`); absent for
+    /// none and in the other two modes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host_deck_slots: Option<DeckSlots>,
     /// The host's frozen trio in a Conquest room; null otherwise.
     pub host_trio: Option<FrozenTrio>,
     /// R1372, R924000: an All Random host's "More cards from" pick, for the deck dealt to their seat
@@ -784,6 +801,10 @@ pub struct Ticket {
     /// R642: the Bo1 deck's portrait, frozen with it (R641's `null` — `vanilla` — otherwise).
     #[serde(default, skip_serializing_if = "Option::is_none", with = "absent_or_null")]
     pub portrait: Option<Option<String>>,
+    /// R1834002: the Bo1 deck's slots, frozen with it (`tickets.deck_cosmetics`); absent for none
+    /// and in the other two modes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_slots: Option<DeckSlots>,
     /// R259: a Conquest ticket's frozen trio; null in the other two modes.
     pub trio: Option<FrozenTrio>,
     /// R1372, R924000: an All Random ticket's "More cards from" pick, for the deck dealt to its seat
@@ -1013,11 +1034,15 @@ pub struct BotRating {
 }
 
 /// R1454: one Best-of-1 deck a ladder bot carries, and the portrait it plays it under (R642).
+/// R1834005: and the slots it wears it with, drawn as a person's deck's (`bots::cosmetics`); absent
+/// on a deck dealt since the bot last drew its loadout, which the pool's next refresh draws.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BotDeck {
     pub cards: Vec<String>,
     pub portrait: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slots: Option<DeckSlots>,
 }
 
 /// R1453, R1454, R1452: a ladder bot as the queue, the actor and the pool read it: its `bots` row (migration
@@ -1059,6 +1084,23 @@ pub struct BotRow {
     /// R1555000: the rated games it has won since it started grinding or last stepped up.
     #[serde(default)]
     pub grind_wins: i32,
+    /// R1834005: its wardrobe and the picks it wears (`bots.cosmetics`, migration 0058), drawn by
+    /// the pool; none before the first draw. Never in the ledger or `GET /api/cosmetics`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cosmetics: Option<BotCosmetics>,
+}
+
+/// R1834006: one person's seat of a match, as `cosmetics-fit` reads what people wear: the loadout
+/// it froze, the deck it played, when the match began and when the person's account was made
+/// (epoch ms). Never a bot's.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LoadoutSample {
+    pub profile_id: String,
+    pub account_created_at: i64,
+    pub match_created_at: i64,
+    pub deck: Vec<String>,
+    pub loadout: Loadout,
 }
 
 /// R1454: a bot `bots_create` writes: its profile id, its `bots` row and the rating its
@@ -1468,6 +1510,11 @@ pub struct MatchSeat {
     /// R642: the portrait dealt to this seat at match creation. Absent reads as `vanilla`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portrait: Option<String>,
+    /// R1834002: the slots of the deck this seat plays, frozen with it (a ticket's, a room's, a
+    /// trio's picked deck's, a bot's); absent for none, and for an All Random seat, which wears the
+    /// account's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_slots: Option<DeckSlots>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -2299,6 +2346,17 @@ impl Tx<'_> {
         catalog_version: &str,
     ) -> StoreResult<()> {
         dispatch!(self, bots_set_decks(profile_id, decks, catalog_version))
+    }
+
+    /// R1834005: the bot's wardrobe and picks, as the pool drew them.
+    pub async fn bots_set_cosmetics(&mut self, profile_id: &str, cosmetics: &BotCosmetics) -> StoreResult<()> {
+        dispatch!(self, bots_set_cosmetics(profile_id, cosmetics))
+    }
+
+    /// R1834006: every person's seat of a match begun at or after `since` (epoch ms) that froze a
+    /// loadout, oldest match first, its seats in seat order. A bot's seat is never one.
+    pub async fn matches_loadout_samples(&mut self, since: i64) -> StoreResult<Vec<LoadoutSample>> {
+        dispatch!(self, matches_loadout_samples(since))
     }
 
     /// R641000: the bot's Conquest trio, dealt for `catalog_version`.

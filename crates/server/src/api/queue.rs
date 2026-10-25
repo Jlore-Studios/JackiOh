@@ -290,19 +290,20 @@ async fn enqueue_ticket(
     // current catalog; All Random needs no deck at all (R258).
     let frozen = freeze_choice(app, &profile.id, choice).await?;
 
-    let (mode, deck, portrait, trio, lean) = match frozen {
+    let (mode, deck, portrait, deck_slots, trio, lean) = match frozen {
         // §9.4, §9.5: frozen. This copy lands in the ticket and later the match or series; the saved
-        // deck is never read again. R642: the deck's portrait freezes with it.
+        // deck is never read again. R642: the deck's portrait freezes with it, and R1834002 its slots.
         FrozenChoice::Bo1 { deck } => (
             QueueMode::Bo1,
             deck.cards.clone(),
             deck.portrait.clone(),
+            deck.slots.clone(),
             None,
             None,
         ),
-        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio), None),
+        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, None, Some(trio), None),
         // R1372, R924000: the player's lean waits in the ticket for the deal, as a deck would.
-        FrozenChoice::Random { lean } => (QueueMode::Random, Vec::new(), None, None, lean),
+        FrozenChoice::Random { lean } => (QueueMode::Random, Vec::new(), None, None, None, lean),
     };
     let ticket = Ticket {
         id: new_uuid(),
@@ -311,6 +312,7 @@ async fn enqueue_ticket(
         mode,
         deck,
         portrait,
+        deck_slots,
         trio,
         lean,
         catalog_version: app.catalog.version.clone(),
@@ -564,6 +566,8 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             } else {
                 a.portrait.clone().flatten()
             },
+            // R1834002: an All Random seat plays no deck of its own, so it wears the account's slots.
+            deck_slots: if random { None } else { a.deck_slots.clone() },
         },
         MatchSeat {
             profile_id: b.profile_id.clone(),
@@ -578,6 +582,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             } else {
                 b.portrait.clone().flatten()
             },
+            deck_slots: if random { None } else { b.deck_slots.clone() },
         },
     );
 
@@ -1070,6 +1075,7 @@ async fn start_bot_match(
         } else {
             ticket.portrait.clone().flatten()
         },
+        deck_slots: if random { None } else { ticket.deck_slots.clone() },
     };
     // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
     // in the match, and otherwise only the sweeper's release of stale starts would let them go,
@@ -1116,17 +1122,20 @@ async fn start_bot_match(
                 player: bot_player,
                 deck: dealt_deck(&seed, bot_player.as_str(), None),
                 portrait: dealt_portrait(&seed, bot_player.as_str()),
+                deck_slots: None,
             }
         } else {
             let picked = jackioh_engine::Rng::new(&format!("{seed}:bot-deck"), 0)
                 .pick(&bot.decks)
                 .cloned()
                 .ok_or_else(|| ApiError::internal(format!("bot {} holds no deck", bot.profile_id)))?;
+            // R1834005: the bot's deck carries the slots it drew for it, as a person's does.
             MatchSeat {
                 profile_id: bot.profile_id.clone(),
                 player: bot_player,
                 deck: picked.cards,
                 portrait: Some(picked.portrait),
+                deck_slots: picked.slots,
             }
         };
         let seats = (human, bot_seat);
@@ -1264,6 +1273,7 @@ pub async fn kick_off_bot_match(app: &Arc<App>, now: i64) -> Result<Option<Strin
             player,
             deck: picked.cards,
             portrait: Some(picked.portrait),
+            deck_slots: picked.slots,
         })
     };
     let started = async {

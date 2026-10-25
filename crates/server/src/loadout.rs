@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use jackioh_engine::{BackrowView, HandView, PLAYER_IDS, PlayerId, PlayerView, SideView};
 
 use crate::cosmetics::{Cosmetic, CosmeticKind, default_of, full_art_of, owns, registry};
-use crate::db::store::{PlayerSettingValue, PlayerSettingsRow, SavedDeck};
+use crate::db::store::{BotRow, PlayerSettingValue, PlayerSettingsRow, SavedDeck, StoreResult, Tx};
 use crate::economy::store::{CardPicks, OwnedCosmetics};
 
 /// The settings group the client keeps the account's picks in (R633, R1295000).
@@ -332,6 +332,49 @@ pub fn freeze_loadout(
         }
     }
     Loadout { seat, cards }
+}
+
+/// R1834002: what one seat's loadout is frozen from, read as its match starts: what the account
+/// owns, its settings' picks and its cards' own picks. A ladder bot's are its wardrobe and the picks
+/// it drew (R1834005), read off its row, so a bot's seat freezes through the same function a
+/// person's does.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SeatPicks {
+    pub owned: OwnedCosmetics,
+    pub account: AccountPicks,
+    pub cards: Vec<CardPicks>,
+}
+
+impl SeatPicks {
+    /// The picks of `profile_id`'s seat inside the caller's transaction: `bot`'s own when the seat
+    /// is a ladder bot's (none before it drew any), the account's ledger, settings and card picks
+    /// otherwise.
+    pub async fn read(t: &mut Tx<'_>, profile_id: &str, bot: Option<&BotRow>) -> StoreResult<SeatPicks> {
+        if let Some(bot) = bot {
+            return Ok(bot
+                .cosmetics
+                .as_ref()
+                .map(|cosmetics| SeatPicks {
+                    owned: cosmetics.wardrobe.clone(),
+                    account: cosmetics.account.clone(),
+                    cards: cosmetics.cards.clone(),
+                })
+                .unwrap_or_default());
+        }
+        let owned = t.economy_cosmetics_get(profile_id).await?;
+        let settings = t.player_settings_get(profile_id).await?;
+        let cards = t.economy_card_picks_get(profile_id).await?;
+        Ok(SeatPicks {
+            owned,
+            account: AccountPicks::of_settings(settings.as_ref()),
+            cards,
+        })
+    }
+
+    /// [`freeze_loadout`] against the shipped registry, for the deck `deck` slots and `deck_cards`.
+    pub fn freeze(&self, deck: Option<&DeckSlots>, deck_cards: &[String]) -> Loadout {
+        freeze_loadout(registry(), &self.owned, &self.account, deck, &self.cards, deck_cards)
+    }
 }
 
 /// The cards a side of a view shows face up, each `(instance id, def id)`: its units, carried

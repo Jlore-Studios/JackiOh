@@ -154,7 +154,7 @@ describe("writing (B28)", () => {
   });
 
   it("B28 R1017001 a written fullArt is what the next page load reads, the other keys kept", async () => {
-    writeCardSettings({ fullArt: false, opponentCosmetics: true });
+    writeCardSettings({ fullArt: false });
     const fresh = await freshSettings();
     expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: false, opponentCosmetics: true });
   });

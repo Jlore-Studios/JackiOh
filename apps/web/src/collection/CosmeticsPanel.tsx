@@ -34,8 +34,9 @@ const COSMETIC_ROWS: readonly { kind: CardSlotKind; label: string; hint: string 
 
 /**
  * R1295000, R1655000: the defaults your own cards wear in a game, every one unlocked, until a card
- * picks its own in the Cards section. A pick this client does not know (a newer client's) shows as
- * its kind's default, which is what it draws.
+ * picks its own in the Cards section. R1834002, R1834004: an online match freezes them with the
+ * card's own picks as it begins, and your opponent sees your cards wear them too. A pick this client
+ * does not know (a newer client's) shows as its kind's default, which is what it draws.
  */
 export function CardCosmeticsControls(): ReactElement {
   const picks = useCosmetics();

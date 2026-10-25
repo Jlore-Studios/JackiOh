@@ -41,6 +41,7 @@ use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
 use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
+use crate::loadout::DeckSlots;
 use crate::seats::Seat;
 
 /// R672: a normal rematch moves the rating once; a double-or-nothing moves it twice.
@@ -220,6 +221,17 @@ async fn create_rematch(
     let dealt_portrait = |seat: &str| -> Option<String> {
         Some(jackioh_engine::wire::pick_portrait_from_seed(&format!("{seed}:portrait:{seat}")).to_string())
     };
+    // R1834002: a Best-of-1 rematch plays the same decks under the slots their seats wore, which the
+    // new loadout judges again; All Random deals new decks and wears the accounts' slots.
+    let slots_of = |at: usize| -> Option<DeckSlots> {
+        if random {
+            return None;
+        }
+        finished
+            .loadouts
+            .as_ref()
+            .map(|loadouts| (if at == 0 { &loadouts.0 } else { &loadouts.1 }).seat.deck_slots())
+    };
     let seats = (
         MatchSeat {
             profile_id: finished.players.0.clone(),
@@ -237,6 +249,7 @@ async fn create_rematch(
             } else {
                 portrait_of(0)
             },
+            deck_slots: slots_of(0),
         },
         MatchSeat {
             profile_id: finished.players.1.clone(),
@@ -254,6 +267,7 @@ async fn create_rematch(
             } else {
                 portrait_of(1)
             },
+            deck_slots: slots_of(1),
         },
     );
 
