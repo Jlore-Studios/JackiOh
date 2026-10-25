@@ -2,6 +2,10 @@
   "halt": {},
   "halted": false,
   "items": {
+    "1817": {
+      "asks": [],
+      "taken_asks": []
+    },
     "1833": {
       "handoff": {
         "at": "2026-10-25T08:49:22Z",
