@@ -8,6 +8,7 @@ pub mod bots;
 pub mod catalog;
 pub mod challenges;
 pub mod chat;
+pub mod ci_runs;
 pub mod client_address;
 pub mod code_input_parity;
 pub mod codes;
