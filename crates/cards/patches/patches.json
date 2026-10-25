@@ -14568,5 +14568,31 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.4.10b",
+    "date": "2026-10-25",
+    "title": "A Unit on a carrier counts on the field",
+    "source": "#1824",
+    "notes": "R1824000: every walk of a side's acting cards takes a carried Unit once.",
+    "player": {
+      "title": "A Unit on a carrier counts on the field",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Unit standing on a carrier now counts as one of your Units on the field for every effect, cost and count, and can be picked to take Plague Counters."
+      ]
+    },
+    "commits": [
+      "4134f4c4f285343a2818ec46befee3aacbb83108"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-061"
+    ],
+    "changes": []
   }
 ]
