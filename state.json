@@ -540,11 +540,11 @@
       "issue": 1818,
       "kind": "review",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "queued_at": "2026-10-25T13:09:48Z",
-      "run_id": "",
+      "run_id": "pending:b106a897-1792935785",
       "self_check_findings": [],
-      "started_at": "2026-10-25T13:31:35Z",
+      "started_at": "2026-10-25T13:43:54Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -602,9 +602,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T13:31:35Z",
+    "at": "2026-10-25T13:43:54Z",
     "url": "",
-    "what": "review #1910 on claude-6"
+    "what": "review #1910 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-25T13:29:06Z",
