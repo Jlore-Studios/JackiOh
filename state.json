@@ -929,15 +929,15 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-10-25T19:31:01Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "40200665548",
+      "run_id": "pending:2da6cac6-1792958322",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-25T14:06:12Z",
+      "started_at": "2026-10-25T19:59:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -1458,9 +1458,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T19:41:16Z",
+    "at": "2026-10-25T19:59:39Z",
     "url": "",
-    "what": "revise #1937 on claude-8"
+    "what": "revise #1908 on muse"
   },
   "last_sweep": {
     "at": "2026-10-25T19:48:43Z",
