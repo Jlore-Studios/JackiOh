@@ -1,7 +1,14 @@
 {
   "halt": {},
   "halted": false,
-  "items": {},
+  "items": {
+    "1844": {
+      "planned_at": "2026-10-25T09:12:18Z",
+      "planned_by": "`claude-3` (claude, `opus`, strong)",
+      "planned_by_id": "claude-3",
+      "planned_tier": "strong"
+    }
+  },
   "last_run": null,
   "loop_deliveries": {
     "40177864479": {
