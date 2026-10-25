@@ -114,6 +114,7 @@ export const shopTestid = {
   shardEmpty: "shard-empty",
   chasePick: (id: string) => `shard-pick-${id}`,
   chaseCards: (id: string) => `shard-cards-${id}`,
+  chasePreview: (id: string) => `shard-preview-${id}`,
 } as const;
 
 /** How long a bought pack's copy takes to fly into its kind's unopened count; `shop.css` reads it as `--shop-fly-ms`. */

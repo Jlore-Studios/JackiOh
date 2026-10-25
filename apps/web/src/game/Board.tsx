@@ -64,7 +64,7 @@ import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
 import { WearerProvider, useWornDeckCosmetics } from "./wearer.ts";
 import Backdrop from "./Backdrop.tsx";
-import { DEFAULT_CARD_COSMETICS, useCosmetics, wornDeckCosmetics } from "../cards/cosmetics.ts";
+import { DEFAULT_CARD_COSMETICS, useCosmetics, useOwnsAccountCosmetic, wornDeckCosmetics } from "../cards/cosmetics.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7); table.css restyles
 // the viewer's half of board.css's field and so comes after it (R1297000).
@@ -647,7 +647,8 @@ export default function Board({
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
   // R1297000: the playmat and backdrop the viewer's half wears; a default adds no attribute and no element.
-  const slots = wornDeckCosmetics(wearCosmetics, deckCosmetics, useCosmetics());
+  // R1833000: an unowned pick draws as the default.
+  const slots = wornDeckCosmetics(wearCosmetics, deckCosmetics, useCosmetics(), useOwnsAccountCosmetic());
   const backdrop = slots.field === DEFAULT_CARD_COSMETICS.field ? undefined : slots.field;
   const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
 

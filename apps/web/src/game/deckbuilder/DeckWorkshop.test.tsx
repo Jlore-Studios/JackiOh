@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { EARLIER_DECK_SIZE } from "@jackioh/engine/config";
 import { DECK_AUTOSAVE_DEBOUNCE_MS, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
+import { cosmeticsOf } from "../../cards/cosmetics.ts";
 import { ApiRequestError, type SavedDeck, type SavedTrio } from "../../net/api.ts";
 import { DECK_COMPLETE_SAVED } from "./DeckEditor.tsx";
 import { decodeDeckCode, encodeDeckCode } from "./deckCode.ts";
@@ -881,13 +882,8 @@ describe("the deck's playmat, backdrop and card back (R1297000)", () => {
     expect(select("table").value).toBe("table-felt");
     expect(select("field").value).toBe("");
     expect(select("cardBack").value).toBe("card-back-standard");
-    expect([...select("field").options].map((option) => option.value)).toEqual([
-      "",
-      "field-none",
-      "field-embers",
-      "field-rain",
-      "field-fireflies",
-    ]);
+    // With nothing deciding ownership above it, every backdrop is offered (R1833000).
+    expect([...select("field").options].map((option) => option.value)).toEqual(["", ...cosmeticsOf("field").map((cosmetic) => cosmetic.id)]);
     expect(select("field").options[0]?.textContent).toBe("As equipped in Collection");
 
     // A pick saves with the deck, beside the cards and the portrait.

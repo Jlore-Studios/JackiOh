@@ -13,6 +13,7 @@ import type { CardDef } from "@jackioh/shared";
 
 import type { TokenBarsResponse } from "../net/api.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { collectionOf, ownedCosmeticsOf, tokenBars } from "./fixtures.ts";
 import {
   fittingCards,
@@ -199,11 +200,50 @@ describe("#1309 the token picker", () => {
     render(<TokenPicker token={TOKEN} />);
     await screen.findByTestId(T.tokenPanel);
 
-    // The shipped registry's only unowned, non-starter cosmetics are Epic full arts.
-    expect(screen.getByTestId(T.cosmeticNone)).toHaveTextContent("No cosmetics to pick at this tier.");
+    // The shipped registry's unowned, non-starter Common and Rare cosmetics are #1833's per-card
+    // ones (R1833000), each for a card the account owns; its full arts are Epic.
+    const listed = [...document.querySelectorAll('[data-testid^="token-cosmetic-pick-"]')].map((pick) =>
+      (pick.getAttribute("data-testid") ?? "").replace("token-cosmetic-pick-", ""),
+    );
+    expect(listed).toEqual(
+      COSMETICS.filter((cosmetic) => !cosmetic.starter && !cosmetic.default && (cosmetic.rarity === "Common" || cosmetic.rarity === "Rare")).map(
+        (cosmetic) => cosmetic.id,
+      ),
+    );
+    expect(screen.queryByTestId(T.cosmeticNone)).toBeNull();
     expect(screen.queryByTestId(T.cosmeticPick("full-art-big-d-fender"))).toBeNull();
+    expect(screen.queryByTestId(T.cosmeticPick("table-marble"))).toBeNull();
     expect(screen.getByTestId(T.tierRare)).toBeEnabled();
     expect(screen.getByTestId(T.tierEpic), "no Epic token is held").toBeDisabled();
+  });
+
+  it("R1833000 a token row shows a new cosmetic's name, rarity and look, and no token reaches a chase", async () => {
+    const bars = tokenBars();
+    tokenServer({
+      bars: {
+        status: 200,
+        body: { ...bars, tokens: { ...bars.tokens, cosmeticEpic: 1 } } satisfies TokenBarsResponse,
+      },
+    });
+    render(<TokenPicker token={TOKEN} />);
+    await screen.findByTestId(T.tokenPanel);
+
+    // A Rare foil, on the first card the account owns, worn by that card's face.
+    const sunburst = screen.getByTestId(T.cosmeticPick("foil-sunburst")).closest(".token-row");
+    expect(sunburst).toHaveTextContent("Sunburst · Rare");
+    expect(sunburst).toHaveAttribute("data-rarity", "Rare");
+    const preview = screen.getByTestId(T.cosmeticPreview("foil-sunburst"));
+    expect(preview.querySelector(".cosmetic-look .cf")).toHaveAttribute("data-cosmetic-foil", "foil-sunburst");
+
+    // An Epic playmat, on the account: its look is a mini board.
+    fireEvent.click(screen.getByTestId(T.tierEpic));
+    expect(screen.getByTestId(T.cosmeticPick("table-marble")).closest(".token-row")).toHaveTextContent("Marble · Epic");
+    expect(screen.getByTestId(T.cosmeticPreview("table-marble")).querySelector(".collection-miniboard")).toHaveAttribute(
+      "data-table",
+      "table-marble",
+    );
+    // No chase at either tier: the Mythic foil and the Legendary playmat are the Chase Shard's.
+    for (const id of ["foil-void-shimmer", "table-obsidian-slab", "card-back-nebula"]) expect(screen.queryByTestId(T.cosmeticPick(id)), id).toBeNull();
   });
 
   it("an Epic token adds the Epic full arts, and never Legendary or Mythic", async () => {
