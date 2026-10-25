@@ -145,7 +145,6 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         social: jackioh_server::social::Social::default(),
         engine_thread: test_engine_thread,
         bug_reports: jackioh_server::bug_reports::BugReports::recording(),
-        ci_runs: jackioh_server::api::ci_runs::CiRuns::canned(),
         economy_live: jackioh_server::config::ECONOMY_LIVE,
         practice_verifications: tokio::sync::Semaphore::new(
             jackioh_server::config::PRACTICE_VERIFY_CONCURRENCY,

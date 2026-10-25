@@ -14,8 +14,6 @@
 //  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
-//  - Daily runs tab (R1935000): the daily super run's last runs on main, read live from GitHub by the server and
-//    asked for again every `CI_RUNS_CACHE_TTL_SECONDS` while the tab is open.
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
@@ -25,21 +23,17 @@ import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
-import { CI_RUNS_CACHE_TTL_SECONDS } from "@jackioh/server-config";
-import { formatDateTime, formatNumber, t, useLocale } from "../i18n/i18n.ts";
+import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   getCardDrillDown,
   getCardStats,
-  getCiRuns,
   getPublicPlayers,
   type CardDrillDownResponse,
-  type CiRun,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
-import { ciInsights } from "../stats/ciInsights.ts";
 import { CARD_STATS_MIN_SAMPLE, PLAYER_SEARCH_DEBOUNCE_MS } from "../stats/config.ts";
 import { formatPlayedDelta, winPercent } from "../stats/model.ts";
 import { usePlayerStats } from "../stats/store.ts";
@@ -50,12 +44,6 @@ import "../auth/tavern.css";
 import "./stats.css";
 
 const CATALOG = catalogJson as unknown as CardDefs;
-
-/** Unit conversion, not configuration. */
-const MS_PER_SECOND = 1000;
-
-/** How much of a commit's hash a daily run shows, as GitHub shortens one. */
-const SHORT_COMMIT = 7;
 
 /** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
 function shownName(id: string, name: string): string {
@@ -118,7 +106,7 @@ function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>)
   });
 }
 
-type TabKey = "cards" | "players" | "ci";
+type TabKey = "cards" | "players";
 type ViewKey = "table" | "grid";
 type SortColumn =
   | "name"
@@ -171,10 +159,7 @@ export default function StatsRoute(): ReactElement {
   // Read initial state from URL search params
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
-  const [tab, setTab] = useState<TabKey>(() => {
-    const asked = initialParams.get("tab");
-    return asked === "players" || asked === "ci" ? asked : "cards";
-  });
+  const [tab, setTab] = useState<TabKey>(initialParams.get("tab") === "players" ? "players" : "cards");
   const [patch, setPatch] = useState<string>(initialParams.get("patch") ?? "");
   const [search, setSearch] = useState<string>(initialParams.get("search") ?? "");
   const [sortCol, setSortCol] = useState<SortColumn>(
@@ -236,13 +221,6 @@ export default function StatsRoute(): ReactElement {
   const [drillDownAttempt, setDrillDownAttempt] = useState(0);
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
-
-  // R1935000: the daily runs, null until the first answer; a failed refresh keeps the runs shown.
-  const [ciRuns, setCiRuns] = useState<CiRun[] | null>(null);
-  const [ciError, setCiError] = useState(false);
-  // Bumped by the Daily runs tab's Retry, as `cardStatsAttempt` is by the table's.
-  const [ciAttempt, setCiAttempt] = useState(0);
-  const ciSummary = useMemo(() => (ciRuns && ciRuns.length > 0 ? ciInsights(ciRuns) : null), [ciRuns]);
 
   const playerStats = usePlayerStats();
   const signedIn = readSession() !== null;
@@ -345,31 +323,6 @@ export default function StatsRoute(): ReactElement {
       return fetchPlayers(playerQuery, playerPage);
     }
   }, [tab, playerQuery, playerPage, fetchPlayers]);
-
-  // R1935000: the daily runs, asked for when the tab opens and again every `CI_RUNS_CACHE_TTL_SECONDS`
-  // while it stays open, as long as the server keeps what GitHub answered.
-  useEffect(() => {
-    if (tab !== "ci") return;
-    const controller = new AbortController();
-    const read = (): void => {
-      getCiRuns(controller.signal)
-        .then((res) => {
-          if (controller.signal.aborted) return;
-          setCiRuns(res.runs);
-          setCiError(false);
-        })
-        .catch(() => {
-          if (controller.signal.aborted) return;
-          setCiError(true);
-        });
-    };
-    read();
-    const timer = window.setInterval(read, CI_RUNS_CACHE_TTL_SECONDS * MS_PER_SECOND);
-    return () => {
-      controller.abort();
-      window.clearInterval(timer);
-    };
-  }, [tab, ciAttempt]);
 
   // Fetch card drill-down
   useEffect(() => {
@@ -663,18 +616,6 @@ export default function StatsRoute(): ReactElement {
             onClick={() => setTab("players")}
           >
             {t("Players")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="stats-tab-ci"
-            aria-selected={tab === "ci"}
-            aria-controls="stats-panel-ci"
-            className={`stats-tab ${tab === "ci" ? "stats-tab--active" : ""}`}
-            data-testid={statsTestid.tabCi}
-            onClick={() => setTab("ci")}
-          >
-            {t("Daily runs")}
           </button>
         </div>
 
@@ -1365,122 +1306,6 @@ export default function StatsRoute(): ReactElement {
                   {t("Next page")}
                 </button>
               </div>
-            )}
-          </section>
-        )}
-
-        {/* DAILY RUNS TAB (R1935000) */}
-        {tab === "ci" && (
-          <section id="stats-panel-ci" role="tabpanel" aria-labelledby="stats-tab-ci" className="stats-panel one-screen__body">
-            <p className="stats-player-note">
-              {t("The daily run tests the whole game on main: every fuzz seed, end-to-end spec and AI gate. Read live from GitHub.")}
-            </p>
-            {ciRuns === null ? (
-              ciError ? (
-                <div className="stats-error">
-                  <p>{t("Failed to load the daily runs.")}</p>
-                  <button
-                    type="button"
-                    className="stats-retry-btn"
-                    data-testid={statsTestid.ciRetry}
-                    onClick={() => {
-                      setCiError(false);
-                      setCiAttempt((attempt) => attempt + 1);
-                    }}
-                  >
-                    {t("Retry")}
-                  </button>
-                </div>
-              ) : (
-                <p className="stats-loading">{t("Loading daily runs…")}</p>
-              )
-            ) : ciRuns.length === 0 ? (
-              <p className="stats-empty">{t("No daily runs yet.")}</p>
-            ) : (
-              <>
-                {ciSummary && (
-                  <section
-                    className="stats-summary-tiles stats-ci-summary"
-                    data-testid={statsTestid.ciSummary}
-                    aria-label={t("Daily runs summary")}
-                  >
-                    <div className="stats-summary-tile">
-                      <span className="stats-summary-label">{t("Finished runs that passed")}</span>
-                      <span className="stats-summary-value">
-                        {t("{passed} of {finished}", { passed: ciSummary.passed, finished: ciSummary.finished })}
-                      </span>
-                    </div>
-                    {ciSummary.streak && (
-                      <div className="stats-summary-tile">
-                        <span className="stats-summary-label">
-                          {ciSummary.streak.result === "passed" ? t("Passed in a row") : t("Failed in a row")}
-                        </span>
-                        <span className={`stats-summary-value stats-ci-result--${ciSummary.streak.result}`}>
-                          {formatNumber(ciSummary.streak.runs)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="stats-summary-tile">
-                      <span className="stats-summary-label">{t("Failed most often")}</span>
-                      <span className="stats-summary-value">
-                        {ciSummary.mostFailed ? ciSummary.mostFailed.name : t("Nothing failed")}
-                      </span>
-                      {ciSummary.mostFailed && (
-                        <span className="stats-sample-hint">
-                          {t("in {runs} of {finished} runs", { runs: ciSummary.mostFailed.runs, finished: ciSummary.finished })}
-                        </span>
-                      )}
-                    </div>
-                  </section>
-                )}
-                <div className="stats-table-wrapper">
-                  <table className="stats-table" data-testid={statsTestid.ciTable}>
-                    <thead>
-                      <tr>
-                        <th scope="col" className="stats-th">{t("Started")}</th>
-                        <th scope="col" className="stats-th">{t("Commit")}</th>
-                        <th scope="col" className="stats-th">{t("Result")}</th>
-                        <th scope="col" className="stats-th">{t("Jobs that did not pass")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ciRuns.map((run) => (
-                        <tr key={run.id} className="stats-tr" data-result={run.result}>
-                          <td className="stats-td">
-                            <a href={run.url} target="_blank" rel="noopener noreferrer">
-                              {formatDateTime(Date.parse(run.startedAt))}
-                            </a>
-                          </td>
-                          <td className="stats-td">
-                            <code>{run.commit.slice(0, SHORT_COMMIT)}</code>
-                          </td>
-                          <td className="stats-td">
-                            <span className={`stats-ci-result stats-ci-result--${run.result}`}>
-                              {run.result === "passed" ? t("Passed") : run.result === "failed" ? t("Failed") : t("Running")}
-                            </span>
-                          </td>
-                          <td className="stats-td">
-                            {run.failedJobs.length === 0 ? (
-                              "—"
-                            ) : (
-                              <ul className="stats-ci-jobs">
-                                {run.failedJobs.map((job) => (
-                                  <li key={job.url}>
-                                    <a href={job.url} target="_blank" rel="noopener noreferrer">
-                                      {job.name}
-                                    </a>{" "}
-                                    ({job.conclusion})
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
             )}
           </section>
         )}

@@ -4,11 +4,6 @@ export const statsTestid = {
   screen: "stats-screen",
   tabCards: "stats-tab-cards",
   tabPlayers: "stats-tab-players",
-  /** R1935000: the Daily runs tab, its table and its Retry. */
-  tabCi: "stats-tab-ci",
-  ciTable: "stats-ci-table",
-  ciRetry: "stats-ci-retry",
-  ciSummary: "stats-ci-summary",
   summaryTiles: "stats-summary-tiles",
   summaryTotalGames: "stats-summary-total-games",
   provisionalBanner: "stats-provisional-banner",
