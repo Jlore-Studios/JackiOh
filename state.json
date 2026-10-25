@@ -470,6 +470,9 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "1902": {
+      "suggestion": true
+    },
     "1903": {
       "asks": [
         "c:6398740340"
