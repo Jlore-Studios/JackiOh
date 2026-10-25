@@ -312,6 +312,14 @@
       "started_at": "2026-10-25T09:21:04Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "1906": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-25T09:21:04Z",
+      "issue": 1889,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
