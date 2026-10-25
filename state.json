@@ -385,13 +385,19 @@
     "1842": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
+      "pr": 1924,
       "provider": "claude-2",
+      "question": "",
+      "round_tier": "strong",
       "run_id": "40200766079",
       "started_at": "2026-10-25T14:07:31Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "1844": {
       "handoff": {
