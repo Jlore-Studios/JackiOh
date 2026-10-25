@@ -162,9 +162,9 @@
       "planned_by": "`gpt` (codex, `gpt-5.6-sol`, medium)",
       "planned_by_id": "gpt",
       "planned_tier": "medium",
-      "provider": "gpt",
-      "run_id": "40191571946",
-      "started_at": "2026-10-25T12:04:59Z",
+      "provider": "claude-1",
+      "run_id": "pending:e00ae77c-1792934410",
+      "started_at": "2026-10-25T13:20:58Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -560,9 +560,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-25T13:11:19Z",
+    "at": "2026-10-25T13:20:58Z",
     "url": "",
-    "what": "revise #1908 on gpt"
+    "what": "plan #1826 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-25T13:08:36Z",
