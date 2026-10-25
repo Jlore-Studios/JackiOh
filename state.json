@@ -1238,12 +1238,22 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "cognition",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "gemini",
+            "run": "40211981519",
+            "tier": "medium"
+          }
+        ],
         "sha": "b2fa586efea4ad829992a83afe862348ef22710b",
-        "tiers": {}
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     }
   },
