@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
+use jackioh_server::cosmetics::{CosmeticKind, shipped};
 use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 use serde_json::{Value, json};
 
@@ -122,4 +123,39 @@ async fn r1313000_get_api_cosmetics_refuses_a_signed_out_caller() {
         (200, json!({ "cards": [], "account": [] }))
     );
     assert_eq!(get(&app, Some(PENDING_TOKEN)).await.0, 403);
+}
+
+#[tokio::test]
+async fn r1833000_an_existing_account_owns_none_of_the_36() {
+    let app = test_app().await;
+    let profile = profile_id_of(&app, USER).await;
+    // What an account made before #1833 could own: a full art on its card and an earned portrait.
+    own(&app, &profile, Some("core-008"), "full-art-mr-vanilla").await;
+    own(&app, &profile, None, "portrait-gary").await;
+    // #1833's 36: the picked kinds' entries that are neither a default nor a starter, every earlier
+    // one of those kinds being a starter (R1833000).
+    let new: Vec<String> = shipped()
+        .expect("the shipped registry")
+        .into_iter()
+        .filter(|cosmetic| {
+            CosmeticKind::PICKED.contains(&cosmetic.kind) && !cosmetic.default && !cosmetic.starter
+        })
+        .map(|cosmetic| cosmetic.id)
+        .collect();
+    assert_eq!(new.len(), 36);
+
+    // Nothing grants them: the account reads what it was given, and none of the 36.
+    let (status, body) = get(&app, Some(TOKEN)).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(
+        body,
+        json!({ "cards": [{ "cardId": "core-008", "cosmeticId": "full-art-mr-vanilla" }], "account": ["portrait-gary"] })
+    );
+    let listed = body.to_string();
+    for id in &new {
+        assert!(!listed.contains(&format!("\"{id}\"")), "{id} is owned");
+    }
+    // And another fixture account, which was given nothing, owns none either.
+    let (status, body) = get(&app, Some(OTHER_TOKEN)).await;
+    assert_eq!((status, body), (200, json!({ "cards": [], "account": [] })));
 }

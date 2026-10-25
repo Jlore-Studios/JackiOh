@@ -292,6 +292,43 @@ describe("#1308 the pack-opening scene", () => {
     expect(slot.querySelector(".pack-slot__face .cf")).toBeNull();
   });
 
+  it("R1833000 a slot that dropped a new chase shows its name, rarity and look", () => {
+    const opened = openedPack();
+    const [first, second, third, fourth, ...rest] = opened.slots;
+    torn({
+      opened: {
+        ...opened,
+        slots: [
+          first!,
+          second!,
+          // A Mythic foil on the slot's card, and a Legendary card back on the account.
+          { ...third!, grant: { kind: "cosmetic", cosmeticId: "foil-void-shimmer", cosmeticRarity: "Mythic" } },
+          { ...fourth!, grant: { kind: "cosmetic", cosmeticId: "card-back-clockwork", cosmeticRarity: "Legendary" } },
+          ...rest,
+        ],
+      },
+    });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    fireEvent.click(screen.getByTestId(T.flip(3)));
+    const foil = screen.getByTestId(T.slot(2));
+    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent("New cosmetic: Void shimmer");
+    expect(foil).toHaveTextContent("Mythic · Chase");
+    // Its own rarity, never its card's (R1333000).
+    expect(foil).toHaveAttribute("data-cosmetic-rarity", "Mythic");
+    // The slot's card, wearing the foil, in the card's place.
+    const face = foil.querySelector(".pack-slot__face .cosmetic-look .cf");
+    expect(face).toHaveAttribute("data-cosmetic-foil", "foil-void-shimmer");
+    expect(face).toHaveTextContent(CATALOG[third!.cardId]?.name ?? "no card");
+    // A card back sits on no card: its look is the back.
+    const back = screen.getByTestId(T.slot(3));
+    expect(screen.getByTestId(T.outcome(3))).toHaveTextContent("New cosmetic: Clockwork");
+    expect(back).toHaveTextContent("Legendary · Chase");
+    expect(back.querySelector(".pack-slot__face .cf-back")).toHaveAttribute("data-card-back", "card-back-clockwork");
+    expect(back.querySelector(".pack-slot__face .cf")).toBeNull();
+    // A card's slot shows its card as before, with no cosmetic rarity.
+    expect(screen.getByTestId(T.slot(0))).not.toHaveAttribute("data-cosmetic-rarity");
+  });
+
   it("Epic and above flip only after a hold", () => {
     torn();
     const epic = screen.getByTestId(T.flip(1));

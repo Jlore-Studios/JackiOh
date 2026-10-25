@@ -297,7 +297,7 @@ describe("R1313000 the full-art faces are owned cosmetics", () => {
         { cardId: "core-008", cosmeticId: "border-bone" },
         // An account cosmetic and an id the registry lacks are no card's.
         { cardId: "core-004", cosmeticId: "table-felt" },
-        { cardId: "core-004", cosmeticId: "foil-aurora" },
+        { cardId: "core-004", cosmeticId: "foil-unknown" },
       ],
       account: ["full-art-tempo-timmy", "table-felt"],
     };

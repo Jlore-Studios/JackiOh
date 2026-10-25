@@ -344,11 +344,11 @@ describe("R634 after the load, each change is sent as it happens", () => {
   });
 
   it("R1295000 an id this client does not know comes in, is kept and draws as its kind's default", async () => {
-    const api = fakeApi({ cosmetics: { at: T0 - 1_000, values: { foil: "foil-aurora", border: "border-wood" } } });
+    const api = fakeApi({ cosmetics: { at: T0 - 1_000, values: { foil: "foil-unknown", border: "border-wood" } } });
     start(api);
     await settle();
 
-    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-aurora", border: "border-wood" });
+    expect(readCosmetics()).toEqual({ ...DEFAULT_CARD_COSMETICS, foil: "foil-unknown", border: "border-wood" });
     expect(resolveCosmetic("foil", readCosmetics().foil)).toBe(DEFAULT_CARD_COSMETICS.foil);
     // Adopted, not changed: nothing goes back up to overwrite the newer client's pick.
     await pass(SETTINGS_SYNC_DEBOUNCE_MS * 3);

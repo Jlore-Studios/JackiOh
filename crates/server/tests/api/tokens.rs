@@ -714,6 +714,60 @@ async fn r1305003_an_owned_card_and_an_owned_cosmetic_are_refused_without_spend(
     assert_eq!(everything(&app).await, before);
 }
 
+#[tokio::test]
+async fn r1833000_a_rare_token_buys_foil_sunburst_not_table_marble_and_no_token_buys_foil_void_shimmer() {
+    let (app, token) = setup().await;
+    let cards = three_cards(&app);
+    own(&app, &cards[..1]).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Rare", 2).await;
+    grant_item(&app, InventoryItem::CosmeticToken, "Epic", 2).await;
+    let redeem = |body: Value| {
+        let (app, token) = (app.clone(), token.clone());
+        async move {
+            let (status, _, answer) =
+                call(&app, "POST", "/api/tokens/redeem-cosmetic", Some(&token), body).await;
+            (status, answer)
+        }
+    };
+    let owned = |ledger: &EconomyLedger, card_id: Option<&str>, cosmetic_id: &str| {
+        ledger
+            .cosmetics
+            .iter()
+            .any(|row| row.card_id.as_deref() == card_id && row.cosmetic_id == cosmetic_id)
+    };
+
+    // #1833's Rare foil, through the route over the shipped registry, on a card the account owns.
+    let (status, answer) =
+        redeem(json!({ "token": "Rare", "cosmeticId": "foil-sunburst", "cardId": cards[0] })).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owned(&ledger(&app).await, Some(&cards[0]), "foil-sunburst"));
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Rare").await, 1);
+
+    // Its Epic playmat is above a Rare token's tier, and its Mythic foil is a chase, which no
+    // token buys (R1305003): refused, and every token kept.
+    let before = everything(&app).await;
+    let (status, answer) = redeem(json!({ "token": "Rare", "cosmeticId": "table-marble" })).await;
+    assert_eq!(status, 409, "{answer}");
+    for token in ["Rare", "Epic"] {
+        let (status, answer) =
+            redeem(json!({ "token": token, "cosmeticId": "foil-void-shimmer", "cardId": cards[0] })).await;
+        assert_eq!(status, 409, "{token}: {answer}");
+    }
+    // A token of a chase's tier is no token at all.
+    for token in ["Legendary", "Mythic"] {
+        let (status, answer) =
+            redeem(json!({ "token": token, "cosmeticId": "foil-void-shimmer", "cardId": cards[0] })).await;
+        assert_eq!(status, 400, "{token}: {answer}");
+    }
+    assert_eq!(everything(&app).await, before);
+
+    // An Epic token buys the Epic playmat, on the account.
+    let (status, answer) = redeem(json!({ "token": "Epic", "cosmeticId": "table-marble" })).await;
+    assert_eq!(status, 200, "{answer}");
+    assert!(owned(&ledger(&app).await, None, "table-marble"));
+    assert_eq!(held(&app, InventoryItem::CosmeticToken, "Epic").await, 1);
+}
+
 // ---------------------------------------------------------------------------------------------
 // Reading back (R1305004)
 // ---------------------------------------------------------------------------------------------
