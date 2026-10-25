@@ -1211,11 +1211,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-25T19:10:08Z",
+        "at": "2026-10-25T20:15:25Z",
         "by": "`claude` (strong)",
-        "carried_from": "17ba34f532d9f700362ab3e76f47db4309f3c0a5",
+        "carried_from": "e731ae6f03448d8a57f6ea0100011846a0146781",
         "resolved_by": "`claude` (strong)",
-        "sha": "e731ae6f03448d8a57f6ea0100011846a0146781"
+        "sha": "c34c197b1b8a825d8473709d8ae4150a7f5b02e9"
       },
       "died": 0,
       "difficulty": "hard",
