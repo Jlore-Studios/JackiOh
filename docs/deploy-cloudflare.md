@@ -256,8 +256,8 @@ job's `check the live site` step reads it.
 - **Render API key** (once, recommended): Render -> Account Settings -> API Keys -> Create API Key,
   saved as the GitHub repository secret `RENDER_API_KEY`. With it `deploy-watch.yml` starts each
   deploy through Render's API with the pushed commit (`commitId`), and its `Render deploy of this
-  push` job follows that deploy with `Bounceapp/render-action`, so a failed build or boot shows in
-  the run with a link to its Render log. Without it the hook names the commit with `ref`. Either way
+  push` job follows that deploy by the id Render's API gives it, so a failed or canceled build
+  shows in the run and in the issue with a link to its Render log. Without it the hook names the commit with `ref`. Either way
   Render clones the public repository itself, which is what keeps deploys going while its GitHub
   access is broken: its log then says "It looks like we don't have access to your repo" and, given
   no commit, rebuilt `9809419` all through 2026-10-04.
