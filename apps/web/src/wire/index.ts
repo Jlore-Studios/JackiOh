@@ -95,6 +95,7 @@ export type { SpawnZone } from "./generated/SpawnZone.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
+export type { TradesView } from "./generated/TradesView.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { TuningChange } from "./generated/TuningChange.ts";
 export type { UnitView } from "./generated/UnitView.ts";
@@ -205,6 +206,15 @@ export const GAME_EVENT_TYPES = [
   "curveDrawn",
   // Meditative+ #18 Cognitive Offloading's autopilot (R1183002).
   "autopilotEngaged",
+  // Stinkyscape's Dormant: a Dormant card awakened (issue #1839, R1839002).
+  "awakened",
+  // Issue #1838's Trade (R1838001).
+  "traded",
+  // Issue #1840's Resources and Credits (R1840000, R1840001, R1840004, R1840005).
+  "resourceGained",
+  "resourceSold",
+  "resourceDiscarded",
+  "marketCreditsChanged",
 ] as const satisfies readonly GameEventType[];
 
 /**

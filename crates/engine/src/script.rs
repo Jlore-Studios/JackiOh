@@ -682,6 +682,28 @@ pub struct StaticFlags {
     /// where it declares it, else this; two Gardens apply the least.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embiggen_garden: Option<i32>,
+    // ---- Stinkyscape's mechanic (issue #1839) ----
+    /// R1839000: "Dormant" (SPEC §6.1): this Unit enters the field Dormant — from a hand, a deck, a
+    /// graveyard or the resolving zone, any way it arrives — and is reached by nothing but an awakening
+    /// until it awakens (`slumber.rs`). What it prints is a `SlumberText`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub slumber: Option<SlumberText>,
+}
+
+/// R1839000–R1839002: what a card's "Dormant" prints (`StaticFlags.slumber`). `turns` is "Dormant for
+/// N turns", the countdown it enters with (R1839001); absent, it is Dormant until an effect awakens it.
+/// `wakesBy` names the one Activate ability the card keeps while it is Dormant (the Dormant Starship's
+/// "pay (3) to awaken", whose effect is `effects::awaken` on itself, R1839002); its other abilities,
+/// like the rest of its text, are off until it awakens. Named apart from the "dormant" of a card
+/// beneath a Stack pile (§3.2, R13).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SlumberText {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turns: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wakes_by: Option<String>,
 }
 
 /// R1180000 (Meditative+ #9 Magic Amplifier): the Spell Damage an aura gives — `amount` to the
@@ -903,6 +925,16 @@ pub fn mode_allowed_hook(
     Arc::new(f)
 }
 
+/// R1851000, `Script.play_allowed`: whether this player may play the card now.
+pub type PlayAllowedHook = Arc<dyn Fn(&GameState, PlayerId) -> bool + Send + Sync>;
+
+/// Builds a `PlayAllowedHook`.
+pub fn play_allowed_hook(
+    f: impl Fn(&GameState, PlayerId) -> bool + Send + Sync + 'static,
+) -> PlayAllowedHook {
+    Arc::new(f)
+}
+
 /// `ActivationDecl.has`: whether the card has this ability now.
 pub type HasHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
@@ -946,6 +978,14 @@ pub struct Script {
     /// the board, asked by `legalActions`, the play's refusal and a cast's own pick alike
     /// (Meditative #98 Showdown: only an empty lane). Absent allows every option.
     pub mode_allowed: Option<ModeAllowedHook>,
+    /// R1851000: whether the card may be played now, for a card whose play needs something on the
+    /// board to act on though it declares no target its play needs (R703; Meditative #53 Prestige's
+    /// Radiant face: a Radiant enemy card on the field). A pure read of what its player may see
+    /// (§9.1), asked off the face the play resolves (R214, R399) by `legalActions`, the play's refusal
+    /// and the view's `playReason` through one check (`play_choices::play_allowed`), and by a set
+    /// Spell's Reveal (R783006); never by a cast, an Echo repeat or a random cast (R70, R1851001). A
+    /// fusion holds every ingredient's (R1851002). Absent allows the play.
+    pub play_allowed: Option<PlayAllowedHook>,
     /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
     /// play's events, and blanked from an in-flight play the other seat reads.
     pub secret_modes: bool,

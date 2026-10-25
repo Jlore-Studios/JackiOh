@@ -842,6 +842,52 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R1839002: a Dormant card awakens where it lies; its Dormant badge falls away with the next view.
+  awakened: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R1838001: a Trade. The trader's deck pulses as a card back goes from their hand into it; the
+  // `shuffledIn` and `drawn` after it move the cards, backs for a seat that may not read them.
+  traded: {
+    animation: "jk-shuffle-in",
+    durationMs: 300,
+    testid: "library-<side>",
+    fx: { recipe: "shuffle" },
+    target: (e, view) => animTestid.library(sideOf(view, e.player)),
+  },
+  // R1840000: a Resource reaches its player's tray, beside the hand: the hand's edge glints as for
+  // `addedToHand`, with no effect (FX "—"); the other seat's view names no card.
+  resourceGained: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1840001: a Resource gained past the tray's cap is sold at once, as a full hand burns a card.
+  resourceSold: {
+    animation: "jk-hand-full",
+    durationMs: 700,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1840004: a Resource discarded from the tray ceases to exist.
+  resourceDiscarded: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1840005: the Credits count ticks by the hero, as the Jade Counter's does.
+  marketCreditsChanged: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /**

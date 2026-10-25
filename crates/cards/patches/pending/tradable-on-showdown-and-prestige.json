@@ -1,0 +1,22 @@
+{
+  "title": "Tradable on Showdown and Prestige",
+  "sources": "#1838",
+  "notes": "R1838000: Tradable, Hearthstone's Tradeable at no mana (TRADE_COST 0): in their own main phase a player may Trade a Tradable hand card, which goes into their deck at a random position as they draw a card, one Trade a turn (TRADES_PER_TURN, or a figure of the player's own, PlayerState.tradesPerTurn) over all their Tradable cards, refused into a full deck; one refusal (trade::why_trade_refused) for legal_actions, the reducer and the view's tradeReason and trades. R1838001: a public traded naming only the player, then the shuffledIn and drawn it is made of, hidden per zone. R1838002: the draw is a draw for every rule and the Trade no play. R1838003: a Trade on offer keeps a turn from ending by itself; the AI, the random policy and the clock answer it. Meditative #53 Prestige and #98 Showdown are Tradable on both faces. Against main's build, the classifier's games find no family playing differently but the two Tradable cards themselves: a game moves only once a Trade is on offer, and that needs Prestige or Showdown in a hand, so the fragment claims those two cards and no `plays` or rule (R1370000).",
+  "player": {
+    "title": "Showdown and Prestige are Tradable",
+    "new": [
+      "Tradable: in your main phase, shuffle the card from your hand into your deck and draw a card, at no mana. One Trade per turn."
+    ],
+    "balance": [],
+    "changes": [
+      "Showdown is Tradable.",
+      "Prestige is Tradable."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "meditative-053",
+    "meditative-098"
+  ]
+}

@@ -47,6 +47,7 @@ pub mod activate_listed;
 pub mod after_resolution;
 pub mod aura_table;
 pub mod buff_priorities;
+pub mod card_metrics;
 pub mod card_text;
 pub mod catalog;
 pub mod chinese;

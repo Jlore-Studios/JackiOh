@@ -168,7 +168,10 @@ string_union! {
     /// Meditative set adds Wincon (its #8 Reach the Summit and #20 Aestheticize the Game, which win the
     /// game another way, R1420's set); the Meditative+ set adds Potion (its #11, #12 and #13 Living
     /// Potions and the potions its #16 Jazakus crafts, R1178000), which no rule reads and two pools
-    /// name (M+ #14, #15).
+    /// name (M+ #14, #15). Ahead of the Stinkyscape set, #1837 adds Terminus (Core #100 Ceaseless
+    /// Void), Quest (Classic #90 In Too Deep), Otherworldly (Classic+ #32 Otherworldly Removal),
+    /// Other-Origins (its three tokens, #32.1 to #32.3) and Jelly Bean (Core #26 to #29, the Glowy
+    /// Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -187,6 +190,11 @@ string_union! {
         Acclaimed = "Acclaimed",
         Wincon = "Wincon",
         Potion = "Potion",
+        Terminus = "Terminus",
+        Quest = "Quest",
+        Otherworldly = "Otherworldly",
+        OtherOrigins = "Other-Origins",
+        JellyBean = "Jelly Bean",
         Token = "Token",
     }
 }
@@ -290,6 +298,12 @@ pub const CATALOG_SETS: [SetName; 5] = [
 pub fn set_ships(set: SetName) -> bool {
     SHIPPED_SETS.contains(&set)
 }
+
+/// R1846001: the sets made for single-player modes (dungeon runs and their bosses, planned), reserved
+/// in `SetName` and holding no card yet. `SHIPPED_SETS` never lists one, so no deck holds its cards
+/// and no pool that names no set reaches them, but a catalog query's `everySet` ("every set,
+/// single-player ones too") does.
+pub const SINGLE_PLAYER_SETS: [SetName; 2] = [SetName::Boss, SetName::BossX];
 
 /// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
 /// until the Meditative set shipped, Meditative until Meditative+ did, then whichever set ships
@@ -511,6 +525,9 @@ pub enum Keyword {
     Crater,
     /// R783012: a card that may be played once from its owner's graveyard, at its cost.
     Flashback,
+    /// R1838000: a card its owner may Trade from their hand in their main phase — put into their deck
+    /// at a random position for a draw, at `TRADE_COST` — up to their Trades a turn (`trade.rs`).
+    Tradable,
 }
 
 string_union! {
@@ -554,6 +571,8 @@ string_union! {
         Cloaked = "Cloaked",
         Crater = "Crater",
         Flashback = "Flashback",
+        /// R1838000: the Trade's keyword (`trade.rs`).
+        Tradable = "Tradable",
     }
 }
 
@@ -605,6 +624,7 @@ impl Keyword {
             Keyword::Cloaked => KeywordKind::Cloaked,
             Keyword::Crater => KeywordKind::Crater,
             Keyword::Flashback => KeywordKind::Flashback,
+            Keyword::Tradable => KeywordKind::Tradable,
         }
     }
 
@@ -656,6 +676,7 @@ impl Keyword {
             KeywordKind::Cloaked => Keyword::Cloaked,
             KeywordKind::Crater => Keyword::Crater,
             KeywordKind::Flashback => Keyword::Flashback,
+            KeywordKind::Tradable => Keyword::Tradable,
         }
     }
 }
@@ -1041,6 +1062,13 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub uses_plague: Option<bool>,
+    /// R1840000: this card is a Resource, a (0) Spell token gained into its player's Resource tray
+    /// and never a hand, with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
+    /// `printedRarity` stays the card frame's alone. Absent on every other card, a fused or crafted
+    /// definition included, so a catalog without Resources serialises as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub resource: Option<ResourceDef>,
     /// E36: the non-blank, non-comment lines of this card's script file, imports excluded. Frozen
     /// gameplay data since v0.3.0 (SURFACE §7.5): C+ #44, C+ #45 and Classic #48 read it. Public (the
     /// inspect overlay prints it) and part of the card's patch history (B4.2). Absent while the card
@@ -1103,6 +1131,36 @@ pub struct FusedIngredient {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub radiant: Option<bool>,
+}
+
+/// R1840001: one face's prices for a Resource: what a sale of it fetches, a whole number drawn
+/// uniformly from `sell_min` to `sell_max`, and what the Marketplace (#1853) asks for it.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourcePrice {
+    pub sell_min: i32,
+    pub sell_max: i32,
+    pub buy: i32,
+}
+
+/// R1840000–R1840002: what makes a card a Resource (`CardDef.resource`): the rarity the roll reads,
+/// and each face's prices.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceDef {
+    pub rarity: PrintedRarity,
+    pub base: ResourcePrice,
+    pub radiant: ResourcePrice,
 }
 
 /// `Readonly<Record<string, CardDef>>`, by catalog id, in catalog order.
@@ -1253,6 +1311,8 @@ string_union! {
         Field = "field",
         Resolving = "resolving",
         Gone = "gone",
+        /// R1840000: a player's Resource tray, beside the hand.
+        Tray = "tray",
     }
 }
 
@@ -1289,6 +1349,11 @@ pub enum Zone {
     Gone {
         player: PlayerId,
     },
+    /// R1840000: a Resource in its player's Resource tray (`PlayerState.resource_tray`), read as a
+    /// hand is (§9.1): its player reads it, the other player only its count.
+    Tray {
+        player: PlayerId,
+    },
 }
 
 impl Zone {
@@ -1302,6 +1367,7 @@ impl Zone {
             Zone::Field { .. } => ZoneName::Field,
             Zone::Resolving { .. } => ZoneName::Resolving,
             Zone::Gone { .. } => ZoneName::Gone,
+            Zone::Tray { .. } => ZoneName::Tray,
         }
     }
 
@@ -1314,7 +1380,8 @@ impl Zone {
             | Zone::Exile { player }
             | Zone::Field { player, .. }
             | Zone::Resolving { player }
-            | Zone::Gone { player } => player,
+            | Zone::Gone { player }
+            | Zone::Tray { player } => player,
         }
     }
 
@@ -1328,6 +1395,7 @@ impl Zone {
             ZoneName::Exile => Some(Zone::Exile { player }),
             ZoneName::Resolving => Some(Zone::Resolving { player }),
             ZoneName::Gone => Some(Zone::Gone { player }),
+            ZoneName::Tray => Some(Zone::Tray { player }),
             ZoneName::Field => None,
         }
     }
@@ -1557,6 +1625,7 @@ mod tests {
             params: Some(params),
             deals_damage: None,
             uses_plague: None,
+            resource: None,
             loc: None,
             radiant_fallback: None,
             ingredients: None,

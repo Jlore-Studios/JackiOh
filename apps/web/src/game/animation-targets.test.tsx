@@ -156,6 +156,13 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     scriptFailed: { type: "scriptFailed", player: "p1", instanceId: unit, defId: "custom-fixture", message: "cry failed on line 3: boom" },
     curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
     autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
+    awakened: { type: "awakened", player: "p1", instanceId: unit, defId: "core-008" },
+    traded: { type: "traded", player: "p1" },
+    // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
+    resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+    resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
+    resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+    marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
   };
 }
 

@@ -24,7 +24,7 @@ use crate::config::HAND_CAP_MAX;
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
 use crate::state::{ModifierExpiry, ModifierKind};
-use crate::wire::opponent_of;
+use crate::wire::{Keyword, opponent_of};
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -158,6 +158,38 @@ pub fn price_next_spell_in_health(args: HealthPriceArgs) -> Effect {
             ModifierKind::HealthPrice {
                 multiple: args.multiple.max(0),
                 echo: args.echo.filter(|echo| *echo > 0),
+            },
+        );
+    })
+}
+
+/// `giveNextSpellKeyword`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveNextSpellKeywordArgs {
+    /// The keyword the Spell has: Poisonous for Stinkyscape #13 Asphyxiants Cloud.
+    pub keyword: Keyword,
+    /// Whose next Spell, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R1848002 (Stinkyscape #13 Asphyxiants Cloud, "This and your next Spell this turn have Poisonous"):
+/// the next Spell the player plays face-up this turn, a cast included (R70), has `keyword` for its
+/// resolution — a `keywordNextSpell` player modifier, expiry `thisTurn`, which that play spends at
+/// §10.5 step 4 (`play_steps::give_next_spell_keywords`). The card's own "this has Poisonous" is the
+/// keyword printed on its face, read off it while it resolves as a Spell's Pierce is (R346).
+pub fn give_next_spell_keyword(args: GiveNextSpellKeywordArgs) -> Effect {
+    Effect::new("giveNextSpellKeyword", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let turn = ctx.sink.state.turn;
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::ThisTurn { turn },
+            ModifierKind::KeywordNextSpell {
+                keyword: args.keyword.clone(),
             },
         );
     })

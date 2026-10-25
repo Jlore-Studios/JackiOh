@@ -115,6 +115,25 @@ pub struct Grant {
     pub params: IndexMap<String, i32>,
 }
 
+/// R1839000, R1839001: a Dormant card's status (SPEC §6.1 Dormant, `CardInstance.slumber`): on the
+/// field, filling its zone, and out of every attack's, target's and effect's reach until it awakens
+/// (`slumber.rs`). `turns` is "Dormant for N turns"'s countdown: how many more of its controller's
+/// turns must start before it awakens at the start of the last of them; absent, it sleeps until an
+/// effect awakens it (`effects::awaken`, the Dormant Starship's Activate). Named apart from the
+/// "dormant" of a card beneath a Stack pile (§3.2, R13), which is a place, not a status.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Slumber {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub turns: Option<i32>,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -273,6 +292,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub frozen: Option<i32>,
+    /// R1839000: the card is Dormant (`slumber.rs`): it entered the field printing it
+    /// (`StaticFlags.slumber`) and has not awakened. A status, never text: it goes with R78's reset as
+    /// the card leaves the field, and an awakening takes it off. Absent on every other card, so a game
+    /// with no Dormant card serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -321,6 +347,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grants: Option<Vec<Grant>>,
+    /// R1848003 (Stinkyscape #102 Book of Nono-Words, "their prices are set at 1, 2, 3, 4"): the X an
+    /// X-cost card is set at, so its player chooses none: it is played for this X, which is its price
+    /// (R65: exactly X, no modifier reaching it) and what its text reads. A price, so it rides a hand,
+    /// a library and a bounce as `costOverride` does and R766 takes it off a card reaching a graveyard
+    /// or an exile pile; a copy is a new card without it (R57). Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fixed_x: Option<i32>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -563,6 +597,14 @@ pub enum ModifierKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         echo: Option<i32>,
+    },
+    // ---- Stinkyscape (issue #1848) ----
+    /// R1848002 (Stinkyscape #13 Asphyxiants Cloud, "your next Spell this turn has Poisonous"): the next
+    /// Spell this player plays face-up (a cast included, R70) has `keyword` for its resolution, given
+    /// at §10.5 step 4 as Forever&'s enchantment is (`play_steps::give_next_spell_keywords`), which
+    /// spends it. Expiry `thisTurn`; several are each spent by that one Spell.
+    KeywordNextSpell {
+        keyword: Keyword,
     },
 }
 
@@ -1099,6 +1141,18 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    /// R1838000: how many Trades this player has made on turn `turn`, kept as `draws` is: a count kept
+    /// for an earlier turn reads as 0 (`trade::trades_this_turn`). Absent until their first Trade, so a
+    /// game nobody trades in hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades: Option<DrawCount>,
+    /// R1838000: the Trades this player may make each turn, once an effect has set a figure of their
+    /// own; absent means `TRADES_PER_TURN` (`trade::trades_per_turn_of`), so a game that never sets
+    /// one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades_per_turn: Option<i32>,
     // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
     /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
     /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -1151,6 +1205,19 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub answer_chain: Option<AnswerChain>,
+    // ---- Stinkyscape player fields (#1840, `resources`) ----
+    /// R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
+    /// at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
+    /// `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub resource_tray: Option<Vec<CardInstance>>,
+    /// R1840005: this player's Credits, public, gained by selling Resources and spent at the
+    /// Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+    /// Absent until first gained, so a game without Credits hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub market_credits: Option<i32>,
 }
 
 string_union! {
@@ -1710,6 +1777,10 @@ pub fn create_player_state() -> PlayerState {
         duos: None,
         autopilot: None,
         answer_chain: None,
+        trades: None,
+        trades_per_turn: None,
+        resource_tray: None,
+        market_credits: None,
     }
 }
 
@@ -2024,6 +2095,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enchantments: None,
         berserk: None,
         frozen: None,
+        slumber: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,
@@ -2034,6 +2106,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         set_as: None,
         granted_tags: None,
         grants: None,
+        fixed_x: None,
     };
     *next_id += 1;
     instance
@@ -2296,6 +2369,8 @@ fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
         // B5 E21: a backrow pile's dormant cards and a carrier's Unit are on the board too (R446).
         .chain(side.backrow_piles.iter().flatten().flatten())
         .chain(side.carried.iter().flatten().flatten())
+        // R1840000: a Resource in the tray is a card the state holds, as a hand card is.
+        .chain(side.resource_tray.iter().flatten())
         // R98: a card that asks a question mid-resolution is still itself, and §10.5 parks it here
         // between its play and its destination, so a resumed step finds `ctx.self` rather than null.
         .chain(side.resolving.iter())
@@ -2311,6 +2386,7 @@ fn side_cards_mut(side: &mut PlayerState) -> impl Iterator<Item = &mut CardInsta
         .chain(side.backrow.iter_mut().flatten())
         .chain(side.backrow_piles.iter_mut().flatten().flatten())
         .chain(side.carried.iter_mut().flatten().flatten())
+        .chain(side.resource_tray.iter_mut().flatten())
         .chain(side.resolving.iter_mut())
 }
 

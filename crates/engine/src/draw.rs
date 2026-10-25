@@ -65,7 +65,7 @@ fn infinite_reserves_source(sink: &EngineSink, player: PlayerId) -> Option<CardI
     for slot in crate::zones::slots_of(player, Row::Backrow) {
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
         if let Some(card) = crate::zones::card_at(sink.state, slot)
-            && !crate::preview::lasting_text_dormant(sink.state, card)
+            && !crate::preview::lasting_text_off(sink.state, card)
             && crate::scripts::script_of(sink.state, card)
                 .flags()
                 .infinite_reserves
@@ -312,7 +312,7 @@ fn text_on_field(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     crate::zones::acting_on(state, player, crate::zones::StandingAt::AmongUnits)
         .into_iter()
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        .filter(|card| !crate::preview::lasting_text_dormant(state, card))
+        .filter(|card| !crate::preview::lasting_text_off(state, card))
         .collect()
 }
 

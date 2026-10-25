@@ -47,6 +47,8 @@ pub use crate::restrictions::*;
 pub use crate::rng::*;
 pub use crate::script::*;
 pub use crate::secrets::*;
+// R1839000–R1839002: Dormant's reads and its "When this awakens" (the `awaken` verb is the effects').
+pub use crate::slumber::{is_slumbering, slumber_turns_of, when_this_awakens};
 pub use crate::state::*;
 pub use crate::times_played::*;
 pub use crate::traps::*;

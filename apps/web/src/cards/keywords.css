@@ -424,6 +424,11 @@
   animation: kw-flashback-rewind var(--kw-period-rewind) ease-in-out infinite;
 }
 
+/* R1838000: Tradable's two arrows nudge past each other, a card in and a card out. */
+.cf .kw-fx[data-keyword-fx="Tradable"][data-kw-motion="on"] .kw-anim {
+  animation: kw-trade-swap var(--kw-period-rewind) ease-in-out infinite;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -700,6 +705,16 @@
   }
   90% {
     transform: translate(-2%, 0);
+  }
+}
+
+@keyframes kw-trade-swap {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(6%);
   }
 }
 

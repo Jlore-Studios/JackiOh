@@ -477,7 +477,8 @@ fn may_read(state: &GameState, viewer: PlayerId, instance_id: &str, replaced: &R
     };
     match &card.zone {
         Zone::Library { .. } => false,
-        Zone::Hand { player } => *player == viewer,
+        // R1840000: a Resource tray is read as a hand is: its player's alone.
+        Zone::Hand { player } | Zone::Tray { player } => *player == viewer,
         Zone::Field {
             row: Row::Backrow, ..
         } => backrow_is_public(state, card, viewer),
@@ -509,6 +510,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         condition_active: None,
         countered_on_play: None,
         play_reason: None,
+        trade_reason: None,
         choices_truncated: None,
         preview: None,
         type_: None,
@@ -522,6 +524,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         activations: None,
         quest: None,
         copies: None,
+        fixed_x: None,
     }
 }
 
@@ -553,6 +556,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     view.chinese = card.chinese;
     // MD-B6, R943: Created is public the same way.
     view.created = card.created;
+    // R1848003: a set X is the card's price, read where the card is.
+    view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
     view
 }
 
@@ -686,6 +691,47 @@ fn with_play_reason(
     view
 }
 
+/// R1838000: why the viewer's own Tradable hand card cannot be Traded now, or no key at all — never
+/// empty, so a view with no Tradable card looks exactly as it did before. Only while the viewer may act
+/// (their turn, the main phase, no prompt open), and only on a card `trade::why_trade_refused` refuses,
+/// which is exactly a card `legal_actions` lists no `trade` of. Nothing else calls this, so the
+/// opponent's hand and post-game hands carry no key.
+fn with_trade_reason(
+    mut view: CardView,
+    state: &GameState,
+    card: &CardInstance,
+    viewer: PlayerId,
+) -> CardView {
+    if state.result.is_some() || state.phase != crate::wire::Phase::Main {
+        return view;
+    }
+    if state.pending.is_some() || state.active != viewer {
+        return view;
+    }
+    if !crate::trade::is_tradable(state, card) {
+        return view;
+    }
+    if let Err(refusal) = crate::trade::why_trade_refused(state, viewer, &card.id)
+        && !refusal.message.is_empty()
+    {
+        view.trade_reason = Some(refusal.message);
+    }
+    view
+}
+
+/// R1838000: the viewer's own Trades while their hand holds a Tradable card in a live game, or nothing.
+fn trades_view(state: &GameState, viewer: PlayerId) -> Option<crate::wire::TradesView> {
+    let holds = state.result.is_none()
+        && state.players[viewer]
+            .hand
+            .iter()
+            .any(|card| crate::trade::is_tradable(state, card));
+    holds.then(|| crate::wire::TradesView {
+        cost: crate::config::TRADE_COST,
+        left: crate::trade::trades_left(state, viewer),
+    })
+}
+
 /// R280, §10.8: what a card's formula comes to now rides on its view as `preview`, or not at all —
 /// never `[]`. `preview::preview_of` owns where it may: this file asks only about a card it shows the
 /// viewer (the viewer's own hand, the top of a unit pile, a backrow card face-up to the viewer).
@@ -803,6 +849,10 @@ fn unit_view_of(
         },
         // R1174000: a status, public on the field like the unit itself.
         frozen: top.frozen.map(|_| true),
+        // R1839000: a status, public on the field like the unit itself, its countdown included.
+        slumber: top.slumber,
+        // R1848000: and whether it never thaws, public the same way.
+        frozen_forever: crate::freeze::frozen_forever(top).then_some(true),
         // ME-CN, R1301: public on the field like the unit itself (the pile's top, R13).
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
@@ -1160,6 +1210,11 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
             ),
             _ => format!("Your next Spell costs health equal to {multiple} times its cost instead of mana"),
         },
+        // R1848002: Stinkyscape #13 Asphyxiants Cloud's "your next Spell this turn has Poisonous".
+        ModifierKind::KeywordNextSpell { keyword } => format!(
+            "Your next Spell this turn has {}",
+            crate::wire::keyword_key(keyword)
+        ),
     }
 }
 
@@ -1313,23 +1368,28 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             side.hand
                 .iter()
                 .map(|card| {
-                    with_choices_truncated(
-                        with_preview(
-                            with_play_reason(
-                                with_counter_warning(
-                                    with_condition(
-                                        with_embiggen_cost(hand_card_view(state, card), state, card),
-                                        condition_active(state, card, viewer, ConditionZone::Hand),
+                    with_trade_reason(
+                        with_choices_truncated(
+                            with_preview(
+                                with_play_reason(
+                                    with_counter_warning(
+                                        with_condition(
+                                            with_embiggen_cost(hand_card_view(state, card), state, card),
+                                            condition_active(state, card, viewer, ConditionZone::Hand),
+                                        ),
+                                        countered.contains(&card.id),
                                     ),
-                                    countered.contains(&card.id),
+                                    state,
+                                    card,
+                                    viewer,
                                 ),
-                                state,
-                                card,
-                                viewer,
+                                preview_of(state, card, viewer, ConditionZone::Hand),
                             ),
-                            preview_of(state, card, viewer, ConditionZone::Hand),
+                            hand_play_choices_truncated(state, viewer, card),
                         ),
-                        hand_play_choices_truncated(state, viewer, card),
+                        state,
+                        card,
+                        viewer,
                     )
                 })
                 .collect(),
@@ -1428,6 +1488,19 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         fatigue_count: side.fatigue_count,
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
+        // R1840000: the viewer's own Resource tray in full, the opponent's as a count, as the hand is,
+        // both in full once the game is over (R434); absent with no tray (D14).
+        resource_tray: side.resource_tray.as_ref().map(|tray| {
+            if player == viewer || state.result.is_some() {
+                HandView::Cards(tray.iter().map(|card| hand_card_view(state, card)).collect())
+            } else {
+                HandView::Count {
+                    count: tray.len() as i32,
+                }
+            }
+        }),
+        // R1840005: public on both seats, and absent until first gained.
+        market_credits: side.market_credits,
         // R846, R847: owed extra turns and the Rift flag, public on both seats.
         extra_turns: side.extra_turns,
         rift_extra_turn: side.rift_extra_turn,
@@ -1963,6 +2036,15 @@ fn redact_event(
             rebuild(shown)
         }
 
+        // R1840000: a Resource gained names its card as `addedToHand` does, its face with it.
+        GameEventType::ResourceGained => {
+            if hidden(&instance) {
+                shown.remove("radiant");
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            rebuild(shown)
+        }
+
         // A card named with its definition: both go, or neither.
         //
         // `cardResolved` (§10.5 step 7) is one of these rather than a public event: R97 judges a card
@@ -2289,7 +2371,14 @@ fn redact_event(
         // R831003: the curve is board positions only.
         | GameEventType::CurveDrawn
         // R1183002: the autopilot names a player and a turn.
-        | GameEventType::AutopilotEngaged => event.clone(),
+        | GameEventType::AutopilotEngaged
+        // R1838001: a Trade names its player alone; its `shuffledIn` and `drawn` are judged as any are.
+        | GameEventType::Traded
+        // R1840001, R1840004: a sold or discarded Resource ceased to exist where both seats see it go,
+        // as a burned card is (R317); R1840005: Credits are a player and a number.
+        | GameEventType::ResourceSold
+        | GameEventType::ResourceDiscarded
+        | GameEventType::MarketCreditsChanged => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 
@@ -2413,7 +2502,9 @@ fn redact_event(
         GameEventType::Activated
         | GameEventType::Animated
         | GameEventType::Deanimated
-        | GameEventType::Flickered => {
+        | GameEventType::Flickered
+        // R1839002: an awakening names a card face-up on the field, public as the card is.
+        | GameEventType::Awakened => {
             if !hidden(&instance) {
                 return event.clone();
             }
@@ -2497,7 +2588,8 @@ fn readable_where_stolen(
         return readable_from.contains(&viewer);
     }
     match zone {
-        ZoneName::Hand => from == viewer,
+        // R1840000: a Resource tray is its holder's, as a hand is.
+        ZoneName::Hand | ZoneName::Tray => from == viewer,
         ZoneName::Graveyard | ZoneName::Exile | ZoneName::Resolving => true,
         // A stolen card never comes out of "gone"; TS's switch had no case for it and answered nothing.
         ZoneName::Library | ZoneName::Field | ZoneName::Gone => false,
@@ -2632,6 +2724,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         } else {
             None
         },
+        // R1838000: the viewer's own Trades, while their hand holds a Tradable card.
+        trades: trades_view(state, player_id),
     };
     let defs = match_defs_in(state, &view);
     if !defs.is_empty() {

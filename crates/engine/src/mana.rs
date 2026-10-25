@@ -159,6 +159,7 @@ pub fn push_mana_spent(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32,
 }
 
 /// The printed cost as it stands: X uses the chosen X, an embiggen card the chosen price (R65).
+/// R1848003: an X-cost card whose X is set (`fixed_x`) costs that X wherever it is.
 pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
     let script = crate::scripts::script_of(state, instance);
     if let Some(cost) = script.cost.as_ref() {
@@ -167,7 +168,7 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
 
     let cost: CardCost = def_of(Some(state), &instance.def_id).cost;
     match cost {
-        CardCost::X => instance.x.unwrap_or(0).max(0),
+        CardCost::X => instance.x.or(instance.fixed_x).unwrap_or(0).max(0),
         CardCost::Fixed(n) => n,
         CardCost::Embiggen { base, embiggen } => {
             if instance.embiggened == Some(true) {
@@ -290,9 +291,14 @@ pub fn garden_reaches(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// R1181002, R1563004: the premium a Garden asks of a play of this card now — any card played face-up
-/// from a hand, or from a graveyard (R454), while a Garden acts.
+/// from a hand, from a graveyard (R454) or from a Resource tray (R1840003), while a Garden acts.
 fn garden_premium_for(state: &GameState, card: &CardInstance) -> Option<i32> {
-    if card.set_as.is_some() || !matches!(card.zone, Zone::Hand { .. } | Zone::Graveyard { .. }) {
+    if card.set_as.is_some()
+        || !matches!(
+            card.zone,
+            Zone::Hand { .. } | Zone::Graveyard { .. } | Zone::Tray { .. }
+        )
+    {
         return None;
     }
     garden_premium(state)
@@ -368,9 +374,10 @@ fn price_of(state: &GameState, instance: &CardInstance, options: CostOptions) ->
         garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
     }) + instance.cost_mod;
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
-    // graveyard, while a permission lets its player play it from there (E11, R454).
+    // graveyard, while a permission lets its player play it from there (E11, R454), or from its
+    // Resource tray (R1840003).
     let for_play = options.as_play == Some(true)
-        || matches!(instance.zone, Zone::Hand { .. })
+        || matches!(instance.zone, Zone::Hand { .. } | Zone::Tray { .. })
         || (matches!(instance.zone, Zone::Graveyard { .. }) && playable_from_graveyard(state, instance));
     if !for_play {
         return Price {
@@ -496,10 +503,11 @@ pub fn can_afford(state: &GameState, instance: &CardInstance) -> bool {
 pub fn cost_now(state: &GameState, card: &CardInstance) -> i32 {
     let floor = cost_floor_of(card);
     if is_x_cost(state, card) {
+        // R1848003: a set X is the card's price anywhere, the field's chosen X first.
         let x = if matches!(card.zone, Zone::Field { .. }) {
-            card.x.unwrap_or(0)
+            card.x.or(card.fixed_x).unwrap_or(0)
         } else {
-            0
+            card.fixed_x.unwrap_or(0)
         };
         return 0.max(x).max(floor);
     }

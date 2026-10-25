@@ -68,7 +68,8 @@ mutable static. Two things hold it:
 Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state), in the same order
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the
 catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`
-(with where the older shipped catalogs are found, `register_shipped`, R767000); under the `testkit`
+(with where the older shipped catalogs are found, `register_shipped`, R767000, and the card metrics
+compiled beside the catalog, `register_card_metrics`, R1846000); under the `testkit`
 feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One
 more thread-local, `catalog.rs`'s `FOLDING`, names the shipped catalog a replay is folding under:
 `with_shipped` sets it for that one call and puts the previous one back after it, a panic included,
@@ -86,6 +87,12 @@ so a fold of a game played on an older catalog version reads that version's card
   `ai_policy`, the scorer-driven `autopilot` that `reduce` drives through a turn, R1183002, heroic
   power, combo index, Call to Chaos, quests, …), each tested through fixture scripts in
   `tests/rules/fixtures/`.
+- `slumber.rs` is Dormant (§6.1, R1839000–R1839003), a status that keeps a card on the field and out
+  of every rule's reach until it awakens: `zones::active_units_of` and `zones::acts_on_field` leave a
+  Dormant card out, `restrictions::unaffected_by` passes it by for every effect, and
+  `preview::lasting_text_off` turns its text off, so a new rule that reads Units, acting cards or
+  lasting text through them gets Dormant right for nothing. Its identifiers say slumber and awaken,
+  never dormant, which names a card beneath a Stack pile (`zones::dormant_units_of`, R13).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
@@ -135,7 +142,10 @@ Every rules number is a named constant in `src/config.rs` (BUILD §2), the "deci
 R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
 `TRAINING_UNBAN`: each lane's games, pairing and wins) and Duos's team rules (§13.4, §13.7:
 `DUOS_OWN_HEALTH`, `DUOS_POOL_HEALTH`, `DUOS_POOL_HEALTH_HARD`, `DUOS_PASS_COST`, `DUOS_PASS_CAP`,
-`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`). The ones the web reads are written to
+`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`) and the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
+R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
+`trade::trades_per_turn_of`) and the Resources' (`RESOURCE_TRAY_CAP`, `RESOURCE_RARITY_ODDS`,
+R1840000–R1840002, `resources.rs`). The ones the web reads are written to
 `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript
@@ -161,7 +171,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 | Binary | Path | What |
 | --- | --- | --- |
 | `rules` | `tests/rules.rs`, `tests/rules/<x>.rs` | one module per rule area; needs `--features testkit` |
-| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash through `testkit::golden` (as `cargo jackioh golden check` replays them), and the hotseat fixture's fold to `8784adae`; needs `--features testkit` |
+| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash through `testkit::golden` (as `cargo jackioh golden check` replays them), and the hotseat fixture's fold to `7044d528`; needs `--features testkit` |
 | `export_config` | `tests/export_config.rs` | writes `engineConfig.ts` |
 
 A test that proves a ruling is named after it: `fn r58_…` (CLAUDE.md rule 3).
