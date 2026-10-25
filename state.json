@@ -13259,16 +13259,19 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-24T22:08:34Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
       "planned_by_id": "agy",
       "planned_tier": "medium",
       "provider": "agy",
+      "round_tier": "medium",
       "run_id": "40137303493",
       "started_at": "2026-10-24T22:08:58Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     }
   },
   "labels_synced": "7853ef3862488cbb",
