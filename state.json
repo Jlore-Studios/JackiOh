@@ -4,10 +4,12 @@
   "items": {
     "1841": {
       "failures": 1,
+      "round_tier": "",
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
-      "strikes": 1
+      "strikes": 1,
+      "verdict_rounds": 0
     },
     "1844": {
       "handoff": {
