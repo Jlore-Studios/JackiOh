@@ -298,6 +298,26 @@ fragment), never held behind the set's gate:
 
 ## ST6. The issues
 
+**Opened on 2026-10-25** as #1836 (the tracker to pin) to #1886:
+
+| Id | Issue | Id | Issue | Id | Issue | Id | Issue |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| L1 | #1837 | M05 | #1841 | M13 | #1847 | S07 | #1863 |
+| L2 | #1838 | M06 | #1842 | M14 | #1848 | S08 | #1864 |
+| L3 | #1851 | M07 | #1854 | M15 | #1849 | S09 | #1873 |
+| M01 | #1839 | M08 | #1855 | M16 | #1850 | S10 | #1865 |
+| M02 | #1852 | M09 | #1843 | fullsend 1 | #1856 | S11 | #1866 |
+| M03 | #1840 | M10 | #1844 | F | #1857 | S12 | #1874 |
+| M04 | #1853 | M11 | #1845 | S01–S06 | #1858, #1859, #1860, #1861, #1872, #1862 | S13–S18 | #1867, #1868, #1875, #1869, #1876, #1877 |
+| M12 | #1846 | release | #1884 | S19–S22 | #1878, #1879, #1881, #1870 | S23–S26 | #1871, #1880, #1882, #1883 |
+| fullsend 2 | #1885 | fullsend 3 | #1886 | | | | |
+
+**How they are built** (the designer, 2026-10-25): not through Squishy's fullsend mode. An issue being built in
+a Claude Code session with subagents is labelled `human`; every other buildable issue is `bot:build`, for the
+night bot, and waits for its `Blocked by` lines. So fullsend 1's parts are ordinary issues built on `main`
+behind the gate, as Meditative+'s were, and the release is a part of its own (#1884) rather than a
+reconcile. The trackers (#1836, #1856) carry no queue label.
+
 One tracker, `Patch: the Stinkyscape set` (labels `major version`, `patch`), holds a checklist of everything
 below. **No issue is titled `(part n of m)`**: the night bot builds such parts strictly in order
 (`bot/harness/queue.py`, `waits_for`), and these build in parallel, each waiting only for the issues its
@@ -464,7 +484,7 @@ Asked and answered on 2026-10-25; the S parts and mechanics are written in these
 | — | Orca's Embiggened version | The offered Miners are Radiant |
 | — | Spacerace Propaganda and The Syndicate | Field Spells, with the tags they lack |
 | — | Great Replacement Theory's name | Kept: it is satire |
-| — | Who builds | Squishy: `squishy:build` for phase 0, `squishy:fullsend` for the three fullsends |
+| — | Who builds | First Squishy; then (when the issues opened) a Claude Code session's subagents for what it takes (`human`) and the night bot for the rest (`bot:build`), ST6 |
 
 **KY's Tricknology's coordinates** (the build's choice): a zone is (x, y) with x its lane, 1 to 5, and y
 its row — 1 your unit row, 2 your backrow, −1 the enemy's unit row, −2 the enemy's backrow. The chosen
@@ -489,6 +509,5 @@ cards; Drone Hanger keeps its spelling.
   client's piece, with the repo's gates (CLAUDE.md, Commands); for a card part, each card's base and
   Radiant tests in its script file (CLAUDE.md rule 6), its BUILD M12 rows green, and `catalog check`,
   `patches check` (no fragment) and `spec check` green on the integration branch's reconcile.
-- **Labels**: `patch` (with `major version` for the set's issues), one `difficulty:*`, and Squishy's queue
-  label once it is asked for (ST9): `squishy:build` on a phase-0 issue, `squishy:fullsend` on a fullsend
-  parent, fullsend 1's only after phase 0 has merged.
+- **Labels**: `patch` (with `major version` for the set's issues), one `difficulty:*`, and `human` while a
+  Claude Code session builds it, else `bot:build` (ST6, How they are built).
