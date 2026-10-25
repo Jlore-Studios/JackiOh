@@ -578,6 +578,16 @@
         "status": "allowed"
       }
     },
+    "claude-8": {
+      "usage": {
+        "five_hour": {
+          "resets_at": "2026-10-25T09:20:00Z",
+          "utilization": 0.86
+        },
+        "observed_at": "2026-10-25T09:39:19Z",
+        "status": "allowed"
+      }
+    },
     "muse": {
       "infra": {
         "at": "2026-10-25T09:38:28Z",
