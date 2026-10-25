@@ -2,6 +2,17 @@
   "halt": {},
   "halted": false,
   "items": {
+    "1803": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "gpt",
+      "run_id": "pending:d629d556-1792920255",
+      "started_at": "2026-10-25T09:25:06Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1817": {
       "action": "build",
       "asks": [],
@@ -185,9 +196,9 @@
     }
   },
   "last_run": {
-    "at": "2026-10-25T09:24:04Z",
+    "at": "2026-10-25T09:25:06Z",
     "url": "",
-    "what": "build #1824 on claude-3"
+    "what": "build #1803 on gpt"
   },
   "loop_deliveries": {
     "40175181653": {
