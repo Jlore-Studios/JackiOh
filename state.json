@@ -230,10 +230,7 @@
       "tries": 1
     }
   },
-  "planning": {
-    "at": "2026-10-25T09:25:15Z",
-    "owner": "loop 40176073636"
-  },
+  "planning": null,
   "providers": {
     "claude-1": {
       "spent": [
