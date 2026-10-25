@@ -1951,14 +1951,6 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 <span
                   class="keyword keyword-icon"
                   data-chip="hidden"
-                  data-keyword="Immune to tribal tag based hate"
-                  title="Immune to tribal tag based hate"
-                >
-                  IT
-                </span>
-                <span
-                  class="keyword keyword-icon"
-                  data-chip="hidden"
                   data-keyword="Windfury"
                   title="Windfury"
                 >
@@ -2038,10 +2030,10 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
                 </span>
                 <span
                   class="cf-kw-more"
-                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Immune to tribal tag based hate, Windfury, Temporary, Deft, Untributable, Equip, Ranged, Flying, Cloaked, Crater, Flashback"
+                  title="First Strike, Poisonous, Lifesteal, Reborn, Trample, Cleave, Pierce, Indestructible, Immutable, Stack, Can't attack, Lucky 3, Animated, Animated on your turn, Brittle 2, Spell Damage 1, Immune to Spells, Windfury, Temporary, Deft, Untributable, Equip, Ranged, Flying, Cloaked, Crater, Flashback"
                 >
                   +
-                  28
+                  27
                 </span>
               </span>
               <span

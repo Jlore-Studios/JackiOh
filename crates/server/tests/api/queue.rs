@@ -45,7 +45,9 @@ use std::time::Duration;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use jackioh_engine::{DEFAULT_PORTRAIT, EARLIER_DECK_SIZE, newest_shipped_set, pick_portrait_from_seed};
+use jackioh_engine::{
+    DEFAULT_PORTRAIT, EARLIER_DECK_SIZE, PortraitId, newest_shipped_set, pick_portrait_from_seed,
+};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::api::collection::grant_entire_catalog;
 use jackioh_server::api::http::AuthLevel;
@@ -58,10 +60,12 @@ use jackioh_server::config::{
     RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
     STARTER_CARDS, rating_window,
 };
+use jackioh_server::cosmetics::portrait_cosmetic_id;
 use jackioh_server::db::fake::{
     CallOutcome, E2eStoreOptions, FakeCatalog, FakeData, FakeTables, create_e2e_store,
 };
 use jackioh_server::db::store::{BotDeck, NewBot, ProfileStatus, SavedDeck, StoreError};
+use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 use crate::support::store::{fake_lock, q, to_json, uuid};
@@ -386,6 +390,29 @@ async fn save(app: &Arc<App>, token: &str, deck_id: &str, cards: &[String], port
     request(app, "PUT", &format!("/api/decks/{deck_id}"), token, Some(body))
         .await
         .0
+}
+
+/// R1827000: `profile_id` owns `portraits` on its account, as a pack's drop leaves them, so a deck's
+/// save may name them.
+async fn own_portraits(app: &App, profile_id: &str, portraits: &[PortraitId]) {
+    let mut tx = app.db.begin(Some(profile_id)).await.expect("a transaction");
+    for portrait in portraits {
+        let granted = tx
+            .economy_cosmetics_grant(&CosmeticGrant {
+                profile_id: profile_id.to_string(),
+                card_id: None,
+                cosmetic_id: portrait_cosmetic_id(*portrait),
+                delta: 1,
+                reason: EconomyReason::PackOpen,
+                reference: None,
+                dev: false,
+                at: now_ms(),
+            })
+            .await
+            .expect("the grant");
+        assert!(granted, "{portrait} was already owned");
+    }
+    tx.commit().await.expect("the commit");
 }
 
 /// The store's call log and a fault to raise in it.
@@ -2027,6 +2054,9 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let deck_id = next_uuid();
         let rival_deck_id = next_uuid();
         let [mine, theirs, _] = decks_from();
+        // R1827000: a deck's save names only a portrait its account owns.
+        own_portraits(&app, "swapper", &[PortraitId::Gary, PortraitId::Timmy]).await;
+        own_portraits(&app, "rival", &[PortraitId::Shredder]).await;
         assert_eq!(save(&app, &swapper, &deck_id, &mine, Some("gary")).await, 200);
         assert_eq!(
             save(&app, &rival, &rival_deck_id, &theirs, Some("shredder")).await,

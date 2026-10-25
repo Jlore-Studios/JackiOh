@@ -12551,12 +12551,8 @@
     "base": {
       "attack": 12,
       "health": 9,
-      "keywords": [
-        {
-          "kind": "Immune to tribal tag based hate"
-        }
-      ],
-      "text": "Tribute 2, Immune to tribal tag based hate"
+      "keywords": [],
+      "text": "Tribute 2\nImmune to tribal tag based hate."
     },
     "radiant": {
       "attack": 24,
@@ -12564,12 +12560,9 @@
       "keywords": [
         {
           "kind": "Immutable"
-        },
-        {
-          "kind": "Immune to tribal tag based hate"
         }
       ],
-      "text": "Tribute 2, Immutable, Immune to tribal tag based hate"
+      "text": "Tribute 2, Immutable\nImmune to tribal tag based hate."
     }
   },
   "meditative-026": {

@@ -31,7 +31,9 @@ import {
   memoryStorage,
   savedDeck,
 } from "../game/deckbuilder/testkit.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { EMOJI_LABEL } from "./EmojiArt.tsx";
+import { ownedPortraits, portraitCosmeticId, portraitOfCosmetic, PortraitsOwned } from "./ownedPortraits.ts";
 import { PORTRAIT_DEFS } from "./portraits.ts";
 import { PortraitPicker } from "./PortraitPicker.tsx";
 
@@ -115,6 +117,51 @@ describe("the deck's portrait button (R641)", () => {
     openPicker();
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+describe("the portraits an account owns (R1827000)", () => {
+  /** The open menu's tiles, by portrait, in the order they show. */
+  function tiles(): (string | null)[] {
+    const grid = within(openPicker()).getByRole("listbox", { name: "Portraits" });
+    return [...grid.querySelectorAll<HTMLElement>(".portrait-tile")].map((tile) => tile.getAttribute("data-portrait"));
+  }
+
+  it("R1827000 the menu offers only the owned portraits, in roster order, and the deck's own", () => {
+    render(<PortraitsOwned owned={["vanilla", "gary"]}>{picker("timmy")}</PortraitsOwned>);
+    expect(tiles()).toEqual(["vanilla", "gary", "timmy"]);
+    // The deck's own pick, owned or not, is the one shown selected.
+    expect(screen.getByTestId("portrait-pick-timmy")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId("portrait-pick-shredder")).toBeNull();
+    cleanup();
+
+    // An owned pick shows once; under "every", as with no provider above it, every portrait is offered.
+    render(<PortraitsOwned owned={["vanilla", "gary"]}>{picker("gary")}</PortraitsOwned>);
+    expect(tiles()).toEqual(["vanilla", "gary"]);
+    cleanup();
+    render(<PortraitsOwned owned="every">{picker("gary")}</PortraitsOwned>);
+    expect(tiles()).toEqual([...PORTRAIT_IDS]);
+  });
+
+  it("R1827000 ownedPortraits reads the starters and the account's rows, and portraitOfCosmetic maps ids", () => {
+    // `vanilla` is the registry's starter: every account owns it with no row.
+    expect(ownedPortraits([])).toEqual(["vanilla"]);
+    expect(ownedPortraits(["portrait-shredder", "table-wood", "portrait-gary", "portrait-ulfric", "gary"])).toEqual([
+      "vanilla",
+      "gary",
+      "shredder",
+    ]);
+    expect(ownedPortraits(PORTRAIT_IDS.map(portraitCosmeticId))).toEqual([...PORTRAIT_IDS]);
+
+    expect(portraitCosmeticId("timmy")).toBe("portrait-timmy");
+    expect(portraitOfCosmetic("portrait-gary")).toBe("gary");
+    expect(portraitOfCosmetic("portrait-ulfric")).toBeNull();
+    expect(portraitOfCosmetic("table-wood")).toBeNull();
+    expect(portraitOfCosmetic("gary")).toBeNull();
+    // The registry holds one portrait cosmetic per roster id, and only `vanilla`'s is a starter.
+    const registry = COSMETICS.filter((cosmetic) => cosmetic.kind === "portrait");
+    expect(registry.map((cosmetic) => portraitOfCosmetic(cosmetic.id))).toEqual([...PORTRAIT_IDS]);
+    expect(registry.filter((cosmetic) => cosmetic.starter).map((cosmetic) => cosmetic.id)).toEqual(["portrait-vanilla"]);
   });
 });
 

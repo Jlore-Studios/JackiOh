@@ -36,4 +36,10 @@ export const COSMETICS = [
   {"id":"full-art-tempo-timmy","kind":"fullArt","name":"Tempo Timmy full art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"core-011"},
   {"id":"full-art-duplicating-felinors","kind":"fullArt","name":"Duplicating Felinors full art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"core-012"},
   {"id":"full-art-jlockeed-shredder-10","kind":"fullArt","name":"Jlockeed Shredder-10 full art","rarity":"Epic","default":false,"starter":false,"chase":false,"card":"core-013"},
+  {"id":"portrait-vanilla","kind":"portrait","name":"Mr. Vanilla portrait","rarity":"Common","default":true,"starter":true,"chase":false},
+  {"id":"portrait-gary","kind":"portrait","name":"Gary the Gambler portrait","rarity":"Epic","default":false,"starter":false,"chase":false},
+  {"id":"portrait-timmy","kind":"portrait","name":"Tempo Timmy portrait","rarity":"Epic","default":false,"starter":false,"chase":false},
+  {"id":"portrait-dfender","kind":"portrait","name":"Big D-fender portrait","rarity":"Epic","default":false,"starter":false,"chase":false},
+  {"id":"portrait-felinors","kind":"portrait","name":"Duplicating Felinors portrait","rarity":"Epic","default":false,"starter":false,"chase":false},
+  {"id":"portrait-shredder","kind":"portrait","name":"Jlockeed Shredder-10 portrait","rarity":"Epic","default":false,"starter":false,"chase":false},
 ] as const;

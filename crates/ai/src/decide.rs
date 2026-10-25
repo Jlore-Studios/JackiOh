@@ -159,7 +159,10 @@ struct Scored<'a> {
     score: f64,
 }
 
-/// The best-scoring line for each distinct first action, best first, at most `count` of them.
+/// The best-scoring line for each distinct first action, best first, at most `count` of them. A play
+/// that differs from a better one only in its lane and scores the same is left out (#1797): the beam
+/// keeps a play's lanes apart so that the reply can tell them apart, and where it did not, the lane
+/// would only take the place of another first action.
 fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<'a>> {
     let mut best: IndexMap<&'a ActionBody, Scored<'a>> = IndexMap::new();
     for entry in scored {
@@ -181,8 +184,29 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
     let mut entries: Vec<Scored<'a>> = best.into_values().collect();
     // Stable, so equal scores keep the beam's order.
     entries.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-    entries.truncate(count);
-    entries
+    let mut out: Vec<Scored<'a>> = Vec::new();
+    for entry in entries {
+        if out.len() >= count {
+            break;
+        }
+        let first = entry.line.actions.first().map(lane_free);
+        let another_lane = out
+            .iter()
+            .any(|held| held.score == entry.score && held.line.actions.first().map(lane_free) == first);
+        if !another_lane {
+            out.push(entry);
+        }
+    }
+    out
+}
+
+/// `action` with the lane of the zone it plays into left out (#1797).
+fn lane_free(action: &ActionBody) -> ActionBody {
+    let mut action = action.clone();
+    if let ActionBody::Play { zone: Some(zone), .. } = &mut action {
+        zone.lane = 0;
+    }
+    action
 }
 
 /// A decision's width (AI_SEARCH.fat_*): the more of its root candidates, or the more cards held and
@@ -751,10 +775,11 @@ pub fn decide_styled(
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::{Scenario, json, scenario};
+    use jackioh_engine::{Row, ZoneChoice};
 
     use super::*;
     use crate::config::AI_BUDGET;
-    use crate::simulate::create_node_counter;
+    use crate::simulate::{LineStatus, create_node_counter};
 
     const AI: PlayerId = PlayerId::P1;
     const LOBBYIST: &str = "classic-068"; // C #68: (3)+ Cost cards cost (1) more.
@@ -868,5 +893,50 @@ mod tests {
         let (decision, runners_up) = planned(believed.state());
         let sent = submitted(believed.state(), AI, decision.clone(), &runners_up);
         assert_eq!(sent, decision);
+    }
+
+    /// #1797: of the (3) Unit's lanes 1 and 2, which score alike, only lane 1 is a finalist; its lane
+    /// 3, which scores otherwise, is one of its own, and so the third is the (1) Unit's play.
+    #[test]
+    fn lanes_of_one_play_that_score_alike_are_one_finalist() {
+        let scenario = board(false);
+        let state = scenario.state();
+        let play = |def_id: &str, lane: i32| ActionBody::Play {
+            instance_id: scenario.card(def_id).id.clone(),
+            zone: Some(ZoneChoice {
+                row: Row::Units,
+                lane,
+            }),
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: None,
+        };
+        let line = |action: ActionBody| Line {
+            actions: vec![action, ActionBody::EndTurn],
+            score: 0.0,
+            status: LineStatus::Passed,
+            end: state.clone(),
+        };
+        let lines = [
+            line(play(MENACE, 1)),
+            line(play(MENACE, 2)),
+            line(play(MENACE, 3)),
+            line(play(VANILLA, 1)),
+        ];
+        let scored: Vec<Scored<'_>> = lines
+            .iter()
+            .zip([5.0, 5.0, 6.0, 4.0])
+            .map(|(line, score)| Scored { line, score })
+            .collect();
+        let firsts: Vec<ActionBody> = best_per_first_action(&scored, 3)
+            .iter()
+            .filter_map(|entry| entry.line.actions.first().cloned())
+            .collect();
+        assert_eq!(firsts, vec![play(MENACE, 3), play(MENACE, 1), play(VANILLA, 1)]);
     }
 }
