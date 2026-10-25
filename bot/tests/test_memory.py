@@ -8,10 +8,12 @@ time, swapping and available memory as it goes.
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from datetime import timedelta
 from pathlib import Path
+from unittest import mock
 
 from harness import dashboard, memory
 from harness.clock import iso
@@ -110,6 +112,18 @@ class DeliverTests(unittest.TestCase):
         self.assertEqual(len(kept), 1)
         self.assertGreater(kept[0]["total"], 0)
         self.assertEqual(kept[0]["runner"], "night-vm-muse")
+        self.assertNotIn("box", kept[0])
+
+    def test_a_run_on_the_second_box_keeps_its_box(self):
+        from tests.test_flow import Harness
+        from harness.config import LABEL_BUILD
+        h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("muse",), at=DAY)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+        with mock.patch.dict(os.environ, {"RUNNER_NAME": "night-vm-muse-b2"}):
+            h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                                "review": reviewer(APPROVE)}))
+        kept = h.ctx.store.load()["machine_memory"]
+        self.assertEqual((kept[0]["runner"], kept[0]["box"]), ("night-vm-muse-b2", "b2"))
 
 
 class LineTests(unittest.TestCase):
@@ -131,6 +145,28 @@ class LineTests(unittest.TestCase):
         self.assertIn("**short of memory**", text)
         self.assertIn("1 run(s) stalled on memory for 5 s or more (longest 12 s); 1 swapped", text)
         self.assertEqual(memory.line({}, DAY), "")
+
+    def test_a_runners_name_says_its_box(self):
+        # register-runners.sh's names: the label, a lane past the first, the second box's BOX.
+        for runner, label, box in (("night-vm-muse", "night-vm-muse", ""),
+                                   ("night-vm-devin-6", "night-vm-devin", ""),
+                                   ("night-vm-muse-b2", "night-vm-muse", "b2"),
+                                   ("night-vm-muse-2-b2", "night-vm-muse", "b2"),
+                                   ("someone-else", "night-vm-muse", "")):
+            self.assertEqual(memory.box_of(runner, label), box, runner)
+
+    def test_each_box_has_its_own_verdict(self):
+        # #1677: the night box with memory to spare does not hide the second box running short.
+        state: dict = {}
+        memory.note(state, self.entry(1), "night-vm-muse")
+        memory.note(state, self.entry(2), "night-vm-agy")
+        memory.note(state, self.entry(1, stall_full=30.0, swapped=9), "night-vm-muse-b2", "b2")
+        text = memory.line(state, DAY)
+        night, second = text.splitlines()[1:]
+        self.assertIn("**Machine memory, last 24 hours**, a line a box:", text)
+        self.assertIn("- the night box (2 runs): memory to spare", night)
+        self.assertIn("- the `b2` box (1 runs): **short of memory**", second)
+        self.assertIn("(longest 30 s); 1 swapped", second)
 
     def test_the_state_keeps_the_newest_runs_only(self):
         state: dict = {}
