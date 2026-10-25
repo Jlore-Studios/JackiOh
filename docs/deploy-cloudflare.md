@@ -55,7 +55,11 @@ So the workflow also runs whenever CI completes on main, and every check starts 
 a lost event is made up by the next). It promotes only if the commit changes `render.yaml`'s
 `CATALOG_VERSION` compared to what `production` has, through the same kind of pull request, and **a
 hold does not stop it** (the server already runs the new catalog, so holding the client back is what
-breaks production). It comments on the open countdown issue and leaves its time alone. Every other
+breaks production). It does wait while the live server serves another catalog than the one it would
+bring, as when Render could not deploy (out of build pipeline minutes, a failed build or boot): a
+client ahead of the server is refused just as much. The scheduled merge waits the same way, and the
+first check once the server serves it merges; running *promote production* by hand merges past it.
+It comments on the open countdown issue and leaves its time alone. Every other
 change waits for the countdown. The gap that remains is the time for CI plus a Cloudflare build
 after Render has deployed (roughly 10 to 20 minutes). Section 7 discusses closing that gap.
 
@@ -383,7 +387,10 @@ past the hour.
   `RENDER_GIT_COMMIT`) with the push, and its issue says which of three things it is. The server
   runs an older commit: Render is not receiving pushes, or a deploy failed. jackioh-server, Events
   shows a "Deploy started" for every push it receives, and a failed deploy names its step in the
-  log. The server runs the pushed commit but another catalog version: render.yaml's start command
+  log; a deploy that never started, or a build cut off, can be the workspace out of build pipeline
+  minutes (Workspace, Billing: buy more, or wait for the month's reset; nothing in the repository
+  fixes it), and production holds a catalog bump meanwhile (section 2.1). The server runs the
+  pushed commit but another catalog version: render.yaml's start command
   takes the version from `patches.json`, so `render.yaml`'s `CATALOG_VERSION` and that list
   disagree, or the service is not running render.yaml's start command (Settings, Build & Deploy;
   Blueprints). The server reports no commit: it predates the check, or `RENDER_GIT_COMMIT` is not
