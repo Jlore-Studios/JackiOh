@@ -21,6 +21,11 @@
 //! those taken before it, then decks dealt with every card already taken left out, until it holds
 //! three that pass the trio's rules (`validate_trio`, R253).
 //!
+//! R1834005: each refresh then draws the cosmetics of every active bot that holds decks and has
+//! drawn none, was dealt a deck since it drew, or drew `BOT_COSMETIC_REDRAW_DAYS` ago
+//! (`bots::cosmetics`): a wardrobe kept on its `bots` row, never in the ledger, and a loadout drawn
+//! from it as a person's.
+//!
 //! R1555000: each refresh then starts or stops the top bots' grind (`plan_grind`). While the
 //! `BOT_GRIND_REFERENCE_RANK`-th highest-rated placed person this season is more than
 //! `BOT_GRIND_GAP` above every active bot, the top `BOT_GRINDERS` active bots grind, chosen again at
@@ -46,11 +51,12 @@ use crate::api::catalog::Catalog;
 use crate::api::queue::{new_seed, new_uuid};
 use crate::api::ranked::{SeasonDeps, build_season_id};
 use crate::app::{App, now_ms};
+use crate::bots::cosmetics;
 use crate::bots::fallback::{holds_deck_size, holds_decks, holds_trio};
 use crate::bots::names::draw_username;
 use crate::bots::persona::pick_bot_persona;
 use crate::config::{
-    BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
+    BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN, BOT_COSMETIC_FITS,
     BOT_DECK_DRAW_ATTEMPTS, BOT_DECKS_MAX, BOT_DECKS_MIN, BOT_DEFAULT_USERNAME_SHARE, BOT_GRIND_GAP,
     BOT_GRIND_HYSTERESIS, BOT_GRIND_REFERENCE_RANK, BOT_GRINDERS, BOT_HOURS_PER_DAY,
     BOT_POOL_ACTIVE_WINDOW_DAYS, BOT_POOL_MAX, BOT_POOL_MIN, BOT_POOL_PER_WEEKLY_ACTIVE,
@@ -447,6 +453,8 @@ pub struct PoolRefresh {
     pub trios: usize,
     /// R1555000: bots that grind after it.
     pub grinding: usize,
+    /// R1834005: bots whose cosmetics were drawn (new bots, bots dealt decks again, bots that aged).
+    pub dressed: usize,
 }
 
 /// R1454: claims `name` for the new bot as the username route claims one. A name the checks refuse,
@@ -500,7 +508,9 @@ pub async fn release_stale_starts(app: &App, now: i64) -> Result<usize, StoreErr
 /// deals decks to every active bot that holds none for this catalog, or holds one not of `DECK_SIZE`
 /// cards (R1705001), then (R641000) a trio to every active bot that holds none for it on the same
 /// terms, then (R1555000) sets grinding the bots `plan_grind` names
-/// against this season's placed people, and every other bot, retired ones included, not. `seed`
+/// against this season's placed people, and every other bot, retired ones included, not. R1834005:
+/// between the two it draws the cosmetics of every active bot `bots::cosmetics::redraw` finds due,
+/// against what people own (`economy_cosmetic_owners`); nothing it draws reaches the ledger. `seed`
 /// seeds the new bots.
 pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh, StoreError> {
     let mut tx = app.db.begin(None).await?;
@@ -584,6 +594,39 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         trios += 1;
     }
 
+    // R1834005: after the decks and the trio, since a deck's slots and a card's picks follow them.
+    let mut tx = app.db.begin(None).await?;
+    let bots = tx.bots_list().await?;
+    let owners = tx.economy_cosmetic_owners().await?;
+    tx.commit().await?;
+    let registry = crate::cosmetics::registry();
+    let eligible = cosmetics::eligible(registry, &owners, now);
+    let mut dressed = 0;
+    for bot in bots.iter().filter(|bot| bot.retired_at.is_none()) {
+        let Some(draw) = cosmetics::redraw(
+            &format!("{seed}:{}", bot.profile_id),
+            bot,
+            BOT_COSMETIC_FITS,
+            registry,
+            &eligible,
+            now,
+        ) else {
+            continue;
+        };
+        let mut tx = app.db.begin(None).await?;
+        tx.bots_set_cosmetics(&bot.profile_id, &draw.cosmetics).await?;
+        if let Some(decks) = &draw.decks {
+            let version = bot.decks_catalog_version.as_deref().unwrap_or(&app.catalog.version);
+            tx.bots_set_decks(&bot.profile_id, decks, version).await?;
+        }
+        if let Some(trio) = &draw.trio {
+            let version = bot.trio_catalog_version.as_deref().unwrap_or(&app.catalog.version);
+            tx.bots_set_trio(&bot.profile_id, trio, version).await?;
+        }
+        tx.commit().await?;
+        dressed += 1;
+    }
+
     // R1555000: after the pool is sized, so a retired bot stops and a new one may start.
     let mut tx = app.db.begin(None).await?;
     let bots = tx.bots_list().await?;
@@ -613,6 +656,7 @@ pub async fn refresh_pool(app: &App, seed: &str, now: i64) -> Result<PoolRefresh
         dealt: stale.len(),
         trios,
         grinding: grinders.len(),
+        dressed,
     })
 }
 
@@ -631,6 +675,7 @@ pub async fn run_bot_pool(app: Arc<App>) {
                 dealt = done.dealt,
                 trios = done.trios,
                 grinding = done.grinding,
+                dressed = done.dressed,
             ),
             Err(error) => tracing::warn!(event = "bots.pool.failed", message = %error),
         }
