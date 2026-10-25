@@ -2512,6 +2512,7 @@
   "{name} takes no targets": "{name}不需要目标",
   "{name} cannot be played without {n} legal target": "{name}没有{n}个合法目标就无法打出",
   "{name} cannot be played without {n} legal targets": "{name}没有{n}个合法目标就无法打出",
+  "{name} cannot be played without something to act on": "{name}没有可作用的对象就无法打出",
   "{name} needs {n} target for that choice": "{name}在该选择下需要{n}个目标",
   "{name} needs {n} targets for that choice": "{name}在该选择下需要{n}个目标",
   "{name} takes at most {n} target for that choice": "{name}在该选择下最多需要{n}个目标",

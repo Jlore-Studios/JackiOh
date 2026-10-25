@@ -29,8 +29,8 @@ use crate::scripts::core::{
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c030_fickle_e_kitten, c037_cn_in_a_bottle,
-    c038_h1b_printer, c049_yilegpt_tamed, c054_money_machine, c074_montana_giant, c080_aluneth,
-    c097_2_wishing_well, c097_8_prison,
+    c038_h1b_printer, c049_yilegpt_tamed, c053_prestige, c054_money_machine, c074_montana_giant,
+    c080_aluneth, c097_2_wishing_well, c097_8_prison,
 };
 use crate::scripts::meditative_plus::{c001_bobs_plan, c003_wondrous_wand, c019_grubby_gloves};
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -66,7 +66,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// v0.4.4b with the numbers printed that they now declare (R1748003): Hinder's discard, Reoccurring
 /// Dream's and Eugenics' chances, Call to Arms' recruits, Zao Gao's tokens, Outbreak's draws per
 /// counter, the cost Claude's Datacenter, H1B Printer, Wondrous Wand and Grubby Gloves set, and CN in a
-/// Bottle's raise and its Radiant face's cost.
+/// Bottle's raise and its Radiant face's cost. #1851's ran its through v0.4.9: Prestige could be played
+/// on either face with nothing to De-Radiant (R1103, R1851003).
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -207,6 +208,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.4b",
         c019_grubby_gloves::script_v0_4_4b,
     ),
+    (c053_prestige::ID, "v0.4.9", c053_prestige::script_v0_4_9),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

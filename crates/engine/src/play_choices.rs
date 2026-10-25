@@ -18,7 +18,8 @@
 //! in order, each taking its own minimum and the last one the remainder; one declaration may not
 //! name the same card twice while two declarations may both name the same card; a declaration the
 //! board cannot satisfy does not refuse the play, it fizzles on resolution — unless the play needs it
-//! (`required`, R703), and then the play is neither offered nor accepted. §9.1 is why a `hand` pick
+//! (`required`, R703), and then the play is neither offered nor accepted, as it is while a card's
+//! own play gate does not hold (`play_allowed`, R1851000). §9.1 is why a `hand` pick
 //! only ever offers the chooser's own hand, and R13 is why a unit pick only offers the top of a
 //! Stack pile.
 //!
@@ -202,6 +203,18 @@ pub fn mode_option_allowed(state: &GameState, player: PlayerId, card: &CardInsta
         .mode_allowed
         .as_ref()
         .is_none_or(|allowed| allowed(state, player, option))
+}
+
+/// R1851000: whether this player may play this card now (`Script.play_allowed`; Meditative #53
+/// Prestige's Radiant face: a Radiant enemy card on the field). `card` is the face the play resolves
+/// (`resolving_face`), so a copier answers with its copied face's gate (R399, R1851002). The one check
+/// `listed_play_choices` offers by and `why_choices_refused` refuses by; a cast never asks it (R70,
+/// R1851001). A card with no gate allows it.
+pub fn play_allowed(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    crate::scripts::script_of(state, card)
+        .play_allowed
+        .as_ref()
+        .is_none_or(|allowed| allowed(state, player))
 }
 
 /// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that
@@ -1770,6 +1783,13 @@ pub fn listed_play_choices(
         Some(declared) => declared.modes.clone(),
         None => declared_modes(state, card),
     };
+    // R1851000: a play gate that does not hold leaves no combination, so the card is not offered.
+    if declared.is_none() && !play_allowed(state, player, card) {
+        return ListedChoices {
+            combos: Vec::new(),
+            truncated: false,
+        };
+    }
     if target_decls.is_empty() && mode_decls.is_empty() {
         return ListedChoices {
             combos: vec![PlayChoices::default()],
@@ -2217,9 +2237,9 @@ fn why_unplayable(
             .map(|error| error.message);
     }
     // (e) Choices: the resolving face at the cheapest price declares something the board cannot
-    // answer — a needed pick (R703) or a mode with no allowed option (R831008). The probe is the
-    // listing's default (this price, its zone, its first Tribute set, no picks), so the refusal is
-    // the one §10.5 step 1 gives that play.
+    // answer — a needed pick (R703), a mode with no allowed option (R831008) or a play gate that does
+    // not hold (R1851000). The probe is the listing's default (this price, its zone, its first
+    // Tribute set, no picks), so the refusal is the one §10.5 step 1 gives that play.
     let face = resolving_face(
         state,
         player,
@@ -2965,6 +2985,14 @@ pub fn why_choices_refused(
         &stamped,
         cost_with(state, card, action.x, action.embiggen),
     );
+    // R1851000: a play gate that does not hold refuses the play whatever it carried, as the listing
+    // offers none of it.
+    if !play_allowed(state, player, &face) {
+        return refuse(format!(
+            "{} cannot be played without something to act on",
+            name_of(state, &face.def_id)
+        ));
+    }
     let targets: &[Selection] = action.targets.as_deref().unwrap_or(&[]);
     let modes: &[String] = action.modes.as_deref().unwrap_or(&[]);
     refuse_targets(state, player, &face, targets, modes, None)?;

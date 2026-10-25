@@ -229,8 +229,8 @@ pub(crate) fn reveal_triggers(card: &CardInstance) -> Vec<TriggerDef> {
 /// R783006: whether a card set by its Cloaked can come out whole now, which its Reveal waits for — a
 /// Unit needs the unit zone it would animate into (its own lane's, else R64's leftmost open one), a
 /// Spell what playing it needs (a legal pick for each declaration its play could not go without,
-/// R703, read as its reveal reads it, `cry_trigger::reveal_set_spell`), and a Field Spell, which
-/// stands in its zone already, nothing.
+/// R703, and its play gate, R1851001, read as its reveal reads them, `cry_trigger::reveal_set_spell`),
+/// and a Field Spell, which stands in its zone already, nothing.
 pub fn reveal_can_complete(state: &GameState, card: &CardInstance) -> bool {
     let Some(at) = crate::zones::slot_of(state, card) else {
         return false;
@@ -242,13 +242,14 @@ pub fn reveal_can_complete(state: &GameState, card: &CardInstance) -> bool {
             if let Some(set) = probe.set_as.as_mut() {
                 set.revealing = Some(true);
             }
-            crate::play_choices::declared_targets(state, &probe)
-                .iter()
-                .all(|decl| {
-                    let offered =
-                        crate::play_choices::legal_selections_for(state, card.controller, &probe, decl);
-                    !crate::play_choices::unmet_requirement(decl, offered.len())
-                })
+            crate::play_choices::play_allowed(state, card.controller, &probe)
+                && crate::play_choices::declared_targets(state, &probe)
+                    .iter()
+                    .all(|decl| {
+                        let offered =
+                            crate::play_choices::legal_selections_for(state, card.controller, &probe, decl);
+                        !crate::play_choices::unmet_requirement(decl, offered.len())
+                    })
         }
         _ => true,
     }
