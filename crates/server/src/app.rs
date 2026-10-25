@@ -84,6 +84,9 @@ pub struct App {
     /// A match its own log does not reproduce, logged and filed for the night bot
     /// (`bug_reports.rs`): GitHub with `CREATE_ISSUES_TOKEN`, a record in a test's app.
     pub bug_reports: crate::bug_reports::BugReports,
+    /// SPEC §11 R1935000: the daily super run's last runs, read from GitHub for `/stats` and kept
+    /// (`api::ci_runs`); a test's app answers what the test gives it.
+    pub ci_runs: api::ci_runs::CiRuns,
     /// §14.12: whether the economy pays out, `config::ECONOMY_LIVE` at boot, on since the economy
     /// went live (R1310000). A field so a test can turn it off; nothing else sets it.
     pub economy_live: bool,
@@ -604,6 +607,12 @@ pub static ROUTES: &[Route] = &[
     ),
     (
         "GET",
+        "/api/stats/ci",
+        AuthLevel::None,
+        h!(api::ci_runs::get_ci_runs),
+    ),
+    (
+        "GET",
         "/api/stats/player",
         AuthLevel::Active,
         h!(api::stats::get_player),
@@ -915,6 +924,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     };
 
     let bug_reports = crate::bug_reports::BugReports::from_env(&env);
+    let ci_runs = api::ci_runs::CiRuns::from_env(&env);
     let app = Arc::new(App {
         env,
         db,
@@ -939,6 +949,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         social: crate::social::Social::default(),
         engine_thread: actor::engine::registered_thread,
         bug_reports,
+        ci_runs,
         economy_live: crate::config::ECONOMY_LIVE,
         practice_verifications: tokio::sync::Semaphore::new(crate::config::PRACTICE_VERIFY_CONCURRENCY),
     });

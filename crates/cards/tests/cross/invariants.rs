@@ -1437,3 +1437,120 @@ mod r1200_i8_an_activation_left_with_no_pick_while_a_mayor_acts {
         }
     }
 }
+
+/// R1829000 (issue #1829): a card a Stack pile uncovers has entered the field on that turn, though no
+/// event says so (R212). The monitor reads the uncovering off the piles of the states it is shown, a
+/// card dormant in the last one that acts now, and takes `summonedTurn`'s word only where an uncovering
+/// inside the one action was possible: a fusion's kept card keeps its turn (R77, R1086), and a card in
+/// the zone a play was announced into may have been covered and uncovered inside that action.
+mod r1829000_a_card_uncovered_beneath_a_stack {
+    use super::*;
+
+    const FIENDER: &str = "core-092"; // (2) 5/7 Stack.
+
+    /// p1's Vanilla, played on the turn returned, beneath the Felinor Fiender played onto it, on p1's
+    /// next turn, the monitor fed every action. Hit Job is still in p1's hand.
+    fn covered_on_an_earlier_turn() -> (Scenario, InvariantMonitor, CardInstance, CardInstance, i32) {
+        let mut g = scenario(json!({
+            "p1": { "hand": [VANILLA, FIENDER, HIT_JOB], "library": [VANILLA, VANILLA] },
+            "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let played_on = g.state().turn;
+        g.play(VANILLA, json!({ "zone": 1 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let vanilla = unit_at(&g, PlayerId::P1, 1, "p1's Vanilla should hold lane 1");
+        g.play(FIENDER, json!({ "zone": 1 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let fiender = unit_at(&g, PlayerId::P1, 1, "the Fiender should top lane 1");
+        assert_eq!(fiender.def_id, FIENDER);
+        for _ in 0..2 {
+            g.end_turn();
+            assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        }
+        (g, monitor, vanilla, fiender, played_on)
+    }
+
+    fn entry_mismatches(found: &[String]) -> Vec<&String> {
+        found
+            .iter()
+            .filter(|message| message.starts_with("I4 entry mismatch"))
+            .collect()
+    }
+
+    #[test]
+    fn r1829000_i4_stays_clean_as_a_unit_uncovered_on_a_later_turn_enters_again() {
+        let (mut g, mut monitor, vanilla, fiender, _) = covered_on_an_earlier_turn();
+
+        g.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+        );
+
+        assert_eq!(unit_at(&g, PlayerId::P1, 1, "the Vanilla resumed").id, vanilla.id);
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+
+    #[test]
+    fn r1829000_i4_fires_on_an_uncovered_unit_left_with_the_turn_it_was_played() {
+        let (mut g, mut monitor, vanilla, fiender, played_on) = covered_on_an_earlier_turn();
+        g.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+        );
+        find_instance_mut(g.state_mut(), &vanilla.id)
+            .expect("the Vanilla")
+            .summoned_turn = Some(played_on);
+
+        let found = monitor.after(g.last_events(), g.state());
+
+        let mismatches = entry_mismatches(&found);
+        assert_eq!(mismatches.len(), 1, "{found:?}");
+        assert!(mismatches[0].contains(&vanilla.id), "{found:?}");
+    }
+
+    /// R1086: an Equip card whose play paused on top of its host fuses into it in a later action, and
+    /// the host, which the fusion keeps, keeps the turn it arrived.
+    #[test]
+    fn r1829000_r1086_i4_stays_clean_as_the_card_a_fusion_keeps_acts_again_with_its_own_turn() {
+        let (mut g, mut monitor, vanilla, fiender, played_on) = covered_on_an_earlier_turn();
+        let mut gone = fiender.clone();
+        jackioh_engine::zones::cease_to_exist(g.state_mut(), &mut gone);
+        find_instance_mut(g.state_mut(), &vanilla.id)
+            .expect("the Vanilla")
+            .summoned_turn = Some(played_on);
+        let fused = event(json!({
+            "type": "fused", "instanceIds": [fiender.id, vanilla.id], "resultInstanceId": vanilla.id,
+            "defId": vanilla.def_id,
+        }));
+
+        assert_eq!(monitor.after(&[fused], g.state()), no_violations());
+    }
+
+    /// A Stack card played onto a unit and destroyed inside the same action (a trap answering its
+    /// summon, the autopilot's turn) uncovers the unit with nothing on the piles between actions to
+    /// show it: a play announced into the unit's zone is what makes it possible, and one announced into
+    /// another zone does not.
+    #[test]
+    fn r1829000_i4_takes_the_turn_of_a_unit_a_play_may_have_covered_and_uncovered_inside_one_action() {
+        let (mut g, monitor, _, fiender, _) = covered_on_an_earlier_turn();
+        let now = g.state().turn;
+        find_instance_mut(g.state_mut(), &fiender.id)
+            .expect("the Fiender")
+            .summoned_turn = Some(now);
+        let announced = |lane: i32| {
+            event(json!({
+                "type": "cardAnnounced", "player": "p1", "instanceId": "a-stack-card", "defId": FIENDER,
+                "cardType": "Unit", "costPaid": 2, "targets": [], "row": "units", "lane": lane,
+            }))
+        };
+
+        assert_eq!(monitor.clone().after(&[announced(1)], g.state()), no_violations());
+        for events in [vec![], vec![announced(2)]] {
+            let found = monitor.clone().after(&events, g.state());
+            let mismatches = entry_mismatches(&found);
+            assert_eq!(mismatches.len(), 1, "{found:?}");
+            assert!(mismatches[0].contains(&fiender.id), "{found:?}");
+        }
+    }
+}

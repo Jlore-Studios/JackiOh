@@ -490,6 +490,32 @@
   color: #f87171;
 }
 
+/* R1935000: a daily run's result, and the jobs of one that failed. */
+.stats-ci-result {
+  font-weight: 600;
+}
+
+.stats-ci-result--passed {
+  color: #4ade80;
+}
+
+.stats-ci-result--failed {
+  color: #f87171;
+}
+
+.stats-ci-result--running {
+  color: var(--accent, #60a5fa);
+}
+
+.stats-ci-summary {
+  margin: 12px 0;
+}
+
+.stats-ci-jobs {
+  margin: 0;
+  padding-left: 16px;
+}
+
 .stats-retry-btn {
   margin-top: 8px;
   padding: 6px 14px;
