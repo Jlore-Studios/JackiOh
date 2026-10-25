@@ -205,6 +205,20 @@
     }
   },
   "rate_limited_until": null,
+  "secrets": {
+    "at": "2026-10-25T09:13:52Z",
+    "set": [
+      "CLAUDE_CODE_OAUTH_TOKEN",
+      "CLAUDE_CODE_OAUTH_TOKEN_2",
+      "CLAUDE_CODE_OAUTH_TOKEN_3",
+      "CLAUDE_CODE_OAUTH_TOKEN_4",
+      "CLAUDE_CODE_OAUTH_TOKEN_5",
+      "CLAUDE_CODE_OAUTH_TOKEN_6",
+      "CLAUDE_CODE_OAUTH_TOKEN_7",
+      "CLAUDE_CODE_OAUTH_TOKEN_8",
+      "CLAUDE_CODE_OAUTH_TOKEN_SQUISHY"
+    ]
+  },
   "suggest": {
     "last_run": null,
     "requested": false
