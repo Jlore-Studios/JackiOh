@@ -1293,8 +1293,11 @@
     "what": "revise #1924 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-25T17:11:46Z",
-    "notes": [],
+    "at": "2026-10-25T17:18:16Z",
+    "notes": [
+      "#1929 needs a plan",
+      "#1929: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -1712,7 +1715,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-25T17:11:46Z",
+  "loop_tick": "2026-10-25T17:18:16Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-25T16:34:59Z",
