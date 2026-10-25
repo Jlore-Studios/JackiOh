@@ -205,10 +205,10 @@ mod b3_4_params_the_numbers_a_card_declares {
             &first_param("classic-038"),
             &json!({ "key": "plays", "base": 3, "radiant": 2, "better": "down", "min": 2 })
         ));
-        // A percentage: step 10, never above 100.
+        // A percentage: step 10, never above 100, at its bound on both faces since issue #1828.
         assert!(matches_object(
             &first_param("classicplus-019-2"),
-            &json!({ "key": "chance", "base": 25, "radiant": 50, "step": 10, "max": 100 })
+            &json!({ "key": "chance", "base": 100, "radiant": 100, "step": 10, "max": 100 })
         ));
     }
 
@@ -553,6 +553,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classicplus-025", KEYWORD),
         ("classicplus-036-1", KEYWORD),
         ("classicplus-047", KEYWORD),
+        ("classicplus-061", KEYWORD),
         ("classicplus-065", KEYWORD),
         ("classicplus-066", KEYWORD),
         ("meditative-036", KEYWORD),
@@ -569,6 +570,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("classic-032", PRICE),
         ("classicplus-036", PRICE),
         ("classicplus-042-1", PRICE),
+        ("classicplus-043", PRICE),
         ("meditative-004", PRICE),
         ("meditative-021", PRICE),
         ("meditative-037", PRICE),

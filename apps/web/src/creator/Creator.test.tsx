@@ -246,3 +246,27 @@ describe("R915010 a card written in code stays in code", () => {
     await waitFor(() => expect(server.cards()).toEqual([]));
   });
 });
+
+describe("the creator's script check, when it fails", () => {
+  it("offers Try again, which checks the same script again and frees Save without an edit", async () => {
+    const server = fakeServer();
+    vi.mocked(server.api.check).mockRejectedValueOnce(new Error("the Luau module did not load"));
+    render(<Creator token={TOKEN} api={server.api} onTry={vi.fn()} />);
+    await screen.findByText("0 of 50 cards");
+    type(creatorTestid.name, "Spark Lancer");
+
+    await screen.findByText("The script could not be checked: the Luau module did not load");
+    const save = screen.getByTestId(creatorTestid.save) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    expect(server.api.check).toHaveBeenCalledTimes(1);
+    const source = vi.mocked(server.api.check).mock.calls[0]?.[0].source;
+
+    fireEvent.click(screen.getByTestId(creatorTestid.checkRetry));
+
+    await waitFor(() => expect(save.disabled).toBe(false));
+    expect(server.api.check).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(server.api.check).mock.calls[1]?.[0].source).toBe(source);
+    expect(screen.queryByText(/could not be checked/u)).toBeNull();
+    expect(screen.queryByTestId(creatorTestid.checkRetry)).toBeNull();
+  });
+});

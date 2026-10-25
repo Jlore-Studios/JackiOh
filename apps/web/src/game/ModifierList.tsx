@@ -4,9 +4,9 @@
 // holds a count and a few shortened labels at most, and a badge's full text is only its `title`,
 // which a touch screen never shows. This is where the rest can be read: a chip with the count while
 // any modifier is live on either side, which opens the whole list. Practice and the lessons mount it
-// in their HUD, the online match and the Duos board in the board's rail. It reads the same
-// `SideView.modifiers` the board does, so it can show nothing the view does not (§10.8, CLAUDE.md
-// rule 7).
+// in their HUD; the online match, the Duos board, the watch screen and the replay player in the
+// board's rail. It reads the same `SideView.modifiers` the board does, so it can show nothing the
+// view does not (§10.8, CLAUDE.md rule 7).
 
 import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";

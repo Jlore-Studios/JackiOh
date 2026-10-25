@@ -24,6 +24,7 @@ import type { ActionBody } from "@jackioh/shared";
 import { useFxSettings } from "../fx/settings.ts";
 import { scaleForSpeed } from "../game/animations.ts";
 import Game from "../game/Game.tsx";
+import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "./source.ts";
@@ -393,7 +394,13 @@ export default function ReplayPlayer({
         onAction={IGNORE}
         replay
         resultForm="chip"
-        boardRail={back}
+        boardRail={
+          <>
+            {back}
+            {/* R169: the live modifiers of the step on the board, in full, one tap away. */}
+            <ModifierList view={at.step.view} opponentLabel={t("Opponent")} />
+          </>
+        }
         boardNotice={
           <>
             {controls}
