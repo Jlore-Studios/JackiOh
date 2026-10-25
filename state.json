@@ -31,12 +31,15 @@
       "action": "build",
       "asks": [],
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "provider": "agy",
+      "round_tier": "",
       "run_id": "40180419342",
       "started_at": "2026-10-25T09:23:03Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "1824": {
       "action": "build",
