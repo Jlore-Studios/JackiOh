@@ -13282,6 +13282,13 @@
     "1817": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T03:52:08Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 7: one app and unit-tested, but it adds a chip to the board's control-bar rail on the watch and replay screens, and only someone looking at a phone can check that it fits; the issue is also labelled medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
