@@ -27813,6 +27813,12 @@
         "number": 1772,
         "title": "Patch: turning public player statistics off reaches the account or says it didn't, with Try again, and a settings reset reaches it too",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-25T03:34:30Z",
+        "number": 1819,
+        "title": "Patch: the inline confirms on the series, friends and creator screens take focus and answer Escape",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-25T03:27:08Z",
