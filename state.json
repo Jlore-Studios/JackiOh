@@ -70,7 +70,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-8",
-      "run_id": "pending:83233186-1792919696",
+      "run_id": "40179902870",
       "started_at": "2026-10-25T09:15:34Z",
       "stop_requested": false,
       "taken_asks": []
