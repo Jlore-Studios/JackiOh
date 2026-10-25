@@ -582,6 +582,13 @@
     "1896": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T16:20:21Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule line 3 fails: R890000's text says endings clear the in-match flag unconditionally, so the swap needs a new ruling (R1896000) and spec edits, not just the two lines the issue rated easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
