@@ -565,6 +565,13 @@
     "1898": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-25T15:49:09Z",
+        "difficulty": "easy",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "Line 9 (stands alone) was the hardest to check, since I can't see open PRs: no remote branch touches ChatPanel.tsx or testids.ts. Line 8 holds because the plan settles the one trap: a separate read-failure state, so a good poll does not wipe a refused send"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
