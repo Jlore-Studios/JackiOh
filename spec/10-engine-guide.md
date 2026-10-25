@@ -88,12 +88,14 @@ type CardInstance = {
   brittle?: { count: number; since: number; printed?: true };  // Brittle X (R385, R441, R638); kept in every zone but ticking on the field only, never copied
   berserk?: true;               // C+ #19.5's status, lost on leaving the field (R412)
   frozen?: number;              // Frozen: thaws at the cleanup of its controller's first turn numbered this or later; lost on leaving the field and to a Vanilla (R1174000)
+                                // a forever freeze is stamped FROZEN_FOREVER, a turn no cleanup reaches (R1848000)
   chinese?: true;               // shown in Chinese, and so CN; kept everywhere (R1300, R1176000)
   created?: true;               // minted after the decks were built, kept everywhere (R943)
   grantedTags?: Tag[];          // granted by an effect (R923)
   grants?: { grant: string; radiant: boolean; params?: Record<string, number> }[];  // Death abilities other cards granted, in order; a `<defId>#<key>` naming a hook the granting card registers (R1107); lost on leaving the field (R78)
   timesPlayed?: number;         // plays of this instance, the current one included (#31, R429); kept in every zone
   enchantments?: ({ kind: 'returnAfterResolve'; floor: number } | { kind: 'castOnDraw' } | { kind: 'targetEnemies' })[];  // riders kept in every zone (C+ #14, C+ #40, R443)
+  fixedX?: number;              // an X-cost card's X, set: it is played for it and costs it; a price, so R766 takes it off (Stinkyscape #102, R1848003)
 };
 ```
 

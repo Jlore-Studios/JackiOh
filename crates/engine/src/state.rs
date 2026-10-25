@@ -347,6 +347,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grants: Option<Vec<Grant>>,
+    /// R1848003 (Stinkyscape #102 Book of Nono-Words, "their prices are set at 1, 2, 3, 4"): the X an
+    /// X-cost card is set at, so its player chooses none: it is played for this X, which is its price
+    /// (R65: exactly X, no modifier reaching it) and what its text reads. A price, so it rides a hand,
+    /// a library and a bounce as `costOverride` does and R766 takes it off a card reaching a graveyard
+    /// or an exile pile; a copy is a new card without it (R57). Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fixed_x: Option<i32>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -589,6 +597,14 @@ pub enum ModifierKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         echo: Option<i32>,
+    },
+    // ---- Stinkyscape (issue #1848) ----
+    /// R1848002 (Stinkyscape #13 Asphyxiants Cloud, "your next Spell this turn has Poisonous"): the next
+    /// Spell this player plays face-up (a cast included, R70) has `keyword` for its resolution, given
+    /// at §10.5 step 4 as Forever&'s enchantment is (`play_steps::give_next_spell_keywords`), which
+    /// spends it. Expiry `thisTurn`; several are each spent by that one Spell.
+    KeywordNextSpell {
+        keyword: Keyword,
     },
 }
 
@@ -2075,6 +2091,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         set_as: None,
         granted_tags: None,
         grants: None,
+        fixed_x: None,
     };
     *next_id += 1;
     instance

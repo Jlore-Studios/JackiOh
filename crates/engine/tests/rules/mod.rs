@@ -209,6 +209,7 @@ pub mod shuffle_random;
 pub mod sick_view;
 pub mod slumber;
 pub mod spell_power;
+pub mod spell_verbs;
 pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;

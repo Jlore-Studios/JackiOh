@@ -34,6 +34,7 @@ import {
   DORMANT_GLYPH,
   DORMANT_NEXT_TURN_WORDS,
   DORMANT_WORDS,
+  FROZEN_FOREVER_WORDS,
   FROZEN_GLYPH,
   FROZEN_WORDS,
   PILE_WORDS,
@@ -664,6 +665,31 @@ describe("R1839000 Dormant: a moon badge and its countdown on a Dormant card, on
     expect(theirs?.getAttribute("aria-label")).toBe(DORMANT_NEXT_TURN_WORDS);
     const preview = hover(root);
     expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe(`${DORMANT_GLYPH}2${dormantWords(2)}`);
+  });
+});
+
+/* ----------------------------------------------------------------------------- R1848000 Frozen forever */
+
+describe("R1848000 Frozen forever: the frost badge says it never thaws, on either seat", () => {
+  it("R1848000 a unit Frozen forever wears the frost badge in its own words; one Frozen until it thaws keeps the old ones", () => {
+    vi.useFakeTimers();
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [unit("p1", { instanceId: "u1", defId: "core-008", frozen: true, frozenForever: true }), unit("p1", { instanceId: "u2", defId: "core-008", frozen: true }), null, null, null],
+        }),
+        opponent: emptySide("p2", {
+          units: [unit("p2", { instanceId: "u3", defId: "core-008", frozen: true, frozenForever: true }), null, null, null, null],
+        }),
+      }),
+    );
+    const forever = screen.getByTestId(testid.card("u1")).querySelector('.cf-state[data-state="frozen"]');
+    expect(forever?.getAttribute("aria-label")).toBe(FROZEN_FOREVER_WORDS);
+    expect(forever?.textContent).toBe(FROZEN_GLYPH);
+    const thawing = screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="frozen"]');
+    expect(thawing?.getAttribute("aria-label")).toBe(FROZEN_WORDS);
+    const theirs = screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="frozen"]');
+    expect(theirs?.getAttribute("aria-label")).toBe(FROZEN_FOREVER_WORDS);
   });
 });
 

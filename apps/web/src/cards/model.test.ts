@@ -324,6 +324,20 @@ describe("B8: faceModel cost", () => {
     expect(face("core-024", false).cost).toEqual({ text: "X", value: "X", tone: "base", alt: null });
   });
 
+  it("R1848003 an X card whose X is set prints the set X on its gem", () => {
+    // Stinkyscape #102 Book of Nono-Words' copies: the view's `fixedX` is the price, and the gem says it.
+    for (const fixedX of [1, 2, 3, 4]) {
+      expect(face("core-024", false, { liveCost: fixedX, fixedX }).cost, `X set at ${fixedX}`).toEqual({
+        text: String(fixedX),
+        value: String(fixedX),
+        tone: "base",
+        alt: null,
+      });
+    }
+    // With none set, the gem says X as ever.
+    expect(face("core-024", false, { liveCost: 2 }).cost.text).toBe("X");
+  });
+
   it("B8 an embiggen card shows its base price, with alt set to the embiggen price", () => {
     expect(face("core-046", false).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
     expect(face("core-046", false, { liveCost: 2 }).cost).toEqual({ text: "2", value: "2", tone: "base", alt: "4" });
