@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, Rarity, StarscapeReward, Tag, string_union,
 };
 
 /// §2.6, R1705000
@@ -1082,6 +1082,25 @@ pub const NIGHT_MARKET_CN_LOTS: i32 = 3;
 pub const NIGHT_MARKET_ROCK_LOTS: i32 = 2;
 /// R1000: the stall's random AI generated card.
 pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002,
+// `subsystems::starscape`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1847000, R1847001: a starscape map's nodes, the edge the last: the travels from the start to the
+/// edge of the universe.
+pub const STARSCAPE_EDGE_TRAVELS: i32 = 20;
+/// R1847002: a travel's mana, the Radiant face's first each turn free.
+pub const STARSCAPE_TRAVEL_MANA: i32 = 1;
+/// R1847000, R1847001: the rewards a node before the edge may hold, one entry each, drawn uniformly,
+/// and each one's amount: the health healed, the cards drawn, the mana gained, the damage dealt.
+pub const STARSCAPE_REWARDS: &[(StarscapeReward, i32)] = &[
+    (StarscapeReward::Heal, 3),
+    (StarscapeReward::Draw, 1),
+    (StarscapeReward::Mana, 1),
+    (StarscapeReward::Damage, 2),
+];
 
 // ---------------------------------------------------------------------------------------------
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).

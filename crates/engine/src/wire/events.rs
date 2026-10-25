@@ -140,6 +140,17 @@ string_union! {
 }
 
 string_union! {
+    /// R1847000: what a starscape node gives (config `STARSCAPE_REWARDS`); `Edge` is the last node's.
+    pub enum StarscapeReward {
+        Heal = "heal",
+        Draw = "draw",
+        Mana = "mana",
+        Damage = "damage",
+        Edge = "edge",
+    }
+}
+
+string_union! {
     /// R981: how a Feng Shui judged a play (`fengShui.outcome`). A neutral play has no event.
     pub enum FengShuiOutcome {
         Positive = "positive",
@@ -905,6 +916,13 @@ pub enum GameEvent {
         player: PlayerId,
         turn: i32,
     },
+    /// R1847001: `player` travelled to `node` (1 to `STARSCAPE_EDGE_TRAVELS`) of their starscape map,
+    /// which gives `reward`. Public: a player, a number and a reward.
+    StarscapeTravelled {
+        player: PlayerId,
+        node: i32,
+        reward: StarscapeReward,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1039,6 +1057,7 @@ string_union! {
         ScriptFailed = "scriptFailed",
         CurveDrawn = "curveDrawn",
         AutopilotEngaged = "autopilotEngaged",
+        StarscapeTravelled = "starscapeTravelled",
     }
 }
 
@@ -1206,6 +1225,7 @@ impl GameEvent {
             GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
             GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
             GameEvent::AutopilotEngaged { .. } => GameEventType::AutopilotEngaged,
+            GameEvent::StarscapeTravelled { .. } => GameEventType::StarscapeTravelled,
         }
     }
 }
@@ -1277,9 +1297,9 @@ mod tests {
         // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
         // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
-        // and #831's patch one more, `curveDrawn` (R831003); and Meditative+ #18 one,
-        // `autopilotEngaged` (R1183002).
-        assert_eq!(GAME_EVENT_TYPES.len(), 79);
+        // and #831's patch one more, `curveDrawn` (R831003); Meditative+ #18 one,
+        // `autopilotEngaged` (R1183002); and the starscape map one, `starscapeTravelled` (R1847001).
+        assert_eq!(GAME_EVENT_TYPES.len(), 80);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

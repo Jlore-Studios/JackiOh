@@ -23,7 +23,7 @@ use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
     GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
-    SecretChoice, Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -1009,6 +1009,23 @@ pub struct AnswerChain {
     pub depth: i32,
 }
 
+/// R1847000 (Stinkyscape #148 Alteran Reach): a player's starscape map (`subsystems::starscape`), charted
+/// from the match rng at their first travel. `nodes` is the map, node n at `nodes[n - 1]` and the edge
+/// last; `at` is the node they stand on, 0 the start; `travelled_on` is the `GameState.turn` of their
+/// last travel (R1847002).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeMap {
+    pub nodes: Vec<StarscapeReward>,
+    pub at: i32,
+    pub travelled_on: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1151,6 +1168,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub answer_chain: Option<AnswerChain>,
+    /// R1847000: this player's starscape map, public. Absent until their first travel, so a game
+    /// without one hashes as before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starscape: Option<StarscapeMap>,
 }
 
 string_union! {
@@ -1710,6 +1732,7 @@ pub fn create_player_state() -> PlayerState {
         duos: None,
         autopilot: None,
         answer_chain: None,
+        starscape: None,
     }
 }
 

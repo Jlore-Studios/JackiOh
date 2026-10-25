@@ -11,6 +11,7 @@ import type { HeroState } from "./HeroState";
 import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
+import type { StarscapeMap } from "./StarscapeMap";
 import type { TurnLog } from "./TurnLog";
 
 export type PlayerState = { hero: HeroState, mana: ManaState, hand: Array<CardInstance>, library: Array<CardInstance>, graveyard: Array<CardInstance>, exile: Array<CardInstance>, 
@@ -120,4 +121,9 @@ autopilot?: Autopilot,
  * player's Spells and how many answers led to it. Absent but while one is, so a game without an
  * answering card hashes as before this field existed (D9).
  */
-answerChain?: AnswerChain, };
+answerChain?: AnswerChain, 
+/**
+ * R1847000: this player's starscape map, public. Absent until their first travel, so a game
+ * without one hashes as before this field existed (D14).
+ */
+starscape?: StarscapeMap, };

@@ -10,6 +10,7 @@ import type { ModifierView } from "./ModifierView";
 import type { PlayerId } from "./PlayerId";
 import type { RowFlags } from "./RowFlags";
 import type { SecretView } from "./SecretView";
+import type { StarscapeView } from "./StarscapeView";
 import type { UnitView } from "./UnitView";
 
 export type SideView = { player: PlayerId, hero: HeroView, 
@@ -88,4 +89,9 @@ secrets?: Array<SecretView>,
  * `query::luck_of` as the hero panel reads its armor through `hero_armor_of`. Absent at 0, so a
  * game with no Feng Shui looks as it did (D14).
  */
-luck?: number, };
+luck?: number, 
+/**
+ * R1847000: this seat's starscape map, shown to both seats. Absent until the player first
+ * travels, so a game without one sends the view it always did (D14).
+ */
+starscape?: StarscapeView, };
