@@ -1508,6 +1508,9 @@
     "1945": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "1f25d2c4e12ea2e027066ea8aa28bb58a9f07036": 1
+      },
       "cleared": {
         "at": "2026-10-25T21:11:04Z",
         "by": "`claude` (strong)",
