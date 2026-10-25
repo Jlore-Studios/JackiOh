@@ -3207,6 +3207,20 @@ pub async fn matches_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<Mat
         .collect()
 }
 
+pub async fn matches_has_actions(t: &mut PgTx<'_>, match_id: &str) -> Result<bool, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let row =
+        sqlx::query("select exists (select 1 from public.match_actions where match_id = $1::uuid) as logged")
+            .bind(match_id)
+            .fetch_one(&mut **t)
+            .await
+            .map_err(db_error)?;
+    get(&row, "logged")
+}
+
 /// #1169: one statement, so the guards and the write cannot come apart: the row goes in only while
 /// the match is live and its log holds `seq` under `nonce`, and replaces only an earlier seq's.
 pub async fn matches_put_checkpoint(t: &mut PgTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
@@ -7754,7 +7768,11 @@ pub async fn shares_sharers(
     rows.iter().map(|row| uuid_text(row, "sharer")).collect()
 }
 
-pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+pub async fn shares_for(
+    t: &mut PgTx<'_>,
+    friend: &str,
+    limit: i64,
+) -> Result<Vec<SharedReplayRow>, StoreError> {
     if !is_uuid(friend) {
         return Ok(Vec::new());
     }
@@ -7766,9 +7784,11 @@ pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedRepl
           where s.friend = $1::uuid and ",
         readable_share!(),
         "
-          order by s.created_at desc, s.match_id desc, s.sharer desc"
+          order by s.created_at desc, s.match_id desc, s.sharer desc
+          limit $2::bigint"
     ))
     .bind(friend)
+    .bind(limit)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;

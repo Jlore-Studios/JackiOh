@@ -48,7 +48,7 @@ mod tests {
     const TIMMY: &str = "core-011";
     const MENACE: &str = "core-019";
     const STOCKPILE: &str = "core-005";
-    const NOTEBOOK: &str = "core-051-1"; // Spell 1: draw 1
+    const CURSE: &str = "classic-001"; // Spell 1: no hit against an empty enemy exile (R63), then draw 1
     const MANA_WELL: &str = "core-006"; // Field Spell
     const SHEEPISH: &str = "core-041"; // Trap
 
@@ -112,10 +112,10 @@ mod tests {
         #[test]
         fn r73_the_fatigue_counts_stay_with_the_players_and_an_empty_deck_swaps_too() {
             let mut s = scenario(json!({
-                "p1": { "hand": [NOTEBOOK, KING, STOCKPILE], "library": [], "mana": 5 },
+                "p1": { "hand": [CURSE, KING, STOCKPILE], "library": [], "mana": 5 },
                 "p2": p2_with(json!([MENACE, TIMMY, VANILLA]))
             }));
-            s.play(NOTEBOOK, json!({}));
+            s.play(CURSE, json!({}));
             assert_eq!(s.state().players.p1.fatigue_count, 1);
             s.play(KING, json!({}));
             assert_eq!(s.pile(P1, "library").len(), 3);

@@ -2215,6 +2215,9 @@ pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
 pub const CHAT_RETENTION_DAYS: i64 = 30;
 /// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
 pub const CHAT_PAGE: i64 = 50;
+/// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
+/// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
+pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
 /// B58: how often an open chat panel reads its conversation again.
 pub const CHAT_POLL_MS: i64 = 4_000;
 /// §9.4: how often a signed-in client reads its unread counts and its challenges again (the challenge

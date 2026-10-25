@@ -5,7 +5,8 @@
 //! `friendId` that is not the caller's friend or that either side has blocked, get the one 404, so
 //! neither a match's existence nor a friendship leaks. `DELETE /api/replays/:matchId/shares/:friendId`
 //! takes the caller's own share back, 204 whether or not there was one. `GET /api/replays/shared`
-//! lists what friends have shared with the caller, newest first: `{ shared: SharedReplay[] }`.
+//! lists the newest `SHARED_REPLAYS_LIST_MAX` replays friends have shared with the caller, newest
+//! first: `{ shared: SharedReplay[] }`.
 //! `GET /api/replays/:matchId/shares` (R1435000) answers the friends the caller has shared that
 //! replay with, `{ friendIds }`, so "Share with a friend" shows them shared on any later visit and
 //! the share can be withdrawn there; a caller who held no seat in a finished match of that id gets
@@ -25,6 +26,7 @@ use serde_json::json;
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, log_info, now_ms, ok_of, str};
 use crate::app::App;
+use crate::config::SHARED_REPLAYS_LIST_MAX;
 use crate::db::store::{MatchPhase, ReplayShare, StoreError, Tx};
 use crate::social::friends::are_friends;
 use crate::social::{PlayerRef, iso, no_content, not_found, param};
@@ -77,8 +79,9 @@ pub async fn share_replay(app: &Arc<App>, req: Req) -> ApiResult {
         return Err(no_such_share());
     }
     // The retention purge took the log: there is nothing to share, so the match is as
-    // unshareable as one the caller held no seat in, with the same answer.
-    if tx.matches_actions(&match_id).await?.is_empty() {
+    // unshareable as one the caller held no seat in, with the same answer. Asked without reading the
+    // log (#1825).
+    if !tx.matches_has_actions(&match_id).await? {
         return Err(no_such_share());
     }
     tx.shares_put(&ReplayShare {
@@ -121,7 +124,7 @@ pub async fn unshare_replay(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn list_shared(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
-    let rows = tx.shares_for(&profile.id).await?;
+    let rows = tx.shares_for(&profile.id, SHARED_REPLAYS_LIST_MAX).await?;
     let sharers: Vec<String> = rows
         .iter()
         .map(|row| row.sharer.clone())

@@ -268,6 +268,30 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.getByTestId(T.close)).toHaveTextContent("Close");
   });
 
+  it("R1827000 a slot that dropped a portrait shows its name and its art", () => {
+    const opened = openedPack();
+    const [first, second, third, ...rest] = opened.slots;
+    torn({
+      opened: {
+        ...opened,
+        slots: [
+          first!,
+          second!,
+          { ...third!, grant: { kind: "cosmetic", cosmeticId: "portrait-gary", cosmeticRarity: "Epic" } },
+          ...rest,
+        ],
+      },
+    });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    expect(screen.getByTestId(T.outcome(2))).toHaveTextContent("New cosmetic: Gary the Gambler portrait");
+    const slot = screen.getByTestId(T.slot(2));
+    const art = slot.querySelector('.pack-slot__face [data-portrait-art="gary"]');
+    expect(art).not.toBeNull();
+    expect(art).toHaveClass("pack-slot__portrait");
+    // The portrait is in the slot card's place: an account cosmetic sits on no card.
+    expect(slot.querySelector(".pack-slot__face .cf")).toBeNull();
+  });
+
   it("Epic and above flip only after a hold", () => {
     torn();
     const epic = screen.getByTestId(T.flip(1));

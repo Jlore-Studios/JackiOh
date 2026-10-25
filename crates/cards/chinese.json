@@ -271,8 +271,8 @@
   },
   "core-051-1": {
     "name": "KY的空白笔记本",
-    "base": "抽{draw}张牌。",
-    "radiant": "抽{draw}张牌。"
+    "base": "将{cards}张随机KY牌洗入你的牌库。",
+    "radiant": "将{cards}张随机光辉KY牌洗入你的牌库。"
   },
   "core-052": {
     "name": "憨憨塞拉斯",
@@ -992,8 +992,8 @@
   },
   "classic-080": {
     "name": "砰！大麦克斯",
-    "base": "献祭3，突袭，践踏，不可摧毁",
-    "radiant": "献祭3，冲锋，践踏，不可摧毁"
+    "base": "献祭3，突袭，践踏，不可摧毁，陨坑",
+    "radiant": "献祭3，冲锋，践踏，不可摧毁，陨坑"
   },
   "classic-081": {
     "name": "兴盛之力",
@@ -1201,8 +1201,8 @@
   },
   "classicplus-019-2": {
     "name": "打野菜鸡",
-    "base": "回合结束时：有{chance}%的几率：此单位随机攻击一个敌方单位。如果它消灭了你的下路菜鸡对面的敌方单位，则你的下路菜鸡进入狂暴状态。",
-    "radiant": "回合结束时：有{chance}%的几率：此单位随机攻击一个敌方单位。如果它消灭了你的下路菜鸡对面的敌方单位，则改为由你的下路菜鸡获得此次击杀。"
+    "base": "无法攻击\n回合结束时：有{chance}%的几率：此单位随机攻击一个敌方单位。如果它消灭了你的下路菜鸡对面的敌方单位，则你的下路菜鸡进入狂暴状态。",
+    "radiant": "无法攻击\n回合结束时：有{chance}%的几率：此单位随机攻击一个敌方单位。如果它消灭了你的下路菜鸡对面的敌方单位，则改为由你的下路菜鸡获得此次击杀。"
   },
   "classicplus-019-3": {
     "name": "中路菜鸡",
@@ -1369,8 +1369,8 @@
   },
   "classicplus-043": {
     "name": "AI垃圾",
-    "base": "融合{cards}张随机AI生成的牌，并将融合结果置入你的手牌。其法力值消耗为(0)。",
-    "radiant": "融合{cards}张随机光辉AI生成的牌，并将融合结果置入你的手牌。其法力值消耗为(0)。"
+    "base": "融合{cards}张法力值消耗为(1)的随机AI生成的牌，并将融合结果置入你的手牌。其法力值消耗为(0)。",
+    "radiant": "融合{cards}张法力值消耗为(1)的随机光辉AI生成的牌，并将融合结果置入你的手牌。其法力值消耗为(0)。"
   },
   "classicplus-044": {
     "name": "简单度审计",
@@ -1472,8 +1472,8 @@
   },
   "classicplus-061": {
     "name": "小饰泡泡",
-    "base": "亡语：将{cards}张囤积置入你的手牌。每张牌的法力值消耗为({setCost})。",
-    "radiant": "亡语：将{cards}张光辉囤积置入你的手牌。每张牌的法力值消耗为({setCost})。"
+    "base": "易碎1\n亡语：将{cards}张囤积置入你的手牌。每张牌的法力值消耗为({setCost})。",
+    "radiant": "易碎1\n亡语：将{cards}张光辉囤积置入你的手牌。每张牌的法力值消耗为({setCost})。"
   },
   "classicplus-062": {
     "name": "KY的木瓜",
@@ -1768,7 +1768,7 @@
   "meditative-021": {
     "name": "API密钥钓鱼",
     "base": "有{chance}%的几率：夺取你对手的手牌。\n加码(1)：改为{paidChance}%的几率。\n回合结束时：将一张API密钥钓鱼置入你的手牌。",
-    "radiant": "有{chance}%的几率：夺取你对手的手牌。\n加码(1)：改为{paidChance}%的几率。\n回合结束时：将一张API密钥钓鱼置入你的手牌。"
+    "radiant": "有{chance}%的几率：夺取你对手的手牌。\n加码(1)：改为{paidChance}%的几率。\n回合结束时：将一张光辉API密钥钓鱼置入你的手牌。"
   },
   "meditative-022": {
     "name": "心理博弈",
@@ -1792,8 +1792,8 @@
   },
   "meditative-025": {
     "name": "青眼白猫族",
-    "base": "献祭2，种族歧视免疫",
-    "radiant": "献祭2，不可变，种族歧视免疫"
+    "base": "献祭2\n种族歧视免疫。",
+    "radiant": "献祭2，不可变\n种族歧视免疫。"
   },
   "meditative-026": {
     "name": "另一种命运",
@@ -2227,7 +2227,7 @@
   "meditative-094": {
     "name": "缩小猫族",
     "base": "亡语：召唤一个缩小猫族，其基础属性为此牌的−{shrinkAttack}/−{shrinkHealth}。",
-    "radiant": "亡语：召唤一个光辉缩小猫族，其基础属性为此牌的−{shrinkAttack}/−{shrinkHealth}。"
+    "radiant": "亡语：召唤一个缩小猫族，其基础属性为此牌的−{shrinkAttack}/−{shrinkHealth}。"
   },
   "meditative-095": {
     "name": "混沌召唤（冥想版）",
@@ -2360,7 +2360,7 @@
     "radiant": "抽{draw}张牌。它们的法力值消耗为({setCost})。\n加码(4)：改为抽{embiggenedDraw}张牌。"
   },
   "meditativeplus-004": {
-    "name": "空投补给",
+    "name": "Jlockeed的空投补给",
     "base": "抉择：{turns}个回合后，对每个敌人造成{damage}点伤害，具有穿透和吸血；或者{turns}个回合后，将{cards}张随机光辉Jlockeed牌置入你的手牌，每张的法力值消耗为({suppliesCost})。\n加码(4)：改为{embiggenedTurns}个回合后；造成{embiggenedDamage}点伤害，或者置入{embiggenedCards}张。",
     "radiant": "抉择：{turns}个回合后，对每个敌人造成{damage}点伤害，具有穿透和吸血；或者{turns}个回合后，将{cards}张随机光辉Jlockeed牌置入你的手牌，每张的法力值消耗为({suppliesCost})。\n加码(4)：改为{embiggenedTurns}个回合后；造成{embiggenedDamage}点伤害，或者用它们填满你的手牌。"
   },

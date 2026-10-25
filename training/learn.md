@@ -5,12 +5,14 @@ evaluation (`crates/ai/src/learned.rs`) trained on the AI's own games and promot
 `main` through the same kind of gate every generation passes. Its decisions are a script's, not an
 LLM's (D2), so this file is its contract rather than a prompt, as `gather.md` is the gather lane's.
 
-It is the other half of the AI. The `improve` and `unban` lanes are **supervised**: a Muse session
-reads the AI, changes the hand-written evaluation or the search, and measures each change
-(`improve.md`, `unban.md`). The `learn` lane is **learned**: a network fitted to the outcomes of
-games corrects the hand eval where the search finally scores a line. The hand eval stays the
-network's input (D4's skip connection) and the beam's pruning, so the supervised lanes keep improving
-the AI the network corrects, and the network is retrained on their work.
+Since 2026-10-25 it is how the AI keeps getting stronger. The `improve` and `unban` lanes were
+**supervised**: a Muse session read the AI, changed the hand-written evaluation or the search, and
+measured each change (`improve.md`, `unban.md`). #682's audit found that they made no fair promotion
+in about 427 hours, so both are stopped (#1677). The `learn` lane is **learned**: a network fitted to
+the outcomes of games corrects the hand eval where the search finally scores a line, and no LLM
+takes part in any step. The hand eval stays the network's input (D4's skip connection) and the
+beam's pruning, so a person's or the night bot's change to it, through an ordinary issue, still
+improves the AI the network corrects, and the next run retrains on it.
 
 ## How it runs
 

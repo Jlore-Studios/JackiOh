@@ -635,8 +635,8 @@ fn compare_text(a: &str, b: &str) -> std::cmp::Ordering {
 /// The controller's cards of the ingredient's type, in the piles named: the field in lane order
 /// (units, the carried Units, then backrow, `zones::acting_on`; the top of a pile only, R13, R446,
 /// R1824000), the hand in hand order, and the library in an order its cards alone decide — name,
-/// definition, face, id — never its own, which is hidden from everyone (§9.1, R310). An Immutable card is never a Fuse target (R23), and the ingredient itself is
-/// not one of its own candidates.
+/// definition, face, id — never its own, which is hidden from everyone (§9.1, R310). An Immutable card
+/// is never a Fuse target (R23), and the ingredient itself is not one of its own candidates.
 fn fuse_candidates(
     state: &GameState,
     player: PlayerId,

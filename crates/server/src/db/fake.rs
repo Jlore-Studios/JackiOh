@@ -1441,6 +1441,15 @@ pub fn matches_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<Vec<MatchAc
     Ok(rows)
 }
 
+/// #1825: as Postgres's `exists`.
+pub fn matches_has_actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<bool, StoreError> {
+    call(f, "matches.hasActions")?;
+    Ok(f.tables()
+        .match_actions
+        .iter()
+        .any(|row| row.match_id == match_id))
+}
+
 /// #1169: as Postgres's one statement: stored only while the match is live and its log holds `seq`
 /// under `nonce`, and in place of an earlier seq's only.
 pub fn matches_put_checkpoint(f: &mut FakeTx<'_>, row: &MatchCheckpointRow) -> Result<bool, StoreError> {
@@ -4930,7 +4939,7 @@ pub fn shares_sharers(f: &mut FakeTx<'_>, match_id: &str, friend: &str) -> Resul
     Ok(shares.into_iter().map(|row| row.sharer.clone()).collect())
 }
 
-pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+pub fn shares_for(f: &mut FakeTx<'_>, friend: &str, limit: i64) -> Result<Vec<SharedReplayRow>, StoreError> {
     call(f, "shares.for")?;
     let tables: &FakeTables = f.tables();
     let mut shared: Vec<SharedReplayRow> = tables
@@ -4948,6 +4957,7 @@ pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRo
         .collect();
     shared
         .sort_by(|a, b| (b.created_at, &b.match_id, &b.sharer).cmp(&(a.created_at, &a.match_id, &a.sharer)));
+    shared.truncate(usize::try_from(limit).unwrap_or(0));
     Ok(shared)
 }
 

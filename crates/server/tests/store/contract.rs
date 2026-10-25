@@ -3695,6 +3695,32 @@ mod matches {
         assert_eq!(seqs, (1..=12).collect::<Vec<i64>>(), "{}", harness.name);
     }
 
+    /// #1825: the question the share route asks, answered without reading the log.
+    async fn tells_whether_a_log_holds_an_action_without_reading_it(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        assert!(
+            !q!(harness, t => t.matches_has_actions(&row.id)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        assert!(
+            q!(harness, t => t.matches_has_actions(&row.id)),
+            "{}",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.matches_has_actions(&id())),
+            "{}",
+            harness.name
+        );
+        assert!(
+            !q!(harness, t => t.matches_has_actions("not-a-uuid")),
+            "{}",
+            harness.name
+        );
+    }
+
     async fn refuses_a_seq_that_already_exists(harness: &StoreHarness) {
         let row = live_match(harness).await;
         q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
@@ -4061,6 +4087,7 @@ mod matches {
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         reads_a_log_of_ten_or_more_actions_back_in_seq_order,
+        tells_whether_a_log_holds_an_action_without_reading_it,
         refuses_a_seq_that_already_exists,
         r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
@@ -7939,7 +7966,7 @@ mod social {
             "not a seat"
         );
         assert_eq!(
-            j(&q!(harness, t => t.shares_for(&b.id))),
+            j(&q!(harness, t => t.shares_for(&b.id, 10))),
             json!([{ "matchId": over, "sharer": a.id, "createdAt": now - 3_000, "endedAt": now - 5_000 }])
         );
 
@@ -7949,7 +7976,7 @@ mod social {
             q!(harness, t => t.shares_sharers(&over, &b.id)),
             vec![a.id.clone(), c.id.clone()]
         );
-        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 2);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 2);
 
         // Unfriended or blocked, a's share is not read; made friends again, it is.
         assert!(q!(harness, t => t.friends_remove(&a.id, &b.id)));
@@ -7999,7 +8026,7 @@ mod social {
             q!(harness, t => t.shares_sharers(&over, &b.id)),
             vec![a.id.clone()]
         );
-        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 1);
+        assert_eq!(q!(harness, t => t.shares_for(&b.id, 10)).len(), 1);
 
         let cutoffs: RetentionPurgeInput = from(json!({
             "codeAttemptsBefore": now - 30 * day,
@@ -8009,8 +8036,52 @@ mod social {
         }));
         q!(harness, t => t.purge_expired(&cutoffs));
         assert!(q!(harness, t => t.matches_actions(&over)).is_empty());
+        assert!(!q!(harness, t => t.matches_has_actions(&over)));
         assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
-        assert!(q!(harness, t => t.shares_for(&b.id)).is_empty());
+        assert!(q!(harness, t => t.shares_for(&b.id, 10)).is_empty());
+    }
+
+    /// #1825: the list is the newest shares, at most `limit` of them.
+    async fn s7_replay_shares_list_the_newest_up_to_the_limit(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 10_000));
+        let mut ids = Vec::new();
+        for n in 0..3_i64 {
+            let over = id();
+            q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+            q!(harness, t => t.matches_append_actions(&[action_row(&over, 1, "p1", "n1", now - 8_000)]));
+            q!(harness, t => t.matches_finish(&over, now - 5_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": a.id, "friend": b.id, "createdAt": now - 3_000 + n * 1_000,
+            }));
+            q!(harness, t => t.shares_put(&share));
+            ids.push(over);
+        }
+
+        let newest_two: Vec<String> = q!(harness, t => t.shares_for(&b.id, 2))
+            .into_iter()
+            .map(|row| row.match_id)
+            .collect();
+        assert_eq!(
+            newest_two,
+            vec![ids[2].clone(), ids[1].clone()],
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.shares_for(&b.id, 3)).len(),
+            3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.shares_for(&b.id, 10)).len(),
+            3,
+            "{}",
+            harness.name
+        );
     }
 
     /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
@@ -8311,6 +8382,7 @@ mod social {
         r1384000_chat_pages_run_in_time_then_id_order_across_a_tie,
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_replay_shares_hide_a_match_whose_log_the_purge_took,
+        s7_replay_shares_list_the_newest_up_to_the_limit,
         r1435000_a_sharers_shares_are_read_while_each_friend_may_read_them,
         s7_a_deleted_profile_takes_its_social_rows,
         s7_presence_reads_many_profiles_at_once,
@@ -9403,6 +9475,35 @@ mod economy {
         assert_eq!(rest, EconomyLedger::default());
     }
 
+    /// R1827000: a portrait is an account cosmetic. An account made after migration 0057's grant
+    /// owns none, vanilla being a starter that needs no row, until one is granted on no card, which
+    /// writes its ledger row like any account cosmetic.
+    async fn r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({ "cards": [], "account": [] })
+        );
+        assert!(
+            q!(harness, t => t.economy_cosmetics_grant(&cosmetic(&profile.id, None, "portrait-gary", 1, now)))
+        );
+        assert!(
+            !q!(harness, t => t.economy_cosmetics_grant(&cosmetic(&profile.id, None, "portrait-gary", 1, now)))
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.economy_cosmetics_get(&profile.id))),
+            json!({ "cards": [], "account": ["portrait-gary"] })
+        );
+        let ledger = q!(harness, t => t.economy_ledger_get(&profile.id));
+        let rows: Vec<(Option<String>, String, i64)> = ledger
+            .cosmetics
+            .iter()
+            .map(|row| (row.card_id.clone(), row.cosmetic_id.clone(), row.delta))
+            .collect();
+        assert_eq!(rows, vec![(None, "portrait-gary".to_string(), 1)]);
+    }
+
     both_stores!(
         r1301003_the_economy_lock_is_taken_per_transaction,
         jlore_adds_spends_and_refuses_what_the_wallet_cannot_cover,
@@ -9417,6 +9518,7 @@ mod economy {
         practice_seeds_issue_claim_once_and_prune,
         r1483000_game_jlore_totals_use_one_window_reason_and_reference,
         r1483000_open_practice_seed_count_excludes_claimed_expired_and_other_accounts,
+        r1827000_a_new_account_owns_no_portrait_until_one_is_granted_on_no_card,
     );
 }
 

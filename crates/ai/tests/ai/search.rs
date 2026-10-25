@@ -16,7 +16,7 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, act, dealt_game, is_legal};
+use super::support::{AI, act, dealt_game, is_legal, trace};
 
 const SKIPPED: &[ActionType] = &[
     ActionType::Concede,
@@ -953,6 +953,147 @@ mod lanes_that_play_differently {
         .clone();
         assert!(!offered_lanes(&state, "classicplus-020").contains(&4));
         assert_eq!(root_offered_lanes(&state, "classicplus-020"), vec![1, 2, 4]);
+    }
+
+    /// Mr. Vanilla, 4/4 with no text.
+    const VANILLA: &str = "core-008";
+
+    /// One of the AI's Mr. Vanillas in lane 1, another in its hand, and the enemy's Radiant Nurse
+    /// Cleaver (classic-073, 6/12 Cleave) opposite lane 1. The vanilla's placements are lanes 2, 3 and 5
+    /// (3 and 4 are one); only lane 2 is beside the unit, where the Cleaver's reply would kill both.
+    fn cleaver_board() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "search-cleaver-lanes",
+            "p1": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
+            "p2": { "field": [{ "def": "classic-073", "radiant": true, "lane": 1 }], "library": LIBRARY },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// #1797: two orders of the same two plays into the same lanes are one position, for the lethal
+    /// solver (`search_signature`) and the beam (`unit_lanes` beside it); the second play into another
+    /// lane is the lethal solver's same position, and the beam's another.
+    #[test]
+    fn two_orders_of_two_plays_into_the_same_lanes_are_one_position_and_another_lane_is_another() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-two-orders",
+            "p1": { "hand": [VANILLA, VANILLA], "library": LIBRARY },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        let first = state.players[AI].hand[0].id.clone();
+        let second = state.players[AI].hand[1].id.clone();
+        let play = |id: &str, lane: i32| {
+            body(json!({ "type": "play", "instanceId": id, "zone": { "row": "units", "lane": lane } }))
+        };
+        let (a1, b2, b3) = (play(&first, 1), play(&second, 2), play(&second, 3));
+
+        let one = act(&act(&state, AI, &a1), AI, &b2);
+        let other = act(&act(&state, AI, &b2), AI, &a1);
+        let apart = act(&act(&state, AI, &a1), AI, &b3);
+        assert_eq!(search_signature(&one, AI), search_signature(&other, AI));
+        assert_eq!(unit_lanes(&one), unit_lanes(&other));
+        assert_eq!(search_signature(&one, AI), search_signature(&apart, AI));
+        assert_ne!(unit_lanes(&one), unit_lanes(&apart));
+    }
+
+    /// #1797: beside an enemy Cleaver, the beam keeps a line that plays the vanilla away from its
+    /// neighbour (lane 3), which the duplicate check once merged into lane 2's, and opens with at most
+    /// `AI_SEARCH.zone_variants` of the vanilla's placements.
+    #[test]
+    fn the_beam_plays_a_vanilla_away_from_its_neighbour_and_opens_with_at_most_zone_variants_of_its_lanes() {
+        let state = cleaver_board();
+        let placements = vec![2, 3, 5];
+        assert_eq!(root_offered_lanes(&state, VANILLA), placements);
+
+        let lines = beam_search(&state, AI, &create_node_counter(AI_BUDGET.nodes, None), AI_BUDGET);
+        let keys = lines
+            .iter()
+            .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+            .collect::<Vec<_>>()
+            .join(" | ");
+        assert!(
+            lines.iter().any(|line| lanes_of(&state, VANILLA, &line.actions)
+                .iter()
+                .any(|lane| *lane >= 3)),
+            "{keys}"
+        );
+        let opening: Vec<i32> = lines
+            .iter()
+            .flat_map(|line| lanes_of(&state, VANILLA, line.actions.get(..1).unwrap_or_default()))
+            .collect();
+        for lane in &placements[AI_SEARCH.zone_variants as usize..] {
+            assert!(!opening.contains(lane), "lane {lane}: {keys}");
+        }
+    }
+
+    /// #1797: a lane variant is closed only beside a line the beam keeps, and a tie goes to that line.
+    /// At 3 mana with Midrange Menace (core-019, 3) and a vanilla (1) in hand and a beam one line wide,
+    /// the Menace in lane 1 is kept and the vanilla in lane 1 dropped: the Menace's lane 2 is a line,
+    /// below lane 1's, and no line plays the vanilla at all. The same one depth deep, where lane 1's
+    /// line is still open when the loop ends and is closed after it.
+    #[test]
+    fn a_lane_variant_is_closed_only_beside_a_line_the_beam_keeps_and_ranks_below_it() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "search-lane-variants-kept",
+            "p1": { "hand": ["core-019", VANILLA], "mana": 3, "library": LIBRARY },
+            "p2": { "library": LIBRARY },
+        }))
+        .state()
+        .clone();
+        let narrow = SearchBudget {
+            beam_width: 1,
+            ..AI_BUDGET
+        };
+        for budget in [
+            narrow,
+            SearchBudget {
+                max_depth: 1,
+                ..narrow
+            },
+        ] {
+            let lines = beam_search(&state, AI, &create_node_counter(budget.nodes, None), budget);
+            let keys = lines
+                .iter()
+                .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+                .collect::<Vec<_>>()
+                .join(" | ");
+            let menace_openings: Vec<i32> = lines
+                .iter()
+                .flat_map(|line| lanes_of(&state, "core-019", line.actions.get(..1).unwrap_or_default()))
+                .collect();
+            assert_eq!(menace_openings.first(), Some(&1), "{keys}");
+            assert!(menace_openings.contains(&2), "{keys}");
+            assert!(
+                lines
+                    .iter()
+                    .all(|line| lanes_of(&state, VANILLA, &line.actions).is_empty()),
+                "{keys}"
+            );
+        }
+    }
+
+    /// #1797: when the enemy Cleaver's reply would splash the vanilla's neighbour, the AI's turn plays
+    /// the vanilla away from it.
+    #[test]
+    fn decide_plays_a_vanilla_where_the_enemy_cleaver_cannot_splash_it_from_its_neighbour() {
+        let state = cleaver_board();
+        let vanilla = hand_id(&state, VANILLA);
+        let neighbour = active_units_of(&state, AI)[0].id.clone();
+
+        let turn = play_ai_turn(&state, AI, &mut ai_options("search-cleaver-lanes", AI_BUDGET));
+        let lane = |id: &str| {
+            find_instance(&turn.state, id)
+                .and_then(|card| slot_of(&turn.state, card))
+                .map(|slot| slot.lane)
+        };
+        assert_eq!(lane(&neighbour), Some(1), "{}", trace(&turn));
+        assert!(lane(&vanilla).is_some_and(|lane| lane >= 3), "{}", trace(&turn));
     }
 }
 

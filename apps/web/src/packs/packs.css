@@ -137,6 +137,12 @@
   height: auto;
 }
 
+/* R1827000: a dropped portrait fills the face in its card's place. */
+.pack-slot__face .pack-slot__portrait {
+  position: absolute;
+  inset: 0;
+}
+
 .pack-slot[data-holding="true"] .pack-slot__back {
   animation: pack-hold calc(var(--pack-hold-ms) * 1ms) ease-in both;
 }

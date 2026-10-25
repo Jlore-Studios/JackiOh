@@ -122,10 +122,11 @@ pub fn immutable_bars(state: &GameState, source: Option<&CardInstance>, card: &C
     ) && immutable_in_play(state, card)
 }
 
-/// MD-B1, R940: whether the card holds the tribal-hate immunity now (a keyword, so layered:
-/// printed, granted, aura). It protects the card only while the card acts on the field.
+/// MD-B1, R940: whether the card holds the tribal-hate immunity now (a static flag).
+/// It protects the card only while the card acts on the field.
 pub fn immune_to_tribal_hate(state: &GameState, card: &CardInstance) -> bool {
-    matches!(card.zone, Zone::Field { .. }) && unit_has(state, card, KeywordKind::ImmuneToTribalHate)
+    matches!(card.zone, Zone::Field { .. })
+        && crate::scripts::flags_of(state, card).immune_to_tribal_hate == Some(true)
 }
 
 /// MD-B1, R940: whether a harmful effect whose card filter names a tribal tag (in `tags` or

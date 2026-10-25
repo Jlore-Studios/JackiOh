@@ -36,7 +36,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `names/`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool and its bots' usernames, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
-| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, and the hero cards' full arts, one per card) and its check: no id twice, ids a settings text can carry, one default per kind a player picks, a full art naming its own card and no default (R1295000, R1297000, R1313000), and an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000); `is_id_of` checks a deck's pick, and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001) |
+| Cosmetics | `cosmetics.rs`, `cosmetics.json` | the cosmetics registry (the card slots, the deck slots: playmat, backdrop, card back, the hero cards' full arts, one per card, and the hero portraits, one per portrait id) and its check: no id twice, ids a settings text can carry, one default per kind a player picks and per portrait, a full art naming its own card and no default (R1295000, R1297000, R1313000), an account cosmetic other than its kind's default at `GLOBAL_COSMETIC_FLOOR_RARITY` or better (R1661000), and one `portrait-<id>` entry per portrait id, vanilla the default (R1827000); `is_id_of` checks a deck's pick, `owns_portrait` whether an account owns a portrait, and `global_cosmetics` lists what a duplicate's global roll may drop (R1661001), the five portraits but vanilla on the shipped registry |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
 | Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings), `finish_match`, which writes a result once and pays both people (R1502000), and `live_match_of` (§13) |
@@ -196,7 +196,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET` | `/api/cosmetics` | active | the cosmetics the caller owns, `{ cards: [{ cardId, cosmeticId }], account }`, never another's; the starter cosmetics have no row (R1313000) |
 | `POST` | `/api/dev/xp`, `/api/dev/jlore`, `/api/dev/fill`, `/api/dev/clear/:part` | active | a dev account's own tools (§14.10, R1300000): `{ setId, xp }` to a shipped set's track, its level stopping at `SET_TRACK_LEVELS`; `{ jlore }`; every collectable card and every cosmetic but the defaults; a clear of `cards`, `cosmetics`, `jlore`, `counters`, `tracks` or `everything`; every row reason `dev`, marked `dev`. 403 `forbidden` to any account `DEV_PROFILE_IDS` does not list |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step (R1305000, R1305001), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
-| `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641) and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
+| `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
@@ -219,7 +219,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it; records nothing while the account owes the terms (R970002) |
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; a challenge's room joined by its friend alone, while the two are still friends, anyone else getting an unknown code's 404 (R1689000); decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read, `nextCursor` the opaque cursor of the page before it, R1384000), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
-| `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
+| `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the newest `SHARED_REPLAYS_LIST_MAX` replays shared with the caller; the friends the caller shared a finished match it held a seat in with (`GET`, R1435000), share it with a friend, and unshare it |
 | `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog; `conflict` for a host's fourth open room, R1047002; `already_in_match` for a guest in a game and `conflict` for a host in one, R1065000, the ledger's answer to a join racing another door, and 503 `unavailable` while a newer server holds the seats, R1523000); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
 | `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§13.9) |
 | `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
@@ -850,6 +850,16 @@ btree index leading with its columns, whole or partial only on one of them `is n
 keys into the catalog (`cards`, `cosmetics`), whose rows the server never deletes. A new foreign key
 brings its index in the same migration.
 
+Migration 0057 makes the hero portraits account cosmetics (R1827000). It writes the six `portrait-*`
+rows of `public.cosmetics` as `cosmetics.json` has them, since `release` migrates before
+`seed-catalog` writes the registry, and then gives every person's profile then signed up, whatever its
+status and a ladder bot's passed over (R1454), the five that are not starters: an
+`account_cosmetics` row each, with its `cosmetic_grants` row on no card, reason `launch` and ref
+`launch:0057`, so an account that existed keeps every portrait it could pick. It runs once:
+`app.settings.portraits_granted` marks it done. An account made after it owns `portrait-vanilla`
+alone, a starter with no row, and a deck's save refuses a portrait its account does not own
+(`api/decks.rs`).
+
 ## Tests
 
 ```
@@ -881,7 +891,7 @@ real Postgres, so only the three Docker suites check them (CI's `db` job).
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
 `tests/export_cosmetics.rs` writes `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json`,
-the card and deck slot cosmetics and the full arts, the registry `src/cosmetics.rs` checks (R1295000, R1297000, R1313000); CI fails when a run changes it too.
+the card and deck slot cosmetics, the full arts and the portraits, the registry `src/cosmetics.rs` checks (R1295000, R1297000, R1313000, R1827000); CI fails when a run changes it too.
 
 ## Conventions
 

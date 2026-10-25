@@ -8,7 +8,7 @@
 
 use std::cmp::Ordering;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
 use crate::candidates::{
@@ -21,7 +21,7 @@ use crate::policy::{POLICY_PRIOR, PolicyPrior, prior_order};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, close_line, line_status, own_prompt_score, search_signature,
-    simulate, static_score,
+    simulate, static_score, unit_lanes,
 };
 use crate::types::{NodeCounter, SearchBudget};
 
@@ -134,9 +134,13 @@ fn expand(
 /// candidates, in the order `AI_MOVE_ORDER` names (`expansion`, R1171001), plus endTurn. Every child is
 /// simulated and scored with `evaluate`, a child waiting on the seat's own prompt where its answers
 /// lead (`own_prompt_score`, #1112); children whose status is not "open" become complete lines scored by
-/// terminalScore; the best beamWidth open children (stable) form the next frontier. The loop stops at
-/// maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns complete
-/// lines, best first.
+/// terminalScore; an open child whose position (`search_signature` with `unit_lanes`, #1797) an earlier
+/// child reached is dropped; the best beamWidth open children (stable) form the next frontier. A child
+/// that differs from an earlier one only in its units' lanes is a lane variant (#1797): it takes no
+/// place in the frontier, at most `AI_SEARCH.zone_variants` - 1 of a position are kept, and when the
+/// frontier keeps the earlier one, the variant is closed after the loop, after the open lines. The loop
+/// stops at maxDepth (open lines are closed by terminalScore) or when the counter refuses. Returns
+/// complete lines, best first.
 pub fn beam_search(
     det: &GameState,
     seat: PlayerId,
@@ -163,12 +167,18 @@ pub fn beam_search_with(
         score: open_score(det, seat, NextSwing::Enemy),
     }];
     let mut left_open: Vec<OpenLine> = Vec::new();
+    // #1797: the lane variants of the children the beam kept, closed after it (each a state and its line).
+    let mut lane_variants: Vec<(GameState, Vec<ActionBody>)> = Vec::new();
     let mut stopped = false;
 
     let mut depth = 0;
     while depth < budget.max_depth && !frontier.is_empty() {
         let mut children: Vec<OpenLine> = Vec::new();
-        let mut seen: IndexSet<String> = IndexSet::new();
+        // #1797: each open child's position with its units' lanes; how many children each position
+        // without them (`search_signature`) has had; and its lane variants, by that signature.
+        let mut seen: IndexSet<(String, String)> = IndexSet::new();
+        let mut placements: IndexMap<String, usize> = IndexMap::new();
+        let mut variants: Vec<(String, GameState, Vec<ActionBody>)> = Vec::new();
         let width = if depth == 0 {
             budget.root_branching
         } else {
@@ -207,12 +217,24 @@ pub fn beam_search_with(
                     });
                     continue;
                 }
-                // Two orders of the same moves reach the same position: keep the first, which ranks higher.
+                // Two orders of the same moves into the same lanes reach the same position: keep the
+                // first, which ranks higher.
                 let signature = search_signature(&next, seat);
-                if seen.contains(&signature) {
+                if !seen.insert((signature.clone(), unit_lanes(&next))) {
                     continue;
                 }
-                seen.insert(signature);
+                // #1797: a later child that differs from its position's first only in where its units
+                // stand is a lane variant. The evaluation reads no lane, so it would score alike and
+                // fill the beam; it is played no further but closed beside the first, so the reply can
+                // tell the lanes apart. At most AI_SEARCH.zone_variants of a position, the first included.
+                let placed = placements.entry(signature.clone()).or_insert(0);
+                *placed += 1;
+                if *placed > 1 {
+                    if *placed <= AI_SEARCH.zone_variants.max(1) as usize {
+                        variants.push((signature, next, actions));
+                    }
+                    continue;
+                }
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
                 let score = own_prompt_score(&next, seat, counter)
                     .unwrap_or_else(|| open_score(&next, seat, NextSwing::Enemy));
@@ -227,10 +249,21 @@ pub fn beam_search_with(
         if stopped {
             left_open = std::mem::take(&mut frontier);
             left_open.extend(children);
+            lane_variants.extend(variants.into_iter().map(|(_, state, actions)| (state, actions)));
             break;
         }
         let mut next_frontier = best_first_open(children);
         next_frontier.truncate(budget.beam_width.max(1));
+        let kept: IndexSet<String> = next_frontier
+            .iter()
+            .map(|line| search_signature(&line.state, seat))
+            .collect();
+        lane_variants.extend(
+            variants
+                .into_iter()
+                .filter(|(signature, _, _)| kept.contains(signature))
+                .map(|(_, state, actions)| (state, actions)),
+        );
         frontier = next_frontier;
         depth += 1;
     }
@@ -239,22 +272,28 @@ pub fn beam_search_with(
         left_open = frontier;
     }
 
-    // Open lines at maxDepth, or where the counter refused, are closed where they stand.
-    for line in left_open {
-        if line.actions.is_empty() {
+    // Open lines at maxDepth, or where the counter refused, are closed where they stand; then the lane
+    // variants (#1797), after every line the beam would close without them, so a tie goes to the first
+    // lane as before.
+    let open_lines = left_open
+        .into_iter()
+        .map(|line| (line.state, line.actions))
+        .chain(lane_variants);
+    for (state, actions) in open_lines {
+        if actions.is_empty() {
             continue;
         }
-        let end = close_line(&line.state, seat, root_turn, counter);
+        let end = close_line(&state, seat, root_turn, counter);
         // TS asked whether `closeLine` handed back the very state it was given (no step was taken):
         // a step always moves the state on, so equality answers the same question.
-        let score = if end == line.state {
+        let score = if end == state {
             line_score(&end, seat, NextSwing::Enemy)
         } else {
             static_score(&end, seat, root_turn)
         };
         let status = line_status(&end, seat, root_turn);
         complete.push(Line {
-            actions: line.actions,
+            actions,
             score,
             status,
             end,

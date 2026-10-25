@@ -419,10 +419,13 @@ mod r1303_the_chinese_tables {
             named("rarities"),
             all(Rarity::ALL.iter().map(|r| r.as_str()).collect())
         );
-        assert_eq!(
-            named("keywords"),
-            all(KeywordKind::ALL.iter().map(|k| k.as_str()).collect())
-        );
+        // A retired kind (`KeywordKind::RETIRED`) is no keyword of any card and has no word.
+        let live: Vec<KeywordKind> = KeywordKind::ALL
+            .iter()
+            .copied()
+            .filter(|kind| !KeywordKind::RETIRED.contains(kind))
+            .collect();
+        assert_eq!(named("keywords"), all(live.iter().map(|k| k.as_str()).collect()));
         assert_eq!(named("labels"), all(LABELS.to_vec()));
         let mut problems: Vec<String> = Vec::new();
         let plain = |value: &Value| {
@@ -462,7 +465,7 @@ mod r1303_the_chinese_tables {
             .flatten()
             .filter_map(|(_, w)| w.as_str())
             .collect();
-        assert_eq!(unique.len(), KeywordKind::ALL.len(), "two keywords share a word");
+        assert_eq!(unique.len(), live.len(), "two keywords share a word");
         assert_eq!(problems, Vec::<String>::new());
     }
 

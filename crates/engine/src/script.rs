@@ -574,6 +574,10 @@ pub struct StaticFlags {
     /// B5 E35: this unit neither attacks nor is attacked, declared or forced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cant_attack_or_be_attacked: Option<bool>,
+    /// MD-B1, R940: while this card acts on the field, harmful effects whose card filter names a tribal tag
+    /// can neither pick it nor reach it through scopes; combat bonuses against defender tags do not apply.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub immune_to_tribal_hate: Option<bool>,
     /// B5 E35: "This can't go Berserk" (Classic+ #19.5's Radiant face).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub never_berserk: Option<bool>,
