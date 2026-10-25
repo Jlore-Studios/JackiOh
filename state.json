@@ -503,7 +503,25 @@
       "feedback_since": "2026-10-25T12:43:28Z",
       "issue": 1818,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "gpt"
+        ],
+        "builder": "gpt",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "gpt",
+            "run": "40194384770",
+            "tier": "medium"
+          }
+        ],
+        "sha": "04173a57b413f5c531d44f1ebf9e5aedd84cd883",
+        "tiers": {
+          "gpt": "medium"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
