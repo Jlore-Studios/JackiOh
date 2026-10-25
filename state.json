@@ -13647,9 +13647,9 @@
     "what": "plan #1821 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-25T04:27:23Z",
+    "at": "2026-10-25T04:33:41Z",
     "notes": [
-      "#1831 needs a plan"
+      "#1834 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -14355,7 +14355,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-25T04:27:23Z",
+  "loop_tick": "2026-10-25T04:33:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
