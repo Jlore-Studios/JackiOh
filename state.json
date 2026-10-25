@@ -1177,7 +1177,7 @@
     "at": "2026-10-25T11:57:26Z"
   },
   "suggest": {
-    "idle_since": "2026-10-25T12:14:19Z",
+    "idle_since": null,
     "last_run": null,
     "requested": false
   },
