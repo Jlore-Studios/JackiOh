@@ -643,6 +643,10 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
     if resume.hook == crate::subsystems::CHAOS_ETERNAL_HOOK {
         return Some(crate::subsystems::eternal_step());
     }
+    // R1841002: an Equip pick's answer is the engine's own step, whatever card asked.
+    if resume.hook == "resume" && resume.step == crate::effects::fuse::EQUIP_PICK_STEP {
+        return Some(crate::effects::fuse::equip_pick_step());
+    }
     if let Some(step) = script.hook_named(&resume.hook) {
         return Some(step.clone());
     }

@@ -1,0 +1,393 @@
+# The shadow ban swept again (R1678000, issue #1678): a shadow ban (R186) is a measurement of one AI,
+# and the learn lane promotes a new one every few weeks with no one in the loop, so every push to main
+# that moves the AI's generation, or ships a set, starts a sweep of record here. By dispatch too
+# (`gh workflow run sweep.yml`, optionally `-f ids="meditative-011 …"`).
+#
+#   due       `cargo jackioh sweep --due <the push's base>` names the ids: when crates/ai/generation.json's
+#             `generation` moved, every card SHADOW_BAN holds and every Meditative or Meditative+ card
+#             SHADOW_WATCH holds (the sets that may hold bans, R732000, R1186000); when SHIPPED_SETS
+#             gained a set, every non-token card of that set. Anything else (the sweep's own pull request
+#             changes `shadowBan`, never `generation`) is due nothing, and the run stops there. A sweep
+#             pull request still open is superseded: its ids (its body's marker) join this run's, and it
+#             is closed once this run's report is written.
+#   sweep     R390's two passes at both tiers, as the sweeps of record ran them (training/history/
+#             sweep-2026-10-22.md, How it ran): SWEEP_LANES processes at once on the runner's four cores,
+#             one card per process, the ids dealt to the lanes in turn; pass 1 (`--json`) over every due
+#             id, then pass 2 (`--pass2` over every pass-1 file) over each of them, which plays only the
+#             ones at risk. A card whose process passes SWEEP_CARD_MINUTES, or fails, is cut short: its files are
+#             left out of the report, so it keeps the row an earlier report gave it, and the report says
+#             so. On GitHub's runners, never the owner's PC: its runner throttles a job to half a CPU while
+#             the PC is in use, which would read as timeouts (R977000's re-timer would mostly catch it,
+#             but the record should not lean on that).
+#   deliver   on main as it is when the sweep ends: the report under training/history/ as a report of
+#             record, `sweep --write` over the header's reports and it, generation.json's `shadowBan`,
+#             and, when SHADOW_BAN changed, the practice-claim fixture recorded again (R1303002) since the
+#             AI's practice deck deals from the live ban. When neither table changed it opens nothing
+#             and says so; the report stays the run's artifact. Otherwise it pushes sweep/shadow-ban and opens
+#             `Patch: the shadow ban swept again …` with auto-merge on, which CI holds to `sweep --check`
+#             like any other pull request. A record `--write` refuses (more than half a set banned, or a
+#             ban of a set that may not hold bans yet, as a set that just shipped until a ruling adds it)
+#             opens an issue for a person instead.
+#
+# Pushing sweep/shadow-ban and opening its pull request take LEARN_LANE_TOKEN (training/learn.md, Setting it up):
+# a pull request opened with the run's own token would start no CI. Without it, a changed record stops
+# at its artifact (`sweep-<run>/record.patch`) and the run says so in red.
+name: shadow-ban sweep
+
+on:
+  push:
+    branches: [main]
+    paths: ["crates/ai/generation.json", "crates/engine/src/wire/catalog_types.rs"]
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Card ids to sweep, space-separated (blank: what is due for the AI as it is, `sweep --due`)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  # Sweep processes at once: the sweeps of record ran three lanes on four cores, one core spare.
+  SWEEP_LANES: "3"
+  # A card whose one pass runs longer than this is cut short and left out of the report.
+  SWEEP_CARD_MINUTES: "45"
+  # The branch every sweep's pull request comes from: never under ai/, whose pull requests CI holds to a
+  # training lane's promotion (ci.yml's `rust (training gate)`).
+  SWEEP_BRANCH: sweep/shadow-ban
+
+# One sweep at a time, never cancelled: a push that queues behind a running sweep sweeps after it.
+concurrency:
+  group: shadow-ban-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: sweep, report, deliver
+    # The AI that ships: a dispatch from another branch would sweep that branch's and write to main's.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    # GitHub's limit is six hours; a set as big as Meditative (102 cards) took about two (2026-10-12).
+    timeout-minutes: 350
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `--due` reads the push's base, and deliver starts from main as it is when the sweep ends.
+          fetch-depth: 0
+          persist-credentials: false
+      # Most pushes that start this (the sweep's own pull request among them) moved neither the
+      # generation nor SHIPPED_SETS: they stop here, before the build.
+      - name: anything to sweep?
+        id: worth
+        env:
+          BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+        run: |
+          set -uo pipefail
+          generation() { git show "$1:crates/ai/generation.json" 2> /dev/null | jq -r .generation 2> /dev/null; }
+          shipped() { git show "$1:crates/engine/src/wire/catalog_types.rs" 2> /dev/null | sed -n '/^pub const SHIPPED_SETS/,/^];/p'; }
+          if [ -n "$BASE" ] && [ "$(generation "$BASE")" = "$(generation HEAD)" ] && [ "$(shipped "$BASE")" = "$(shipped HEAD)" ] \
+            && [ -n "$(generation HEAD)" ]; then
+            echo "nothing is due: the AI's generation and the shipped sets are as they were (R1678000)" >> "$GITHUB_STEP_SUMMARY"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: ./.github/actions/setup
+        if: ${{ steps.worth.outputs.build == 'true' }}
+        with:
+          node: "false"
+      - name: build
+        if: ${{ steps.worth.outputs.build == 'true' }}
+        run: |
+          set -euo pipefail
+          cargo build --release -p jackioh-tools
+          cp "${CARGO_TARGET_DIR:-target}/release/jackioh" "$RUNNER_TEMP/jackioh"
+      - name: what is due (sweep --due)
+        id: due
+        if: ${{ steps.worth.outputs.build == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event_name == 'push' && github.event.before || '' }}
+          IDS: ${{ inputs.ids }}
+        run: |
+          set -euo pipefail
+          if [ -n "$BASE" ] && ! git cat-file -e "$BASE^{commit}" 2> /dev/null; then
+            echo "::warning::the push's base $BASE is not in the clone: sweeping what is due for the AI as it is"
+            BASE=""
+          fi
+          "$RUNNER_TEMP/jackioh" sweep --due ${BASE:+"$BASE"} > "$RUNNER_TEMP/due.json"
+          cat "$RUNNER_TEMP/due.json"
+          if [ -n "$IDS" ]; then
+            ids=$(tr -s ' ,' '\n' <<< "$IDS" | grep . | sort -u | tr '\n' ' ')
+            why="a dispatch, over $(wc -w <<< "$ids") card(s)"
+          else
+            ids=$(jq -r '.ids | join(" ")' "$RUNNER_TEMP/due.json")
+            why=$(jq -r '[(if .baseGeneration != .generation then "AI gen \(.generation)" else empty end),
+              (.newSets[] | "the \(.) set shipping")] | join(" and ")' "$RUNNER_TEMP/due.json")
+            [ -n "$BASE" ] || why="AI gen $(jq -r .generation "$RUNNER_TEMP/due.json"), dispatched"
+          fi
+          # A sweep pull request still open is superseded: its ids join this run's.
+          open=$(gh pr list -R "$REPO" --head "$SWEEP_BRANCH" --state open --json number,body --jq '.[0] // empty')
+          superseded=""
+          if [ -n "$open" ]; then
+            superseded=$(jq -r .number <<< "$open")
+            carried=$(jq -r .body <<< "$open" | sed -n 's/.*<!-- sweep-ids: \(.*\) -->.*/\1/p' | tail -n 1)
+            ids=$(printf '%s %s\n' "$ids" "$carried" | tr -s ' ' '\n' | grep . | sort -u | tr '\n' ' ')
+            why="$why, with #$superseded's cards"
+          fi
+          ids=$(tr -s ' \n' '  ' <<< "$ids" | sed -e 's/^ //' -e 's/ $//')
+          if [ -z "$ids" ]; then
+            echo "nothing is due: the AI's generation and the shipped sets are as they were (R1678000)" >> "$GITHUB_STEP_SUMMARY"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          {
+            echo "run=true"
+            echo "ids=$ids"
+            echo "why=$why"
+            echo "superseded=$superseded"
+            echo "generation=$(jq -r .generation "$RUNNER_TEMP/due.json")"
+          } >> "$GITHUB_OUTPUT"
+          echo "the sweep after $why: $(wc -w <<< "$ids") card(s), $ids" >> "$GITHUB_STEP_SUMMARY"
+      - name: the two passes
+        if: ${{ steps.due.outputs.run == 'true' }}
+        env:
+          IDS: ${{ steps.due.outputs.ids }}
+        run: |
+          set -uo pipefail
+          bin="$RUNNER_TEMP/jackioh"
+          out="$RUNNER_TEMP/sweep"
+          mkdir -p "$out"
+          read -ra ids <<< "$IDS"
+          # One card per process, its pass's files kept only when it finished.
+          card() {
+            local pass=$1 id=$2
+            shift 2
+            if ! timeout "${SWEEP_CARD_MINUTES}m" "$bin" sweep "$@" "$id" > "$out/$pass-$id.jsonl" 2> "$out/$pass-$id.log"; then
+              echo "$id" >> "$out/cut"
+            fi
+          }
+          lanes() {
+            local pass=$1
+            shift
+            for lane in $(seq 0 $((SWEEP_LANES - 1))); do
+              (
+                for i in "${!ids[@]}"; do
+                  if [ $((i % SWEEP_LANES)) = "$lane" ] && ! grep -qx "${ids[$i]}" "$out/cut" 2> /dev/null; then
+                    card "$pass" "${ids[$i]}" "$@"
+                  fi
+                done
+              ) &
+            done
+            wait
+          }
+          # Read back with `source`, so each value is quoted.
+          at() { printf '%s=%q\n' "$1" "$2" >> "$out/times"; }
+          at machine "$(nproc) cores ($(sed -n 's/^model name[[:space:]]*: //p' /proc/cpuinfo | head -n 1))"
+          at pass1_from "$(date -u +%H:%M)"
+          lanes p1 --json
+          at pass1_to "$(date -u +%H:%M)"
+          first=()
+          for file in "$out"/p1-*.jsonl; do
+            id=$(basename "$file" .jsonl)
+            grep -qx "${id#p1-}" "$out/cut" 2> /dev/null || first+=("$file")
+          done
+          if [ "${#first[@]}" = 0 ] || [ ! -e "${first[0]}" ]; then
+            echo "::error::no card finished pass 1"
+            exit 1
+          fi
+          lanes p2 --pass2 "$(IFS=,; echo "${first[*]}")"
+          at pass2_to "$(date -u +%H:%M)"
+          if [ -f "$out/cut" ]; then
+            sort -u -o "$out/cut" "$out/cut"
+            while read -r id; do rm -f "$out/p1-$id.jsonl" "$out/p2-$id.jsonl"; done < "$out/cut"
+            echo "::warning::cut short (past $SWEEP_CARD_MINUTES minutes, or its process failed: its log is in the artifact), so left out, each keeping its row: $(paste -sd' ' "$out/cut")"
+          fi
+          shopt -s nullglob
+          "$bin" sweep --report "$out"/p1-*.jsonl "$out"/p2-*.jsonl > "$out/report.md"
+          sed -n '/^Run /p' "$out/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: the report of record and the tables (sweep --write)
+        id: record
+        if: ${{ steps.due.outputs.run == 'true' }}
+        env:
+          WHY: ${{ steps.due.outputs.why }}
+          IDS: ${{ steps.due.outputs.ids }}
+          GENERATION: ${{ steps.due.outputs.generation }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/sweep"
+          git fetch --quiet origin main
+          git switch --quiet --force-create "$SWEEP_BRANCH" origin/main
+          tables() { sed -n -e '/^pub const SHADOW_BAN: /,/^];/p' -e '/^pub const SHADOW_WATCH: /,/^];/p' crates/ai/src/shadow_ban.rs; }
+          ban() { sed -n '/^pub const SHADOW_BAN: /,/^];/p' crates/ai/src/shadow_ban.rs; }
+          tables > "$out/tables-before"
+          ban > "$out/ban-before"
+          date=$(sed -n 's/^Run \([0-9-]*\) (UTC).*/\1/p' "$out/report.md")
+          path="training/history/sweep-$date.md"
+          n=2
+          while [ -e "$path" ]; do path="training/history/sweep-$date-$n.md"; n=$((n + 1)); done
+          source "$out/times"
+          cut=$(paste -sd' ' "$out/cut" 2> /dev/null || true)
+          {
+            echo "# Shadow-ban sweep of record, $date"
+            echo
+            echo "The sweep after $WHY (R1678000, \`.github/workflows/sweep.yml\`, [run]($RUN_URL)): R390's two passes over"
+            echo "the cards due, $(wc -w <<< "$IDS") of them, on the AI that ships. Every other card keeps the row the earlier reports"
+            echo "gave it (R1186000); a card this report clears has no row in either table (R1675000)."
+            echo
+            echo "## How it ran"
+            echo
+            echo "- **Tree**: \`main\` at \`$(git rev-parse --short=7 "$GITHUB_SHA")\`, AI generation $GENERATION."
+            echo "- **Machine**: GitHub's \`ubuntu-latest\`, $machine, with nothing else running. Each pass ran as"
+            echo "  $SWEEP_LANES lanes, one card per process, the ids dealt to the lanes in turn:"
+            echo "  - pass 1: \`jackioh sweep --json <id>\` over the ids, $pass1_from to $pass1_to UTC;"
+            echo "  - pass 2: \`jackioh sweep --pass2 <every pass-1 file> <id>\` over the same ids, which plays the"
+            echo "    ones at risk, $pass1_to to $pass2_to UTC;"
+            echo "  - the report: \`jackioh sweep --report <the pass-1 files> <the pass-2 files>\`."
+            echo "- **Ids**: $IDS."
+            if [ -n "$cut" ]; then
+              echo "- **Cut short** (past $SWEEP_CARD_MINUTES minutes, or the process failed), so left out of the report and keeping their rows: $cut."
+            fi
+            echo
+            echo "## AI shadow-ban sweep"
+            echo
+            echo "The sweep's own report, as \`jackioh sweep --report\` printed it, its headings one level down."
+            echo
+            sed -e '1d' -e 's/^## /### /' "$out/report.md"
+          } > "$path"
+          mapfile -t reports < <(sed -n 's|^// Report of record: ||p' crates/ai/src/shadow_ban.rs)
+          if ! "$RUNNER_TEMP/jackioh" sweep --write "${reports[@]}" "$path" > "$out/write.txt" 2>&1; then
+            cat "$out/write.txt"
+            echo "refused=true" >> "$GITHUB_OUTPUT"
+            echo "**\`sweep --write\` refused the record**: $(tail -n 1 "$out/write.txt")" >> "$GITHUB_STEP_SUMMARY"
+            cp "$path" "$out/report-of-record.md"
+            exit 0
+          fi
+          cat "$out/write.txt"
+          tables > "$out/tables-after"
+          ban > "$out/ban-after"
+          if cmp -s "$out/tables-before" "$out/tables-after"; then
+            echo "the tables are unchanged: nothing to open (the report is the run's artifact)" >> "$GITHUB_STEP_SUMMARY"
+            cp "$path" "$out/report-of-record.md"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          banned=$(sed -n 's/^.*: \([0-9][0-9]*\) SHADOW_BAN and .*$/\1/p' "$out/write.txt")
+          if [ -z "$banned" ]; then
+            echo "::error::sweep --write did not say how many SHADOW_BAN entries it wrote"
+            exit 1
+          fi
+          sed -i "s/^\(  \"shadowBan\": \)[0-9][0-9]*,$/\1$banned,/" crates/ai/generation.json
+          {
+            echo "changed=true"
+            echo "path=$path"
+            echo "ban_changed=$(cmp -s "$out/ban-before" "$out/ban-after" && echo false || echo true)"
+            echo "summary=$(sed -n 's/^Run [0-9-]* (UTC): .*; \([0-9]* banned, [0-9]* watched, [0-9]* unswept\).*/\1/p' "$out/report.md")"
+          } >> "$GITHUB_OUTPUT"
+          git diff --stat
+      # The AI's practice deck deals from the live ban, so the fixture its claim replays is recorded again.
+      - uses: ./.github/actions/setup
+        if: ${{ steps.record.outputs.ban_changed == 'true' }}
+        with:
+          rust: "false"
+      - name: the practice-claim fixture, recorded again
+        if: ${{ steps.record.outputs.ban_changed == 'true' }}
+        run: |
+          set -euo pipefail
+          JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh
+          JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
+          pnpm --dir apps/web exec vitest run src/practice/claim.test.ts
+      - name: close the superseded pull request
+        if: ${{ steps.due.outputs.superseded != '' && steps.record.outputs.changed != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SUPERSEDED: ${{ steps.due.outputs.superseded }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        # Before deliver pushes the branch again, which would close it without a word.
+        run: |
+          gh pr close "$SUPERSEDED" -R "$REPO" --comment "A newer sweep of record swept this one's cards again ($RUN_URL), so this one is closed (R1678000)." || true
+      - name: deliver (push sweep/shadow-ban, open its pull request, auto-merge)
+        if: ${{ steps.record.outputs.changed == 'true' }}
+        env:
+          LEARN_LANE_TOKEN: ${{ secrets.LEARN_LANE_TOKEN }}
+          REPO: ${{ github.repository }}
+          WHY: ${{ steps.due.outputs.why }}
+          IDS: ${{ steps.due.outputs.ids }}
+          SUPERSEDED: ${{ steps.due.outputs.superseded }}
+          REPORT: ${{ steps.record.outputs.path }}
+          SUMMARY: ${{ steps.record.outputs.summary }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/sweep"
+          git add "$REPORT" crates/ai/src/shadow_ban.rs crates/ai/generation.json crates/server/tests/fixtures/practice-claim.json
+          git -c user.name="jackioh sweep" -c user.email="sweep@users.noreply.github.com" \
+            commit --quiet -m "Patch: the shadow ban swept again after $WHY" -m "R1678000: $REPORT ($RUN_URL)."
+          git format-patch -1 --stdout > "$out/record.patch"
+          if [ -z "$LEARN_LANE_TOKEN" ]; then
+            echo "::error::the tables changed, but LEARN_LANE_TOKEN is not set: the record is the run's artifact (record.patch)"
+            exit 1
+          fi
+          title="Patch: the shadow ban swept again after $WHY"
+          remote="https://x-access-token:${LEARN_LANE_TOKEN}@github.com/${REPO}.git"
+          # Pushed as a new branch, as the learn lane pushes ai/learn: only the sweep's commit is new.
+          git push --quiet "$remote" --delete "$SWEEP_BRANCH" 2> /dev/null || true
+          if ! git push "$remote" "HEAD:refs/heads/$SWEEP_BRANCH"; then
+            echo "::error::LEARN_LANE_TOKEN could not push $SWEEP_BRANCH: it may have expired (training/learn.md, Setting it up)"
+            exit 1
+          fi
+          export GH_TOKEN="$LEARN_LANE_TOKEN"
+          {
+            echo "The sweep of record after $WHY (R1678000, [run]($RUN_URL)): $SUMMARY."
+            echo
+            echo "- **Report**: \`$REPORT\`, read last by \`cargo jackioh sweep --write\`; \`sweep --check\` holds the tables to it."
+            echo "- **Swept**: $IDS."
+            [ -z "$SUPERSEDED" ] || echo "- **Supersedes** #$SUPERSEDED, whose cards it swept again."
+            echo
+            git show --stat --format= HEAD | sed 's/^/    /'
+            echo
+            echo "<!-- sweep-ids: $IDS -->"
+          } > "$out/pull-body.md"
+          gh pr create -R "$REPO" --base main --head "$SWEEP_BRANCH" --title "$title" --body-file "$out/pull-body.md"
+          gh pr merge -R "$REPO" "$SWEEP_BRANCH" --auto --squash
+          echo "opened the pull request with auto-merge on: $SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+      - name: a refused record, an issue for a person
+        if: ${{ steps.record.outputs.refused == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          WHY: ${{ steps.due.outputs.why }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/sweep"
+          {
+            echo "The sweep of record after $WHY ([run]($RUN_URL)) wrote a report that \`cargo jackioh sweep --write\` refuses, so the shadow ban is as it was (R1678000):"
+            echo
+            echo '```text'
+            tail -n 20 "$out/write.txt"
+            echo '```'
+            echo
+            echo "A ban of a set outside the sets that may hold bans needs a ruling that adds it (R732000, R1186000); more than half of a set banned means the AI is improved until it bans no more (R732000). The report is the run's \`sweep-${{ github.run_number }}\` artifact (\`report-of-record.md\`)."
+          } > "$out/issue.md"
+          gh issue create -R "$REPO" --title "Patch: the shadow ban's sweep after $WHY is refused by sweep --write" \
+            --label human --body-file "$out/issue.md"
+          echo "::error::sweep --write refused the record: an issue is open for it"
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sweep-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/due.json
+            ${{ runner.temp }}/sweep/
+          if-no-files-found: ignore
+          retention-days: 90

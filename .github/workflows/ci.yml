@@ -641,14 +641,15 @@ jobs:
   # must be exactly one generation on from main, and must pass
   # its lane's promotion gate again here, against main's AI with the same seeds. A lane's own claim is
   # never trusted. Any other pull request skips this job and the `rust` summary accepts the skip, so
-  # it needs no required-check name of its own. It plays 200 games, so it may take longer than the
-  # other pieces; ci-duration.yml does not report it.
+  # it needs no required-check name of its own. It plays the lane's sequential test again (R1679000):
+  # about 800 games and at most 2,000, the same deals the lane read (about 30 games a minute here), so
+  # it takes longer than the other pieces; ci-duration.yml does not report it.
   training-gate:
     name: rust (training gate)
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' && github.event_name == 'pull_request' && startsWith(github.head_ref, 'ai/') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       # The branch's own commit, not the merge commit GitHub makes: promote seeds its games from
       # `git rev-parse HEAD:crates/ai/src`, as the lane's run did. All history, for main's commit.
