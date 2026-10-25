@@ -3,9 +3,13 @@ credits watch (bot/machine/credits.py): when an issue says the credits run low."
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 from datetime import datetime, timezone
 
 from harness.config import REPO_ROOT
@@ -105,6 +109,72 @@ class CreditsTests(unittest.TestCase):
 SETUP = REPO_ROOT / "bot" / "machine" / "setup.sh"
 
 
+REGISTER = REPO_ROOT / "bot" / "machine" / "register-runners.sh"
+
+
+class RegisterRunnersTests(unittest.TestCase):
+    """register-runners.sh with `gh` and `on-machine.sh` stubbed: what it hands each box (#1677:
+    the night box and the Muse box split the subscriptions, one Muse runner on each)."""
+
+    def run_script(self, *args: str, box: str = "") -> subprocess.CompletedProcess:
+        with tempfile.TemporaryDirectory() as tmp:
+            here, bin_dir = Path(tmp, "machine"), Path(tmp, "bin")
+            here.mkdir()
+            bin_dir.mkdir()
+            shutil.copy(REGISTER, here / "register-runners.sh")
+            # The box gets the remote script and its arguments: the stub keeps the arguments.
+            (here / "on-machine.sh").write_text('#!/bin/bash\nshift\nprintf "%s\\n" "$@" > "$HANDED"\n')
+            (bin_dir / "gh").write_text('#!/bin/bash\n'
+                                       'case "$*" in *registration-token*) echo REG;; '
+                                       '*remove-token*) echo REMOVE;; esac\n')
+            for stub in (here / "on-machine.sh", bin_dir / "gh"):
+                stub.chmod(0o755)
+            env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "BOX": box,
+                   "HANDED": str(Path(tmp, "handed"))}
+            done = subprocess.run(["bash", str(here / "register-runners.sh"), "OWNER/REPO", *args],
+                                  cwd=REPO_ROOT, env=env, capture_output=True, text=True)
+            handed = Path(tmp, "handed")
+            done.stdout = handed.read_text() if handed.exists() else ""
+            return done
+
+    def handed(self, *args: str, box: str = "") -> list[str]:
+        done = self.run_script(*args, box=box)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return done.stdout.splitlines()
+
+    def test_with_no_ids_every_machine_subscription_gets_its_lanes(self):
+        handed = self.handed()
+        self.assertEqual(handed[:4], ["OWNER/REPO", "REG", "REMOVE", ""])
+        self.assertIn("muse=night-vm-muse=2", handed)
+        self.assertIn("agy=night-vm-agy=1", handed)
+
+    def test_each_box_names_its_own_subscriptions_and_runners(self):
+        self.assertEqual(self.handed("gpt", "agy", "devin", "muse=1")[3:],
+                         ["", "gpt=night-vm-gpt=1", "agy=night-vm-agy=1",
+                          "devin=night-vm-devin=6", "muse=night-vm-muse=1"])
+        self.assertEqual(self.handed("muse=1", box="b2")[3:], ["b2", "muse=night-vm-muse=1"])
+        self.assertEqual(self.handed("muse=0")[4:], ["muse=night-vm-muse=0"])
+
+    def test_it_refuses_an_unknown_id_a_bad_count_or_a_bad_suffix(self):
+        for args, box, message in ((("nobody",), "", "nobody: no provider"),
+                                   (("muse=two",), "", "muse=two: the runners here"),
+                                   (("claude-1",), "", "claude-1: no provider"),
+                                   (("muse=1",), "B 2", "BOX=B 2")):
+            done = self.run_script(*args, box=box)
+            self.assertNotEqual(done.returncode, 0, args)
+            self.assertIn(message, done.stderr)
+
+    def test_the_box_names_its_runners_and_removes_those_past_its_count(self):
+        text = REGISTER.read_text(encoding="utf-8")
+        self.assertIn('name="$label${box:+-$box}"', text)
+        self.assertIn('name="$label-$lane${box:+-$box}"', text)
+        self.assertIn('./config.sh remove --token "$remove_token"', text)
+        # A runner in the middle of a job is never removed.
+        removal = text.split("Past this box's count")[1].split("for lane in $(seq")[0]
+        self.assertLess(removal.index("Runner.Worker"), removal.index("config.sh remove"))
+        self.assertEqual(subprocess.run(["bash", "-n", str(REGISTER)]).returncode, 0)
+
+
 class SetupTests(unittest.TestCase):
     """setup.sh, read as text: what each box gets (README.md, Building it; The training box)."""
 
@@ -126,7 +196,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn('for dir in "/home/$user"/actions-runner*; do', self.night)
         self.assertIn('echo "/home/$user/.cargo/bin:/usr/local/bin:', self.night)
 
-    def test_the_training_box_runs_three_lanes_forever_and_never_powers_off(self):
+    def test_the_training_box_keeps_three_lanes_starts_only_gather_and_never_powers_off(self):
         self.assertIn('TRAIN_LANES="improve unban gather"', self.text)
         self.assertIn('user="agent-train-$lane"', self.training)
         self.assertIn("apt-get install -y -qq gh", self.training)
@@ -140,8 +210,9 @@ class SetupTests(unittest.TestCase):
                      "Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i",
                      "WantedBy=multi-user.target"):
             self.assertIn(f"\n{line}\n", f"\n{unit}\n", line)
-        self.assertIn("systemctl enable --now jackioh-train@improve jackioh-train@unban"
-                      " jackioh-train@gather\n", self.training)
+        # #1677: the two LLM lanes are stopped, and setup never starts them again.
+        self.assertIn("systemctl enable --now jackioh-train@gather\n", self.training)
+        self.assertNotIn("systemctl enable --now jackioh-train@improve", self.training)
         # No idle stop, no runner and no CloudWatch agent: those are the night box's alone.
         for night_only in ("night-vm-idle-stop.timer <<", "actions-runner", "amazon-cloudwatch-agent"):
             self.assertNotIn(night_only, self.training, night_only)

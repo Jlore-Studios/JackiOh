@@ -1955,6 +1955,12 @@ impl Tx<'_> {
         dispatch!(self, matches_actions(match_id))
     }
 
+    /// #1825: whether the match's log holds any action, asked without reading the log: false once
+    /// the retention purge has taken it, and for an unknown id.
+    pub async fn matches_has_actions(&mut self, match_id: &str) -> StoreResult<bool> {
+        dispatch!(self, matches_has_actions(match_id))
+    }
+
     /// #1169: stores the match's checkpoint, only while the match is live and its log holds `row.seq`
     /// under `row.nonce`, and in place of an earlier seq's only. Answers whether it was stored.
     pub async fn matches_put_checkpoint(&mut self, row: &MatchCheckpointRow) -> StoreResult<bool> {
@@ -3095,9 +3101,10 @@ impl Tx<'_> {
         dispatch!(self, shares_sharers(match_id, friend))
     }
 
-    /// B52: every share `friend` may read now (as `shares_sharers` judges each), newest first.
-    pub async fn shares_for(&mut self, friend: &str) -> StoreResult<Vec<SharedReplayRow>> {
-        dispatch!(self, shares_for(friend))
+    /// B52: every share `friend` may read now (as `shares_sharers` judges each), newest first, at most
+    /// `limit` of them (#1825).
+    pub async fn shares_for(&mut self, friend: &str, limit: i64) -> StoreResult<Vec<SharedReplayRow>> {
+        dispatch!(self, shares_for(friend, limit))
     }
 
     /// R1435000: the friends `sharer` shared the finished match `match_id` with who may still read

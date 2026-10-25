@@ -346,8 +346,8 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
       <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
         {t("← All decks")}
       </button>
-      {/* Issue §8: the deck's portrait. The picker holds the whole roster and the previews;
-          picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
+      {/* Issue §8: the deck's portrait. The picker holds the portraits the account owns (R1827000)
+          and the previews; picking one saves like any edit. `null` in the store reads `vanilla` (R641). */}
       <PortraitPicker
         portrait={portraitOrDefault(deck.portrait)}
         onPick={(next) => {

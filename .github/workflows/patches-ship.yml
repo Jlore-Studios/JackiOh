@@ -26,6 +26,16 @@
 # fragment and the issues that pull request closes become `Patch v<version>: <what it does>`, each
 # with a comment naming the version (`bot/harness/titles.py`). Versions are named by tier when they
 # ship (R1366000), so no title holds one before.
+#
+# A promotion that is still open STUCK_AFTER_SECONDS (2 hours) after it opened, its checks done and
+# one of them red, did not merge itself: `watch` escalates it. Twice a test that reads the shipped
+# history broke only on the history a promotion ships (#1644, #1832), and the promotion sat unseen.
+# The watch opens one issue for it (or comments on the one open) queued for the night bot as
+# `bot:build` and `difficulty:hard`, and assigns the bot. Its fix lands on main, which a fix outside
+# pending/ does not ship, so once that issue is closed the watch runs this workflow again from the
+# newer main, superseding the stuck promotion with one that carries the fix. GitHub does not start
+# this repository's scheduled runs reliably (promote-production.yml), so every completed CI run
+# checks too; the check is a few API calls.
 name: patches ship
 
 on:
@@ -33,9 +43,17 @@ on:
     branches: [main]
     paths: ["crates/cards/patches/pending/**", "crates/cards/patches/patches.json"]
   workflow_dispatch:
+  # `watch` alone: hourly if GitHub starts it, and after every CI run.
+  schedule:
+    - cron: "23 * * * *"
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
 
+# The ship runs one at a time and is never cancelled; the watch runs in a group of its own, so a watch
+# queued behind a ship never displaces a ship waiting its turn.
 concurrency:
-  group: patches-ship
+  group: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'patches-ship' || 'patches-ship-watch' }}
   cancel-in-progress: false
 
 permissions:
@@ -46,6 +64,7 @@ permissions:
 jobs:
   ship:
     name: promote pending fragments
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     # A release build of the CLI first (the cache holds its dependencies, not the crates themselves).
     timeout-minutes: 20
@@ -154,3 +173,108 @@ jobs:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: python3 -m harness.titles shipped --before "$BEFORE" --after "$AFTER"
+
+  # The header's stuck promotion: open STUCK_AFTER_SECONDS, no check still running, one check red. One
+  # issue holds the escalations: the first opens it (bot:build, difficulty:hard, assigned to the
+  # night bot), a later one while it is open comments on it, each promotion once, which its
+  # `promotion #N` marker records. Once no such issue is open, a promotion it named that is still
+  # stuck is shipped again from the newer main, unless main has not moved or a ship from it is on its
+  # way or already ran. A promotion still running its checks, or green and only waiting to merge, is
+  # left alone.
+  watch:
+    name: escalate a stuck promotion
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_run' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      # `gh run list` and `gh workflow run`: the ship again, once its issue is closed.
+      actions: write
+    steps:
+      - name: escalate each promotion still red 2 hours after it opened
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          STUCK_AFTER_SECONDS: "7200"
+          NIGHT_BOT: jgoetzmann-bot
+          TITLE: "A patches ship promotion is stuck"
+        run: |
+          set -euo pipefail
+          now=$(date -u +%s)
+          main=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          gh pr list --repo "$REPO" --state open --base main --limit 50 \
+            --json number,headRefName,createdAt,url,body \
+            --jq '.[] | select(.headRefName | startswith("patches/ship-")) | [.number, .createdAt, .url, (((.body // "") | capture("pending on main at (?<sha>[0-9a-f]{40})") | .sha) // "")] | @tsv' |
+            while IFS=$'\t' read -r number created url base; do
+              age=$(( now - $(date -u -d "$created" +%s) ))
+              if [ "$age" -lt "$STUCK_AFTER_SECONDS" ]; then
+                echo "#$number: open $((age / 60)) minutes; waiting"
+                continue
+              fi
+              checks=$(gh pr view "$number" --repo "$REPO" --json statusCheckRollup --jq '.statusCheckRollup')
+              running=$(jq '[.[] | select((.status != null and .status != "COMPLETED") or (.state == "PENDING" or .state == "EXPECTED"))] | length' <<<"$checks")
+              if [ "$running" -gt 0 ]; then
+                echo "#$number: $running check(s) still running; waiting"
+                continue
+              fi
+              failed=$(jq -r '.[] | select(((.conclusion // .state) // "") as $c | ["FAILURE", "TIMED_OUT", "STARTUP_FAILURE", "ERROR", "ACTION_REQUIRED"] | index($c)) | "- [\(.name // .context)](\(.detailsUrl // .targetUrl))"' <<<"$checks")
+              if [ -z "$failed" ]; then
+                echo "#$number: every check passed; left to merge itself"
+                continue
+              fi
+
+              # Whole, so promotion #18's marker is not found in #1832's.
+              marker="<!-- promotion #$number -->"
+              issues=$(gh issue list --repo "$REPO" --state all --search "in:title \"$TITLE\"" --limit 50 \
+                --json number,title,state,body,comments \
+                --jq "[.[] | select(.title == \"$TITLE\")]")
+              open=$(jq -r '[.[] | select(.state == "OPEN")][0].number // empty' <<<"$issues")
+              named=$(jq -r --arg marker "$marker" '[.[] | select(((.body // "") | contains($marker)) or ([.comments[].body // ""] | any(contains($marker))))] | length' <<<"$issues")
+
+              if [ "$named" -eq 0 ]; then
+                note=$(printf '%s\n' \
+                  "$marker" \
+                  "The card-patch promotion $url (\`patches ship\`, R646) has been open over 2 hours and did not merge itself: these checks are red on its head." \
+                  "" \
+                  "$failed" \
+                  "" \
+                  "Until it merges, the patches it ships are not live as versions: \`CATALOG_VERSION\` stays where it was and the patch notes do not show them." \
+                  "" \
+                  "Fix it on a branch from main: a check that only fails here usually reads the shipped history (\`crates/cards/patches/\`) and must hold for the history this promotion ships, so check out its branch and run the failing tests there to see it fail first, then show them pass there with the fix. Close this issue with the fix's pull request; the watch in \`.github/workflows/patches-ship.yml\` then ships again from the newer main, and that promotion supersedes this one.")
+                if [ -n "$open" ]; then
+                  gh issue comment "$open" --repo "$REPO" --body "$note"
+                  echo "#$number: stuck; commented on #$open"
+                else
+                  issue=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$note" \
+                    --label "bot:build" --label "difficulty:hard" --label "priority:high")
+                  # The label queues it; the assignment is the bot's other way in, and a refused one
+                  # leaves the queued issue as it is.
+                  gh issue edit "$issue" --repo "$REPO" --add-assignee "$NIGHT_BOT" ||
+                    echo "::warning::could not assign $NIGHT_BOT to $issue; it is queued by its bot:build label"
+                  echo "#$number: stuck; opened $issue"
+                fi
+                continue
+              fi
+
+              # Named in an issue already: wait while one is open, then ship again from a newer main.
+              if [ -n "$open" ]; then
+                echo "#$number: stuck; #$open is open"
+                continue
+              fi
+              if [ "$base" = "$main" ]; then
+                echo "#$number: stuck, its issue closed, but main has not moved since it shipped"
+                continue
+              fi
+              # Once per main: a ship refused there (its own issue above) is not dispatched again on
+              # every CI run until main moves.
+              active=$(gh run list --repo "$REPO" --workflow patches-ship.yml --event workflow_dispatch --limit 20 \
+                --json status,headSha | jq --arg main "$main" '[.[] | select(.status != "completed" or .headSha == $main)] | length')
+              if [ "$active" -gt 0 ]; then
+                echo "#$number: stuck, its issue closed; a ship from main at $main is on its way or already ran"
+                continue
+              fi
+              gh workflow run patches-ship.yml --repo "$REPO" --ref main
+              echo "#$number: stuck, its issue closed; shipping again from main at $main"
+            done

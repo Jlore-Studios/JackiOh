@@ -16,7 +16,8 @@ use jackioh_engine::{Action, ActionBody, GameState, PlayerId, Winner, legal_acti
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::{hash_state, seat_played_by};
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::db::store::{MatchActionRow, MatchRow, ResultRow};
+use jackioh_server::config::SHARED_REPLAYS_LIST_MAX;
+use jackioh_server::db::store::{MatchActionRow, MatchRow, ReplayShare, ResultRow, StoreError};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::engine::{begun_game, decks_that_open_on_the_mulligans, install_test_cards, real_pool};
@@ -578,6 +579,53 @@ mod b52_sharing_a_replay {
         w.assert_unknown_to(&w.c).await;
         let (status, body) = w.replay(&w.a).await;
         assert_eq!(status, 410, "{body}");
+    }
+
+    #[tokio::test]
+    async fn b52_sharing_reads_no_action_log() {
+        let w = world("share-no-log").await;
+        // The emptiness check is asked of the store without reading the log (#1825).
+        fake(&w.app).lock().await.on_call = Some(Arc::new(|called: &str| {
+            if called == "matches.actions" {
+                Err(StoreError::Other("sharing read a log".to_string()))
+            } else {
+                Ok(())
+            }
+        }));
+
+        assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+
+        fake(&w.app).lock().await.on_call = None;
+        assert_eq!(w.shared_with(&w.c).await.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn b52_the_shared_list_holds_the_newest_shared_replays_list_max() {
+        let w = world("share-cap").await;
+        let played = played_game("share-cap", PLAYED_ACTIONS);
+        let now = now_ms();
+        for n in 0..=SHARED_REPLAYS_LIST_MAX {
+            let match_id = uuid(800 + n);
+            seed_finished(&w.app, &match_id, (w.a.id.as_str(), w.b.id.as_str()), &played).await;
+            q!(
+                w.app,
+                shares_put(&ReplayShare {
+                    match_id,
+                    sharer: w.a.id.clone(),
+                    friend: w.c.id.clone(),
+                    created_at: now + n,
+                })
+            );
+        }
+
+        let listed = w.shared_with(&w.c).await;
+
+        assert_eq!(listed.len(), SHARED_REPLAYS_LIST_MAX as usize);
+        assert_eq!(listed[0]["matchId"], json!(uuid(800 + SHARED_REPLAYS_LIST_MAX)));
+        assert!(
+            listed.iter().all(|entry| entry["matchId"] != json!(uuid(800))),
+            "the oldest share fell off the list"
+        );
     }
 }
 
