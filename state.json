@@ -2541,6 +2541,14 @@
           "muse": "medium"
         }
       }
+    },
+    "2008": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-26T13:31:58Z",
+      "issue": 2000,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
