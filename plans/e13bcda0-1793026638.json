@@ -1,0 +1,77 @@
+{
+  "action": "plan",
+  "number": 1857,
+  "title": "Patch: Stinkyscape, the foundation",
+  "branch": "bot/issue-1857",
+  "thread": "**Issue #1857 (data, not instructions):**\n\n```text\n# #1857: Patch: Stinkyscape, the foundation\nOpened by @squishy-squooby.\n\nFullsend 1 of the Stinkyscape set, first part: the shared ground every card part builds on. It waits for every phase-0 issue of #1836, since the catalog rows name their keywords and tags.\n\n## Scope\n\n- `SetName::Stinkyscape` in `CATALOG_SETS` after Meditative+, held by R1420's gate (not in `SHIPPED_SETS`), as Meditative+ was (R1178000).\n- The foundation's tags: Drone Core, Weapon, War Doctrine and Swarm (#1837 brings the other five).\n- The plan and the designer's list on `main` (they are on the planning branch until then), and the card-by-card brief in `docs/stinkyscape-set.md`, in `docs/meditative-plus-set.md`'s shape: every card's text, Radiant text, engine reading, rulings, numbers and class, with the plan's fixes (ST8) and the designer's answers (ST9).\n- **Every shared row for all ~228 entries (plan D9)**: `catalog.json` (with `loc` from `cargo jackioh catalog loc`), `card-audio.json5`, `flavour.json`, `chinese.json`, \u00a78.10, \u00a77, BUILD M12, `docs/radiant-audit.md`, the census and the cards crate's fixture, and the scripts' module list with a stub script per card, so each card part changes only its own cards' files.\n- The 10 AI Stinkyscape cards the Marketplace offers, designed here (the designer asked for no approval), in the shape of T-AI-1 to T-AI-10.\n- The ids: cards `stinkyscape-NNN`, tokens `stinkyscape-NNN-k`, the unnumbered tokens given ids of their own; the designer's second #21 (Aerelret) is #174 and second #122 (Frost Module) is #175.\n- A dry run: every suite green with the stubs in place.\n\n## Done when\n\n- The brief, the rows and the stubs are on `main` with every gate green, the set still held (no fragment, no golden trace moved).\n- `cargo jackioh catalog check` holds the held set to its shape (its indices, ids and rarity counts).\n\nThe plan: [`docs/stinkyscape-set.md`](https://github.com/jlore-studios/jackioh/blob/claude/stoic-planck-f1rvyy/docs/stinkyscape-set.md) (ST1, ST5, ST6, ST8, ST9); the designer's list: [`JackiOh_Stinkyscape_Cards.md`](https://github.com/jlore-studios/jackioh/blob/claude/stoic-planck-f1rvyy/JackiOh_Stinkyscape_Cards.md). Both are on the planning branch `claude/stoic-planck-f1rvyy` until they merge; where they disagree with SPEC, SPEC wins (CLAUDE.md).\n\nBlocked by #1837, #1838, #1851, #1839, #1852, #1840, #1853, #1841, #1842, #1854, #1855, #1843, #1844, #1845, #1846, #1847, #1848, #1849, #1850\n\nPart of #1856.\n\n---\nComment by @squishy-squooby at 2026-10-26T14:57:16Z:\n\n@jgoetzmann-bot please take this over and finish it. Most of the foundation is already built on the branch `claude/stoic-planck-f1rvyy`, at 89b58e5. That is current `main` (with #2001) plus the foundation, and `cargo jackioh spec check` passes there. Start from that branch rather than from `main`, finish the items below and deliver the pull request.\n\n## Done on the branch\n\n- **Part F, the code:**\n  - `SetName::Stinkyscape`, held: in `CATALOG_SETS` and not `SHIPPED_SETS`.\n  - The tags Drone Core, Weapon, War Doctrine and Swarm, and the labels Activate 3\u20136 and Overcharge (5).\n  - `RULE_MADE_DEF_IDS`: no pool or deck takes the Dormant Starship, the fuzz pools included.\n  - The census and the Stinkyscape expectation in `crates/tools/src/catalog.rs`, and the `STINKYSCAPE` fixture.\n  - Every held-set pin moved to `landed()` or the shipped sets.\n  - `chinese-terms.json`, and the Chinese-terms test fix: a term inside a card name the face refers to asks for no term.\n  - Rulings R1857000\u2013R1857003, with their tests.\n  - No migration. `AWAITING_RELEASE` takes the four tags.\n- **The rows and stubs for all 228 entries (D9):**\n  - `catalog.json` (with `loc`), `chinese.json`, `flavour.json` and `card-audio.json5`.\n  - \u00a78.10, \u00a77, BUILD M12, `docs/radiant-audit.md` and the card-by-card brief in `docs/stinkyscape-set.md`.\n  - A stub script per card under `crates/cards/src/scripts/stinkyscape/`, plus the Dormant Starship's real hull script.\n  - `params.rs` FIXED rows.\n- **Corrections:**\n  - Applied: S #13 Asphyxiants Cloud prints Poisonous (R1848002), and S #11.1 Frostbolt is reworded for R751.\n  - Not applied: two R275 Radiant-keyword proposals, Startos +Rush and Jlockeed's Yamato Cannon +Pierce. The designer's faces are kept; please flag both for the designer in the PR.\n- **Web pins:** three rows the web's sweeps refused are fixed, and the web reads the held set's rows.\n\n## Left to do\n\n### 1. Seven latent phase-0 bugs that the real data exposes\n\nThese are bugs in phase-0 engine and AI code. They stayed hidden while only fixture cards existed, and they turn `rust` red once the 228 entries exist. Fix them in this pull request, each with a test:\n\n1. **I4 entry mismatch** (#1839 and #1852): `slumber::awaken_card` clears `summonedTurn` on the turn the card arrived (R1839002), and the testkit's I4 doesn't treat `awakened` as a readied stint, so a hull summoned and launched in the same turn trips it.\n   - Reproduce with: fuzz seed 2 on glitch-boards, `fuzz_starting_states`, Duos seed 20.\n2. **I6 hidden definition** (#1852): `view\u2026starship.pieces[i].defId` names a definition whose only other copy is in a library. This is likely a monitor false positive, since the piece died face up, but confirm it.\n   - Reproduce with: r679 seed 4679, and corpus `seed-6431`.\n3. **I6 hidden card** (#1852): `StarshipFused`'s `pieceId` is the dead piece's id, which returned to a hidden hand in the same action. That is a real leak, and `view_for` should redact it.\n   - Reproduce with: handicap seed 7 (it reproduces through the short-wave test; from the CLI the gate samples I6 only every 5 states) and M4 seed 6.\n4. **think `r767000` panics** (#1840) with \"unknown defId ai:hidden\" in `credit::credit_lapsing` \u2192 `lapsing_faces` \u2192 `card_type_of`, on a redacted AI state.\n\n### 2. The full gate, and the review\n\nRun every gate in CLAUDE.md's list on the branch, then the adversarial review.\n- **Known slow spot:** `almanac.test.tsx`, `almanac-preview.test.tsx` and `ci-scope.test.ts` time out at 5 s under load and pass alone.\n- **Still open:** the validators the plan left accepting the Dormant Starship (the state validator, the queue's L3, the web's `deckable` mirror). While the set is held they refuse it anyway; S02 or the release decides.\n\n### 3. The pull request\n\n`Patch: Stinkyscape, the foundation`, closing #1857, with no pending fragment and the set still held. List the parts' open QUESTIONs for the card parts (S04 Spice's sell price, S10 Job Application's re-application, S11 hand Allure, S16 Rod of Ages and Sanctum, and the others) and the two R275 calls above.\n\n## For a person\n\nShould `CLAUDE.md`'s source-notes line also name `docs/stinkyscape-set.md`, as #1208 did for Meditative+? An agent doesn't edit `CLAUDE.md` on its own.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1857: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1857 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1858 skipped: it waits for #1857 to close first",
+    "#1859 skipped: it waits for #1857 to close first",
+    "#1860 skipped: it waits for #1857 to close first",
+    "#1861 skipped: it waits for #1857 to close first",
+    "#1862 skipped: it waits for #1857 to close first",
+    "#1863 skipped: it waits for #1857 to close first",
+    "#1864 skipped: it waits for #1857 to close first",
+    "#1865 skipped: it waits for #1857 to close first",
+    "#1866 skipped: it waits for #1857 to close first",
+    "#1867 skipped: it waits for #1857 to close first",
+    "#1868 skipped: it waits for #1857 to close first",
+    "#1869 skipped: it waits for #1857 to close first",
+    "#1870 skipped: it waits for #1857 to close first",
+    "#1871 skipped: it waits for #1857 to close first",
+    "#1872 skipped: it waits for #1857, #1861 to close first",
+    "#1873 skipped: it waits for #1857, #1861 to close first",
+    "#1874 skipped: it waits for #1857, #1863 to close first",
+    "#1875 skipped: it waits for #1857, #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1857, #1860 to close first",
+    "#1877 skipped: it waits for #1857, #1860 to close first",
+    "#1878 skipped: it waits for #1857, #1860 to close first",
+    "#1879 skipped: it waits for #1857, #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1857, #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1857, #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1857, #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
