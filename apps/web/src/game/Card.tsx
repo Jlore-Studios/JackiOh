@@ -90,7 +90,7 @@ import { isSpent, useActingSeat } from "./spent.ts";
 import { useKeywordLost } from "./keywordLoss.ts";
 import { useSeatDeckCosmetics, useTheirLoadout, useWearerSeat } from "./wearer.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
-import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr } from "./glow.ts";
+import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr, paretoAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -481,6 +481,8 @@ export default function Card(props: CardProps): ReactElement {
       data-condition-active={conditionAttr(card) ?? conditionTargetAttr(props.highlight, testId)}
       // R667: the engine says a card on the field would counter this hand card if played now.
       data-countered-on-play={counteredAttr(card)}
+      // R1844001: the engine says the judge would call this hand card's play optimal (the Pareto hint).
+      data-pareto-optimal={paretoAttr(card)}
       // #991, R583: a hovered or selected hand card's preview counts this card (highlights.css rings it).
       data-counted={countedAttr(props.highlight, testId)}
       data-owner={props.owner ?? unit?.owner}

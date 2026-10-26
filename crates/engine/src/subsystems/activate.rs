@@ -1067,11 +1067,13 @@ pub fn activate_ability(
     let decl = find_ability(sink.state, &card, action.ability.as_deref())?;
 
     let modes: Vec<String> = action.modes.clone().unwrap_or_default();
+    // R1850000: a copier's abilities are the copied text's, run under that definition.
+    let (text_def_id, text_radiant) = crate::subsystems::unit_text::text_def_of(&card);
     let mut run = ActivationRun {
         player,
         instance_id: card.id.clone(),
-        def_id: card.def_id.clone(),
-        radiant: card.radiant,
+        def_id: text_def_id.to_string(),
+        radiant: text_radiant,
         ability: decl.id.clone(),
         // R221, R90: each declaration's picks are a set, taken in the order it offers them.
         targets: in_declared_order(

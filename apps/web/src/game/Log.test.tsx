@@ -521,6 +521,33 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
   });
 });
 
+describe("R1850003 a permanent held beneath a card", () => {
+  const lookup = lookupFromDefs(CATALOG);
+  const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
+
+  it("R1850003 names the card that was taken and the card it is held beneath", () => {
+    const view = fullBoardView();
+    const holder = view.you.backrow[0];
+    const taken = view.opponent.units[0];
+    if (holder === null || holder === undefined || holder.faceDown || taken === null || taken === undefined) {
+      throw new Error("the fixture has a face-up backrow card and an enemy unit");
+    }
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Log
+          view={withEvents(view, [
+            { type: "held", player: "p2", instanceId: taken.instanceId, defId: taken.defId, holderId: holder.instanceId },
+          ])}
+        />
+      </CatalogContext.Provider>,
+    );
+    const [line] = [...screen.getByTestId(testid.log).querySelectorAll(".log-line")].map((li) => li.textContent ?? "");
+    expect(line).toMatch(/is held beneath/);
+    expect(line).toContain(nameOf(taken.defId));
+    expect(line).toContain(nameOf(holder.defId));
+  });
+});
+
 // #552 (MN09): the lines the Meditative play-through turned up, read as English. A line that opens on
 // a card the viewer may not read opens with a capital; a hidden card turned into another hidden card
 // says only that it changed; a craft prompt is a card to craft; and the lines about one card shown in

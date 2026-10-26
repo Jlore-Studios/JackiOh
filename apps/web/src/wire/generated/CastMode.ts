@@ -6,4 +6,9 @@ import type { PlayerId } from "./PlayerId";
  * its target picks to enemies when one is legal (`targetEnemies`), or both. `casts` counts the casts
  * a random cast's resolution has made in all, itself included, against RANDOM_CAST_CHAIN_CAP.
  */
-export type CastMode = { instanceId: string, player: PlayerId, random: boolean, targetEnemies: boolean, casts: number, };
+export type CastMode = { instanceId: string, player: PlayerId, random: boolean, targetEnemies: boolean, casts: number, 
+/**
+ * R1850004: its target picks are narrowed to its caster's own hero and permanents, strictly: a
+ * declaration with none of those is passed. Only ever `Some(true)`.
+ */
+friendsOnly?: true, };
