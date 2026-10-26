@@ -89,7 +89,10 @@ export type CardFaceProps = {
   face: FaceModel;
   layout?: "full" | "compact";
   className?: string;
-  /** One face of a long grid: its art is drawn once it has dwelt near the screen (CardArt `lazy`). */
+  /**
+   * One face of a long grid: its art is drawn once it has dwelt near the screen (CardArt `lazy`),
+   * and (R1956000) a cosmetic it wears holds still, taking none of the moving slots.
+   */
   lazyArt?: boolean;
   /**
    * Issue #814: the Summit's Ascent level as the view gives it, in a game. A Summit face with a
@@ -330,7 +333,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // R503: the frame's rarity, a token's printed one included.
   const rarity = frameRarity(face);
   // R1295000: what the face wears, judged by the rarity its frame shows as its rarity foil is.
-  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil);
+  // R1956000: a grid's faces hold theirs still, so the slots stay with the card a player opens.
+  const cosmetics = useCosmeticAttributes({ ...face, rarity }, worn, settings.animatedFoil && !lazyArt);
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
