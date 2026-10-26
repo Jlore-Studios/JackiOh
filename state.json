@@ -2675,21 +2675,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "spec/11-rulings.md"
           ],
-          "from": "6ca3af8bf4fbdd392e8d0d148cd7baa62f10e49e",
-          "main": "91bdfad19392a6298e5efbb0ba0bf195d114529e"
+          "from": "bcd00e5504021d7e98e2164a5ee6836ef03c34ef",
+          "main": "50b4b6af88cb5d3d9b8b5cf6633093ad3d5ced2c"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "40363206605",
+            "run": "40370022489",
             "tier": "medium"
           }
         ],
-        "sha": "bcd00e5504021d7e98e2164a5ee6836ef03c34ef",
+        "sha": "c00bfa5894dca7ad93dc41cb03993472a1629b42",
         "tiers": {
           "muse": "medium"
         }
