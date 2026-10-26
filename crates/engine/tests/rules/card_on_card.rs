@@ -918,6 +918,58 @@ mod r1850003_hold_beneath {
     }
 
     #[test]
+    fn r1850003_a_held_card_reads_to_both_seats_held_and_released() {
+        // I6, the fuzz's hidden-information monitor: a held card is in no pile, yet it was face-up as
+        // it went, so `held` naming it hides nothing from either seat.
+        let mut state = playing("held-i6");
+        let held = put(&mut state, &crier().id, slot(P2, Row::Units, 2), json!({}));
+        let played = play(&state, P1, &ticket().id, false, at("backrow", 1, &held.id));
+        let mut state = played.state;
+        assert_eq!(state.held.as_ref().map(Vec::len), Some(1));
+        let monitor = create_invariant_monitor(&state);
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
+
+        let holder = state.players.p1.backrow[0].clone().expect("the ticket");
+        let mut events = played.events.clone();
+        events.extend(destroy(&mut state, &holder.id));
+        assert!(on_field(&state, &held.id));
+        state.applied = vec![AppliedAction {
+            nonce: "released".into(),
+            events,
+        }];
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
+    }
+
+    #[test]
+    fn r1850003_a_rollback_moves_a_held_card_back_and_it_is_held_no_longer() {
+        // R419: the snapshot's card goes back to its zone from wherever it is now, beneath its holder too.
+        let mut state = playing("rollback");
+        let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        // This turn's snapshot, taken with the card on the board.
+        state.board_history = None;
+        subsystems::board_history::record_board_snapshot(&mut state);
+        let (holder, _) = ticketed(&mut state, &held.id);
+        assert!(!on_field(&state, &held.id));
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+            let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
+            assert_eq!(
+                subsystems::board_history::restore_board(&mut sink, P1, 0, &[P2]),
+                Some(0)
+            );
+        }
+        assert_eq!(top(&state, P2, 1).map(|card| card.id), Some(held.id.clone()));
+        assert_eq!(state.held, None);
+
+        // Its holder's leaving later summons nothing: the card stays where it went since.
+        destroy(&mut state, &held.id);
+        assert!(summoned(&destroy(&mut state, &holder)).is_empty());
+        assert!(state.players.p2.graveyard.iter().any(|card| card.id == held.id));
+        assert!(!on_field(&state, &held.id));
+    }
+
+    #[test]
     fn r1850003_a_held_token_ceases_to_exist() {
         let mut state = playing("token");
         let held = put(&mut state, &token().id, slot(P2, Row::Units, 1), json!({}));
