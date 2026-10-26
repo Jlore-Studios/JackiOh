@@ -421,6 +421,7 @@ mod r1183003_what_the_autopilot_takes {
         state.players[P1].autopilot = Some(Autopilot {
             turn: state.turn,
             actions: 0,
+            aura_actions: None,
         });
         let chosen = jackioh_engine::subsystems::autopilot::choose(&state, P1).expect("an action");
         assert!(legal_actions(&state, P1).contains(&chosen));

@@ -138,6 +138,11 @@ duos?: DuosLife,
  */
 autopilot?: Autopilot, 
 /**
+ * R1844001: the turn this player is shown the Pareto hint for (the `pareto_hint` verb); absent
+ * otherwise, so a game without it hashes as before this field existed.
+ */
+paretoHint?: number, 
+/**
  * R1180006: the answer chain under way (R1180005) — the card last named to answer one of this
  * player's Spells and how many answers led to it. Absent but while one is, so a game without an
  * answering card hashes as before this field existed (D9).

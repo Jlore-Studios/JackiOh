@@ -125,9 +125,12 @@ pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
 /// off and what a numbered keyword's tuning steps from (B3.4). §7: the Bread Token's radiant "Armor X"
 /// is the same X as its X/X, so the printed `n` is a placeholder the summon fills in, exactly as
 /// `statsOverride` fills in the printed 0/0.
+///
+/// R1850000: a copier prints the keywords of the text it copied, on its own stats (`face_of`).
 pub fn printed_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
-    let def = def_of(Some(state), &instance.def_id);
-    let face = if instance.radiant { &def.radiant } else { &def.base };
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(instance);
+    let def = def_of(Some(state), def_id);
+    let face = if radiant { &def.radiant } else { &def.base };
     match instance.armor_override {
         None => face.keywords.clone(),
         Some(n) => face
@@ -249,7 +252,8 @@ fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
         entries.extend(aura(HookArgs {
             state,
             self_: source,
-            radiant: source.radiant,
+            // R1850000: the face of the text that is running, a copier's copied one.
+            radiant: crate::subsystems::unit_text::text_def_of(source).1,
         }));
     }
     entries
