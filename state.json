@@ -1866,6 +1866,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-26T00:34:56Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "40250963155",
       "started_at": "2026-10-26T00:46:16Z",
       "stop_requested": false,
@@ -1873,7 +1874,8 @@
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     }
   },
   "labels_synced": "7853ef3862488cbb",
