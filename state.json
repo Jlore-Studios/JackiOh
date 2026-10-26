@@ -2943,14 +2943,12 @@
     "what": "build #1857 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-26T17:42:44Z",
+    "at": "2026-10-26T18:00:49Z",
     "notes": [
-      "delivered plan #2013 on claude-1 (run 40365099265): planned",
-      "delivered plan #2010 on claude-8 (run 40364924188): failed",
-      "delivered revise #2012 on claude-7 (run 40363020094): approved",
-      "started plan #2010 on claude-7 (run 40371770600)",
-      "started revise #2012 on claude-8 (run 40371938958)",
-      "started build #2013 on claude-1 (run 40372103160)",
+      "delivered revise #2008 on muse (run 40370022489): approved",
+      "delivered plan #1857 on claude-4 (run 40359930733): planned",
+      "delivered build #1995 on claude-6 (run 40352160629): approved",
+      "started build #1857 on claude-4 (run 40374764355)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -3657,7 +3655,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T17:42:44Z",
+  "loop_tick": "2026-10-26T18:00:49Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T18:01:10Z",
