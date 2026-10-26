@@ -634,6 +634,157 @@ fn r1834005_pool_shares_within_tolerance() {
     );
 }
 
+/// A fit that lists two playmats nobody starts with: Marble worn by two seats in ten and owned by
+/// four people in ten, Chessboard worn by one in ten and owned by one in four.
+static OWNED_SHARES: CosmeticFit = CosmeticFit {
+    max_age_days: Some(90),
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[
+        ("table-tavern", 0.3),
+        ("table-wood", 0.2),
+        ("table-felt", 0.2),
+        ("table-marble", 0.2),
+        ("table-chessboard", 0.1),
+    ],
+    per_card_share: 0.0,
+    cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    full_art_wear: &[],
+    ownership: &[
+        CosmeticOwnership {
+            cosmetic: "table-marble",
+            card: None,
+            share: 0.4,
+        },
+        CosmeticOwnership {
+            cosmetic: "table-chessboard",
+            card: None,
+            share: 0.25,
+        },
+    ],
+};
+
+#[test]
+fn r1834005_a_fitted_non_starter_is_worn_at_its_share_of_seats() {
+    // A fitted share counts every seat, owners or not: a bot that owns a non-starter wears it more
+    // often than the share, and the pool, whose wardrobes hold it at its owners' share, at the share.
+    let registry = registry();
+    let none = OwnedCosmetics::default();
+    let eligible = vec![holding("table-marble", None), holding("table-chessboard", None)];
+    let share = |count: usize| count as f64 / POOL as f64;
+    let mut account: BTreeMap<String, usize> = BTreeMap::new();
+    let mut slots: BTreeMap<String, usize> = BTreeMap::new();
+    let mut owning: BTreeMap<Holding, usize> = BTreeMap::new();
+    for n in 0..POOL {
+        let seed = format!("owned-share:{n}");
+        let wardrobe = draw_wardrobe(&seed, &OWNED_SHARES, &eligible, &none);
+        for held in holdings(&wardrobe) {
+            *owning.entry(held).or_default() += 1;
+        }
+        let picks = draw_account(&seed, registry, &OWNED_SHARES, &wardrobe);
+        let deck = draw_slots(&seed, registry, &OWNED_SHARES, &wardrobe);
+        assert_owned(&picks, &[&deck], &wardrobe);
+        let table = picks.get(CosmeticKind::Table).expect("a playmat");
+        *account.entry(table.to_string()).or_default() += 1;
+        let table = deck.get(CosmeticKind::Table).expect("a playmat");
+        *slots.entry(table.to_string()).or_default() += 1;
+    }
+    for ownership in OWNED_SHARES.ownership {
+        let held = holding(ownership.cosmetic, ownership.card);
+        close(
+            share(owning.get(&held).copied().unwrap_or(0)),
+            ownership.share,
+            &format!("owning {held:?}"),
+        );
+    }
+    for (id, expected) in OWNED_SHARES.slots {
+        for (what, worn) in [("the account's", &account), ("a deck's", &slots)] {
+            close(
+                share(worn.get(*id).copied().unwrap_or(0)),
+                *expected,
+                &format!("{what} {id}"),
+            );
+        }
+    }
+}
+
+#[test]
+fn r1834005_an_aging_bot_owns_at_its_ages_share_not_more() {
+    // The pool draws each refresh from a seed of its own; a bot that ages six times still owns Big
+    // D-fender's full art at the share of people of its age that do, since its roll for it is the
+    // one its first draw made.
+    static AGING: [CosmeticFit; 1] = [CosmeticFit {
+        max_age_days: Some(90),
+        samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+        slots: &[],
+        per_card_share: 0.0,
+        cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+        full_art_wear: &[],
+        ownership: &[CosmeticOwnership {
+            cosmetic: "full-art-big-d-fender",
+            card: Some("core-001"),
+            share: 0.4,
+        }],
+    }];
+    const AGINGS: i64 = 6;
+    let registry = registry();
+    let dfender = holding("full-art-big-d-fender", Some("core-001"));
+    let eligible = vec![dfender.clone()];
+    let born = NOW - 40 * DAY;
+    let deck = deck_of(1);
+    let mut owners = 0;
+    for n in 0..POOL {
+        let mut aging = bot(&format!("bot-aging-{n}"), born, vec![dealt(&deck)]);
+        let first = redraw(
+            &format!("refresh-0:{n}"),
+            &aging,
+            &AGING,
+            registry,
+            &eligible,
+            NOW,
+        )
+        .expect("a first draw");
+        let owned_first = holdings(&first.cosmetics.wardrobe).contains(&dfender);
+        aging.decks = first.decks.expect("its deck, given slots");
+        aging.cosmetics = Some(first.cosmetics);
+        for refresh in 1..=AGINGS {
+            let at = NOW + refresh * BOT_COSMETIC_REDRAW_DAYS * DAY;
+            assert_eq!(fit_for(&AGING, (at - born) / DAY), &AGING[0]);
+            let aged = redraw(
+                &format!("refresh-{refresh}:{n}"),
+                &aging,
+                &AGING,
+                registry,
+                &eligible,
+                at,
+            )
+            .expect("a bot past BOT_COSMETIC_REDRAW_DAYS ages");
+            if let Some(decks) = aged.decks {
+                aging.decks = decks;
+            }
+            aging.cosmetics = Some(aged.cosmetics);
+        }
+        let cosmetics = aging.cosmetics.as_ref().expect("its cosmetics");
+        let owned = holdings(&cosmetics.wardrobe).contains(&dfender);
+        assert_eq!(
+            owned, owned_first,
+            "bot {n}: its age's share did not change, nor did it"
+        );
+        assert_eq!(
+            cosmetics.seed,
+            format!("refresh-0:{n}"),
+            "the first draw's seed is kept"
+        );
+        if owned {
+            owners += 1;
+        }
+    }
+    close(
+        owners as f64 / POOL as f64,
+        0.4,
+        "owning Big D-fender's full art after aging",
+    );
+}
+
 // ---------------------------------------------------------------------------------------------
 // Drawn again: a deck dealt again, and a bot that ages
 // ---------------------------------------------------------------------------------------------

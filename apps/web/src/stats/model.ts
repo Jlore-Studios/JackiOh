@@ -1,7 +1,9 @@
 // Device statistics (SPEC R639) use redacted PlayerViews (SPEC §10.8, R97; CLAUDE.md rule 7).
 // `track.ts` turns views into a `GameLog`; `store.ts` keeps totals on the device.
 
-import type { PlayerId } from "@jackioh/shared";
+import type { GameOverReason, PlayerId } from "@jackioh/shared";
+
+import { seatOutcome } from "../game/outcome.ts";
 
 export const CARD_COUNTERS = [
   "seen",
@@ -160,7 +162,9 @@ export const EMPTY_LOG: GameLog = Object.freeze({
 
 export type GameOutcome = "win" | "loss" | "draw";
 
-export function outcomeFor(winner: PlayerId | "draw", viewer: PlayerId): GameOutcome {
+/** R1843004: given the result's reason, the other player's `fled` is a draw (`game/outcome.ts`). */
+export function outcomeFor(winner: PlayerId | "draw", viewer: PlayerId, reason?: GameOverReason): GameOutcome {
+  if (reason !== undefined) return seatOutcome(winner, reason, viewer);
   if (winner === "draw") return "draw";
   return winner === viewer ? "win" : "loss";
 }

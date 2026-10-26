@@ -247,8 +247,16 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0057_portrait_cosmetics.sql"),
     ),
     (
-        "0058_cosmetic_loadouts.sql",
-        include_str!("../../migrations/0058_cosmetic_loadouts.sql"),
+        "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql",
+        include_str!("../../migrations/0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql"),
+    ),
+    (
+        "0059_voted_out_and_fled.sql",
+        include_str!("../../migrations/0059_voted_out_and_fled.sql"),
+    ),
+    (
+        "0060_cosmetic_loadouts.sql",
+        include_str!("../../migrations/0060_cosmetic_loadouts.sql"),
     ),
 ];
 

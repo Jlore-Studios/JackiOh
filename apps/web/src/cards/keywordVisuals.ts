@@ -291,6 +291,30 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-flashback-rewind", when: "always" },
     numbered: false,
   },
+  // R1838000: a hand keyword; a Unit that prints it carries it onto the field, where it does nothing.
+  Tradable: {
+    layer: "glyph",
+    priority: 33,
+    shape: "two arrows passing each other, one in and one out",
+    motion: { keyframes: "kw-trade-swap", when: "always" },
+    numbered: false,
+  },
+  // R1852000: Stinkyscape's Starship Piece, a riveted hull plate that glints.
+  "Starship Piece": {
+    layer: "glyph",
+    priority: 34,
+    shape: "a riveted hull plate",
+    motion: { keyframes: "kw-starship-piece-glint", when: "always" },
+    numbered: false,
+  },
+  // R1852003: a launched Starship, a rocket nose up over its flame, riding its thrust.
+  Starship: {
+    layer: "glyph",
+    priority: 35,
+    shape: "a rocket nose up over its flame",
+    motion: { keyframes: "kw-starship-thrust", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

@@ -149,7 +149,39 @@ describe("R1834000 each card's picks live on the account", () => {
     await start(account).settled();
     expect(account.calls).toEqual(["load tok-u1"]);
     expect(readAllCardPicks()).toEqual({ "core-004": { foil: FOIL, fullArt: true } });
-    expect(uploaded()).toBeNull();
+    expect(uploaded()).toEqual(["u1"]);
+  });
+
+  it("R1834000 a pick cleared on another device never comes back from this one's cache", async () => {
+    const account = fakeAccount([{ cardId: "core-004", foil: FOIL }]);
+    const first = start(account);
+    await first.settled();
+    expect(readAllCardPicks()).toEqual({ "core-004": { foil: FOIL } });
+    first.stop();
+
+    // Another device clears the pick; this one still holds it as the account's copy.
+    account.stored.delete("core-004");
+    await start(account).settled();
+    expect(account.calls).toEqual(["load tok-u1", "load tok-u1"]);
+    expect(account.uploads).toEqual([]);
+    expect(account.stored.has("core-004")).toBe(false);
+    expect(readAllCardPicks()).toEqual({});
+  });
+
+  it("R1834000 a second profile never sends the first's copy up as its own", async () => {
+    writeCardPick("core-004", "border", BORDER);
+    const one = fakeAccount();
+    const first = start(one, "u1");
+    await first.settled();
+    expect(one.calls).toEqual(["upload tok-u1"]);
+    first.stop();
+
+    const two = fakeAccount([{ cardId: "core-005", foil: FOIL }]);
+    await start(two, "u2").settled();
+    expect(two.calls).toEqual(["load tok-u2"]);
+    expect(two.stored.has("core-004")).toBe(false);
+    expect(readAllCardPicks()).toEqual({ "core-005": { foil: FOIL } });
+    expect(uploaded()).toEqual(["u1", "u2"]);
   });
 
   it("R1834000 a failed upload lists no profile and leaves the device's picks, and the next sign-in uploads them", async () => {

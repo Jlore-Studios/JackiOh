@@ -5,6 +5,7 @@ import type { CardInstance } from "./CardInstance";
 import type { DrawCount } from "./DrawCount";
 import type { DrawOfferState } from "./DrawOfferState";
 import type { DuosLife } from "./DuosLife";
+import type { FleeOpponent } from "./FleeOpponent";
 import type { GameLog } from "./GameLog";
 import type { Handicap } from "./Handicap";
 import type { HeroState } from "./HeroState";
@@ -12,6 +13,7 @@ import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
 import type { TurnLog } from "./TurnLog";
+import type { VoteTally } from "./VoteTally";
 
 export type PlayerState = { hero: HeroState, mana: ManaState, hand: Array<CardInstance>, library: Array<CardInstance>, graveyard: Array<CardInstance>, exile: Array<CardInstance>, 
 /**
@@ -71,6 +73,18 @@ gameLog?: GameLog,
  */
 draws?: DrawCount, 
 /**
+ * R1838000: how many Trades this player has made on turn `turn`, kept as `draws` is: a count kept
+ * for an earlier turn reads as 0 (`trade::trades_this_turn`). Absent until their first Trade, so a
+ * game nobody trades in hashes as it did before this field existed (D14).
+ */
+trades?: DrawCount, 
+/**
+ * R1838000: the Trades this player may make each turn, once an effect has set a figure of their
+ * own; absent means `TRADES_PER_TURN` (`trade::trades_per_turn_of`), so a game that never sets
+ * one hashes as it did before this field existed (D14).
+ */
+tradesPerTurn?: number, 
+/**
  * R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
  * #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
  * (`query::hand_cap_of`). Absent means `HAND_CAP`, so a game that never sets one hashes as it did
@@ -88,6 +102,13 @@ jade?: number,
  * hashes as it did before this field existed.
  */
 lostRefreshThrough?: number, 
+/**
+ * R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
+ * started", inside the cap): negative once theirs were stolen, positive once they stole some
+ * (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
+ * hashes as it did before this field existed (D3).
+ */
+manaCrystals?: number, 
 /**
  * R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
  * starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
@@ -120,4 +141,29 @@ autopilot?: Autopilot,
  * player's Spells and how many answers led to it. Absent but while one is, so a game without an
  * answering card hashes as before this field existed (D9).
  */
-answerChain?: AnswerChain, };
+answerChain?: AnswerChain, 
+/**
+ * R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
+ * at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
+ * `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
+ */
+resourceTray?: Array<CardInstance>, 
+/**
+ * R1840005: this player's Credits, public, gained by selling Resources and spent at the
+ * Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+ * Absent until first gained, so a game without Credits hashes as it did before this field existed.
+ */
+marketCredits?: number, 
+/**
+ * R1843000 (Stinkyscape #18's Brains): the votes cast this turn to remove this player from the
+ * game (`effects::vote_out`). Absent until a first vote, so a game without one hashes as before
+ * this field existed (D3).
+ */
+votes?: VoteTally, 
+/**
+ * R1843002 (Stinkyscape #148.1 Edge of the Universe): set when this player flees
+ * (`effects::flee`), with what it leaves the other player; the state check's game-end point ends
+ * the game on it. Absent otherwise, so a game without one hashes as before this field existed
+ * (D3).
+ */
+fled?: FleeOpponent, };

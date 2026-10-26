@@ -218,7 +218,9 @@ pub fn is_player_action(body: &ActionBody) -> bool {
         | ActionBody::AnswerDraw { .. }
         | ActionBody::Emote { .. }
         | ActionBody::Concede
-        | ActionBody::EndTurn => true,
+        | ActionBody::EndTurn
+        // R1838000: a Trade is a move the player took.
+        | ActionBody::Trade { .. } => true,
         ActionBody::SetAutoEndTurn { .. }
         | ActionBody::Sandbox { .. }
         | ActionBody::Timeout

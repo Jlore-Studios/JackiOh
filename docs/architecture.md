@@ -710,7 +710,10 @@ step that is not yet implemented says which BUILD task delivers it.
    `0042_match_checkpoints.sql` → `0043_meditative_plus_set.sql` → `0044_deck_cosmetics.sql` →
    `0045_economy.sql` → `0046_dev_accounts.sql` → `0047_practice_seeds.sql` →
    `0048_game_record_builds.sql` → `0049_version_retcon.sql` → `0050_going_live.sql` →
-   `0051_duos_seats_set_null.sql` → `0052_bot_rating_generation.sql` → `0053_bot_grind.sql` — and records them in
+   `0051_duos_seats_set_null.sql` → `0052_bot_rating_generation.sql` → `0053_bot_grind.sql` →
+   `0054_seat_epoch.sql` → `0055_deck_size_25.sql` → `0056_foreign_key_indexes.sql` →
+   `0057_portrait_cosmetics.sql` → `0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql` — and
+   records them in
    `app.migrations`. Expected result: 63 tables in `public`, all with RLS enabled, plus the private
    `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the

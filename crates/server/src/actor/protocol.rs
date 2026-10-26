@@ -130,6 +130,8 @@ pub const CLIENT_ACTION_TYPES: &[ActionType] = &[
     ActionType::AnswerDraw,
     ActionType::Concede,
     ActionType::EndTurn,
+    // R1838000: a Trade of a Tradable hand card, judged by the reducer as `legal_actions` lists it.
+    ActionType::Trade,
     ActionType::SetAutoEndTurn,
 ];
 
@@ -699,6 +701,14 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
         ActionType::OfferDraw => Ok(ActionBody::OfferDraw),
         ActionType::Concede => Ok(ActionBody::Concede),
         ActionType::EndTurn => Ok(ActionBody::EndTurn),
+        ActionType::Trade => {
+            let Some(instance_id) = is_string(raw.get("instanceId")) else {
+                return Err(malformed(r#""trade.instanceId" must be a string"#));
+            };
+            Ok(ActionBody::Trade {
+                instance_id: instance_id.to_string(),
+            })
+        }
         ActionType::SetAutoEndTurn => {
             let Some(enabled) = is_bool(raw.get("enabled")) else {
                 return Err(malformed(r#""setAutoEndTurn.enabled" must be a boolean"#));

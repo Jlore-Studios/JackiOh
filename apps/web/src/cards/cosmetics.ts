@@ -36,8 +36,8 @@
 // or where every cosmetic counts as owned (practice, hotseat, R1310004's builds); the store keeps what
 // it is given, the wear path and `useCanEquip` apply ownership. The face wearing them is still only
 // the viewer's own copy (`worn`, or below an `OwnCopy`, fullArt.ts). R1834000: they live on the
-// account now, and this store is its cache on the device: `cardPicksSync.ts` sends the device's up
-// once, then puts the account's in it and sends each later write (`subscribeCardPickWrites`).
+// account now, and this store is its cache on the device: `cardPicksSync.ts` sends the device's own
+// up once, then puts the account's in it and sends each later write (`subscribeCardPickWrites`).
 //
 // An id this client does not know (one a newer client wrote to the account) is kept in the store,
 // so this device never overwrites it, and drawn as its kind's default, never an error. A cosmetic

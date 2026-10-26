@@ -20,9 +20,13 @@
 //! true` as it lands and `added: false` as it thaws or a Vanilla removes it, so the client's brand
 //! flourish, its sound cue and its log need no new event. A Unit leaving the field loses the status
 //! with R78's reset (`zones::reset_instance`), silently, as Berserk does.
+//!
+//! R1848000 (Stinkyscape #2 Absolute Zero) adds the freeze that never thaws: its stamp is
+//! `FROZEN_FOREVER`, a turn no cleanup reaches, which a change of control leaves as it is
+//! (`freeze_unit_forever`, `frozen_forever`).
 
 use crate::combat::{ExertionKind, exertion_unspent};
-use crate::config::FROZEN_MARK;
+use crate::config::{FROZEN_FOREVER, FROZEN_MARK};
 use crate::script::EngineSink;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::wire::{GameEvent, Phase, PlayerId};
@@ -60,10 +64,31 @@ fn frozen_event(instance_id: &str, added: bool) -> GameEvent {
 /// §6.3 Freeze: the Unit is Frozen, stamped with `thaw_turn`. A Unit already Frozen keeps the later of
 /// its two thaws. The caller has checked it is a Unit on the field; a hero is never Frozen.
 pub fn freeze_unit(sink: &mut EngineSink<'_>, instance_id: &str) {
+    freeze_stamped(sink, instance_id, false);
+}
+
+/// R1848000 (Stinkyscape #2 Absolute Zero): "Freeze a Unit forever" — Frozen as `freeze_unit` makes
+/// it, its thaw `FROZEN_FOREVER`, which no cleanup reaches and a later freeze never lowers, since a
+/// Unit keeps the later of two thaws. Announced with the same `marked` "frozen" as any freeze.
+pub fn freeze_unit_forever(sink: &mut EngineSink<'_>, instance_id: &str) {
+    freeze_stamped(sink, instance_id, true);
+}
+
+/// R1848000: whether the Unit is Frozen forever (`freeze_unit_forever`), which only leaving the field
+/// and a Vanilla end.
+pub fn frozen_forever(unit: &CardInstance) -> bool {
+    unit.frozen == Some(FROZEN_FOREVER)
+}
+
+fn freeze_stamped(sink: &mut EngineSink<'_>, instance_id: &str, forever: bool) {
     let Some(unit) = find_instance(sink.state, instance_id) else {
         return;
     };
-    let thaw = thaw_turn(sink.state, unit);
+    let thaw = if forever {
+        FROZEN_FOREVER
+    } else {
+        thaw_turn(sink.state, unit)
+    };
     let Some(live) = find_instance_mut(sink.state, instance_id) else {
         return;
     };
@@ -88,7 +113,8 @@ pub fn restamp(state: &mut GameState, instance_id: &str) {
     let Some(unit) = find_instance(state, instance_id) else {
         return;
     };
-    if unit.frozen.is_none() {
+    // R1848000: a forever freeze has no thaw to stamp again, so it stays forever on the new side.
+    if unit.frozen.is_none() || frozen_forever(unit) {
         return;
     }
     let thaw = thaw_turn(state, unit);

@@ -751,6 +751,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
         params: if params.is_empty() { None } else { Some(params) },
         deals_damage: None,
         uses_plague: None,
+        resource: None,
         loc: Some(recipe_loc(recipe)),
         radiant_fallback: None,
         ingredients: None,

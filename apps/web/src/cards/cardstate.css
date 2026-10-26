@@ -85,6 +85,20 @@
   background: radial-gradient(circle, #4fe3ff 0%, #0b5d73 100%);
 }
 
+/* R1839000: Dormant, the crescent moon and its countdown on a night-violet disc. */
+.cf .cf-state[data-state="dormant"] {
+  background: radial-gradient(circle, #8a7bd8 0%, #261b5c 100%);
+}
+
+/* R1852000: a Starship, the comet and its piece count on a deep-space disc, brighter once launched. */
+.cf .cf-state[data-state="starship"] {
+  background: radial-gradient(circle, #5b8cff 0%, #10183d 100%);
+}
+
+.cf .cf-state[data-state="starship"][data-starship="launched"] {
+  background: radial-gradient(circle, #ffd36b 0%, #7a3d00 100%);
+}
+
 /* R386: the card's tuned mark, ▲ Buffed, ▼ Nerfed, ◆ Tuned (R1320). */
 .cf .cf-state[data-state="tuned"][data-tuned="upgraded"] .cf-state-text {
   color: var(--cf-state-better);
@@ -125,6 +139,21 @@
 }
 
 .cf .cf-state[data-state="quest"] .cf-state-text {
+  font-size: calc(var(--cf-state-size) * 0.48);
+}
+
+/* R1854000: a staged quest's stage, "2/3", the quest pill's shape in a plain ring. */
+.cf .cf-state[data-state="questStage"] {
+  width: auto;
+  min-width: var(--cf-state-size);
+  padding: 0 0.3em;
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 max(1px, 0.5cqw) var(--text-dim, #9aa1b8),
+    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+}
+
+.cf .cf-state[data-state="questStage"] .cf-state-text {
   font-size: calc(var(--cf-state-size) * 0.48);
 }
 

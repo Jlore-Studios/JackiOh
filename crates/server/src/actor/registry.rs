@@ -385,7 +385,7 @@ impl Registry {
             dealt.clone(),
         );
         // R1834003: the cards each deck dealt, read off the opening, when a loadout names a card of
-        // its own (a match from before 0058 names none, and sends no card's picks).
+        // its own (a match from before 0060 names none, and sends no card's picks).
         let opening = match_row
             .loadouts
             .as_ref()

@@ -90,6 +90,16 @@ fn winner_side_of(outcome: &TerminalOutcome, seats: &(MatchSeat, MatchSeat)) -> 
     Some(if winner == seats.0.player { 0 } else { 1 })
 }
 
+/// Whether `player`'s seat won (`Some(true)`), lost (`Some(false)`) or drew (`None`), as the reward
+/// hook reads it. R1843004: the other player's `fled` is a draw for this seat, not a loss.
+fn won_by(outcome: &TerminalOutcome, player: PlayerId) -> Option<bool> {
+    match jackioh_engine::seat_outcome(outcome.winner, outcome.reason, player) {
+        jackioh_engine::SeatOutcome::Win => Some(true),
+        jackioh_engine::SeatOutcome::Loss => Some(false),
+        jackioh_engine::SeatOutcome::Draw => None,
+    }
+}
+
 /// §14.8, [[R1502000]]: the rates a finished 1v1 match pays at: a game of a Conquest series,
 /// ranked or not, as a Conquest game; a ranked match outside one as a ladder game; any other
 /// (a room challenge and its rematches, R604) as an unranked game.
@@ -352,12 +362,11 @@ async fn write_once(
             tx.economy_lock_account(profile_id).await.map_err(failed)?;
         }
         let log = tx.matches_actions(&input.match_id).await.map_err(failed)?;
-        let winner_side = winner_side_of(&input.outcome, &input.seats);
         let game = match &match_row {
             Some(row) => quests_game(app, row, &log).await,
             None => None,
         };
-        for (index, seat) in [seat_a, seat_b].into_iter().enumerate() {
+        for seat in [seat_a, seat_b] {
             let taken = |keep: fn(&ActionBody) -> bool| {
                 let count = log
                     .iter()
@@ -377,7 +386,7 @@ async fn write_once(
                     mode,
                     profile_id: seat.profile_id.clone(),
                     player: seat.player,
-                    won: winner_side.map(|side| side == index),
+                    won: won_by(&input.outcome, seat.player),
                     actions,
                     match_id: input.match_id.clone(),
                     at: input.at,

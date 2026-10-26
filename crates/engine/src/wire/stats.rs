@@ -77,6 +77,10 @@ pub const GAME_OVER_REASONS: &[GameOverReason] = &[
     GameOverReason::Voided,
     GameOverReason::AltWin,
     GameOverReason::WonByEffect,
+    GameOverReason::VotedOut,
+    GameOverReason::BothVotedOut,
+    GameOverReason::Fled,
+    GameOverReason::FledDecisive,
 ];
 
 /// R376: what one seat's cards did in one game, as catalog ids.
@@ -434,11 +438,13 @@ enum Outcome {
     Loss,
 }
 
+/// R1843004: the seat's result as the ladder reads it (`game_over::seat_outcome`): a fled game is the
+/// fleer's win and the other seat's draw.
 fn outcome_for(game: &GameSummary, seat: PlayerId) -> Outcome {
-    match game.winner.player() {
-        None => Outcome::Draw,
-        Some(winner) if winner == seat => Outcome::Win,
-        Some(_) => Outcome::Loss,
+    match crate::game_over::seat_outcome(game.winner, game.reason, seat) {
+        crate::game_over::SeatOutcome::Win => Outcome::Win,
+        crate::game_over::SeatOutcome::Draw => Outcome::Draw,
+        crate::game_over::SeatOutcome::Loss => Outcome::Loss,
     }
 }
 

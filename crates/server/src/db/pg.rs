@@ -98,12 +98,30 @@ use crate::username::{render_username, username_key};
 pub type PgTx<'a> = Transaction<'a, Postgres>;
 
 /// The endings that always have a winner (`GameOverReason`, `crates/engine/src/wire/events.rs`): one
-/// hero died, a player conceded, a player's disconnect grace ran out, or an effect won the game for
-/// one player (`won-by-effect`, R1412). The others (`both-heroes-dead`, `draw-accepted`, `turn-cap`,
-/// `match-ceiling`) are draws, and `alt-win` is either: two players holding an alternative win draw
-/// (R850). `results_record_for` reads a winnerless decisive row as the deleted winner's (migration
-/// 0012).
-const DECISIVE_REASONS: &[&str] = &["hero-death", "concede", "disconnect", "won-by-effect"];
+/// hero died, a player conceded, a player's disconnect grace ran out, an effect won the game for
+/// one player (`won-by-effect`, R1412), a player was voted out (`voted-out`, R1843000), or a player
+/// fled and chose a loss for the other (`fled-decisive`, R1843002). The others (`both-heroes-dead`,
+/// `draw-accepted`, `turn-cap`, `match-ceiling`, `both-voted-out`) are draws, `alt-win` is either: two
+/// players holding an alternative win draw (R850), and `fled` is a win for its winner and a draw for
+/// the other player, or a draw for both when two fled (`LOSER_DRAWS_REASONS`, R1843004).
+/// `results_record_for` reads a winnerless decisive row as the deleted winner's (migration 0012).
+const DECISIVE_REASONS: &[&str] = &[
+    "hero-death",
+    "concede",
+    "disconnect",
+    "won-by-effect",
+    "voted-out",
+    "fled-decisive",
+];
+
+/// R1843004: the endings whose winner's opponent draws (the engine's `LOSER_DRAWS_REASONS`), as the
+/// strings `results.reason` holds.
+fn loser_draws_reasons() -> Vec<String> {
+    jackioh_engine::config::LOSER_DRAWS_REASONS
+        .iter()
+        .map(|reason| reason.as_str().to_string())
+        .collect()
+}
 
 // ---------------------------------------------------------------------------
 // The role the server acts as
@@ -309,7 +327,7 @@ fn deck_slots_or_none(value: Option<Value>) -> Result<Option<DeckSlots>, StoreEr
         .transpose()
 }
 
-/// R1834002: `matches.loadouts`, both seats' in seat order, or `null` on a match from before 0058.
+/// R1834002: `matches.loadouts`, both seats' in seat order, or `null` on a match from before 0060.
 fn loadouts_or_none(value: Option<Value>) -> Result<Option<(Loadout, Loadout)>, StoreError> {
     value
         .filter(|value| !value.is_null())
@@ -625,7 +643,7 @@ struct MatchDbRow {
     stake: Option<i16>,
     /// R768 (migration 0035): the final state's hash, written with the result.
     final_hash: Option<String>,
-    /// R1834002 (migration 0058): both seats' loadouts; null on every older row.
+    /// R1834002 (migration 0060): both seats' loadouts; null on every older row.
     loadouts: Option<Value>,
 }
 
@@ -764,7 +782,7 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         mode: row.mode.as_deref().map(queue_mode_of).transpose()?,
         stake: row.stake.map(stake_of).transpose()?,
         portraits,
-        // R1834002 (migration 0058): absent on a match from before it.
+        // R1834002 (migration 0060): absent on a match from before it.
         loadouts: loadouts_or_none(row.loadouts)?,
         // R768 (migration 0035): absent until the result writes it.
         final_hash: row.final_hash,
@@ -847,7 +865,7 @@ fn to_ticket(row: TicketRow) -> Result<Ticket, StoreError> {
         mode: queue_mode_of(&row.mode)?,
         deck: card_list_of(&row.frozen_deck)?,
         portrait: Some(row.portrait),
-        // R1834002 (migration 0058): null for none, and on a ticket from before it.
+        // R1834002 (migration 0060): null for none, and on a ticket from before it.
         deck_slots: deck_slots_or_none(row.deck_cosmetics)?,
         trio: trio_or_null(row.frozen_trio.as_ref())?,
         // R1372, R924000: migration 0036's column (0027's boolean, `true` read as "newest").
@@ -973,7 +991,7 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
         host_deck: card_list_of(&row.p1_deck)?,
         // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
         host_portrait: Some(row.p1_portrait),
-        // R1834002: the host deck's slots wait beside it (migration 0058).
+        // R1834002: the host deck's slots wait beside it (migration 0060).
         host_deck_slots: deck_slots_or_none(row.room_deck_cosmetics)?,
         host_trio: trio_or_null(row.room_trio.as_ref())?,
         // R1372, R924000: the host's lean waits in the open row too (migrations 0027 and 0036).
@@ -3157,7 +3175,7 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
         .bind(json(
             m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1),
         )?)
-        // R1834002: the loadouts frozen as the match began (migration 0058), null when absent.
+        // R1834002: the loadouts frozen as the match began (migration 0060), null when absent.
         .bind(json_or_null(&m.loadouts)?)
         .execute(&mut **t)
         .await
@@ -4115,6 +4133,9 @@ pub async fn tickets_cancel(t: &mut PgTx<'_>, ticket_id: &str, _at: i64) -> Resu
 /// Since migration 0012 a row also has no winner when the winner deleted their account. The
 /// reason tells the two apart: a `DECISIVE_REASONS` ending always had a winner, so for the
 /// player who is left it is still a loss, not a draw.
+///
+/// R1843004: a `fled` row (`LOSER_DRAWS_REASONS`) is the winner's win and the other player's draw,
+/// whether its winner is still there or not.
 pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<ProfileRecord, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let decisive: Vec<String> = DECISIVE_REASONS.iter().map(|reason| reason.to_string()).collect();
@@ -4122,15 +4143,21 @@ pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<Pr
         "select
            count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
            count(*) filter (where winner_profile_id is distinct from $1::uuid
-                              and (winner_profile_id is not null
-                                   or reason = any($2::text[])))                         as losses,
-           count(*) filter (where winner_profile_id is null
-                              and reason <> all($2::text[]))                             as draws
+                              and ((winner_profile_id is not null
+                                    and reason <> all($3::text[]))
+                                   or (winner_profile_id is null
+                                       and reason = any($2::text[]))))                   as losses,
+           count(*) filter (where (winner_profile_id is null
+                                   and reason <> all($2::text[]))
+                              or (winner_profile_id is distinct from $1::uuid
+                                  and winner_profile_id is not null
+                                  and reason = any($3::text[])))                         as draws
          from public.results
         where p1_profile_id = $1::uuid or p2_profile_id = $1::uuid",
     )
     .bind(profile_id)
     .bind(decisive)
+    .bind(loser_draws_reasons())
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;

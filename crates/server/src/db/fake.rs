@@ -201,7 +201,7 @@ pub struct BotTableRow {
     /// R1555000: whether it grinds now and its grinding wins since the last step (migration 0053).
     pub grinding: bool,
     pub grind_wins: i32,
-    /// R1834005: its wardrobe and picks (migration 0058).
+    /// R1834005: its wardrobe and picks (migration 0060).
     pub cosmetics: Option<BotCosmetics>,
 }
 
@@ -2013,7 +2013,8 @@ pub fn results_get_by_match(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option
         .cloned())
 }
 
-/// Counted as the Postgres store counts it: a winnerless row is a draw (§9.5).
+/// Counted as the Postgres store counts it: a winnerless row is a draw (§9.5), and (R1843004) a row
+/// whose ending leaves the winner's opponent a draw (`LOSER_DRAWS_REASONS`, `fled`) is a draw for them.
 pub fn results_record_for(f: &mut FakeTx<'_>, profile_id: &str) -> Result<ProfileRecord, StoreError> {
     call(f, "results.recordFor")?;
     let mine: Vec<&ResultRow> = f
@@ -2022,19 +2023,21 @@ pub fn results_record_for(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Profil
         .iter()
         .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
         .collect();
+    let loser_draws = |row: &ResultRow| jackioh_engine::config::LOSER_DRAWS_REASONS.contains(&row.reason);
     let wins = mine
         .iter()
         .filter(|row| row.winner_profile_id.as_deref() == Some(profile_id))
         .count();
-    let losses = mine
+    let beaten = |row: &ResultRow| {
+        row.winner_profile_id
+            .as_deref()
+            .is_some_and(|winner| winner != profile_id)
+    };
+    let losses = mine.iter().filter(|row| beaten(row) && !loser_draws(row)).count();
+    let draws = mine
         .iter()
-        .filter(|row| {
-            row.winner_profile_id
-                .as_deref()
-                .is_some_and(|winner| winner != profile_id)
-        })
+        .filter(|row| row.winner_profile_id.is_none() || (beaten(row) && loser_draws(row)))
         .count();
-    let draws = mine.iter().filter(|row| row.winner_profile_id.is_none()).count();
     Ok(ProfileRecord {
         wins: wins as i64,
         losses: losses as i64,

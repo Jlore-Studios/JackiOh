@@ -3,7 +3,8 @@
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
 //! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, the custom cards' and the practice
 //! sandbox's limits, R915001 and R923002, Duos co-op's six, #936 S1, R1563006's sequence clock, and
-//! R1705003's and R1705005's earlier deck size and lesson handicap),
+//! R1705003's and R1705005's earlier deck size and lesson handicap, and #1843's vote tally and the
+//! endings whose winner's opponent draws, R1843000 and R1843004),
 //! generated from `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md
 //! rule 9).
 //!
@@ -14,8 +15,8 @@
 //! annotation is the one `packages/engine/src/config.ts` declared, so the client's code typechecks
 //! against the same shapes it did (`DIFFICULTIES` is `readonly Difficulty[]`, not `string[]`). The
 //! two types come from the generated ts-rs files, which are `config.rs`'s own `Handicap` and
-//! `Difficulty`; `TRIBAL_TAGS` is typed with the generated `Tag`, and `DUOS_HUMAN_TEAM` with the
-//! generated `DuosTeamRules`.
+//! `Difficulty`; `TRIBAL_TAGS` is typed with the generated `Tag`, `DUOS_HUMAN_TEAM` with the
+//! generated `DuosTeamRules`, and `LOSER_DRAWS_REASONS` with the generated `GameOverReason`.
 #![allow(
     clippy::disallowed_methods,
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"
@@ -29,9 +30,9 @@ use jackioh_engine::config::{
     CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
     DIFFICULTIES, DRAWS_PER_TURN, DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST,
     DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, EARLIER_DECK_SIZE, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
-    KY_COMPETITION_SECONDS, LIBRARY_CAP, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY,
-    REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX,
-    TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_HUMAN, VERSIONS_SCHEME,
+    KY_COMPETITION_SECONDS, LIBRARY_CAP, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET,
+    REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX,
+    SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
 };
 use serde::Serialize;
 
@@ -53,6 +54,7 @@ import type { CraftKeywordPrice } from \"./generated/CraftKeywordPrice.ts\";
 import type { CraftVerb } from \"./generated/CraftVerb.ts\";
 import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
 import type { DuosTeamRules } from \"./generated/DuosTeamRules.ts\";
+import type { GameOverReason } from \"./generated/GameOverReason.ts\";
 import type { KeywordKind } from \"./generated/KeywordKind.ts\";
 import type { Tag } from \"./generated/Tag.ts\";
 
@@ -147,6 +149,12 @@ fn engine_config_ts() -> String {
         constant("HUMAN_HANDICAP", Some("Handicap"), &HUMAN_HANDICAP),
         constant("KY_COMPETITION_SECONDS", None, &KY_COMPETITION_SECONDS),
         constant("LIBRARY_CAP", None, &LIBRARY_CAP),
+        // R1843004: the endings whose winner's opponent draws, which the result reads for each seat.
+        constant(
+            "LOSER_DRAWS_REASONS",
+            Some("readonly GameOverReason[]"),
+            LOSER_DRAWS_REASONS,
+        ),
         constant("MAX_COPIES", None, &MAX_COPIES),
         constant("MAX_MANA", None, &MAX_MANA),
         constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
@@ -162,6 +170,8 @@ fn engine_config_ts() -> String {
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
         // R1705005: the human seat's handicap in a lesson.
         constant("TUTORIAL_HUMAN", Some("Handicap"), &TUTORIAL_HUMAN),
+        // R1843000: the votes in one turn that remove a player, which a vote's banner counts toward.
+        constant("VOTE_TALLY_SIZE", None, &VOTE_TALLY_SIZE),
     ];
     constants.sort_by(|a, b| a.name.cmp(b.name));
 
@@ -183,8 +193,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Fifty-three constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 53, "{text}");
+    // Fifty-five constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 55, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

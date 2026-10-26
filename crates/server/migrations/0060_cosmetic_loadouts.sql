@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0058: per-card picks on the account, and the loadouts a match
+-- Migration 0060: per-card picks on the account, and the loadouts a match
 -- freezes (SPEC §14.2, §10.10; R1834000, R1834002, R1834005; issue #1834)
 -- ============================================================================
 -- Serves SPEC §14.2, quoted:
@@ -38,7 +38,7 @@
 -- PLAYER_SETTINGS_TEXT_MAX_LENGTH of R633) and the jsonb types; what each id
 -- names is the server's to check, against cosmetics.json.
 --
--- Apply order: ... -> 0045 (the economy) -> ... -> 0057 -> 0058 (this file).
+-- Apply order: ... -> 0045 (the economy) -> ... -> 0057 -> 0058 -> 0059 -> 0060 (this file).
 -- This file only ADDS objects. Safe to re-apply: create-if-not-exists,
 -- add-column-if-not-exists, drop-constraint-or-policy-if-exists then add.
 -- ============================================================================
@@ -115,7 +115,7 @@ alter table public.matches add constraint matches_loadouts_check
 comment on column public.matches.loadouts is
   $$R1834002: both seats' frozen loadouts, seat order, each { seat, cards }:
   every id one the seat's account owned as the match began, the kind's default
-  otherwise. NULL on a match from before 0058, read as all defaults. Cosmetic
+  otherwise. NULL on a match from before 0060, read as all defaults. Cosmetic
   only: never part of PlayerView, the log, a replay hash or a game record.$$;
 
 alter table public.bots add column if not exists cosmetics jsonb;

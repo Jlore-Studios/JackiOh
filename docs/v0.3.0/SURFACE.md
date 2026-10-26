@@ -969,7 +969,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
   border?, fullArt? }`, goes after the first view to a socket that shows a card that seat's deck
   dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
-  `matches.loadouts` (migration 0058; a jsonb column, not the retired `loadouts` tables), which
+  `matches.loadouts` (migration 0060; a jsonb column, not the retired `loadouts` tables), which
   `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
   (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
   `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:

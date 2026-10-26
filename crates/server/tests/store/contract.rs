@@ -5483,10 +5483,54 @@ mod results {
         assert!(q!(harness, t => t.results_get_by_match(&id())).is_none());
     }
 
+    /// R1843005, R1843004: issue #1843's four endings are results (migration 0059), each read back as
+    /// written, and each counts in the record as it ended for each side: `voted-out` the winner's win
+    /// and the removed player's loss, `both-voted-out` a draw for both, `fled` the fleer's win and the
+    /// other player's draw, `fled-decisive` the fleer's win and the other's loss.
+    async fn r1843004_the_new_endings_are_results_and_count_for_each_side(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let endings = [
+            ("voted-out", Some(a.id.clone())),
+            ("both-voted-out", None),
+            ("fled", Some(a.id.clone())),
+            ("fled-decisive", Some(a.id.clone())),
+        ];
+        for (reason, winner) in endings {
+            let match_id = id();
+            q!(harness, t => t.matches_create(&match_row(&match_id, &a.id, &b.id, harness, harness.now())));
+            let row: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [a.id, b.id],
+                "winnerProfileId": winner,
+                "reason": reason,
+                "turns": 12,
+                "endedAt": harness.now(),
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            }));
+            q!(harness, t => t.results_insert(&row));
+            assert_eq!(
+                q!(harness, t => t.results_get_by_match(&match_id)),
+                Some(row),
+                "{reason}"
+            );
+        }
+        assert_eq!(
+            j(&q!(harness, t => t.results_record_for(&a.id))),
+            json!({ "wins": 3, "losses": 0, "draws": 1 })
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.results_record_for(&b.id))),
+            json!({ "wins": 0, "losses": 2, "draws": 2 })
+        );
+    }
+
     both_stores!(
         writes_one_result_per_match_and_refuses_a_second,
         records_a_draw_as_a_null_winner,
         returns_null_for_a_match_that_has_not_ended,
+        r1843004_the_new_endings_are_results_and_count_for_each_side,
     );
 }
 
@@ -5773,6 +5817,33 @@ mod ranked {
         );
     }
 
+    /// R1843005: a ranked game issue #1843's endings ended is a rated game too (migration 0059's
+    /// `rated_games_reason_check`), read back whole: a fled game with the fleer's win and the other
+    /// side's draw on its two sides (R1843004), a removal, a double removal and a decisive flight.
+    async fn r1843005_records_a_rated_game_each_new_ending_ended(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
+        for (reason, winner_side) in [
+            ("fled", json!(0)),
+            ("fled-decisive", json!(1)),
+            ("voted-out", json!(0)),
+            ("both-voted-out", Value::Null),
+        ] {
+            let row = rated_game(
+                harness,
+                &id(),
+                "v0.1",
+                &a,
+                &b,
+                json!({ "reason": reason, "winnerSide": winner_side }),
+            );
+            q!(harness, t => t.ranked_record_game(&row));
+            assert_eq!(q!(harness, t => t.ranked_game(&row.id)), Some(row), "{reason}");
+        }
+    }
+
     async fn r611_records_a_bot_side_with_no_profile_and_no_rank(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
         let now = harness.now();
@@ -5929,6 +6000,7 @@ mod ranked {
         r610_keeps_each_bot_s_own_rating_upserted,
         r1560000_keeps_the_ai_generation_a_bot_was_last_rated_on,
         r611_records_a_rated_game_once_and_answers_it_back_whole,
+        r1843005_records_a_rated_game_each_new_ending_ended,
         r611_records_a_bot_side_with_no_profile_and_no_rank,
         r748000_lists_rated_games_with_a_bot_side_since,
         r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it,
@@ -6105,9 +6177,50 @@ mod profiles_remove {
         );
     }
 
+    /// R1843004: once the winner deletes their account, a `voted-out` or `fled-decisive` game is
+    /// still the other player's loss (`DECISIVE_REASONS`), and a `fled` game still their draw.
+    async fn r1843004_a_deleted_winner_leaves_each_new_ending_as_it_was(harness: &StoreHarness) {
+        for (reason, record) in [
+            ("voted-out", json!({ "wins": 0, "losses": 1, "draws": 0 })),
+            ("fled-decisive", json!({ "wins": 0, "losses": 1, "draws": 0 })),
+            ("fled", json!({ "wins": 0, "losses": 0, "draws": 1 })),
+        ] {
+            let gone = active_profile(harness, None).await;
+            let other = active_profile(harness, None).await;
+            let now = harness.now();
+            let match_id = id();
+            q!(harness, t => t.matches_create(&match_row(&match_id, &gone.id, &other.id, harness, now)));
+            q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+            let result: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [gone.id, other.id],
+                "winnerProfileId": gone.id,
+                "reason": reason,
+                "turns": 9,
+                "endedAt": now,
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1016, 1000],
+            }));
+            q!(harness, t => t.results_insert(&result));
+            q!(harness, t => t.matches_finish(&match_id, now));
+            assert_eq!(
+                j(&q!(harness, t => t.results_record_for(&other.id))),
+                record,
+                "{reason}, before the delete"
+            );
+            assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+            assert_eq!(
+                j(&q!(harness, t => t.results_record_for(&other.id))),
+                record,
+                "{reason}, after the delete"
+            );
+        }
+    }
+
     both_stores!(
         removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match,
         r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss,
+        r1843004_a_deleted_winner_leaves_each_new_ending_as_it_was,
     );
 }
 
@@ -9523,10 +9636,10 @@ mod economy {
 }
 
 // ---------------------------------------------------------------------------
-// Cosmetic loadouts (SPEC §14.2, #1834; migration 0058)
+// Cosmetic loadouts (SPEC §14.2, #1834; migration 0060)
 // ---------------------------------------------------------------------------
 
-/// Migration 0058: an account's own picks for its cards (R1834000), the slots and loadouts a ticket,
+/// Migration 0060: an account's own picks for its cards (R1834000), the slots and loadouts a ticket,
 /// a room, a trio and a match freeze (R1834002), a ladder bot's wardrobe and picks and what people
 /// own that it may (R1834005), and the people's seats `cosmetics-fit` reads (R1834006).
 mod cosmetic_loadouts {

@@ -230,14 +230,16 @@ fn expected_tag_count(tag: Tag) -> usize {
     match tag {
         // Meditative+ #7 Life Mage, #8 Arch Mage, #10 Medina Grifter, #16 Jazakus and #16.1 Jazakus Prime.
         Tag::Human => 39 + meditative(16) + meditative_plus(5),
-        Tag::Felinor => 11 + meditative(11),
+        // Core #62 Friend of Felinors and Classic #32 Felinor Feelings lost it in #1837 (R1837000).
+        Tag::Felinor => 9 + meditative(11),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         Tag::Ky => 9 + meditative(6) + meditative_plus(3),
         // Meditative+ #21 Harmony Spirit.
         Tag::Cn => 7 + meditative(33) + meditative_plus(1),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.10 (#831). Meditative+ #23 Enormous Elderberry.
-        Tag::Fruit => 14 + meditative(2) + meditative_plus(1),
+        // patch v0.3.10 (#831), and Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field
+        // Spells that make Fruit, in #1837 (R1837000). Meditative+ #23 Enormous Elderberry.
+        Tag::Fruit => 12 + meditative(2) + meditative_plus(1),
         // Meditative #95 Call to Chaos (Meditative Edition).
         Tag::CallToChaos => 2 + meditative(1),
         // Meditative+ #1 Bob's Plan.
@@ -263,6 +265,14 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Wincon => meditative(2),
         // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
         Tag::Potion => meditative_plus(3),
+        // #1837, ahead of the Stinkyscape set (R1837000): Core #100 Ceaseless Void; Classic #90 In Too
+        // Deep; Classic+ #32 Otherworldly Removal; its three tokens, #32.1 Execute, #32.2 Brawl and
+        // #32.3 Blade Storm; and Core #26 to #29, the four Glowy Jelly Beans.
+        Tag::Terminus => 1,
+        Tag::Quest => 1,
+        Tag::Otherworldly => 1,
+        Tag::OtherOrigins => 3,
+        Tag::JellyBean => 4,
         Tag::Token => 50 + meditative(30) + meditative_plus(6),
     }
 }
@@ -1381,6 +1391,8 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
             "params",
             "dealsDamage",
             "usesPlague",
+            // R1840000: a Resource's rarity and prices (`CardDef.resource`).
+            "resource",
             "loc",
             "radiantFallback",
             "base",
@@ -2441,6 +2453,21 @@ mod tests {
         assert_eq!(
             failures("classic-039"),
             ["catalog[\"classic-039\"]: `usesPlague` marks a Field Spell, not a Spell"]
+        );
+    }
+
+    #[test]
+    fn r1840000_catalog_check_admits_resource_data() {
+        // The Coin, a (0) Spell token, made a Resource: the check admits the field.
+        let resource = parse_object(
+            r#"{"rarity":"Common","base":{"sellMin":1,"sellMax":3,"buy":3},"radiant":{"sellMin":10,"sellMax":20,"buy":20}}"#,
+        );
+        let catalog = with_field("core-t-coin", "resource", Json::Object(resource));
+        assert_eq!(check_catalog(&catalog).failures, Vec::<String>::new());
+        // A field it does not know still fails.
+        assert_eq!(
+            check_catalog(&with_field("core-t-coin", "resourceTray", Json::Bool(true))).failures,
+            ["catalog[\"core-t-coin\"]: unknown field(s) resourceTray"]
         );
     }
 

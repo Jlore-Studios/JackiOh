@@ -1,13 +1,15 @@
 // R1834000: a signed-in account's per-card picks (R1655000) live on the account, and the device's store
-// (`cards/cosmetics.ts`) is their cache. The first time an active profile signs in on a device that
-// holds picks, the device's are sent up once (`POST /api/card-picks/upload`, which never overwrites a
-// card the account holds) and the profile is listed under CARD_PICKS_UPLOADED_KEY; any other time the
-// account's copy is read. Either answer replaces the device's copy, but for a write made here while it
-// was on its way, which stands and is sent after it. From then on each write on this page is sent as
-// the fields it changed (`PUT /api/card-picks`, null clearing one), one request at a time.
+// (`cards/cosmetics.ts`) is their cache. The device's own picks are sent up once, by the first active
+// profile to sign in on it while it holds some (`POST /api/card-picks/upload`, which never overwrites a
+// card the account holds); any other time the account's copy is read. Either answer replaces the
+// device's copy, but for a write made here while it was on its way, which stands and is sent after it,
+// and lists the profile under CARD_PICKS_UPLOADED_KEY: from then on the store holds an account's copy,
+// which is never sent up again, so a pick cleared on another device never comes back from this one's
+// cache, and no profile's copy is sent up as another's. Each write on this page is then sent as the
+// fields it changed (`PUT /api/card-picks`, null clearing one), one request at a time.
 //
-// A failed request throws nothing into React and changes nothing on the device: a failed upload lists
-// no profile, so the next sign-in sends the picks again, and a failed send leaves the pick worn here.
+// A failed request throws nothing into React and changes nothing on the device: a failed upload or
+// read lists no profile, so the next sign-in tries again, and a failed send leaves the pick worn here.
 // The screens share one sync per profile, as the settings' does (`settings/accountSync.ts`).
 
 import { useEffect, useRef } from "react";
@@ -24,7 +26,7 @@ import {
   type StoredCardPicks,
 } from "./cosmetics.ts";
 
-/** R1834000: the profiles whose device picks this device has sent up, a JSON list of profile ids. */
+/** R1834000: the profiles whose account copy has replaced this device's picks, a JSON list of profile ids. */
 export const CARD_PICKS_UPLOADED_KEY = "jackioh.cosmetics.cards.uploaded.v1";
 
 /** The three requests, injectable so the tests never touch the network. */
@@ -61,7 +63,7 @@ function markUploaded(profileId: string): void {
   try {
     window.localStorage.setItem(CARD_PICKS_UPLOADED_KEY, JSON.stringify([...uploadedProfiles(), profileId]));
   } catch {
-    // Storage refused: the next sign-in sends the picks again, which overwrites nothing on the account.
+    // Storage refused: the next sign-in may send the picks again, which overwrites nothing on the account.
   }
 }
 
@@ -127,14 +129,15 @@ export function startCardPicksAccountSync(options: {
     let copy: Record<string, unknown> | null = null;
     try {
       const device = readAllCardPicks();
-      const upload = Object.keys(device).length > 0 && !uploadedProfiles().includes(profileId);
+      // Once any profile's copy has replaced the store, what it holds is an account's, not the device's own.
+      const upload = Object.keys(device).length > 0 && uploadedProfiles().length === 0;
       if (upload) {
         const cards = Object.entries(device).map(([cardId, picks]: [string, StoredCardPicks]): CardPicksEntry => ({ cardId, ...picks }));
         copy = accountCopy(await api.upload(token(), cards));
-        markUploaded(profileId);
       } else {
         copy = accountCopy(await api.load(token()));
       }
+      if (!uploadedProfiles().includes(profileId)) markUploaded(profileId);
     } finally {
       const owed = early ?? [];
       early = null;

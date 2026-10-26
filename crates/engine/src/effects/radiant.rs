@@ -44,7 +44,8 @@ pub enum RadiantZone {
 /// and a library nobody's (§9.1), and a face-down trap is read by its controller only (R33, §10.8).
 fn hidden_from_someone(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     match card.zone {
-        Zone::Hand { .. } | Zone::Library { .. } => return true,
+        // R1840000: a Resource tray is read as a hand is.
+        Zone::Hand { .. } | Zone::Tray { .. } | Zone::Library { .. } => return true,
         Zone::Field {
             row: Row::Backrow, ..
         } => {}
@@ -119,6 +120,8 @@ fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance> {
     acting_on(ctx.state, player, StandingAt::ItsLane)
         .into_iter()
+        // R1839000: nor is a Dormant card, which no effect reaches.
+        .filter(|card| !crate::slumber::is_slumbering(card))
         .cloned()
         .collect()
 }

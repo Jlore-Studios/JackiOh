@@ -658,7 +658,7 @@ pub struct MatchRow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portraits: Option<(PortraitId, PortraitId)>,
     /// R1834002: the loadouts the seats froze as the match began, seat order like `decks`
-    /// (`matches.loadouts`, migration 0058). Cosmetic only, like `portraits`: sent in the `loadouts`
+    /// (`matches.loadouts`, migration 0060). Cosmetic only, like `portraits`: sent in the `loadouts`
     /// and `cardLoadouts` frames and on a replay's pages, never part of `PlayerView`, the log, a
     /// replay hash or a game record. Absent on matches started before them, which read as
     /// `Loadout::defaults`.
@@ -1084,7 +1084,7 @@ pub struct BotRow {
     /// R1555000: the rated games it has won since it started grinding or last stepped up.
     #[serde(default)]
     pub grind_wins: i32,
-    /// R1834005: its wardrobe and the picks it wears (`bots.cosmetics`, migration 0058), drawn by
+    /// R1834005: its wardrobe and the picks it wears (`bots.cosmetics`, migration 0060), drawn by
     /// the pool; none before the first draw. Never in the ledger or `GET /api/cosmetics`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cosmetics: Option<BotCosmetics>,

@@ -16,7 +16,8 @@
 // dark, and duos.css hides them with the board's own Concede, which the rail's offer stands in for.
 //
 // PASSING (B62): the pass control on a hand card of the seat's own (`CardActions.tsx`), or a hand card
-// dragged onto the portal, sends that card's listed `pass`; anything not listed sends nothing.
+// dragged onto the portal, sends that card's listed `pass`; anything not listed sends nothing. The
+// Trade control (R1838000) rides the same bar on a Tradable one, in place of Game's own Trade bar.
 //
 // PINGS (B64): the ping wheel on a hero, zone or hand card of either board sends a ping (`onPing`); a
 // ping marks its place (`duos-ping-marker`) for PING_SHOW_MS on whichever board shows its duel, the
@@ -58,6 +59,7 @@ import { DRAG_THRESHOLD_PX } from "../game/drag/model.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { useBoardBusy } from "../replay/ReplayPlayer.tsx";
+import { tradeOfferFor } from "../game/TradeControl.tsx";
 import { CardActions, type PingMarker } from "./CardActions.tsx";
 import { DuosChromeContext } from "./context.ts";
 import { LifeStrip, TeammateStrip } from "./LifeStrip.tsx";
@@ -328,6 +330,14 @@ export function DuosBoard({
     const body = legal.find((entry) => entry.kind === "concede");
     if (body !== undefined) onAction(body);
   }, [legal, onAction]);
+  // R1838000: a Trade is a duel move: the listed `trade`, in its envelope, or nothing.
+  const sendTrade = useCallback(
+    (instanceId: string) => {
+      const body = duelLegal.find((entry) => entry.type === "trade" && entry.instanceId === instanceId);
+      if (body !== undefined) sendDuel(body);
+    },
+    [duelLegal, sendDuel],
+  );
 
   // B62: a hand card of the seat's own dropped on the portal is passed, when `legal` lists it.
   const passLatest = useRef(sendPass);
@@ -460,6 +470,7 @@ export function DuosBoard({
           turnClock={chrome?.clock}
           matchStatus={chrome?.status}
           boardRail={rail}
+          tradeBar={false}
         />
       ) : (
         <Game
@@ -483,6 +494,8 @@ export function DuosBoard({
           enabled={!over}
           pass={showing === "own" ? { legal: passLegal, cost: view.team.passCost, left: view.team.passesLeft[slot] ?? 0 } : null}
           onPass={sendPass}
+          trade={showing === "own" ? tradeOfferFor(view.own, duelLegal) : null}
+          onTrade={sendTrade}
           onPing={onPing}
           markers={markers}
         />

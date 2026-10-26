@@ -17,7 +17,7 @@ import { KEYWORD_KINDS, type PlayerView, type PreviewValue } from "@jackioh/shar
 import Board from "./Board.tsx";
 import { SAND_FEEL } from "./SandSurface.tsx";
 import { LANES, NO_HIGHLIGHT, testid, type ClickTarget, type Highlight } from "./contract.ts";
-import { fullBoardView, withEvents } from "../test/fixtures.ts";
+import { card, fullBoardView, withEvents } from "../test/fixtures.ts";
 
 const FIELD_SLOTS = [
   { side: "opponent", row: "backrow" },
@@ -412,6 +412,41 @@ describe("Board", () => {
     const badges = [...document.querySelectorAll(".hero-jade")];
     expect(badges.map((badge) => badge.getAttribute("data-jade")).sort()).toEqual(["2", "5"]);
     for (const badge of badges) expect(badge.getAttribute("title")).toBe("Jade Counter");
+  });
+
+  it("R1840000 the tray shows the viewer's Resources, the opponent's count and both seats' Credits, and nothing without them", () => {
+    const plain = fullBoardView();
+    render(<Board view={plain} />);
+    for (const side of ["you", "opponent"]) {
+      expect(screen.queryByTestId(`tray-${side}`)).toBeNull();
+      expect(screen.queryByTestId(`market-credits-${side}`)).toBeNull();
+    }
+    cleanup();
+
+    const resource = card({ instanceId: "r1", defId: "core-t-coin", cost: 0 });
+    const onClick = vi.fn<(target: ClickTarget) => void>();
+    const stocked: PlayerView = {
+      ...plain,
+      you: { ...plain.you, resourceTray: [resource], marketCredits: 7 },
+      opponent: { ...plain.opponent, resourceTray: { count: 3 }, marketCredits: 2 },
+    };
+    render(<Board view={stocked} highlight={highlightOf([testid.trayCard("r1")])} onClick={onClick} />);
+    const own = screen.getByTestId(testid.trayCard("r1"));
+    expect(screen.getByTestId("tray-you")).toContainElement(own);
+    expect(screen.queryByTestId("tray-count-you")).toBeNull();
+    fireEvent.click(own);
+    expect(onClick).toHaveBeenCalledWith({ on: "tray", instanceId: "r1" });
+
+    // The opponent's tray is a number: no card, no id, nothing to click.
+    const count = screen.getByTestId("tray-count-opponent");
+    expect(count).toHaveTextContent("3");
+    expect(count.getAttribute("title")).toBe("Resources");
+    expect(screen.getByTestId("tray-opponent").querySelector("[data-testid^='tray-card-']")).toBeNull();
+
+    // Credits are public on both seats.
+    expect(screen.getByTestId("market-credits-you").getAttribute("data-credits")).toBe("7");
+    expect(screen.getByTestId("market-credits-opponent").getAttribute("data-credits")).toBe("2");
+    expect(screen.getByTestId("market-credits-you").getAttribute("title")).toBe("Credits");
   });
 
   it("writes the log from view.events without naming a drawn card", () => {
