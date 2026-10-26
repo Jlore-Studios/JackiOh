@@ -13,7 +13,7 @@
 use jackioh_engine::config::LIFE_TAP_DAMAGE;
 use jackioh_engine::testkit::*;
 
-use super::scenario;
+use super::{scenario, targets_of, tributes_of};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -118,23 +118,9 @@ fn listed(s: &Scenario, card: &str) -> Vec<ActionBody> {
         .collect()
 }
 
-fn targets_of(action: &ActionBody) -> Vec<Selection> {
-    match action {
-        ActionBody::Activate { targets, .. } => targets.clone().unwrap_or_default(),
-        _ => Vec::new(),
-    }
-}
-
 fn modes_of(action: &ActionBody) -> Vec<String> {
     match action {
         ActionBody::Activate { modes, .. } => modes.clone().unwrap_or_default(),
-        _ => Vec::new(),
-    }
-}
-
-fn tributes_of(action: &ActionBody) -> Vec<String> {
-    match action {
-        ActionBody::Activate { tributes, .. } => tributes.clone().unwrap_or_default(),
         _ => Vec::new(),
     }
 }

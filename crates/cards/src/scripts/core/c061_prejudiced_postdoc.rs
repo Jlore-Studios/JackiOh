@@ -69,14 +69,6 @@ mod tests {
     const PILLOW: &str = "core-065-1"; // #65.1, the aura source for "auras apply afresh"
     const SURGERY: &str = "core-063"; // #63, the only buff this wave can put on an enemy unit
 
-    /// `s.unit()` is nullable; a lane assertion wants a hard failure when the lane is empty.
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("expected a unit in {player} lane {lane}, found none"),
-        }
-    }
-
     fn sel(card: &CardInstance) -> Value {
         json!({ "pick": "instance", "instanceId": card.id })
     }
@@ -115,7 +107,7 @@ mod tests {
 
             s.play(POSTDOC, json!({ "targets": [sel(&timmy)] }));
 
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             assert_eq!(copy.def_id, TIMMY);
             // The target's form at its printed 3/3: a Vanilla copy is a Vanilla'd Unit like any other, so
             // the buffs R57 would carry go (R781003), and R57 resets its damage.
@@ -138,7 +130,7 @@ mod tests {
 
             s.play(POSTDOC, json!({ "targets": [sel(&timmy)] }));
 
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             // Vanilla: §10.4 drops the printed keywords (Rush, First Strike) on the read.
             assert!(copy.vanilla);
             // "no granted keywords": Plastic Surgery's keyword stayed on the original.
@@ -162,7 +154,7 @@ mod tests {
             s.play(POSTDOC, json!({ "targets": [sel(&timmy)] }));
 
             // The copy lands on p1, where no aura reaches it, so it reads its own layers from scratch.
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             s.expect_stats(&copy, json!({ "attack": 3, "maxHealth": 3 }));
         }
 
@@ -178,7 +170,7 @@ mod tests {
 
             s.play(POSTDOC, json!({ "targets": [sel(&immutable)] }));
 
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             assert_eq!(copy.def_id, ROCK);
             s.expect_stats(&copy, json!({ "attack": 20, "maxHealth": 20 }));
             // The copy is Vanilla, so neither Indestructible nor Immutable reaches it.
@@ -200,7 +192,7 @@ mod tests {
 
             s.play(POSTDOC, json!({ "targets": [sel(&timmy)] }));
 
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             assert!(copy.radiant);
             s.expect_stats(&copy, json!({ "attack": 6, "maxHealth": 6 }));
         }
@@ -217,9 +209,9 @@ mod tests {
             s.play(POSTDOC, json!({ "targets": [sel(&timmy)] }));
 
             s.expect_in_zone(POSTDOC, "field");
-            assert_eq!(unit_at(&s, P1, 5).def_id, POSTDOC);
+            assert_eq!(s.unit_at(P1, 5).def_id, POSTDOC);
             // Every lane is taken, so the copy had nowhere to go and was never created.
-            let p1_defs: Vec<String> = (1..=5).map(|lane| unit_at(&s, P1, lane).def_id).collect();
+            let p1_defs: Vec<String> = (1..=5).map(|lane| s.unit_at(P1, lane).def_id).collect();
             assert!(!p1_defs.iter().any(|def_id| def_id == TIMMY));
         }
 
@@ -236,9 +228,9 @@ mod tests {
             s.play(POSTDOC, json!({ "targets": [sel(&shredder)] }));
 
             // The radiant face's own stats prove the radiant text is the one that ran.
-            let postdoc = unit_at(&s, P1, 1);
+            let postdoc = s.unit_at(P1, 1);
             s.expect_stats(&postdoc, json!({ "attack": 4, "maxHealth": 8 }));
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             assert_eq!(copy.def_id, SHREDDER);
             s.expect_stats(&copy, json!({ "attack": 6, "maxHealth": 10 }));
             assert!(copy.vanilla);
@@ -255,7 +247,7 @@ mod tests {
 
             s.play(POSTDOC, json!({ "targets": [sel(&enforcer)] }));
 
-            let copy = unit_at(&s, P1, COPY_LANE);
+            let copy = s.unit_at(P1, COPY_LANE);
             assert_eq!(copy.def_id, "meditative-083");
             assert!(copy.vanilla);
         }

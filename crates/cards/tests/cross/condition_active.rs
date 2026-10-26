@@ -343,13 +343,6 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
         setup(opts)
     }
 
-    fn at_sponge(s: &Scenario) -> Value {
-        let unit = s
-            .unit("p2", 1)
-            .unwrap_or_else(|| panic!("no sponge in p2's lane 1"));
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     fn sorcerer(s: &Scenario) -> Instance {
         nth(&copies_in_hand(s, SORCERER), 0)
     }
@@ -362,7 +355,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
         );
 
         assert!(hand_glows(&s, &sorcerer(&s)));
-        let targets = at_sponge(&s);
+        let targets = pick::unit_at(&s, "p2", 1);
         s.play(SORCERER, json!({ "targets": targets }));
         s.expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
     }
@@ -375,7 +368,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
         );
 
         assert!(!hand_glows(&s, &sorcerer(&s)));
-        let targets = at_sponge(&s);
+        let targets = pick::unit_at(&s, "p2", 1);
         s.play(SORCERER, json!({ "targets": targets }));
         s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
     }
@@ -390,7 +383,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
         }));
 
         assert!(hand_glows(&s, &sorcerer(&s)));
-        let targets = at_sponge(&s);
+        let targets = pick::unit_at(&s, "p2", 1);
         s.play(SORCERER, json!({ "targets": targets }));
         s.expect_stats(SPONGE, json!({ "health": 2, "maxHealth": 18 }));
     }
@@ -405,7 +398,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
         }));
 
         assert!(!hand_glows(&s, &sorcerer(&s)));
-        let targets = at_sponge(&s);
+        let targets = pick::unit_at(&s, "p2", 1);
         s.play(SORCERER, json!({ "targets": targets }));
         s.expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
     }
@@ -418,7 +411,7 @@ mod c68_twisted_sorcerer_lights_up_below_10_r195_b7 {
         );
 
         assert!(!hand_glows(&s, &sorcerer(&s)));
-        let targets = at_sponge(&s);
+        let targets = pick::unit_at(&s, "p2", 1);
         s.play(SORCERER, json!({ "targets": targets }));
         s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
     }

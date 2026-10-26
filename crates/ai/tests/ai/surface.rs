@@ -12,14 +12,9 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, is_legal};
+use super::support::{AI, HUMAN, act, ai_options, det, is_legal, js};
 
 const TURN: i32 = 9;
-
-/// `determinize` with TS's default options (`{}`).
-fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, DeterminizeOptions::default())
-}
 
 /// `evaluate(state, seat)`: TS's two defaulted arguments, passed explicitly.
 fn eval(state: &GameState, seat: PlayerId) -> f64 {
@@ -30,20 +25,6 @@ fn eval(state: &GameState, seat: PlayerId) -> f64 {
 /// `eval` while the switch is off and at any reach short of `Lines` (R1012002).
 fn line(state: &GameState, seat: PlayerId) -> f64 {
     line_score(state, seat, NextSwing::Enemy)
-}
-
-/// TS's `{ rng: createRng(seed), budget }`, with no clock.
-fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget,
-        should_stop: None,
-    }
-}
-
-/// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
-fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
 }
 
 /// p1's main phase on turn 9: one attacker, a 1-drop in hand (so an attack alone does not leave the

@@ -67,13 +67,6 @@ mod tests {
     const MENACE: &str = "core-019"; // Unit, 9/9 — filler so a turn never auto-ends (§2.5, R82)
     const FELINOR: &str = "core-t-felinor";
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("expected a unit in {player} lane {lane}, found none"),
-        }
-    }
-
     fn sel(card: &CardInstance) -> Value {
         json!({ "pick": "instance", "instanceId": card.id })
     }
@@ -149,7 +142,7 @@ mod tests {
             // §10.5 step 3 sets the flag before step 5 runs the script, so the RADIANT text is what ran:
             // "Then your units get +2/+2" on top of the fill.
             s.expect_stats(&timmy, json!({ "attack": 5, "maxHealth": 5 }));
-            let token = unit_at(&s, P1, 2);
+            let token = s.unit_at(P1, 2);
             s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
         }
 
@@ -169,7 +162,7 @@ mod tests {
             s.play(FRIEND, json!({}));
 
             s.expect_stats(&timmy, json!({ "attack": 9, "maxHealth": 9 }));
-            let token = unit_at(&s, P1, 2);
+            let token = s.unit_at(P1, 2);
             assert_eq!(token.def_id, FELINOR);
             s.expect_stats(&token, json!({ "attack": 1, "maxHealth": 1 }));
         }
@@ -226,7 +219,7 @@ mod tests {
 
             // A fresh turn, so Friend of Felinors is the first cheap card again and runs its radiant text.
             s.expect_stats(&timmy, json!({ "attack": 11, "maxHealth": 11 }));
-            let token = unit_at(&s, P1, 2);
+            let token = s.unit_at(P1, 2);
             s.expect_stats(&token, json!({ "attack": 3, "maxHealth": 3 }));
         }
     }

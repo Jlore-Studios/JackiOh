@@ -31,13 +31,6 @@ const LIBRARY: [&str; 6] = [VANILLA; 6];
 
 use super::scenario;
 
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 /// One `attackDeclared` event's fields.
 #[derive(Clone, Debug, PartialEq)]
 struct Declared {
@@ -78,9 +71,9 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
             "p1": { "hand": [VANILLA], "field": [{ "def": MOTHS, "lane": 3 }], "library": [TIMMY, TIMMY] },
             "p2": { "hand": [VANILLA], "field": [{ "def": MROW, "lane": 1 }, { "def": VANILLA, "lane": 2 }], "library": [TIMMY] },
         }));
-        let moths = unit_at(&g, P1, 3);
-        let mrow = unit_at(&g, P2, 1);
-        let vanilla = unit_at(&g, P2, 2);
+        let moths = g.unit_at(P1, 3);
+        let mrow = g.unit_at(P2, 1);
+        let vanilla = g.unit_at(P2, 2);
 
         // p1's start of turn: "every enemy unit attacks this". Mrow goes first and dies to the strike
         // back; its Death takes control of the unit that destroyed it — Moths — for p2 (R361).
@@ -166,7 +159,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
                 .count(),
             1
         );
-        let defender = unit_at(&g, P2, 1);
+        let defender = g.unit_at(P2, 1);
         assert_eq!(defender.def_id, RIGHT_HOUSE);
         g.expect_stats(&defender.id, json!({ "health": 1 }));
     }
@@ -191,7 +184,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
                     "library": LIBRARY,
                 },
             }));
-            let fiender = unit_at(&g, P2, 2);
+            let fiender = g.unit_at(P2, 2);
             (g, fiender)
         };
         let surgery_on = |g: &mut Scenario, fiender: &CardInstance| {

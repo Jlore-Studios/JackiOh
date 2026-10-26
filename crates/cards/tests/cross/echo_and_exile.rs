@@ -29,18 +29,6 @@ const LIBRARY: [&str; 6] = [RENO; 6];
 
 use super::scenario;
 
-/// The one-instance target list a play sends.
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 fn option_ids(g: &Scenario) -> Vec<String> {
     g.state()
         .pending
@@ -87,10 +75,10 @@ mod section_4_5_the_state_check_between_an_echos_resolutions {
             "p1": { "hand": [TWINSPELL, HIT_JOB, RENO], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "mana": 8, "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": MROW, "lane": 1 }, { "def": POINTMASTER, "lane": 4 }], "library": LIBRARY },
         }));
-        let mrow = unit_at(&g, P2, 1);
+        let mrow = g.unit_at(P2, 1);
 
         g.play(TWINSPELL, json!({}));
-        g.play(HIT_JOB, json!({ "targets": at(&mrow) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&mrow) }));
 
         assert_eq!(
             g.state().pending.as_ref().map(|pending| pending.kind),

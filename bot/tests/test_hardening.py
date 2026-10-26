@@ -143,6 +143,28 @@ class TokenTests(unittest.TestCase):
         self.assertEqual(seen[-1], "Bearer actions-token")
 
 
+class ConditionalGetTests(unittest.TestCase):
+    def test_a_cached_get_sends_its_etag_and_keeps_the_answer_github_says_is_unchanged(self):
+        """The status loop reads every running job every two minutes: GitHub answers 304 to a
+        conditional GET whose ETag still matches, which costs no rate limit."""
+        sent = []
+
+        def opener(req, timeout=60):
+            sent.append(req.headers.get("If-none-match"))
+            if sent[-1] == '"v1"':
+                raise urllib.error.HTTPError(req.full_url, 304, "Not Modified", {}, None)
+            resp = io.BytesIO(json.dumps({"jobs": [{"id": 1}]}).encode())
+            resp.headers = {"ETag": '"v1"'}
+            return resp
+
+        gh = GitHub("o/r", "token-for-etags", opener=opener)
+        self.assertEqual(gh.list_jobs(5, cached=True), [{"id": 1}])
+        self.assertEqual(gh.list_jobs(5, cached=True), [{"id": 1}])  # the 304, answered as kept
+        self.assertEqual(sent, [None, '"v1"'])
+        gh.list_jobs(5)  # a plain GET stays unconditional
+        self.assertEqual(sent[-1], None)
+
+
 class DeliverTests(unittest.TestCase):
     def approved_run(self, h, number=12):
         planned = plan_mod.make(h.ctx)

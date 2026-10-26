@@ -79,13 +79,6 @@ mod tests {
     const SURGERY: &str = "core-063"; // #63, +3/+3: the only way to give a Pillow attack to drain
     const FRIEND: &str = "core-062"; // #62, fills the board: a unit that arrives after the aura
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("expected a unit in {player} lane {lane}, found none"),
-        }
-    }
-
     fn sel(card: &CardInstance) -> Value {
         json!({ "pick": "instance", "instanceId": card.id })
     }
@@ -95,14 +88,14 @@ mod tests {
         for (upgrade, drain) in [(true, 1), (false, 3)] {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
             let moved = if upgrade {
                 crate::upgrade_number(&mut s, &pillow.id, "drain")
             } else {
                 crate::degrade_number(&mut s, &pillow.id, "drain")
             };
             assert_eq!(moved, drain);
-            let timmy = unit_at(&s, P1, 2);
+            let timmy = s.unit_at(P1, 2);
             s.expect_stats(&timmy, json!({ "attack": 3 - drain, "maxHealth": 3 }));
         }
     }
@@ -115,7 +108,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
 
-            let timmy = unit_at(&s, P1, 2);
+            let timmy = s.unit_at(P1, 2);
             s.expect_stats(&timmy, json!({ "attack": 1, "maxHealth": 3 }));
         }
 
@@ -125,10 +118,10 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, FELINOR] } }));
 
             // 1 − 2 would be −1; `layers.rs` clamps the total at 0.
-            let felinor = unit_at(&s, P1, 2);
+            let felinor = s.unit_at(P1, 2);
             s.expect_stats(&felinor, json!({ "attack": 0, "maxHealth": 1, "health": 1 }));
             // The Pillow's own 0 attack is likewise floored, not negative.
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
             s.expect_stats(&pillow, json!({ "attack": 0, "maxHealth": 2, "health": 2 }));
         }
 
@@ -137,7 +130,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW] }, "p2": { "field": [TIMMY] } }));
 
-            let timmy = unit_at(&s, P2, 1);
+            let timmy = s.unit_at(P2, 1);
             s.expect_stats(&timmy, json!({ "attack": 3, "maxHealth": 3 }));
         }
 
@@ -149,7 +142,7 @@ mod tests {
             s.play(FRIEND, json!({}));
 
             for lane in [2, 3, 4, 5] {
-                let token = unit_at(&s, P1, lane);
+                let token = s.unit_at(P1, lane);
                 assert_eq!(token.def_id, FELINOR);
                 s.expect_stats(&token, json!({ "attack": 0, "maxHealth": 1 }));
             }
@@ -159,7 +152,7 @@ mod tests {
         fn the_base_aura_drains_the_pillow_itself() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW], "hand": [SURGERY], "mana": 4 } }));
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
 
             s.play(SURGERY, json!({ "targets": [sel(&pillow)] }));
 
@@ -173,7 +166,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": PILLOW, "radiant": true }], "hand": [SURGERY], "mana": 4 },
             }));
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
 
             s.play(SURGERY, json!({ "targets": [sel(&pillow)] }));
 
@@ -191,7 +184,7 @@ mod tests {
                     "mana": 4,
                 },
             }));
-            let second = unit_at(&s, P1, 2);
+            let second = s.unit_at(P1, 2);
 
             s.play(SURGERY, json!({ "targets": [sel(&second)] }));
 
@@ -204,7 +197,7 @@ mod tests {
             let mut s = scenario(json!({
                 "p1": { "field": [PILLOW, { "def": PILLOW, "radiant": true }], "hand": [SURGERY], "mana": 4 },
             }));
-            let second = unit_at(&s, P1, 2);
+            let second = s.unit_at(P1, 2);
 
             s.play(SURGERY, json!({ "targets": [sel(&second)] }));
 
@@ -217,7 +210,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [{ "def": PILLOW, "radiant": true }, TIMMY] } }));
 
-            let timmy = unit_at(&s, P1, 2);
+            let timmy = s.unit_at(P1, 2);
             s.expect_stats(&timmy, json!({ "attack": 1, "maxHealth": 3 }));
         }
 
@@ -225,15 +218,15 @@ mod tests {
         fn s4_1_it_can_never_switch_to_defense_position() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
 
             s.expect_refused_with(|s| s.switch_position(&pillow), "Defense Position");
             assert_eq!(s.card(&pillow).position.unwrap_or(Position::Atk), Position::Atk);
 
             // The flag is the Pillow's alone: an ordinary unit beside it still switches.
-            let timmy = unit_at(&s, P1, 2);
+            let timmy = s.unit_at(P1, 2);
             s.switch_position(&timmy);
-            let timmy = unit_at(&s, P1, 2);
+            let timmy = s.unit_at(P1, 2);
             assert_eq!(s.card(&timmy).position, Some(Position::Def));
         }
 
@@ -241,7 +234,7 @@ mod tests {
         fn s4_1_the_radiant_face_cannot_switch_to_defense_either() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "field": [{ "def": PILLOW, "radiant": true }] } }));
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
 
             s.expect_refused_with(|s| s.switch_position(&pillow), "Defense Position");
             s.expect_stats(&pillow, json!({ "attack": 0, "maxHealth": 4 }));
@@ -253,7 +246,7 @@ mod tests {
     fn r1081000_the_drain_reaches_a_unit_standing_in_the_backrow() {
         crate::register_all();
         let mut s = scenario(json!({ "p1": { "field": [PILLOW, TIMMY] } }));
-        let timmy = unit_at(&s, P1, 2);
+        let timmy = s.unit_at(P1, 2);
         crate::stand_in_backrow(&mut s, &timmy.id, 2);
         s.expect_stats(&timmy, json!({ "attack": 1, "maxHealth": 3 }));
     }

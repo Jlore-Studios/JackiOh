@@ -230,13 +230,6 @@ const TIMMY: &str = "core-011";
 const EXPERIMENTATION: &str = "core-085";
 const TRIBUTE_LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 mod r102_3_2_a_sheep_s_worth_is_its_text_and_a_fuse_keeps_it {
     use super::*;
 
@@ -257,8 +250,8 @@ mod r102_3_2_a_sheep_s_worth_is_its_text_and_a_fuse_keeps_it {
             },
             "p2": { "hand": [TIMMY, STOCKPILE], "library": TRIBUTE_LIBRARY },
         }));
-        let sheep = unit_at(&g, PlayerId::P1, 1);
-        let vanilla = unit_at(&g, PlayerId::P1, 2);
+        let sheep = g.unit_at(PlayerId::P1, 1);
+        let vanilla = g.unit_at(PlayerId::P1, 2);
         assert_eq!(tribute_value_of(g.state(), &sheep), 2);
 
         g.play(TIMMY, json!({ "zone": 1 }));

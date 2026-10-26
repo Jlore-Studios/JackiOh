@@ -102,10 +102,6 @@ mod tests {
         loc(SHRIMP)
     }
 
-    fn pick(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// The target ids `legal_actions` offers Hired Shrimp's play, any zone.
     fn offered(s: &Scenario, player: PlayerId) -> IndexSet<String> {
         let Some(shrimp) = s.hand(player).into_iter().find(|card| card.def_id == SHRIMP) else {
@@ -198,7 +194,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [CUBE, { "def": FIENDER, "stack": true }] },
                 }));
                 assert_eq!(offered(&s, P1), set_of(&[s.card(FIENDER).id.as_str()]));
-                let targets = pick(&s.card(CUBE).id);
+                let targets = pick::id(&s.card(CUBE).id);
                 s.expect_refused(move |s| s.play(SHRIMP, json!({ "targets": targets })));
             }
 
@@ -207,7 +203,7 @@ mod tests {
                 crate::register_all();
                 assert!(loc(CUBE) > shrimp_loc());
                 let mut s = scenario(json!({ "p1": { "hand": [SHRIMP, FILLER] }, "p2": { "hand": [FILLER], "field": [CUBE] } }));
-                let targets = pick(&s.card(CUBE).id);
+                let targets = pick::id(&s.card(CUBE).id);
                 s.play(SHRIMP, json!({ "targets": targets }));
                 s.expect_in_zone(CUBE, "graveyard").expect_in_zone(SHRIMP, "field");
             }
@@ -217,7 +213,7 @@ mod tests {
                 crate::register_all();
                 assert!(loc(VANILLA) < shrimp_loc());
                 let mut s = scenario(json!({ "p1": { "hand": [SHRIMP, FILLER] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
-                let targets = pick(&s.card(VANILLA).id);
+                let targets = pick::id(&s.card(VANILLA).id);
                 s.play(SHRIMP, json!({ "targets": targets }));
                 s.expect_in_zone(VANILLA, "field");
                 assert!(!destroyed_any(&s));
@@ -230,7 +226,7 @@ mod tests {
                 let Some(theirs) = s.unit(P2, 1) else {
                     panic!("p2's Hired Shrimp should be on the board");
                 };
-                s.play(SHRIMP, json!({ "targets": pick(&theirs.id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&theirs.id) }));
                 s.expect_in_zone(&theirs, "field");
             }
 
@@ -242,7 +238,7 @@ mod tests {
                     "p1": { "hand": [SHRIMP, FILLER], "backrow": [{ "def": HONEYPOT, "faceUp": false }] },
                     "p2": { "hand": [FILLER] },
                 }));
-                let targets = pick(&s.card(HONEYPOT).id);
+                let targets = pick::id(&s.card(HONEYPOT).id);
                 s.play(SHRIMP, json!({ "targets": targets }));
                 s.expect_in_zone(HONEYPOT, "graveyard");
             }
@@ -260,7 +256,7 @@ mod tests {
                 };
                 assert_eq!(offered(&s, P1), set_of(&[trap.id.as_str()]));
                 assert!(!js(&s.view(P1)).to_string().contains(HONEYPOT));
-                s.play(SHRIMP, json!({ "targets": pick(&trap.id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&trap.id) }));
                 s.expect_in_zone(&trap, "graveyard");
             }
 
@@ -275,7 +271,7 @@ mod tests {
                 let Some(trap) = s.backrow(P2, 1) else {
                     panic!("p2's trap should be set");
                 };
-                s.play(SHRIMP, json!({ "targets": pick(&trap.id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&trap.id) }));
                 s.expect_in_zone(&trap, "field");
                 assert_ne!(s.card(&trap).face_up, Some(true));
                 assert!(!js(&s.view(P1)).to_string().contains(GAMBIT));
@@ -288,7 +284,7 @@ mod tests {
                 let fused_loc = def_of(Some(s.state()), &s.card(&fused_id).def_id).loc;
                 assert_eq!(fused_loc, Some(loc(ROCK) + loc(CUBE)));
                 assert!(fused_loc.unwrap_or(0) > shrimp_loc());
-                s.play(SHRIMP, json!({ "targets": pick(&fused_id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
                 s.expect_in_zone(&fused_id, "field");
                 assert_eq!(js(&s.stats(&fused_id).position), json!("ATK"));
             }
@@ -306,7 +302,7 @@ mod tests {
                 for viewer in [P1, P2] {
                     assert_eq!(js(&s.view(viewer))["defs"][fused_def.id.as_str()]["loc"], json!(loc(BIGOT) + loc(GARY)));
                 }
-                s.play(SHRIMP, json!({ "targets": pick(&fused_id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
                 s.expect_in_zone(&fused_id, "graveyard");
             }
 
@@ -355,7 +351,7 @@ mod tests {
                     "p1": { "hand": [{ "def": SHRIMP, "radiant": true }, FILLER] },
                     "p2": { "hand": [FILLER], "field": [CUBE, VANILLA] },
                 }));
-                let targets = pick(&s.card(CUBE).id);
+                let targets = pick::id(&s.card(CUBE).id);
                 s.play(SHRIMP, json!({ "targets": targets }));
                 s.expect_in_zone(CUBE, "graveyard");
                 s.expect_stats(SHRIMP, json!({ "attack": 8, "health": 6 }));
@@ -370,7 +366,7 @@ mod tests {
                 }));
                 let vanilla = s.card(VANILLA).clone();
                 assert!(!offered(&s, P1).contains(&vanilla.id));
-                let targets = pick(&vanilla.id);
+                let targets = pick::id(&vanilla.id);
                 s.expect_refused(move |s| s.play(SHRIMP, json!({ "targets": targets })));
                 s.expect_in_zone(SHRIMP, "hand");
             }
@@ -385,7 +381,7 @@ mod tests {
                 let Some(trap) = s.backrow(P2, 1) else {
                     panic!("p2's trap should be set");
                 };
-                s.play(SHRIMP, json!({ "targets": pick(&trap.id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&trap.id) }));
                 s.expect_in_zone(&trap, "field");
                 assert!(!js(&s.view(P1)).to_string().contains(GAMBIT));
             }
@@ -400,7 +396,7 @@ mod tests {
                 let Some(trap) = s.backrow(P2, 1) else {
                     panic!("p2's trap should be set");
                 };
-                s.play(SHRIMP, json!({ "targets": pick(&trap.id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&trap.id) }));
                 s.expect_in_zone(&trap, "graveyard");
             }
 
@@ -443,7 +439,7 @@ mod tests {
                 crate::register_all();
                 let (mut s, fused_id) = fused(BIGOT, GARY, true);
                 assert!(offered(&s, P1).contains(&fused_id));
-                s.play(SHRIMP, json!({ "targets": pick(&fused_id) }));
+                s.play(SHRIMP, json!({ "targets": pick::id(&fused_id) }));
                 s.expect_in_zone(&fused_id, "graveyard");
             }
         }
