@@ -57,7 +57,7 @@ export default function CreatorRoute({ token, api }: CreatorRouteProps): ReactEl
         }}
       />
       <h1 className="creator-title">{t("Card creator")}</h1>
-      <p className="creator-hint">{t("Make your own cards and try them against the AI. Custom cards play only in practice.")}</p>
+      <p className="creator-hint">{t("Custom cards play only in practice.")}</p>
       {leaving === null ? null : (
         <UnsavedNote
           onDiscard={leaving.leave}

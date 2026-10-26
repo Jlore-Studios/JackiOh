@@ -67,7 +67,11 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796; plus a Trample attacker's excess on the hero and a Lifesteal
 attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
-evaluation prefers) on every determinization, and plays the first action of the best mean. It
+evaluation prefers) on every determinization, and plays the first action of the best mean. A line
+leaving a countdown waiting (an effect "in N turns" with its public badge, R1181000) is replied to again
+on a copy whose countdowns come due at the seat's next turn start, and the scores are blended at
+`AI_REPLY.countdown_share` per turn the farthest still waits past its owner's next turn start (#1995);
+with none waiting, nothing changes. It
 re-plans after every action, so a lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
 it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that

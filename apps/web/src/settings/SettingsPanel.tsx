@@ -22,7 +22,6 @@ import {
 import { readRememberedTab, rememberTab } from "./tabs.ts";
 import { retrySettingsSync, useSettingsSyncState } from "./accountSync.ts";
 import { TryAgainButton } from "../auth/AccountError.tsx";
-import { syncPlayerStats } from "../stats/sync.ts";
 import { SpectatorSwitch } from "../together/SpectatorSwitch.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import "./settings.css";
@@ -45,7 +44,7 @@ const SECTIONS: readonly SectionSpec[] = [
   {
     id: "gameplay",
     title: "Gameplay",
-    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "publicStats"],
+    controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews"],
   },
   { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
   { id: "audio", title: "Audio", controls: ["muteOpponentEmotes"] },
@@ -77,10 +76,6 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
     label: "Mute opponent emotes",
     hint: "Never show or hear an opponent's emotes, in every match.",
   },
-  publicStats: {
-    label: "Public player statistics",
-    hint: "Share your games, win rate and favourite cards on the public stats page. Off: visible only to you when signed in.",
-  },
 };
 
 const FOCUSABLE =
@@ -111,9 +106,6 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
             const patch: Partial<Settings> = {};
             patch[setting] = event.currentTarget.checked;
             writeSettings(patch);
-            if (setting === "publicStats") {
-              void syncPlayerStats();
-            }
           }}
         />
       </label>

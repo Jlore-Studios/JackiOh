@@ -1,7 +1,7 @@
 // #936 S7 B50: `SpectatorSwitch`, "Let friends watch my games". It draws nothing until the account's
-// `allowSpectators` is in (signed out, or an account whose settings carry none), shows it as a switch
-// with the delay in its hint, writes a change with `PUT /api/settings` carrying `allowSpectators` alone
-// and keeps the server's answer, and puts the switch back with the server's words when it refuses.
+// `allowSpectators` is in (signed out, or an account whose settings carry none), shows it as a switch,
+// writes a change with `PUT /api/settings` carrying `allowSpectators` alone and keeps the server's
+// answer, and puts the switch back with the server's words when it refuses.
 //
 // The server is a stubbed `fetch` (`test/stubServer.ts`); the signed-in session is put where
 // `net/session.ts` reads it.
@@ -9,9 +9,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
-
-import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 
@@ -85,13 +82,14 @@ describe("B50 the spectator switch", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("B50 shows allowSpectators as a switch, the delay in its hint", async () => {
+  it("B50 shows allowSpectators as a switch, with no hint under it", async () => {
     serve(true);
     render(<SpectatorSwitch />);
     const toggle = await screen.findByTestId(SWITCH, undefined, SLOW);
     expect(toggle.getAttribute("role")).toBe("switch");
     expect(theSwitch().checked).toBe(true);
-    expect(document.body).toHaveTextContent(String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND)));
+    expect(toggle).not.toHaveAttribute("aria-describedby");
+    expect(document.body).not.toHaveTextContent("seconds behind");
   });
 
   it("B50 turning it off sends PUT /api/settings with allowSpectators alone, and keeps the server's answer", async () => {

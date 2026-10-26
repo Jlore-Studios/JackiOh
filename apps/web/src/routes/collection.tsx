@@ -164,7 +164,6 @@ function Hub(): ReactElement {
           onClick={followInApp(paths.decks)}
         >
           <span className="collection-door__title">{t("Decks")}</span>
-          <span className="collection-door__hint">{t("Your decks and trios, and the deck builder.")}</span>
         </a>
         <a
           className="collection-door"
@@ -173,7 +172,6 @@ function Hub(): ReactElement {
           onClick={followInApp(paths.collectionSection("cards"))}
         >
           <span className="collection-door__title">{t("Cards")}</span>
-          <span className="collection-door__hint">{t("The cards you own, your wallet, set tracks and quests.")}</span>
         </a>
         <a
           className="collection-door"
@@ -182,7 +180,6 @@ function Hub(): ReactElement {
           onClick={followInApp(paths.collectionSection("cosmetics"))}
         >
           <span className="collection-door__title">{t("Cosmetics")}</span>
-          <span className="collection-door__hint">{t("The cosmetics you own, and the ones you wear.")}</span>
         </a>
         <a
           className="collection-door"
@@ -191,7 +188,6 @@ function Hub(): ReactElement {
           onClick={followInApp(paths.creator)}
         >
           <span className="collection-door__title">{t("Card builder")}</span>
-          <span className="collection-door__hint">{t("Make your own cards and try them against the AI.")}</span>
         </a>
       </nav>
     </>
