@@ -187,11 +187,14 @@ pub fn credit_lapsing(state: &GameState, player: PlayerId) -> Vec<String> {
 }
 
 /// The ids of the acting `credit_lapses` cards on this player's field, a Unit a carrier holds among
-/// them (R446, R1824000), in `zones::acting_on`'s order.
+/// them (R446, R1824000), in `zones::acting_on`'s order. A card with no definition (the AI's redacted
+/// placeholder for a face-down card, R185) has no text, so it lapses nothing.
 fn lapsing_faces(state: &GameState, player: PlayerId) -> Vec<String> {
     let mut out = Vec::new();
     for card in crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane) {
-        if !crate::subsystems::activate::is_acting_on_field(state, card) {
+        if crate::catalog::find_def(Some(state), &card.def_id).is_none()
+            || !crate::subsystems::activate::is_acting_on_field(state, card)
+        {
             continue;
         }
         if crate::scripts::flags_of(state, card).credit_lapses == Some(true) {

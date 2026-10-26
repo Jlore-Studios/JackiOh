@@ -125,6 +125,40 @@ fn built_ship_with(p1_hand: Value, mana: Option<i32>, p2_backrow: Value) -> Scen
     s
 }
 
+/// `id`, taken out of p1's graveyard into their hand (`ZoneName::Hand`) or their library (anything else),
+/// as a return or a shuffle takes it: R97 judges a card by where it is now.
+fn out_of_the_graveyard(s: &mut Scenario, id: &str, to: ZoneName) {
+    let side = &mut s.state_mut().players.p1;
+    let at = side
+        .graveyard
+        .iter()
+        .position(|card| card.id == id)
+        .unwrap_or_else(|| panic!("{id} is not in p1's graveyard"));
+    let mut card = side.graveyard.remove(at);
+    if to == ZoneName::Hand {
+        card.zone = Zone::Hand { player: P1 };
+        side.hand.push(card);
+    } else {
+        card.zone = Zone::Library { player: P1 };
+        side.library.push(card);
+    }
+}
+
+/// The `starshipFused` and `starshipLaunched` events on `viewer`'s view, as the wire carries them.
+fn starship_events(s: &Scenario, viewer: PlayerId) -> Vec<Value> {
+    s.view(viewer)
+        .events
+        .iter()
+        .filter(|event| {
+            matches!(
+                event.event_type(),
+                GameEventType::StarshipFused | GameEventType::StarshipLaunched
+            )
+        })
+        .map(|event| serde_json::to_value(event).expect("an event serializes"))
+        .collect()
+}
+
 mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
     use super::*;
 
@@ -296,6 +330,74 @@ mod r1852000_a_piece_that_dies_fuses_into_its_owners_dormant_starship {
         // The launched Starship is no token: killed, it reaches its owner's graveyard.
         bolt_at(&mut s, &first.id);
         assert_eq!(s.card(&first.id).zone.z(), ZoneName::Graveyard);
+    }
+
+    #[test]
+    fn r1852000_a_piece_returned_to_a_hand_is_hidden_on_its_starship_fused_event() {
+        let mut s = board(
+            "p1",
+            json!([bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let piece = id_at(&s, P1, 1);
+        bolt_at(&mut s, &piece);
+        let ship = ship_of(&s, P1);
+        out_of_the_graveyard(&mut s, &piece, ZoneName::Hand);
+        // The other seat reads the fusion, the Starship and its count, but not the piece now in a hand.
+        assert_eq!(
+            starship_events(&s, P2)[0],
+            json!({
+                "type": "starshipFused",
+                "player": "p1",
+                "instanceId": ship.id,
+                "pieceId": HIDDEN_ID,
+                "defId": HIDDEN_ID,
+                "pieces": 1,
+            })
+        );
+        // Its owner reads its own hand.
+        let own = &starship_events(&s, P1)[0];
+        assert_eq!(own["pieceId"], json!(piece));
+        assert_eq!(own["defId"], json!(booster.id));
+        assert_eq!(
+            create_invariant_monitor(s.state()).hidden(s.state()),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn r1852005_a_piece_shuffled_into_a_library_is_still_named_by_the_starships_memory() {
+        let mut s = board(
+            "p1",
+            json!([bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let piece = id_at(&s, P1, 1);
+        bolt_at(&mut s, &piece);
+        let ship = ship_of(&s, P1);
+        out_of_the_graveyard(&mut s, &piece, ZoneName::Library);
+        // The log keeps the last NONCE_HISTORY actions (`reduce::remember_nonce`): once the fusion has
+        // left it, only the Starship's memory names the piece's definition.
+        s.state_mut().applied.clear();
+        let view = s.view(P2);
+        let unit = view.opponent.units[0]
+            .as_ref()
+            .expect("lane 1 shows the Starship");
+        assert_eq!(unit.instance_id, ship.id);
+        let memory = unit
+            .starship
+            .as_ref()
+            .expect("the Starship's memory is on the view");
+        assert_eq!(memory.pieces[0].def_id, booster.id);
+        // The piece died face-up, so its definition is no secret, wherever the card went since.
+        assert_eq!(
+            create_invariant_monitor(s.state()).hidden(s.state()),
+            Vec::<String>::new()
+        );
     }
 }
 
@@ -550,6 +652,83 @@ mod r1852003_the_launch {
         );
         assert_eq!(health_of(&s, P1), health - TRAP_DAMAGE);
     }
+
+    #[test]
+    fn r1852003_a_starship_summoned_and_launched_in_one_turn_is_not_sick_and_the_monitor_agrees() {
+        let mut s = board(
+            "p1",
+            json!([bolt.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let mut monitor = create_invariant_monitor(s.state());
+        let piece = id_at(&s, P1, 1);
+        let from = s.events().len();
+        bolt_at(&mut s, &piece);
+        let ship = ship_of(&s, P1);
+        // Summoned this turn, the Starship entered the field this turn.
+        assert_eq!(s.card(&ship.id).summoned_turn, Some(s.state().turn));
+        assert_eq!(
+            monitor.after(&s.events()[from..], s.state()),
+            Vec::<String>::new()
+        );
+        let from = s.events().len();
+        launch(&mut s, &ship.id);
+        // R1839002: its awakening lifts the sickness, and the monitor's shadow reads it so (I4).
+        assert_eq!(s.card(&ship.id).summoned_turn, None);
+        assert_eq!(
+            monitor.after(&s.events()[from..], s.state()),
+            Vec::<String>::new()
+        );
+        let attack = ActionBody::Attack {
+            attacker_id: ship.id.clone(),
+            target_id: "hero-p2".to_string(),
+        };
+        assert!(legal_actions(s.state(), P1).contains(&attack));
+        // I1 agrees it may attack; the scenario's own cards arrived with no event, which I3 reports.
+        let found: Vec<String> = monitor
+            .before(s.state(), P1, &attack)
+            .into_iter()
+            .filter(|finding| !finding.starts_with("I3"))
+            .collect();
+        assert_eq!(found, Vec::<String>::new());
+    }
+
+    #[test]
+    fn r1852003_a_starship_bounced_into_a_hand_is_hidden_on_its_fused_and_launched_events() {
+        let mut s = board(
+            "p1",
+            json!([bolt.id, recall.id]),
+            json!([{ "def": booster.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let piece = id_at(&s, P1, 1);
+        bolt_at(&mut s, &piece);
+        let ship = ship_of(&s, P1);
+        launch(&mut s, &ship.id);
+        s.play(recall.id.as_str(), json!({}));
+        assert_eq!(s.card(&ship.id).zone.z(), ZoneName::Hand);
+        // The other seat reads both events, but not the Starship now in p1's hand.
+        let theirs = starship_events(&s, P2);
+        assert_eq!(theirs.len(), 2, "{theirs:?}");
+        assert!(
+            theirs.iter().all(|event| event["instanceId"] == json!(HIDDEN_ID)),
+            "{theirs:?}"
+        );
+        assert_eq!(theirs[1]["defId"], json!(HIDDEN_ID));
+        // Its owner reads its own hand.
+        assert!(
+            starship_events(&s, P1)
+                .iter()
+                .all(|event| event["instanceId"] == json!(ship.id))
+        );
+        assert_eq!(
+            create_invariant_monitor(s.state()).hidden(s.state()),
+            Vec::<String>::new()
+        );
+    }
 }
 
 mod r1852004_the_name {
@@ -730,5 +909,41 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
         // The Starship tops its zone again, still Dormant.
         assert_eq!(id_at(&s, P1, 1), ship.id);
         assert!(is_dormant_starship(s.card(&ship.id)));
+    }
+}
+
+/// R1857001: the Dormant Starship is a card, not a token (R1852000), and still in no pool and no deck,
+/// as R674 keeps Glitch out of every pool: only a Starship Piece's death summons it. A pool that names
+/// it by id reaches it. Proved on this file's fixture hull, a shipped Core card under the engine's id.
+mod r1857001_the_dormant_starship_is_in_no_pool_and_no_deck {
+    use super::*;
+
+    fn pool(args: Value) -> Vec<String> {
+        query(&json_as(args)).iter().map(|def| def.id.clone()).collect()
+    }
+
+    #[test]
+    fn r1857001_the_dormant_starship_is_in_no_pool_and_no_deck() {
+        register_starship_fixtures();
+        assert_eq!(hull.id, DORMANT_STARSHIP_DEF_ID);
+        assert!(!hull.is_token(), "it is no token (R1852000)");
+        for args in [
+            json!({}),
+            json!({ "type": "Unit" }),
+            json!({ "set": "Core", "type": "Unit" }),
+            json!({ "cost": 3 }),
+            json!({ "withTokens": true }),
+            json!({ "everySet": true }),
+            json!({ "excludeDefId": booster.id }),
+        ] {
+            assert!(!pool(args.clone()).contains(&hull.id), "{args}");
+        }
+        // The pieces are cards like any other.
+        assert!(pool(json!({ "type": "Unit" })).contains(&booster.id));
+        assert_eq!(pool(json!({ "defId": [hull.id] })), vec![hull.id.clone()]);
+        assert!(made_by_a_rule(&hull));
+        assert!(!made_by_a_rule(&booster));
+        assert!(!deckable(&hull));
+        assert!(deckable(&booster));
     }
 }

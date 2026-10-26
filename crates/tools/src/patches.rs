@@ -3268,6 +3268,28 @@ mod tests {
                 }
             }
 
+            // R1857000: the Stinkyscape set is the third held set: a patch reads the catalog without
+            // its cards, and claims none of them, until its release (#1884) lists it in `SHIPPED_SETS`.
+            #[test]
+            fn r1857000_a_patch_reads_the_catalog_without_the_stinkyscape_set_until_it_ships() {
+                use jackioh_engine::wire::{SetName, set_ships};
+                let held = json(&catalog_of(vec![
+                    in_set(card("aaa", 1), "Core"),
+                    in_set(card("stinkyscape-001", 1), "Stinkyscape"),
+                    in_set(card("stinkyscape-t-dormant-starship", 3), "Stinkyscape"),
+                    card("bbb", 2),
+                ]));
+                let view = crate::patches::shipped_text(&held).unwrap();
+                if set_ships(SetName::Stinkyscape) {
+                    assert_eq!(view, held);
+                } else {
+                    assert_eq!(
+                        view,
+                        json(&catalog_of(vec![in_set(card("aaa", 1), "Core"), card("bbb", 2)]))
+                    );
+                }
+            }
+
             // The issue's acceptance scenario on a three-card catalog: branch A adds a fragment
             // changing card aaa, branch B one changing card bbb. A merges, then B merges with no
             // conflict under pending/, and promotion ships A before B whatever their titles say, each

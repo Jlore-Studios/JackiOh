@@ -31,7 +31,9 @@
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //!     A `redirected` attack targets the Unit it was re-aimed at, where its combat is fought (R1122;
-//!     fuzz seed 9123 of the handicapped wave, #1645).
+//!     fuzz seed 9123 of the handicapped wave, #1645). A card `awakened` on the turn it entered is
+//!     readied too (R1839002: a Dormant Starship summoned and launched in one turn, fuzz seed 2), and
+//!     `slumber::awaken_card` leaves it with no `summonedTurn`.
 //!
 //! The nine checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
@@ -46,8 +48,8 @@
 //!      declarations and are skipped (R53).
 //!   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
 //!   I4 the bookkeeping matches the shadow (white-box R171): (a) `summonedTurn` is the turn of the
-//!      latest entry, or absent on a `readied` stint (R424); (b) a spent attack exertion belongs to
-//!      the current stint, so an exertion left spent across an entry trips it.
+//!      latest entry, or absent on a `readied` stint (R424, R1839002); (b) a spent attack exertion
+//!      belongs to the current stint, so an exertion left spent across an entry trips it.
 //!   I5 nothing happens after the game is over (§2.5, R216): `gameOver` is the last event an action
 //!      emits. Added in the hunt's fourth round, whose engine-invariants lens found the rest of an
 //!      effect list, and a trap's consumption, resolving after the check that ended the game.
@@ -86,6 +88,9 @@
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding. An empty id names
 //!      no card: a Cry run out of a graveyard runs with none (R127), so the `chaosRolled` its Call to
 //!      Chaos sends carries `""` beside the definition (R436; fuzz seed 7232 of the handicapped wave, #1645).
+//!      Stinkyscape's rows found another false positive, fuzz seed 4679 of the handicapped wave: a
+//!      Starship's memory (R1852005) names the definitions of the pieces fused into it, each a card that
+//!      died face-up (R1852000), so they read off a Starship the seat reads.
 //!      A seat's own Created card names the card that generated it (`createdBy`, R1956001), which is
 //!      read off that card as Echo's `copies` is.
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
@@ -764,6 +769,11 @@ fn hidden_from(state: &GameState, viewer: PlayerId) -> HiddenSet {
             if let Enchantment::SwapsBook { from } = enchantment {
                 defs.shift_remove(from);
             }
+        }
+        // R1852005: a Starship's memory names the pieces fused into it, each a card that died face-up
+        // (R1852000), read off the Starship.
+        for piece in crate::starship::starship_pieces_of(card) {
+            defs.shift_remove(&piece.def_id);
         }
         // R1956001: a Created card's owner is told the card that generated it (`CardView.createdBy`),
         // read off the card, as an Echo's copied Spell is.
@@ -1936,6 +1946,13 @@ impl InvariantMonitor {
                 }
                 GameEvent::TrapFired { instance_id, .. } => {
                     self.fired.insert(instance_id.clone());
+                }
+                GameEvent::Awakened { instance_id, .. } => {
+                    // R1839002: a card awakened on the turn it entered is not summoning sick, and
+                    // `awaken_card` takes its `summonedTurn` off, as R424's readying transform does.
+                    if self.entered.get(instance_id) == Some(&self.turn) {
+                        self.readied.insert(instance_id.clone());
+                    }
                 }
                 GameEvent::Animated {
                     player,

@@ -171,7 +171,10 @@ string_union! {
     /// name (M+ #14, #15). Ahead of the Stinkyscape set, #1837 adds Terminus (Core #100 Ceaseless
     /// Void), Quest (Classic #90 In Too Deep), Otherworldly (Classic+ #32 Otherworldly Removal),
     /// Other-Origins (its three tokens, #32.1 to #32.3) and Jelly Bean (Core #26 to #29, the Glowy
-    /// Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000).
+    /// Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000). The
+    /// held Stinkyscape set adds Drone Core (its #27 to #36), Weapon (#50 to #61 and #140 to #143),
+    /// War Doctrine (the four #137 tokens) and Swarm (its Swarm Units, #91 and #92): family tags that
+    /// no rule reads, which the server admits with the set's release (R1857000).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -195,6 +198,10 @@ string_union! {
         Otherworldly = "Otherworldly",
         OtherOrigins = "Other-Origins",
         JellyBean = "Jelly Bean",
+        DroneCore = "Drone Core",
+        Weapon = "Weapon",
+        WarDoctrine = "War Doctrine",
+        Swarm = "Swarm",
         Token = "Token",
     }
 }
@@ -258,7 +265,8 @@ string_union! {
 
 string_union! {
     /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
-    /// issue #1173, R1178000) ship; Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
+    /// issue #1173, R1178000) ship; Stinkyscape (issue #1836) is held until its release (#1884,
+    /// R1857000); Boss and Boss-X are reserved. Custom is a custom card's (§12.1, R915000): never in the catalog and never
     /// shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
@@ -266,6 +274,7 @@ string_union! {
         ClassicPlus = "Classic+",
         Meditative = "Meditative",
         MeditativePlus = "Meditative+",
+        Stinkyscape = "Stinkyscape",
         Boss = "Boss",
         BossX = "Boss-X",
         Custom = "Custom",
@@ -285,13 +294,15 @@ pub const SHIPPED_SETS: [SetName; 5] = [
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
-/// Meditative+ follows Meditative (issue #1173, R1178000).
-pub const CATALOG_SETS: [SetName; 5] = [
+/// Meditative+ follows Meditative (issue #1173, R1178000), and the held Stinkyscape set follows
+/// Meditative+ (issue #1857, R1857000).
+pub const CATALOG_SETS: [SetName; 6] = [
     SetName::Core,
     SetName::Classic,
     SetName::ClassicPlus,
     SetName::Meditative,
     SetName::MeditativePlus,
+    SetName::Stinkyscape,
 ];
 
 /// R1420: whether a set ships, i.e. whether `SHIPPED_SETS` lists it.
