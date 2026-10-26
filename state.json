@@ -1552,21 +1552,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/cards/rules.test.ts",
             "spec/11-rulings.md"
           ],
-          "from": "58c3fc4f6245652b69bcd0200432681bd4376dad",
-          "main": "c3af6db76704f90784f799cb58f4cf8fb79f9da8"
+          "from": "ea56c64e4be635baafc592cfb7cdec1269602a02",
+          "main": "e1da458311bb3188490c74de8f08f76f78ac0866"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40253660807",
+            "run": "40259178072",
             "tier": "strong"
           }
         ],
-        "sha": "ea56c64e4be635baafc592cfb7cdec1269602a02",
+        "sha": "68b7bc98a5c4a774226a7cb6d81eb98c3b980377",
         "tiers": {
           "claude": "strong"
         }
