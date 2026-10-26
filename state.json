@@ -2156,6 +2156,13 @@
     "1989": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T13:25:53Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "fails easy line 1 (about 18 files: server doors, spec notes, tests, two e2e specs) and line 3 (new ruling R1989000); not hard since no engine, AI, migration, or cross-crate design is involved"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
