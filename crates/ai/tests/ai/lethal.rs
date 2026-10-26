@@ -559,3 +559,120 @@ mod duos_life_r964000 {
         assert_eq!(ready_gap(&with_pool(&state, true), AI), 6.0);
     }
 }
+
+/// R1965000 (issue #1965): C #90 In Too Deep's reward L lets the AI play cards from its graveyard
+/// (R454), and with its deck empty its two (0) Spells there, C #37 Last Hurrah and M #62 Small Time
+/// Recruits, do nothing and land back there. The board needs a lethal the depth-first walk does not
+/// find first: p2 stands at 6 behind a Felinor Token in Defense Position (Taunt, Armor 1), and p1's
+/// 4-mana 7/7 (Armor 7) would kill it and survive, the first attack in move order, but would leave
+/// Bigot's 4 short of the face. The lethal is Bigot into the Token, a trade down that comes after the
+/// plays in move order, then the 7/7 at the face. Before the fix the solver found that lethal only
+/// behind replays of the two Spells, and `decide` played them one at a time without end.
+mod free_replays_r1965000 {
+    use super::*;
+    use jackioh_ai::{AiOptions, AiTurnResult, play_ai_turn};
+    use jackioh_engine::testkit::{find_instance_mut, subsystems};
+
+    const IN_TOO_DEEP: &str = "classic-090";
+    const LAST_HURRAH: &str = "classic-037";
+    const SMALL_TIME_RECRUITS: &str = "meditative-062";
+    const BIGOT: &str = "core-002";
+    const SEVEN_SEVEN: &str = "core-025";
+    const FELINOR_TOKEN: &str = "core-t-felinor";
+    const STOCKPILE: &str = "core-005";
+
+    /// The board above, In Too Deep's line as quest 9 leaves it, with reward L held; `played` puts the
+    /// two Spells in p1's record of the turn's plays, as game 4 of R1171000's series had them.
+    fn board(played: bool) -> GameState {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "r1965000",
+            "active": AI,
+            "turn": 9,
+            "p1": {
+                "field": [SEVEN_SEVEN, BIGOT],
+                "backrow": [IN_TOO_DEEP],
+                "graveyard": [LAST_HURRAH, SMALL_TIME_RECRUITS],
+                "hand": [],
+                "library": [],
+            },
+            "p2": {
+                "health": 6,
+                "field": [{ "def": FELINOR_TOKEN, "position": "DEF" }],
+                "hand": [STOCKPILE],
+                "library": [STOCKPILE, STOCKPILE, STOCKPILE, STOCKPILE],
+            },
+        }));
+        let itd = s.card(IN_TOO_DEEP).id.clone();
+        find_instance_mut(s.state_mut(), &itd)
+            .expect("In Too Deep in the backrow")
+            .memory
+            .insert(
+                subsystems::QUEST_MEMORY_KEY.to_string(),
+                json!({ "active": [], "progress": {}, "done": ["9"], "auras": ["L"], "waiting": [] }),
+            );
+        if played {
+            let ids = [
+                s.card(LAST_HURRAH).id.clone(),
+                s.card(SMALL_TIME_RECRUITS).id.clone(),
+            ];
+            let log = &mut s.state_mut().players[AI].turn_log;
+            log.played_ids.extend(ids);
+            log.cards_played += 2;
+        }
+        s.state().clone()
+    }
+
+    /// The AI's turn on `board(played)`, and how many times it played each of the two Spells.
+    fn turn_on(played: bool) -> (AiTurnResult, [usize; 2]) {
+        let start = board(played);
+        let spells = [LAST_HURRAH, SMALL_TIME_RECRUITS].map(|def| mine(&start, AI, def).id);
+        let mut ai = AiOptions::with_budget(create_rng("r1965000", 0), AI_BUDGET);
+        let turn = play_ai_turn(&start, AI, &mut ai);
+        let plays = spells.map(|id| {
+            turn.actions
+                .iter()
+                .filter(|action| matches!(&action.body, ActionBody::Play { instance_id, .. } if *instance_id == id))
+                .count()
+        });
+        (turn, plays)
+    }
+
+    /// Who won when the turn stopped, if anyone did.
+    fn winner(turn: &AiTurnResult) -> Option<PlayerId> {
+        turn.state
+            .result
+            .as_ref()
+            .and_then(|result| result.winner.player())
+    }
+
+    #[test]
+    fn r1965000_a_free_spell_that_changes_nothing_is_replayed_at_most_once_and_the_turn_ends() {
+        let (turn, plays) = turn_on(false);
+        // Both Spells are offered from the graveyard: the replays are legal and still the engine's.
+        let start = board(false);
+        for def in [LAST_HURRAH, SMALL_TIME_RECRUITS] {
+            let id = mine(&start, AI, def).id;
+            assert!(
+                legal_actions(&start, AI).iter().any(
+                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id)
+                ),
+                "{def} is offered from the graveyard"
+            );
+        }
+        // The turn ends inside play_ai_turn's ceiling, here with the lethal the board holds.
+        assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));
+        assert!(
+            plays.iter().all(|&count| count <= 1),
+            "{plays:?}: {}",
+            trace(&turn)
+        );
+    }
+
+    #[test]
+    fn r1965000_a_free_spell_already_played_this_turn_is_not_replayed_for_nothing() {
+        let (turn, plays) = turn_on(true);
+        assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));
+        assert_eq!(plays, [0, 0], "{}", trace(&turn));
+    }
+}

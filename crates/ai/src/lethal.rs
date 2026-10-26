@@ -18,7 +18,9 @@
 //!      `ready_gap`, so such a card is found when it is among those moves. A move past the first
 //!      lethalWidth of its position is never tried by either walk.
 //!
-//! A line counts only when it wins on every determinization.
+//! A line counts only when it wins on every determinization. Neither walk goes on from a free replay
+//! that leaves `ready_gap` where it was (`replays_for_nothing`, R1965000): it could be made again
+//! without end, and a lethal opening with one would be played one replay at a time, for ever.
 //!
 //! Port of `packages/ai/src/lethal.ts`. TS's frames shared one state object between the moves pushed
 //! from it; here they share it through an `Rc`.
@@ -202,13 +204,33 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     f64::from(life - damage_past_taunts(state, opp, &attacks))
 }
 
+/// R1965000: whether `action`, taken in `state` to reach `next`, replays for nothing a card the seat
+/// has already played this turn: a play of an instance in its turn's `played_ids` that leaves its
+/// mana and `ready_gap` where they were. Such a play spends nothing and is offered again, as a (0)
+/// Spell played from the graveyard under C #90 In Too Deep's reward L lands back there (R454), and
+/// each reads as a new position, the turn's play record being part of `search_signature`; the
+/// best-first walk, taking the longer line on a tied gap, would follow such replays down to
+/// `lethal_max_depth` and return a lethal that opens with one, which `decide` plays and then finds
+/// again, without end.
+fn replays_for_nothing(state: &GameState, next: &GameState, seat: PlayerId, action: &ActionBody) -> bool {
+    let ActionBody::Play { instance_id, .. } = action else {
+        return false;
+    };
+    let before = &state.players[seat];
+    before.turn_log.played_ids.contains(instance_id)
+        && next.players[seat].mana.current == before.mana.current
+        && ready_gap(next, seat) == ready_gap(state, seat)
+}
+
 /// What a new position means for the walk: a proved lethal, a position to search on from, or neither.
-/// `None` when the counter ran out while proving a win on the other determinizations.
+/// `line`'s last action took `parent` to `next`. `None` when the counter ran out while proving a win
+/// on the other determinizations.
 #[allow(clippy::too_many_arguments)]
 fn judge(
     dets: &[GameState],
     seat: PlayerId,
     line: &[ActionBody],
+    parent: &GameState,
     next: &GameState,
     root_turn: i32,
     visited: &mut IndexSet<String>,
@@ -225,6 +247,13 @@ fn judge(
         return Some(Verdict::Dead);
     }
     if line_status(next, seat, root_turn) != LineStatus::Open {
+        return Some(Verdict::Dead);
+    }
+    // R1965000: a replay for nothing leads nowhere a walk has not been.
+    if line
+        .last()
+        .is_some_and(|action| replays_for_nothing(parent, next, seat, action))
+    {
         return Some(Verdict::Dead);
     }
     let signature = search_signature(next, seat);
@@ -253,7 +282,16 @@ fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) ->
         };
         let mut line: Vec<ActionBody> = frame.line.as_ref().clone();
         line.push(frame.action.clone());
-        let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
+        let Some(verdict) = judge(
+            dets,
+            seat,
+            &line,
+            &frame.state,
+            &next,
+            root.turn,
+            &mut visited,
+            counter,
+        ) else {
             return Walk::Cut;
         };
         match verdict {
@@ -308,7 +346,16 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
             };
             let mut line = node.line.clone();
             line.push(action);
-            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
+            let Some(verdict) = judge(
+                dets,
+                seat,
+                &line,
+                &node.state,
+                &next,
+                root.turn,
+                &mut visited,
+                counter,
+            ) else {
                 return Walk::Cut;
             };
             match verdict {

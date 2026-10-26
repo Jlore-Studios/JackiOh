@@ -67,7 +67,11 @@ lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watch
 it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796), and once none is worth making the switches to Defense Position
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
-re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
+re-plans after every action. Neither walk of the lethal solver goes on from a replay for nothing, a play
+of a card already played this turn that leaves the seat's mana and `ready_gap` as they were (a (0) Spell
+back from the graveyard under In Too Deep's reward L, R454): it could be made again without end, and since
+only a line's first action is played, a lethal opening with one would be played one replay at a time, for
+ever (R1965000). Each line tries its moves in move order (`candidates.rs`): attacks on the
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
 opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
 of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
