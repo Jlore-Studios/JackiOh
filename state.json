@@ -2272,6 +2272,13 @@
     "1995": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T15:42:01Z",
+        "difficulty": "hard",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "it changes the AI's search (crates/ai/src/reply.rs scores every finalist), which the rule rates hard even though it is only 7 files and about 250 lines"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
