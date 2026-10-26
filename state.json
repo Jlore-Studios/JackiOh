@@ -2870,8 +2870,12 @@
     "what": "revise #2008 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-26T17:24:53Z",
-    "notes": [],
+    "at": "2026-10-26T17:32:31Z",
+    "notes": [
+      "delivered revise #2008 on muse (run 40363206605): approved",
+      "started revise #2008 on muse (run 40370022489)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -3576,7 +3580,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T17:24:53Z",
+  "loop_tick": "2026-10-26T17:32:31Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T17:26:09Z",
