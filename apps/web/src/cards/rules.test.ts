@@ -154,6 +154,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Complete the current stage",
     "Hear back",
     "Steal mana crystals",
+    // R1845000, R1845002: engine primitives no shipped card prints yet; the Stinkyscape cards that print
+    // them (#123, #77) give them glossary entries.
+    "Hidden Nerf",
+    "Trade offer",
   ],
 };
 
