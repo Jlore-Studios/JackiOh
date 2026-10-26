@@ -709,6 +709,17 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "1867": {
+      "action": "build",
+      "asks": [],
+      "kind": "build",
+      "pending_request": false,
+      "provider": "muse",
+      "run_id": "pending:9ec1e376-1793054302",
+      "started_at": "2026-10-26T22:38:53Z",
+      "stop_requested": false,
+      "taken_asks": []
+    },
     "1889": {
       "action": "build",
       "died": 0,
@@ -3242,9 +3253,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T22:38:09Z",
+    "at": "2026-10-26T22:38:53Z",
     "url": "",
-    "what": "build #1860 on muse"
+    "what": "build #1867 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T22:25:44Z",
