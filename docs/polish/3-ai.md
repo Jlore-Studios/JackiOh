@@ -732,6 +732,12 @@ It never plays a card it held unseen: those are samples, and a guessed hand adds
 information. At most `AI_REPLY.maxSteps` steps; the seat's own prompt at its next turn start ends
 the reply, since that is where its next decision begins.
 
+**Countdowns** (#1995). A countdown still waiting where the reply ends (R1181000) is a payoff to its
+owner and a threat to the other side. `replyScore` replies again on a copy of the line's end whose
+countdowns come due at the seat's next turn start and blends the two: `first + countdownShare^wait ·
+(second − first)`, `wait` the turns the farthest still waits past its owner's next turn start. With
+none waiting nothing changes.
+
 #### `src/deck.ts` (B2)
 
 ```ts

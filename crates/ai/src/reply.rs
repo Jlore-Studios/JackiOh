@@ -30,6 +30,12 @@
 //! First Strike, Divine Shield, Taunt, Lifesteal, end-of-turn damage and the seat's own start of turn.
 //! Nothing here recurses.
 //!
+//! A countdown (an effect "in N turns" with its public badge, R1181000) still waiting where the reply
+//! ends is scored a second time (#1995): `reply_score` plays the reply again on a copy of the line's
+//! end whose countdowns come due at the seat's next turn start, so the engine resolves them as their
+//! owners', and blends the two scores by `AI_REPLY.countdown_share` for each turn the farthest of them
+//! would still wait past its owner's next turn start.
+//!
 //! Port of `packages/ai/src/reply.ts`. TS's `try { reduce } catch` is `catch_unwind` around
 //! `reduce`, whose refusals come back as `error` and whose impossible states panic (SURFACE §4.4.9).
 
@@ -38,9 +44,9 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, AttackTarget, CardInstance, GameState, KeywordKind, PlayerId, Position, Selection,
-    effective_life, find_instance, has_keyword, legal_actions, pierces, reduce_unpiloted, subsystems,
-    takes_strike_back, unit_view,
+    Action, ActionBody, AttackTarget, CardInstance, DelayedAt, GameState, KeywordKind, Phase, PlayerId,
+    Position, Selection, effective_life, find_instance, has_countdown, has_keyword, legal_actions, pierces,
+    reduce_unpiloted, subsystems, takes_strike_back, unit_view,
 };
 
 use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
@@ -575,6 +581,7 @@ pub fn simulate_reply_with(
 /// less the crystals it left unspent and with the coming refreshes priced as at the line's end
 /// (`coming_mana`); a line that ended the game, or stopped on the seat's own prompt, keeps its static
 /// score. `hidden` is as for `simulate_reply` (TS's default: `hidden_card_ids(end, seat)`).
+/// A countdown still waiting at the seat's next decision is weighed past it (`countdowns_due`, #1995).
 /// `None` when the counter ran out.
 pub fn reply_score(
     end: &GameState,
@@ -598,6 +605,20 @@ pub fn reply_score(
         0
     };
     let after = simulate_reply(end, seat, counter, hidden)?;
+    let first = replied_score(end, &after, seat, unspent);
+    // #1995: a countdown still waiting at the seat's next decision is scored a second time, fired.
+    let Some((fired, wait)) = countdowns_due(end, &after, seat) else {
+        return Some(first);
+    };
+    let refired = simulate_reply(&fired, seat, counter, hidden)?;
+    let second = replied_score(end, &refired, seat, unspent);
+    let share = (0..wait).fold(1.0, |share, _| share * AI_REPLY.countdown_share);
+    Some(first + share * (second - first))
+}
+
+/// A passed line's score at `after`, where the reply from `end` stopped: the finalists' evaluation
+/// with whoever swings next, less the crystals the line left `unspent`.
+fn replied_score(end: &GameState, after: &GameState, seat: PlayerId, unspent: i32) -> f64 {
     let next = if after.active == seat {
         NextSwing::Seat
     } else {
@@ -606,11 +627,42 @@ pub fn reply_score(
     // R844, §2.3: the coming refreshes count as the line's end priced them (`coming_mana`): what the
     // reply's refreshes spent (lost, or moved by a rider) still counts, and what the reply set does not.
     let spent = if after.result.is_none() {
-        coming_mana(end, seat, &AI_EVAL) - coming_mana(&after, seat, &AI_EVAL)
+        coming_mana(end, seat, &AI_EVAL) - coming_mana(after, seat, &AI_EVAL)
     } else {
         0.0
     };
-    Some(finalist_score(&after, seat, next) + spent - AI_EVAL.unspent_mana * f64::from(unspent))
+    finalist_score(after, seat, next) + spent - AI_EVAL.unspent_mana * f64::from(unspent)
+}
+
+/// #1995: `end` with every countdown still waiting at `after` (an entry with its public badge, R1181000,
+/// R169: nothing hidden, R185) due at the seat's next turn start, where the reply ends, so the reply
+/// fires it through `reduce` as its owner; and how many turns the farthest of them still waits past
+/// its owner's next turn start, which `AI_REPLY.countdown_share` is raised to. `None` when none waits.
+fn countdowns_due(end: &GameState, after: &GameState, seat: PlayerId) -> Option<(GameState, i32)> {
+    if !after.delayed.iter().any(has_countdown) {
+        return None;
+    }
+    let mut fired = end.clone();
+    let mut wait: Option<i32> = None;
+    for entry in fired.delayed.iter_mut().filter(|entry| has_countdown(entry)) {
+        let Some(due) = after
+            .delayed
+            .iter()
+            .find(|waiting| waiting.id == entry.id)
+            .and_then(|waiting| waiting.due_own_turn)
+        else {
+            continue;
+        };
+        let past_next = (due - after.players[entry.at.player].turns_started - 1).max(0);
+        wait = Some(wait.map_or(past_next, |farthest| farthest.max(past_next)));
+        entry.at = DelayedAt {
+            phase: Phase::Start,
+            player: seat,
+        };
+        entry.due_own_turn = Some(end.players[seat].turns_started + 1);
+        entry.not_before = None;
+    }
+    wait.map(|wait| (fired, wait))
 }
 
 #[cfg(test)]
