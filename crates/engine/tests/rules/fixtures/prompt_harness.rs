@@ -5,13 +5,10 @@
 //! A sink borrows the state, so `cast_now` and `answer_keys` answer the sink's events; the rng's
 //! cursor is written back to the state and the caller reads the state it passed in.
 
-use std::cell::Cell;
-
 use jackioh_engine::testkit::*;
-use serde::Serialize;
 
 use super::catalog::vanilla_deck;
-use super::harness::{new_game, setup_catalog};
+use super::harness::{act_logged, new_game, setup_catalog};
 use super::prompts::register_prompt_fixtures;
 
 /// p1's main phase on turn 3 with 4 mana, the fixtures registered (after `newGame`'s own).
@@ -152,32 +149,6 @@ pub fn event_types(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-thread_local! {
-    /// One counter per test thread, so every action a test sends is fresh.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-/// One action through `reduce`, logged, erroring loudly. `body` is an `ActionInput` or its JSON literal.
-pub fn act(state: &GameState, body: impl Serialize, log: Option<&mut Vec<Action>>) -> GameState {
-    let nonce = NONCE.with(|n| {
-        n.set(n.get() + 1);
-        n.get()
-    });
-    let mut fields = serde_json::to_value(body).expect("an action input serialises");
-    if let Some(object) = fields.as_object_mut() {
-        object.insert("nonce".to_string(), json!(format!("pm{nonce}")));
-    }
-    let action: Action = json_as(fields);
-    let result = reduce(state, &action);
-    if let Some(error) = result.error {
-        panic!("{} refused: {error}", action.action_type());
-    }
-    if let Some(log) = log {
-        log.push(action);
-    }
-    result.state
-}
-
 /// What `replayable` answers.
 pub struct Replayable {
     pub state: GameState,
@@ -204,17 +175,19 @@ pub fn replayable(seed: &str, p1_cards: &[String], p2_cards: &[String]) -> Repla
     }))
     .state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "mulligan", "playerId": "p1", "keep": keep }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     let keep: Vec<String> = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "mulligan", "playerId": "p2", "keep": keep }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     Replayable { state, log, decks }
 }
 

@@ -26,7 +26,7 @@ use jackioh_engine::{
 use super::fixtures::combat::{plain, spikey_pillow, taunter};
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 use super::fixtures::scripts::{anti_oneshot, stockpile};
-use crate::rules::fixtures::harness::{json_of, matches_object};
+use crate::rules::fixtures::harness::{json_of, live, live_mut, matches_object};
 
 /// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
 /// borrows all three, so they live here and `sink()` lends them out.
@@ -203,15 +203,6 @@ fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
-/// The card as it stands in the state now.
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
 /// `resolve_target`'s answer as JSON: `{ kind: "unit", instance }`, `{ kind: "hero", player }`, or
@@ -1160,7 +1151,7 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
         assert!(
             [&mine, &also_mine, &theirs]
                 .iter()
-                .all(|unit| !live(&state, unit).exertion.switched)
+                .all(|unit| !live(&state, *unit).exertion.switched)
         );
 
         // One side only when the effect names it.

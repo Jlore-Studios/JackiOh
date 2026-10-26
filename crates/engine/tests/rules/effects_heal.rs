@@ -5,7 +5,7 @@ use jackioh_engine::effects::heal::heal;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, plain};
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, live, live_mut, new_game, put, slot};
 
 /// The events and rng of a sink over `state`, the rng starting at the state's cursor as `reduce`
 /// does. The state is lent to it call by call, so a test reads the state between runs.
@@ -76,16 +76,8 @@ fn chosen(targets: Option<Vec<Selection>>) -> RunOptions {
     }
 }
 
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
-}
-
 fn health_of(state: &GameState, id: &str) -> i32 {
-    unit_view(state, live(state, id)).health
+    unit_view(state, &live(state, id)).health
 }
 
 fn healed(sink: &Sink) -> Value {

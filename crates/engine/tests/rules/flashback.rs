@@ -5,13 +5,13 @@
 
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{put, slot};
+use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
     flashback_spell, flashback_unit, picky_wind, plague_field, plain_spell, plain_unit,
     register_keywords_783, second_wind,
 };
-use super::fixtures::play_pipeline_b::{in_graveyard, pb_reduce, plays_of};
-use super::fixtures::prompt_harness::{act, board, must};
+use super::fixtures::play_pipeline_b::{in_graveyard, plays_of};
+use super::fixtures::prompt_harness::{board, must};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -45,7 +45,7 @@ fn has_flashback(state: &GameState, card: &CardInstance) -> bool {
 }
 
 fn cast_spell(state: &GameState, id: &str) -> ReduceResult {
-    pb_reduce(
+    act_result(
         state,
         json!({ "type": "play", "instanceId": id, "playerId": "p1" }),
     )
@@ -123,7 +123,6 @@ mod r783013_flashback_spent {
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
-            None,
         );
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
@@ -138,7 +137,6 @@ mod r783013_flashback_spent {
         units = act(
             &units,
             json!({ "type": "play", "instanceId": body.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
-            None,
         );
         assert_eq!(hero_health(&units, P2), before - 1);
         let standing = must(find_instance(&units, &body.id).cloned(), "the Unit on the field");
@@ -167,7 +165,6 @@ mod r783013_flashback_spent {
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
-            None,
         );
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, None);
@@ -180,7 +177,6 @@ mod r783013_flashback_spent {
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
-            None,
         );
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
@@ -198,7 +194,6 @@ mod r783013_flashback_spent {
         state = act(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
-            None,
         );
         let landed = must(graveyard_card(&state, &spell.id), "the Spell in the graveyard");
         assert_eq!(landed.flashback_spent, Some(true));
@@ -224,7 +219,6 @@ mod r783013_flashback_spent {
         let in_mana = act(
             &grave,
             json!({ "type": "play", "instanceId": body.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
-            None,
         );
         let standing = must(
             find_instance(&in_mana, &body.id).cloned(),
@@ -243,7 +237,6 @@ mod r783013_flashback_spent {
                 "plague": { "from": field.id, "tokens": 1 },
                 "playerId": "p1",
             }),
-            None,
         );
         let standing = must(
             find_instance(&in_plague, &body.id).cloned(),

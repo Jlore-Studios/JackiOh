@@ -10,7 +10,9 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::effects::add_library_copies;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, matches_object, new_game, set_library};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, matches_object, new_game, run_effect, set_library,
+};
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
@@ -23,22 +25,7 @@ fn game(seed: &str) -> GameState {
 /// TS `run(state, effect)`: the effect applied for p1 with no card of its own, the rng cursor written
 /// back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(P1),
-                ..HookOptions::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
+    run_effect(state, effect, P1)
 }
 
 fn copies(args: Value) -> Effect {

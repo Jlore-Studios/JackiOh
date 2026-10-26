@@ -12,9 +12,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::board_history::{phoenix, register_board_history_fixtures, rewind};
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::field::{act, banner, playing, spatula, tower, watcher};
+use crate::rules::fixtures::field::{banner, playing, spatula, tower, watcher};
 use crate::rules::fixtures::harness::{
-    events_of_type, json_of, matches_object, put, round_trip, setup_catalog, slot,
+    act, events_of_type, json_of, matches_object, put, round_trip, setup_catalog, slot,
 };
 
 /// p1's main phase of turn 1 with the field fixtures and this file's registered, the history emptied.

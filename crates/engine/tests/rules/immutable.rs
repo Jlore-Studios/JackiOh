@@ -4,15 +4,11 @@
 //! is not a Field Trap and a source that is no card still may. A face-down card's Immutable is dormant,
 //! and a card out of play is protected by its text half alone (R23, R386).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::restrictions::{immutable_bars, immutable_in_play, targeting_type_of};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{in_hand, new_game, next_nonce, put, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
@@ -33,11 +29,7 @@ fn game(seed: &str) -> GameState {
 }
 
 fn attempt(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    reduce(
-        state,
-        &Action::new(json_as(body), player_id, format!("im-{nonce}")),
-    )
+    reduce(state, &Action::new(json_as(body), player_id, next_nonce()))
 }
 
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {

@@ -14,11 +14,9 @@
 //!
 //! Fixtures are this file's own: `tz-` defs indexed above 2500 (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, both, in_hand, new_game, put, slot};
 
 // Fixtures.
 
@@ -248,19 +246,6 @@ fn game(seed: &str) -> GameState {
     }
     register_scripts(registry);
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("tz{nonce}"));
-    let result = reduce(state, &json_as::<Action>(action));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {

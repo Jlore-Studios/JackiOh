@@ -9,9 +9,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{json_of, matches_object, put, slot};
+use crate::rules::fixtures::harness::{act_logged, json_of, matches_object, put, slot};
 use crate::rules::fixtures::last_boards::{
-    FIELD_TRAP, LB_DECKS, PORTAL, PORTAL_RADIANT_CARDS, TRAP, act, portal_game, register_last_boards,
+    FIELD_TRAP, LB_DECKS, PORTAL, PORTAL_RADIANT_CARDS, TRAP, portal_game, register_last_boards,
 };
 
 const FUSED: &str = "t-1:fx-1+fx-2";
@@ -51,21 +51,18 @@ fn portal_of(state: &GameState) -> CardInstance {
 
 fn play(state: &GameState, log: &mut Vec<Action>) -> GameState {
     let portal = portal_of(state);
-    act(
+    act_logged(
         state,
-        log,
         json!({ "type": "play", "playerId": "p1", "instanceId": portal.id }),
+        log,
     )
+    .state
 }
 
 fn answer_with(state: &GameState, log: &mut Vec<Action>, option: &str) -> GameState {
     let pending = state.pending.as_ref().expect("no prompt is open");
     let selection = json!([{ "pick": "mode", "option": option }]);
-    act(
-        state,
-        log,
-        json!({ "type": "answer", "playerId": pending.player_id, "choiceId": pending.id, "selection": selection }),
-    )
+    act_logged(state, json!({ "type": "answer", "playerId": pending.player_id, "choiceId": pending.id, "selection": selection }), log).state
 }
 
 fn revive(state: &GameState) -> GameState {

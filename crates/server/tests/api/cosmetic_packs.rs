@@ -233,7 +233,7 @@ fn opened(body: &Value) -> OpenedCosmeticPack {
     serde_json::from_value(body.clone()).unwrap_or_else(|error| panic!("{error}: {body}"))
 }
 
-/// The points an opening's spent slots added to each bar (R1953000).
+/// The points an opening's slots added to each bar (R1953000, R1999000).
 fn points(pack: &OpenedCosmeticPack) -> i64 {
     pack.bars.slot_points.iter().sum()
 }
@@ -727,10 +727,13 @@ async fn a_cosmetic_pack_answers_the_cycle_s_next_step_when_its_cosmetic_bar_pay
     assert_eq!(pack.bars.card.pays, 0);
 }
 
+/// R1999000: a slot that grants a new cosmetic still adds its rolled cosmetic rarity's points to
+/// both bars, so an opening of new cosmetics alone moves both, and the answer carries every slot's
+/// points.
 #[tokio::test]
-async fn a_cosmetic_pack_with_no_spent_slot_answers_both_bars_unmoved() {
-    let (app, _) = setup().await;
-    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+async fn r1999000_a_cosmetic_pack_of_new_cosmetics_adds_every_slot_s_points_to_both_bars() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 2).await;
     set_counter(&app, Counter::CardTokenBar, 7).await;
     set_counter(&app, Counter::CosmeticTokenBar, 11).await;
     // A foil at each tier fits any card, so no slot is left with nothing to own.
@@ -745,31 +748,93 @@ async fn a_cosmetic_pack_with_no_spent_slot_answers_both_bars_unmoved() {
     assert!(
         pack.slots
             .iter()
-            .all(|slot| slot.grant != CosmeticSlotGrant::Bars),
+            .all(|slot| matches!(slot.grant, CosmeticSlotGrant::Cosmetic { .. })),
         "{:?}",
         pack.slots
     );
+    let expected: Vec<i64> = pack
+        .slots
+        .iter()
+        .map(|slot| cosmetic_bar_points(slot.rarity))
+        .collect();
+    assert!(expected.iter().all(|points| *points > 0), "{expected:?}");
+    let gained: i64 = expected.iter().sum();
     assert_eq!(
         pack.bars,
         BarsSettled {
             card: BarSettle {
                 before: 7,
-                after: 7,
+                after: 7 + gained,
                 size: CARD_TOKEN_BAR_SIZE,
                 pays: 0,
             },
             cosmetic: BarSettle {
                 before: 11,
-                after: 11,
+                after: 11 + gained,
                 size: COSMETIC_TOKEN_BAR_SIZE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
-            slot_points: vec![0; COSMETIC_PACK_SLOTS],
+            slot_points: expected,
         }
     );
-    assert_eq!(counter_of(&app, Counter::CardTokenBar).await, 7);
-    assert_eq!(counter_of(&app, Counter::CosmeticTokenBar).await, 11);
+    assert_eq!(counter_of(&app, Counter::CardTokenBar).await, 7 + gained);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenBar).await, 11 + gained);
+
+    // On the wire, through the route, every slot's points are `bars.slotPoints`.
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let points: Vec<i64> = opened(&body)
+        .slots
+        .iter()
+        .map(|slot| cosmetic_bar_points(slot.rarity))
+        .collect();
+    assert_eq!(body["bars"]["slotPoints"], json!(points));
+}
+
+/// R1999000: a slot whose rolled tier had nothing unowned falls to a lower one (R1306001) and adds
+/// the points of the tier it rolled, not the one it fell to (R1953000).
+#[tokio::test]
+async fn r1999000_a_fallen_cosmetic_slot_adds_the_points_of_the_tier_it_rolled() {
+    // No Legendary or Mythic foil: a first slot rolling either falls to the Epic one.
+    let registry = vec![
+        foil("foil-fixture-common", CosmeticRarity::Common),
+        foil("foil-fixture-rare", CosmeticRarity::Rare),
+        foil("foil-fixture-epic", CosmeticRarity::Epic),
+    ];
+    let (app, _) = setup().await;
+    let pool = pack_pool(&app.catalog.defs, PackKind::Global);
+    for rolled in [CosmeticRarity::Legendary, CosmeticRarity::Mythic] {
+        let seed = (0..)
+            .map(|at| format!("r1999000-{rolled}-{at}"))
+            .find(|seed| {
+                roll_cosmetic_pack(&pool, &CosmeticHoldings::default(), &registry, seed).slots[0].rarity
+                    == rolled
+            })
+            .expect("a seed that rolls the tier");
+        let (app, _) = setup().await;
+        grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+        let pack = open_cosmetic_pack(&app, PROFILE, &registry, &seed)
+            .await
+            .expect("the opening");
+        assert_eq!(pack.slots[0].rarity, rolled);
+        let CosmeticSlotGrant::Cosmetic { cosmetic_rarity, .. } = &pack.slots[0].grant else {
+            panic!("an Epic foil was open: {:?}", pack.slots[0]);
+        };
+        assert_eq!(*cosmetic_rarity, CosmeticRarity::Epic);
+        assert_eq!(pack.bars.slot_points[0], cosmetic_bar_points(rolled));
+        assert_ne!(
+            pack.bars.slot_points[0],
+            cosmetic_bar_points(CosmeticRarity::Epic)
+        );
+    }
 }
 
 #[tokio::test]

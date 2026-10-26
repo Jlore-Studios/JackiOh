@@ -14,10 +14,8 @@
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, sink_for};
-use crate::rules::fixtures::play_pipeline_b::{
-    embiggen_field, only, pb_act, pb_playing, pb_reduce, plays_of,
-};
+use crate::rules::fixtures::harness::{act, act_result, in_hand, sink_for};
+use crate::rules::fixtures::play_pipeline_b::{embiggen_field, only, pb_playing, plays_of};
 
 /// The fixture's printed prices: "2 embiggen 4".
 const BASE: i32 = 2;
@@ -139,7 +137,7 @@ fn shown(state: &GameState, viewer: PlayerId, id: &str) -> Option<CardView> {
 
 /// A play of the card into backrow lane 1 at the price asked for.
 fn play(state: &GameState, id: &str, embiggen: bool) -> ReduceResult {
-    pb_reduce(
+    act_result(
         state,
         json!({
             "type": "play",
@@ -264,7 +262,7 @@ fn r81_embiggen_cost_rides_only_the_viewers_own_hand_cards_with_an_embiggen_pric
     assert_eq!(shown(&state, PlayerId::P2, &id), None);
 
     // R434: once the game is over p2 reads p1's hand in full, and still no embiggenCost on it.
-    let over = pb_act(&state, json!({ "type": "concede", "playerId": "p2" }));
+    let over = act(&state, json!({ "type": "concede", "playerId": "p2" }));
     assert!(over.result.is_some());
     let revealed = shown(&over, PlayerId::P2, &id).expect("the hand is revealed at the end");
     assert_eq!(
@@ -272,7 +270,7 @@ fn r81_embiggen_cost_rides_only_the_viewers_own_hand_cards_with_an_embiggen_pric
         "the opponent's revealed card carries no embiggenCost"
     );
     // The card is played onto the field at its embiggen price: the field's view carries none either.
-    let after = pb_act(
+    let after = act(
         &state,
         json!({ "type": "play", "instanceId": id, "zone": { "row": "backrow", "lane": 1 }, "embiggen": true, "playerId": "p1" }),
     );

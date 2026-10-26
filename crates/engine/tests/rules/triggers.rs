@@ -14,12 +14,10 @@
 //! Echo's repeats live in `echo.test.ts` (`state.echoQueue`). Fixtures are this file's own: `tg-`
 //! defs indexed above 1400 (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    both, events_of_type, in_hand, new_game, put, round_trip, set_library, slot,
+    act, act_result, both, events_of_type, in_hand, new_game, put, round_trip, set_library, slot,
 };
 use crate::rules::fixtures::scripts::double_edge;
 
@@ -326,23 +324,6 @@ fn game(seed: &str) -> GameState {
     }
     register_scripts(registry);
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("tg{nonce}"));
-    reduce(state, &json_as::<Action>(action))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {

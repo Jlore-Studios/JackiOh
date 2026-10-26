@@ -10,7 +10,6 @@
 //! unchanged. Defs are `ph-`, indexed from 4901.
 
 use std::cmp::Ordering;
-use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
 use jackioh_engine::effects::mana::refresh_mana;
 use jackioh_engine::subsystems::perfect_hand::{rank_perfect_hand, replace_hand_with_perfect};
@@ -19,7 +18,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::harness::{in_hand, json_of, new_game, spread};
+use crate::rules::fixtures::harness::{act_ok, in_hand, json_of, new_game, spread};
 
 fn face(text: &str, extra: Value) -> Value {
     spread(json!({ "keywords": [], "text": text }), extra)
@@ -229,19 +228,6 @@ fn zealot_scripts() -> CardScripts {
     }
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let n = NONCE.fetch_add(1, AtomicOrdering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("ph{n}"));
-    let result = reduce(state, &json_as::<Action>(action));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
-
 /// p1's main phase, both hands empty, 4 of 4 mana, the vanilla units and this file's cards the whole
 /// catalog.
 fn playing(seed: &str) -> GameState {
@@ -252,7 +238,7 @@ fn playing(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
         )
@@ -308,7 +294,7 @@ fn holding(seed: &str, others: &[String], radiant: bool, mana: Option<i32>) -> H
 }
 
 fn cast(state: &GameState, instance_id: &str) -> ReduceResult {
-    act(
+    act_ok(
         state,
         json!({ "type": "play", "instanceId": instance_id, "playerId": "p1" }),
     )

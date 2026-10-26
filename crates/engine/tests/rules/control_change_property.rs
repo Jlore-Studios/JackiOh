@@ -13,8 +13,6 @@
 //!   P4 R53: a forced attack by a unit that crossed still happens and spends nothing.
 //! Runs reproduce from PROPERTY_SEED (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{rotate, steal, steal_all, swap_board};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -22,7 +20,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::combat::{
     charger, deft_duelist, pacifist, plain, rusher, stacker, taunter, zero_attack,
 };
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{act_result, events_of_type, new_game, put, slot};
 
 /// The one seed every property runs from, so a failure reproduces exactly.
 const PROPERTY_SEED: u32 = 20260922;
@@ -190,20 +188,12 @@ fn case_arb(run: u32) -> Case {
 
 // Building and running a case
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    reduce(state, &input.with_nonce(format!("ccp{nonce}")))
-}
-
 /// Past both mulligans, in p1's main phase of turn 1, with an empty board.
 fn playing() -> GameState {
     let mut state = begin_game(&new_game("control-change-property", None)).state;
     for player in PLAYER_IDS {
         let keep: Vec<String> = state.players[player].hand.iter().map(|c| c.id.clone()).collect();
-        let result = act(
+        let result = act_result(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
         );
@@ -549,7 +539,7 @@ mod r171_over_random_boards_and_random_control_changes_fast_check {
                 .collect();
             for (attacker_id, attacker_def) in &attackers {
                 for target_id in &target_ids {
-                    let result = act(
+                    let result = act_result(
                         &state,
                         json!({ "type": "attack", "playerId": player, "attackerId": attacker_id, "targetId": target_id }),
                     );

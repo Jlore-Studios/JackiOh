@@ -431,6 +431,7 @@
   "Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.": "无法加载你的收藏，因此这里不会标出你尚未拥有的卡牌。",
   "Copy code": "复制代码",
   "Delete deck": "删除卡组",
+  "Practice with this deck": "练习模式（使用这套卡组）",
   "Deck code": "卡组代码",
   "Delete “{deck}”? This can’t be undone.": "删除“{deck}”？此操作无法撤销。",
   "Delete “{deck}”? Its slot in {count} trio will be empty. This can’t be undone.": "删除“{deck}”？它在{count}个三套卡组中的槽位将变为空。此操作无法撤销。",

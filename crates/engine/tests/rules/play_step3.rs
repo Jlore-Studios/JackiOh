@@ -7,15 +7,12 @@
 //! the price paid was the old card's, and the new card makes its own choices as a cast does, before
 //! the announce, so a Counter reads them; it takes its zone at step 4 by R64.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_json, in_hand, matches_object, new_game, put, slot};
+use crate::rules::fixtures::harness::{
+    events_json, in_hand, matches_object, new_game, next_nonce, put, slot,
+};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
-
-/// Unique across the tests, which run on parallel threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
@@ -36,10 +33,9 @@ fn game(seed: &str) -> GameState {
 
 /// `body` is the action literal; the player and a fresh nonce are added.
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
     body["playerId"] = json!(player_id);
-    body["nonce"] = json!(format!("pa-s3-{nonce}"));
+    body["nonce"] = json!(next_nonce());
     let result = reduce(state, &json_as::<Action>(body));
     if let Some(error) = &result.error {
         panic!("{error}");

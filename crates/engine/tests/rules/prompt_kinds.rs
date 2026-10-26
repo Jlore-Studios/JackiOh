@@ -14,10 +14,10 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, put, set_library, slot,
+    act, act_logged, events_of_type, in_hand, json_of, matches_object, put, set_library, slot,
 };
 use crate::rules::fixtures::prompt_harness::{
-    act, answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
+    answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
 };
 use crate::rules::fixtures::prompts::{
     BACK_BUDGET, GLITCH_OPTIONS, PICKLE_OPTIONS, QUEST_REWARDS, QUIZ, acquire, back_from_gy, cross_pick,
@@ -270,11 +270,7 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         set_library(&mut state, P2, &[plain_id.as_str(), plain_id.as_str()]);
         cast_now(&mut state, &pickle().id, P1, false);
         let before = state.pending.as_ref().expect("Pickle's first choice").id.clone();
-        state = act(
-            &state,
-            input(json!({ "type": "timeout", "playerId": "p2" })),
-            None,
-        );
+        state = act(&state, input(json!({ "type": "timeout", "playerId": "p2" })));
         // It answered that one prompt: the next choice is open, still theirs, and the turn is still p1's.
         assert_ne!(
             state.pending.as_ref().map(|pending| pending.id.clone()),
@@ -284,11 +280,7 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         assert_eq!(state.active, P1);
         // The active player's clock cannot answer the other player's prompt.
         let held = state.pending.as_ref().expect("the second choice").id.clone();
-        state = act(
-            &state,
-            input(json!({ "type": "timeout", "playerId": "p1" })),
-            None,
-        );
+        state = act(&state, input(json!({ "type": "timeout", "playerId": "p1" })));
         assert_eq!(
             state.pending.as_ref().map(|pending| pending.id.clone()),
             Some(held)
@@ -303,30 +295,28 @@ mod e18_a_mode_prompt_the_other_player_holds_classic_8 {
         let mut log = game.log;
         let mut state = game.state;
         let played = hand_card(&state, P1, &qd).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": played })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         for option in ["draw", "exile", "discard"] {
             let pending = open_as(&state, PromptKind::Mode, P2);
-            state = act(
+            state = act_logged(
                 &state,
                 input(json!({
                     "type": "answer", "playerId": "p2", "choiceId": pending.id,
                     "selection": [{ "pick": "mode", "option": option }],
                 })),
-                Some(&mut log),
-            );
+                &mut log,
+            )
+            .state;
         }
         let discard = open_as(&state, PromptKind::Hand, P2);
-        state = act(
-            &state,
-            input(
+        state = act_logged(&state, input(
                 json!({ "type": "answer", "playerId": "p2", "choiceId": discard.id, "selection": [at0(&discard)] }),
-            ),
-            Some(&mut log),
-        );
+            ), &mut log).state;
         assert!(state.pending.is_none());
         expect_replays("pickle-replay", &decks, &log, &state);
     }
@@ -363,7 +353,6 @@ mod e18_the_number_kind {
         let next = act(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": card.id, "modes": ["7"] })),
-            None,
         );
         assert_eq!(next.players.p2.hero.health, HERO_HEALTH - 7);
     }
@@ -388,11 +377,7 @@ mod e18_the_number_kind {
     fn r79_e18_a_timeout_answers_a_number_prompt_with_one_of_its_numbers() {
         let mut state = board("numberer-timeout");
         cast_now(&mut state, &numberer().id, P1, false);
-        state = act(
-            &state,
-            input(json!({ "type": "timeout", "playerId": "p1" })),
-            None,
-        );
+        state = act(&state, input(json!({ "type": "timeout", "playerId": "p1" })));
         assert!(state.pending.is_none());
         let lost = HERO_HEALTH - state.players.p2.hero.health;
         assert!([1, 2, 3].contains(&lost));
@@ -513,11 +498,7 @@ mod r465_e18_the_answer_kind_classic_plus_42 {
             // R79: the policy draws uniformly over the answers, from the match rng at its stored cursor.
             let drawn = &answers[Rng::new(&state.seed, state.rng_cursor).int(answers.len() as i32) as usize];
             let chosen = selection_of(drawn).first().cloned();
-            state = act(
-                &state,
-                input(json!({ "type": "timeout", "playerId": "p1" })),
-                None,
-            );
+            state = act(&state, input(json!({ "type": "timeout", "playerId": "p1" })));
             assert!(state.pending.is_none());
             let right = chosen == Some(mode(&key));
             assert_eq!(
@@ -535,21 +516,23 @@ mod r465_e18_the_answer_kind_classic_plus_42 {
         let mut log = game.log;
         let mut state = game.state;
         let played = hand_card(&state, P1, &qd).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": played })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         let pending = open_as(&state, PromptKind::Answer, P1);
         let key = answer_key_of(&pending.resume.data).expect("the key").to_string();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({
                 "type": "answer", "playerId": "p1", "choiceId": pending.id,
                 "selection": [{ "pick": "mode", "option": key }],
             })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert!(state.players.p1.hand.iter().any(|card| card.def_id == prize().id));
         expect_replays("quiz-replay", &decks, &log, &state);
     }
@@ -628,11 +611,7 @@ mod e18_the_cell_kind_classic_plus_62 {
         let mut state = board("papaya-timeout");
         cast_now(&mut state, &papaya().id, P1, false);
         let first = state.pending.as_ref().expect("the first cell").id.clone();
-        state = act(
-            &state,
-            input(json!({ "type": "timeout", "playerId": "p1" })),
-            None,
-        );
+        state = act(&state, input(json!({ "type": "timeout", "playerId": "p1" })));
         // The turn clock answers every prompt the answers open in turn, then ends the turn (R79).
         assert!(state.pending.is_none());
         assert_eq!(state.active, P2);
@@ -647,11 +626,12 @@ mod e18_the_cell_kind_classic_plus_62 {
         let mut log = game.log;
         let mut state = game.state;
         let played = hand_card(&state, P1, &qd).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": played })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         for selection in [
             Selection::Zone {
                 player: P2,
@@ -661,13 +641,9 @@ mod e18_the_cell_kind_classic_plus_62 {
             Selection::None,
         ] {
             let pending = open_as(&state, PromptKind::Cell, P1);
-            state = act(
-                &state,
-                input(
+            state = act_logged(&state, input(
                     json!({ "type": "answer", "playerId": "p1", "choiceId": pending.id, "selection": [selection] }),
-                ),
-                Some(&mut log),
-            );
+                ), &mut log).state;
         }
         assert!(state.pending.is_none());
         expect_replays("papaya-replay", &decks, &log, &state);
@@ -720,11 +696,7 @@ mod e18_the_reward_kind_classic_90 {
         answer_keys(&mut copy, &["mode:A"]);
         assert_eq!(copy.players.p1.hero.health, HERO_HEALTH + 6);
         // The non-active player's clock answers it (R79), and the turn stays p2's.
-        state = act(
-            &state,
-            input(json!({ "type": "timeout", "playerId": "p1" })),
-            None,
-        );
+        state = act(&state, input(json!({ "type": "timeout", "playerId": "p1" })));
         assert!(state.pending.is_none());
         assert_eq!(state.active, P2);
         let healed = state.players.p1.hero.health == HERO_HEALTH + 6;
@@ -740,32 +712,35 @@ mod e18_the_reward_kind_classic_90 {
         let mut log = game.log;
         let dealt = game.state;
         let played = hand_card(&dealt, P1, &qd).id.clone();
-        let mut state = act(
+        let mut state = act_logged(
             &dealt,
             input(json!({
                 "type": "play", "playerId": "p1", "instanceId": played,
                 "zone": { "row": "backrow", "lane": 1 },
             })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         if state.active == P1 {
-            state = act(
+            state = act_logged(
                 &state,
                 input(json!({ "type": "endTurn", "playerId": "p1" })),
-                Some(&mut log),
-            );
+                &mut log,
+            )
+            .state;
         }
         // p2's start-of-turn draw completed the quest: p1's reward prompt, on p2's turn.
         let pending = open_as(&state, PromptKind::Reward, P1);
         assert_eq!(state.active, P2);
-        state = act(
+        state = act_logged(
             &state,
             input(json!({
                 "type": "answer", "playerId": "p1", "choiceId": pending.id,
                 "selection": [{ "pick": "mode", "option": "B" }],
             })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 3);
         expect_replays("quest-replay", &decks, &log, &state);
     }
@@ -889,7 +864,6 @@ mod e18_the_pick_kind_an_up_to_pile_pick_classic_44 {
         let refused = act(
             &round_trip(&state),
             input(json!({ "type": "timeout", "playerId": "p1" })),
-            None,
         );
         assert!(refused.pending.is_none());
 
@@ -945,11 +919,12 @@ mod e18_the_pick_kind_an_up_to_pile_pick_classic_44 {
         let mut state = game.state;
         // The mill puts three of p1's Units in the graveyard; Back from the GY brings two of them back.
         let milling = hand_card(&state, P1, &mill_card).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": milling })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert_eq!(
             state
                 .players
@@ -961,22 +936,24 @@ mod e18_the_pick_kind_an_up_to_pile_pick_classic_44 {
             3
         );
         let returning = hand_card(&state, P1, &back).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": returning })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         let pending = open_as(&state, PromptKind::Pick, P1);
         assert_eq!(pending.budget, Some(BACK_BUDGET));
         let picks: Vec<Selection> = pending.options[..2]
             .iter()
             .map(|option| option.selection.clone())
             .collect();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "answer", "playerId": "p1", "choiceId": pending.id, "selection": picks })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert_eq!(
             state
                 .players
@@ -1148,19 +1125,16 @@ mod e17_the_other_players_hand_as_a_prompt_classic_11 {
         let mut log = game.log;
         let mut state = game.state;
         let played = hand_card(&state, P1, &qd).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": played })),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         let pending = open_as(&state, PromptKind::Pick, P1);
-        state = act(
-            &state,
-            input(
+        state = act_logged(&state, input(
                 json!({ "type": "answer", "playerId": "p1", "choiceId": pending.id, "selection": [at0(&pending)] }),
-            ),
-            Some(&mut log),
-        );
+            ), &mut log).state;
         assert_eq!(state.players.p2.exile.len(), 1);
         expect_replays("mind-melt-replay", &decks, &log, &state);
     }
@@ -1189,7 +1163,6 @@ mod r81_r97_a_prompt_a_hidden_card_opens_in_each_seats_events {
         state = act(
             &state,
             input(json!({ "type": "play", "playerId": "p1", "instanceId": card.id })),
-            None,
         );
         let pending = open_as(&state, PromptKind::Mode, P1);
         assert_eq!(
@@ -1212,7 +1185,6 @@ mod r81_r97_a_prompt_a_hidden_card_opens_in_each_seats_events {
                 "type": "answer", "playerId": "p1", "choiceId": pending.id,
                 "selection": [{ "pick": "mode", "option": "stay" }],
             })),
-            None,
         );
         assert!(state.pending.is_none());
         assert_eq!(

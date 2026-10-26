@@ -6,13 +6,11 @@
 //! rest of the game. Proved on the fixtures of `fixtures/marketplace.rs` and `fixtures/resources.rs`,
 //! with the fixture table registered; the effect harness is `resources.rs`'.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{add_market_lot, gain_market_credits, gain_resources};
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 
-use crate::rules::fixtures::harness::{new_game, setup_catalog, spread};
+use crate::rules::fixtures::harness::{new_game, next_nonce, run_effect, setup_catalog, spread};
 use crate::rules::fixtures::marketplace::*;
 use crate::rules::fixtures::resources::*;
 
@@ -47,29 +45,9 @@ fn board(seed: &str, active: &str, p1: Value, p2: Value) -> GameState {
         .clone()
 }
 
-/// One effect on a sink over `state`, the rng cursor written back; its events.
-fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
-}
-
 /// `player` gains `amount` Credits, which opens the Marketplace.
 fn credits(state: &mut GameState, player: PlayerId, amount: i32) -> Vec<GameEvent> {
-    run(
+    run_effect(
         state,
         gain_market_credits(json_as(json!({ "amount": amount }))),
         player,
@@ -103,12 +81,8 @@ fn sell_of(id: &str) -> ActionBody {
     }
 }
 
-/// A nonce unique across the file's tests, which Rust runs on many threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
 fn deal(state: &GameState, player: PlayerId, body: ActionBody) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    reduce(state, &Action::new(body, player, format!("deal{nonce}")))
+    reduce(state, &Action::new(body, player, next_nonce()))
 }
 
 fn buy(state: &GameState, player: PlayerId, offer: i32) -> ReduceResult {
@@ -177,7 +151,7 @@ fn r1853000_the_first_resource_gained_opens_it_for_both_players() {
     let mut state = board("r1853000-resource", "p1", json!({}), json!({}));
     assert!(state.marketplace.is_none(), "closed before anything is gained");
     assert!(view_for(&state, P1).marketplace.is_none());
-    let events = run(
+    let events = run_effect(
         &mut state,
         gain_resources(json_as(json!({ "count": 1, "pool": [COMMON_A] }))),
         P1,
@@ -424,7 +398,7 @@ fn r1853002_sell_quotes_move_in_range_and_the_full_tray_sale_fetches_the_quote()
     };
     for radiant in [false, true] {
         let expected = quoted(&state, radiant);
-        let events = run(
+        let events = run_effect(
             &mut state,
             gain_resources(json_as(json!({ "count": 1, "pool": [RARE], "radiant": radiant }))),
             P1,
@@ -780,7 +754,7 @@ fn r1853004_the_random_policy_may_deal_and_the_timeout_never_does() {
 #[test]
 fn r1853005_a_fixed_lot_is_its_casters_alone_at_a_fixed_price() {
     let mut state = board("r1853005-fixed", "p1", json!({}), json!({}));
-    let events = run(
+    let events = run_effect(
         &mut state,
         add_market_lot(json_as(json!({ "pool": [CHAOS], "price": CHAOS_PRICE }))),
         P1,
@@ -844,7 +818,7 @@ fn r1853005_a_fixed_lot_is_its_casters_alone_at_a_fixed_price() {
 
     // A pool with nothing in the catalog adds nothing.
     let before = market(&state).offers.len();
-    run(
+    run_effect(
         &mut state,
         add_market_lot(json_as(json!({ "pool": ["fx-mkt-none"], "price": CHAOS_PRICE }))),
         P1,

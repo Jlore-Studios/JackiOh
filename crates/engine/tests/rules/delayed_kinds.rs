@@ -4,8 +4,6 @@
 //! start-of-turn effect for the rest of the game (Classic+ #52), which runs in R62's delayed stage
 //! among the delayed effects in creation order, once per turn, and stacks.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::delay::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::effects::discard_hand_at_turn_end;
 use jackioh_engine::reduce::{begin_game, reduce};
@@ -21,7 +19,7 @@ use jackioh_engine::zones::{
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, setup_catalog, slot,
+    act_ok, events_of_type, in_hand, json_of, matches_object, new_game, put, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, contract, contract_ask, doom, doom_all, hurrah, later, log_card, notes, reminder,
@@ -35,21 +33,6 @@ fn register() {
     register_scripts(scripts);
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// `reduce` with a fresh nonce; `body` carries its `playerId`.
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("dk{nonce}"));
-    let action: Action = json_as(action);
-    let result = reduce(state, &action);
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
-
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
@@ -59,7 +42,7 @@ fn playing(seed: &str) -> GameState {
     register();
     for player in [P1, P2] {
         let keep = ids(&state.players[player].hand);
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
         )
@@ -88,12 +71,12 @@ fn play(state: &mut GameState, player: PlayerId, def_id: &str, extra: Value) -> 
             body.insert(key.clone(), value.clone());
         }
     }
-    act(state, body)
+    act_ok(state, body)
 }
 
 /// End the active player's turn.
 fn pass(state: &GameState) -> ReduceResult {
-    act(state, json!({ "type": "endTurn", "playerId": state.active }))
+    act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
 }
 
 fn on_field(state: &GameState, id: &str) -> bool {
@@ -268,7 +251,7 @@ mod b5_e27_your_hand_discarded_at_the_end_of_this_turn_or_your_next_r458 {
         find_instance_mut(&mut state, &card.id)
             .expect("the hurrah")
             .radiant = true;
-        let cast = act(
+        let cast = act_ok(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         )

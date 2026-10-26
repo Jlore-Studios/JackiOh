@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 use super::fixtures::combat as combat_fx;
 use super::fixtures::harness::{events_of_type, in_hand, json_of, put, set_library, slot};
 use super::fixtures::instance_data as instance_fx;
-use crate::rules::fixtures::harness::matches_object;
+use crate::rules::fixtures::harness::{live, live_mut, matches_object};
 
 fn game(seed: &str) -> GameState {
     let mut state = instance_fx::instance_game(seed, None);
@@ -148,18 +148,6 @@ fn card(state: &mut GameState, def_id: &str) -> CardInstance {
 /// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
-}
-
-/// TS held the live instance and read it after an effect; Rust reads the card again by id.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-/// TS wrote through the live instance; Rust writes through the card found by id.
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 /// `applicableChanges(state, card, direction)`, as the rows' names.

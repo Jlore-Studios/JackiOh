@@ -11,7 +11,7 @@ use jackioh_engine::effects::choose::{discover_from_catalog, discover_from_libra
 use jackioh_engine::effects::library::{exile_bottom_of_library, exile_random_from_library};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, set_library};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, live, new_game, set_library};
 
 // Fixture cards.
 
@@ -219,10 +219,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 
 fn defs_of(defs: &[CardDef]) -> Vec<String> {
     defs.iter().map(|def| def.id.clone()).collect()
-}
-
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
 }
 
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {

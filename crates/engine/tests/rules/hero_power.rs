@@ -13,8 +13,6 @@
 //!
 //! Port of `packages/engine/test/heroPower.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use serde::Serialize;
 
 use jackioh_engine::effects::bounce;
@@ -31,7 +29,8 @@ use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::feng_shui::{FS, register_feng_shui};
 use crate::rules::fixtures::harness::{
-    events_json, events_of_type, in_hand, json_of, new_game, put, set_library, sink_for, slot, spread,
+    act_result, events_json, events_of_type, in_hand, json_of, new_game, put, set_library, sink_for, slot,
+    spread,
 };
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
@@ -194,22 +193,13 @@ fn powered(state: &mut GameState, name: &str, radiant: bool, lane: i32) -> CardI
     set_memory(state, &card.id, POWER_KEY, json!(name))
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let n = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("hp{n}"));
-    reduce(state, &json_as::<Action>(action))
-}
-
 /// One `activate` of the card's power, as the client sends it (R752).
 fn use_power(state: &GameState, card: &CardInstance, targets: Option<Value>) -> ReduceResult {
     let mut body = json!({ "type": "activate", "instanceId": card.id, "playerId": "p1" });
     if let Some(targets) = targets {
         body["targets"] = targets;
     }
-    act(state, body)
+    act_result(state, body)
 }
 
 /// Keep the turn from auto-ending (§2.5) under the assertions: a second card p1 could still play.
@@ -358,7 +348,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         keep_turn(&mut state);
         assert_eq!(effective_cost(&state, &card, CostOptions::default()), 0);
 
-        let played = act(
+        let played = act_result(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -389,7 +379,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         keep_turn(&mut state);
         state.players.p1.mana.current = 2;
         assert_eq!(
-            act(
+            act_result(
                 &state,
                 json!({ "type": "activatePower", "instanceId": card.id, "playerId": "p1" })
             )
@@ -403,7 +393,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         let recruit: ActionBody =
             json_as(json!({ "type": "activate", "instanceId": card.id, "ability": "recruit" }));
         assert!(legal_actions(&state, P1).contains(&recruit));
-        let used = act(
+        let used = act_result(
             &state,
             json!({ "type": "activatePower", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -428,7 +418,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         let mut state = game("r752-who");
         let card = powered(&mut state, "burn", false, 1);
         assert_eq!(
-            act(
+            act_result(
                 &state,
                 json!({ "type": "activate", "instanceId": card.id, "playerId": "p2" })
             )
@@ -440,7 +430,7 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
         let held = held.first().expect("a Heroic Power in hand");
         let held = set_memory(&mut state, &held.id, POWER_KEY, json!("burn"));
         assert_eq!(
-            act(
+            act_result(
                 &state,
                 json!({ "type": "activatePower", "instanceId": held.id, "playerId": "p1" })
             )
@@ -449,11 +439,11 @@ mod heroic_power_the_thirteen_powers_and_their_abilities_r103_r752 {
             Some("that card is not on the field")
         );
         keep_turn(&mut state);
-        let via_alias = act(
+        let via_alias = act_result(
             &state,
             json!({ "type": "activatePower", "instanceId": card.id, "playerId": "p1" }),
         );
-        let via_activate = act(
+        let via_activate = act_result(
             &state,
             json!({ "type": "activate", "instanceId": card.id, "ability": "burn", "playerId": "p1" }),
         );
@@ -692,10 +682,10 @@ mod heroic_power_the_powers_r753_r758 {
         keep_turn(&mut state);
         let with_armor = use_power(&state, &card, None).state;
         assert_eq!(hero_armor_of(&with_armor, P1), ARMOR_UP_ARMOR);
-        let their_turn = act(&with_armor, json!({ "type": "endTurn", "playerId": "p1" })).state;
+        let their_turn = act_result(&with_armor, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert_eq!(their_turn.active, P2);
         assert_eq!(hero_armor_of(&their_turn, P1), ARMOR_UP_ARMOR);
-        let mine = act(&their_turn, json!({ "type": "endTurn", "playerId": "p2" })).state;
+        let mine = act_result(&their_turn, json!({ "type": "endTurn", "playerId": "p2" })).state;
         assert_eq!(mine.active, P1);
         assert_eq!(hero_armor_of(&mine, P1), 0);
     }
@@ -715,8 +705,8 @@ mod heroic_power_the_powers_r753_r758 {
         assert_eq!(uses_this_turn(&after, &changed), 0);
         assert!(!used_this_turn(&after, &changed));
         // The armor stays into the next turn: Tank Up's is the hero's own (R757).
-        let later = act(
-            &act(&after, json!({ "type": "endTurn", "playerId": "p1" })).state,
+        let later = act_result(
+            &act_result(&after, json!({ "type": "endTurn", "playerId": "p1" })).state,
             json!({ "type": "endTurn", "playerId": "p2" }),
         )
         .state;
@@ -921,7 +911,7 @@ mod heroic_power_rolling_the_power_r43_r78 {
         }))
         .state;
         let keep: Vec<String> = begun.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-        let mut playing = act(
+        let mut playing = act_result(
             &begun,
             json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
         )
@@ -933,7 +923,7 @@ mod heroic_power_rolling_the_power_r43_r78 {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        playing = act(
+        playing = act_result(
             &playing,
             json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
         )

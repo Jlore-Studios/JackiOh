@@ -7,13 +7,13 @@
 use jackioh_engine::testkit::*;
 use jackioh_engine::zones::is_locked;
 
-use super::fixtures::harness::{events_of_type, put, set_library, slot};
+use super::fixtures::harness::{act, act_result, events_of_type, put, set_library, slot};
 use super::fixtures::keywords_783::{
     crater_cloaked, crater_field, crater_moon, crater_reborn, crater_spell, crater_trap, crater_unit,
     flicker_all, plague_field, plain_unit, recruiter, register_keywords_783, stacker, summon_crater,
 };
-use super::fixtures::play_pipeline_b::{pb_reduce, plays_of};
-use super::fixtures::prompt_harness::{act, board, cast_now, must};
+use super::fixtures::play_pipeline_b::plays_of;
+use super::fixtures::prompt_harness::{board, cast_now, must};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -37,7 +37,7 @@ fn unit_zone(lane: i32) -> ZoneSlot {
 
 /// Play this card from p1's hand into this zone, answering the whole result.
 fn play_into(state: &GameState, id: &str, row: &str, lane: i32) -> ReduceResult {
-    pb_reduce(
+    act_result(
         state,
         json!({
             "type": "play",
@@ -139,7 +139,6 @@ mod r783010_crater_arrivals {
         let plain = act(
             &plain,
             json!({ "type": "play", "instanceId": other.id, "zone": { "row": "units", "lane": 2 }, "playerId": "p1" }),
-            None,
         );
         assert_eq!(locked_count(&plain), 0);
     }
@@ -191,7 +190,6 @@ mod r783010_crater_arrivals {
                 "faceDown": "cloaked",
                 "playerId": "p1",
             }),
-            None,
         );
         // Set face-down, it is no Unit and has no Crater to use.
         assert_eq!(locked_count(&state), 0);
@@ -199,7 +197,6 @@ mod r783010_crater_arrivals {
         state = act(
             &state,
             json!({ "type": "activate", "instanceId": set.id, "ability": "reveal", "playerId": "p1" }),
-            None,
         );
         assert_eq!(unit_in(&state, 2), Some(set.id.clone()));
         assert!(is_locked(&state, unit_zone(2)));
@@ -215,7 +212,6 @@ mod r783010_crater_arrivals {
         state = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
-            None,
         );
         let placed = must(unit_in(&state, 1), "the Crater Unit in lane 1");
         // Offered into the other zones, never onto the Crater Unit's.
@@ -301,7 +297,6 @@ mod r783011_crater_traps {
         let spells = act(
             &spells,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
-            None,
         );
         assert_eq!(spells.players.p1.graveyard.len(), 1);
         assert_eq!(locked_count(&spells), 0);
@@ -324,7 +319,6 @@ mod r1850006_crater_field_spells {
         let played = act(
             &played,
             json!({ "type": "play", "instanceId": field.id, "zone": { "row": "backrow", "lane": 2 }, "playerId": "p1" }),
-            None,
         );
         assert!(played.players.p1.backrow[1].is_some());
         assert!(is_locked(&played, backrow_zone(2)));

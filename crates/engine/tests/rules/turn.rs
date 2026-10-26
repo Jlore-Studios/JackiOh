@@ -2,34 +2,17 @@
 //! §10.6; R62, R113, R117, R122, R126, R127).
 
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    both, events_of_type, new_game, put, round_trip, set_library, sink_for, slot,
+    act, act_result, both, events_of_type, new_game, next_nonce, put, round_trip, set_library, sink_for, slot,
 };
 use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, x_bolt};
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn next_nonce() -> u32 {
-    NONCE.fetch_add(1, Ordering::SeqCst) + 1
-}
-
 fn action(body: Value) -> Action {
     json_as(body)
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let nonce = next_nonce();
-    let input: ActionInput = json_as(body);
-    let result = reduce(state, &input.with_nonce(format!("t{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
@@ -660,12 +643,6 @@ fn delay_at_end_of_p1(state: &mut GameState, resume: Resume) -> String {
         None,
     )
     .id
-}
-
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = next_nonce();
-    let input: ActionInput = json_as(body);
-    reduce(state, &input.with_nonce(format!("t{nonce}")))
 }
 
 fn answer_result(state: &GameState) -> ReduceResult {

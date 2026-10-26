@@ -15,8 +15,6 @@
 //!
 //! Port of `packages/engine/test/prompts.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -28,7 +26,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{both, in_hand, json_of, matches_object, new_game, put, slot};
+use crate::rules::fixtures::harness::{
+    act_result, both, in_hand, json_of, matches_object, new_game, put, run_effect, slot,
+};
 use crate::rules::fixtures::scripts::{going_long, x_bolt};
 
 // ---------------------------------------------------------------------------
@@ -388,16 +388,6 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-static SEQ: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let seq = SEQ.fetch_add(1, Ordering::Relaxed) + 1;
-    reduce(
-        state,
-        &json_as::<ActionInput>(body).with_nonce(format!("pr{seq}")),
-    )
-}
-
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
         .hand
@@ -410,13 +400,13 @@ fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = hand_ids(&state, P1);
-    state = act(
+    state = act_result(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
     )
     .state;
     let keep = hand_ids(&state, P2);
-    state = act(
+    state = act_result(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
     )
@@ -545,24 +535,9 @@ fn answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, keys: &[&str]) -> 
         .map(|error| error.to_string())
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
-fn by(player: PlayerId) -> HookOptions {
-    HookOptions {
-        controller: Some(player),
-        ..Default::default()
-    }
-}
-
 /// Apply one effect outside a card, the way `resolve.ts` does.
 fn run(state: &mut GameState, effect: Effect, controller: PlayerId) {
-    let mut events = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(&mut sink, None, by(controller));
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
+    run_effect(state, effect, controller);
 }
 
 /// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. As in the TS
@@ -1308,7 +1283,7 @@ mod prompts_s10_6_m3_t3 {
         // X: the value travels in `play.x` and is the cost, never a prompt (R65).
         let mut x_state = playing("r81-x");
         let bolt = in_hand(&mut x_state, &x_bolt().id, P1, 1).remove(0);
-        let x_played = act(
+        let x_played = act_result(
             &x_state,
             json!({ "type": "play", "instanceId": bolt.id, "x": 2, "playerId": "p1" }),
         );
@@ -1319,7 +1294,7 @@ mod prompts_s10_6_m3_t3 {
         // Embiggen: the price travels in `play.embiggen`.
         let mut big_state = playing("r81-embiggen");
         let long = in_hand(&mut big_state, &going_long().id, P1, 1).remove(0);
-        let big_played = act(
+        let big_played = act_result(
             &big_state,
             json!({ "type": "play", "instanceId": long.id, "embiggen": true, "playerId": "p1" }),
         );
@@ -1330,7 +1305,7 @@ mod prompts_s10_6_m3_t3 {
         // Zone: the lane travels in `play.zone`.
         let mut zone_state = playing("r81-zone");
         let body = in_hand(&mut zone_state, &plain.id, P1, 1).remove(0);
-        let zone_played = act(
+        let zone_played = act_result(
             &zone_state,
             json!({
                 "type": "play",
@@ -1352,7 +1327,7 @@ mod prompts_s10_6_m3_t3 {
         // Direction: a declared `direction` pick travels in `play.modes` (R81's second sentence).
         let mut dir_state = playing("r81-direction");
         let silas = in_hand(&mut dir_state, &director().id, P1, 1).remove(0);
-        let dir_played = act(
+        let dir_played = act_result(
             &dir_state,
             json!({ "type": "play", "instanceId": silas.id, "modes": ["right"], "playerId": "p1" }),
         );
@@ -1368,7 +1343,7 @@ mod prompts_s10_6_m3_t3 {
         let mut trib_state = playing("r81-tribute");
         let fodder = put(&mut trib_state, &plain.id, slot(P1, Row::Units, 1), json!({}));
         let summoner = in_hand(&mut trib_state, &tributer().id, P1, 1).remove(0);
-        let trib_played = act(
+        let trib_played = act_result(
             &trib_state,
             json!({
                 "type": "play",
@@ -1398,7 +1373,7 @@ mod prompts_s10_6_m3_t3 {
     fn s10_2_the_reducer_answers_the_open_prompt_and_refuses_an_option_it_did_not_offer() {
         let mut state = playing("reducer-answer");
         let card = in_hand(&mut state, &tutor().id, P1, 1).remove(0);
-        let played = act(
+        let played = act_result(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -1411,7 +1386,7 @@ mod prompts_s10_6_m3_t3 {
         // DISCREPANCY: src/reduce.ts answers `answer` with "prompts arrive with M3" instead of routing
         // it to `prompts.answerPrompt`, which already validates and resumes. The wiring is the
         // reducer's half of M3-T3; `prompts.ts` holds up its end.
-        let bad = act(
+        let bad = act_result(
             &played.state,
             json!({
                 "type": "answer",
@@ -1425,7 +1400,7 @@ mod prompts_s10_6_m3_t3 {
 
         // A prompt blocks every other action while it is open (§9.3).
         assert!(
-            error_text(&act(
+            error_text(&act_result(
                 &played.state,
                 json!({ "type": "endTurn", "playerId": "p1" })
             ))
@@ -1433,7 +1408,7 @@ mod prompts_s10_6_m3_t3 {
         );
         // And it is answerable only by its own player (§10.6).
         assert!(
-            error_text(&act(
+            error_text(&act_result(
                 &played.state,
                 json!({
                     "type": "answer",
@@ -1446,7 +1421,7 @@ mod prompts_s10_6_m3_t3 {
         );
 
         // A legal answer re-invokes the script, which opens the next step of the chain.
-        let good = act(
+        let good = act_result(
             &played.state,
             json!({
                 "type": "answer",

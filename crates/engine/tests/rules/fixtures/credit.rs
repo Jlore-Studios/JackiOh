@@ -7,8 +7,6 @@
 //! (with a "Tribute this" activation), an Untributable Field Spell whose `tributeWhen` always
 //! holds, and a Unit with a Tribute 1 play cost.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use super::harness::{both, new_game, spread};
@@ -221,28 +219,4 @@ pub fn playing(seed: &str) -> GameState {
         perm_mod: 0,
     };
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// `reduce` on a hand-built action, panicking on refusal (TS's `act`).
-pub fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
-
-pub fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    reduce(state, &input.with_nonce(format!("cr{nonce}")))
-}
-
-/// The card as it stands in the state now (TS held the live object).
-pub fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .expect("the card is in the state")
 }
