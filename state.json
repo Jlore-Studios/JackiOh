@@ -2908,6 +2908,14 @@
       "started_at": "2026-10-26T17:48:38Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2014": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-26T15:43:38Z",
+      "issue": 1995,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
