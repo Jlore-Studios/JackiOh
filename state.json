@@ -2022,6 +2022,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1988": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-26T07:42:26Z",
+      "issue": 1956,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
