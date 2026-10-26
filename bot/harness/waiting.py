@@ -96,9 +96,11 @@ def lanes_of(ctx: Context, state: dict[str, Any], live: dict[int, str]) -> plan_
     pool = ctx.cfg.pool
     planning = {n for n in live
                 if n and (state["items"].get(str(n)) or {}).get("action") == "plan"}
+    filling = {n for n in live if n and plan_mod.fills_in(pool, state["items"].get(str(n)) or {})}
     return plan_mod.Lanes(pool.max_parallel, dict(live), planning, pool.plan_lanes,
                           pool.machine_parallel,
-                          frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)))
+                          frozenset(p.id for p in pool.ordered() if pool.on_machine(p.id)),
+                          filling=filling)
 
 
 def need(c: Candidate) -> tuple[str, str, str]:
@@ -217,7 +219,8 @@ def explain(ctx: Context, state: dict[str, Any], live: dict[int, str], *,
                 break
             candidate, assignment = top
             starts[candidate.number] = assignment
-            after = after.with_run(candidate.number, assignment.provider.id, assignment.action)
+            after = after.with_run(candidate.number, assignment.provider.id, assignment.action,
+                                   assignment.fills_in)
             rest = [c for c in rest if c.number != candidate.number]
     now = subscriptions(ctx, state, lanes, after, starts, halted=halted)
     # The planner's own order (`plan.pairs`), the items that start at the next run first.
@@ -279,6 +282,9 @@ def subscriptions(ctx: Context, state: dict[str, Any], lanes: plan_mod.Lanes,
         elif plan_mod.machine_full(pool, provider, lanes):
             found[provider.id] = Now("full", f"⏸️ the night box is full<br/>"
                                      f"({pool.machine_parallel} at once)")
+        elif plan_mod.fill_in_full(pool, provider, lanes):
+            found[provider.id] = Now("full", "⏸️ its lane on its box is in use<br/>"
+                                     f"(`{pool.filler_of(provider.id).id}` fills it)")
         elif not lanes.room_for(provider.id) and not lanes.plan_free:
             found[provider.id] = Now("full", f"⏸️ every lane is in use<br/>"
                                      f"({pool.max_parallel} on GitHub's runners)")
