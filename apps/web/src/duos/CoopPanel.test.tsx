@@ -362,6 +362,41 @@ describe("B60 the deck choice", () => {
   });
 });
 
+describe("#1900 the way back to a live co-op game", () => {
+  it("#1900 a live co-op game that could not be read is named in an alert with Try again, and no way back is drawn", async () => {
+    serve({ created: false, guestJoined: false }, (call) =>
+      call.method === "GET" && call.path === "/api/duos/live" ? refusal(500, "internal", "The co-op games are out of reach.") : undefined,
+    );
+    await renderPanel();
+    expect(await screen.findByRole("alert", undefined, SLOW)).toHaveTextContent(
+      "Your live co-op game could not be checked: The co-op games are out of reach.",
+    );
+    expect(screen.getByTestId("coop-live-retry")).toHaveTextContent("Try again");
+    expect(screen.queryByTestId("coop-rejoin")).toBeNull();
+  }, TEST_MS);
+
+  it("#1900 Try again reads the live co-op game again and offers the way back to it", async () => {
+    let reads = 0;
+    serve({ created: false, guestJoined: false }, (call) => {
+      if (call.method === "GET" && call.path === "/api/duos/live") {
+        reads += 1;
+        return reads === 1 ? refusal(500, "internal", "The co-op games are out of reach.") : { status: 200, body: { matchId: "dm-5" } };
+      }
+      return undefined;
+    });
+    await renderPanel();
+    expect(await screen.findByRole("alert", undefined, SLOW)).toHaveTextContent(
+      "Your live co-op game could not be checked: The co-op games are out of reach.",
+    );
+
+    fireEvent.click(screen.getByTestId("coop-live-retry"));
+    expect(await screen.findByTestId("coop-rejoin", undefined, SLOW)).toHaveAttribute("href", "/duos/dm-5");
+    expect(reads).toBe(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("coop-live-retry")).toBeNull();
+  }, TEST_MS);
+});
+
 describe("B60 inviting a friend", () => {
   function inviteControl(): HTMLElement {
     const invites = screen.queryAllByRole("button", { name: /invite/i });

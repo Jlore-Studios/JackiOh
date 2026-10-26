@@ -1752,7 +1752,7 @@ impl Tx<'_> {
     /// while the seat is free and answers `false` without writing when another match holds it, so
     /// a queue pair, room join, rematch or series game can never seat a player twice — the first
     /// writer wins. `Err` only when the profile is missing. Clearing with `None` is
-    /// unconditional. §9.5: every terminal reason clears both players'.
+    /// unconditional.
     pub async fn profiles_set_in_match(
         &mut self,
         profile_id: &str,
@@ -1763,7 +1763,8 @@ impl Tx<'_> {
 
     /// Clears the seat only while it points at `match_id` (R890000): a start-failure cleanup that
     /// never wipes a rival match's flag. Always `Ok`, even when the seat points elsewhere or the
-    /// profile is missing.
+    /// profile is missing. §9.5: every ending clears both players' flags through it, so a late
+    /// result never wipes a newer match's (R1896000).
     pub async fn profiles_clear_in_match(&mut self, profile_id: &str, match_id: &str) -> StoreResult<()> {
         dispatch!(self, profiles_clear_in_match(profile_id, match_id))
     }

@@ -448,7 +448,7 @@ export type ConnectionState =
   | "reconnecting"
   /** The server refused this socket (4401/4403/4404); no reconnect will be attempted, but a 4401 is final only for the token it refused (R1115000). */
   | "refused"
-  /** `close()` was called. */
+  /** `close()` was called, or the server closed the socket with VOIDED_CLOSE_CODE (R679): the match is gone, and nothing reopens it until `connect()`. */
   | "closed";
 
 /**
