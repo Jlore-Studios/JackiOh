@@ -3107,10 +3107,8 @@
     "what": "review #2016 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-26T20:44:39Z",
-    "notes": [
-      "delivered review #2016 on claude-7 (run 40397295868): reviewed"
-    ],
+    "at": "2026-10-26T20:52:21Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -3815,7 +3813,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T20:44:39Z",
+  "loop_tick": "2026-10-26T20:52:21Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T20:33:04Z",
