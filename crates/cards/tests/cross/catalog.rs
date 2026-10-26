@@ -26,8 +26,10 @@
 //!                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
 //!                    (tagged AI). Buff Billy's "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
 //!   MEDITATIVE     — docs/meditative-set.md's card headers (M6), with §8.8's later patches.
-//!   MEDITATIVE_PLUS — docs/meditative-plus-set.md's card headers (MP6, issue #1178): the set is
-//!                    held (R1420, R1178000), so a row waits for its card until the set ships.
+//!   MEDITATIVE_PLUS — docs/meditative-plus-set.md's card headers (MP6, issue #1178), held (R1420,
+//!                    R1178000) until it shipped in v0.3.15.
+//!   STINKYSCAPE    — docs/stinkyscape-set.md's card headers (ST13, issue #1857): the set is held
+//!                    (R1420, R1857000), so a row waits for its card until the set ships (#1884).
 //!   patch v0.3.Y    — issue #1067 renamed Jlockheed to Jlockeed in every name (the briefs keep
 //!                    the old spelling as the record).
 //!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
@@ -4784,17 +4786,2136 @@ const MEDITATIVE_PLUS: &[SpecRow] = &[
     ),
 ];
 
+/// R1420, R1857000, R1857001: the Stinkyscape set's rows, transcribed from docs/stinkyscape-set.md
+/// ST13's header lines (issue #1857), in catalog order: each card's tokens after it, then the Dormant
+/// Starship (a card at a `T-` index), the shared tokens and the ten AI generated cards. The set is
+/// held, so a row waits for its card until the set ships (#1884). The designer's second #21 and #122
+/// are #174 Aerelret and #175 Frost Module.
+const STINKYSCAPE: &[SpecRow] = &[
+    row(
+        "1",
+        "Freeze Ray",
+        c(0),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "2",
+        "Absolute Zero",
+        c(2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row("3", "Meteor", c(3), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
+    row(
+        "4",
+        "Olivian Expanse",
+        c(4),
+        T::Spell,
+        &[],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4.1",
+        "Farewell",
+        c(4),
+        T::Spell,
+        &[G::Terminus, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4.2",
+        "KY's Last Exam",
+        c(4),
+        T::Spell,
+        &[G::Terminus, G::Ky, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4.3",
+        "Event Horizon",
+        c(4),
+        T::Spell,
+        &[G::Terminus, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4.4",
+        "Last Word",
+        c(4),
+        T::Trap,
+        &[G::Terminus, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4.5",
+        "1v1 Final Destination",
+        c(4),
+        T::Trap,
+        &[G::Terminus, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "4.6",
+        "The Big Crunch",
+        c(4),
+        T::Spell,
+        &[G::Terminus, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "5",
+        "Masochism Unmasked",
+        c(1),
+        T::FieldTrap,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "6",
+        "Tylannt",
+        c(2),
+        T::Unit,
+        &[G::Acclaimed, G::Human],
+        R::Mythic,
+        st(6, 4),
+        st(12, 8),
+    ),
+    row(
+        "7",
+        "The Greatest Heist",
+        c(3),
+        T::FieldSpell,
+        &[G::Quest],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "8",
+        "Conjure Rosemary Triscuit",
+        c(2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "8.1",
+        "Rosemary Triscuit",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "9",
+        "Ticketed",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "10",
+        "Otherworldly Endurance",
+        c(2),
+        T::Spell,
+        &[G::Otherworldly],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "10.1",
+        "Inner Fire",
+        c(1),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "10.2",
+        "Divine Spirit",
+        c(2),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "10.3",
+        "Power Word Shield",
+        c(0),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "11",
+        "Otherworldly Magic",
+        c(1),
+        T::Spell,
+        &[G::Otherworldly],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "11.1",
+        "Frostbolt",
+        c(1),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "11.2",
+        "Arcane Missiles",
+        c(0),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "11.3",
+        "Flame Strike",
+        c(2),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "12",
+        "Otherworldly Nightmare",
+        c(1),
+        T::Spell,
+        &[G::Otherworldly],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "12.1",
+        "Shadow Word Death",
+        c(1),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "12.2",
+        "Shadow Word Pain",
+        c(0),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "12.3",
+        "Psychic Scream",
+        c(3),
+        T::Spell,
+        &[G::OtherOrigins, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "13",
+        "Asphyxiants Cloud",
+        c(2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "14",
+        "Arm of the Jempire",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(4, 5),
+        st(8, 10),
+    ),
+    row(
+        "15",
+        "Arg Arg Defender",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(2, 3),
+        st(4, 6),
+    ),
+    row(
+        "16",
+        "Rod of Ages",
+        c(1),
+        T::FieldSpell,
+        &[G::Quickdraw],
+        R::Mythic,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "17",
+        "Imprisoned Ship Smith",
+        c(1),
+        T::Unit,
+        &[G::Human],
+        R::Common,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "18",
+        "Imitated Instrumentality",
+        c(3),
+        T::Spell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "18.1",
+        "MELCHIOR",
+        c(1),
+        T::FieldSpell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "18.2",
+        "BALTHASAR",
+        c(2),
+        T::FieldSpell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "18.3",
+        "CASPER",
+        c(3),
+        T::FieldSpell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "19",
+        "Imprisoned Cosmality",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(10, 6),
+        st(20, 12),
+    ),
+    row(
+        "20",
+        "Tnack Trav",
+        c(2),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(6, 6),
+        st(12, 12),
+    ),
+    row(
+        "21",
+        "Moonberry",
+        c(1),
+        T::Spell,
+        &[G::Fruit],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row("22", "Gatinsir", c(4), T::Trap, &[], R::Epic, NO_STATS, NO_STATS),
+    row(
+        "23",
+        "Warp Disruptor",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "24",
+        "Warp Disruptor II",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "25",
+        "KY's Tricknology",
+        c(2),
+        T::Spell,
+        &[G::Ky],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "26",
+        "ZolarKeth",
+        c(4),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Legendary,
+        st(2, 9),
+        st(4, 18),
+    ),
+    row(
+        "27",
+        "Drone Core I",
+        c(0),
+        T::Spell,
+        &[G::DroneCore],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "28",
+        "Drone Core II",
+        c(1),
+        T::Spell,
+        &[G::DroneCore],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "29",
+        "Drone Core III",
+        c(2),
+        T::Spell,
+        &[G::DroneCore],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "30",
+        "Drone Core IV",
+        c(3),
+        T::Spell,
+        &[G::DroneCore],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "31",
+        "Drone Core V",
+        c(3),
+        T::Spell,
+        &[G::DroneCore],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "32",
+        "Drone Core VI",
+        c(4),
+        T::Spell,
+        &[G::DroneCore],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "33",
+        "Drone Core VII",
+        c(4),
+        T::Spell,
+        &[G::DroneCore],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "34",
+        "Drone Core VIII",
+        c(6),
+        T::Spell,
+        &[G::DroneCore],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "35",
+        "Drone Core IX",
+        c(6),
+        T::Spell,
+        &[G::DroneCore],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "36",
+        "Drone Core X",
+        c(8),
+        T::Spell,
+        &[G::DroneCore],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "37",
+        "Kwzka",
+        c(3),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Legendary,
+        st(6, 9),
+        st(12, 18),
+    ),
+    row(
+        "38",
+        "Shield Amplifier",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "39",
+        "The Narcor Project",
+        c(4),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "40",
+        "Poison Capsule",
+        c(3),
+        T::Unit,
+        &[G::Plague],
+        R::Rare,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "41",
+        "Drone Sympathizer",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "42",
+        "Core Researcher",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(4, 5),
+        st(8, 10),
+    ),
+    row(
+        "43",
+        "Healing Capsule",
+        c(1),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "44",
+        "Great Replacement Theory",
+        c(1),
+        T::Spell,
+        &[G::Quickdraw],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "45",
+        "Drone Commander",
+        c(4),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(8, 12),
+        st(16, 24),
+    ),
+    row(
+        "46",
+        "Circadian Halfcycler",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "47",
+        "Circadian Fullcycler",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "48",
+        "Ultralight Chassis",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(4, 1),
+        st(8, 2),
+    ),
+    row(
+        "49",
+        "Spacemine",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(5, 1),
+        st(10, 2),
+    ),
+    row(
+        "50",
+        "Beam v3",
+        c(2),
+        T::Unit,
+        &[G::Weapon],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "51",
+        "Repeater v3",
+        c(2),
+        T::Unit,
+        &[G::Weapon],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "52",
+        "Cannon v3",
+        c(2),
+        T::Unit,
+        &[G::Weapon],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "53",
+        "Flak v3",
+        c(2),
+        T::Unit,
+        &[G::Weapon],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "54",
+        "Beam v4",
+        c(3),
+        T::Unit,
+        &[G::Weapon],
+        R::Epic,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "55",
+        "Repeater v4",
+        c(3),
+        T::Unit,
+        &[G::Weapon],
+        R::Epic,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "56",
+        "Cannon v4",
+        c(3),
+        T::Unit,
+        &[G::Weapon],
+        R::Epic,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "57",
+        "Flak v4",
+        c(3),
+        T::Unit,
+        &[G::Weapon],
+        R::Epic,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "58",
+        "Beam v5",
+        c(4),
+        T::Unit,
+        &[G::Weapon],
+        R::Legendary,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "59",
+        "Repeater v5",
+        c(4),
+        T::Unit,
+        &[G::Weapon],
+        R::Legendary,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "60",
+        "Cannon v5",
+        c(4),
+        T::Unit,
+        &[G::Weapon],
+        R::Legendary,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "61",
+        "Flak v5",
+        c(4),
+        T::Unit,
+        &[G::Weapon],
+        R::Legendary,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "62",
+        "Miner v1",
+        c(0),
+        T::Unit,
+        &[],
+        R::Common,
+        st(0, 1),
+        st(0, 2),
+    ),
+    row(
+        "63",
+        "Miner v2",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(0, 2),
+        st(0, 4),
+    ),
+    row("64", "Miner v3", c(2), T::Unit, &[], R::Rare, st(0, 4), st(0, 8)),
+    row("65", "Miner v4", c(3), T::Unit, &[], R::Epic, st(0, 6), st(0, 12)),
+    row(
+        "66",
+        "Miner v5",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "67",
+        "Tractor Beam",
+        c(1),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(0, 2),
+        st(0, 4),
+    ),
+    row("68", "Startos", c(1), T::Unit, &[], R::Common, st(3, 3), st(6, 6)),
+    row("69", "Falcon", c(2), T::Unit, &[], R::Rare, st(4, 1), st(8, 2)),
+    row(
+        "70",
+        "Z'Zoth",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(5, 7),
+        st(10, 14),
+    ),
+    row(
+        "71",
+        "A'Zoth",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(7, 5),
+        st(14, 10),
+    ),
+    row(
+        "72",
+        "Paragon Mk1",
+        c(3),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(6, 1),
+        st(12, 2),
+    ),
+    row(
+        "73",
+        "Paragon Mk2",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(7, 1),
+        st(14, 2),
+    ),
+    row(
+        "74",
+        "Paragon-X",
+        c(4),
+        T::Unit,
+        &[],
+        R::Mythic,
+        st(10, 1),
+        st(20, 2),
+    ),
+    row("75", "Badger", c(1), T::Unit, &[], R::Common, st(2, 3), st(4, 6)),
+    row(
+        "76",
+        "Honey Badger",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(4, 6),
+        st(8, 12),
+    ),
+    row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
+    row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
+    row(
+        "79",
+        "Orca",
+        emb(4, 5),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(8, 8),
+        st(16, 16),
+    ),
+    row(
+        "80",
+        "Galaxy",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(10, 10),
+        st(20, 20),
+    ),
+    row("81", "Radix", c(3), T::Unit, &[], R::Rare, st(2, 2), st(4, 4)),
+    row("82", "Phalanx", c(4), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
+    row("83", "Halo", c(4), T::Unit, &[], R::Epic, st(2, 2), st(4, 4)),
+    row(
+        "84",
+        "Power Cell",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "84.1",
+        "Metal Scraps",
+        c(1),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "85",
+        "Prototype-X1",
+        c(4),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(6, 6),
+        st(12, 12),
+    ),
+    row(
+        "86",
+        "Prototype-X2",
+        c(4),
+        T::Unit,
+        &[],
+        R::Mythic,
+        st(8, 8),
+        st(16, 16),
+    ),
+    row(
+        "87",
+        "Siva 1",
+        c(2),
+        T::Unit,
+        &[G::Felinor, G::Acclaimed],
+        R::Legendary,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "88",
+        "Siva 2",
+        c(3),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Legendary,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row("89", "Spice", c(1), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "90",
+        "After Burner",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(4, 8),
+        st(8, 16),
+    ),
+    row(
+        "91",
+        "The Propagation's Wasp",
+        c(1),
+        T::Unit,
+        &[G::Swarm],
+        R::Common,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "92",
+        "The Propagation's Hornet",
+        c(2),
+        T::Unit,
+        &[G::Swarm],
+        R::Rare,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "93",
+        "Patcher Nanobots",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 4),
+        st(6, 8),
+    ),
+    row(
+        "94",
+        "Tmack Trav",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(9, 9),
+        st(18, 18),
+    ),
+    row(
+        "95",
+        "Vanguard Coalition",
+        c(3),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "96",
+        "Ocean Tsunami",
+        c(3),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(6, 6),
+        st(12, 12),
+    ),
+    row(
+        "97",
+        "Asteroid Field",
+        c(2),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "98",
+        "Hull Booster",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "99",
+        "No-No Words",
+        X,
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "100",
+        "AP Rounds",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 1),
+        st(6, 2),
+    ),
+    row(
+        "101",
+        "Overdrive Module",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(5, 5),
+        st(10, 10),
+    ),
+    row(
+        "102",
+        "Book of Nono-Words",
+        c(1),
+        T::Spell,
+        &[G::Book],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "103",
+        "Vxyl",
+        c(2),
+        T::Unit,
+        &[G::Human],
+        R::Rare,
+        st(1, 4),
+        st(2, 8),
+    ),
+    row(
+        "104",
+        "Reflective Plating",
+        c(2),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "105",
+        "Disintegrex",
+        c(2),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(6, 3),
+        st(12, 6),
+    ),
+    row(
+        "106",
+        "Warpfield Amplifier",
+        c(1),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(2, 3),
+        st(4, 6),
+    ),
+    row("107", "RR-5000", c(2), T::Unit, &[], R::Rare, st(4, 4), st(8, 8)),
+    row(
+        "108",
+        "Trila 3",
+        c(3),
+        T::Unit,
+        &[],
+        R::Common,
+        st(7, 7),
+        st(14, 14),
+    ),
+    row(
+        "109",
+        "xxFreshJack",
+        c(4),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Mythic,
+        st(6, 11),
+        st(12, 22),
+    ),
+    row(
+        "110",
+        "iKwzki",
+        c(2),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Mythic,
+        st(6, 6),
+        st(12, 12),
+    ),
+    row(
+        "111",
+        "Shockwave447",
+        c(4),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Mythic,
+        st(4, 7),
+        st(8, 14),
+    ),
+    row(
+        "112",
+        "Job Application",
+        c(1),
+        T::FieldSpell,
+        &[G::Quest],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "112.1",
+        "Paycheck",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "113",
+        "A Very Dandy Lad",
+        c(4),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(9, 15),
+        st(18, 30),
+    ),
+    row(
+        "114",
+        "Arctic Citadel",
+        c(4),
+        T::Unit,
+        &[G::Human],
+        R::Epic,
+        st(4, 4),
+        st(8, 8),
+    ),
+    row(
+        "115",
+        "Scornboi",
+        c(4),
+        T::Unit,
+        &[G::Human, G::Acclaimed],
+        R::Legendary,
+        st(12, 9),
+        st(24, 18),
+    ),
+    row(
+        "116",
+        "Megabase",
+        c(1),
+        T::FieldSpell,
+        &[G::Quickdraw],
+        R::Legendary,
+        st(0, 20),
+        st(0, 40),
+    ),
+    row(
+        "117",
+        "Core System",
+        c(3),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "118",
+        "Secure System",
+        c(3),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "119",
+        "Unsecure System",
+        c(3),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "120",
+        "Wild System",
+        c(3),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "121",
+        "System Schematic",
+        c(1),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "122",
+        "Vamp Rounds",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "123",
+        "Gokugains",
+        c(1),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "124",
+        "Jlockeed's Shipbuilding Grant",
+        c(2),
+        T::Spell,
+        &[G::Jlockeed],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "125",
+        "Jlockeed's Spacerace Propaganda",
+        c(2),
+        T::FieldSpell,
+        &[G::Jlockeed],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "126",
+        "Jlockeed's Permanent Procurement Lobbying",
+        c(2),
+        T::Spell,
+        &[G::Jlockeed],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "127",
+        "Jlockeed's Siege Tank",
+        emb(3, 4),
+        T::Unit,
+        &[G::Jlockeed],
+        R::Rare,
+        st(8, 5),
+        st(16, 10),
+    ),
+    row(
+        "128",
+        "Jlockeed's Yamato Cannon",
+        emb(2, 3),
+        T::Unit,
+        &[G::Jlockeed],
+        R::Rare,
+        st(4, 1),
+        st(8, 2),
+    ),
+    row(
+        "129",
+        "Jlockeed's Missile Pod",
+        emb(1, 2),
+        T::Unit,
+        &[G::Jlockeed],
+        R::Epic,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "130",
+        "Jlockeed's Starship Retrofitting Program",
+        c(1),
+        T::Spell,
+        &[G::Jlockeed],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "131",
+        "Spacerace Stimulus",
+        c(1),
+        T::FieldTrap,
+        &[],
+        R::Common,
+        st(6, 6),
+        st(12, 12),
+    ),
+    row(
+        "132",
+        "Defensive Crystal",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 6),
+        st(6, 12),
+    ),
+    row(
+        "133",
+        "Ultra Capacitor",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "134",
+        "Felinor Containment Chamber",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row("135", "Sacked", c(1), T::Trap, &[], R::Common, NO_STATS, NO_STATS),
+    row(
+        "135.1",
+        "Sack",
+        c(1),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "136",
+        "Magic Module",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(4, 3),
+        st(8, 6),
+    ),
+    row(
+        "137",
+        "Firststrike Capability",
+        c(4),
+        T::Unit,
+        &[],
+        R::Common,
+        st(9, 9),
+        st(18, 18),
+    ),
+    row(
+        "137.1",
+        "Land Doctrine",
+        c(4),
+        T::Spell,
+        &[G::WarDoctrine, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "137.2",
+        "Sea Doctrine",
+        c(4),
+        T::Spell,
+        &[G::WarDoctrine, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "137.3",
+        "Air Doctrine",
+        c(4),
+        T::Spell,
+        &[G::WarDoctrine, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "137.4",
+        "Space Doctrine",
+        c(4),
+        T::Spell,
+        &[G::WarDoctrine, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "138",
+        "Pocket Peptides",
+        c(1),
+        T::Trap,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row("139", "Wormhole", c(2), T::Trap, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "140",
+        "Rush Token Launcher",
+        c(2),
+        T::Unit,
+        &[G::Weapon],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "141",
+        "Fruit Launcher",
+        c(2),
+        T::Unit,
+        &[G::Weapon],
+        R::Rare,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "142",
+        "Jade Launcher",
+        c(3),
+        T::Unit,
+        &[G::Cn, G::Weapon],
+        R::Epic,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "143",
+        "Book Launcher",
+        c(3),
+        T::Unit,
+        &[G::Weapon],
+        R::Epic,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "144",
+        "Prepare For Liftoff",
+        c(1),
+        T::Trap,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "145",
+        "Fortify Flesh",
+        c(4),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "146",
+        "Flash Freeze",
+        c(0),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "147",
+        "IN33DH3",
+        c(0),
+        T::Unit,
+        &[G::Catalyst, G::Human],
+        R::Legendary,
+        st(1, 2),
+        st(2, 4),
+    ),
+    row(
+        "147.1",
+        "IN33DH3 Prime",
+        c(4),
+        T::Unit,
+        &[G::Prime, G::Human, G::Token],
+        R::Token,
+        st(9, 5),
+        st(18, 10),
+    ),
+    row(
+        "147.2",
+        "Wardrum Blob",
+        c(2),
+        T::FieldSpell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "148",
+        "Alteran Reach",
+        c(1),
+        T::FieldSpell,
+        &[G::Wincon, G::Quickdraw],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "148.1",
+        "Edge of the Universe",
+        c(0),
+        T::Spell,
+        &[G::Wincon, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "149",
+        "Wildar",
+        c(3),
+        T::Spell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "150",
+        "Call to Chaos (Stinky Edition)",
+        c(4),
+        T::Spell,
+        &[G::CallToChaos],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "150.1",
+        "Stinkyscape Golem",
+        c(4),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(10, 10),
+        st(20, 20),
+    ),
+    row(
+        "151",
+        "Call to Chaos (Scape Edition)",
+        c(4),
+        T::Spell,
+        &[G::CallToChaos],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "152",
+        "Sanctum",
+        c(4),
+        T::FieldSpell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "153",
+        "Stimmycheck",
+        c(0),
+        T::Spell,
+        &[],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "154",
+        "Dice of Doom",
+        emb(0, 1),
+        T::Spell,
+        &[G::Quickdraw],
+        R::Mythic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "155",
+        "Comet Crash",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "156",
+        "Catalyst Comet",
+        c(1),
+        T::Spell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "157",
+        "The Gauntlet",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "158",
+        "Stratos Swarm",
+        c(3),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row("159", "ETHICS", c(3), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "160",
+        "Golden Accord",
+        c(3),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row("161", "Pegasus", c(3), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "162",
+        "Star-jumper Core",
+        c(3),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "163",
+        "Swear Loyalities",
+        c(1),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "164",
+        "The Syndicate",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "165",
+        "The Trade Union",
+        c(1),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "166",
+        "Scanning Probe Mk1",
+        c(1),
+        T::Spell,
+        &[],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "167",
+        "Scanning Probe Mk2",
+        c(2),
+        T::Spell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "168",
+        "Drone Hanger",
+        c(2),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "169",
+        "Tiny Asteroid",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(0, 4),
+        st(0, 8),
+    ),
+    row(
+        "170",
+        "Medium Asteroid",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(0, 6),
+        st(0, 12),
+    ),
+    row(
+        "171",
+        "Large Asteroid",
+        c(3),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row(
+        "172",
+        "Huge Asteroid",
+        c(4),
+        T::Unit,
+        &[],
+        R::Epic,
+        st(0, 10),
+        st(0, 20),
+    ),
+    row(
+        "173",
+        "Abandoned Spice Tower",
+        c(3),
+        T::Unit,
+        &[],
+        R::Rare,
+        st(0, 8),
+        st(0, 16),
+    ),
+    row("174", "Aerelret", c(4), T::Trap, &[], R::Epic, NO_STATS, NO_STATS),
+    row(
+        "175",
+        "Frost Module",
+        c(1),
+        T::Unit,
+        &[],
+        R::Common,
+        st(2, 1),
+        st(4, 2),
+    ),
+    row(
+        "T-dormant-starship",
+        "Dormant Starship",
+        c(3),
+        T::Unit,
+        &[],
+        R::Legendary,
+        st(0, 0),
+        st(0, 0),
+    ),
+    row(
+        "T-drone-interceptor",
+        "Drone Interceptor",
+        c(1),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "T-drone-corvette",
+        "Drone Corvette",
+        c(3),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(8, 8),
+        st(16, 16),
+    ),
+    row(
+        "T-shield-layer",
+        "Drone Battleship (Shield Layer)",
+        c(5),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(12, 12),
+        st(24, 24),
+    ),
+    row(
+        "T-propagation-layer",
+        "Drone Battleship (Propagation Layer)",
+        c(5),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(12, 12),
+        st(24, 24),
+    ),
+    row(
+        "T-meltdown-layer",
+        "Drone Battleship (Meltdown Layer)",
+        c(5),
+        T::Unit,
+        &[G::Token],
+        R::Token,
+        st(12, 12),
+        st(24, 24),
+    ),
+    row(
+        "T-reknite",
+        "Reknite",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-korrelite",
+        "Korrelite",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-gellium",
+        "Gellium",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-axnit",
+        "Axnit",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-narcor",
+        "Narcor",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-red-narcor",
+        "Red Narcor",
+        c(0),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-anomaly-found",
+        "Anomaly Found!",
+        c(4),
+        T::Spell,
+        &[G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-1",
+        "Escort Protocol",
+        c(1),
+        T::Unit,
+        &[G::Ai, G::Token],
+        R::Token,
+        st(1, 3),
+        st(2, 6),
+    ),
+    row(
+        "T-AI-2",
+        "Mining Subroutine",
+        c(0),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-3",
+        "Route Optimizer",
+        c(1),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-4",
+        "Predictive Shield",
+        c(1),
+        T::Trap,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-5",
+        "Launch Sequencer",
+        c(1),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-6",
+        "Probe Relay",
+        c(1),
+        T::Spell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-7",
+        "Combat Subroutine",
+        c(2),
+        T::Unit,
+        &[G::Ai, G::Token],
+        R::Token,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "T-AI-8",
+        "Drone Uplink",
+        c(2),
+        T::FieldSpell,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-9",
+        "Honeypot",
+        c(1),
+        T::Trap,
+        &[G::Ai, G::Token],
+        R::Token,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "T-AI-10",
+        "Salvage Protocol",
+        c(1),
+        T::Unit,
+        &[G::Ai, G::Token],
+        R::Token,
+        st(1, 2),
+        st(2, 4),
+    ),
+];
+
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Core, CORE),
     (SetName::Classic, CLASSIC),
     (SetName::ClassicPlus, CLASSIC_PLUS),
     (SetName::Meditative, MEDITATIVE),
     (SetName::MeditativePlus, MEDITATIVE_PLUS),
+    (SetName::Stinkyscape, STINKYSCAPE),
 ];
 
 /// BUILD M4-T1 and B2.4, plus the mechanics patch's Plague, patch v0.2.Y's Catalyst, Prime and
-/// Acclaimed, the Meditative set's Wincon, the Meditative+ set's Potion and #1837's Terminus, Quest,
-/// Otherworldly, Other-Origins and Jelly Bean (R1837000): the only tags any entry may carry.
+/// Acclaimed, the Meditative set's Wincon, the Meditative+ set's Potion, #1837's Terminus, Quest,
+/// Otherworldly, Other-Origins and Jelly Bean (R1837000) and the held Stinkyscape set's Drone Core,
+/// Weapon, War Doctrine and Swarm (R1857000): the only tags any entry may carry.
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -4818,6 +6939,10 @@ const ALLOWED_TAGS: &[&str] = &[
     "Otherworldly",
     "Other-Origins",
     "Jelly Bean",
+    "Drone Core",
+    "Weapon",
+    "War Doctrine",
+    "Swarm",
     "Token",
 ];
 
@@ -4875,12 +7000,28 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
             ("Mythic", 2),
         ],
     ),
+    // R1420, R1857001: docs/stinkyscape-set.md ST12's distribution over its 176 cards, the Dormant
+    // Starship one of the Legendaries, a ceiling until the set ships.
+    (
+        "Stinkyscape",
+        &[
+            ("Common", 42),
+            ("Rare", 50),
+            ("Epic", 43),
+            ("Legendary", 29),
+            ("Mythic", 12),
+        ],
+    ),
 ];
 
 /// B2.1: cards and tokens per set.
 struct SetSize {
     set: &'static str,
+    /// The cards indexed 1..cards.
     cards: usize,
+    /// The cards outside the set's numbers, at a `T-` index (R1857001: Stinkyscape's Dormant
+    /// Starship), counted with `cards` but not among its 1..N indices.
+    named_cards: usize,
     tokens: usize,
 }
 
@@ -4888,29 +7029,42 @@ const SET_SIZES: &[SetSize] = &[
     SetSize {
         set: "Core",
         cards: 100,
+        named_cards: 0,
         tokens: 11,
     },
     SetSize {
         set: "Classic",
         cards: 90,
+        named_cards: 0,
         tokens: 1,
     },
     SetSize {
         set: "Classic+",
         cards: 78,
+        named_cards: 0,
         tokens: 38,
     },
     // R1420: docs/meditative-set.md M2, a ceiling until the set ships.
     SetSize {
         set: "Meditative",
         cards: 102,
+        named_cards: 0,
         tokens: 30,
     },
     // R1420, R1178000: docs/meditative-plus-set.md MP2, a ceiling until the set ships.
     SetSize {
         set: "Meditative+",
         cards: 26,
+        named_cards: 0,
         tokens: 6,
+    },
+    // R1420, R1857001: docs/stinkyscape-set.md ST12, a ceiling until the set ships: 175 cards, the
+    // Dormant Starship, and 52 tokens (the 30 its cards define and 22 shared).
+    SetSize {
+        set: "Stinkyscape",
+        cards: 175,
+        named_cards: 1,
+        tokens: 52,
     },
 ];
 
@@ -4929,7 +7083,7 @@ fn total_cards() -> usize {
     SET_SIZES
         .iter()
         .filter(|size| ships(size.set))
-        .map(|size| size.cards)
+        .map(|size| size.cards + size.named_cards)
         .sum()
 }
 
@@ -4949,12 +7103,13 @@ fn shipped_entries() -> Vec<&'static CardDef> {
         .collect()
 }
 
-/// A set's SET_SIZES row as one number (cards + tokens), for the fixture-row counts below.
+/// A set's SET_SIZES row as one number (cards, named cards and tokens), for the fixture-row counts
+/// below.
 fn set_size(set: &str) -> usize {
     SET_SIZES
         .iter()
         .find(|size| size.set == set)
-        .map_or(0, |size| size.cards + size.tokens)
+        .map_or(0, |size| size.cards + size.named_cards + size.tokens)
 }
 
 fn entries() -> Vec<&'static CardDef> {
@@ -5108,18 +7263,25 @@ fn fixture_report(set: SetName) -> String {
         .join("\n")
 }
 
-/// R1420, R1178000: the ids of a held set's entries among `ids` that the catalog holds yet (a card
-/// still being built has none), or all of them once its set ships, when a missing one fails the
-/// list it is in. The ids of a shipped set pass unchanged.
+/// R1420, R1178000, R1857000: the ids of a held set's entries among `ids` that the catalog holds yet
+/// (a card still being built has none), or all of them once its set ships, when a missing one fails
+/// the list it is in. The ids of a shipped set pass unchanged. An id's set is the one its segment
+/// spells (B2.2: `meditativeplus-…`, `stinkyscape-…`).
 fn landed(ids: &[&str]) -> Vec<String> {
     ids.iter()
-        .filter(|id| {
-            CATALOG.contains_key(**id)
-                || !id.starts_with("meditativeplus-")
-                || set_ships(SetName::MeditativePlus)
-        })
+        .filter(|id| CATALOG.contains_key(**id) || set_of_id(id).is_none_or(set_ships))
         .map(|id| (*id).to_string())
         .collect()
+}
+
+/// B2.2: the set an id's segment spells, its name lowered with "+" written "plus" and "-" dropped
+/// (`classicplus-…` is Classic+'s, `stinkyscape-…` Stinkyscape's).
+fn set_of_id(id: &str) -> Option<SetName> {
+    let segment = id.split('-').next()?;
+    SetName::ALL
+        .iter()
+        .copied()
+        .find(|set| set.as_str().to_lowercase().replace('+', "plus").replace('-', "") == segment)
 }
 
 /// `/^\d+$/`.
@@ -5150,16 +7312,17 @@ mod catalog_membership_build_m4_t1_b2_1 {
                 in_set.iter().filter(|entry| !entry.token).count(),
                 in_set.iter().filter(|entry| entry.token).count(),
             );
+            // R1857001: a set's cards are its numbered ones and those outside its numbers.
+            let most_cards = size.cards + size.named_cards;
             if ships(size.set) {
-                assert_eq!(cards, size.cards, "{} cards", size.set);
+                assert_eq!(cards, most_cards, "{} cards", size.set);
                 assert_eq!(tokens, size.tokens, "{} tokens", size.set);
             } else {
                 // R1420: a set being built holds no more than its brief lists.
                 assert!(
-                    cards <= size.cards,
-                    "{} cards: {cards} of at most {}",
-                    size.set,
-                    size.cards
+                    cards <= most_cards,
+                    "{} cards: {cards} of at most {most_cards}",
+                    size.set
                 );
                 assert!(
                     tokens <= size.tokens,
@@ -5421,6 +7584,166 @@ mod r1178000_every_meditative_plus_entry_equals_its_fixture_row_while_the_set_is
     }
 }
 
+mod r1857000_every_stinkyscape_entry_equals_its_fixture_row_while_the_set_is_built {
+    use super::*;
+
+    /// The fixture's rows by index.
+    fn row_at(index: &str) -> &'static SpecRow {
+        STINKYSCAPE
+            .iter()
+            .find(|row| row.index == index)
+            .unwrap_or_else(|| panic!("STINKYSCAPE has no row {index}"))
+    }
+
+    #[test]
+    fn r1857000_every_stinkyscape_entry_equals_its_fixture_row_and_none_is_missing_once_it_ships() {
+        assert_eq!(fixture_report(SetName::Stinkyscape), "");
+        let by_key = by_key();
+        let missing: Vec<&str> = STINKYSCAPE
+            .iter()
+            .filter(|row| !by_key.contains_key(&key_of("Stinkyscape", row.index)))
+            .map(|row| row.name)
+            .collect();
+        if set_ships(SetName::Stinkyscape) {
+            assert_eq!(
+                missing,
+                Vec::<&str>::new(),
+                "a shipped set holds every card it lists"
+            );
+        }
+        // Every entry of the set is `stinkyscape-…` (B2.2's segment) and, until the release (#1884),
+        // none of them ships.
+        for entry in entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::Stinkyscape)
+        {
+            assert!(entry.id.starts_with("stinkyscape-"), "{}", entry.id);
+            assert_eq!(set_of_id(&entry.id), Some(SetName::Stinkyscape), "{}", entry.id);
+        }
+        assert!(!set_ships(SetName::Stinkyscape), "the set is held until #1884");
+    }
+
+    #[test]
+    fn r1857001_numbers_174_and_175_and_the_t_ids() {
+        // The designer's second #21 and second #122 take the numbers after the list's last.
+        assert_eq!(row_at("174").name, "Aerelret");
+        assert_eq!(row_at("175").name, "Frost Module");
+        // The plain indices are 1..=175, each once; a token is N.k after its card N, or T-name;
+        // the AI generated cards are T-AI-1 to T-AI-10.
+        let plain: Vec<usize> = STINKYSCAPE
+            .iter()
+            .filter(|row| is_plain_index(row.index))
+            .filter_map(|row| row.index.parse().ok())
+            .collect();
+        assert_eq!(plain, (1..=175).collect::<Vec<usize>>());
+        for row in STINKYSCAPE.iter().filter(|row| !is_plain_index(row.index)) {
+            let numbered = row
+                .index
+                .split_once('.')
+                .is_some_and(|(card, k)| is_plain_index(card) && is_plain_index(k));
+            assert!(
+                numbered || row.index.starts_with("T-"),
+                "{} {}",
+                row.index,
+                row.name
+            );
+        }
+        let ai: Vec<&str> = STINKYSCAPE
+            .iter()
+            .filter(|row| row.index.starts_with("T-AI-"))
+            .map(|row| row.index)
+            .collect();
+        assert_eq!(ai, (1..=10).map(|n| format!("T-AI-{n}")).collect::<Vec<_>>());
+        for row in STINKYSCAPE.iter().filter(|row| row.index.starts_with("T-AI-")) {
+            assert_eq!(row.tags, [Tag::Ai, Tag::Token], "{}", row.index);
+            assert_eq!(row.rarity, Rarity::Token, "{}", row.index);
+        }
+    }
+
+    #[test]
+    fn r1857001_the_census_is_175_cards_the_dormant_starship_and_52_tokens() {
+        let cards: Vec<&SpecRow> = STINKYSCAPE
+            .iter()
+            .filter(|row| row.rarity != Rarity::Token)
+            .collect();
+        let named: Vec<&str> = cards
+            .iter()
+            .filter(|row| !is_plain_index(row.index))
+            .map(|row| row.index)
+            .collect();
+        assert_eq!(cards.len(), 176);
+        assert_eq!(named, ["T-dormant-starship"]);
+        let tokens: Vec<&str> = STINKYSCAPE
+            .iter()
+            .filter(|row| row.rarity == Rarity::Token)
+            .map(|row| row.index)
+            .collect();
+        assert_eq!(tokens.len(), 52);
+        assert_eq!(
+            tokens.iter().filter(|index| index.starts_with("T-")).count(),
+            22,
+            "shared tokens"
+        );
+        assert_eq!(STINKYSCAPE.len(), set_size("Stinkyscape"));
+        let mut rarities: BTreeMap<&str, usize> = BTreeMap::new();
+        for row in &cards {
+            *rarities.entry(row.rarity.as_str()).or_insert(0) += 1;
+        }
+        let expected: BTreeMap<&str, usize> = RARITY_COUNTS
+            .iter()
+            .find(|(set, _)| *set == "Stinkyscape")
+            .map(|(_, counts)| counts.iter().copied().collect())
+            .unwrap_or_default();
+        assert_eq!(rarities, expected);
+        // Its four tags are its own (R1857000): #27 to #36 Drone Core, #50 to #61 and #140 to #143
+        // Weapon, the four #137 tokens War Doctrine, and the Swarm Units #91 and #92.
+        let carrying = |tag: Tag| -> Vec<&str> {
+            STINKYSCAPE
+                .iter()
+                .filter(|row| row.tags.contains(&tag))
+                .map(|row| row.index)
+                .collect()
+        };
+        let indices =
+            |from: usize, to: usize| -> Vec<String> { (from..=to).map(|n| n.to_string()).collect() };
+        assert_eq!(carrying(Tag::DroneCore), indices(27, 36));
+        assert_eq!(
+            carrying(Tag::Weapon),
+            [indices(50, 61), indices(140, 143)].concat()
+        );
+        assert_eq!(carrying(Tag::WarDoctrine), ["137.1", "137.2", "137.3", "137.4"]);
+        assert_eq!(carrying(Tag::Swarm), ["91", "92"]);
+        for index in carrying(Tag::Swarm) {
+            assert_eq!(row_at(index).type_, CardType::Unit, "a Swarm entry is a Unit");
+        }
+    }
+
+    #[test]
+    fn r1857001_the_dormant_starship_is_a_non_token_with_no_radiant_form_of_its_own() {
+        let hull = row_at("T-dormant-starship");
+        assert_eq!(
+            (hull.name, hull.cost, hull.type_, hull.rarity),
+            ("Dormant Starship", c(3), CardType::Unit, Rarity::Legendary)
+        );
+        assert_eq!((hull.base, hull.radiant), (st(0, 0), st(0, 0)));
+        assert!(!hull.tags.contains(&Tag::Token));
+        // Its id is the one the engine summons (R1852000).
+        assert_eq!(
+            format!("stinkyscape-{}", hull.index.to_lowercase()),
+            jackioh_engine::DORMANT_STARSHIP_DEF_ID
+        );
+        if let Some(entry) = CATALOG.get(jackioh_engine::DORMANT_STARSHIP_DEF_ID) {
+            assert!(!entry.token, "no token (R1852000)");
+            assert_eq!(entry.radiant_fallback, Some(true), "R349's fallback");
+            assert_eq!(entry.set, SetName::Stinkyscape);
+            // In no deck (R1857001), even with its set open.
+            let _preview = jackioh_engine::testkit::preview_sets(&[SetName::Stinkyscape]);
+            assert!(!jackioh_engine::deckable(entry));
+            assert!(jackioh_engine::made_by_a_rule(entry));
+        }
+    }
+}
+
 mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
     use super::*;
 
@@ -5603,6 +7926,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         // §7 prints a designer rarity on the Meditative tokens too (the next test, keyed apart:
         // their indices repeat Classic+ ones); every printed rarity is a Classic+ or a Meditative
         // token's, never a card's.
+        // The held Stinkyscape set prints its tokens' too (R1857000, its §7 rows).
         assert!(
             entries()
                 .into_iter()
@@ -5610,7 +7934,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                 .all(|entry| entry.token
                     && (entry.set == SetName::ClassicPlus
                         || entry.set == SetName::Meditative
-                        || entry.set == SetName::MeditativePlus))
+                        || entry.set == SetName::MeditativePlus
+                        || entry.set == SetName::Stinkyscape))
         );
     }
 
@@ -5958,6 +8283,16 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             ])
             .into_iter()
             .chain(landed(&["meditativeplus-004"]))
+            // R1857000: the held Stinkyscape set's seven, #124 to #130, each named for the faction.
+            .chain(landed(&[
+                "stinkyscape-124",
+                "stinkyscape-125",
+                "stinkyscape-126",
+                "stinkyscape-127",
+                "stinkyscape-128",
+                "stinkyscape-129",
+                "stinkyscape-130",
+            ]))
             .collect::<Vec<_>>(),
             "entries tagged Jlockeed"
         );
@@ -6046,7 +8381,9 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                     "meditative-049",
                     "meditative-091"
                 ]),
-                landed(&["meditativeplus-016"])
+                landed(&["meditativeplus-016"]),
+                // R1857000: Stinkyscape #147 IN33DH3.
+                landed(&["stinkyscape-147"])
             ]
             .concat()
         );
@@ -6064,7 +8401,9 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                     "meditative-049-1",
                     "meditative-091-1"
                 ]),
-                landed(&["meditativeplus-016-1"])
+                landed(&["meditativeplus-016-1"]),
+                // R1857000: Stinkyscape #147.1 IN33DH3 Prime.
+                landed(&["stinkyscape-147-1"])
             ]
             .concat()
         );
@@ -6127,12 +8466,27 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         // "Acclaimed"); Yile's Virus and AI Girlfriend lost it in patch v0.3.10 (#831).
         assert_eq!(
             tagged(Tag::Acclaimed),
-            strings(&[
-                "classic-080",
-                "classicplus-037",
-                "meditative-049",
-                "meditative-049-1",
-            ])
+            [
+                strings(&[
+                    "classic-080",
+                    "classicplus-037",
+                    "meditative-049",
+                    "meditative-049-1",
+                ]),
+                // R1857000: the held Stinkyscape set's nine.
+                landed(&[
+                    "stinkyscape-006",
+                    "stinkyscape-026",
+                    "stinkyscape-037",
+                    "stinkyscape-087",
+                    "stinkyscape-088",
+                    "stinkyscape-109",
+                    "stinkyscape-110",
+                    "stinkyscape-111",
+                    "stinkyscape-115",
+                ])
+            ]
+            .concat()
         );
     }
 }
@@ -6153,19 +8507,64 @@ mod the_tags_issue_1837_moves_r1837000 {
     #[test]
     fn r1837000_tags_core_100_terminus_classic_90_quest_classic_plus_32_otherworldly_its_three_tokens_other_origins_and_core_26_to_29_jelly_bean_and_no_other_entry()
      {
-        assert_eq!(tagged(Tag::Terminus), strings(&["core-100"]));
-        assert_eq!(tagged(Tag::Quest), strings(&["classic-090"]));
-        assert_eq!(tagged(Tag::Otherworldly), strings(&["classicplus-032"]));
+        // R1857000: and the held Stinkyscape set's, once each has landed: its #4's six Terminus
+        // tokens, #7 and #112 (Quest), #10 to #12 (Otherworldly) and their nine Other-Origins tokens.
+        assert_eq!(
+            tagged(Tag::Terminus),
+            [
+                strings(&["core-100"]),
+                landed(&[
+                    "stinkyscape-004-1",
+                    "stinkyscape-004-2",
+                    "stinkyscape-004-3",
+                    "stinkyscape-004-4",
+                    "stinkyscape-004-5",
+                    "stinkyscape-004-6",
+                ])
+            ]
+            .concat()
+        );
+        assert_eq!(
+            tagged(Tag::Quest),
+            [
+                strings(&["classic-090"]),
+                landed(&["stinkyscape-007", "stinkyscape-112"])
+            ]
+            .concat()
+        );
+        assert_eq!(
+            tagged(Tag::Otherworldly),
+            [
+                strings(&["classicplus-032"]),
+                landed(&["stinkyscape-010", "stinkyscape-011", "stinkyscape-012"])
+            ]
+            .concat()
+        );
         assert_eq!(
             tagged(Tag::OtherOrigins),
-            strings(&["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"])
+            [
+                strings(&["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"]),
+                landed(&[
+                    "stinkyscape-010-1",
+                    "stinkyscape-010-2",
+                    "stinkyscape-010-3",
+                    "stinkyscape-011-1",
+                    "stinkyscape-011-2",
+                    "stinkyscape-011-3",
+                    "stinkyscape-012-1",
+                    "stinkyscape-012-2",
+                    "stinkyscape-012-3",
+                ])
+            ]
+            .concat()
         );
         assert_eq!(
             tagged(Tag::JellyBean),
             strings(&["core-026", "core-027", "core-028", "core-029"])
         );
-        // A Jelly Bean is a card named one, and the Other-Origins cards are the three tokens
-        // Otherworldly Removal adds, every one a token it names.
+        // A Jelly Bean is a card named one, and the Other-Origins cards are the tokens an Otherworldly
+        // card adds, every one a token its maker names: Otherworldly Removal's three, and each of
+        // Stinkyscape #10 to #12's three (its maker the card whose number the token's carries).
         let mut beans: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.ends_with("Jelly Bean"))
@@ -6173,17 +8572,16 @@ mod the_tags_issue_1837_moves_r1837000 {
             .collect();
         beans.sort();
         assert_eq!(beans, tagged(Tag::JellyBean));
-        let removal = CATALOG.get("classicplus-032").expect("C+ #32");
         for id in tagged(Tag::OtherOrigins) {
             assert_eq!(
                 CATALOG.get(id.as_str()).map(|entry| entry.token),
                 Some(true),
                 "{id}"
             );
-            assert!(
-                removal.refs.as_ref().is_some_and(|refs| refs.contains(&id)),
-                "{id}"
-            );
+            let maker_id = id.rsplit_once('-').map_or(id.as_str(), |(maker, _)| maker);
+            let maker = CATALOG.get(maker_id).expect("an Other-Origins token's maker");
+            assert!(maker.tags.contains(&Tag::Otherworldly), "{maker_id}");
+            assert!(maker.refs.as_ref().is_some_and(|refs| refs.contains(&id)), "{id}");
         }
         // In Too Deep keeps its Quickdraw beside its Quest.
         assert_eq!(
@@ -6257,7 +8655,15 @@ mod every_entry_has_a_radiant_face_of_its_own_spec_5_2_r276 {
             .filter(|entry| entry.radiant_fallback == Some(true))
             .map(|entry| entry.id.clone())
             .collect();
-        assert_eq!(fallbacks, strings(&["core-t-ghoul"]));
+        // R1857001: and the held Stinkyscape set's Dormant Starship, which prints no Radiant form.
+        assert_eq!(
+            fallbacks,
+            [
+                strings(&["core-t-ghoul"]),
+                landed(&["stinkyscape-t-dormant-starship"])
+            ]
+            .concat()
+        );
     }
 }
 

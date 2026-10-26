@@ -13,6 +13,9 @@
  * name (M+ #14, #15). Ahead of the Stinkyscape set, #1837 adds Terminus (Core #100 Ceaseless
  * Void), Quest (Classic #90 In Too Deep), Otherworldly (Classic+ #32 Otherworldly Removal),
  * Other-Origins (its three tokens, #32.1 to #32.3) and Jelly Bean (Core #26 to #29, the Glowy
- * Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000).
+ * Jelly Beans): family tags, not tribes, which no shipped rule or pool reads (R1837000). The
+ * held Stinkyscape set adds Drone Core (its #27 to #36), Weapon (#50 to #61 and #140 to #143),
+ * War Doctrine (the four #137 tokens) and Swarm (its Swarm Units, #91 and #92): family tags that
+ * no rule reads, which the server admits with the set's release (R1857000).
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Token";

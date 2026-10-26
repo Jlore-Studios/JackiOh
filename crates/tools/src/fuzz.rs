@@ -151,7 +151,8 @@ use jackioh_engine::{
     EARLIER_DECK_SIZE, FoldArgs, GameEvent, GameState, Handicap, KeywordKind, LastBoardEntry, PLAYER_IDS,
     PerPlayerOpt, Phase, PlayerId, ReduceResult, Rng, TURN_CAP_PLAYER_TURNS, UNIT_ZONES, begin_game,
     create_game, create_recorded_game, find_instance, fold, has_standing_draw_offer, hash_state,
-    legal_actions, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems, validate_deck,
+    legal_actions, made_by_a_rule, mulligan_owed, opponent_of, reduce, seat_to_act, subsystems,
+    validate_deck,
 };
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -330,13 +331,14 @@ static EXCLUDED_IDS: LazyLock<IndexSet<&'static str>> =
     LazyLock::new(|| POOL_EXCLUSIONS.iter().map(|entry| entry.id).collect());
 
 /// Every deck-legal card: the whole catalog minus tokens (§2.6 L3, which `validate_deck` enforces)
-/// minus `POOL_EXCLUSIONS`, of every set, shipped or not: each seed previews every set (R1420), so a
+/// and the cards only a rule makes (`made_by_a_rule`: R1857001's Dormant Starship, which no deck
+/// holds) minus `POOL_EXCLUSIONS`, of every set, shipped or not: each seed previews every set (R1420), so a
 /// set's cards are fuzzed from the day they land. Sorted by catalog id so the pool a seed shuffles is identical on every
 /// machine and in every process, whatever order the registry handed the defs over.
 pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.is_token())
+        .filter(|(_, def)| !def.is_token() && !made_by_a_rule(def))
         .map(|(id, _)| id.clone())
         .filter(|id| !EXCLUDED_IDS.contains(id.as_str()))
         .collect();
@@ -2721,11 +2723,11 @@ fn run_regress() -> anyhow::Result<()> {
 // ---------------------------------------------------------------------------------------------
 
 /// Every deck-legal card, sorted, as the gate's FUZZ_POOL (its exclusion list is empty): every set,
-/// shipped or not (R1420).
+/// shipped or not (R1420), and no card only a rule makes (R1857001).
 static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.is_token())
+        .filter(|(_, def)| !def.is_token() && !made_by_a_rule(def))
         .map(|(id, _)| id.clone())
         .collect();
     pool.sort();

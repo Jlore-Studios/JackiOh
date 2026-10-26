@@ -20,7 +20,9 @@ export type CardType = "Unit" | "Spell" | "Field Spell" | "Trap" | "Field Trap";
  * tokens) and AI (the ten AI generated cards); the v0.2.x mechanics patch adds Plague (every card
  * that uses Plague Counters); patch v0.2.Y adds Catalyst (Classic+ #38 Solarius and #46 Felinor
  * Flagbearer), Prime (their Prime tokens, Classic+ #38.1 Solarius Prime and #46.1 Felinor
- * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum).
+ * Flagbearer Prime) and Acclaimed (Classic #80 BOOM! Big Max and Classic+ #37 Wardrum). The held
+ * Stinkyscape set adds Drone Core, Weapon, War Doctrine and Swarm: family tags that no rule reads
+ * (R1857000).
  */
 export type Tag =
   | "Human"
@@ -45,6 +47,10 @@ export type Tag =
   | "Otherworldly"
   | "Other-Origins"
   | "Jelly Bean"
+  | "Drone Core"
+  | "Weapon"
+  | "War Doctrine"
+  | "Swarm"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
@@ -55,9 +61,19 @@ export type PrintedRarity = Exclude<Rarity, "Token">;
 
 /**
  * §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15, issue
- * #1187, R1178000) ship; Boss and Boss-X are reserved.
+ * #1187, R1178000) ship; Stinkyscape (issue #1836) is held until its release (#1884, R1857000); Boss
+ * and Boss-X are reserved.
  */
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Boss" | "Boss-X" | "Custom";
+export type SetName =
+  | "Core"
+  | "Classic"
+  | "Classic+"
+  | "Meditative"
+  | "Meditative+"
+  | "Stinkyscape"
+  | "Boss"
+  | "Boss-X"
+  | "Custom";
 
 /**
  * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and

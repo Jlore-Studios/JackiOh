@@ -17,7 +17,9 @@
 //! eight Pancake tokens and the AI generated cards (the ten T-AI cards, and since v0.3.15 Meditative+
 //! #1.1 to #1.4) reach play through a pool a card names by its tag ("a random Pancake token", "a
 //! random AI generated card"), so a text naming that pool names each of its members for the rule that
-//! every token is named by some card.
+//! every token is named by some card. R1857002 adds the held Stinkyscape set's two such pools, its
+//! Terminus tokens ("a Terminus card") and its War Doctrines ("a War Doctrine"), and its Resources,
+//! which R1840002's roll deals as §2.1's setup deals The Coin, so no card need name one.
 //!
 //! Port of `packages/cards/test/references.test.ts`.
 
@@ -36,6 +38,12 @@ const DEALT_BY_A_RULE: &[&str] = &[
     // Summoned by the Jade Counter crossing 5 or 10, never named by a card (R962).
     "meditative-039-5",
 ];
+
+/// R244, R1857002: whether a rule deals this token, so no card need name it: one of `DEALT_BY_A_RULE`,
+/// or a Resource (`resource`), which R1840002's roll deals whichever card or rule asks for one.
+fn dealt_by_a_rule(card: &CardDef) -> bool {
+    DEALT_BY_A_RULE.contains(&card.id.as_str()) || card.resource.is_some()
+}
 
 /// R1420: tokens of a set that has not shipped, landed before the card that names them, by that card's
 /// id. Its part empties the entry: the test fails once the maker is in the catalog (Meditative #97
@@ -96,6 +104,16 @@ const TOKEN_POOLS: &[TokenPool] = &[
     TokenPool {
         tag: Tag::Ky,
         phrase: "random reward",
+    },
+    // R1857002: the held Stinkyscape set's #4 Olivian Expanse and #154 Dice of Doom name its six
+    // Terminus tokens as "a Terminus card", and #137 its four War Doctrines as "a War Doctrine".
+    TokenPool {
+        tag: Tag::Terminus,
+        phrase: "Terminus card",
+    },
+    TokenPool {
+        tag: Tag::WarDoctrine,
+        phrase: "War Doctrine",
     },
 ];
 
@@ -205,6 +223,14 @@ fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_string()).collect()
 }
 
+/// R1420, R1857000: the ids among `ids` of cards whose set ships, so a pin of the shipped sets' cards
+/// holds while a held set's cards land (the release re-pins it).
+fn shipped(ids: Vec<String>) -> Vec<String> {
+    ids.into_iter()
+        .filter(|id| CATALOG.get(id.as_str()).is_some_and(|card| set_ships(card.set)))
+        .collect()
+}
+
 mod r279_the_reference_map_spec_5_7_10_10 {
     use super::*;
 
@@ -276,9 +302,8 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         }
         let unnamed: Vec<String> = entries()
             .into_iter()
-            .filter(|card| card.token && !named.contains(&card.id))
+            .filter(|card| card.token && !named.contains(&card.id) && !dealt_by_a_rule(card))
             .map(|card| card.id.clone())
-            .filter(|id| !DEALT_BY_A_RULE.contains(&id.as_str()))
             .collect();
         assert_eq!(unnamed, Vec::<String>::new());
     }
@@ -308,8 +333,9 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 "T-AI-10", "1.1", "1.2", "1.3", "1.4",
             ])
         );
+        // The pins are the shipped sets' cards (R1857000: a held set's are pinned at its release).
         assert_eq!(
-            naming("Pancake token"),
+            shipped(naming("Pancake token")),
             strings(&["classicplus-012", "classicplus-013"])
         );
         // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #59's granted
@@ -317,7 +343,7 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         // until #831's patch. Issue #911 put Claude's Datacenter's "AI Generated card" back in the
         // pool's one spelling.
         assert_eq!(
-            naming("AI generated card"),
+            shipped(naming("AI generated card")),
             strings(&[
                 "classicplus-043",
                 "classicplus-078",
@@ -333,8 +359,58 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         );
         // Balance patch 1 hid the odds and the reward lists: "Grape" names the five
         // Grapes, and "a random reward" names KY's Gift.
-        assert_eq!(naming("Grape"), strings(&["classicplus-065", "classicplus-066"]));
-        assert_eq!(naming("random reward"), strings(&["classicplus-042"]));
+        assert_eq!(
+            shipped(naming("Grape")),
+            strings(&["classicplus-065", "classicplus-066"])
+        );
+        assert_eq!(shipped(naming("random reward")), strings(&["classicplus-042"]));
+    }
+
+    #[test]
+    fn r1857002_terminus_cards_war_doctrines_and_resources_are_named_by_their_pools_and_their_roll() {
+        let phrase = |tag: Tag| {
+            TOKEN_POOLS
+                .iter()
+                .find(|pool| pool.tag == tag)
+                .map(|pool| pool.phrase)
+        };
+        assert_eq!(phrase(Tag::Terminus), Some("Terminus card"));
+        assert_eq!(phrase(Tag::WarDoctrine), Some("War Doctrine"));
+        // No shipped card names either pool, so neither names a shipped token (Core #100 Ceaseless
+        // Void, the shipped Terminus card, is no token).
+        assert_eq!(shipped(naming("Terminus card")), Vec::<String>::new());
+        assert_eq!(shipped(naming("War Doctrine")), Vec::<String>::new());
+        // A Resource is dealt by R1840002's roll, as The Coin by §2.1's setup: it needs no card to
+        // name it. A plain token still does.
+        let resource: CardDef = serde_json::from_value(serde_json::json!({
+            "id": "stinkyscape-t-reknite", "index": "T-reknite", "name": "Reknite", "set": "Stinkyscape",
+            "type": "Spell", "tags": ["Token"], "rarity": "Token", "token": true, "cost": 0,
+            "resource": {
+                "rarity": "Common",
+                "base": { "sellMin": 1, "sellMax": 3, "buy": 3 },
+                "radiant": { "sellMin": 2, "sellMax": 6, "buy": 6 }
+            },
+            "base": { "keywords": [], "text": "Draw a card." },
+            "radiant": { "keywords": [], "text": "Draw 2 cards." }
+        }))
+        .expect("a Resource definition");
+        assert!(dealt_by_a_rule(&resource));
+        assert!(dealt_by_a_rule(&CATALOG["core-t-coin"]));
+        assert!(!dealt_by_a_rule(&CATALOG["core-t-sheep"]));
+        // Every Stinkyscape Resource the catalog holds yet is a token; and the makers that have landed
+        // name their pools: #4 Olivian Expanse and #154 Dice of Doom a Terminus card, #137 a War Doctrine.
+        for card in entries().into_iter().filter(|card| card.resource.is_some()) {
+            assert!(card.token, "{} is a Resource and a token (R1840000)", card.id);
+        }
+        for (maker, pool) in [
+            ("stinkyscape-004", "Terminus card"),
+            ("stinkyscape-154", "Terminus card"),
+            ("stinkyscape-137", "War Doctrine"),
+        ] {
+            if CATALOG.contains_key(maker) {
+                assert!(naming(pool).contains(&maker.to_string()), "{maker} names {pool}");
+            }
+        }
     }
 
     #[test]
