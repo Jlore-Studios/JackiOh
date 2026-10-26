@@ -1930,11 +1930,10 @@
     "what": "review #1985 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-26T09:07:19Z",
+    "at": "2026-10-26T09:13:58Z",
     "notes": [
-      "delivered build #1895 on muse (run 40291397170): approved",
-      "delivered revise #1975 on claude-1 (run 40290270133): approved",
-      "started review #1985 on claude-5 (run 40297563446)",
+      "delivered review #1985 on claude-5 (run 40297563446): interrupted",
+      "started review #1985 on claude-1 (run 40298298624)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -2641,7 +2640,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T09:07:19Z",
+  "loop_tick": "2026-10-26T09:13:58Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T08:58:13Z",
