@@ -2951,10 +2951,13 @@
     "what": "plan #2015 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-26T18:13:53Z",
+    "at": "2026-10-26T18:28:48Z",
     "notes": [
-      "delivered revise #2004 on claude-3 (run 40365282574): approved",
-      "night_run: could not finish (IncompleteRead: IncompleteRead(0 bytes read, 401382 more expected))"
+      "needs_plan: could not finish (IncompleteRead: IncompleteRead(219264 bytes read, 182118 more expected))",
+      "delivered plan #2010 on claude-7 (run 40371770600): failed",
+      "started plan #2010 on muse (run 40378621320)",
+      "started plan #2015 on claude-3 (run 40379071925)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -3660,7 +3663,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T18:13:53Z",
+  "loop_tick": "2026-10-26T18:28:48Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T18:01:10Z",
