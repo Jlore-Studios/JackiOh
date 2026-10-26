@@ -112,13 +112,18 @@
 //!   I9 the wire tells the truth (§10.3: every visible state change emits an event; §10.10: every client
 //!      renders from them; #1719). A payload wrong the same way every time folds to the same hash, so the
 //!      replay check cannot see it. In the stream, a `turnEnded` or `turnAutoEnded` names the turn under
-//!      way, the shadow's `turn` and player (§2.2). On the state an action left, its last `turnStarted`
-//!      names `state.turn` and `state.active` (§2.2), each `gameOver` is `state.result` (§2.5), and each
-//!      seat's last `manaChanged` is its `mana.current` and `mana.max` (§2.3): every mana write announces
-//!      one (the refresh, a gain, a refresh of spent mana, a payment, a Duos pass, the sandbox's). A
-//!      Glitch's reset (R676) starts the game again once the action has settled, at setup, announcing
-//!      neither a turn nor mana, so an action that reset the game (`state.resets` moved) has its
-//!      `turnStarted` and `manaChanged` left unread: they named the game it took.
+//!      way, the shadow's `turn` and player (§2.2), and each `fatigue` is its seat's next fatigue draw:
+//!      its `count` one past the shadow's `fatigue` for that seat (the start state's count, then one per
+//!      `fatigue` seen) and its `amount` `FATIGUE_DAMAGE(count)` (§2.4, R3, R315; #1902). On the state an
+//!      action left, its last `turnStarted` names `state.turn` and `state.active` (§2.2), each `gameOver`
+//!      is `state.result` (§2.5), each seat's last `manaChanged` is its `mana.current` and `mana.max`
+//!      (§2.3): every mana write announces one (the refresh, a gain, a refresh of spent mana, a payment,
+//!      a Duos pass, the sandbox's), and each seat's `fatigue_count` is the shadow's count, since a
+//!      fatigue draw announces itself even when Armor takes its hit whole (R240, R1362). A Glitch's reset
+//!      (R676) starts the game again once the action has settled, at setup, announcing neither a turn nor
+//!      mana, so an action that reset the game (`state.resets` moved) has its `turnStarted` and
+//!      `manaChanged` left unread: they named the game it took. Its `fatigue` events are still read,
+//!      against the game they fell in, and the fatigue shadow starts again from the new game's counts.
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -133,7 +138,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Map, Value};
 
-use crate::config::{MIN_PLAGUE_PAYMENT, WINDFURY_ATTACKS};
+use crate::config::{FATIGUE_DAMAGE, MIN_PLAGUE_PAYMENT, WINDFURY_ATTACKS};
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
 use crate::play_choices::PlayAction;
@@ -141,9 +146,9 @@ use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::subsystems::activate::ActivateAction;
 use crate::wire::{
     Action, ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView,
-    Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, Phase, PlagueSpend, PlayerId, PlayerView,
-    PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice, ZoneName,
-    has_keyword, opponent_of,
+    Enchantment, GameEvent, GameResult, KeywordKind, PLAYER_IDS, PerPlayer, Phase, PlagueSpend, PlayerId,
+    PlayerView, PromptKind, RedirectWhat, RevealAt, Row, Selection, Team, TuningChange, Zone, ZoneChoice,
+    ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -1479,6 +1484,9 @@ pub struct InvariantMonitor {
     attack: Option<ShadowAttack>,
     /// I9: `state.resets` as the last state `after` read left it; a move is a Glitch's reset (R676).
     resets: Option<i32>,
+    /// I9: each seat's fatigue draws as the stream counted them (§2.4, R3, R315): the start state's
+    /// `fatigue_count`, one more per `fatigue` event, and the new game's count after a Glitch's reset (R676).
+    fatigue: PerPlayer<i32>,
     /// R1829000: the cards dormant beneath a pile's top, either row, in the last state read.
     dormant: IndexSet<String>,
 }
@@ -1505,6 +1513,7 @@ impl InvariantMonitor {
             readied: IndexSet::new(),
             attack: None,
             resets: start.resets,
+            fatigue: start.players.map(|_, side| side.fatigue_count),
             dormant: dormant_cards(start),
         }
     }
@@ -1733,6 +1742,28 @@ impl InvariantMonitor {
         found
     }
 
+    /// I9 on the state one action left: each seat's `fatigue_count` is the fatigue draws the stream
+    /// announced for it (§2.4, §10.3, R315), one whose hit Armor took whole included (R240, R1362). A
+    /// Glitch's reset (R676) starts the game again, so the count starts again from the state it left.
+    fn counted_fatigue(&mut self, state: &GameState, reset: bool) -> Vec<String> {
+        if reset {
+            self.fatigue = state.players.map(|_, side| side.fatigue_count);
+            return Vec::new();
+        }
+        let mut found: Vec<String> = Vec::new();
+        for seat in PLAYER_IDS {
+            let (counted, held) = (self.fatigue[seat], state.players[seat].fatigue_count);
+            if counted != held {
+                found.push(format!(
+                    "I9 silent fatigue: {seat} holds fatigue count {held} on turn {}, but the stream's count for \
+                     {seat} is {counted} (§2.4, §10.3, R315)",
+                    state.turn
+                ));
+            }
+        }
+        found
+    }
+
     /// I1 and I3 on the state the next action is chosen in. Empty when clean.
     pub fn before(&mut self, state: &GameState, player: PlayerId, action: &ActionBody) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
@@ -1868,6 +1899,31 @@ impl InvariantMonitor {
                              turn {} (§2.2, §10.3)",
                             event.event_type().as_str(),
                             self.active,
+                            self.turn
+                        ));
+                    }
+                }
+                GameEvent::Fatigue {
+                    player,
+                    count,
+                    amount,
+                } => {
+                    // I9: a fatigue draw is its seat's next, and deals FATIGUE_DAMAGE of its count (§2.4, R3,
+                    // R315). The shadow counts the events, so one skipped count is one finding.
+                    let expected = self.fatigue[*player] + 1;
+                    self.fatigue[*player] = expected;
+                    if *count != expected {
+                        found.push(format!(
+                            "I9 wrong fatigue count: fatigue names {player}'s fatigue draw {count} on turn {}, but it \
+                             is their fatigue draw {expected} (§2.4, R3, R315)",
+                            self.turn
+                        ));
+                    }
+                    let dealt = FATIGUE_DAMAGE(*count);
+                    if *amount != dealt {
+                        found.push(format!(
+                            "I9 wrong fatigue damage: fatigue says {player}'s fatigue draw {count} deals {amount} on \
+                             turn {}, but FATIGUE_DAMAGE({count}) is {dealt} (§2.4, R3, R315)",
                             self.turn
                         ));
                     }
@@ -2046,6 +2102,7 @@ impl InvariantMonitor {
         let reset = state.resets != self.resets;
         self.resets = state.resets;
         found.extend(InvariantMonitor::announced_state(events, state, reset));
+        found.extend(self.counted_fatigue(state, reset));
 
         // R1829000: a card a Stack pile uncovers has entered, though no event says so (R212).
         if !reset {

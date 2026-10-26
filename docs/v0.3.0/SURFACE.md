@@ -363,7 +363,8 @@ because practice saves on players' devices store it (`apps/web/src/practice/core
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
-1. Serialise the state to `serde_json::Value`; remove the top-level keys `applied` and `opening`.
+1. Serialise the state to `serde_json::Value`; remove the top-level keys `applied`, `opening` and
+   `generators` (the Created cards' generators, presentation only, R1956001).
 2. `canonical(v)`: a string, number, bool or null as `JSON.stringify` writes it (serde_json writes the
    same for integers and for the escapes `\" \\ \b \f \n \r \t \u00xx`, lower-case hex, non-ASCII
    raw); an array as `[` + items joined by `,` + `]`; an object as `{` + `"key":canonical(value)`

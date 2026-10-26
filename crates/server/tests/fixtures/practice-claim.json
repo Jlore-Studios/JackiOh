@@ -559,18 +559,11 @@
       "nonce": "a36"
     },
     {
-      "attackerId": "c31",
-      "targetId": "hero-p2",
-      "type": "attack",
-      "playerId": "p1",
-      "nonce": "a37"
-    },
-    {
       "attackerId": "c16",
       "targetId": "hero-p2",
       "type": "attack",
       "playerId": "p1",
-      "nonce": "a38"
+      "nonce": "a37"
     }
   ]
 }
