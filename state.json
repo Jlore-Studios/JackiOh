@@ -1987,6 +1987,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1963": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-26T01:37:40Z",
+      "issue": 1853,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
