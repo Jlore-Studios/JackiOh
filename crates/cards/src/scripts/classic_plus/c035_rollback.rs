@@ -123,10 +123,6 @@ mod tests {
         events.iter().filter(|event| event.event_type() == want).cloned().collect()
     }
 
-    fn target(instance_id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": instance_id }])
-    }
-
     use crate::js;
 
     use crate::matches_object;
@@ -281,7 +277,7 @@ mod tests {
             crate::register_all();
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, HIT_JOB], "field": [VANILLA] }, "p2": { "field": [TIMMY] } }));
             let victim = unit_id(&s, P2, 1).unwrap_or_default();
-            s.play(HIT_JOB, json!({ "targets": target(&victim) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&victim) }));
             to_turn_13(&mut s);
             let copy: GameState = serde_json::from_str(&serde_json::to_string(s.state()).unwrap()).unwrap();
             assert_eq!(hash_state(&copy), hash_state(s.state()));
@@ -411,7 +407,7 @@ mod tests {
             let fiender = unit(&s, P1, 1);
             let felinor = s.state().players.p1.units[0].as_ref().and_then(|pile| pile.get(1)).cloned();
             let vanilla = unit(&s, P1, 2);
-            s.play(HIT_JOB, json!({ "targets": target(&fiender.id) })); // the pile's top dies; Big Felinor resumes
+            s.play(HIT_JOB, json!({ "targets": pick::id(&fiender.id) })); // the pile's top dies; Big Felinor resumes
             s.switch_position(&vanilla);
             assert_eq!(unit_id(&s, P1, 1), felinor.as_ref().map(|card| card.id.clone()));
             s.end_turn();
@@ -481,17 +477,17 @@ mod tests {
                 "p2": { "hand": [HIT_JOB], "field": [TIMMY] },
             }));
             let (early, late) = (unit(&s, P1, 1), unit(&s, P1, 2));
-            s.play(SURGERY, json!({ "targets": target(&early.id) })); // turn 11: +3/+3 and a random keyword
+            s.play(SURGERY, json!({ "targets": pick::id(&early.id) })); // turn 11: +3/+3 and a random keyword
             let keywords = s.card(&early).granted_keywords.clone();
             assert_eq!(keywords.len(), 1);
             s.end_turn(); // turn 12's snapshot holds it buffed
-            s.play(HIT_JOB, json!({ "targets": target(&early.id) })); // it dies, and leaving the field strips both (R78)
+            s.play(HIT_JOB, json!({ "targets": pick::id(&early.id) })); // it dies, and leaving the field strips both (R78)
             assert!(matches_object(
                 &js(s.card(&early)),
                 &json!({ "buffs": { "attack": 0, "health": 0 }, "grantedKeywords": [] })
             ));
             s.end_turn();
-            s.play(SURGERY, json!({ "targets": target(&late.id) })); // turn 13, after that snapshot
+            s.play(SURGERY, json!({ "targets": pick::id(&late.id) })); // turn 13, after that snapshot
             assert_eq!(js(&s.card(&late).buffs), json!({ "attack": 3, "health": 3 }));
             s.end_turn().end_turn();
 
@@ -541,9 +537,9 @@ mod tests {
             let vanilla = unit(&s, P1, 4);
             let timmy = unit(&s, P2, 1);
             let theirs = unit(&s, P2, 2);
-            s.play(HIT_JOB, json!({ "targets": target(&timmy.id) })); // to p2's graveyard
+            s.play(HIT_JOB, json!({ "targets": pick::id(&timmy.id) })); // to p2's graveyard
             s.end_turn();
-            s.play(COLLATERAL, json!({ "targets": target(&vanilla.id) })); // to p1's exile, nothing beside it
+            s.play(COLLATERAL, json!({ "targets": pick::id(&vanilla.id) })); // to p1's exile, nothing beside it
             s.end_turn().end_turn();
             s.play(FLOOD, json!({})); // p2's turn 14: every Unit to its owner's hand, and the turn has nothing left (R82)
             assert_eq!(s.state().turn, 15);
@@ -581,7 +577,7 @@ mod tests {
             crate::register_all();
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, MIND_CONTROL], "field": [VANILLA] }, "p2": { "field": [VANILLA, TIMMY] } }));
             let timmy = unit(&s, P2, 2);
-            s.play(MIND_CONTROL, json!({ "targets": target(&timmy.id) }));
+            s.play(MIND_CONTROL, json!({ "targets": pick::id(&timmy.id) }));
             assert_eq!(unit_id(&s, P1, 2), Some(timmy.id.clone()));
             to_turn_13(&mut s);
 
@@ -604,7 +600,7 @@ mod tests {
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, MIND_CONTROL], "field": [VANILLA] }, "p2": { "hand": [FLOOD], "field": [TIMMY] } }));
             let vanilla = unit(&s, P1, 1);
             let timmy = unit(&s, P2, 1);
-            s.play(MIND_CONTROL, json!({ "targets": target(&timmy.id) }));
+            s.play(MIND_CONTROL, json!({ "targets": pick::id(&timmy.id) }));
             s.end_turn(); // turn 12's snapshot holds Timmy on p1's side
             s.play(FLOOD, json!({})); // to its controller, p1 (R747); the turn has nothing left (R82)
             s.expect_in_zone(&timmy, "hand");
@@ -645,7 +641,7 @@ mod tests {
             crate::register_all();
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, HIT_JOB], "field": [VANILLA, RUSH_TOKEN] }, "p2": { "field": [TIMMY] } }));
             let token = unit(&s, P1, 2);
-            s.play(HIT_JOB, json!({ "targets": target(&token.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&token.id) }));
             s.expect_in_zone(&token, "gone");
             to_turn_13(&mut s);
 
@@ -689,7 +685,7 @@ mod tests {
                 "p2": { "field": [TIMMY], "backrow": [SHEEPISH] },
             }));
             let trap = backrow(&s, P2, 1);
-            s.play(MAGIC_JAMMED, json!({ "targets": target(&trap.id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&trap.id) }));
             s.expect_in_zone(&trap, "graveyard");
             assert!(s.state().players.p2.locks.backrow[0]);
             to_turn_13(&mut s);
@@ -729,7 +725,7 @@ mod tests {
             crate::register_all();
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, HIT_JOB], "field": [VANILLA] }, "p2": { "field": [TIMMY, VANILLA] } }));
             let timmy = unit(&s, P2, 1);
-            s.play(HIT_JOB, json!({ "targets": target(&timmy.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&timmy.id) }));
             s.end_turn();
             let attacker = unit(&s, P2, 2);
             s.attack(&attacker, "hero");
@@ -784,7 +780,7 @@ mod tests {
             crate::register_all();
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, HIT_JOB], "field": [VANILLA, DEFENDER] }, "p2": { "field": [TIMMY] } }));
             let defender = unit(&s, P1, 2);
-            s.play(HIT_JOB, json!({ "targets": target(&defender.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&defender.id) }));
             assert_eq!(s.card(&defender).reborn_spent, Some(true));
             to_turn_13(&mut s);
 
@@ -806,7 +802,7 @@ mod tests {
             crate::register_all();
             let mut s = on_turn_11(json!({ "p1": { "hand": [ROLLBACK, HIT_JOB], "field": [VANILLA, TIMMY] }, "p2": { "field": [VANILLA] } }));
             let timmy = unit(&s, P1, 2);
-            s.play(HIT_JOB, json!({ "targets": target(&timmy.id) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&timmy.id) }));
             to_turn_13(&mut s);
             let vanilla = unit(&s, P1, 1);
             s.attack(&vanilla, "hero");
@@ -987,7 +983,7 @@ mod tests {
                 "p2": { "field": [VANILLA, TIMMY] },
             }));
             let timmy = unit(&s, P2, 2);
-            s.play(MIND_CONTROL, json!({ "targets": target(&timmy.id) }));
+            s.play(MIND_CONTROL, json!({ "targets": pick::id(&timmy.id) }));
             to_turn_13(&mut s);
             play_rollback(&mut s, &["2", "your side"]);
             // p1's side as it was holds no Timmy, and p2's side is not restored: it goes to its controller's hand (R747).

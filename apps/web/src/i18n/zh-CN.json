@@ -3431,5 +3431,14 @@
   "Weakest cards": "最弱卡牌",
   "No card is {z} standard errors from 50% yet.": "还没有卡牌偏离 50% 达到 {z} 个标准误。",
   "{set} · {rate} over {games} games · {z} standard errors": "{set} · {games} 局胜率 {rate} · {z} 个标准误",
-  "★ marks the highest win rate. ± is one standard error, counted as if every card-game were independent; they are not, so sets less than two or three of it apart are within noise. Strong and weak cards are {z} or more standard errors over or under 50%.": "★ 标出胜率最高的系列。± 为一个标准误，按每张卡牌的每局对局相互独立计算；实际并非如此，因此相差不到两三个标准误的系列差异只是噪声。强势和弱势卡牌高于或低于 50% 至少 {z} 个标准误。"
+  "★ marks the highest win rate. ± is one standard error, counted as if every card-game were independent; they are not, so sets less than two or three of it apart are within noise. Strong and weak cards are {z} or more standard errors over or under 50%.": "★ 标出胜率最高的系列。± 为一个标准误，按每张卡牌的每局对局相互独立计算；实际并非如此，因此相差不到两三个标准误的系列差异只是噪声。强势和弱势卡牌高于或低于 50% 至少 {z} 个标准误。",
+  "Patches": "版本",
+  "Patch": "版本",
+  "← Previous patch ({patch})": "← 上一个版本（{patch}）",
+  "← Previous patch": "← 上一个版本",
+  "Next patch ({patch}) →": "下一个版本（{patch}）→",
+  "Next patch →": "下一个版本 →",
+  "{patch} · {games} games": "{patch} · {games} 局",
+  "Patches:": "版本：",
+  "A card's figures start again at each patch. A micro patch starts again only the cards it changed, and every other card keeps all its games; a patch nobody played before the next one shipped counts as a micro.": "卡牌的数据在每个版本重新开始统计。小版本只重新统计它改动的卡牌，其他卡牌保留全部对局；在下一个版本发布前无人游玩的版本按小版本计算。"
 }

@@ -16,7 +16,7 @@ use std::cell::Cell;
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, act, dealt_game, is_legal, trace};
+use super::support::{AI, act, ai_options, dealt_game, is_legal, js, trace};
 
 const SKIPPED: &[ActionType] = &[
     ActionType::Concede,
@@ -24,20 +24,6 @@ const SKIPPED: &[ActionType] = &[
     ActionType::AnswerDraw,
     ActionType::Mulligan,
 ];
-
-/// TS's `{ rng: createRng(seed), budget }`, with no clock.
-fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget,
-        should_stop: None,
-    }
-}
-
-/// A value as its JSON: `SearchStats.stoppedBy` is compared by its literal, whatever its Rust name.
-fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
 
 /// An action body from TS's object literal.
 fn body(literal: Value) -> ActionBody {

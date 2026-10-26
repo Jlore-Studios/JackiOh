@@ -31,9 +31,9 @@ use jackioh_engine::{
     KeywordKind, ModifierKind, PlayerId, PlayerState, Position, SeatOutcome, UnitView, active_brittle_count,
     active_units_of, animated_kind_of, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_keywords, card_type_of_face, credit_lapsing, effective_cost,
-    effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card,
-    lost_refreshes_left, outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
-    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
+    effective_life, find_def, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of,
+    is_temporary_card, lost_refreshes_left, outcome_for, owed_mana_of, own_cost, pierces, query_cost,
+    reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -57,6 +57,18 @@ fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
         return -w.win;
     }
     w.hero_health * (f64::from(health) * f64::from(start)).sqrt()
+}
+
+/// §4.4 step 8: what healing `player`'s hero by `amount` is worth on `hero_value`'s curve, the more the
+/// lower its life, its healing multiplier included (R1180003). A hero's heal has no cap (§6.3).
+pub(crate) fn heal_worth(state: &GameState, player: PlayerId, amount: i32, w: &EvalWeights) -> f64 {
+    let life = effective_life(state, player);
+    if amount <= 0 || life <= 0 {
+        return 0.0;
+    }
+    let start = starting_life(state, player);
+    let healed = amount.saturating_mul(heal_multiplier_of(state, player));
+    hero_value(life.saturating_add(healed), start, w) - hero_value(life, start, w)
 }
 
 /// §10.8, R33, R686: whether `seat` may read this backrow card, by the rule `view_for` reads
@@ -517,7 +529,7 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// `subsystems::projected_hero_damage` (armor, which a Pierce hit skips (R346), and the Anti-oneshot
 /// cap, per hit), and the results are summed.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
-    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
         let ready = view.position == Position::Atk || (w.deft_defense_attacks && deft_in_defense(&view));
@@ -528,8 +540,9 @@ pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) 
             continue;
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
+        // Nor is it summoning sick then, so every swing may hit the hero.
         for _ in 0..attacks_per_turn(state, unit) {
-            attacks.push((unit, view.attack));
+            attacks.push((unit, view.attack, true));
         }
     }
     damage_past_taunts(state, attacker.opponent(), &attacks)
@@ -560,13 +573,14 @@ impl TauntStand {
     }
 }
 
-/// What `attacks` (one entry per attack: the attacker and its attack) deal `defender`'s hero once its
-/// Taunt units have soaked up the smallest attackers they bind, as `face_threat` counts it. §4.2 step
-/// 3: a Taunt binds only the attackers that may attack it, asked of the engine's own
+/// What `attacks` (one entry per attack: the attacker, its attack and whether it may hit the hero once
+/// no Taunt walls it) deal `defender`'s hero once its Taunt units have soaked up the attackers they
+/// bind, those that may not hit the hero first and then the smallest, as `face_threat` counts it. §4.2
+/// step 3: a Taunt binds only the attackers that may attack it, asked of the engine's own
 /// `attack_restriction` (what its Taunt wall reads), so a Flying Taunt in Attack Position holds no
 /// ground attacker (R783002) and a landed one, in Defense Position, holds every attacker (R783003).
 ///
-/// Each bound attacker, smallest first, is one §4.4 hit on the Taunt (#898): an attacker its First
+/// Each bound attacker, in that order, is one §4.4 hit on the Taunt (#898): an attacker its First
 /// Strike destroys first lands nothing (§4.3 step 1, `falls_to_first_strike`); a Divine Shield takes
 /// the first hit whole (step 1); the Taunt's Armor comes off each hit, unless it pierces (step 2,
 /// R346), and a hit the Armor takes whole does nothing (R1361); Poisonous destroys with any damage
@@ -576,11 +590,16 @@ impl TauntStand {
 /// and Trample excess past a neighbour reaches the hero as for the main hit. A Taunt its attackers
 /// cannot destroy holds them all, and a destroyed Reborn Taunt comes back and binds the attackers
 /// left (§4.5 step 4, `reborn_body`). Lane strike (R94) and combat-only bonuses (R1120) stay out.
-/// Every remaining hit goes through `subsystems::projected_hero_damage` with its attacker's Pierce
-/// (R346).
-pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&CardInstance, i32)]) -> i32 {
-    let mut free: Vec<(&CardInstance, i32)> = attacks.to_vec();
-    free.sort_by_key(|(_, attack)| *attack);
+/// Every remaining hit that may hit the hero goes through `subsystems::projected_hero_damage` with its
+/// attacker's Pierce (R346); one that may not (a Rush unit on its summon turn, §6.1, or one in the
+/// Gauntlet, R1849005) binds and tramples like any other but lands nothing past the Taunts (#1823).
+pub fn damage_past_taunts(
+    state: &GameState,
+    defender: PlayerId,
+    attacks: &[(&CardInstance, i32, bool)],
+) -> i32 {
+    let mut free: Vec<(&CardInstance, i32, bool)> = attacks.to_vec();
+    free.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
     let mut stands: Vec<TauntStand> = active_units_of(state, defender)
         .into_iter()
         .map(|unit| TauntStand::of(unit.clone(), unit_view(state, unit)))
@@ -596,11 +615,11 @@ pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&Ca
         };
         let (bound, mut unbound): (Vec<_>, Vec<_>) = free
             .into_iter()
-            .partition(|(attacker, _)| attack_restriction(state, attacker, &target).is_ok());
+            .partition(|(attacker, _, _)| attack_restriction(state, attacker, &target).is_ok());
         let mut bound = bound.into_iter();
         let mut poisoned = false;
         while stands[i].health > 0 && !poisoned {
-            let Some((attacker, attack)) = bound.next() else {
+            let Some((attacker, attack, _)) = bound.next() else {
                 break;
             };
             // §4.3 step 1: an attacker the Taunt's First Strike destroys lands nothing.
@@ -694,7 +713,7 @@ pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&Ca
             stands[i].health -= dealt;
         }
         unbound.extend(bound);
-        unbound.sort_by_key(|(_, attack)| *attack);
+        unbound.sort_by_key(|(_, attack, may_hit_hero)| (*may_hit_hero, *attack));
         free = unbound;
         // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
         if (stands[i].health <= 0 || poisoned)
@@ -707,7 +726,10 @@ pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&Ca
         i += 1;
     }
 
-    for (attacker, hit) in &free {
+    for (attacker, hit, may_hit_hero) in &free {
+        if !may_hit_hero {
+            continue;
+        }
         let pierce = pierces(state, Some(attacker), None);
         total += subsystems::projected_hero_damage(state, defender, *hit, pierce);
     }

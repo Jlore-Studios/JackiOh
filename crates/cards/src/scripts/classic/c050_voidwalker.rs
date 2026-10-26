@@ -82,13 +82,6 @@ mod tests {
 
     use crate::js;
 
-    fn target(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {} lane {lane}", player.as_str());
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     fn exiled_events(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(js).filter(|event| event["type"] == "exiled").collect()
     }
@@ -111,7 +104,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
             let vanilla = s.card(VANILLA).clone();
-            let targets = target(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(HIT_JOB, json!({ "targets": targets }));
             let exiled: Vec<Value> = exiled_events(&s).into_iter().map(|event| event["instanceId"].clone()).collect();
             assert!(exiled.contains(&json!(vanilla.id)));
@@ -151,7 +144,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
                 let vanilla = s.card(VANILLA).clone();
                 let hit_job = s.card(HIT_JOB).clone();
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&vanilla, "exile").expect_in_zone(&hit_job, "exile");
                 assert_eq!(def_ids(&s.pile(P2, "exile")), vec![VANILLA]);
@@ -218,7 +211,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID] }, "p2": { "hand": [FILLER], "field": [RUSH_TOKEN] } }));
                 let token = s.card(RUSH_TOKEN).clone();
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&token, "gone");
                 assert!(def_ids(&s.pile(P2, "exile")).is_empty());
@@ -232,7 +225,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [{ "def": DEFENDER, "radiant": true }] },
                 }));
                 let defender = s.card(DEFENDER).clone();
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&defender, "exile");
                 assert!([1, 2, 3, 4, 5].iter().all(|lane| s.unit(P2, *lane).is_none()));
@@ -262,7 +255,7 @@ mod tests {
                     "p2": { "hand": [HIT_JOB, STOCKPILE, FILLER], "library": [FILLER, FILLER] },
                     "active": "p2",
                 }));
-                let targets = target(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.play(STOCKPILE, json!({}));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![HIT_JOB, STOCKPILE]);
@@ -287,7 +280,7 @@ mod tests {
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [VOID, { "def": FIENDER, "stack": true }] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
                 }));
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![VANILLA]);
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![HIT_JOB]);
@@ -297,7 +290,7 @@ mod tests {
             fn in_a_hand_it_replaces_nothing_the_aura_is_the_card_on_the_fields() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [VOID, HIT_JOB, FILLER] }, "p2": { "hand": [FILLER], "field": [VANILLA] } }));
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(def_ids(&s.pile(P2, "graveyard")), vec![VANILLA]);
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![HIT_JOB]);
@@ -343,7 +336,7 @@ mod tests {
                     "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": VOID, "radiant": true }] },
                     "p2": { "hand": [FILLER], "field": [VANILLA] },
                 }));
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(def_ids(&s.pile(P2, "exile")), vec![VANILLA]);
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![HIT_JOB]);
@@ -373,7 +366,7 @@ mod tests {
                     "p2": { "hand": [HIT_JOB, FILLER] },
                     "active": "p2",
                 }));
-                let targets = target(&s, P1, 2);
+                let targets = pick::unit_at(&s, P1, 2);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![GARY]);
                 assert_eq!(def_ids(&s.pile(P2, "exile")), vec![HIT_JOB]);
@@ -400,7 +393,7 @@ mod tests {
                     "p2": { "hand": [HIT_JOB, FILLER] },
                     "active": "p2",
                 }));
-                let targets = target(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 assert_eq!(def_ids(&s.pile(P1, "graveyard")), vec![VOID]);
             }
@@ -413,7 +406,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [RUSH_TOKEN] },
                 }));
                 let token = s.card(RUSH_TOKEN).clone();
-                let targets = target(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
                 s.expect_in_zone(&token, "gone");
                 assert!(def_ids(&s.pile(P2, "exile")).is_empty());

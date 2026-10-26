@@ -56,6 +56,8 @@
 use jackioh_cards::register_all;
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
+
+use super::{fixture, in_hand};
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 const TEMPO_TIMMY: &str = "core-011";
@@ -123,23 +125,6 @@ fn register_fixture_scripts(id: &str, scripts: CardScripts) {
     let mut registry = registered_scripts().clone();
     registry.insert(id.to_string(), scripts);
     register_scripts(registry);
-}
-
-/// A fixture card: a transient def in the match state and its script in the registry. `stats` is
-/// TS's `stats = { attack: 2, health: 2 }` (`None` takes the default).
-fn fixture(s: &mut Scenario, id: &str, ty: &str, script: Script, stats: Option<Value>) {
-    let stats = stats.unwrap_or_else(|| json!({ "attack": 2, "health": 2 }));
-    let face = fixture_face(id, ty, &stats, &json!([]));
-    s.state_mut()
-        .transient_defs
-        .insert(id.to_string(), fixture_def(id, ty, 0, &face));
-    register_fixture_scripts(
-        id,
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
 }
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
@@ -282,7 +267,7 @@ mod r174_r59_a_delayed_effect_that_asks_is_still_followed_by_the_check_before_th
         fixture(
             &mut s,
             "edge-r5-pinger",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 resume: IndexMap::from([
                     (
@@ -346,7 +331,7 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
         fixture(
             &mut s,
             "edge-r5-saver",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 resume: IndexMap::from([
                     (
@@ -407,7 +392,7 @@ mod r59_no_state_check_between_the_halves_of_one_delayed_effect_or_one_cast {
         fixture(
             &mut s,
             "edge-r5-cod",
-            "Spell",
+            CardType::Spell,
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 cry: Some(hook(move |_ctx| {
@@ -458,7 +443,7 @@ mod r127_a_continuation_with_no_instance_keeps_its_script_across_its_own_prompt 
         fixture(
             &mut s,
             "edge-r5-orphan",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 resume: IndexMap::from([
                     (
@@ -522,7 +507,7 @@ mod s10_3_r113_a_trap_s_list_is_resumable_like_any_other {
         fixture(
             &mut s,
             "edge-r5-asking-trap",
-            "Trap",
+            CardType::Trap,
             Script {
                 triggers: vec![
                     TriggerDef::new("edge-r5-asks", &[GameEventType::CardPlayed], |_ctx, _event| {
@@ -586,7 +571,7 @@ mod r53_r113_a_forced_run_waits_for_a_death_hook_s_question_before_its_next_comb
         fixture(
             &mut s,
             "edge-r5-last-word",
-            "Unit",
+            CardType::Unit,
             Script {
                 death: Some(hook(|_ctx| {
                     vec![effects::choose_target(json_as(
@@ -596,7 +581,7 @@ mod r53_r113_a_forced_run_waits_for_a_death_hook_s_question_before_its_next_comb
                 resume: IndexMap::from([("said", hook(|_ctx| vec![]))]),
                 ..Script::default()
             },
-            Some(json!({ "attack": 1, "health": 1 })),
+            Some(AttackHealth { attack: 1, health: 1 }),
         );
         let last_word = place_fixture(&mut s, "edge-r5-last-word", P1, Row::Units, 1);
         let timmy = must(s.unit(P1, 2), "p1's Tempo Timmy");
@@ -636,7 +621,7 @@ mod r89_a_death_hook_s_answered_step_reads_the_unit_as_it_died {
         fixture(
             &mut s,
             "edge-r5-grudge",
-            "Unit",
+            CardType::Unit,
             Script {
                 death: Some(hook(|_ctx| {
                     vec![effects::choose_target(json_as(
@@ -654,7 +639,7 @@ mod r89_a_death_hook_s_answered_step_reads_the_unit_as_it_died {
                 )]),
                 ..Script::default()
             },
-            Some(json!({ "attack": 2, "health": 2 })),
+            Some(AttackHealth { attack: 2, health: 2 }),
         );
         let grudge = place_fixture(&mut s, "edge-r5-grudge", P2, Row::Units, 1);
         must(
@@ -682,7 +667,7 @@ fn asking_trap_on_play(s: &mut Scenario, id: &str) {
     fixture(
         s,
         id,
-        "Trap",
+        CardType::Trap,
         Script {
             triggers: vec![
                 TriggerDef::new(
@@ -768,7 +753,7 @@ mod r59_activating_a_power_whose_draw_s_cast_is_still_asking_runs_no_state_check
         fixture(
             &mut s,
             "edge-r6-l7-power-cod",
-            "Spell",
+            CardType::Spell,
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 cry: Some(hook(move |_ctx| {
@@ -857,7 +842,7 @@ mod r70_r81_a_cast_asks_for_the_choices_its_card_declares {
         fixture(
             &mut s,
             "edge-r6-l7-targeted-cod",
-            "Spell",
+            CardType::Spell,
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 targets: declared,
@@ -902,7 +887,7 @@ mod r87_r113_r423_call_to_chaos_s_play_waits_for_the_cast_its_recursion_is_still
         fixture(
             &mut s,
             "edge-r6-l7-asks-on-every-play",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 on_play_hook: Some(hook(|_ctx| {
                     vec![effects::choose_mode(json_as(
@@ -996,7 +981,7 @@ mod r174_a_trap_owed_an_event_behind_another_trap_s_question_meets_the_event_as_
         fixture(
             &mut s,
             "edge-r6-l7-asks-then-kills",
-            "Trap",
+            CardType::Trap,
             Script {
                 triggers: vec![
                     TriggerDef::new(
@@ -1066,7 +1051,7 @@ mod r174_r113_a_list_s_tail_after_a_prompt_still_meets_the_stay_the_play_chose {
         fixture(
             &mut s,
             "edge-r6-l7-sac-ask-hit",
-            "Spell",
+            CardType::Spell,
             Script {
                 targets: vec![decl(
                     json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit"] } }),
@@ -1125,7 +1110,7 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
         fixture(
             &mut s,
             "edge-r6-l7-asking-death",
-            "Unit",
+            CardType::Unit,
             Script {
                 death: Some(hook(|_ctx| {
                     vec![effects::choose_mode(json_as(
@@ -1135,7 +1120,7 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
                 resume: IndexMap::from([("answered", hook(|_ctx| vec![]))]),
                 ..Script::default()
             },
-            Some(json!({ "attack": 2, "health": 2 })),
+            Some(AttackHealth { attack: 2, health: 2 }),
         );
         let asker = place_fixture(&mut s, "edge-r6-l7-asking-death", P1, Row::Units, 5);
         let asker_id = asker.id.clone();
@@ -1143,7 +1128,7 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
         fixture(
             &mut s,
             "edge-r6-l7-sacrificing-death",
-            "Unit",
+            CardType::Unit,
             Script {
                 death: Some(hook(move |_ctx| {
                     vec![effects::sacrifice(json_as(
@@ -1152,7 +1137,7 @@ mod r156_r113_a_death_pass_whose_hook_ends_in_a_nested_death_that_asks_still_owe
                 })),
                 ..Script::default()
             },
-            Some(json!({ "attack": 2, "health": 2 })),
+            Some(AttackHealth { attack: 2, health: 2 }),
         );
         let sacrificer = place_fixture(&mut s, "edge-r6-l7-sacrificing-death", P1, Row::Units, 1);
         let defender = must(s.unit(P1, 2), "p1's Right-house defender");
@@ -1191,7 +1176,7 @@ mod r68_r62_a_delayed_effect_made_while_its_point_is_resolving_waits_for_the_nex
         fixture(
             &mut s,
             "edge-r6-l7-reschedules",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 resume: IndexMap::from([
                     (
@@ -1280,7 +1265,7 @@ mod s10_5_step_3_r113_step_3_s_hooks_resume_where_they_stopped_whatever_the_answ
         fixture(
             &mut s,
             "edge-r6-l7-hook-leaves",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 on_play_hook: Some(hook(|_ctx| {
                     vec![effects::choose_mode(json_as(
@@ -1300,7 +1285,7 @@ mod s10_5_step_3_r113_step_3_s_hooks_resume_where_they_stopped_whatever_the_answ
         fixture(
             &mut s,
             "edge-r6-l7-hook-pings",
-            "Field Spell",
+            CardType::FieldSpell,
             Script {
                 on_play_hook: Some(hook(|_ctx| {
                     vec![effects::damage(json_as(
@@ -2068,12 +2053,6 @@ fn same(script: Script) -> CardScripts {
         base: script.clone(),
         radiant: script,
     }
-}
-
-fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
-    let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    s.state_mut().players[player].hand.push(card.clone());
-    card
 }
 
 fn on_library_top(s: &mut Scenario, def_ids: &[&str], player: PlayerId) -> Vec<CardInstance> {
@@ -3287,7 +3266,7 @@ mod r98_a_card_that_left_the_resolving_zone_before_its_question_is_answered {
         fixture(
             &mut s,
             "edge-r10-homing-spell",
-            "Spell",
+            CardType::Spell,
             Script {
                 // "Return this to your hand. Choose one: …" — then the answered step says "this costs 2 more".
                 cry: Some(hook(|_ctx| {
@@ -3334,7 +3313,7 @@ mod r59_a_sacrifice_whose_death_asks_inside_a_list {
         fixture(
             &mut s,
             "edge-r10-dying",
-            "Unit",
+            CardType::Unit,
             if asking_death {
                 Script {
                     death: Some(hook(|_ctx| {
@@ -3353,9 +3332,9 @@ mod r59_a_sacrifice_whose_death_asks_inside_a_list {
         fixture(
             &mut s,
             "edge-r10-plain",
-            "Unit",
+            CardType::Unit,
             Script::default(),
-            Some(json!({ "attack": 1, "health": 5 })),
+            Some(AttackHealth { attack: 1, health: 5 }),
         );
         let dying = place_fixture(&mut s, "edge-r10-dying", P1, Row::Units, 1);
         let plain = place_fixture(&mut s, "edge-r10-plain", P1, Row::Units, 2);
@@ -3363,7 +3342,7 @@ mod r59_a_sacrifice_whose_death_asks_inside_a_list {
         fixture(
             &mut s,
             "edge-r10-sac-spell",
-            "Spell",
+            CardType::Spell,
             Script {
                 cry: Some(hook(move |_ctx| {
                     vec![
@@ -3422,7 +3401,7 @@ mod r151_r113_a_start_of_game_clause_that_asks_run_as_its_card_arrives_in_a_hand
         fixture(
             &mut s,
             "edge-r10-asks-at-start",
-            "Unit",
+            CardType::Unit,
             Script {
                 start_of_game: Some(hook(|_ctx| {
                     vec![
@@ -3440,7 +3419,7 @@ mod r151_r113_a_start_of_game_clause_that_asks_run_as_its_card_arrives_in_a_hand
         fixture(
             &mut s,
             "edge-r10-gift",
-            "Spell",
+            CardType::Spell,
             Script {
                 cry: Some(hook(|_ctx| {
                     vec![effects::add_to_hand(json_as(
@@ -3475,12 +3454,12 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
         fixture(
             &mut s,
             "edge-r10-cod",
-            "Unit",
+            CardType::Unit,
             Script {
                 static_flags: flags(json!({ "castOnDraw": true })),
                 ..Script::default()
             },
-            Some(json!({ "attack": 3, "health": 3 })),
+            Some(AttackHealth { attack: 3, health: 3 }),
         );
         let cod = on_top_of_library(&mut s, "edge-r10-cod", P1);
         let (asked_about, exiled) = (cod.id.clone(), cod.id.clone());
@@ -3488,7 +3467,7 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
         fixture(
             &mut s,
             "edge-r10-hook",
-            "Unit",
+            CardType::Unit,
             Script {
                 on_play_hook: Some(hook(move |ctx| {
                     if ctx.data.get("playedId").and_then(Value::as_str) == Some(asked_about.as_str()) {
@@ -3522,7 +3501,7 @@ mod r226_r70_a_cast_card_an_onplayhook_s_answer_moved_before_step_4 {
         fixture(
             &mut s,
             "edge-r10-draw-one",
-            "Spell",
+            CardType::Spell,
             Script {
                 cry: Some(hook(|_ctx| vec![effects::draw(json_as(json!({ "count": 1 })))])),
                 ..Script::default()
@@ -3557,9 +3536,9 @@ mod r174_a_card_picked_at_a_prompt_watched_by_a_delayed_effect_the_answered_step
         fixture(
             &mut s,
             "edge-r10-reborn",
-            "Unit",
+            CardType::Unit,
             Script::default(),
-            Some(json!({ "attack": 1, "health": 3 })),
+            Some(AttackHealth { attack: 1, health: 3 }),
         );
         let reborn = place_fixture(&mut s, "edge-r10-reborn", P1, Row::Units, 1);
         must(find_instance_mut(s.state_mut(), &reborn.id), "the Reborn unit")
@@ -3570,7 +3549,7 @@ mod r174_a_card_picked_at_a_prompt_watched_by_a_delayed_effect_the_answered_step
         fixture(
             &mut s,
             "edge-r10-watcher",
-            "Spell",
+            CardType::Spell,
             Script {
                 cry: Some(hook(move |_ctx| {
                     vec![
@@ -3646,7 +3625,7 @@ mod r122_r113_the_engine_s_answer_called_directly_on_the_prompt_an_echo_repeat_o
         fixture(
             &mut s,
             "edge-r10-echo-ping",
-            "Spell",
+            CardType::Spell,
             Script {
                 targets: vec![decl(
                     json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }),

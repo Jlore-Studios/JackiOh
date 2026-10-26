@@ -128,10 +128,6 @@ mod tests {
         s.card(&id).clone()
     }
 
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     mod base {
         use super::*;
 
@@ -189,7 +185,7 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "hand": [CUBE, ANCHOR], "field": [SHEEOPLE], "library": lib(3) }, "p2": { "hand": [ANCHOR] } }));
             let sheeople = s.card(SHEEOPLE).clone();
 
-            s.play(CUBE, json!({ "targets": at(&sheeople) }));
+            s.play(CUBE, json!({ "targets": pick::instance(&sheeople) }));
 
             s.expect_in_zone(&sheeople, "graveyard");
             assert_eq!(draws_by(s.events(), P1), 2);
@@ -221,7 +217,7 @@ mod tests {
             }));
 
             let sheeople = s.card(SHEEOPLE).clone();
-            s.play(HIT_JOB, json!({ "targets": at(&sheeople) }));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&sheeople) }));
 
             assert_eq!(draws_by(s.events(), P1), 2);
             assert_eq!(draws_by(s.events(), P2), 0);
@@ -252,7 +248,7 @@ mod tests {
             }));
 
             let sheeople = s.card(SHEEOPLE).clone();
-            s.play(COLLATERAL, json!({ "targets": at(&sheeople) }));
+            s.play(COLLATERAL, json!({ "targets": pick::instance(&sheeople) }));
 
             s.expect_in_zone(SHEEOPLE, "exile");
             assert_eq!(draws_by(s.events(), P1), 0);
@@ -267,7 +263,7 @@ mod tests {
                 "p2": { "hand": [HIT_JOB, ANCHOR] }
             }));
             let target = full.card(SHEEOPLE).clone();
-            full.play(HIT_JOB, json!({ "targets": at(&target) }));
+            full.play(HIT_JOB, json!({ "targets": pick::instance(&target) }));
             assert_eq!(full.events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count(), 2);
 
             let mut empty = scenario(json!({
@@ -276,7 +272,7 @@ mod tests {
                 "p2": { "hand": [HIT_JOB, ANCHOR] }
             }));
             let target = empty.card(SHEEOPLE).clone();
-            empty.play(HIT_JOB, json!({ "targets": at(&target) }));
+            empty.play(HIT_JOB, json!({ "targets": pick::instance(&target) }));
             assert_eq!(
                 empty
                     .events()
@@ -348,7 +344,7 @@ mod tests {
             }));
 
             let vanilla = s.card(VANILLA).clone();
-            s.play(CUBE, json!({ "targets": at(&vanilla) }));
+            s.play(CUBE, json!({ "targets": pick::instance(&vanilla) }));
             s.play(FLOOD, json!({}));
 
             s.expect_in_zone(SHEEOPLE, "hand");
@@ -366,7 +362,7 @@ mod tests {
             step_param(s.card_mut(SHEEOPLE), "draw", -1);
 
             let sheeople = s.card(SHEEOPLE).clone();
-            s.play(HIT_JOB, json!({ "targets": at(&sheeople) }));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&sheeople) }));
 
             assert_eq!(draws_by(s.events(), P1), 2);
         }

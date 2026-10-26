@@ -62,10 +62,6 @@ mod tests {
         }))
     }
 
-    fn at(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     fn kinds(s: &Scenario, id: &str) -> Vec<KeywordKind> {
         s.stats(id).keywords.iter().map(|k| k.kind()).collect()
     }
@@ -86,12 +82,12 @@ mod tests {
                 false,
             );
             let menace = s.card(MENACE).clone();
-            s.play(SURGERY, json!({ "targets": at(&menace.id) }));
+            s.play(SURGERY, json!({ "targets": pick::id(&menace.id) }));
             let granted: Vec<KeywordKind> = s.card(&menace).granted_keywords.iter().map(|k| k.kind()).collect();
             assert_eq!(granted.len(), 1);
             s.expect_stats(&menace, json!({ "attack": 12, "maxHealth": 12, "health": 9 }));
 
-            s.play(SILENCE, json!({ "targets": at(&menace.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&menace.id) }));
 
             assert!(s.card(&menace).vanilla);
             // Back to the 9/9 it prints: Plastic Surgery's +3/+3 goes, its 3 damage stays.
@@ -113,12 +109,12 @@ mod tests {
                 false,
             );
             let vanilla = s.card(VANILLA).clone();
-            s.play(SURGERY, json!({ "targets": at(&vanilla.id) }));
+            s.play(SURGERY, json!({ "targets": pick::id(&vanilla.id) }));
             // 5 damage on the buffed 7/7, more than the 4 health it prints.
             s.card_mut(&vanilla).damage = 5;
             s.expect_stats(&vanilla, json!({ "maxHealth": 7, "health": 2 }));
 
-            s.play(SILENCE, json!({ "targets": at(&vanilla.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&vanilla.id) }));
 
             s.expect_in_zone(&vanilla, "field");
             s.expect_stats(&vanilla, json!({ "attack": 4, "maxHealth": 4, "health": 1 }));
@@ -134,9 +130,9 @@ mod tests {
                 false,
             );
             let vanilla = s.card(VANILLA).clone();
-            s.play(SURGERY, json!({ "targets": at(&vanilla.id) }));
+            s.play(SURGERY, json!({ "targets": pick::id(&vanilla.id) }));
 
-            s.play(SILENCE, json!({ "targets": at(&vanilla.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&vanilla.id) }));
 
             assert!(s.card(&vanilla).radiant);
             // Mr. Vanilla's Radiant face prints 12/12, not its base 4/4.
@@ -149,7 +145,7 @@ mod tests {
             let mut s = setup(json!({ "field": [{ "def": MENACE, "damage": 4 }] }), json!({}), false);
             let menace = s.card(MENACE).clone();
 
-            s.play(SILENCE, json!({ "targets": at(&menace.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&menace.id) }));
             s.end_turn();
 
             s.expect_stats(&menace, json!({ "health": 5 }));
@@ -161,7 +157,7 @@ mod tests {
             let mut s = setup(json!({ "field": [MENACE] }), json!({}), false);
 
             let menace = s.card(MENACE).id.clone();
-            s.play(SILENCE, json!({ "targets": at(&menace) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&menace) }));
 
             assert!(!kinds(&s, MENACE).contains(&KeywordKind::Taunt));
         }
@@ -172,7 +168,7 @@ mod tests {
             let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "radiant": true }] }), false);
             let menace = s.card(MENACE).clone();
 
-            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": at(&menace.id) })));
+            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": pick::id(&menace.id) })));
             // With no other Unit it is played with no pick and fizzles (R90).
             s.play(SILENCE, json!({}));
 
@@ -188,7 +184,7 @@ mod tests {
             crate::register_all();
             let mut s = setup(json!({ "backrow": [WEAPONS] }), json!({}), false);
             let weapons = s.card(WEAPONS).id.clone();
-            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": at(&weapons) })));
+            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": pick::id(&weapons) })));
 
             s.play(SILENCE, json!({}));
 
@@ -208,7 +204,7 @@ mod tests {
             s.expect_stats(VANILLA, json!({ "attack": 7 }));
 
             let weapons = s.card(WEAPONS).id.clone();
-            s.play(SILENCE, json!({ "targets": at(&weapons) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&weapons) }));
 
             s.expect_stats(VANILLA, json!({ "attack": 4 }));
             assert!(!kinds(&s, VANILLA).contains(&KeywordKind::Rush));
@@ -225,7 +221,7 @@ mod tests {
             );
             let trap = s.backrow(P2, 2).unwrap();
 
-            s.play(SILENCE, json!({ "targets": at(&trap.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&trap.id) }));
             s.play(VANILLA, json!({ "zone": 1 }));
 
             assert_eq!(count(&s, "trapFired"), 0);
@@ -249,7 +245,7 @@ mod tests {
             assert!(offered.contains(&trap.id));
             assert!(!offered.contains(SHEEPISH));
 
-            s.play(SILENCE, json!({ "targets": at(&trap.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&trap.id) }));
 
             assert!(!serde_json::to_string(&s.view(P1)).unwrap().contains(SHEEPISH));
             assert!(serde_json::to_string(&s.view(P2).you.backrow).unwrap().contains(SHEEPISH));
@@ -265,7 +261,7 @@ mod tests {
             );
             let tesla = s.backrow(P2, 3).unwrap();
 
-            s.play(SILENCE, json!({ "targets": at(&tesla.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&tesla.id) }));
             s.play(VANILLA, json!({ "zone": 1 }));
 
             assert_eq!(count(&s, "trapFired") + count(&s, "animated"), 0);
@@ -279,7 +275,7 @@ mod tests {
             let mut s = setup(json!({ "backrow": [{ "def": FROSTSPATULA, "lane": 2 }] }), json!({}), true);
             let spatula = s.card(FROSTSPATULA).clone();
 
-            s.play(SILENCE, json!({ "targets": at(&spatula.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&spatula.id) }));
             s.end_turn();
             s.end_turn();
 
@@ -296,7 +292,7 @@ mod tests {
             s.start_turn();
             assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(spatula.id.clone()));
 
-            s.play(SILENCE, json!({ "targets": at(&spatula.id) }));
+            s.play(SILENCE, json!({ "targets": pick::id(&spatula.id) }));
             s.end_turn();
 
             assert!(matches!(s.card(&spatula).zone, Zone::Field { row: Row::Units, lane: 2, .. }));

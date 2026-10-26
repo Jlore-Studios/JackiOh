@@ -37,51 +37,13 @@ const TURN_ACTIONS: [ActionType; 6] = [
     ActionType::EndTurn,
 ];
 
-use super::scenario;
+use super::{fixture, scenario};
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
         Some(value) => value,
         None => panic!("expected {what}"),
     }
-}
-
-fn register_fixture_script(id: &str, script: Script) {
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
-}
-
-/// A fixture card: a transient def in the match state and its script in the registry (a Unit's
-/// `stats` default to 2/2).
-fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: Option<AttackHealth>) {
-    let stats = stats.unwrap_or(AttackHealth { attack: 2, health: 2 });
-    let face = if type_ == CardType::Unit {
-        json!({ "attack": stats.attack, "health": stats.health, "keywords": [], "text": id })
-    } else {
-        json!({ "keywords": [], "text": id })
-    };
-    let def: CardDef = json_as(json!({
-        "id": id,
-        "index": id,
-        "name": id,
-        "set": "Core",
-        "type": type_,
-        "tags": [],
-        "rarity": "Common",
-        "token": false,
-        "cost": 0,
-        "base": face.clone(),
-        "radiant": face,
-    }));
-    s.state_mut().transient_defs.insert(id.to_string(), def);
-    register_fixture_script(id, script);
 }
 
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
