@@ -17,7 +17,7 @@
   border: 1px solid var(--line, #4a4335);
   border-radius: 8px;
   background: var(--bg-raised, #2a241c);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   font: inherit;
   font-weight: 600;
 }
@@ -99,7 +99,7 @@
 
 .sandbox-panel__button,
 .sandbox-panel__close {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   font-weight: 600;
 }
 
@@ -112,7 +112,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .sandbox-panel__note {
@@ -136,7 +136,7 @@
   border: 2px solid transparent;
   border-radius: 8px;
   background: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .sandbox-panel__pick[aria-pressed="true"] {

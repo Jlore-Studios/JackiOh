@@ -165,7 +165,7 @@
   border-radius: 50%;
   background: transparent;
   transform: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   user-select: none;
