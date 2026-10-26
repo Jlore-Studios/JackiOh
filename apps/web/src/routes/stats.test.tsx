@@ -1515,7 +1515,7 @@ describe("R1935000 the Daily runs tab", () => {
   });
 });
 
-describe("R1943000 the Sets tab", () => {
+describe("R1966000 the Sets tab", () => {
   /** A card row: `wins` of `games`, in `set`. */
   function row(id: string, name: string, set: string, wins: number, games: number) {
     return {
@@ -1565,7 +1565,7 @@ describe("R1943000 the Sets tab", () => {
     );
   }
 
-  it("R1943000 ranks each set by its pooled win rate, with its mean, median, change since the previous patch, best and worst card", async () => {
+  it("R1966000 ranks each set by its pooled win rate, with its mean, median, change since the previous patch, best and worst card", async () => {
     serveSets();
     const user = userEvent.setup();
     render(<StatsRoute />);
@@ -1607,7 +1607,7 @@ describe("R1943000 the Sets tab", () => {
     expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
   });
 
-  it("R1943000 reads every set's cards whatever the Cards tab filters, on the patch and match type it shows", async () => {
+  it("R1966000 reads every set's cards whatever the Cards tab filters, on the patch and match type it shows", async () => {
     serveSets();
     at("/stats?set=core&rarity=Rare&cost=2&mode=bo1");
     render(<StatsRoute />);
@@ -1622,7 +1622,7 @@ describe("R1943000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
-  it("R1943000 a read that fails shows Retry, which asks again", async () => {
+  it("R1966000 a read that fails shows Retry, which asks again", async () => {
     let up = false;
     serveSets(() =>
       up
@@ -1638,7 +1638,7 @@ describe("R1943000 the Sets tab", () => {
     expect(await screen.findByTestId(statsTestid.setsTable, undefined, SLOW)).toBeInTheDocument();
   });
 
-  it("R1943000 says so when the patch has no games, and when no card is far from 50%", async () => {
+  it("R1966000 says so when the patch has no games, and when no card is far from 50%", async () => {
     serveSets(() => new Response(JSON.stringify({ ...NOW, previousPatch: null, cards: [] }), { status: 200 }));
     at("/stats?tab=sets");
     render(<StatsRoute />);

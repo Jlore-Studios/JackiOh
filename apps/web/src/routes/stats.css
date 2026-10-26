@@ -760,7 +760,7 @@
   }
 }
 
-/* R1943000: the Sets tab's three leaders sit in one row, at a phone's width too. */
+/* R1966000: the Sets tab's three leaders sit in one row, at a phone's width too. */
 .stats-sets-leaders {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -779,7 +779,7 @@
   }
 }
 
-/* R1943000: the Sets tab: the highest set's star, each set's change since the previous patch, and the strongest and weakest cards. */
+/* R1966000: the Sets tab: the highest set's star, each set's change since the previous patch, and the strongest and weakest cards. */
 .stats-sets-leader {
   color: #facc15;
 }

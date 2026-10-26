@@ -1,4 +1,4 @@
-// R1943000: the Sets tab's figures (stats/sets.ts), read off `GET /api/stats/cards`'s card rows.
+// R1966000: the Sets tab's figures (stats/sets.ts), read off `GET /api/stats/cards`'s card rows.
 
 import { describe, expect, it } from "vitest";
 
@@ -39,8 +39,8 @@ const CARDS = [
   card("classicplus-001", "classic+", 0, 0), // no games: no row
 ];
 
-describe("R1943000 the Sets tab's figures", () => {
-  it("R1943000 a set pools every card's games and wins, and takes its mean, median, best and worst over the cards with the floor's games", () => {
+describe("R1966000 the Sets tab's figures", () => {
+  it("R1966000 a set pools every card's games and wins, and takes its mean, median, best and worst over the cards with the floor's games", () => {
     const rows = setRows(CARDS, MIN_SAMPLE);
     expect(rows.map((row) => row.set)).toEqual(["Core", "Classic"]); // highest pooled first
     const [core, classic] = rows;
@@ -57,13 +57,13 @@ describe("R1943000 the Sets tab's figures", () => {
     expect(classic!.worst?.id).toBe("classic-002");
   });
 
-  it("R1943000 names each set as SHIPPED_SETS spells it, whatever the case of the row", () => {
+  it("R1966000 names each set as SHIPPED_SETS spells it, whatever the case of the row", () => {
     expect(setOf({ set: "classic+" })).toBe("Classic+");
     expect(setOf({ set: "MEDITATIVE" })).toBe("Meditative");
     expect(setOf({ set: "Stinkyscape" })).toBe("Stinkyscape");
   });
 
-  it("R1943000 names the highest set by each measure, and the change since the previous patch where both have games", () => {
+  it("R1966000 names the highest set by each measure, and the change since the previous patch where both have games", () => {
     const rows = setRows(CARDS, MIN_SAMPLE);
     // Core leads all three: pooled 52.4% to 50%, and mean and median 51.7% to 50%.
     expect(leaders(rows)).toEqual({ pooled: "Core", mean: "Core", median: "Core" });
@@ -75,7 +75,7 @@ describe("R1943000 the Sets tab's figures", () => {
     expect(leaders([])).toEqual({ pooled: null, mean: null, median: null });
   });
 
-  it("R1943000 lists the cards 3 or more standard errors from 50%, furthest first, at most SET_STATS_CARDS_LISTED a side", () => {
+  it("R1966000 lists the cards 3 or more standard errors from 50%, furthest first, at most SET_STATS_CARDS_LISTED a side", () => {
     const { strongest, weakest } = outliers(CARDS, MIN_SAMPLE);
     expect(strongest.map((c) => c.id)).toEqual(["core-001"]);
     expect(strongest[0]!.z).toBeCloseTo((0.7 / 1.2 - 0.5) / Math.sqrt(0.25 / 1200));

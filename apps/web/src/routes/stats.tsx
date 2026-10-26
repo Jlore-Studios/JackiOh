@@ -16,7 +16,7 @@
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
 //  - Daily runs tab (R1935000): the daily super run's last runs on main, read live from GitHub by the server and
 //    asked for again every `CI_RUNS_CACHE_TTL_SECONDS` while the tab is open.
-//  - Sets tab (R1943000): each set's cards on the patch, pooled, by mean and by median, the change since the
+//  - Sets tab (R1966000): each set's cards on the patch, pooled, by mean and by median, the change since the
 //    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
@@ -117,7 +117,7 @@ function faceRate(
  * `{token}`s, and each token is replaced by the node given for it, so a language may order them as it
  * needs and English reads as it always did.
  */
-/** R1943000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
+/** R1966000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
 function setPercent(rate: number, signed = false): string {
   return formatNumber(rate, {
     style: "percent",
@@ -253,7 +253,7 @@ export default function StatsRoute(): ReactElement {
   // The drill-down's "Show Radiant": the Radiant face beside the normal one, kept from card to card.
   const [drillDownRadiant, setDrillDownRadiant] = useState(false);
 
-  // R1943000: the Sets tab's patch, every set's cards unfiltered, and its previous patch's for the change.
+  // R1966000: the Sets tab's patch, every set's cards unfiltered, and its previous patch's for the change.
   const [setsData, setSetsData] = useState<PublicStatsCardsResponse | null>(null);
   const [setsPrevious, setSetsPrevious] = useState<PublicStatsCardsResponse | null>(null);
   const [setsError, setSetsError] = useState(false);
@@ -394,7 +394,7 @@ export default function StatsRoute(): ReactElement {
     };
   }, [tab, ciAttempt]);
 
-  // R1943000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
+  // R1966000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
   // patch's for each set's change; a previous patch that fails to load only leaves the change out.
   useEffect(() => {
     if (tab !== "sets") return;
@@ -489,7 +489,7 @@ export default function StatsRoute(): ReactElement {
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
-  // R1943000: the Sets tab's figures, off the cards it read.
+  // R1966000: the Sets tab's figures, off the cards it read.
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   const sets = useMemo(() => (setsData ? setRows(setsData.cards, setsMinSample) : []), [setsData, setsMinSample]);
   const setLeaders = useMemo(() => leaders(sets), [sets]);
@@ -1351,7 +1351,7 @@ export default function StatsRoute(): ReactElement {
           </section>
         )}
 
-        {/* SETS TAB (R1943000) */}
+        {/* SETS TAB (R1966000) */}
         {tab === "sets" && (
           <section id="stats-panel-sets" role="tabpanel" aria-labelledby="stats-tab-sets" className="stats-panel one-screen__body">
             {setsError ? (

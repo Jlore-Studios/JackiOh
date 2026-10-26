@@ -1,4 +1,4 @@
-// R1943000: the Sets tab of `/stats` (SPEC §9.11): each shipped set's cards on the patch the page
+// R1966000: the Sets tab of `/stats` (SPEC §9.11): each shipped set's cards on the patch the page
 // shows, read off the card figures `GET /api/stats/cards` already sends, so the server adds nothing.
 //
 // A card's win rate is R377's in-deck rate: its deck's wins over the games it was in a deck. A set's
