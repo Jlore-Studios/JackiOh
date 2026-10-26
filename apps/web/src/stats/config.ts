@@ -77,8 +77,8 @@ export const SET_STATS_CARDS_LISTED = 10;
 /** R1966000: the decimal places of a set's win rates and their change, which differ by tenths of a point, and of a card's standard errors from 50%. */
 export const SET_STATS_DIGITS = 1;
 
-/** R1968002: the games, live and AI, a patch needs before the patch picker offers it. */
+/** R1973002: the games, live and AI, a patch needs before the patch picker offers it. */
 export const STATS_PATCH_MIN_GAMES = 1000;
 
-/** R1968002: how many of the newest patches with `STATS_PATCH_MIN_GAMES` games the patch picker offers. */
+/** R1973002: how many of the newest patches with `STATS_PATCH_MIN_GAMES` games the patch picker offers. */
 export const STATS_PATCHES_OFFERED = 5;

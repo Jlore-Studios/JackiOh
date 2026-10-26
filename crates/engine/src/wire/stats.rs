@@ -927,7 +927,7 @@ impl StatsTotals {
             .sum()
     }
 
-    /// R1968001: every record filed under `patch`, live and development alike.
+    /// R1973001: every record filed under `patch`, live and development alike.
     pub fn games(&self, patch: &str) -> i64 {
         self.records
             .iter()

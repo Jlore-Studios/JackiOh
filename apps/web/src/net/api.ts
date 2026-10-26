@@ -1316,7 +1316,7 @@ export type PublicStatsCardsResponse = {
   totalGames: number;
   cards: PublicCardStat[];
   /**
-   * R1968002: every patch the page can show, newest first: the window the cards share, its versions
+   * R1973002: every patch the page can show, newest first: the window the cards share, its versions
    * oldest first (its figures are asked for at the last), its games and its live games. Absent from
    * a server older than it.
    */

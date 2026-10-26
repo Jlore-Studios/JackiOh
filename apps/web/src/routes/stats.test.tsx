@@ -1512,7 +1512,7 @@ describe("R1966000 the Sets tab", () => {
   });
 });
 
-describe("R1968002 the patch bar", () => {
+describe("R1973002 the patch bar", () => {
   /** Newest first: 0.7.0 (newest, short of games), then the older patches with their games. */
   const PATCHES = [
     { versions: ["0.7.0", "0.7.0b"], games: 300, liveGames: 0 },
@@ -1539,7 +1539,7 @@ describe("R1968002 the patch bar", () => {
     );
   }
 
-  it("R1968002 offers the newest five patches with 1,000 games and the one shown, and steps to the patch before and after", async () => {
+  it("R1973002 offers the newest five patches with 1,000 games and the one shown, and steps to the patch before and after", async () => {
     servePatches();
     const user = userEvent.setup();
     render(<StatsRoute />);
@@ -1581,7 +1581,7 @@ describe("R1968002 the patch bar", () => {
     expect(screen.getByTestId(statsTestid.summaryTotalGames)).toHaveTextContent("Games on patch 0.4.0");
   });
 
-  it("R1968002 the provisional banner's previous patch is the patch before, not a micro of the same one", async () => {
+  it("R1973002 the provisional banner's previous patch is the patch before, not a micro of the same one", async () => {
     servePatches();
     render(<StatsRoute />);
     const fallback = await screen.findByTestId(statsTestid.fallbackToggle, undefined, SLOW);
@@ -1590,15 +1590,15 @@ describe("R1968002 the patch bar", () => {
     await waitFor(() => expect(window.location.search).toBe("?patch=0.6.0"), SLOW);
   });
 
-  it("R1968002 a server with no patch list shows no patch bar", async () => {
+  it("R1973002 a server with no patch list shows no patch bar", async () => {
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
   });
 });
 
-describe("R1968000 the Daily runs tab is gone", () => {
-  it("R1968000 the page offers Cards, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
+describe("R1973000 the Daily runs tab is gone", () => {
+  it("R1973000 the page offers Cards, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);

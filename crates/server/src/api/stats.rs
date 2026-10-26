@@ -288,7 +288,7 @@ pub struct PublicStatsCardsResponse {
     pub total_games: i64,
     pub cards: Vec<PublicCardStat>,
     pub summary: PublicStatsSummary,
-    /// R1968002: every patch the page can show, newest first: the window the cards share, its
+    /// R1973002: every patch the page can show, newest first: the window the cards share, its
     /// versions oldest first (ask for its figures at the last), its games and its live games.
     pub patches: Vec<PatchWindow>,
 }
@@ -553,7 +553,7 @@ impl KeptReports {
 
 /// R1367000: one patch's windowed figures for one `?source=` and `?pilot=`, and each version's live
 /// games, which the window of a card no counted deck held is read from, over the history as
-/// R1968001 reads it (a patch no game was played on read as a micro). R1968002: every patch the
+/// R1973001 reads it (a patch no game was played on read as a micro). R1973002: every patch the
 /// page can show, newest first.
 struct KeptWindow {
     report: WindowedReport,

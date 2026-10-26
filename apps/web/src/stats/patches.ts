@@ -1,6 +1,6 @@
-// R1968002: the patches `/stats` can show, as `GET /api/stats/cards` lists them (`patches`, newest
+// R1973002: the patches `/stats` can show, as `GET /api/stats/cards` lists them (`patches`, newest
 // first): the picker's choices and the patch before and after the one shown. A patch is the window
-// the cards share, a major or a patch with its micros and the patches no game was played on (R1968001).
+// the cards share, a major or a patch with its micros and the patches no game was played on (R1973001).
 
 import type { PublicStatsCardsResponse } from "../net/api.ts";
 import { STATS_PATCH_MIN_GAMES, STATS_PATCHES_OFFERED } from "./config.ts";

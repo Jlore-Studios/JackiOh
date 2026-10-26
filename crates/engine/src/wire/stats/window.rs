@@ -10,7 +10,7 @@
 //! the card had at the version before its own opened) when that one is not short too; only when both
 //! are do AI development games pad the current window (provisional).
 //!
-//! R1968001: a patch that a later version replaced before any game, live or development, was played on
+//! R1973001: a patch that a later version replaced before any game, live or development, was played on
 //! it is read as a micro over the families it plays (`collapse_gameless`): it opens no window for the
 //! cards it left alone, so a run of patches shipped back to back does not empty every card's figures.
 //! The newest version keeps its tier, since a patch just shipped has had no time for games.
@@ -209,7 +209,7 @@ pub fn card_window(
     window_in(&history, at, family, request, &live_games)
 }
 
-/// R1968001: `history` with every patch that a later version replaced before a game was played on it
+/// R1973001: `history` with every patch that a later version replaced before a game was played on it
 /// read as a micro over the families it plays. `games` answers every record filed under a version,
 /// live and development alike. The newest version, and every major, keeps its tier.
 pub fn collapse_gameless(history: &[PatchStep], games: impl Fn(&str) -> i64) -> Vec<PatchStep> {
@@ -230,7 +230,7 @@ pub fn collapse_gameless(history: &[PatchStep], games: impl Fn(&str) -> i64) -> 
         .collect()
 }
 
-/// R1968002: a patch as the statistics page lists it: the window every card shares, opened by a major
+/// R1973002: a patch as the statistics page lists it: the window every card shares, opened by a major
 /// or a patch with games, with its micros and the patches `collapse_gameless` folds into it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -242,7 +242,7 @@ pub struct PatchWindow {
     pub live_games: i64,
 }
 
-/// R1968002: every window the cards share over `history` as `collapse_gameless` reads it, newest
+/// R1973002: every window the cards share over `history` as `collapse_gameless` reads it, newest
 /// first. `games` and `live_games` answer a version's records, as for `collapse_gameless` and R654.
 pub fn patch_windows(
     history: &[PatchStep],
@@ -692,7 +692,7 @@ mod tests {
     }
 
     #[test]
-    fn r1968001_a_patch_no_game_was_played_on_is_read_as_a_micro_over_its_plays() {
+    fn r1973001_a_patch_no_game_was_played_on_is_read_as_a_micro_over_its_plays() {
         let history = [
             step("v1", PatchTier::Major, &[]),
             step("v2", PatchTier::Patch, &[A]),
@@ -746,7 +746,7 @@ mod tests {
     }
 
     #[test]
-    fn r1968002_patch_windows_lists_each_shared_window_newest_first_with_its_games() {
+    fn r1973002_patch_windows_lists_each_shared_window_newest_first_with_its_games() {
         let history = [
             step("v1", PatchTier::Major, &[]),
             step("v1b", PatchTier::Micro, &[A]),

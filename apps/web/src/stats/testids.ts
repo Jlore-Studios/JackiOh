@@ -11,7 +11,7 @@ export const statsTestid = {
   setsOutliers: "stats-sets-outliers",
   setsRetry: "stats-sets-retry",
   summaryTiles: "stats-summary-tiles",
-  /** R1968002: the patch bar, its picker and the patch before and after. */
+  /** R1973002: the patch bar, its picker and the patch before and after. */
   patchBar: "stats-patch-bar",
   patchSelect: "stats-patch-select",
   patchPrevious: "stats-patch-previous",

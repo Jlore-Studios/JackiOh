@@ -1422,7 +1422,7 @@ mod r1367000_card_stats_by_window {
     }
 
     #[tokio::test]
-    async fn r1968001_r1968002_the_route_lists_every_patch_newest_first_with_a_gameless_patch_folded_in() {
+    async fn r1973001_r1973002_the_route_lists_every_patch_newest_first_with_a_gameless_patch_folded_in() {
         let (x, micro, card) = x_and_micro();
         let app = test_app().await;
         let mut records: Vec<Value> = (0..5).map(|n| live(format!("x-{n}"), &x, card)).collect();
@@ -1450,7 +1450,7 @@ mod r1367000_card_stats_by_window {
             .expect("X opens a window");
         assert_eq!((&held["games"], &held["liveGames"]), (&json!(8), &json!(5)));
         assert!(versions(held).contains(&micro));
-        // R1968001: no other patch had a game, so each folds into the window before it, and only a
+        // R1973001: no other patch had a game, so each folds into the window before it, and only a
         // major, X or the newest version opens one.
         for window in patches {
             let first = &versions(window)[0];

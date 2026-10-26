@@ -1,5 +1,5 @@
 //! The daily super run's last runs (SPEC §9.11, R1935000), which `/stats`'s Daily runs tab listed until
-//! R1968000 took the tab off the page; the route stays for whatever calls it (CLAUDE.md rule 13).
+//! R1973000 took the tab off the page; the route stays for whatever calls it (CLAUDE.md rule 13).
 //!
 //! `GET /api/stats/ci` is open: the last `CI_RUNS_LISTED` runs of `CI_RUNS_WORKFLOW` on
 //! `CI_RUNS_BRANCH`, newest first, read from GitHub's Actions API, each with when it started, its

@@ -15,8 +15,8 @@
 //  - Card drill-down modal showing CardFace (the Radiant face beside it on request, a link to the card in
 //    the Almanac and the tokens its text names), patch history, turn curve, and co-played synergy.
 //  - Players tab: the search asks the server a pause after the typing, one page of the server's limit at a time.
-//  - Patch bar (R1968002): a picker of the newest patches with enough games, and the patch before and after
-//    the one shown; a patch is the window the cards share (R1968001), so a micro is never a step of its own.
+//  - Patch bar (R1973002): a picker of the newest patches with enough games, and the patch before and after
+//    the one shown; a patch is the window the cards share (R1973001), so a micro is never a step of its own.
 //  - Sets tab (R1966000): each set's cards on the patch, pooled, by mean and by median, the change since the
 //    previous patch, each set's best and worst card, and the cards furthest from 50% (stats/sets.ts).
 
@@ -110,7 +110,7 @@ function faceRate(
  * needs and English reads as it always did.
  */
 /**
- * R1968002: the patch before the one a response shows, as its name and the version to ask its figures
+ * R1973002: the patch before the one a response shows, as its name and the version to ask its figures
  * at, from the response's patch list; a server without one names the version before.
  */
 function previousPatchOf(res: PublicStatsCardsResponse): { name: string; target: string } | null {
@@ -379,7 +379,7 @@ export default function StatsRoute(): ReactElement {
         if (controller.signal.aborted) return;
         setSetsData(res);
         setSetsPrevious(null);
-        // R1968002: the patch before, not the version before, which may be a micro of the same patch.
+        // R1973002: the patch before, not the version before, which may be a micro of the same patch.
         const before = previousPatchOf(res);
         if (!before) return;
         getCardStats({ patch: before.target, mode: mode ? mode : undefined, signal: controller.signal })
@@ -465,7 +465,7 @@ export default function StatsRoute(): ReactElement {
 
   const minSample = cardStatsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
 
-  // R1966000: the Sets tab's figures, off the cards it read; R1968002: compared with the patch before.
+  // R1966000: the Sets tab's figures, off the cards it read; R1973002: compared with the patch before.
   const setsSince = setsData ? previousPatchOf(setsData)?.name : undefined;
   const setsMinSample = setsData?.minSample ?? CARD_STATS_MIN_SAMPLE;
   const sets = useMemo(() => (setsData ? setRows(setsData.cards, setsMinSample) : []), [setsData, setsMinSample]);
@@ -591,7 +591,7 @@ export default function StatsRoute(): ReactElement {
 
   const summary = cardStatsData?.summary;
 
-  // R1968002: the patch shown, the picker's choices and the patches either side of it. The newest is
+  // R1973002: the patch shown, the picker's choices and the patches either side of it. The newest is
   // asked for with no `?patch=`, so the address stays the plain one.
   const patchList = cardStatsData?.patches ?? [];
   const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
@@ -629,7 +629,7 @@ export default function StatsRoute(): ReactElement {
           </section>
         )}
 
-        {/* R1968002: the patch picker, and the patch before and after the one shown */}
+        {/* R1973002: the patch picker, and the patch before and after the one shown */}
         {patchList.length > 0 && (
           <nav className="stats-patch-bar" data-testid={statsTestid.patchBar} aria-label={t("Patches")}>
             <button

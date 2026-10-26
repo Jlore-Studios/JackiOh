@@ -1,4 +1,4 @@
-// R1968002: the patch picker's choices and the patches either side of the one shown (stats/patches.ts).
+// R1973002: the patch picker's choices and the patches either side of the one shown (stats/patches.ts).
 
 import { describe, expect, it } from "vitest";
 
@@ -21,15 +21,15 @@ const PATCHES = [
   patch(["v1"], STATS_PATCH_MIN_GAMES),
 ];
 
-describe("R1968002 the patches /stats can show", () => {
-  it("R1968002 names a patch by its first version and asks its figures at its last", () => {
+describe("R1973002 the patches /stats can show", () => {
+  it("R1973002 names a patch by its first version and asks its figures at its last", () => {
     expect(patchName(PATCHES[3]!)).toBe("v5");
     expect(patchTarget(PATCHES[3]!)).toBe("v5c");
     expect(patchIndex(PATCHES, "v5b")).toBe(3);
     expect(patchIndex(PATCHES, "v9")).toBe(-1);
   });
 
-  it("R1968002 offers the newest STATS_PATCHES_OFFERED patches with STATS_PATCH_MIN_GAMES games, and the one shown", () => {
+  it("R1973002 offers the newest STATS_PATCHES_OFFERED patches with STATS_PATCH_MIN_GAMES games, and the one shown", () => {
     const offered = offeredPatches(PATCHES, 3);
     expect(offered).toHaveLength(STATS_PATCHES_OFFERED);
     expect(offered.map(patchName)).toEqual(["v7", "v5", "v4", "v3", "v2"]);
@@ -40,7 +40,7 @@ describe("R1968002 the patches /stats can show", () => {
     expect(offeredPatches([], -1)).toEqual([]);
   });
 
-  it("R1968002 steps to the patch before and after the one shown", () => {
+  it("R1973002 steps to the patch before and after the one shown", () => {
     expect(neighbours(PATCHES, 0)).toEqual({ previous: PATCHES[1], next: null });
     expect(neighbours(PATCHES, 3)).toEqual({ previous: PATCHES[4], next: PATCHES[2] });
     expect(neighbours(PATCHES, 7)).toEqual({ previous: null, next: PATCHES[6] });
