@@ -2649,7 +2649,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-26T16:51:57Z",
+      "feedback_since": "2026-10-26T17:35:16Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2000,
@@ -2662,11 +2662,11 @@
       "round_tier": "medium",
       "run_id": "40370022489",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-26T17:35:16Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
