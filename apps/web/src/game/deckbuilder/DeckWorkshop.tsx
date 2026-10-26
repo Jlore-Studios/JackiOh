@@ -13,7 +13,7 @@ import "./workshop.css";
 import { deckCosmeticPatch } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import type { DecksResponse } from "../../net/api.ts";
-import { paths } from "../../net/navigate.ts";
+import { paths, practiceDeckPath } from "../../net/navigate.ts";
 import { BackLink } from "../../routes/nav.tsx";
 import DeckCosmeticsPicker from "./DeckCosmeticsPicker.tsx";
 import DeckEditor from "./DeckEditor.tsx";
@@ -371,6 +371,18 @@ function neighbourOf<T extends { id: string }>(items: readonly T[], id: string):
   return items[at + 1] ?? items[at - 1] ?? null;
 }
 
+/**
+ * #1991: where the open deck's "Practice with this deck" goes, or null for none. `saved:<n>` names the
+ * deck by its place in the server's list, oldest first, which the store's list is only while nothing
+ * waits on the server: no deck unsynced (R256) and no deletion pending, both of which keep the status
+ * off `saved`. Practice offers only a complete deck (§9.9).
+ */
+function practicePathOf(snapshot: WorkshopSnapshot, deck: DeckItem): string | null {
+  if (deck.cards.length !== DECK_SIZE || snapshot.status.state !== "saved") return null;
+  if (snapshot.decks.some((other) => snapshot.unsynced.has(other.id))) return null;
+  return practiceDeckPath(snapshot.decks.findIndex((other) => other.id === deck.id) + 1);
+}
+
 export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
   const { catalog, collection, data, profileId, api, initialOpen } = props;
   useLocale();
@@ -476,6 +488,7 @@ export default function DeckWorkshop(props: DeckWorkshopProps): ReactElement {
         limits={limits}
         saved={!unsynced.has(openDeck.id)}
         refusal={refused.get(openDeck.id) ?? null}
+        practicePath={practicePathOf(snapshot, openDeck)}
         filter={filter}
         onFilter={setFilter}
         sort={sort}

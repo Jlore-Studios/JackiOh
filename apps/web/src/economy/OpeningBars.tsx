@@ -1,6 +1,6 @@
 // The two bars of an opening (#1658, part of #1651, SPEC §14.5, R1305000, R1953000): the card token
 // bar and the cosmetic token bar, pinned across the top of the viewport (the HUD) while the opening is
-// on screen. Each spent slot's points fly from the slot into the HUD, labelled and tinted by the slot's
+// on screen. Each slot's points (R1999000) fly from the slot into the HUD, labelled and tinted by the slot's
 // rarity, a bigger rarity landing in a bigger burst; once the last has landed each bar fills from where
 // the opening found it to where it left it, a full one pulsing and glowing as it bursts, and the reward
 // of every fill is revealed as it does. The pack-opening scene and the cosmetic packs mount it with the
@@ -37,7 +37,7 @@ import "./economy.css";
 
 export type OpeningBarsProps = {
   bars: OpeningBarsAnswer;
-  /** The spent slots' points, flown in before the bars fill (`bars.ts::flightsOf`); with none they fill at once. */
+  /** The slots' points, flown in before the bars fill (`bars.ts::flightsOf`); with none they fill at once. */
   flights?: readonly BarFlight[];
   /** Whether the opening plays yet; until it does, both bars rest at their points before. */
   play?: boolean;

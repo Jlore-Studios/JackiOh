@@ -1,6 +1,6 @@
 // The cosmetic packs (#1309, #1667, SPEC §14.6): the unopened pack as a `PackObject` above Open, a
 // simple reveal of an opening's slots with both token bars pinned at the top of the viewport while it
-// is on screen, each spent slot's points flying into them before they fill (`OpeningBars`, R1953000),
+// is on screen, each slot's points flying into them before they fill (`OpeningBars`, R1953000, R1999000),
 // and the Chase Shard bar, a `FillBar` that fills across an opening and, when it reaches full, bursts
 // and reveals its Legendary-or-Mythic choice as a moment of its own (`RewardReveal`).
 //
