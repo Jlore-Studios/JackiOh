@@ -3362,7 +3362,7 @@
       "provider": "claude-7",
       "queued_at": "2026-10-26T22:56:40Z",
       "requested_by": "jgoetzmann",
-      "run_id": "pending:9aa5d468-1793055514",
+      "run_id": "40416512334",
       "started_at": "2026-10-26T22:59:00Z",
       "stop_requested": false,
       "suggestion": true,
