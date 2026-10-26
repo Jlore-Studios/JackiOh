@@ -5212,17 +5212,21 @@
         {
           "at": "2026-10-26T13:40:54Z",
           "minutes": 3.5
+        },
+        {
+          "at": "2026-10-26T14:54:36Z",
+          "minutes": 68.8
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-26T14:29:00Z",
+          "resets_at": "2026-10-26T19:29:00Z",
           "utilization": 0.0
         },
-        "observed_at": "2026-10-26T13:40:54Z",
+        "observed_at": "2026-10-26T14:54:36Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
         "status": "allowed"
       }
