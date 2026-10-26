@@ -50,18 +50,6 @@ const FELINOR_TOKEN: &str = "core-t-felinor";
 const BREAD: &str = "core-t-bread";
 const LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// The one-instance selection list naming `id`.
-fn at(id: &str) -> Value {
-    json!([{ "pick": "instance", "instanceId": id }])
-}
-
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 /// Hand the turn over until `player` is the active one (R82 can end a turn with nothing left in it).
 fn until_active(g: &mut Scenario, player: PlayerId) {
     if g.state().active != player {
@@ -109,13 +97,13 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
             "p1": { "hand": [KPOP, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [FIENDER, VANILLA], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
         }));
-        let prey = unit_at(&g, PlayerId::P2, 2).id;
-        g.play(KPOP, json!({ "targets": at(&prey) }));
+        let prey = g.unit_at(PlayerId::P2, 2).id;
+        g.play(KPOP, json!({ "targets": pick::id(&prey) }));
         g.end_turn();
 
         // p2 stacks Felinor Fiender onto the prey's zone: the prey is dormant (§3.2, R13).
         g.play(FIENDER, json!({ "zone": 2 }));
-        let fiender = unit_at(&g, PlayerId::P2, 2);
+        let fiender = g.unit_at(PlayerId::P2, 2);
         assert_eq!(fiender.def_id, FIENDER);
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
@@ -146,8 +134,8 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
             // The Coin pays for the replay: Flood costs (4).
             "p2": { "hand": [FLOOD, SEVEN_SEVEN, COIN], "field": [{ "def": VANILLA, "lane": 2 }], "library": LIBRARY },
         }));
-        let prey = unit_at(&g, PlayerId::P2, 2).id;
-        g.play(KPOP, json!({ "targets": at(&prey) }));
+        let prey = g.unit_at(PlayerId::P2, 2).id;
+        g.play(KPOP, json!({ "targets": pick::id(&prey) }));
         g.end_turn();
 
         // p2 bounces every unit, the prey included, and plays the prey again.
@@ -187,9 +175,9 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
                 "library": LIBRARY,
             },
         }));
-        let prey = unit_at(&g, PlayerId::P2, 2).id;
-        g.play(KPOP, json!({ "targets": at(&prey) }));
-        g.play(HIT_JOB, json!({ "targets": at(&prey) }));
+        let prey = g.unit_at(PlayerId::P2, 2).id;
+        g.play(KPOP, json!({ "targets": pick::id(&prey) }));
+        g.play(HIT_JOB, json!({ "targets": pick::id(&prey) }));
         // It died and its Reborn body is back in its reserved zone, the same instance id (§4.5 step 4).
         assert_eq!(
             g.unit(PlayerId::P2, 2).map(|card| card.id.clone()),
@@ -216,8 +204,8 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
             "p1": { "hand": [KPOP, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
         }));
-        let prey = unit_at(&g, PlayerId::P2, 2).id;
-        g.play(KPOP, json!({ "targets": at(&prey) }));
+        let prey = g.unit_at(PlayerId::P2, 2).id;
+        g.play(KPOP, json!({ "targets": pick::id(&prey) }));
         g.end_turn();
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
@@ -244,14 +232,14 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
         // every keyword added to the pool moves the roll, so search for a seed where it is Reborn.
         let seed = seed_where("surgery-reborn-token", |seed| {
             let (mut g, token) = setup(seed);
-            g.play(SURGERY, json!({ "targets": at(&token) }));
+            g.play(SURGERY, json!({ "targets": pick::id(&token) }));
             has_keyword(&g, &token, KeywordKind::Reborn)
         });
         let (mut g, token) = setup(&seed);
-        g.play(SURGERY, json!({ "targets": at(&token) }));
+        g.play(SURGERY, json!({ "targets": pick::id(&token) }));
         assert!(has_keyword(&g, &token, KeywordKind::Reborn));
 
-        g.play(HIT_JOB, json!({ "targets": at(&token) }));
+        g.play(HIT_JOB, json!({ "targets": pick::id(&token) }));
 
         // §4.5 step 4: back in its zone at 1 health, without Reborn and without Surgery's buff (R78).
         g.expect_in_zone(token.as_str(), "field");
@@ -297,7 +285,7 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
         assert!(has_keyword(&g, &fused.id, KeywordKind::Stack));
         assert_eq!(pile_of(&g, PlayerId::P1, 1), vec![fiender.clone(), token.clone()]);
 
-        g.play(HIT_JOB, json!({ "targets": at(&fused.id) }));
+        g.play(HIT_JOB, json!({ "targets": pick::id(&fused.id) }));
 
         // The zone was reserved and never Locked, so the body returns — on top, the token dormant again.
         g.expect_in_zone(fiender.as_str(), "field");
@@ -361,13 +349,13 @@ mod c7_r41_r57_what_a_copy_keeps {
 
         // p1 ends its turn with 3 unspent: Bread and Butter summons a 3/3 Bread Token, Armor X of 3.
         g.end_turn();
-        let bread = unit_at(&g, PlayerId::P1, 1).id;
+        let bread = g.unit_at(PlayerId::P1, 1).id;
         assert_eq!(g.card(bread.as_str()).def_id, BREAD);
         g.expect_stats(bread.as_str(), json!({ "attack": 3, "health": 3 }));
 
         // p2 kills the Saintess: her Death makes every other p1 unit Radiant, so the Bread is Armor 3.
         g.play(COIN, json!({}));
-        g.play(HIT_JOB, json!({ "targets": at(&saintess) }));
+        g.play(HIT_JOB, json!({ "targets": pick::id(&saintess) }));
         g.play(JILLIAX, json!({}));
         assert!(g.card(bread.as_str()).radiant);
         assert_eq!(g.stats(bread.as_str()).armor, 3);
@@ -375,10 +363,10 @@ mod c7_r41_r57_what_a_copy_keeps {
 
         // p1 eats it with Carnivorous Cube, and p2 kills the Cube on its next turn.
         assert_eq!(g.state().active, PlayerId::P1);
-        g.play(CUBE, json!({ "targets": at(&bread) }));
+        g.play(CUBE, json!({ "targets": pick::id(&bread) }));
         let cube = g.card(CUBE).id.clone();
         g.end_turn();
-        g.play(HIT_JOB, json!({ "targets": at(&cube) }));
+        g.play(HIT_JOB, json!({ "targets": pick::id(&cube) }));
 
         let copies: Vec<String> = g
             .state()
@@ -428,7 +416,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         // lane 1 — to the opponent — so radiant Silas bounces it "costing 0" to its CONTROLLER's hand
         // (R747), but that hand is full, so it is burned instead (§2.4, R4) into the graveyard of the
         // hand's player, p1, whose card it became.
-        g.play(MIND_CONTROL, json!({ "targets": at(&seven) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::id(&seven) }));
         assert_eq!(
             g.unit(PlayerId::P1, 1).map(|card| card.id.clone()),
             Some(seven.clone())
@@ -461,7 +449,7 @@ mod c8_52_r4_r78_a_rider_on_a_card_that_never_reached_the_hand {
         }));
         let seven = g.card(SEVEN_SEVEN).id.clone();
 
-        g.play(MIND_CONTROL, json!({ "targets": at(&seven) }));
+        g.play(MIND_CONTROL, json!({ "targets": pick::id(&seven) }));
         g.play(SILAS, json!({ "zone": 3, "modes": ["left"] }));
 
         g.expect_in_zone(seven.as_str(), "hand");
@@ -500,7 +488,7 @@ mod r77_r175_a_fuse_onto_a_token_summoned_x_x {
             },
             "p2": { "hand": [SEVEN_SEVEN, STOCKPILE], "library": LIBRARY },
         }));
-        let bread = unit_at(&g, PlayerId::P1, 1).id;
+        let bread = g.unit_at(PlayerId::P1, 1).id;
         g.expect_stats(bread.as_str(), json!({ "attack": 3, "maxHealth": 3 }));
 
         g.play(SEVEN_SEVEN, json!({ "zone": 1 }));
@@ -526,7 +514,7 @@ mod r77_r175_a_fuse_onto_a_token_summoned_x_x {
 
         // p1 ends the turn with 4 unspent: a 4/4 Bread Token, whose radiant "Armor X" is carried as 4.
         g.end_turn();
-        let bread = unit_at(&g, PlayerId::P1, 1);
+        let bread = g.unit_at(PlayerId::P1, 1);
         assert_eq!(bread.def_id, BREAD);
         g.expect_stats(bread.id.as_str(), json!({ "attack": 4, "maxHealth": 4 }));
         assert_eq!(g.stats(bread.id.as_str()).armor, 0);
@@ -570,14 +558,14 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
         // joining the pool moves it: search for a seed where it is Classic #7 InfiniScepter.
         let seed = seed_where("transmogulate-locked", |seed| {
             let (mut g, power) = setup(seed);
-            g.play(MAGIC_JAMMED, json!({ "targets": at(&power) }));
+            g.play(MAGIC_JAMMED, json!({ "targets": pick::id(&power) }));
             g.play(TRANSMOGULATE, json!({}));
             g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()) == Some(INFINISCEPTER.to_string())
         });
         let (mut g, power) = setup(&seed);
 
         // Indestructible: the Field Spell simply stays (R46), in a zone that is now Locked.
-        g.play(MAGIC_JAMMED, json!({ "targets": at(&power) }));
+        g.play(MAGIC_JAMMED, json!({ "targets": pick::id(&power) }));
         assert_eq!(
             g.backrow(PlayerId::P1, 1).map(|card| card.id.clone()),
             Some(power.clone())
@@ -611,7 +599,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "library": LIBRARY,
             },
         }));
-        let sorcerer = unit_at(&g, PlayerId::P2, 5).id;
+        let sorcerer = g.unit_at(PlayerId::P2, 5).id;
         // p1 plays the Cube with nothing to eat (R41); p2's #85 fuses it onto the Sorcerer (R77).
         g.play(CUBE, json!({ "zone": 2 }));
         let fused = g.card(sorcerer.as_str()).clone();
@@ -630,7 +618,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.expect_in_zone(fused.id.as_str(), "hand");
         g.play(COIN, json!({}));
         g.play(TIMMY, json!({ "zone": 1 }));
-        let saintess = unit_at(&g, PlayerId::P2, 1).id;
+        let saintess = g.unit_at(PlayerId::P2, 1).id;
         // A Timmy that has been granted Reborn (Plastic Surgery's pool, R21), with no shield or Armor to
         // hide whether a hit lands on its body.
         grant(&mut g, &saintess, vec![Keyword::Reborn]);
@@ -658,7 +646,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "library": LIBRARY,
             },
         }));
-        let postdoc = unit_at(&g, PlayerId::P2, 5).id;
+        let postdoc = g.unit_at(PlayerId::P2, 5).id;
         g.play(CUBE, json!({ "zone": 2 }));
         let fused = g.card(postdoc.as_str()).clone();
         assert_ne!(fused.def_id, POSTDOC);
@@ -674,7 +662,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.expect_in_zone(fused.id.as_str(), "hand");
         g.play(COIN, json!({}));
         g.play(TIMMY, json!({ "zone": 1 }));
-        let timmy = unit_at(&g, PlayerId::P2, 1).id;
+        let timmy = g.unit_at(PlayerId::P2, 1).id;
         let before = g.events().len();
         // The Cube's part eats Timmy, and the Postdoc's part asks for a Vanilla copy of the same Timmy.
         let meal = json!({ "pick": "instance", "instanceId": timmy });
@@ -711,7 +699,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
                 "library": LIBRARY,
             },
         }));
-        let kpop = unit_at(&g, PlayerId::P2, 3).id;
+        let kpop = g.unit_at(PlayerId::P2, 3).id;
         let jammed = must(
             g.backrow(PlayerId::P1, 1).map(|card| card.id.clone()),
             "p1's backrow lane 1",
@@ -736,7 +724,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         g.end_turn();
         // Turn 10, p2: Magic Jammed locks p1's backrow lane 2, and Flood returns the fused unit to hand.
         g.play(COIN, json!({}));
-        g.play(MAGIC_JAMMED, json!({ "targets": at(&jammed) }));
+        g.play(MAGIC_JAMMED, json!({ "targets": pick::id(&jammed) }));
         g.play(FLOOD, json!({}));
         g.expect_in_zone(fused.id.as_str(), "hand");
         until_active(&mut g, PlayerId::P1);
@@ -756,7 +744,7 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         );
         g.play(
             fused.id.as_str(),
-            json!({ "zone": 1, "modes": ["right"], "targets": at(&prey) }),
+            json!({ "zone": 1, "modes": ["right"], "targets": pick::id(&prey) }),
         );
         g.expect_in_zone(prey.as_str(), "hand");
         // Turn 13, p1 plays the prey again: a new arrival (R78, R83).
@@ -877,7 +865,7 @@ mod r174_r78_a_later_part_of_a_cry_acting_on_the_card_itself_once_an_earlier_par
         }));
         let card = craft(&mut g, PlayerId::P1, &[SILAS, GARY]).id;
         // #26 Glowy Jelly Bean makes the crafted card Radiant, so its Silas part is radiant #52's text.
-        g.play(GLOWY_JELLY_BEAN, json!({ "targets": at(&card) }));
+        g.play(GLOWY_JELLY_BEAN, json!({ "targets": pick::id(&card) }));
         assert!(g.card(card.as_str()).radiant);
 
         // Played into lane 5 and rotated right: the card itself would cross to p2's side, so radiant
@@ -920,7 +908,7 @@ mod r174_a_transformed_card_has_left_the_field {
         g.play(TIMMY, json!({ "zone": 1 }));
 
         // The first Sheepish turned the played unit into a Sheep, which is no longer the card played.
-        assert_eq!(unit_at(&g, PlayerId::P1, 1).def_id, SHEEP);
+        assert_eq!(g.unit_at(PlayerId::P1, 1).def_id, SHEEP);
         g.expect_in_zone(first.as_str(), "graveyard");
         // A trap answering the play behind one that took the card off the field is not offered it, so
         // the second Sheepish stays armed and face-down rather than firing for nothing.
@@ -951,9 +939,9 @@ mod r102_r212_a_card_a_fuse_kept_is_the_same_card_on_the_same_stay {
             "p1": { "hand": [SORCERER, HINDER], "mana": 10 },
             "p2": { "field": [{ "def": FAUCI, "lane": 1 }], "backrow": [{ "def": EXPERIMENTATION, "lane": 1 }] },
         }));
-        let fauci = unit_at(&g, PlayerId::P2, 1).id;
+        let fauci = g.unit_at(PlayerId::P2, 1).id;
 
-        g.play(SORCERER, json!({ "zone": 1, "targets": at(&fauci) }));
+        g.play(SORCERER, json!({ "zone": 1, "targets": pick::id(&fauci) }));
 
         // The Sorcerer's Cry hit Fauci for 4, and the trap fused the Sorcerer onto Fauci (R77: the
         // instance is kept, on the same stay, carrying both texts — Fauci's trigger included, R102).

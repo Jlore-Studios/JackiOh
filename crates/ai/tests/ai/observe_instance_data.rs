@@ -7,7 +7,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, card_by_id, clone};
+use super::support::{AI, card_by_id, clone, js};
 
 fn p1_side() -> Value {
     json!({ "hand": ["core-008"], "field": ["core-011"], "library": ["core-020", "core-053"] })
@@ -15,11 +15,6 @@ fn p1_side() -> Value {
 
 fn p2_side() -> Value {
     json!({ "hand": ["core-002", "core-011"], "field": ["core-019"], "library": ["core-005", "core-016"] })
-}
-
-/// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
-fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
 }
 
 mod r185_the_ai_never_reads_a_hidden_cards_instance_data {

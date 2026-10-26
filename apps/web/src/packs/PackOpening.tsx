@@ -16,6 +16,9 @@
 // REDUCED MOTION (the panel's setting or the system's) shows the results at once: no tear, no flip,
 // no hold and no effects. A skip-all shows the same, with the best card's sting played once.
 //
+// EQUIP (R1955000): a revealed slot that granted a new cosmetic offers Equip (collection/EquipButton.tsx),
+// writing the pick the Collection would; a portrait's offers none.
+//
 // THE KEYBOARD (#1757): the scene is a modal overlay as the inspect views are (`useModalOverlay`): its
 // root takes the focus when it opens and gives it back to the opener when it closes, Tab and Shift+Tab
 // stay inside it, and Escape closes it unless an open request is out, when Close is disabled too.
@@ -36,6 +39,7 @@ import { CATALOG } from "@jackioh/cards";
 import { CardBack, CardFace, faceModel } from "../cards/index.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
+import EquipButton from "../collection/EquipButton.tsx";
 import { flightsOf } from "../economy/bars.ts";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
@@ -300,6 +304,9 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                         {t(cosmetic.cosmeticRarity)}
                         {COSMETICS.some((entry) => entry.id === cosmetic.cosmeticId && entry.chase) ? ` · ${t("Chase")}` : null}
                       </p>
+                    )}
+                    {cosmetic === null ? null : (
+                      <EquipButton cosmeticId={cosmetic.cosmeticId} cardId={slot.cardId} testid={packTestid.equip(index)} />
                     )}
                   </>
                 ) : (

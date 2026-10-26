@@ -8,12 +8,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, card_by_id, trap_pool};
-
-/// `determinize` with TS's default options (`{}`).
-fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, DeterminizeOptions::default())
-}
+use super::support::{AI, HUMAN, card_by_id, det, trap_pool};
 
 fn setting(face_down: bool) -> (GameState, String) {
     jackioh_cards::register_all();

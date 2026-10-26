@@ -108,13 +108,6 @@ mod tests {
         s
     }
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("no unit in {player} unit lane {lane}"),
-        }
-    }
-
     /// Ten distinct cards, to sit a hand exactly on HAND_CAP once Flood has left it (R4).
     const TEN_CARDS: [&str; 10] = [
         "core-001", "core-002", "core-005", "core-006", "core-008", "core-010", "core-011", "core-012", "core-015",
@@ -131,9 +124,9 @@ mod tests {
                 "p1": { "hand": ["core-017", "core-010"], "field": ["core-012"], "mana": 4 },
                 "p2": { "field": ["core-019", "core-020"] }
             }));
-            let mine = unit_at(&s, PlayerId::P1, 1);
-            let theirs1 = unit_at(&s, PlayerId::P2, 1);
-            let theirs2 = unit_at(&s, PlayerId::P2, 2);
+            let mine = s.unit_at(PlayerId::P1, 1);
+            let theirs1 = s.unit_at(PlayerId::P2, 1);
+            let theirs2 = s.unit_at(PlayerId::P2, 2);
 
             s.play("core-017", json!({}));
 
@@ -163,8 +156,8 @@ mod tests {
                 "p1": { "hand": ["core-017", "core-010"], "field": ["core-t-rush"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
             }));
-            let token = unit_at(&s, PlayerId::P1, 1);
-            let real = unit_at(&s, PlayerId::P2, 1);
+            let token = s.unit_at(PlayerId::P1, 1);
+            let real = s.unit_at(PlayerId::P2, 1);
 
             s.play("core-017", json!({}));
 
@@ -186,8 +179,8 @@ mod tests {
                 "p1": { "hand": hand, "field": ["core-012"], "mana": 4 },
                 "p2": { "field": ["core-019"] }
             }));
-            let mine = unit_at(&s, PlayerId::P1, 1);
-            let theirs = unit_at(&s, PlayerId::P2, 1);
+            let mine = s.unit_at(PlayerId::P1, 1);
+            let theirs = s.unit_at(PlayerId::P2, 1);
 
             s.play("core-017", json!({}));
 
@@ -222,8 +215,8 @@ mod tests {
                 "p2": { "field": ["core-019", "core-020"] }
             }));
             make_radiant(&mut s, "core-017");
-            let mine = unit_at(&s, PlayerId::P1, 1);
-            let theirs = unit_at(&s, PlayerId::P2, 1);
+            let mine = s.unit_at(PlayerId::P1, 1);
+            let theirs = s.unit_at(PlayerId::P2, 1);
 
             s.play("core-017", json!({ "modes": [BOUNCE_ALL] }));
 
@@ -242,10 +235,10 @@ mod tests {
                 "p2": { "field": ["core-019", "core-020"] }
             }));
             make_radiant(&mut s, "core-017");
-            let mine1 = unit_at(&s, PlayerId::P1, 1);
-            let mine2 = unit_at(&s, PlayerId::P1, 2);
-            let theirs1 = unit_at(&s, PlayerId::P2, 1);
-            let theirs2 = unit_at(&s, PlayerId::P2, 2);
+            let mine1 = s.unit_at(PlayerId::P1, 1);
+            let mine2 = s.unit_at(PlayerId::P1, 2);
+            let theirs1 = s.unit_at(PlayerId::P2, 1);
+            let theirs2 = s.unit_at(PlayerId::P2, 2);
 
             s.play("core-017", json!({ "modes": [BOUNCE_ENEMY] }));
 
@@ -264,9 +257,9 @@ mod tests {
                 "p2": { "field": ["core-019", "core-020"] }
             }));
             make_radiant(&mut s, "core-017");
-            let mine = unit_at(&s, PlayerId::P1, 1);
-            let theirs1 = unit_at(&s, PlayerId::P2, 1);
-            let theirs2 = unit_at(&s, PlayerId::P2, 2);
+            let mine = s.unit_at(PlayerId::P1, 1);
+            let theirs1 = s.unit_at(PlayerId::P2, 1);
+            let theirs2 = s.unit_at(PlayerId::P2, 2);
 
             s.play("core-017", json!({ "modes": [DESTROY_ENEMY] }));
 
@@ -286,8 +279,8 @@ mod tests {
                 "p2": { "field": [{ "def": "core-025", "radiant": true }, "core-019"] }
             }));
             make_radiant(&mut s, "core-017");
-            let indestructible = unit_at(&s, PlayerId::P2, 1);
-            let mortal = unit_at(&s, PlayerId::P2, 2);
+            let indestructible = s.unit_at(PlayerId::P2, 1);
+            let mortal = s.unit_at(PlayerId::P2, 2);
 
             s.play("core-017", json!({ "modes": [DESTROY_ENEMY] }));
 
@@ -304,7 +297,7 @@ mod tests {
                 "p2": { "field": ["core-t-rush"] }
             }));
             make_radiant(&mut s, "core-017");
-            let token = unit_at(&s, PlayerId::P2, 1);
+            let token = s.unit_at(PlayerId::P2, 1);
 
             s.play("core-017", json!({ "modes": [BOUNCE_ENEMY] }));
 

@@ -13,7 +13,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act_with_nonce, clone, in_graveyard, is_legal};
+use super::support::{AI, HUMAN, act_with_nonce, ai_options, clone, in_graveyard, is_legal};
 
 /// Spell (1): the opponent chooses, three times (E18's mode held by the other player).
 const PICKLE: &str = "classic-008";
@@ -142,15 +142,6 @@ fn install() {
     register_scripts(scripts);
 }
 
-/// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
-}
-
 /// TS's `{ ...base, ...over }` on two JSON objects (an absent `over` changes nothing).
 fn spread(base: Value, over: Option<&Value>) -> Value {
     let mut out = base;
@@ -199,7 +190,7 @@ fn asked(seed: &str, effect: Effect, setup: Value, controller: PlayerId) -> Game
 /// decide on a prompt the AI holds: a legal answer, reason "prompt", within the budget.
 fn answered(state: &GameState, seed: &str) -> ActionBody {
     assert_eq!(state.pending.as_ref().map(|pending| pending.player_id), Some(AI));
-    let decision = decide(&clone(state), AI, &mut ai_options(seed));
+    let decision = decide(&clone(state), AI, &mut ai_options(seed, AI_BUDGET));
     assert!(decision.is_some());
     let decision = decision.expect("a decision");
     assert_eq!(decision.reason, DecisionReason::Prompt);
@@ -488,7 +479,7 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
         .clone();
         let start = state.turn;
 
-        let first = decide(&clone(&state), AI, &mut ai_options("e18-pickle"));
+        let first = decide(&clone(&state), AI, &mut ai_options("e18-pickle", AI_BUDGET));
         assert_eq!(
             first.as_ref().map(|decision| decision.action.action_type()),
             Some(ActionType::Play)
@@ -520,7 +511,11 @@ mod e18_the_ai_answers_the_new_prompt_kinds {
             if state.turn != start {
                 break;
             }
-            let turn = play_ai_turn(&state, AI, &mut ai_options(&format!("e18-pickle-{step}")));
+            let turn = play_ai_turn(
+                &state,
+                AI,
+                &mut ai_options(&format!("e18-pickle-{step}"), AI_BUDGET),
+            );
             let none_played = turn.actions.is_empty();
             decisions.extend(turn.decisions);
             if none_played {

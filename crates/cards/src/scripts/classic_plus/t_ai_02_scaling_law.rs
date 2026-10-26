@@ -66,10 +66,6 @@ mod tests {
         out
     }
 
-    fn unit_at(s: &Scenario, lane: i32) -> CardInstance {
-        s.unit(P1, lane).expect("a unit in that lane")
-    }
-
     mod t_ai_2_scaling_law {
         use super::*;
 
@@ -82,7 +78,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [SCALING, FILLER] }, "p2": { "hand": [FILLER] } }));
                 s.play(SCALING, json!({ "zone": 1 }));
                 assert_eq!(played_this_game_with_tag(s.state(), P1, Tag::Ai), 1);
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 3, "health": 3, "maxHealth": 3 }));
             }
 
@@ -94,7 +90,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(SCALING, json!({ "zone": 1 }));
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.play(HALLUCINATION, json!({}));
                 s.expect_stats(&unit, json!({ "attack": 4, "health": 4 }));
                 s.play(HALLUCINATION, json!({}));
@@ -112,7 +108,7 @@ mod tests {
                 s.play(HALLUCINATION, json!({}));
                 s.play(ASSISTANT, json!({ "zone": 2 }));
                 s.play(SCALING, json!({ "zone": 1 }));
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 5, "health": 5 }));
             }
 
@@ -142,7 +138,7 @@ mod tests {
                     }
                     settle(sink, SettleOptions::default());
                 });
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 4, "health": 4 }));
             }
 
@@ -154,7 +150,7 @@ mod tests {
                     "p1": { "hand": [FILLER], "field": [SCALING] },
                     "p2": { "hand": [HALLUCINATION, HALLUCINATION, FILLER] },
                 }));
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 2, "health": 2 }));
                 s.play(HALLUCINATION, json!({}));
                 s.expect_stats(&unit, json!({ "attack": 2, "health": 2 }));
@@ -185,7 +181,7 @@ mod tests {
                 };
                 s.play(fused.id.as_str(), json!({}));
                 assert_eq!(played_this_game_with_tag(s.state(), P1, Tag::Ai), 2);
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 4, "health": 4 }));
             }
         }
@@ -201,7 +197,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
                 s.play(SCALING, json!({ "zone": 1 }));
-                let unit = unit_at(&s, 1);
+                let unit = s.unit_at(P1, 1);
                 s.expect_stats(&unit, json!({ "attack": 6, "health": 6 }));
                 s.play(HALLUCINATION, json!({}));
                 s.expect_stats(&unit, json!({ "attack": 8, "health": 8 }));

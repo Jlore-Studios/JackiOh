@@ -17,10 +17,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
+import { DEFAULT_CARD_COSMETICS, readCardPicks, readCosmetics, resetCosmeticsForTests, writeCosmetics } from "../cards/cosmetics.ts";
 import { REVEAL_STAGGER_MS, flightsMs, segmentMs } from "../economy/bars.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
-import type { BoughtPackResponse } from "../net/api.ts";
+import type { BoughtPackResponse, OpenedCosmeticPackResponse } from "../net/api.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
@@ -886,5 +887,79 @@ describe("#1667 shop.css", () => {
     const [bad] = blocks("@keyframes x { from { transform: none } to { left: 4px; opacity: 0 } }");
     const animated = blocks(bad!.body).flatMap((stop) => properties(stop.body));
     expect(animated).toContain("left");
+  });
+});
+
+describe("R1955000 a cosmetic pack's new cosmetic is equipped from its reveal", () => {
+  type Slot = OpenedCosmeticPackResponse["slots"][number];
+
+  beforeEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  afterEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  const cosmetic = (cosmeticId: string, cardId: string | null): Slot => ({
+    rarity: "Epic",
+    grant: { kind: "cosmetic", cosmeticId, cosmeticRarity: "Epic", cardId, cardGranted: false },
+  });
+
+  /** The panel opened to a reveal of `open`'s answer, the default fixture's when none. */
+  async function opened(slots?: Slot[]): Promise<void> {
+    cosmeticServer({ open: { status: 200, body: { ...openedCosmeticPack(), ...(slots === undefined ? {} : { slots }) } } });
+    render(<CosmeticPacks token={TOKEN} />);
+    await screen.findByTestId(T.unopened);
+    fireEvent.click(screen.getByTestId(T.open));
+    await screen.findByTestId(T.reveal);
+  }
+
+  it("R1955000 a per-card cosmetic's Equip writes the pick of the card it was granted on, and the Collection link stays", async () => {
+    await opened([
+      cosmetic("border-filigree", "core-004"),
+      openedCosmeticPack().slots[0]!,
+      openedCosmeticPack().slots[2]!,
+    ]);
+    expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equip");
+
+    fireEvent.click(screen.getByTestId(T.equip(0)));
+    expect(readCardPicks("core-004").border).toBe("border-filigree");
+    expect(readCosmetics().border, "the account's pick is not touched").toBe(DEFAULT_CARD_COSMETICS.border);
+    expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(0))).toBeDisabled();
+
+    // A full art goes on the card it was granted on, which is not the first slot's.
+    fireEvent.click(screen.getByTestId(T.equip(1)));
+    expect(readCardPicks("core-008").fullArt).toBe(true);
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+
+    expect(screen.queryByTestId(T.equip(2)), "bars offer none").toBeNull();
+    expect(screen.getByTestId(T.equipLink)).toHaveAttribute("href", "/collection?section=cosmetics");
+  });
+
+  it("R1955000 an account cosmetic's Equip writes the account's pick of its kind, and a portrait offers none", async () => {
+    await opened([
+      cosmetic("table-wood", null),
+      cosmetic("field-snow", null),
+      cosmetic("card-back-tidal", null),
+      cosmetic("portrait-timmy", null),
+      openedCosmeticPack().slots[2]!,
+    ]);
+    for (const index of [0, 1, 2]) fireEvent.click(screen.getByTestId(T.equip(index)));
+    expect(readCosmetics()).toMatchObject({ table: "table-wood", field: "field-snow", cardBack: "card-back-tidal" });
+    for (const index of [0, 1, 2]) expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equipped");
+    expect(screen.queryByTestId(T.equip(3)), "a portrait is a deck's pick").toBeNull();
+    expect(screen.queryByTestId(T.equip(4))).toBeNull();
+    expect(screen.getByTestId(T.equipLink)).toBeInTheDocument();
+  });
+
+  it("R1955000 a cosmetic the store already holds shows Equipped from the reveal", async () => {
+    writeCosmetics({ table: "table-wood" });
+    await opened();
+    expect(screen.getByTestId(T.equip(1))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(1))).toBeDisabled();
+    expect(screen.getByTestId(T.equip(0))).toHaveTextContent("Equip");
+    expect(screen.getByTestId(T.equip(0))).toBeEnabled();
   });
 });

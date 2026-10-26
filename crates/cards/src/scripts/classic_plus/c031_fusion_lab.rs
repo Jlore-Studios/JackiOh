@@ -89,10 +89,6 @@ mod tests {
         s.card(card).id.clone()
     }
 
-    fn pick(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// The kept card's fused id read back into [random ingredient, kept card].
     fn parts_of(s: &Scenario, id: &str) -> Vec<String> {
         match fused_id_parts(Some(s.state()), &s.card(id).def_id) {
@@ -152,7 +148,7 @@ mod tests {
                 let other = id_of(&s, STOCKPILE);
                 let cost_before = effective_cost(s.state(), s.card(&kept), Default::default());
                 s.play(LAB, json!({}));
-                s.activate(LAB, json!({ "targets": pick(&kept) }));
+                s.activate(LAB, json!({ "targets": pick::id(&kept) }));
                 let now = s.card(&kept).clone();
                 assert_eq!(now.zone, Zone::Hand { player: P1 });
                 let parts = parts_of(&s, &kept);
@@ -174,7 +170,7 @@ mod tests {
                     let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [LAB, MENACE] } }));
                     let kept = id_of(&s, MENACE);
                     s.play(LAB, json!({}));
-                    s.activate(LAB, json!({ "targets": pick(&kept) }));
+                    s.activate(LAB, json!({ "targets": pick::id(&kept) }));
                     assert_ne!(parts_of(&s, &kept)[0], LAB);
                 }
             }
@@ -199,8 +195,8 @@ mod tests {
                 let menace = id_of(&s, MENACE);
                 let stockpile = hand_id_of(&s, STOCKPILE);
                 s.play(LAB, json!({}));
-                s.activate(LAB, json!({ "targets": pick(&menace) }));
-                s.expect_refused(|s| s.activate(LAB, json!({ "targets": pick(&stockpile) })));
+                s.activate(LAB, json!({ "targets": pick::id(&menace) }));
+                s.expect_refused(|s| s.activate(LAB, json!({ "targets": pick::id(&stockpile) })));
                 assert_eq!(s.card(&stockpile).def_id, STOCKPILE);
             }
 
@@ -217,7 +213,7 @@ mod tests {
                     "playerId": "p1",
                     "instanceId": s.card(LAB).id,
                     "ability": "fuse",
-                    "targets": pick(&menace),
+                    "targets": pick::id(&menace),
                     "nonce": "lab-roundtrip",
                 }));
                 let live = reduce(s.state(), &declared);
@@ -238,8 +234,8 @@ mod tests {
                 let menace = id_of(&s, MENACE);
                 let stockpile = hand_id_of(&s, STOCKPILE);
                 s.play(LAB, json!({}));
-                s.expect_refused_with(|s| s.activate(LAB, json!({ "targets": pick(&menace) })), "not a legal target");
-                s.activate(LAB, json!({ "targets": pick(&stockpile) }));
+                s.expect_refused_with(|s| s.activate(LAB, json!({ "targets": pick::id(&menace) })), "not a legal target");
+                s.activate(LAB, json!({ "targets": pick::id(&stockpile) }));
                 assert_eq!(parts_of(&s, &stockpile)[1], STOCKPILE);
                 assert_eq!(s.card(&menace).def_id, MENACE);
             }
@@ -253,7 +249,7 @@ mod tests {
                 }));
                 let menace = id_of(&s, MENACE);
                 s.play(LAB, json!({}));
-                s.expect_refused_with(|s| s.activate(LAB, json!({ "targets": pick(&menace) })), "not a legal target");
+                s.expect_refused_with(|s| s.activate(LAB, json!({ "targets": pick::id(&menace) })), "not a legal target");
                 s.end_turn();
                 assert!(!any_fused(&s));
                 assert!(s.state().pending.is_none());
@@ -282,7 +278,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [LAB, MENACE] }, "p2": { "hand": [STOCKPILE] } }));
                 let menace = id_of(&s, MENACE);
                 s.play(LAB, json!({}));
-                s.activate(LAB, json!({ "targets": pick(&menace) }));
+                s.activate(LAB, json!({ "targets": pick::id(&menace) }));
                 let theirs = fused_events(&s, P2);
                 assert_eq!(theirs.len(), 1);
                 match &theirs[0] {
@@ -316,7 +312,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [{ "def": LAB, "radiant": true }, MENACE] } }));
                 let menace = id_of(&s, MENACE);
                 s.play(LAB, json!({}));
-                s.activate(LAB, json!({ "targets": pick(&menace) }));
+                s.activate(LAB, json!({ "targets": pick::id(&menace) }));
                 let kept = s.card(&menace).clone();
                 assert!(!kept.radiant);
                 let specs = fused_id_specs(Some(s.state()), &kept.def_id).unwrap_or_default();
@@ -338,7 +334,7 @@ mod tests {
                 }));
                 let stockpile = id_of(&s, STOCKPILE);
                 s.play(LAB, json!({}));
-                s.activate(LAB, json!({ "targets": pick(&stockpile) }));
+                s.activate(LAB, json!({ "targets": pick::id(&stockpile) }));
                 let kept = s.card(&stockpile).clone();
                 assert!(kept.radiant);
                 let specs = fused_id_specs(Some(s.state()), &kept.def_id).unwrap_or_default();
@@ -359,7 +355,7 @@ mod tests {
                 let stockpile = hand_id_of(&s, STOCKPILE);
                 s.play(LAB, json!({}));
                 let cost = effective_cost(s.state(), s.card(&stockpile), Default::default());
-                s.activate(LAB, json!({ "targets": pick(&stockpile) }));
+                s.activate(LAB, json!({ "targets": pick::id(&stockpile) }));
                 let specs = fused_id_specs(Some(s.state()), &s.card(&stockpile).def_id).unwrap_or_default();
                 assert_eq!(specs.first().and_then(|spec| spec.radiant), Some(true));
                 assert_eq!(effective_cost(s.state(), s.card(&stockpile), Default::default()), cost);

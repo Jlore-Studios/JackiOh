@@ -94,6 +94,7 @@ export const packTestid = {
   slot: (index: number) => `pack-slot-${String(index)}`,
   flip: (index: number) => `pack-slot-${String(index)}-flip`,
   outcome: (index: number) => `pack-slot-${String(index)}-outcome`,
+  equip: (index: number) => `pack-slot-${String(index)}-equip`,
 } as const;
 
 /** A rate as a percentage to `PACK_ODDS_DECIMALS`, without trailing zeros: 0.29 is "29%", 0.082 "8.2%". */

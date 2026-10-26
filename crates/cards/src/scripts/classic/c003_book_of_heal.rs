@@ -61,14 +61,6 @@ mod tests {
 
     use crate::js;
 
-    /// The unit in that lane, as the play's `targets` (`Selection[]`).
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {} lane {lane}", player.as_str());
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     fn healed_amounts(s: &Scenario) -> Vec<i32> {
         s.events()
             .iter()
@@ -110,7 +102,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
 
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(BOOK, json!({ "targets": targets }));
 
                 s.expect_stats(MENACE, json!({ "health": 9, "maxHealth": 9 }));
@@ -125,7 +117,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 }, "damage": 12 }] },
                 }));
 
-                let targets = at(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(BOOK, json!({ "targets": targets }));
 
                 s.expect_stats(TEMPO, json!({ "health": 15, "maxHealth": 18 }));
@@ -157,7 +149,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "field": [MENACE] }, "p2": { "hand": [FILLER] } }));
 
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(BOOK, json!({ "targets": targets }));
 
                 s.expect_stats(MENACE, json!({ "health": 9, "maxHealth": 9 }));
@@ -215,7 +207,7 @@ mod tests {
                     "p2": { "hand": [FILLER] },
                 }));
 
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(BOOK, json!({ "targets": targets }));
                 match s.unit(P1, 1) {
                     Some(unit) => s.expect_stats(&unit, json!({ "health": 18, "maxHealth": 18 })),

@@ -192,10 +192,6 @@ mod tests {
         (s, power)
     }
 
-    fn unit_pick(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// The def ids a Discover prompt offers (§6.3), in the order offered.
     fn offered_ids(s: &Scenario) -> Vec<String> {
         let pending = js(must(s.state().pending.as_ref(), "a discover prompt"));
@@ -331,7 +327,7 @@ mod tests {
                 "burn",
                 OnField { p1: Some(json!({ "hand": [JAMMED], "mana": 8 })), ..OnField::default() },
             );
-            s.play(JAMMED, json!({ "targets": unit_pick(&card) }));
+            s.play(JAMMED, json!({ "targets": pick::instance(&card) }));
             s.expect_in_zone(&card, "field");
             assert_eq!(s.backrow(P1, 1).map(|found| found.id), Some(card.id.clone()));
         }
@@ -705,7 +701,7 @@ mod tests {
                 OnField { radiant_face: true, p2: Some(json!({ "field": [FELINOR_TOKEN] })), ..OnField::default() },
             );
             let kitten = must(s.unit(P2, 1), "the enemy Felinor Token");
-            s.activate(&card, json!({ "targets": unit_pick(&kitten) }));
+            s.activate(&card, json!({ "targets": pick::instance(&kitten) }));
             assert!(s.unit(P2, 1).is_none());
             let ghoul = must(units_of(&s, P1).into_iter().next(), "a Ghoul Token");
             assert_eq!(ghoul.def_id, GHOUL_TOKEN);
@@ -1101,7 +1097,7 @@ mod tests {
                                 ..OnField::default()
                             },
                         );
-                        s.play(book, json!({ "targets": unit_pick(&card) }));
+                        s.play(book, json!({ "targets": pick::instance(&card) }));
                         for key in drawn_numbers(&s) {
                             assert!(own.contains(&key), "{name} radiant {radiant_face} {book}: drew {key}");
                             drawn += 1;
@@ -1140,7 +1136,7 @@ mod tests {
             let held = s.card(HEROIC).clone();
             let held = set_power(&mut s, &held, "recruit");
             assert_eq!(listed_numbers(&s, &held), vec!["cost", "keyword:Activate"]);
-            s.play(KYS_CONSTANT, json!({ "targets": unit_pick(&held) }));
+            s.play(KYS_CONSTANT, json!({ "targets": pick::instance(&held) }));
             assert!(tuned_keys(&s, &held).iter().all(|key| key == "Activate"), "{:?}", tuned_keys(&s, &held));
             let cost_set = effective(&s, s.card(HEROIC)) == 3;
             assert!(cost_set != tuned_keys(&s, &held).contains(&"Activate".to_string()));
@@ -1180,7 +1176,7 @@ mod tests {
             );
             assert_eq!(crate::upgrade_number(&mut s, HEROIC, "ping"), 2);
             let insect = set_power(&mut s, &card, "insect");
-            s.play(BOOK_OF_BUFF, json!({ "targets": unit_pick(&insect) }));
+            s.play(BOOK_OF_BUFF, json!({ "targets": pick::instance(&insect) }));
             let drawn = drawn_numbers(&s);
             let live = s.card(card.id.as_str()).clone();
             // Of the four Upgrades, those the Number row drew are each a step of Die Insect's 8 (step 2);

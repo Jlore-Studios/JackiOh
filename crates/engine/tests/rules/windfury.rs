@@ -41,7 +41,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-fn unit_at(state: &GameState, player: PlayerId, lane: i32) -> &CardInstance {
+fn unit_in(state: &GameState, player: PlayerId, lane: i32) -> &CardInstance {
     state.players[player]
         .units
         .get((lane - 1) as usize)
@@ -63,7 +63,7 @@ fn unit_at_mut(state: &mut GameState, player: PlayerId, lane: i32) -> &mut CardI
 fn attack_body(state: &GameState, lane: i32) -> ActionInput {
     input(
         ActionBody::Attack {
-            attacker_id: unit_at(state, PlayerId::P1, lane).id.clone(),
+            attacker_id: unit_in(state, PlayerId::P1, lane).id.clone(),
             target_id: "hero-p2".to_string(),
         },
         PlayerId::P1,
@@ -110,17 +110,17 @@ mod r636_windfury {
             slot(PlayerId::P1, Row::Units, 1),
             Default::default(),
         );
-        assert_eq!(attacks_per_turn(&state, unit_at(&state, PlayerId::P1, 1)), 2);
+        assert_eq!(attacks_per_turn(&state, unit_in(&state, PlayerId::P1, 1)), 2);
 
         state = attack_hero(&state, 1);
         assert_eq!(state.players.p2.hero.health, 27);
         // The first attack leaves the unit able to declare another, in `legalActions` and in the reducer.
-        assert!(offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
+        assert!(offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
 
         state = attack_hero(&state, 1);
         assert_eq!(state.players.p2.hero.health, 24);
         assert_eq!(
-            unit_at(&state, PlayerId::P1, 1).exertion,
+            unit_in(&state, PlayerId::P1, 1).exertion,
             Exertion {
                 attacked: true,
                 switched: false,
@@ -129,7 +129,7 @@ mod r636_windfury {
         );
 
         // The third is refused the way a second attack by any unit is, and `legalActions` no longer lists it.
-        assert!(!offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
+        assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
         expect_refusal(attempt(&state, attack_body(&state, 1)).error, "already acted");
         assert_eq!(state.players.p2.hero.health, 24);
     }
@@ -151,10 +151,10 @@ mod r636_windfury {
         );
 
         state = attack_hero(&state, 1);
-        assert!(!offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
+        assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
 
         state = attack_hero(&state, 2);
-        let wind = unit_at(&state, PlayerId::P1, 2).clone();
+        let wind = unit_in(&state, PlayerId::P1, 2).clone();
         // Attacked once, with an attack left: it cannot also switch, since a switch takes the exertion an attack spent.
         assert!(has_exertion(&state, &wind, ExertionKind::Attack));
         assert!(!has_exertion(&state, &wind, ExertionKind::Switch));
@@ -187,13 +187,13 @@ mod r636_windfury {
             slot(PlayerId::P1, Row::Units, 1),
             Default::default(),
         );
-        let instance_id = unit_at(&state, PlayerId::P1, 1).id.clone();
+        let instance_id = unit_in(&state, PlayerId::P1, 1).id.clone();
         state = act(
             &state,
             input(ActionBody::SwitchPosition { instance_id }, PlayerId::P1),
         );
         // An effect flips it back to Attack Position (R20, no exertion): the switch it made already spent the turn's.
-        let card = unit_at(&state, PlayerId::P1, 1).clone();
+        let card = unit_in(&state, PlayerId::P1, 1).clone();
         let flipped = with_sink(&mut state, |sink| {
             switch_position(
                 sink,
@@ -205,7 +205,7 @@ mod r636_windfury {
             )
         });
         assert!(flipped.is_ok(), "{flipped:?}");
-        let wind = unit_at(&state, PlayerId::P1, 1).clone();
+        let wind = unit_in(&state, PlayerId::P1, 1).clone();
         assert!(!has_exertion(&state, &wind, ExertionKind::Attack));
         assert!(!offers_attack(&state, &wind));
         expect_refusal(
@@ -240,7 +240,7 @@ mod r636_windfury {
         state = act(&state, input(ActionBody::EndTurn, PlayerId::P2));
         assert_eq!(state.active, PlayerId::P1);
         assert_eq!(
-            unit_at(&state, PlayerId::P1, 1).exertion,
+            unit_in(&state, PlayerId::P1, 1).exertion,
             Exertion {
                 attacked: false,
                 switched: false,
@@ -271,19 +271,19 @@ mod r636_windfury {
 
         state = attack_hero(&state, 1);
         state = attack_hero(&state, 2);
-        assert!(!offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
+        assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
 
         unit_at_mut(&mut state, PlayerId::P1, 1)
             .granted_keywords
             .push(Keyword::Windfury);
-        assert!(offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
+        assert!(offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
         state = attack_hero(&state, 1);
-        assert!(!offers_attack(&state, unit_at(&state, PlayerId::P1, 1)));
+        assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
 
         // The other unit loses its Windfury (here: it is Vanilla'd, which takes the printed keyword) after one attack.
         unit_at_mut(&mut state, PlayerId::P1, 2).vanilla = true;
-        assert_eq!(attacks_per_turn(&state, unit_at(&state, PlayerId::P1, 2)), 1);
-        assert!(!offers_attack(&state, unit_at(&state, PlayerId::P1, 2)));
+        assert_eq!(attacks_per_turn(&state, unit_in(&state, PlayerId::P1, 2)), 1);
+        assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 2)));
         expect_refusal(attempt(&state, attack_body(&state, 2)).error, "already acted");
     }
 
@@ -301,7 +301,7 @@ mod r636_windfury {
             .granted_keywords
             .push(Keyword::Windfury);
         let next = attack_hero(&state, 1);
-        let after = unit_at(&next, PlayerId::P1, 1);
+        let after = unit_in(&next, PlayerId::P1, 1);
         // One attack made, one left, and the duelist's own switch still unspent.
         assert!(has_exertion(&next, after, ExertionKind::Attack));
         assert!(has_exertion(&next, after, ExertionKind::Switch));

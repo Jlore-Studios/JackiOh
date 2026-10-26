@@ -192,10 +192,6 @@ mod tests {
         s
     }
 
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// base
     mod base {
         use super::*;
@@ -278,7 +274,7 @@ mod tests {
             assert_eq!(attack_of(&s, P2, 2), 5);
 
             let vanilla = s.card(VANILLA).clone();
-            s.play(HIT_JOB, json!({ "targets": at(&vanilla) }));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&vanilla) }));
 
             assert_eq!(attack_of(&s, P2, 2), 7);
         }
@@ -311,7 +307,7 @@ mod tests {
             s.expect_in_zone(&siphon, "field");
 
             let vanilla = s.card(VANILLA).clone();
-            s.play(HIT_JOB, json!({ "targets": at(&vanilla) }));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&vanilla) }));
 
             s.expect_in_zone(&siphon, "graveyard");
         }
@@ -434,7 +430,7 @@ mod tests {
 
             let mut s = set_against(&[VANILLA], true, &[]);
             let vanilla = s.card(VANILLA).clone();
-            s.play(HIT_JOB, json!({ "targets": at(&vanilla) }));
+            s.play(HIT_JOB, json!({ "targets": pick::instance(&vanilla) }));
             s.expect_in_zone(SIPHON, "graveyard");
         }
 

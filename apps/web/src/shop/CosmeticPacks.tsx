@@ -8,13 +8,15 @@
 // from the answers; the reveal only reads them out, slot by slot in order. The shard bar plays from the
 // points the panel read before the opening to the answer's, with no `fills`: a full bar holds (R1306002).
 // The odds are not here: they are on `/purchases` (R1665000). A refused open or chase shows the
-// server's words verbatim with nothing changed on screen.
+// server's words verbatim with nothing changed on screen. A slot's new cosmetic is equipped from the
+// reveal too (R1955000, collection/EquipButton.tsx); the link to the Collection stays.
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
+import EquipButton from "../collection/EquipButton.tsx";
 import { BURST_MS, flightsOf, type RevealItem } from "../economy/bars.ts";
 import FillBar, { useReducedMotion } from "../economy/FillBar.tsx";
 import OpeningBars from "../economy/OpeningBars.tsx";
@@ -238,6 +240,9 @@ export default function CosmeticPacks({
                         {t("On {card}", { card: cardName(slot.grant.cardId) })}
                         {slot.grant.cardGranted ? ` · ${t("Its card was granted too")}` : null}
                       </p>
+                    ) : null}
+                    {slot.grant.kind === "cosmetic" ? (
+                      <EquipButton cosmeticId={slot.grant.cosmeticId} cardId={slot.grant.cardId} testid={shopTestid.equip(index)} />
                     ) : null}
                   </div>
                 );

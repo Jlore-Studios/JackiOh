@@ -66,13 +66,6 @@ mod tests {
 
     use crate::js;
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {player} lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     fn grape(radiant: bool) -> Value {
         if radiant { json!({ "def": GRAPE, "radiant": true }) } else { json!({ "def": GRAPE }) }
     }
@@ -95,7 +88,7 @@ mod tests {
         let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
         assert!(!crate::can_degrade_number(&s, GRAPE, "discount"));
         assert_eq!(crate::upgrade_number(&mut s, GRAPE, "discount"), 2);
-        let targets = unit_at(&s, P2, 1);
+        let targets = pick::unit_at(&s, P2, 1);
         s.play(GRAPE, json!({ "targets": targets }));
         assert_eq!(s.card(DECK_B).cost_mod, -2);
     }
@@ -107,7 +100,7 @@ mod tests {
         fn an_enemy_unit_takes_2_damage_then_you_draw_1_that_costs_1_less() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [GRAPE, FILLER], "library": [DECK_B] }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
-            let targets = unit_at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(GRAPE, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 7 }));
@@ -139,7 +132,7 @@ mod tests {
                 "p1": { "hand": [GRAPE, FILLER], "field": [{ "def": MENACE, "damage": 5 }], "library": [DECK_B] },
                 "p2": { "hand": [FILLER] }
             }));
-            let targets = unit_at(&s, P1, 1);
+            let targets = pick::unit_at(&s, P1, 1);
             s.play(GRAPE, json!({ "targets": targets }));
             s.expect_stats(MENACE, json!({ "health": 6 }));
             assert!(!has_event(s.last_events(), "damage"));
@@ -262,7 +255,7 @@ mod tests {
                 "p1": { "hand": [grape(true), FILLER], "library": [DECK_A, DECK_B, DECK_C, DECK_D] },
                 "p2": { "hand": [FILLER], "field": [MENACE] }
             }));
-            let targets = unit_at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(GRAPE, json!({ "targets": targets }));
             s.expect_stats(MENACE, json!({ "health": 5 }));
             assert_eq!(

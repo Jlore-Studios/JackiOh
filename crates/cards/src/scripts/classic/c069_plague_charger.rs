@@ -87,10 +87,6 @@ mod tests {
             .collect()
     }
 
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// declares its one number, a conditional keyword, a self aura and the glow, one script on both faces
     #[test]
     fn declares_its_one_number_a_conditional_keyword_a_self_aura_and_the_glow_one_script_on_both_faces() {
@@ -184,12 +180,12 @@ mod tests {
 
             // Each removal comes before the two forced attacks it buys (the Radiant face's), which here
             // can only be at the hero.
-            s.activate(MUTATE, json!({ "targets": at(&charger) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 6 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge", "First Strike"]);
             s.expect_health(P2, 18);
 
-            s.activate(MUTATE, json!({ "targets": at(&charger) }));
+            s.activate(MUTATE, json!({ "targets": pick::instance(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 4 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge"]);
             s.expect_health(P2, 10);
