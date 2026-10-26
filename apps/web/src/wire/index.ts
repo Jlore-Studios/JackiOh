@@ -68,6 +68,9 @@ export type { KeywordKind } from "./generated/KeywordKind.ts";
 export type { LibraryEntryView } from "./generated/LibraryEntryView.ts";
 export type { LibraryOverflowOutcome } from "./generated/LibraryOverflowOutcome.ts";
 export type { LibraryView } from "./generated/LibraryView.ts";
+export type { MarketOfferView } from "./generated/MarketOfferView.ts";
+export type { MarketSaleView } from "./generated/MarketSaleView.ts";
+export type { MarketplaceView } from "./generated/MarketplaceView.ts";
 export type { ModeDecl } from "./generated/ModeDecl.ts";
 export type { ModifierView } from "./generated/ModifierView.ts";
 export type { MulliganView } from "./generated/MulliganView.ts";
@@ -218,6 +221,9 @@ export const GAME_EVENT_TYPES = [
   "resourceSold",
   "resourceDiscarded",
   "marketCreditsChanged",
+  // Issue #1853's Marketplace: a card bought, a Resource sold (R1853003).
+  "marketBought",
+  "marketSold",
   // Stinkyscape's Starship: a piece fused into its owner's Dormant Starship, and a Starship launched
   // (issue #1852, R1852000, R1852003).
   "starshipFused",

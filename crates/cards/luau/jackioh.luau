@@ -1477,6 +1477,20 @@ defId: string,
 player: PlayerId,
 value: number,
 } | {
+["type"]: "marketBought",
+player: PlayerId,
+instanceId: string,
+defId: string,
+radiant: true?,
+credits: number,
+} | {
+["type"]: "marketSold",
+player: PlayerId,
+instanceId: string,
+defId: string,
+radiant: true?,
+credits: number,
+} | {
 ["type"]: "starshipFused",
 player: PlayerId,
 instanceId: string,
@@ -1518,7 +1532,7 @@ defId: string,
 holderId: string,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled" | "starscapeTravelled" | "held"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "marketBought" | "marketSold" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled" | "starscapeTravelled" | "held"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect" | "voted-out" | "both-voted-out" | "fled" | "fled-decisive"
 

@@ -130,6 +130,9 @@ pub const CLIENT_ACTION_TYPES: &[ActionType] = &[
     ActionType::EndTurn,
     // R1838000: a Trade of a Tradable hand card, judged by the reducer as `legal_actions` lists it.
     ActionType::Trade,
+    // R1853003: a buy or a sale at the Marketplace, judged by the reducer as `legal_actions` lists it.
+    ActionType::MarketBuy,
+    ActionType::MarketSell,
     ActionType::SetAutoEndTurn,
 ];
 
@@ -676,6 +679,20 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 return Err(malformed(r#""trade.instanceId" must be a string"#));
             };
             Ok(ActionBody::Trade {
+                instance_id: instance_id.to_string(),
+            })
+        }
+        ActionType::MarketBuy => {
+            let Some(offer) = non_negative_int(raw.get("offer")) else {
+                return Err(malformed(r#""marketBuy.offer" must be a non-negative integer"#));
+            };
+            Ok(ActionBody::MarketBuy { offer })
+        }
+        ActionType::MarketSell => {
+            let Some(instance_id) = is_string(raw.get("instanceId")) else {
+                return Err(malformed(r#""marketSell.instanceId" must be a string"#));
+            };
+            Ok(ActionBody::MarketSell {
                 instance_id: instance_id.to_string(),
             })
         }

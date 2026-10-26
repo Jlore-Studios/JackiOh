@@ -16,6 +16,7 @@ import type { HeldCard } from "./HeldCard";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { MarkRecord } from "./MarkRecord";
+import type { Marketplace } from "./Marketplace";
 import type { MulliganSeat } from "./MulliganSeat";
 import type { OpeningRecord } from "./OpeningRecord";
 import type { PendingChoice } from "./PendingChoice";
@@ -213,4 +214,10 @@ customDefs?: { [key in string]: CardDef },
  * order they were taken. D14: absent until the first is held, so a game that never holds one
  * hashes exactly as before this field existed. Never in a view: the view sees `held` events.
  */
-held?: Array<HeldCard>, };
+held?: Array<HeldCard>, 
+/**
+ * R1853000: Stinkyscape's Marketplace, opened for both players by the first Resource or Credits
+ * either gains (`marketplace.rs`). Absent until then, so a game without either hashes as it did
+ * before this field existed (D14).
+ */
+marketplace?: Marketplace, };
