@@ -2256,6 +2256,13 @@
     "1996": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T13:40:26Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The hard rule names 'a database migration' outright and this adds 0062; on size alone (~11 files, <100 lines) it would have read medium."
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
