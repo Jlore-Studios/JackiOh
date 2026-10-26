@@ -94,6 +94,9 @@ embiggenCostOverride: number?,
 costMod: number?,
 temporary: boolean?,
 chinese: boolean?,
+statsOverride: AttackHealth?,
+armorOverride: number?,
+tuning: Tuning?,
 lucky: number?,
 copyOf: string?,
 memory: {[string]: JsonValue}?,
@@ -2524,6 +2527,16 @@ export type TuneDirection = "degrade" | "upgrade"
 export type TuneMultiplier = {
 upgrade: number?,
 degrade: number?,
+}
+
+export type Tuning = {
+attack: number?,
+health: number?,
+addKeywords: {Keyword}?,
+removeKeywords: {KeywordKind}?,
+x: {[string]: number}?,
+numbers: {[string]: number}?,
+set: {[string]: number}?,
 }
 
 export type TuningChange = {
