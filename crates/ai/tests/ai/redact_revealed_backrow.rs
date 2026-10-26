@@ -7,15 +7,10 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, card_by_id, register_cards};
+use super::support::{AI, HUMAN, card_by_id, det, register_cards};
 
 /// C #88 Siphon Squad, (3) Field Trap: "Start of Turn: Reveal."
 const SIPHON: &str = "classic-088";
-
-/// `determinize` with TS's default options (`{}`).
-fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, DeterminizeOptions::default())
-}
 
 /// viewFor without its event tail, which B10 exempts.
 fn view_without_events(state: &GameState, seat: PlayerId) -> Value {

@@ -10,7 +10,7 @@
 use std::rc::Rc;
 
 use jackioh_engine::custom::{custom_def, validate_custom_card, with_custom_scripts};
-use jackioh_engine::testkit::{CardDef, PlayerId, Scenario, scenario};
+use jackioh_engine::testkit::{CardDef, PlayerId, Scenario, pick, scenario};
 use jackioh_engine::{
     CardCost, CustomCard, CustomFrame, CustomParam, GameEvent, PrintedRarity, Rarity, find_def, fold,
     hash_state,
@@ -194,13 +194,6 @@ fn hero(player: PlayerId) -> Value {
     json!([{ "pick": "hero", "player": player.as_str() }])
 }
 
-fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-    let Some(unit) = s.unit(player, lane) else {
-        panic!("no unit in {} lane {lane}", player.as_str());
-    };
-    json!([{ "pick": "instance", "instanceId": unit.id }])
-}
-
 // ---------------------------------------------------------------------------------------------
 // R915002: official cards, rewritten in the kit, play as their Rust cards do
 // ---------------------------------------------------------------------------------------------
@@ -239,7 +232,7 @@ mod r915002_parity {
             "return Card {\n  target = \"a unit\",\n  cry = function(c, n)\n    c:destroy(c:target())\n  end,\n}\n",
             board,
             |s, id, _| {
-                let targets = unit_at(s, P2, 2);
+                let targets = pick::unit_at(s, P2, 2);
                 s.play(id, json!({ "targets": targets }));
             },
         );
@@ -264,7 +257,7 @@ mod r915002_parity {
             s.play(id, json!({ "targets": hero(P2) }));
         });
         parity("classic-016", source, board, |s, id, _| {
-            let targets = unit_at(s, P2, 1);
+            let targets = pick::unit_at(s, P2, 1);
             s.play(id, json!({ "targets": targets }));
         });
     }
@@ -288,7 +281,7 @@ mod r915002_parity {
             "return Card {\n  target = \"a unit\",\n  cry = function(c, n)\n    c:buff(c:target(), n.buff, n.buff)\n  end,\n}\n",
             board,
             |s, id, _| {
-                let targets = unit_at(s, P1, 1);
+                let targets = pick::unit_at(s, P1, 1);
                 s.play(id, json!({ "targets": targets }));
             },
         );
@@ -337,7 +330,7 @@ mod r915002_parity {
                 })
             },
             |s, _, _| {
-                let targets = unit_at(s, P1, 1);
+                let targets = pick::unit_at(s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
             },
         );
@@ -355,7 +348,7 @@ mod r915002_parity {
                 })
             },
             |s, _, _| {
-                let targets = unit_at(s, P1, 1);
+                let targets = pick::unit_at(s, P1, 1);
                 s.play(HIT_JOB, json!({ "targets": targets }));
             },
         );

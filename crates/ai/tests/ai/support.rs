@@ -9,20 +9,41 @@
 //! mints p1's deck first, so a scenario seen from p2 would have its own low-numbered library cards
 //! read as p1's. Every scenario-based AI test therefore puts the AI in p1's seat and keeps the
 //! scenario under 20 instances; states for p2's seat come from real `create_game` games.
+//!
+//! `det`, `ai_options` and `js` are here so no test file copies them (#1826;
+//! crates/tools/tests/acceptance.rs refuses a copy).
 
 #![allow(dead_code)]
 
 use std::borrow::Borrow;
 use std::cell::Cell;
 
-use jackioh_ai::{AI_BUDGET, AiOptions, AiTurnResult, SearchBudget, action_key, play_ai_turn};
+use jackioh_ai::{
+    AI_BUDGET, AiOptions, AiTurnResult, DeterminizeOptions, SearchBudget, action_key, determinize,
+    play_ai_turn,
+};
 use jackioh_engine::testkit::{
     Action, ActionBody, ActionType, CardInstance, CatalogQueryArgs, CreateGameOptions, DECK_SIZE, GameState,
-    PLAYER_IDS, Phase, PlayerId, Value, begin_game, create_game, create_rng, json, json_as, legal_actions,
-    opponent_of, query, reduce, seat_to_act, subsystems,
+    PLAYER_IDS, Phase, PlayerId, Rng, Value, begin_game, create_game, create_rng, json, json_as,
+    legal_actions, opponent_of, query, reduce, seat_to_act, subsystems,
 };
 
 pub use jackioh_engine::testkit::scenario;
+
+/// `determinize` with TS's default options (`{}`).
+pub fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
+    determinize(public, seat, rng, DeterminizeOptions::default())
+}
+
+/// TS's `{ rng: createRng(seed), budget }`: no clock.
+pub fn ai_options(seed: &str, budget: SearchBudget) -> AiOptions<'static> {
+    AiOptions::with_budget(create_rng(seed, 0), budget)
+}
+
+/// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
+pub fn js<T: serde::Serialize>(value: T) -> Value {
+    serde_json::to_value(value).expect("serialisable")
+}
 
 /// The real catalog and card scripts, once per process.
 pub fn register_cards() {

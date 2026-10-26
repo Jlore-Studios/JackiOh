@@ -53,10 +53,6 @@ mod tests {
         events.iter().filter(|event| matches!(event, GameEvent::Upgraded { .. })).map(js).collect()
     }
 
-    fn pick(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// TS `book({ radiant? })`.
     fn book(radiant: bool) -> Scenario {
         scenario(json!({
@@ -116,7 +112,7 @@ mod tests {
             crate::register_all();
             let mut s = book(false);
             let unit = s.unit(P2, 1).expect("p2's unit");
-            s.play(BOOK, json!({ "targets": pick(&unit.id) }));
+            s.play(BOOK, json!({ "targets": pick::id(&unit.id) }));
             let events = upgrades(s.events());
             assert_eq!(events.len(), 4);
             assert!(events.iter().all(|event| event["instanceId"] == json!(unit.id)));
@@ -129,7 +125,7 @@ mod tests {
             let hidden_id = jackioh_engine::view_for::HIDDEN_ID;
             let mut s = book(false);
             let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
-            s.play(BOOK, json!({ "targets": pick(&held.id) }));
+            s.play(BOOK, json!({ "targets": pick::id(&held.id) }));
             assert_eq!(upgrades(s.events()).len(), 4);
             let live = s.card(&held.id);
             assert!(live.tuning.is_some() || live.cost_mod != 0);
@@ -145,7 +141,7 @@ mod tests {
             let hidden_id = jackioh_engine::view_for::HIDDEN_ID;
             let mut s = book(false);
             let trap = s.backrow(P2, 1).expect("p2's trap");
-            s.play(BOOK, json!({ "targets": pick(&trap.id) }));
+            s.play(BOOK, json!({ "targets": pick::id(&trap.id) }));
             assert_eq!(upgrades(s.events()).len(), 4);
             assert!(upgrades(&s.view(P1).events).iter().all(|event| event["instanceId"] == json!(hidden_id)));
             assert!(upgrades(&s.view(P2).events).iter().all(|event| event["instanceId"] == json!(trap.id)));
@@ -156,7 +152,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick(&menace.id) })));
+            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick::id(&menace.id) })));
             assert!(upgrades(s.events()).is_empty());
             assert!(s.card(&menace.id).tuning.is_none());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));
@@ -178,7 +174,7 @@ mod tests {
                 let mut s = book(false);
                 step_param(s.card_mut(BOOK), "times", steps);
                 let target = s.unit(P1, 1).expect("p1's unit").id;
-                s.play(BOOK, json!({ "targets": pick(&target) }));
+                s.play(BOOK, json!({ "targets": pick::id(&target) }));
                 assert_eq!(upgrades(s.events()).len(), count);
             }
         }
@@ -192,7 +188,7 @@ mod tests {
             crate::register_all();
             let mut s = book(true);
             let unit = s.unit(P1, 1).expect("p1's unit");
-            s.play(BOOK, json!({ "targets": pick(&unit.id) }));
+            s.play(BOOK, json!({ "targets": pick::id(&unit.id) }));
             assert_eq!(upgrades(s.events()).len(), 8);
             assert!(upgrades(s.events()).iter().all(|event| event["instanceId"] == json!(unit.id)));
         }
@@ -202,7 +198,7 @@ mod tests {
             crate::register_all();
             let mut s = book(true);
             let held = s.hand(P1).into_iter().find(|card| card.def_id == UNIT).expect("Mr. Vanilla in hand");
-            s.play(BOOK, json!({ "targets": pick(&held.id) }));
+            s.play(BOOK, json!({ "targets": pick::id(&held.id) }));
             assert_eq!(upgrades(s.events()).len(), 8);
         }
     }

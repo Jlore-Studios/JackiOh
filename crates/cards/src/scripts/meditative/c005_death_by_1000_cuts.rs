@@ -63,11 +63,6 @@ mod tests {
     const FILLER: &str = "core-005"; // (1) Spell.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell: the next Spell echoes once more.
 
-    /// A target answer naming the given instance.
-    fn at_id(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// The ids of p2's units, lane by lane.
     fn p2_units(s: &Scenario) -> Vec<String> {
         (1..=5).filter_map(|lane| s.unit(P2, lane)).map(|card| card.id.clone()).collect()
@@ -81,7 +76,7 @@ mod tests {
                 break;
             }
             let id = &ids[given % ids.len()];
-            s.answer(at_id(id));
+            s.answer(pick::id(id));
             given += 1;
         }
         assert!(s.state().pending.is_none(), "no prompt stays open");
@@ -115,7 +110,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [MENACE, MENACE] },
             }));
             let ids = p2_units(&s);
-            let first = at_id(&ids[0]);
+            let first = pick::id(&ids[0]);
             s.play(CUTS, json!({ "targets": first }));
 
             // X = 2 × 1: the play plus 2 repeats.
@@ -133,7 +128,7 @@ mod tests {
             }));
             assert_eq!(s.state().players.p1.mana.max, 4);
             let ids = p2_units(&s);
-            let first = at_id(&ids[0]);
+            let first = pick::id(&ids[0]);
             s.play(CUTS, json!({ "targets": first }));
 
             // X = 2 × 4: the play plus 8 repeats, spread over two 9-health units.
@@ -188,7 +183,7 @@ mod tests {
 
             s.play(TWINSPELL, json!({}));
             let ids = p2_units(&s);
-            let first = at_id(&ids[0]);
+            let first = pick::id(&ids[0]);
             s.play(CUTS, json!({ "targets": first }));
 
             // X = 2 × 1, plus the grant's 1: the play plus 3 repeats.
@@ -206,7 +201,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [FODDER] },
             }));
             let fodder = s.card(FODDER).id.clone();
-            s.play(CUTS, json!({ "targets": at_id(&fodder) }));
+            s.play(CUTS, json!({ "targets": pick::id(&fodder) }));
 
             // The first hit kills the 1/1; both repeats find no Unit and fizzle, asking nothing.
             assert!(s.state().pending.is_none());
@@ -226,7 +221,7 @@ mod tests {
             step_param(s.card_mut(CUTS), "echo", 1);
             step_param(s.card_mut(CUTS), "damage", 1);
             let ids = p2_units(&s);
-            let first = at_id(&ids[0]);
+            let first = pick::id(&ids[0]);
             s.play(CUTS, json!({ "targets": first }));
 
             // Echo 3 × 1 max mana: the play plus 3 repeats, each dealing 2.
@@ -248,7 +243,7 @@ mod tests {
                 assert_eq!(s.state().players.p1.mana.max, 4);
                 let ids = p2_units(&s);
                 assert_eq!(ids.len(), 3);
-                let first = at_id(&ids[0]);
+                let first = pick::id(&ids[0]);
                 s.play(CUTS, json!({ "targets": first }));
 
                 // X = 4 × 4: the play plus 16 repeats, spread so no 9-health unit dies.

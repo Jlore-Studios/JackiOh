@@ -79,7 +79,7 @@ fn destroy(state: &mut GameState, id: &str) {
 }
 
 /// The id of the top card in p1's unit zone `lane`, if any.
-fn unit_at(state: &GameState, lane: i32) -> Option<String> {
+fn unit_in(state: &GameState, lane: i32) -> Option<String> {
     state.players.p1.units[(lane - 1) as usize]
         .as_ref()
         .and_then(|pile| pile.first())
@@ -148,14 +148,14 @@ mod r783010_crater_arrivals {
         // Summoned by an effect: into R64's leftmost zone, Locked.
         let mut summoned = playing("r783010-summon");
         cast_now(&mut summoned, &summon_crater().id, P1, false);
-        assert!(unit_at(&summoned, 1).is_some());
+        assert!(unit_in(&summoned, 1).is_some());
         assert!(is_locked(&summoned, unit_zone(1)));
 
         // Recruited from the library.
         let mut recruited = playing("r783010-recruit");
         set_library(&mut recruited, P1, &[crater_unit().id]);
         cast_now(&mut recruited, &recruiter().id, P1, false);
-        assert!(unit_at(&recruited, 1).is_some());
+        assert!(unit_in(&recruited, 1).is_some());
         assert!(is_locked(&recruited, unit_zone(1)));
 
         // Back through Reborn into the zone it died in.
@@ -163,7 +163,7 @@ mod r783010_crater_arrivals {
         let body = put(&mut reborn, &crater_reborn().id, unit_zone(3), json!({}));
         assert!(!is_locked(&reborn, unit_zone(3)));
         destroy(&mut reborn, &body.id);
-        assert!(unit_at(&reborn, 3).is_some(), "Reborn brought it back");
+        assert!(unit_in(&reborn, 3).is_some(), "Reborn brought it back");
         assert!(is_locked(&reborn, unit_zone(3)));
 
         // Flickered: it re-enters its zone.
@@ -171,7 +171,7 @@ mod r783010_crater_arrivals {
         put(&mut flickered, &crater_unit().id, unit_zone(4), json!({}));
         assert!(!is_locked(&flickered, unit_zone(4)));
         cast_now(&mut flickered, &flicker_all().id, P1, false);
-        assert!(unit_at(&flickered, 4).is_some());
+        assert!(unit_in(&flickered, 4).is_some());
         assert!(is_locked(&flickered, unit_zone(4)));
     }
 
@@ -200,7 +200,7 @@ mod r783010_crater_arrivals {
             json!({ "type": "activate", "instanceId": set.id, "ability": "reveal", "playerId": "p1" }),
             None,
         );
-        assert_eq!(unit_at(&state, 2), Some(set.id.clone()));
+        assert_eq!(unit_in(&state, 2), Some(set.id.clone()));
         assert!(is_locked(&state, unit_zone(2)));
         assert!(!is_locked(&state, slot(P1, Row::Backrow, 2)));
         assert_eq!(locked_count(&state), 1);
@@ -216,7 +216,7 @@ mod r783010_crater_arrivals {
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
             None,
         );
-        let placed = must(unit_at(&state, 1), "the Crater Unit in lane 1");
+        let placed = must(unit_in(&state, 1), "the Crater Unit in lane 1");
         // Offered into the other zones, never onto the Crater Unit's.
         let offered: Vec<Value> = plays_of(&state, &stack.id, P1)
             .iter()
@@ -232,7 +232,7 @@ mod r783010_crater_arrivals {
 
         // The Crater Unit leaves; the zone stays Locked, and a play into it is still refused.
         destroy(&mut state, &placed);
-        assert!(unit_at(&state, 1).is_none());
+        assert!(unit_in(&state, 1).is_none());
         assert!(is_locked(&state, unit_zone(1)));
         let other = in_hand(&mut state, &plain_unit().id, P1);
         assert!(play_into(&state, &other.id, "units", 1).error.is_some());

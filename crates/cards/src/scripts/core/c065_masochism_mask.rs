@@ -166,13 +166,6 @@ mod tests {
     /// A library whose top is #19 and whose BOTTOM is #61 (`library[0]` is the top).
     const LIBRARY: [&str; 3] = [MENACE, TIMMY, POSTDOC];
 
-    fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-        match s.unit(player, lane) {
-            Some(found) => found,
-            None => panic!("expected a unit in {player} lane {lane}, found none"),
-        }
-    }
-
     fn option_labels(s: &Scenario) -> Vec<String> {
         s.state()
             .pending
@@ -280,7 +273,7 @@ mod tests {
             let mut s = mask_scenario(false);
             s.start_turn().answer(json!(SUMMON_PILLOW));
 
-            let pillow = unit_at(&s, P1, 1);
+            let pillow = s.unit_at(P1, 1);
             assert_eq!(pillow.def_id, PILLOW);
             s.expect_stats(&pillow, json!({ "attack": 0, "maxHealth": 2 }));
         }
@@ -314,8 +307,8 @@ mod tests {
             s.start_turn().answer(json!(SUMMON_PILLOW)).answer(json!(SUMMON_PILLOW));
 
             assert!(s.state().pending.is_none());
-            assert_eq!(unit_at(&s, P1, 1).def_id, PILLOW);
-            assert_eq!(unit_at(&s, P1, 2).def_id, PILLOW);
+            assert_eq!(s.unit_at(P1, 1).def_id, PILLOW);
+            assert_eq!(s.unit_at(P1, 2).def_id, PILLOW);
         }
 
         #[test]
@@ -341,7 +334,7 @@ mod tests {
             s.answer(json!(SUMMON_PILLOW));
 
             s.expect_health(P1, 27);
-            assert_eq!(unit_at(&s, P1, 1).def_id, PILLOW);
+            assert_eq!(s.unit_at(P1, 1).def_id, PILLOW);
             s.expect_events(json!(["promptOpened", "healthLost", "promptOpened", "summoned"]));
         }
 
