@@ -1757,14 +1757,20 @@
       }
     },
     "1953": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-10-26T00:25:00Z",
       "requested_by": "MaxGoetzmann",
-      "stop_requested": false
+      "run_id": "pending:b2665fe0-1792975450",
+      "started_at": "2026-10-26T00:45:06Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "1954": {
       "failures": 0,
@@ -1799,9 +1805,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T00:13:54Z",
+    "at": "2026-10-26T00:45:06Z",
     "url": "",
-    "what": "build #1850 on claude-2"
+    "what": "plan #1953 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T00:33:18Z",
