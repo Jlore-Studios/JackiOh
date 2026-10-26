@@ -207,7 +207,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
-| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672); 409 `update_required` for a match played on another catalog version (R1638000) |
+| `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5); a `cosmetics` group's six picks must each be of its kind and owned, or the write is 400 `bad_request` (R1834001) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000) |
@@ -559,19 +559,19 @@ series still makes its picks.
   holding decks and for Conquest a trio dealt for this catalog, the closest in rating; for a
   player rated above every bot, only a grinder within `MAX_FAIR_GAP`, R1555000). The queue's sweep
   (`api/queue.rs`, `try_pair`) pairs every two people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
-  single-shot like a pair's claim) and starts the match, ranked, the person p1 and first to act as
-  the older ticket of a pair is (R1453); a start that fails lets both go. A Conquest ticket and its
+  single-shot like a pair's claim) and starts the match, ranked, seated by the match seed's coin
+  (`seat_coin_p1_first`, R1989000) like a pair, not the person always p1 (R1453); a start that fails lets both go. A Conquest ticket and its
   bot (R641000) are claimed and made a series in one transaction (`start_bot_series`:
   `tickets_claim_for_bot_series`, which puts the bot in no match, then `start_series`): between
   games the series is what holds the bot, so every bot claim checks, after it locks the bot, that
   it is a side of no series that is not over (`lock_free_bot` in `db/pg.rs`, a statement of its own
-  so it reads what an earlier claim committed). The person is series p1; the series is ranked and
+  so it reads what an earlier claim committed). The series' p1 is the coin's (R1989000), not always the person; the series is ranked and
   rated once as it ends, the bot's side as the bot it is (`plan_series_rating`). While the top bots
   grind (R1555000), a sweep that finds no ticket open at all then kicks off a ranked Best-of-1 match
   between two bots (`kick_off_bot_match`): the pair is `choose_bot_pair`'s (the lowest-rated ready
   grinder and the ready bot closest to it, not one of its recent opponents), at most
   `BOT_VS_BOT_MAX_LIVE` live (`bot_matches`) and `BOT_VS_BOT_MIN_GAP_SECONDS` after the last ended
-  (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), the grinder p1, and
+  (`bot_match_gap_passed`), both claimed in one statement (`bots_claim_pair`), seated by the same coin (R1989000), and
   neither draws a rematch plan (`plan_bot_rematches`). A sweep also folds back a match two bots hold
   whose actor is not in memory, which no socket would come back to rebuild after a restart.
 - `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
