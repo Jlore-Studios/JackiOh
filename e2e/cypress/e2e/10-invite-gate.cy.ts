@@ -18,11 +18,12 @@ import {
 import {
   E2E_RESEED_PATH,
   accounts,
+  apiUrl,
+  bearerHeaders,
   constants,
   inviteCodes,
   routes,
   seedFor,
-  server,
 } from "../../support/config.ts";
 import {
   INVITE_CODE_INPUT,
@@ -34,22 +35,11 @@ import {
 } from "../../support/testids.ts";
 import { mintId } from "../../support/commands.ts";
 
-/** ASK: `cy.signIn(account)` and its session key belong in `e2e/support/**`. */
-const SESSION_STORAGE_KEY = "jackioh.e2e.session";
-
 /** Not R107's floor: bounds localhost transport spread; M6-T1 owns the tight timing assertion. */
 const TRANSPORT_JITTER_MS = 100;
 
 /** The deck the activated account saves and queues: starter cards alone (R1310000). */
 const STARTER_DECK_FIXTURE = "10-invite-gate-a";
-
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
 
 function pendingToken(): string {
   return accounts.pending().token;
@@ -79,8 +69,8 @@ type ReseedBody = { profiles: Record<string, string>; grantedCards: number; code
 function redeem(code: string): Cypress.Chainable<Cypress.Response<RedeemBody>> {
   return cy.request<RedeemBody>({
     method: "POST",
-    url: api("/api/codes/redeem"),
-    headers: bearer(pendingToken()),
+    url: apiUrl("/api/codes/redeem"),
+    headers: bearerHeaders(pendingToken()),
     body: { code },
     failOnStatusCode: false,
   });
@@ -89,17 +79,9 @@ function redeem(code: string): Cypress.Chainable<Cypress.Response<RedeemBody>> {
 function me(token: string): Cypress.Chainable<Cypress.Response<MeBody>> {
   return cy.request<MeBody>({
     method: "GET",
-    url: api("/api/auth/me"),
-    headers: bearer(token),
+    url: apiUrl("/api/auth/me"),
+    headers: bearerHeaders(token),
     failOnStatusCode: false,
-  });
-}
-
-function visitAs(token: string, path: string): void {
-  cy.visit(path, {
-    onBeforeLoad(win) {
-      win.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-    },
   });
 }
 
@@ -143,7 +125,7 @@ describe("10 invite gate — a pending account", () => {
     }
     // R144: the server puts back the account this file activates and the code it spends, so the
     // file passes run after run against one server, with no restart.
-    cy.request<ReseedBody>({ method: "POST", url: api(E2E_RESEED_PATH) }).should((response) => {
+    cy.request<ReseedBody>({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).should((response) => {
       expect(response.status, "R144: an E2E server reseeds on demand").to.eq(200);
       expect(response.body.codes, "the good, expired and exhausted codes; never the missing one").to.deep.eq([
         "good",
@@ -170,8 +152,8 @@ describe("10 invite gate — a pending account", () => {
 
     cy.request<{ redemptionEnabled: boolean; retryAfterMs: number }>({
       method: "GET",
-      url: api("/api/codes/status"),
-      headers: bearer(pendingToken()),
+      url: apiUrl("/api/codes/status"),
+      headers: bearerHeaders(pendingToken()),
     }).should((response) => {
       expect(response.status).to.eq(200);
       expect(response.body.redemptionEnabled, "§9.4's circuit breaker is closed").to.eq(true);
@@ -192,8 +174,8 @@ describe("10 invite gate — a pending account", () => {
     for (const door of gated) {
       cy.request<{ error: { code: string } }>({
         method: door.method,
-        url: api(door.path),
-        headers: bearer(pendingToken()),
+        url: apiUrl(door.path),
+        headers: bearerHeaders(pendingToken()),
         body: door.body,
         failOnStatusCode: false,
       }).should((response) => {
@@ -204,7 +186,7 @@ describe("10 invite gate — a pending account", () => {
       });
     }
 
-    visitAs(pendingToken(), routes.deckbuilder());
+    cy.visitAs(accounts.pending(), routes.deckbuilder());
     // The redirect is the gate's own read of /api/auth/me (net/gate.ts), which the requests above
     // just answered as pending. When it never comes, say which panel held the page: still checking
     // (the read never answered), the gate's error (it failed), or no app at all.
@@ -215,7 +197,7 @@ describe("10 invite gate — a pending account", () => {
       );
     });
 
-    visitAs(pendingToken(), routes.invite());
+    cy.visitAs(accounts.pending(), routes.invite());
     cy.location("pathname").should("eq", routes.invite());
 
     // A13: assert rendered controls, not only the `/invite` route.
@@ -320,7 +302,7 @@ describe("10 invite gate — a pending account", () => {
 
     // Read R111's grant from the §9.1 ledger: since the economy went live it is `STARTER_CARDS`
     // (R1310000), every one a non-token card of the catalog the server serves.
-    cy.request<CatalogBody>({ method: "GET", url: api("/api/catalog") }).then((response) => {
+    cy.request<CatalogBody>({ method: "GET", url: apiUrl("/api/catalog") }).then((response) => {
       for (const id of STARTER_CARDS) {
         const def = response.body.defs[id];
         expect(def, `the catalog holds the starter card ${id}`).to.not.eq(undefined);
@@ -329,8 +311,8 @@ describe("10 invite gate — a pending account", () => {
     });
     cy.request<CollectionBody>({
       method: "GET",
-      url: api("/api/collection"),
-      headers: bearer(pendingToken()),
+      url: apiUrl("/api/collection"),
+      headers: bearerHeaders(pendingToken()),
     }).should((response) => {
       expect(response.status, "the gate is open now").to.eq(200);
       const entries = response.body.entries;
@@ -360,8 +342,8 @@ describe("10 invite gate — a pending account", () => {
     cy.then(() => {
       cy.request<CollectionBody>({
         method: "GET",
-        url: api("/api/collection"),
-        headers: bearer(pendingToken()),
+        url: apiUrl("/api/collection"),
+        headers: bearerHeaders(pendingToken()),
       }).should((response) => {
         expect(
           JSON.stringify(response.body.entries),
@@ -381,20 +363,20 @@ describe("10 invite gate — a pending account", () => {
         .then((deckId) => {
           cy.request<{ status: string; mode: string }>({
             method: "POST",
-            url: api("/api/queue"),
-            headers: bearer(pendingToken()),
+            url: apiUrl("/api/queue"),
+            headers: bearerHeaders(pendingToken()),
             body: { mode: "bo1", deckId },
           }).should((response) => {
             expect(response.status, "R253, R1310000: the starter cards make a deck Best of 1 accepts").to.eq(200);
             expect(response.body.mode).to.eq("bo1");
           });
-          cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(pendingToken()) })
+          cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(pendingToken()) })
             .its("status")
             .should("eq", 200);
         });
     });
 
-    visitAs(pendingToken(), routes.deckbuilder());
+    cy.visitAs(accounts.pending(), routes.deckbuilder());
     cy.location("pathname").should("eq", routes.deckbuilder());
   });
 });

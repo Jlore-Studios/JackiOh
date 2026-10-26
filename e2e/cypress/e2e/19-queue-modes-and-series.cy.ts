@@ -14,6 +14,8 @@ import { TOKEN_NAMES, tokenId } from "../../support/cards.ts";
 import { INSTALLED_TRIO_NAME, type InstalledLoadout } from "../../support/commands.ts";
 import {
   accounts,
+  apiUrl,
+  bearerHeaders,
   constants,
   routes,
   seedFor,
@@ -144,20 +146,12 @@ type SeriesView = {
   } | null;
 };
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 function enqueue(account: E2EAccount, body: Record<string, unknown>): Cypress.Chainable<Cypress.Response<EnqueueBody>> {
-  return cy.request<EnqueueBody>({ method: "POST", url: api("/api/queue"), headers: bearer(account), body });
+  return cy.request<EnqueueBody>({ method: "POST", url: apiUrl("/api/queue"), headers: bearerHeaders(account.token), body });
 }
 
 function dequeue(account: E2EAccount): void {
-  cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(account) })
+  cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(account.token) })
     .its("status")
     .should("eq", 200);
 }
@@ -174,25 +168,25 @@ function pollWhileQueued(account: E2EAccount): void {
 
 function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy
-    .request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account) })
+    .request<MeBody>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
 function profile(account: E2EAccount): Cypress.Chainable<ProfileBody> {
   return cy
-    .request<ProfileBody>({ method: "GET", url: api("/api/profile"), headers: bearer(account) })
+    .request<ProfileBody>({ method: "GET", url: apiUrl("/api/profile"), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
 function ownRank(account: E2EAccount): Cypress.Chainable<RankBody> {
   return cy
-    .request<RankBody>({ method: "GET", url: api("/api/ranked"), headers: bearer(account) })
+    .request<RankBody>({ method: "GET", url: apiUrl("/api/ranked"), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
 function seriesAs(account: E2EAccount, seriesId: string): Cypress.Chainable<SeriesView> {
   return cy
-    .request<SeriesView>({ method: "GET", url: api(`/api/series/${seriesId}`), headers: bearer(account) })
+    .request<SeriesView>({ method: "GET", url: apiUrl(`/api/series/${seriesId}`), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
@@ -200,8 +194,8 @@ function pickAs(account: E2EAccount, seriesId: string, slot: number): Cypress.Ch
   return cy
     .request<SeriesView>({
       method: "POST",
-      url: api(`/api/series/${seriesId}/pick`),
-      headers: bearer(account),
+      url: apiUrl(`/api/series/${seriesId}/pick`),
+      headers: bearerHeaders(account.token),
       body: { slot },
     })
     .its("body");
@@ -209,7 +203,7 @@ function pickAs(account: E2EAccount, seriesId: string, slot: number): Cypress.Ch
 
 function forfeitAs(account: E2EAccount, seriesId: string): Cypress.Chainable<SeriesView> {
   return cy
-    .request<SeriesView>({ method: "POST", url: api(`/api/series/${seriesId}/forfeit`), headers: bearer(account) })
+    .request<SeriesView>({ method: "POST", url: apiUrl(`/api/series/${seriesId}/forfeit`), headers: bearerHeaders(account.token) })
     .its("body");
 }
 
@@ -524,8 +518,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
       });
       cy.request<ErrorBody>({
         method: "POST",
-        url: api(`/api/series/${seriesId}/pick`),
-        headers: bearer(seatOne),
+        url: apiUrl(`/api/series/${seriesId}/pick`),
+        headers: bearerHeaders(seatOne.token),
         body: { slot: 0 },
         failOnStatusCode: false,
       })
@@ -655,8 +649,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     cy.then(() => {
       cy.request<ErrorBody>({
         method: "POST",
-        url: api(`/api/rooms/${code}/join`),
-        headers: bearer(seatTwo),
+        url: apiUrl(`/api/rooms/${code}/join`),
+        headers: bearerHeaders(seatTwo.token),
         body: { mode: "bo1", deckId: installed(theirs).deckIds[0], seed },
         failOnStatusCode: false,
       }).should((response) => {
@@ -669,8 +663,8 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
     cy.then(() => {
       cy.request<JoinBody>({
         method: "POST",
-        url: api(`/api/rooms/${code}/join`),
-        headers: bearer(seatTwo),
+        url: apiUrl(`/api/rooms/${code}/join`),
+        headers: bearerHeaders(seatTwo.token),
         body: { mode: "bo3", trioId: installed(theirs).trioId, seed },
       }).should((response) => {
         expect(response.status).to.eq(200);
