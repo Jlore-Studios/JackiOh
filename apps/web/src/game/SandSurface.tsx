@@ -1,7 +1,8 @@
 // A cosmetic, input-transparent fidget layer for the empty playmat. It reads neither rules nor
 // hidden state: the board owns the cards above it, and this layer only records pointer marks in
 // gaps which did not belong to a card or a board control. #1954: one press is one tap, in the
-// look and sound of the playmat's family; holding or dragging adds nothing.
+// look and sound of the playmat's family; holding or dragging adds nothing. #2015: a tap takes the
+// playmat of the half it lands on, the opponent's above the centre line.
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactElement, type RefObject } from "react";
 
@@ -90,6 +91,9 @@ export type SlamSand = { marks: readonly ("cracks" | "crater")[] };
 /** The DOM event a landing zone dispatches; it bubbles to the field this surface listens on. */
 export const SLAM_SAND_EVENT = "jk-slam-sand";
 
+/** #2015: the field's centre line, in % of its height; above it is the opponent's half (table.css's `.field-their-mat`, `inset: 0 0 50%`). */
+const FIELD_MIDLINE_PERCENT = 50;
+
 /** #185: dispatch a landing's sand marks at `zone` (the field's surface draws them under the cards). */
 export function slamSand(zone: Element, sand: SlamSand): void {
   zone.dispatchEvent(new CustomEvent<SlamSand>(SLAM_SAND_EVENT, { bubbles: true, detail: sand }));
@@ -101,6 +105,8 @@ export type SandSurfaceProps = {
   disabled: boolean;
   /** The worn playmat (Board's data-table); absent is the default, which taps as sand. */
   table?: string;
+  /** R1834004: the opponent's playmat (Board's data-their-table), under the upper half; absent taps as sand. */
+  theirTable?: string;
 };
 
 function isEmptySurfaceTarget(target: EventTarget | null): target is Element {
@@ -160,15 +166,17 @@ export function tapMarks(family: TapFamily, x: number, y: number, firstId: numbe
   return [first];
 }
 
-export default function SandSurface({ field, disabled, table }: SandSurfaceProps): ReactElement {
+export default function SandSurface({ field, disabled, table, theirTable }: SandSurfaceProps): ReactElement {
   const [marks, setMarks] = useState<readonly SandMark[]>([]);
   const disabledRef = useRef(disabled);
   const tableRef = useRef(table);
+  const theirTableRef = useRef(theirTable);
   const markId = useRef(0);
   const lastTap = useRef<number | null>(null);
   const build = useRef(0);
   disabledRef.current = disabled;
   tableRef.current = table;
+  theirTableRef.current = theirTable;
 
   useEffect(() => {
     const element = field.current;
@@ -186,7 +194,8 @@ export default function SandSurface({ field, disabled, table }: SandSurfaceProps
         ? 1
         : Math.min(SAND_FEEL.maximumBuild, build.current + 1);
       lastTap.current = now;
-      const family = tapFamilyOf(tableRef.current);
+      // #2015: each half taps in its own playmat, the opponent's above the centre line.
+      const family = tapFamilyOf(y < FIELD_MIDLINE_PERCENT ? theirTableRef.current : tableRef.current);
       const added = tapMarks(family, x, y, markId.current + 1, build.current);
       markId.current += added.length;
       setMarks((previous) => [...previous, ...added].slice(-SAND_FEEL.maximumMarks));

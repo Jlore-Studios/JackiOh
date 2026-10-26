@@ -489,7 +489,8 @@ pub struct NewSeriesInput {
     pub series_id: String,
     /// The match id `tickets_claim_pair` or `rooms_claim` reserved: game 1's (R263).
     pub first_match_id: String,
-    /// Index 0 is series p1: the older ticket, or the room's host (R335).
+    /// Index 0 is series p1: R1989000's coin winner on the seed base, who goes first in odd
+    /// games (R335).
     pub sides: (NewSeriesSide, NewSeriesSide),
     /// Each game's seed is `{seed_base}:{game_no}` (R335).
     pub seed_base: String,

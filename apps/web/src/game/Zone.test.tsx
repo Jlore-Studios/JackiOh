@@ -1,14 +1,18 @@
-// B3.1 rule 6, R383, R64: what a held zone's icon says it is held for.
+// B3.1 rule 6, R383, R64: what a held zone's icon says it is held for. #2015: a zone the player
+// cannot pick draws no tap highlight.
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { PlayerView, Row } from "@jackioh/shared";
 
 import { baseView, emptySide, unit } from "../test/fixtures.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
-import { testid, type Side } from "./contract.ts";
+import { testid, type Highlight, type Side } from "./contract.ts";
 import Zone from "./Zone.tsx";
 
 afterEach(() => {
@@ -83,5 +87,50 @@ describe("B3.1 rule 6, R64: a held zone's icon says what it is held for", () => 
       opponent: emptySide("p2", { hand: { count: 4 }, units: [animated("p2"), null, null, null, null] }),
     });
     expect(heldTitle(otherSeat, "you", "backrow", 2)).toBe("Held for a Reborn unit");
+  });
+});
+
+/** #2015: the empty units zone `you` lane 1 of a base view, with `highlight` and a click spy. */
+function renderZone(highlight: Highlight): { zone: HTMLElement; onClick: ReturnType<typeof vi.fn> } {
+  const onClick = vi.fn();
+  render(
+    <CatalogContext.Provider value={lookup}>
+      <Zone view={baseView()} side="you" row="units" lane={1} highlight={highlight} onClick={onClick} />
+    </CatalogContext.Provider>,
+  );
+  return { zone: screen.getByTestId(testid.zone("you", "units", 1)), onClick };
+}
+
+describe("#2015 a zone the player cannot pick draws no tap feedback", () => {
+  it("#2015 an empty zone the player cannot pick is a disabled group that fires nothing", () => {
+    const { zone, onClick } = renderZone({ legal: new Set(), selected: new Set() });
+    expect(zone.getAttribute("data-legal")).toBe("false");
+    expect(zone.getAttribute("aria-disabled")).toBe("true");
+    expect(zone.getAttribute("role")).toBe("group");
+    expect(zone.hasAttribute("tabindex")).toBe(false);
+
+    fireEvent.click(zone);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("#2015 an empty zone the player may pick keeps its button role and its click", () => {
+    const { zone, onClick } = renderZone({ legal: new Set([testid.zone("you", "units", 1)]), selected: new Set() });
+    expect(zone.getAttribute("data-legal")).toBe("true");
+    expect(zone.getAttribute("role")).toBe("button");
+    expect(zone.getAttribute("tabindex")).toBe("0");
+    expect(zone.hasAttribute("aria-disabled")).toBe(false);
+
+    fireEvent.click(zone);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onClick).toHaveBeenCalledWith({ on: "zone", side: "you", row: "units", lane: 1 });
+  });
+
+  it("#2015 board.css drops the tap highlight on a zone that is not legal, and only there", () => {
+    // The zone keeps its onClick (#757), so React gives its div an onclick and a phone greys it on
+    // a tap; the rule keys on the `data-legal="false"` the zone always writes.
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "board.css"), "utf8");
+    expect(css).toMatch(/\.zone:not\(\[data-legal="true"\]\)\s*\{[^}]*-webkit-tap-highlight-color:\s*transparent/);
+    expect(css).toMatch(/\.zone:not\(\[data-legal="true"\]\) > \*\s*\{[^}]*-webkit-tap-highlight-color:\s*initial/);
+    expect(css).not.toMatch(/\.zone\[data-legal="true"\][^{]*\{[^}]*tap-highlight/);
   });
 });

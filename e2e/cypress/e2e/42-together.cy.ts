@@ -555,12 +555,14 @@ describe("42 Play together — friends, chat and challenges between two accounts
       ]);
       befriend(two, one, oneName, twoId);
     });
+    // R1989000 pins the host to seat one beside the seed, so the spec keeps the seats it was
+    // written for.
     cy.then(() => {
       cy.request<RoomBody>({
         method: "POST",
         url: apiUrl("/api/rooms"),
         headers: bearerHeaders(one.token),
-        body: { mode: MODE, seed: SEED },
+        body: { mode: MODE, seed: SEED, seat: ONE_SEAT },
       }).then((created) => {
         roomCode = created.body.code;
         cy.request<JoinBody>({
