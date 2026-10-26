@@ -21,7 +21,9 @@ export type SfxId =
   | "degrade" | "upgrade"
   // Patch v0.3.X (MN03, #545, R1345): the fourteen new emoji emotes, synthesized like the five.
   | "emoteWave" | "emoteClap" | "emoteThumbsUp" | "emoteFacepalm" | "emoteShrug" | "emoteThinking" | "emoteHeart"
-  | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty";
+  | "emoteFire" | "emoteSkull" | "emoteSweat" | "emoteCool" | "emoteGasp" | "emoteSalute" | "emoteParty"
+  // #1954: the field's taps on every playmat but sand's (game/SandSurface.tsx TAP_SFX).
+  | "tapWood" | "tapFelt" | "tapStone" | "tapNeon" | "tapParchment" | "tapAstral";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`, which follows the
@@ -66,7 +68,7 @@ export type SfxParams = {
   variation?: number;
   /** The public damage tier that selected this impact recipe. */
   impactTier?: "tiny" | "normal" | "moderate" | "big" | "giga";
-  /** Sand's rolling four-way grain texture and the amount built up by sustained tapping. */
+  /** A field tap's rolling four-way texture (sand's grain, every playmat's voice) and the amount built up by sustained tapping. */
   sandVariant?: number;
   sandBuild?: number;
 };

@@ -533,6 +533,21 @@ describe("B6 SFX limits", () => {
     expect(r.engine.playSfx("draw"), "sand must not spend the ordinary SFX voice budget").toBe(true);
   });
 
+  it("plays each playmat tap in a rapid burst, past the retrigger window and the voice cap (#1954)", () => {
+    const taps: SfxId[] = ["tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral"];
+    for (const id of taps) {
+      const r = rig();
+      unlocked(r);
+      const bursts = SFX_MAX_VOICES + 3;
+
+      for (let tap = 0; tap < bursts; tap += 1) {
+        expect(r.engine.playSfx(id, { sandVariant: tap % 4, sandBuild: tap + 1 }), `${id} tap ${String(tap)}`).toBe(true);
+      }
+      expect(r.engine.log().filter((cue) => cue.kind === "sfx" && cue.id === id)).toHaveLength(bursts);
+      expect(r.engine.playSfx("draw"), `${id} must not spend the ordinary SFX voice budget`).toBe(true);
+    }
+  });
+
   it("B6 with SFX_MAX_VOICES cues still sounding the next cue is refused, and accepted once they end", () => {
     const r = rig();
     unlocked(r);

@@ -31,9 +31,9 @@ use jackioh_engine::{
     KeywordKind, ModifierKind, PlayerId, PlayerState, Position, SeatOutcome, UnitView, active_brittle_count,
     active_units_of, animated_kind_of, armor_of, attack_restriction, attacks_per_turn, backrow_is_public,
     board_totals, cannot_attack, card_keywords, card_type_of_face, credit_lapsing, effective_cost,
-    effective_life, find_def, frozen_next_turn, has_keyword, hero_armor_of, is_temporary_card,
-    lost_refreshes_left, outcome_for, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
-    stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
+    effective_life, find_def, frozen_next_turn, has_keyword, heal_multiplier_of, hero_armor_of,
+    is_temporary_card, lost_refreshes_left, outcome_for, owed_mana_of, own_cost, pierces, query_cost,
+    reset_instance, stats_with_buffs, subsystems, takes_strike_back, unit_has, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -57,6 +57,18 @@ fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
         return -w.win;
     }
     w.hero_health * (f64::from(health) * f64::from(start)).sqrt()
+}
+
+/// §4.4 step 8: what healing `player`'s hero by `amount` is worth on `hero_value`'s curve, the more the
+/// lower its life, its healing multiplier included (R1180003). A hero's heal has no cap (§6.3).
+pub(crate) fn heal_worth(state: &GameState, player: PlayerId, amount: i32, w: &EvalWeights) -> f64 {
+    let life = effective_life(state, player);
+    if amount <= 0 || life <= 0 {
+        return 0.0;
+    }
+    let start = starting_life(state, player);
+    let healed = amount.saturating_mul(heal_multiplier_of(state, player));
+    hero_value(life.saturating_add(healed), start, w) - hero_value(life, start, w)
 }
 
 /// §10.8, R33, R686: whether `seat` may read this backrow card, by the rule `view_for` reads

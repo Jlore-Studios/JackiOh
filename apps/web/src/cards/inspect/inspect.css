@@ -213,7 +213,7 @@
   color: var(--text, #e8eaf2);
   font: inherit;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .inspect-close:hover {
