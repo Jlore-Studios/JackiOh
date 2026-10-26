@@ -2366,18 +2366,18 @@
     "what": "build #2000 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-26T13:04:25Z",
+    "at": "2026-10-26T13:23:35Z",
     "notes": [
-      "#1989 needs a plan",
-      "#1991 needs a plan",
-      "#1994 needs a plan",
-      "#2000 needs a plan",
-      "started plan #1989 on muse (run 40327788637)",
-      "started plan #1991 on claude-6 (run 40327941425)",
-      "started plan #2000 on claude-8 (run 40328094969)",
-      "started plan #1994 on claude-5 (run 40328238169)",
-      "started plan #1996 on claude-5 (run 40328388872)",
-      "started plan #1997 on claude-2 (run 40328545094)",
+      "delivered plan #1996 on claude-5 (run 40328388872): interrupted",
+      "delivered plan #1994 on claude-5 (run 40328238169): interrupted",
+      "delivered plan #2000 on claude-8 (run 40328094969): planned",
+      "delivered plan #1989 on muse (run 40327788637): planned",
+      "delivered plan #1999 on claude-4 (run 40326544638): planned",
+      "started plan #1994 on muse (run 40330803747)",
+      "started plan #1996 on muse (run 40330944183)",
+      "started build #1989 on muse (run 40331090099)",
+      "started build #1999 on claude-4 (run 40331250021)",
+      "started build #2000 on claude-8 (run 40331403229)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -3084,7 +3084,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T13:04:25Z",
+  "loop_tick": "2026-10-26T13:23:35Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T13:13:27Z",
