@@ -2745,6 +2745,13 @@
     "2010": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T18:49:36Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "spans engine, web and e2e with a shared-surface view fix: fails easy lines 2, 5 and 7"
+      },
       "failures": 2,
       "handoff": {
         "at": "2026-10-26T18:17:53Z",
