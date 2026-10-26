@@ -1886,12 +1886,12 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-10-26T00:34:56Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "",
-      "run_id": "40250963155",
-      "started_at": "2026-10-26T00:46:16Z",
+      "run_id": "pending:d19f3b9d-1792977384",
+      "started_at": "2026-10-26T01:17:13Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -1903,9 +1903,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T00:53:33Z",
+    "at": "2026-10-26T01:17:13Z",
     "url": "",
-    "what": "plan #1955 on claude-6"
+    "what": "plan #1956 on claude-6"
   },
   "last_sweep": {
     "at": "2026-10-26T01:00:44Z",
