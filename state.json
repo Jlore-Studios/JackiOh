@@ -2211,6 +2211,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1970": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-26T05:06:46Z",
+      "issue": 1954,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
