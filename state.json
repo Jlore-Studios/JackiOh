@@ -2759,9 +2759,13 @@
     "what": "revise #2008 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-26T16:19:04Z",
+    "at": "2026-10-26T16:27:34Z",
     "notes": [
-      "delivered build #1997 on claude-4 (run 40342708482): approved"
+      "delivered revise #2008 on muse (run 40350366137): approved",
+      "delivered plan #1857 on claude-3 (run 40344683853): failed",
+      "could not deliver build #1994 on claude-7 (run 40340628804), try 1 of 3 (GitHubError: GET /repos/Jlore-Studios/JackiOh/actions/artifacts/12666064973/zip: the archive answered HTTP 503): it is tried again next tick (2 more)",
+      "started plan #1857 on claude-4 (run 40359930733)",
+      "could not start revise #2008 on muse: PUT /repos/Jlore-Studios/JackiOh/contents/plans/ca900c5c-1793032291.json: HTTP 422: Invalid request.\n\n\"sha\" wasn't supplied."
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -3465,7 +3469,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T16:19:04Z",
+  "loop_tick": "2026-10-26T16:27:34Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T16:23:37Z",
