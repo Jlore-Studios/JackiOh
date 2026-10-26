@@ -2093,10 +2093,13 @@
     "1988": {
       "action": "revise",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "5cbbfc8c559953517384e65b4aec650003a41e50": 1,
         "9297f2633bea5fc5b3aa14b864b82bd733fa67c0": 1
       },
+      "ci_run_id": 40336912408,
+      "ci_sha": "9297f2633bea5fc5b3aa14b864b82bd733fa67c0",
       "cleared": {
         "at": "2026-10-26T14:08:53Z",
         "by": "`claude` (strong)",
@@ -2114,11 +2117,12 @@
       "pending_request": false,
       "provider": "claude-7",
       "question": "",
-      "queued_at": "2026-10-26T12:40:33Z",
+      "queued_at": "2026-10-26T14:30:30Z",
+      "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "40324462264",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-26T12:41:20Z",
       "stop_requested": false,
       "taken_asks": [],
