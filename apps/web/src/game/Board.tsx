@@ -60,6 +60,7 @@ import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
 import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
+import { FriendsButton } from "../together/FriendsButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
@@ -804,6 +805,8 @@ export default function Board({
           {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
               sat on the practice HUD's Menu and the match bar's clock (integration). */}
           <AudioToggle className="audio-toggle--bar" />
+          {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
+          <FriendsButton placement="game" />
           <LanguageButton placement="game" />
           <SettingsButton placement="game" />
         </div>

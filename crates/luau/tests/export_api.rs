@@ -585,6 +585,7 @@ mod generator {
             FengShuiOutcome,
             StarscapeReward,
             RedirectWhat,
+            Tuning,
             TuningChange,
             LibraryOverflowOutcome,
             ManaSpentFor,
