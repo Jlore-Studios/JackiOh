@@ -2213,6 +2213,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "5a8b5e3e303334be3040da54a46d0938aaaa8d7b"
       },
+      "closed_at": "2026-10-26T07:52:29Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -2222,6 +2223,7 @@
       "issue": 1955,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
