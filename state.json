@@ -4170,6 +4170,16 @@
       "stall_some": 7.3,
       "swapped": 341888,
       "total": 8153976832
+    },
+    {
+      "at": "2026-10-26T21:35:26Z",
+      "high_swap": 362770432,
+      "low_available": 6545924096,
+      "runner": "night-vm-muse",
+      "stall_full": 4.5,
+      "stall_some": 5.6,
+      "swapped": 116737,
+      "total": 8153964544
     }
   ],
   "planning": null,
