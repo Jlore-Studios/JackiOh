@@ -46,6 +46,9 @@ macro_rules! verbs {
     (@build $call:ident, $site:ident, $bytecode:ident, cast_each, $arg:ty) => {
         $crate::api::cast::build_cast_each($call, $site, $bytecode)
     };
+    (@build $call:ident, $site:ident, $bytecode:ident, choose_target_where, $arg:ty) => {
+        $crate::api::choose_where::build_choose_target_where($call, $site, $bytecode)
+    };
     (@build $call:ident, $site:ident, $bytecode:ident, draw_while, $arg:ty) => {
         $crate::api::draw_while::build_draw_while($call, $site, $bytecode)
     };

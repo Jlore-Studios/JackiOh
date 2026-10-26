@@ -643,6 +643,11 @@ pub fn script_step_for(script: &Script, resume: &Resume) -> Option<Hook> {
     if resume.hook == crate::subsystems::CHAOS_ETERNAL_HOOK {
         return Some(crate::subsystems::eternal_step());
     }
+    // R1845002: a trade offer's steps are the engine's own, whatever card made it, as it comes due and
+    // as each of its two prompts is answered.
+    if resume.hook == crate::effects::trade::TRADE_OFFER_HOOK {
+        return crate::effects::trade::trade_offer_step(&resume.step);
+    }
     // R1841002: an Equip pick's answer is the engine's own step, whatever card asked.
     if resume.hook == "resume" && resume.step == crate::effects::fuse::EQUIP_PICK_STEP {
         return Some(crate::effects::fuse::equip_pick_step());
@@ -687,12 +692,14 @@ const ENGINE_WORK_HOOKS: &[&str] = &[
     "@afterAttack",
     "@combatCopies",
     "@afterAttacked",
+    "@allyAttacked",
     "@startOfTurn",
     "@endOfTurn",
     "@activate",
     "@aiTurn",
     "@setRepeat",
     "@extraCry",
+    "@melee",
 ];
 
 /// Whether anything at all knows how to resume this item (R113).
@@ -728,12 +735,14 @@ pub fn run_work_item(sink: &mut EngineSink<'_>, item: &WorkItem) {
         "@afterAttack" => crate::combat::run_owed_after_attack(sink, item),
         "@combatCopies" => crate::combat::run_owed_combat_copies(sink, item),
         "@afterAttacked" => crate::combat::run_owed_after_attacked(sink, item),
+        "@allyAttacked" => crate::combat::run_owed_ally_attacked(sink, item),
         "@startOfTurn" => crate::turn::run_owed_start_of_turn(sink, item),
         "@endOfTurn" => crate::turn::run_owed_end_of_turn(sink, item),
         "@activate" => crate::subsystems::activate::run_owed_activation(sink, item),
         "@aiTurn" => crate::subsystems::ai_policy::run_owed_ai_turn(sink, item),
         "@setRepeat" => crate::cry_trigger::run_owed_repeat(sink, item),
         "@extraCry" => crate::cry_trigger::run_owed_extra_cries(sink, item),
+        "@melee" => crate::combat::run_owed_melee(sink, item),
         _ => {
             // A sequence a test made (`testkit::seams::register_work_handler`): TS's handler map, read
             // before its default handler.

@@ -131,10 +131,24 @@ cost) ask for them after the target, in the `hand` picker; plays that differ by 
 Tribute and its zone are narrowed together as whole candidates (R391), so a Tribute onto its own
 zone is picked by clicking the unit or its zone.
 
+**The Trade** (SPEC §6.1, §10.10, R1838000). A hand card of the viewer's that `legal` lists a `trade`
+for, or whose view carries a `tradeReason`, gets the Duos pass control's bar when pointed at
+(`TradeControl.tsx` over `cardBar.ts`, which `duos/CardActions.tsx` shares): `trade-bar` holding
+`trade-<instanceId>`, "Trade" with the price and the Trades left from the view's `trades`. It is live
+exactly when `legal` lists that `trade` and sends that body; otherwise it is greyed with the engine's
+reason as its tooltip. On a Duos board the button rides the card bar beside the pass control, and
+Game's own bar is off (`tradeBar={false}`).
+
 **Plays from the graveyard** (B5 E11). While `legal` lists a `play` for a card in the viewer's
 graveyard, that pile glows and its sheet (`cards/inspect/CardList.tsx`) puts "Play"
 (`pile-play-<instanceId>`) under the card; it reports `{ on: "graveyard" }`, closes the sheet, and the
 play is built as a hand card's.
+
+**The Resource tray and Credits** (issue #1840, R1840000, R1840003, R1840005). `ResourceTray.tsx` draws
+each seat's `resourceTray` and `marketCredits` from the view alone, in `tray-<side>`, and nothing while
+the view carries neither: the viewer's own Resources as cards (`tray-card-<instanceId>`), the
+opponent's as a count (`tray-count-<side>`), and the Credits in `market-credits-<side>`, on both seats.
+A tray card `legal` lists a `play` for reports `{ on: "tray" }`, and the play is built as a hand card's.
 
 ## Commands
 
@@ -258,9 +272,12 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
                         as live previews, which equip on that card alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
-                        the account owns them (cards/ownedFullArt.ts); collection/ holds the panels
-                        (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel) and their model; every one
-                        renders the server's answers and decides nothing (rule 7)
+                        the account owns them (cards/ownedFullArt.ts); while ownership decides, the tiles,
+                        the default selects and the deck builder's slot picker offer what the account
+                        owns, and an unowned stored pick draws as the default (R1833000); collection/
+                        holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
+                        model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
+                        every one renders the server's answers and decides nothing (rule 7)
 routes/QuestsPanel.tsx  /collection's Cards section's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307)
 routes/shop.tsx         /shop (#1577, #1580, R1580000): the four panels, re-reading each other, and at its foot
@@ -343,13 +360,22 @@ net/social.ts            fetch wrappers for every Play together route, typed (Fr
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
-together/InMatchChat.tsx the match board rail's chat toggle: online friends, each opening ChatPanel; the
-                         friends list is read only while its list is open
+together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
+                         landing and a board's controls) with its badge (incoming requests, challenges
+                         and unread chats), and its panel: the player's name#tag, the add form, the
+                         requests in, the friends online first with Challenge, Watch and Chat (the rows
+                         of FriendRows.tsx, shared with /together) and a link to /together; the friends
+                         list is read only while the panel is open, ChatPanel and ChallengeDialog open
+                         from it without leaving the screen
+together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts) the toast,
+                         the button and /together share, and the badge's count
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS
-together/ChallengeToast.tsx  mounted once in the shell; polls GET /api/challenges while signed in and
-                         toasts an incoming challenge anywhere: Accept opens /play with the room code
-                         filled in (R767), Decline declines
+together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenges (socialPoll.ts) while signed in and
+                         toasts an incoming challenge anywhere with a deck picker (the last deck used for
+                         its mode): Accept joins the room with it and goes to the game (R1831000), a
+                         refused join offers Open in lobby, /play with the room code filled in (R767);
+                         Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          invite a friend by sending the code in chat, join by code; both players go to
@@ -385,8 +411,8 @@ any other build each throws the reason.
 
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
-`together-challenge`, `together-watch`, `together-chat-open`, `chat-input`, `chat-send`,
-`chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
+`together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
 `duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
 `duos-ping-<kind>` and `duos-ping-marker`.
 

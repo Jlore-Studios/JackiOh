@@ -129,6 +129,10 @@ fn move_control(
         former_id: None,
         how: Some(how),
     });
+    // R1854002: a steal moves its thief's "steal an enemy card" quests; a give is no steal.
+    if how == ControlHow::Steal {
+        crate::subsystems::quests::note_steal(ctx, to.player);
+    }
     true
 }
 
@@ -261,5 +265,7 @@ pub fn capture(args: CaptureArgs) -> Effect {
             former_id: None,
             how: Some(ControlHow::Steal),
         });
+        // R1854002: a capture is a steal, so it moves its taker's "steal an enemy card" quests.
+        crate::subsystems::quests::note_steal(ctx, holder_slot.player);
     })
 }

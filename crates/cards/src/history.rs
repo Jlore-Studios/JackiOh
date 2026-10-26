@@ -17,7 +17,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c008_pickle, c009_income_tax, c032_felinor_feelings, c039_outbreak, c052_final_gambit,
+    c008_pickle, c009_income_tax, c014_shadowstep, c032_felinor_feelings, c039_outbreak, c052_final_gambit,
     c064_malzahars_recycler, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
@@ -31,8 +31,9 @@ use crate::scripts::core::{
 };
 use crate::scripts::meditative::{
     c017_true_craft_a_card, c018_expedition12, c019_expedition123, c021_api_key_fishing,
-    c030_fickle_e_kitten, c037_cn_in_a_bottle, c038_h1b_printer, c049_yilegpt_tamed, c054_money_machine,
-    c074_montana_giant, c080_aluneth, c094_shrinking_felinor, c097_2_wishing_well, c097_8_prison,
+    c030_fickle_e_kitten, c037_cn_in_a_bottle, c038_h1b_printer, c049_yilegpt_tamed, c053_prestige,
+    c054_money_machine, c074_montana_giant, c080_aluneth, c094_shrinking_felinor, c097_2_wishing_well,
+    c097_8_prison,
 };
 use crate::scripts::meditative_plus::{c001_bobs_plan, c003_wondrous_wand, c019_grubby_gloves};
 use crate::{CATALOG, REGISTRY, catalog_json};
@@ -71,7 +72,9 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// Bottle's raise and its Radiant face's cost. #1828's four ran theirs through v0.4.9: API Key Fishing's
 /// Radiant face added a base copy (R1828000), AI Slop fused from every AI generated card (R1828001), KY's
 /// Empty Notebook drew 1, or 2 on its Radiant face (R1828002), and Shrinking Felinor's Radiant face
-/// summoned a Radiant body (R1828003).
+/// summoned a Radiant body (R1828003). #1851's ran its through v0.4.11: Prestige could be played on
+/// either face with nothing to De-Radiant (R1103, R1851003). #1803's Shadowstep ran through v0.4.12b
+/// with its definition-remade hand cards carrying none of the flickered unit's stats, Armor or tuning.
 /// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
 /// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
@@ -228,6 +231,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.4.9",
         c094_shrinking_felinor::script_v0_4_9,
     ),
+    (c053_prestige::ID, "v0.4.11", c053_prestige::script_v0_4_11),
+    (c014_shadowstep::ID, "v0.4.12b", c014_shadowstep::script_v0_4_12b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

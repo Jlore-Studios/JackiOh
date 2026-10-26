@@ -705,13 +705,17 @@ describe("the challenge dialog's focus (#1569)", () => {
     return challenge;
   }
 
-  it("opening it takes the focus to its checked mode, and Escape closes it from anywhere and gives the focus back to the Challenge button", async () => {
+  it("opening it takes the focus to its checked mode, then to Send once the decks are read (#1831), and Escape closes it from anywhere and gives the focus back to the Challenge button", async () => {
     await renderPage();
     const challenge = openChallenge();
+    // Before the decks are read there is nothing to send: the focus starts on the checked mode.
+    expect(screen.getByTestId(TESTID.challengeModeBo1)).toHaveFocus();
     const form = await screen.findByTestId(TESTID.challengeForm);
     expect(form).toHaveAttribute("role", "dialog");
     expect(form).toHaveAttribute("aria-modal", "true");
-    expect(screen.getByTestId(TESTID.challengeModeBo1)).toHaveFocus();
+    await waitFor(() => {
+      expect(screen.getByTestId(TESTID.challengeSend)).toHaveFocus();
+    }, SLOW);
 
     (document.activeElement as HTMLElement | null)?.blur();
     press("Escape");
@@ -728,19 +732,22 @@ describe("the challenge dialog's focus (#1569)", () => {
     const send = screen.getByTestId(TESTID.challengeSend);
     const cancel = screen.getByTestId(TESTID.challengeClose);
 
+    // It opens on Send (#1831), so the walk starts there: Cancel, then round to the mode and the deck.
+    await waitFor(() => {
+      expect(send).toHaveFocus();
+    }, SLOW);
+    press("Tab");
+    expect(cancel).toHaveFocus();
+    press("Tab");
     expect(mode).toHaveFocus();
     press("Tab");
     expect(deck).toHaveFocus();
     press("Tab");
     expect(send).toHaveFocus();
-    press("Tab");
-    expect(cancel).toHaveFocus();
-    press("Tab");
+    press("Tab", { shiftKey: true });
+    expect(deck).toHaveFocus();
+    press("Tab", { shiftKey: true });
     expect(mode).toHaveFocus();
-    press("Tab", { shiftKey: true });
-    expect(cancel).toHaveFocus();
-    press("Tab", { shiftKey: true });
-    expect(send).toHaveFocus();
 
     const behind = screen.getByTestId(TESTID.addInput);
     behind.focus();

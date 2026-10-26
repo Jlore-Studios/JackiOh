@@ -143,6 +143,31 @@
   inset: 0;
 }
 
+/* R1833000: a dropped cosmetic's look fills the face in its card's place, centred, and its own
+   rarity glows on it, never its card's (R1333000). */
+.pack-slot__face .cosmetic-look {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pack-slot[data-cosmetic-rarity="Legendary"] .pack-slot__face .cosmetic-look > * {
+  box-shadow: 0 0 1rem var(--rarity-legendary);
+}
+
+.pack-slot[data-cosmetic-rarity="Mythic"] .pack-slot__face .cosmetic-look > * {
+  box-shadow: 0 0 1rem var(--rarity-mythic);
+}
+
+.pack-slot__cosmetic-rarity {
+  margin: 0;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
 .pack-slot[data-holding="true"] .pack-slot__back {
   animation: pack-hold calc(var(--pack-hold-ms) * 1ms) ease-in both;
 }

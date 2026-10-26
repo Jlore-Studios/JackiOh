@@ -186,5 +186,5 @@ export function observe(log: GameLog, view: PlayerView, fresh: readonly GameEven
 }
 
 export function outcomeOfView(view: PlayerView): GameOutcome | null {
-  return view.result === null ? null : outcomeFor(view.result.winner, view.viewer);
+  return view.result === null ? null : outcomeFor(view.result.winner, view.viewer, view.result.reason);
 }

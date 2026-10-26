@@ -23,7 +23,7 @@ import Log from "../game/Log.tsx";
 import Prompt from "../game/Prompt.tsx";
 import { baseView, emptySide, faceUpBackrow } from "../test/fixtures.ts";
 import { must } from "../test/stubServer.ts";
-import { questProgress, questWords } from "./cardState.ts";
+import { questProgress, questWords, stageWords } from "./cardState.ts";
 import { HOVER_DELAY_MS, LONG_PRESS_MS } from "./inspect/constants.ts";
 import { closeInspect } from "./inspect/store.ts";
 import { INSPECT_HOVER, INSPECT_SHEET, INSPECT_STATES } from "./inspect/testids.ts";
@@ -347,5 +347,116 @@ describe("R404 In Too Deep through the real engine", () => {
     expect(badges(screen.getByTestId(testid.card(entry.instanceId))).map((badge) => badge.getAttribute("aria-label"))).toEqual([
       "Quest: Destroy 2 enemy permanents (0/2)",
     ]);
+  });
+});
+
+/** R1854000: The Greatest Heist's shape at its second stage, as `QuestView.stages` carries it. */
+const STAGED: QuestView = {
+  open: [
+    {
+      id: "deaths",
+      text: "Have 2 Acclaimed Units you control die",
+      progress: 1,
+      goal: 2,
+      rewards: [{ id: "comradery", text: "Gain 1 mana" }],
+    },
+  ],
+  auras: [],
+  stages: [
+    { name: "Initiation", state: "done", goals: ["Make an Acclaimed Unit Radiant"], reward: "Draw a card" },
+    { name: "Comradery", state: "current", goals: ["Have 2 Acclaimed Units you control die"], reward: "Gain 1 mana" },
+    { name: "Empty the Vaults", state: "upcoming", goals: ["Steal an enemy card"], reward: "Steal your enemy's mana crystals" },
+  ],
+};
+
+/** R1854004: Job Application's shape while it waits to hear back, the Interview's three goals still to draw. */
+const HEARING: QuestView = {
+  open: [],
+  auras: [],
+  stages: [
+    { name: "Upload Resume", state: "done", goals: ["Send a card from your hand in as your resume"], reward: "Hear back in 2-6 turns" },
+    {
+      name: "The Interview",
+      state: "upcoming",
+      goals: [
+        "Play a card that costs the same as your resume",
+        "Play 3 cards of different costs in a single turn",
+        "Take or deal 12+ damage in a single instance",
+      ],
+      reward: "Get your resume back",
+      hearBack: 2,
+    },
+    { name: "The Offer", state: "upcoming", goals: ["Activate to claim next turn"], reward: "A Paycheck every turn" },
+  ],
+};
+
+function stageBadge(root: HTMLElement): HTMLElement | null {
+  return root.querySelector<HTMLElement>('.cf-state[data-state="questStage"]');
+}
+
+describe("R1854000 a staged quest's stages, from the view alone", () => {
+  it("R1854000 the card wears its stage, \"2/3\", beside its open quest, on either seat", () => {
+    for (const side of ["you", "opponent"] as const) {
+      render(withCatalog(<Board view={boardWith(questCard(STAGED), side)} />));
+      const root = screen.getByTestId(testid.card("itd"));
+      expect(badges(root).map((badge) => badge.textContent)).toEqual(["1/2"]);
+      const stage = must(stageBadge(root), "the stage badge");
+      expect(stage.textContent).toBe("2/3");
+      expect(stage.getAttribute("aria-label")).toBe("Stage 2 of 3: Comradery");
+      expect(stage.getAttribute("data-stage")).toBe("2");
+      expect(stage.getAttribute("data-stage-state")).toBe("current");
+      cleanup();
+    }
+  });
+
+  it("R1854000 the inspect overlay lists every stage, done, open now and to come, with its goals and its reward", () => {
+    vi.useFakeTimers();
+    render(withCatalog(<Board view={boardWith(questCard(STAGED))} />));
+    const preview = hover(screen.getByTestId(testid.card("itd")));
+    const list = must(
+      within(preview).getByTestId(INSPECT_STATES).querySelector<HTMLElement>('li[data-state="questStages"]'),
+      "the stages",
+    );
+    expect(list.textContent).toContain("Stage 2 of 3: Comradery");
+    const stages = Array.from(list.querySelectorAll<HTMLElement>("li[data-stage]"));
+    expect(stages.map((stage) => stage.getAttribute("data-stage-state"))).toEqual(["done", "current", "upcoming"]);
+    expect(stages[2]?.textContent).toContain("Empty the Vaults");
+    expect(stages[2]?.textContent).toContain("Steal an enemy card");
+    expect(stages[2]?.textContent).toContain("Steal your enemy's mana crystals");
+    // The open quest still has its own line, as In Too Deep's does.
+    expect(questLines(preview).map((line) => line.id)).toEqual(["deaths"]);
+  });
+
+  it("R1854000 a line with every stage done says the quest is complete, and a tree's line shows no stages", () => {
+    const done: QuestView = { open: [], auras: [], stages: (STAGED.stages ?? []).map((stage) => ({ ...stage, state: "done" as const })) };
+    expect(stageWords(done.stages ?? [])).toBe("Quest complete");
+    render(withCatalog(<Board view={boardWith(questCard(done))} />));
+    expect(must(stageBadge(screen.getByTestId(testid.card("itd"))), "the stage badge").textContent).toBe("3/3");
+    cleanup();
+    render(withCatalog(<Board view={boardWith(questCard(FIRST))} />));
+    expect(stageBadge(screen.getByTestId(testid.card("itd")))).toBeNull();
+  });
+
+  it("R1854002 a quest that asks for a cost names it", () => {
+    const quest = { id: "prove", text: "Play a card that costs the same as your resume", progress: 0, goal: 1, rewards: [], cost: 2 };
+    expect(questWords(quest)).toBe("Quest: Play a card that costs the same as your resume, a card that costs (2) (0/1)");
+  });
+});
+
+describe("R1854004 a staged quest waiting to hear back", () => {
+  it("R1854004 the badge and the overlay say how many turns are left, the stage's goals all still to draw", () => {
+    vi.useFakeTimers();
+    render(withCatalog(<Board view={boardWith(questCard(HEARING))} />));
+    const root = screen.getByTestId(testid.card("itd"));
+    const stage = must(stageBadge(root), "the stage badge");
+    expect(stage.textContent).toBe("2/3");
+    expect(stage.getAttribute("aria-label")).toBe("Stage 2 of 3: The Interview, hearing back in 2 turns");
+    expect(stage.getAttribute("data-hear-back")).toBe("2");
+    const preview = hover(root);
+    const interview = must(preview.querySelector<HTMLElement>('li[data-stage="2"]'), "the Interview");
+    expect(interview.getAttribute("data-hear-back")).toBe("2");
+    expect(interview.querySelectorAll(".inspect-quest-stage-goals li")).toHaveLength(3);
+    const next: QuestView = { ...HEARING, stages: (HEARING.stages ?? []).map((one) => (one.hearBack === undefined ? one : { ...one, hearBack: 1 })) };
+    expect(stageWords(next.stages ?? [])).toBe("Stage 2 of 3: The Interview, hearing back next turn");
   });
 });

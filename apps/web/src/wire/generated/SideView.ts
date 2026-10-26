@@ -10,6 +10,7 @@ import type { ModifierView } from "./ModifierView";
 import type { PlayerId } from "./PlayerId";
 import type { RowFlags } from "./RowFlags";
 import type { SecretView } from "./SecretView";
+import type { StarscapeView } from "./StarscapeView";
 import type { UnitView } from "./UnitView";
 
 export type SideView = { player: PlayerId, hero: HeroView, 
@@ -70,6 +71,17 @@ reserved: RowFlags, fatigueCount: number,
  */
 jade?: number, 
 /**
+ * R1840000: this seat's Resource tray beside its hand — the viewer's own in full, the
+ * opponent's as a count, both in full once the game is over (R434), as `hand` is. Absent while
+ * the tray holds none, so a game without a Resource sends the view it always did (D14).
+ */
+resourceTray?: HandView, 
+/**
+ * R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
+ * apart from the credit line's `credit` (R1223).
+ */
+marketCredits?: number, 
+/**
  * R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
  * game without one serialises as before.
  */
@@ -88,4 +100,9 @@ secrets?: Array<SecretView>,
  * `query::luck_of` as the hero panel reads its armor through `hero_armor_of`. Absent at 0, so a
  * game with no Feng Shui looks as it did (D14).
  */
-luck?: number, };
+luck?: number, 
+/**
+ * R1847000: this seat's starscape map, shown to both seats. Absent until the player first
+ * travels, so a game without one sends the view it always did (D14).
+ */
+starscape?: StarscapeView, };

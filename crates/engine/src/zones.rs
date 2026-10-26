@@ -596,6 +596,74 @@ pub fn is_unit_token(state: &GameState, instance: &CardInstance) -> bool {
     def.token && card_type_of(state, instance) == CardType::Unit
 }
 
+/// The X/X (and Bread Token Armor X) a token was summoned with. `setStatsAll` temporarily replaces
+/// `stats_override` (R1185002), so it remembers this face until R78 resets the card; Flicker and
+/// Reborn read it before that reset (R175, R444).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct TokenFace {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stats_override: Option<AttackHealth>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub armor_override: Option<i32>,
+}
+
+const TOKEN_FACE_MEMORY_KEY: &str = "__tokenFace";
+
+/// The token's summoned face, distinct from a later Set Stats override. With no saved face, its
+/// current override is still the face it entered with.
+pub(crate) fn summoned_token_face(state: &GameState, instance: &CardInstance) -> Option<TokenFace> {
+    if !is_unit_token(state, instance) {
+        return None;
+    }
+    if let Some(face) = instance
+        .memory
+        .get(TOKEN_FACE_MEMORY_KEY)
+        .and_then(|value| serde_json::from_value(value.clone()).ok())
+    {
+        return Some(face);
+    }
+    if instance.stats_override.is_none() && instance.armor_override.is_none() {
+        return None;
+    }
+    Some(TokenFace {
+        stats_override: instance.stats_override,
+        armor_override: instance.armor_override,
+    })
+}
+
+/// Save the summoned face before Set Stats replaces layer 1. An empty face is meaningful: a token
+/// with printed stats must return to those printed stats, not to the temporary set value.
+pub(crate) fn remember_summoned_token_face(state: &GameState, instance: &mut CardInstance) {
+    if !is_unit_token(state, instance) || instance.memory.contains_key(TOKEN_FACE_MEMORY_KEY) {
+        return;
+    }
+    let face = TokenFace {
+        stats_override: instance.stats_override,
+        armor_override: instance.armor_override,
+    };
+    instance.memory.insert(
+        TOKEN_FACE_MEMORY_KEY.to_string(),
+        serde_json::to_value(face).expect("a token face is plain JSON (§10.1)"),
+    );
+}
+
+/// R77: Fuse folds a token's current face into a new transient definition, which becomes its printed
+/// face. The pre-Fuse face saved for an R78 reset no longer describes that card.
+pub(crate) fn forget_summoned_token_face(instance: &mut CardInstance) {
+    instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY);
+}
+
+/// R781003, R1185002: Set Stats took a token's buffs and the stat half of its `tuning` and left, on a face
+/// that wears its X/X doubled (R349), the difference that makes it wear the set stats. That difference
+/// goes with the set: a token that returns to the face it was summoned with (R175, R444) carries none of
+/// it, or a Radiant Ghoul would come back at the set stats less its doubling. A token never set is as it was.
+pub(crate) fn forget_set_stats(instance: &mut CardInstance) {
+    if instance.memory.shift_remove(TOKEN_FACE_MEMORY_KEY).is_some() {
+        crate::effects::transform::to_printed_stats(instance);
+    }
+}
+
 /// `place_on_field`'s options: `stack` lets a Stack card top an occupied zone (TS `{ stack? }`, which a
 /// test builds with `json_as`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -726,6 +794,11 @@ fn place_with(
     }
     // B3.3 rule 1, R385, R638: a printed Brittle starts as its card enters the field, and a held count starts ticking.
     start_brittle_on_field(state, instance, from_off_field);
+    // R1839000: a Unit printing Dormant enters the field Dormant (a carried Unit included, R446).
+    let as_unit = slot.row == Row::Units || is_unit_face(state, instance);
+    crate::slumber::start_slumber_on_field(state, instance, from_off_field, as_unit);
+    // R1852000: and a Starship's hull starts its memory as it does.
+    crate::starship::start_starship_on_field(state, instance, from_off_field, as_unit);
 
     let placed = instance.clone();
     match landing {
@@ -1146,6 +1219,18 @@ pub fn remove_from_any_zone(state: &mut GameState, instance: &mut CardInstance) 
             note_moved(state, &instance.id);
             return;
         }
+        // R1840000: a Resource leaves its tray the same way, and an emptied tray is absent again (D14).
+        let side = &mut state.players[player];
+        if let Some(tray) = side.resource_tray.as_mut()
+            && let Some(at) = tray.iter().position(|card| card.id == instance.id)
+        {
+            tray.remove(at);
+            if tray.is_empty() {
+                side.resource_tray = None;
+            }
+            note_moved(state, &instance.id);
+            return;
+        }
     }
 }
 
@@ -1194,6 +1279,10 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.berserk = None;
     // R1174000: so is Frozen, which a Bounce, a death or an exile takes off with it.
     instance.frozen = None;
+    // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
+    instance.slumber = None;
+    // R1852000: and so is a Starship's memory, which its hull starts again as it next enters the field.
+    instance.starship = None;
     // R1040, R1045: a card set face-down as a Trap is its printed card again once it leaves the field.
     instance.set_as = None;
 }
@@ -1208,6 +1297,8 @@ pub fn reset_price(instance: &mut CardInstance) {
     instance.cost_mod = 0;
     instance.cost_override = None;
     instance.embiggen_cost_override = None;
+    // R1848003: and so does a set X, which is the card's price.
+    instance.fixed_x = None;
 }
 
 /// R174: drop the delayed effects aimed at a card that is leaving the field (`DelayedEffect.watch`).
@@ -1543,8 +1634,22 @@ pub fn move_to_zone(
 /// Every unit that acts for this player: each unit zone's top card in lane order (§3.2), then the
 /// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446) —
 /// then the Units standing in its backrow zones, in backrow lane order: a Flying Unit there is a Unit
-/// for every rule too (R1081000).
+/// for every rule too (R1081000). A Dormant card is none of them (R1839000): it fills its zone, which
+/// `units_on_field_of` reads, but no rule that reads a player's Units sees it until it awakens.
 pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    let mut units = units_on_field_of(state, player);
+    // R1839000: the one walk that drops a Dormant card; nothing is dropped on a board without one.
+    if units.iter().any(|unit| unit.slumber.is_some()) {
+        units.retain(|unit| unit.slumber.is_none());
+    }
+    units
+}
+
+/// R1839000: `active_units_of` with the Dormant cards kept — every Unit that tops a unit zone, is held
+/// by a carrier or stands in a backrow zone, in that order. What a rule reads that sees a Dormant card
+/// where it lies: its countdown (`slumber::awaken_at_turn_start`). A zone's room is read off the zone
+/// itself (`is_open`, `takes_move`), so a Dormant card fills its zone either way.
+pub fn units_on_field_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     // Read straight off the rows, not through `slots_of` and `card_at`: the auras ask for this on every
     // unit read (`layers::aura_sources`), so it builds nothing it does not return (#188).
     let side = &state.players[player];
@@ -1633,7 +1738,7 @@ pub enum StandingAt {
 /// zone's top in lane order, then the Units its carriers hold in backrow lane order, then each backrow
 /// zone's top in lane order, a Unit standing there where `standing` puts it. Never a card dormant
 /// beneath a pile (§3.2, R13). It reads no text: each caller drops what its rule says sleeps
-/// (`preview::lasting_text_dormant`, `preview::is_face_down`). `layers::aura_sources` walks the same
+/// (`preview::lasting_text_off`, `preview::is_face_down`). `layers::aura_sources` walks the same
 /// `ItsLane` order straight off the rows (#188).
 pub fn acting_on(state: &GameState, player: PlayerId, standing: StandingAt) -> Vec<&CardInstance> {
     let side = &state.players[player];
@@ -1697,9 +1802,10 @@ pub fn is_buried(state: &GameState, instance: &CardInstance) -> bool {
 }
 
 /// §3.2, R446: whether a card acts on the field — the top of a unit pile, the top of a backrow zone, or
-/// a Unit a carrier holds. A dormant card under either kind of pile does not.
+/// a Unit a carrier holds. A dormant card under either kind of pile does not, and neither does a
+/// Dormant card where it lies (R1839000), which acts for its awakening alone (`slumber::acts_to_awaken`).
 pub fn acts_on_field(state: &GameState, instance: &CardInstance) -> bool {
-    instance.zone.z() == ZoneName::Field && !is_buried(state, instance)
+    instance.zone.z() == ZoneName::Field && instance.slumber.is_none() && !is_buried(state, instance)
 }
 
 /// R64, R1136000: "fill your board" takes every empty, unreserved unit zone, left to right, a Locked
@@ -1825,8 +1931,15 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     // R1040: a card set face-down as a Trap re-enters its backrow zone the Trap it was set as, since
     // a Unit or a Spell face never stands there on its own.
     let set_as = current.set_as.filter(|_| row == Row::Backrow);
+    // R444, R175: an X/X token's summoned face survives the reset; R1185002's later Set Stats does not.
+    let token_face = summoned_token_face(state, &current);
     if let Some(live) = find_instance_mut(state, &current.id) {
+        forget_set_stats(live);
         reset_instance(live);
+        if let Some(face) = token_face {
+            live.stats_override = face.stats_override;
+            live.armor_override = face.armor_override;
+        }
         live.set_as = set_as;
         live.controller = player;
         live.summoned_turn = Some(turn);

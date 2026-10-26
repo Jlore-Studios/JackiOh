@@ -617,6 +617,7 @@ fn stand_in(id: &str, type_: CardType) -> CardDef {
         params: None,
         deals_damage: None,
         uses_plague: None,
+        resource: None,
         loc: None,
         radiant_fallback: None,
         ingredients: None,
@@ -693,6 +694,10 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
     for card in base.players[opponent].hand.iter_mut() {
         hide(card, HIDDEN_CARD_DEF_ID);
     }
+    // R1840000: the opponent's Resource tray is as hidden as their hand.
+    for card in base.players[opponent].resource_tray.iter_mut().flatten() {
+        hide(card, HIDDEN_CARD_DEF_ID);
+    }
     for player in [viewer, opponent] {
         for card in base.players[player].library.iter_mut() {
             hide(card, HIDDEN_CARD_DEF_ID);
@@ -744,6 +749,8 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
         }
     }
     base.board_history = history;
+    // R1845000: no seat reads a hidden Nerf, the viewer's own hand's included, so the dry run lands none.
+    crate::state::forget_hidden_nerfs(base);
 }
 
 /// R1714000: the records beside the cards that the viewer may not read either, as the AI's `redact`

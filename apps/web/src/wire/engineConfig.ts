@@ -9,6 +9,7 @@ import type { CraftKeywordPrice } from "./generated/CraftKeywordPrice.ts";
 import type { CraftVerb } from "./generated/CraftVerb.ts";
 import type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
 import type { DuosTeamRules } from "./generated/DuosTeamRules.ts";
+import type { GameOverReason } from "./generated/GameOverReason.ts";
 import type { KeywordKind } from "./generated/KeywordKind.ts";
 import type { Tag } from "./generated/Tag.ts";
 
@@ -54,6 +55,7 @@ export const HERO_HEALTH = 30;
 export const HUMAN_HANDICAP: Handicap = {"deckSize":25,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0};
 export const KY_COMPETITION_SECONDS = 60;
 export const LIBRARY_CAP = 60;
+export const LOSER_DRAWS_REASONS: readonly GameOverReason[] = ["fled"];
 export const MAX_COPIES = 1;
 export const MAX_MANA = 4;
 export const RANDOM_ATTACK_TARGET = "random";
@@ -67,3 +69,4 @@ export const TRIBAL_TAGS: readonly Tag[] = ["Human","Felinor","KY","CN","Jlockee
 export const TURN_CAP_PLAYER_TURNS = 60;
 export const TUTORIAL_HUMAN: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0};
 export const VERSIONS_SCHEME = 2;
+export const VOTE_TALLY_SIZE = 3;

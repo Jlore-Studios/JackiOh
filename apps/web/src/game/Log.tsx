@@ -109,6 +109,11 @@ function whoseLabel(view: PlayerView, player: PlayerId): string {
   return sideOf(view, player) === "you" ? t("your") : t("the opponent's");
 }
 
+/** R1843000: the player a vote would remove, as the object of the line. */
+function removedLabel(view: PlayerView, player: PlayerId): string {
+  return sideOf(view, player) === "you" ? t("you") : t("your opponent");
+}
+
 /** The log's own words ("your hero", "a unit") open a line with a capital; a card's name is as printed. */
 const OWN_WORDS = /^(?:a|an|your|the) /;
 
@@ -321,6 +326,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return t(COUNTER_LINE[event.counter], { target: capitalised(name.instance(event.instanceId)), value: event.value });
     case "jadeChanged":
       return capitalised(t("{whose} Jade Counter is {value}", { whose: name.whose(event.player), value: event.value }));
+    case "starscapeTravelled":
+      // R1847001: the node the travel reached; the map itself shows its reward.
+      return capitalised(t("{whose} starscape map reaches node {node}", { whose: name.whose(event.player), node: event.node }));
     case "costChanged": {
       // R177: a card this seat may not read arrives with its cost redacted to a negative sentinel.
       const target = capitalised(name.instance(event.instanceId, t("a card")));
@@ -402,7 +410,7 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "emoted":
       return t("{seat} emoted", { seat: name.seat(event.player) });
     case "gameOver": {
-      const why = t(resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason));
+      const why = t(resultReason(outcomeFor({ winner: event.winner, reason: event.reason }, view.viewer), event.reason, event.winner));
       return event.winner === "draw" ? t("Draw. {why}", { why }) : t("{seat} won. {why}", { seat: seatLabel(view, event.winner), why });
     }
     // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
@@ -500,6 +508,63 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "autopilotEngaged":
       // R1183002: the engine plays the rest of that turn; its actions log as their own lines.
       return t("The AI plays the rest of {whose} turn", { whose: name.whose(event.player) });
+    case "awakened":
+      // R1839002: a Dormant card awakened, its countdown run out or an effect's doing.
+      return t("{card} awakened", { card: name.def(event.defId) });
+    case "traded":
+      // R1838001: a Trade names its player alone; the card going in and the one drawn log as their own.
+      return t("{seat} traded a card", { seat: name.seat(event.player) });
+    case "resourceGained":
+      // R1840000: the other seat's view names no card, so the line names none for either.
+      return t("{seat} gained a Resource", { seat: name.seat(event.player) });
+    case "resourceSold":
+      // R1840001: a Resource gained past the cap is sold at once, as R317's burned card is named.
+      return capitalised(
+        t("{whose} Resource tray is full: {card} sold for {credits} Credits", {
+          whose: name.whose(event.player),
+          card: named(event.defId),
+          credits: event.credits,
+        }),
+      );
+    case "resourceDiscarded":
+      // R1840004: a tray discard reads as a hand's.
+      return t("{seat} discarded {card}", { seat: name.seat(event.player), card: name.def(event.defId) });
+    case "marketCreditsChanged":
+      // R1840005: Credits are public.
+      return capitalised(t("{whose} Credits are {value}", { whose: name.whose(event.player), value: event.value }));
+    case "starshipFused":
+      // R1852000: a piece died, and a copy of it fused into its owner's Dormant Starship.
+      return t("{card} fused into {whose} Dormant Starship ({n} pieces)", {
+        card: name.def(event.defId),
+        whose: name.whose(event.player),
+        n: event.pieces,
+      });
+    case "starshipLaunched":
+      // R1852003: the Starship launched under the name it took.
+      return capitalised(t("{whose} Starship launched as {name}", { whose: name.whose(event.player), name: event.name }));
+    case "voteCast":
+      // R1843000: a card voted against a player; the tally counts toward `needed`.
+      return capitalised(
+        t("{card} voted to remove {who} ({votes} of {needed})", {
+          card: name.card(event.instanceId, event.defId),
+          who: removedLabel(view, event.player),
+          votes: event.votes,
+          needed: event.needed,
+        }),
+      );
+    case "votedOut":
+      // R1843000: the cards that agreed, by name (a card the viewer may not read is "a hidden card").
+      return capitalised(
+        t("{cards} agreed: {who} removed from the game", {
+          cards: event.ballots.map((ballot) => name.card(ballot.instanceId, ballot.defId)).join(listSeparator()),
+          who: removedLabel(view, event.player),
+        }),
+      );
+    case "fled":
+      // R1843002: the escape, and what it leaves the other player.
+      return event.opponent === "loss"
+        ? t("{seat} escaped the universe, leaving the other side a loss", { seat: name.seat(event.player) })
+        : t("{seat} escaped the universe, leaving the other side a draw", { seat: name.seat(event.player) });
     case "glitched":
       // R676: what a Glitch did, under its corrupted name (cards/glitch.ts).
       return t("{glitch}: {outcome}", { glitch: GLITCH_WORDS.name, outcome: t(GLITCH_OUTCOME_LINE[event.outcome]) });

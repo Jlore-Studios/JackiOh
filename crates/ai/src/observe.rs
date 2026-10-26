@@ -43,6 +43,8 @@ enum Place {
     BackrowPile(usize, usize),
     /// R446: a carrier's Unit (lane index).
     Carried(usize),
+    /// R1840000: a Resource in its player's Resource tray.
+    Tray(usize),
 }
 
 /// Every card instance the state holds in a pile, a lane or a Stack, in a fixed order (TS
@@ -75,6 +77,8 @@ fn every_place(state: &GameState) -> Vec<(PlayerId, Place)> {
                 out.push((player, Place::Carried(lane)));
             }
         }
+        let tray = side.resource_tray.as_ref().map_or(0, Vec::len);
+        out.extend((0..tray).map(|at| (player, Place::Tray(at))));
     }
     out
 }
@@ -103,6 +107,7 @@ fn card_at(state: &GameState, player: PlayerId, place: Place) -> Option<&CardIns
             .as_ref()
             .and_then(|row| row.get(lane))
             .and_then(|card| card.as_ref()),
+        Place::Tray(at) => side.resource_tray.as_ref().and_then(|tray| tray.get(at)),
     }
 }
 
@@ -130,6 +135,7 @@ fn card_at_mut(state: &mut GameState, player: PlayerId, place: Place) -> Option<
             .as_mut()
             .and_then(|row| row.get_mut(lane))
             .and_then(|card| card.as_mut()),
+        Place::Tray(at) => side.resource_tray.as_mut().and_then(|tray| tray.get_mut(at)),
     }
 }
 
@@ -184,10 +190,10 @@ fn face_down_to(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool 
     ) && backrow_hidden_from(state, card, seat)
 }
 
-/// The instance ids `redact` hides from `seat` (step 2): the opponent's hand and library, every
-/// backrow card the seat cannot read, the cards in the seat's own library that were minted for
-/// the opponent's opening deck (#87 Pocket Chaos's library swap, R73), and every card in the seat's
-/// own library it was never shown (no `knownAs`, R312: a library swapped in, or swapped away and
+/// The instance ids `redact` hides from `seat` (step 2): the opponent's hand, Resource tray (R1840000)
+/// and library, every backrow card the seat cannot read, the cards in the seat's own library that
+/// were minted for the opponent's opening deck (#87 Pocket Chaos's library swap, R73), and every card
+/// in the seat's own library it was never shown (no `knownAs`, R312: a library swapped in, or swapped away and
 /// back, and #83 Transmogulate's picks), which its own `viewFor` list counts as unknown too. A card
 /// the seat's own open prompt offers as an option is shown to the seat by `viewFor` (§10.8), so it
 /// is not hidden, unless the view offers it as a face-down card (`face_down_to`, R177).
@@ -196,6 +202,10 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
     let mut hidden: IndexSet<String> = IndexSet::new();
 
     for card in &state.players[opp].hand {
+        hidden.insert(card.id.clone());
+    }
+    // R1840000: the opponent's Resource tray is as hidden as their hand.
+    for card in state.players[opp].resource_tray.iter().flatten() {
         hidden.insert(card.id.clone());
     }
     for card in &state.players[opp].library {
@@ -594,9 +604,15 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             card.counters.plague = plague;
         }
     }
+    // R1845000: no seat reads a hidden Nerf, the card's own owner included, and the seat's own hand is
+    // never a placeholder, so every card forgets them.
+    jackioh_engine::state::forget_hidden_nerfs(&mut next);
 
     // Step 4: erase the true order of the piles the seat cannot see into.
     next.players[opp].hand.sort_by(by_instance_id);
+    if let Some(tray) = next.players[opp].resource_tray.as_mut() {
+        tray.sort_by(by_instance_id);
+    }
     next.players[opp].library.sort_by(by_instance_id);
     next.players[seat].library.sort_by(by_instance_id);
 

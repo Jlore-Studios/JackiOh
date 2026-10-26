@@ -35,16 +35,17 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 ```
 
 `decide` is the one entry point. It reads the true `GameState` only through `ai_to_act` and `redact`
-(R185): `redact` blanks what the seat may not know (the opponent's hand and library, the backrow
-cards it cannot read, an enemy face-down card its own prompt offers among them (its option reads
-the view's `Face-down card`, R177), its own library's order and the cards in it that came from the
-opponent, the seed, the event history), and strips from the events its queues keep what `view_for`
-strips of a hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are
-resampled from the non-token cards of every set the opponent has not shown (R185, R380), a hidden
-backrow card from the traps alone, minus any whose live aura would change a shown stat (R602), and
-of the shown cost while an unseen trap of that cost is left (R351, R762). So two states that differ
-only in hidden cards give the same decision under the same rng. The caller reads `options.rng.cursor()`
-back afterwards.
+(R185): `redact` blanks what the seat may not know (the opponent's hand, Resource tray (R1840000)
+and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
+them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
+it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
+hand's too (R1845000)), and strips from the events its queues keep what `view_for` strips of a
+hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
+non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
+traps alone, minus any whose live aura would change a shown stat (R602), and of the shown cost while
+an unseen trap of that cost is left (R351, R762), and a hidden tray Resource from the catalog's
+Resources (R1840000). So two states that differ only in hidden cards give the same decision under
+the same rng. The caller reads `options.rng.cursor()` back afterwards.
 
 The AI never concedes and never offers a draw, and it declines every draw offer at once (R188). It
 answers its mulligan as soon as the mulligans open (R265, R266): `mulligan_keep_curved` sends back
@@ -68,8 +69,9 @@ less the body it comes back as, #1796), and once none is worth making the switch
 its own evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action. Each line tries its moves in move order (`candidates.rs`): attacks on the
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
-opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the other
-attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
+opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
+of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
+other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
@@ -245,7 +247,8 @@ pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
 - **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
   side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
   hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
-  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind,
+  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind
+  (bar Tradable, a hand keyword newer than the layout, so the fitted weights still read it, R1838000),
   the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
   and how many of its cards are Radiant (R1012004).
 - **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can

@@ -32,7 +32,7 @@ use crate::db::store::{
     BotRating, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season,
     SeasonStanding, StoreError, Tx,
 };
-use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game, widen_for_promotions};
+use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game_scored, widen_for_promotions};
 use crate::ranked::ladder::{
     self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
     VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
@@ -224,19 +224,27 @@ pub struct RankedPlan {
     pub writes: Option<RankedWrites>,
 }
 
-/// Glicko-2's score for `side`: a win, a draw or a loss.
-fn score_of(winner_side: Option<usize>, side: usize) -> f64 {
-    match winner_side {
-        None => 0.5,
-        Some(winner) if winner == side => 1.0,
-        Some(_) => 0.0,
+/// Glicko-2's score for a side's result: a win, a draw or a loss.
+fn score_of(result: ladder::GameResult) -> f64 {
+    match result {
+        ladder::GameResult::Win => 1.0,
+        ladder::GameResult::Draw => 0.5,
+        ladder::GameResult::Loss => 0.0,
     }
 }
 
-fn result_of(winner_side: Option<usize>, side: usize) -> ladder::GameResult {
+/// The game's result for `side`. R1843004: an ending that leaves the winner's opponent a draw (the
+/// engine's `LOSER_DRAWS_REASONS`, a `fled` game) is the winner's win and the other side's draw; a
+/// series' reasons never do.
+fn result_of(winner_side: Option<usize>, reason: &RatedReason, side: usize) -> ladder::GameResult {
+    let loser_draws = matches!(
+        reason,
+        RatedReason::Game(reason) if jackioh_engine::config::LOSER_DRAWS_REASONS.contains(reason)
+    );
     match winner_side {
         None => ladder::GameResult::Draw,
         Some(winner) if winner == side => ladder::GameResult::Win,
+        Some(_) if loser_draws => ladder::GameResult::Draw,
         Some(_) => ladder::GameResult::Loss,
     }
 }
@@ -405,10 +413,12 @@ pub async fn plan_ranked_game(
         before_of(t, &profiles, first, &input.id).await?,
         before_of(t, &profiles, second, &input.id).await?,
     ];
-    let rated = rate_game(
+    // R1843004: each side's own score, so a fled game rates the fleer's win and the other's draw.
+    let rated = rate_game_scored(
         &before[0].glicko,
         &before[1].glicko,
-        score_of(input.winner_side, 0),
+        score_of(result_of(input.winner_side, &input.reason, 0)),
+        score_of(result_of(input.winner_side, &input.reason, 1)),
     );
     // R672: a double-or-nothing rematch doubles each side's rating movement around its own before:
     // one update, then the delta twice. Deviation and volatility are the single update's — a doubled
@@ -471,7 +481,7 @@ pub async fn plan_ranked_game(
         let row_after = apply_ranked_game(
             &start,
             &ApplyRankedGameInput {
-                result: result_of(input.winner_side, index),
+                result: result_of(input.winner_side, &input.reason, index),
                 target,
                 at: input.at,
             },

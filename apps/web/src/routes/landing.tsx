@@ -24,6 +24,7 @@ import { useSettingsAccountSync } from "../settings/accountSync.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
+import { FriendsButton } from "../together/FriendsButton.tsx";
 import { useSetting } from "../settings/store.ts";
 import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
@@ -415,6 +416,7 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
           <div className="landing-corner">
             <Corner account={account} />
             <JlorePill />
+            <FriendsButton placement="nav" />
             <LanguageButton placement="nav" />
             <SettingsButton placement="nav" />
           </div>

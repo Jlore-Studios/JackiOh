@@ -46,8 +46,10 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
+import ResourceTray from "./ResourceTray.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
+import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
@@ -58,12 +60,13 @@ import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
 import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
+import { FriendsButton } from "../together/FriendsButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
 import { WearerProvider, useWornDeckCosmetics } from "./wearer.ts";
 import Backdrop from "./Backdrop.tsx";
-import { DEFAULT_CARD_COSMETICS, useCosmetics, wornDeckCosmetics } from "../cards/cosmetics.ts";
+import { DEFAULT_CARD_COSMETICS, useCosmetics, useOwnsAccountCosmetic, wornDeckCosmetics } from "../cards/cosmetics.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7); table.css restyles
 // the viewer's half of board.css's field and so comes after it (R1297000).
@@ -464,6 +467,8 @@ function Seat({
         emotes={emotes?.(side)}
       />
       <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
+      {/* R1847000: the seat's starscape map, both seats' once its player has first travelled. */}
+      {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
       <span className="piles">
         {/* R373: the rules' library is shown to players as the Deck. */}
         <Pile
@@ -525,6 +530,17 @@ function Seat({
           ))}
         </span>
       )}
+      {/* R1840000, R1840005: the Resource tray beside the hand and the Credits, each absent until
+          the view carries it. */}
+      <ResourceTray
+        side={side}
+        tray={seat.resourceTray}
+        credits={seat.marketCredits}
+        touchHold={touchHold}
+        highlight={highlight}
+        animating={animating}
+        onClick={onClick}
+      />
     </div>
   );
 }
@@ -635,7 +651,8 @@ export default function Board({
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
   // R1297000: the playmat and backdrop the viewer's half wears; a default adds no attribute and no element.
-  const slots = wornDeckCosmetics(wearCosmetics, deckCosmetics, useCosmetics());
+  // R1833000: an unowned pick draws as the default.
+  const slots = wornDeckCosmetics(wearCosmetics, deckCosmetics, useCosmetics(), useOwnsAccountCosmetic());
   const backdrop = slots.field === DEFAULT_CARD_COSMETICS.field ? undefined : slots.field;
   const table = slots.table === DEFAULT_CARD_COSMETICS.table ? undefined : slots.table;
 
@@ -788,6 +805,8 @@ export default function Board({
           {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
               sat on the practice HUD's Menu and the match bar's clock (integration). */}
           <AudioToggle className="audio-toggle--bar" />
+          {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
+          <FriendsButton placement="game" />
           <LanguageButton placement="game" />
           <SettingsButton placement="game" />
         </div>
