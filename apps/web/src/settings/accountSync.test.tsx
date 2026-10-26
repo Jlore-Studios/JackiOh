@@ -585,4 +585,24 @@ describe("R634 the hook: one sync for the page, only for an active account", () 
     expect(api.save.mock.calls[0]?.[0]).toBe("renewed");
     view.unmount();
   });
+
+  it("#1969 a release that comes due once the page is gone reaches for nothing, as when a test file's jsdom goes first", async () => {
+    const api = fakeApi();
+    const view = render(<Screen account={ready("p1")} api={api} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(readSettingsSyncState().phase).toBe("saved");
+    view.unmount();
+
+    // A test file's teardown takes `window` away before the grace runs out; the release must not throw.
+    vi.stubGlobal("window", undefined);
+    try {
+      await vi.advanceTimersByTimeAsync(SETTINGS_SYNC_GRACE_MS + 1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(vi.getTimerCount(), "the release came due").toBe(0);
+    expect(readSettingsSyncState().phase, "and stopped nothing on a page that is gone").toBe("saved");
+  });
 });

@@ -371,6 +371,42 @@ mod r676_glitchs_outcome_and_the_reset {
             .collect();
         assert_eq!(found, Vec::<String>::new());
     }
+
+    #[test]
+    fn r676_i9_counts_fatigue_again_from_the_game_a_reset_deals() {
+        // p1 had taken 3 fatigue draws; the new game's counts are 0, which no `fatigue` announced. I9
+        // re-reads them at the reset and counts on from there in the new game's next action (#1902).
+        let mut start = game(&seed_for(GlitchOutcome::Reset));
+        start.players.p1.fatigue_count = 3;
+        let result = play_glitch(&mut start);
+        assert_eq!(result.state.resets, Some(1));
+        assert_eq!(result.state.players.p1.fatigue_count, 0);
+        let i9 = |found: Vec<String>| -> Vec<String> {
+            found
+                .into_iter()
+                .filter(|finding| finding.starts_with("I9"))
+                .collect()
+        };
+        let mut monitor = create_invariant_monitor(&start);
+        assert_eq!(
+            i9(monitor.after(&result.events, &result.state)),
+            Vec::<String>::new()
+        );
+        let keep: Vec<String> = result
+            .state
+            .players
+            .p1
+            .hand
+            .iter()
+            .map(|card| card.id.clone())
+            .collect();
+        let kept = reduce(
+            &result.state,
+            &Action::new(ActionBody::Mulligan { keep }, P1, "r676-fatigue-keep"),
+        );
+        assert!(kept.error.is_none(), "{:?}", kept.error);
+        assert_eq!(i9(monitor.after(&kept.events, &kept.state)), Vec::<String>::new());
+    }
 }
 
 mod r677_the_seat_swap {
