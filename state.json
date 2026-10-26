@@ -2076,13 +2076,8 @@
     "what": "revise #1981 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-26T11:29:16Z",
-    "notes": [
-      "delivered revise #1981 on claude-7 (run 40308008005): approved",
-      "found the run of the survey: 40314041992",
-      "started revise #1981 on claude-7 (run 40315748206)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-26T11:38:52Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -2787,7 +2782,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T11:29:16Z",
+  "loop_tick": "2026-10-26T11:38:52Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T09:30:02Z",
