@@ -2522,6 +2522,8 @@
       "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-26T16:46:48Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "40362855384",
       "self_check_findings": [],
