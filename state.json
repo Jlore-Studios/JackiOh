@@ -2052,6 +2052,7 @@
     "1964": {
       "action": "review",
       "asks": [],
+      "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T04:24:46Z",
