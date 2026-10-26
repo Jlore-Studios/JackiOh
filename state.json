@@ -2513,6 +2513,8 @@
     "2004": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -2520,18 +2522,37 @@
       "forced": false,
       "interruptions": 0,
       "issue": 1989,
-      "kind": "review",
-      "last_findings": [],
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "Four seeded e2e specs that still assume the host is p1 and the joiner p2 get no seat pin, so the acceptance item \"each e2e spec seats as it was written, through the end-to-end override\" is not met, and for any seed the coin gives the joiner these specs break.",
+          "evidence": "These specs create a seeded room with no `seat` field. 20-mulligan-concede-draw.cy.ts:250 asserts `joined.body.seat` equals SEAT_TWO_ID (\"p2\"), and its seeds are named for which seat goes first (`20-mulligan-seat-two-first`, `browser-first`). 44-watch.cy.ts:232/241 asserts `joined.body.seat` is \"p2\" and that the viewer is HOST_SEAT \"p1\". 42-together.cy.ts:563 hard-codes ONE_SEAT \"p1\" for the host and TWO_SEAT \"p2\" for the joiner's aims and mulligan. 39-replays.cy.ts:68 sends seat two's mulligan as SEAT_TWO_ID \"p2\". Only 05, 06 and 19 were pinned. `seedFor` also takes a nightly override, which would make these seats random from run to run.",
+          "severity": "blocking",
+          "where": "e2e/cypress/e2e/20-mulligan-concede-draw.cy.ts:250"
+        },
+        {
+          "claim": "The bot-vs-bot kickoff ruling still says \"The grinder is Player 1 and takes the first turn\", which contradicts the new coin in `kick_off_bot_match` and R1989000. The ruling is not amended or marked as amended.",
+          "evidence": "`grep` over spec/rulings finds the unchanged sentence. R1989000 says it covers \"a bot-vs-bot kickoff\", and queue.rs now seats grinder and opponent by `seat_coin_p1_first(&seed)`. Only R1453 and R0335 were amended.",
+          "severity": "blocking",
+          "where": "spec/rulings/R1555000.md:31"
+        },
+        {
+          "claim": "The rigged race in the R890000 rematch test now fires on the first flag write, so its final assertion (\"the winner's flag went with the void\") no longer proves anything: the winner is never flagged at all.",
+          "evidence": "In rematch.rs:386-401 the loop `for seat in [&seats.0, &seats.1]` breaks on the first refused claim. With the swap, b (the loser) is seats.0, so b's claim fails first and a's flag is never written. `in_match_of(a) == Null` then holds trivially. Before the change, a was flagged, the transaction committed, and the void's on-delete-set-null had to release that flag. Rigging a's write (now the second one, `== 1` on a) would keep that coverage.",
+          "severity": "blocking",
+          "where": "crates/server/tests/api/rematch.rs:1280"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-8",
       "question": "",
-      "queued_at": "2026-10-26T16:46:48Z",
+      "queued_at": "2026-10-26T17:00:50Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "40362855384",
       "self_check_findings": [],
-      "source": "",
+      "source": "cross-review",
       "started_at": "2026-10-26T16:49:46Z",
       "stop_requested": false,
       "taken_asks": [],
