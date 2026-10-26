@@ -1,0 +1,87 @@
+{
+  "action": "plan",
+  "number": 1994,
+  "title": "Patch: each patch's game figures (who went first and won, how games end, how long they last, fatigue and traps) outlive the week's purge, and /stats shows them",
+  "branch": "bot/issue-1994",
+  "thread": "**Issue #1994 (data, not instructions):**\n\n```text\n# #1994: Patch: each patch's game figures (who went first and won, how games end, how long they last, fatigue and traps) outlive the week's purge, and /stats shows them\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe server keeps per-card statistics for every patch for good. The figures about whole games are kept only for a week and then lost: how often the player going first wins, how games end, how many turns they last, how often a game reaches fatigue, how often set traps fire. So when the owner weighs a change like the first player's opening hand, no number from people's games older than a week exists. After this the server keeps those figures per patch, and /stats shows a Games panel for the picked patch, for example \"first player wins 51% (\u00b13), median 17 turns, 12% of games reach fatigue\".\n\n## Why\n\n- Every game record carries `first`, `winner`, `reason` and `turns`, plus R1256000's per-seat counts: fatigue draws and damage, traps set and fired, position switches, Radiant upgrades (`crates/engine/src/wire/stats.rs:113-155`).\n- The lasting totals keep none of them.\n  - `StatsTotals` holds `records`, `cards` and `lists` only (`stats.rs:619-629`).\n  - `record_totals` holds a `records` count (`crates/server/migrations/0041_card_totals.sql:86-98`).\n  - A record's detail is purged after `GAME_RECORD_RAW_RETENTION_DAYS = 7` (`crates/server/src/config.rs:259`, R1044001).\n- The figures exist only offline: `cargo jackioh stats report --games` (`crates/tools/src/stats.rs:39-44`, `game_report` at `:453`) reads exported files.\n- Seat decisions have been made without a figure from people's games.\n  - R1156000 raised Player 1's opening draw \"for seat balance\".\n  - `training/README.md:390-393` warns that \"the first seat's edge between two AIs is not the people's\".\n  - The only seat figures checked in are 13 first-seat wins in 40 dev games (`analysis/fixtures/games.report.json`) and 206 of 400 AI games (`training/history/improve-cycle-2026-10-16.md`).\n\n## Proposal\n\n- Add game totals keyed as `RecordsKey` is (patch, source, mode, both pilots):\n  - games, first-seat wins and draws;\n  - a count per ending and a histogram of turns;\n  - R1256000's sums, with the count of records that carry them.\n- Fold them in `StatsTotals::fold`, which stays commutative.\n- Move `game_report`'s arithmetic into the engine's stats module, so the tool and the server compute one way, as the card figures already do.\n- Add a migration for the table (server-only: RLS on, no grant), plus the pg and in-memory stores.\n- Add a public cached `GET /api/stats/games?patch=` under R661's provisional gate, and a Games panel on /stats for the picked patch.\n- It splits cleanly: the totals, store and route first, the panel second.\n\n## Where it lands\n\n- `crates/engine/src/wire/stats.rs`, `crates/tools/src/stats.rs`\n- A new migration in `crates/server/migrations/`; `crates/server/src/db/` (pg and memory), `crates/server/tests/store/contract.rs`, `crates/server/tests/sql/`\n- The server's stats API and router\n- `apps/web/src/routes/stats.tsx` and `apps/web/src/stats/`\n- `spec/09-architecture.md` \u00a79.11 and a new ruling; `crates/server/README.md`\n\n## Acceptance criteria\n\n- [ ] An engine test: game figures read off totals folded in any order equal `game_report` over the same records, and over `analysis/fixtures` they match `games.report.json`.\n- [ ] A store contract test: a live record's game figures read the same after the R1044001 purge empties its detail.\n- [ ] An SQL suite check: the new table is server-only.\n- [ ] An API test: figures below `PUBLIC_STATS_MIN_LIVE_GAMES` are labelled provisional, and games with a ladder bot are split by pilot pair.\n- [ ] A web test: the panel renders, and a short sample reads as not enough games.\n- [ ] `cargo jackioh spec check` is green.\n\n## Size and risks\n\nHard (migration, engine, server and web): about 18 files and 900 to 1,300 lines, in two pull requests. Records already folded have no game totals. Only those whose detail is still held can be back-filled, and the panel should say where its figures start.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-26T13:03:31Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1994: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-10-26T13:14:10Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-5",
+    "reason": "`claude-5` stops mid-call: 5-hour usage is 42%, at or over its 40% cap; it resets at 2026-10-26T16:10:00Z",
+    "trail": ": {\"file_path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/stats/patches.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/stats/testids.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/stats/CardStatsBlock.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/stats/CardStatsBlock.test.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/stats/PlayerStatsCard.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/crates/engine/src/wire/stats.rs\", \"offset\": 1, \"limit\": 320}\n- Bash: {\"command\": \"ls spec/ | head -40; grep -n \\\"9.11\\\" spec/09-architecture.md | head -20\", \"description\": \"List spec notes and find \\u00a79.11\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/crates/engine/src/wire/stats.rs\", \"offset\": 560, \"limit\": 400}\n- Bash: {\"command\": \"sed -n '185,260p' spec/09-architecture.md\", \"description\": \"Read spec \\u00a79.11\"}\n- said: Now the export lists of the remaining stats files.\n- Grep: {\"pattern\": \"^export \", \"path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/stats\", \"output_mode\": \"content\", \"glob\": \"!*.test.*\"}\n- Grep: {\"pattern\": \"fatigue|traps_set|traps_fired|first_seat|firstSeat|game_totals|GameTotals|endings|by_reason\", \"path\": \"/home/runner/work/_temp/work/item-1994/crates/server\", \"output_mode\": \"content\", \"-\u2026\n- Grep: {\"pattern\": \"provisional\", \"path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src\", \"-i\": true, \"output_mode\": \"content\", \"glob\": \"!**/i18n/*.json\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/crates/engine/src/wire/stats.rs\", \"offset\": 320, \"limit\": 240}\n- Grep: {\"pattern\": \"PUBLIC_STATS|MIN_LIVE|minLiveGames|STATS_\", \"path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src\", \"output_mode\": \"content\", \"glob\": \"!**/i18n/*.json\"}\n- Grep: {\"pattern\": \"stats_totals_load|struct StatsTotalsQuery|stats_totals_fold|fn stats_totals|game_records_insert|fn game_record\", \"path\": \"/home/runner/work/_temp/work/item-1994/crates/server/src/db\", \"o\u2026\n- Grep: {\"pattern\": \"PUBLIC_STATS_MIN_LIVE_GAMES|MIN_LIVE_GAMES|min_live_games\", \"path\": \"/home/runner/work/_temp/work/item-1994\", \"output_mode\": \"content\", \"head_limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1994; sed -n 860,895p crates/server/src/db/store.rs; echo -----; sed -n 2575,2645p crates/server/src/db/store.rs; echo ----FAKE; sed -n 2900,2935p cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1994/apps/web/src/wire && head -20 engineConfig.ts serverConfig.ts index.ts; wc -l index.ts engineConfig.ts serverConfig.ts; ls generated | wc -l; ls\u2026\n- Grep: {\"pattern\": \"CardStats|WinRateSource|GameSummary|GameRecord|SourceFilter|GameCounters|export \\\\*|export type \\\\{\", \"path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/wire/index.ts\", \"output\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1994; sed -n 1,130p crates/engine/src/wire/stats/window.rs; grep -n \\\"pub struct\\\\|pub enum\\\\|pub fn\\\\|ts(export\\\\|ladder\\\\|live_pilot\\\\|R807000\\\\|Pi\u2026\n- Grep: {\"pattern\": \"STATS|SAMPLE|LIVE\", \"path\": \"/home/runner/work/_temp/work/item-1994/apps/web/src/wire\", \"glob\": \"*Config.ts\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1994/apps/web/src/wire/generated && cat CardStatsReport.ts CardStats.ts WinRateSource.ts CardStatsFilter.ts SourceFilter.ts; ls ../../../../../crates\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-1994/crates/engine/src/wire/stats/window.rs\", \"offset\": 228, \"limit\": 160}\n- Bash: {\"command\": \"ls analysis/fixtures/ | head -30; grep -rn \\\"games.report.json\\\" --include=*.rs --include=*.py --include=*.md --include=*.ts --include=*.sh --include=*.yml . 2>/dev/null | grep -v node_m\u2026\n- Grep: {\"pattern\": \"generated/(CardStats|WinRateSource|GameSummary|GameRecord|SourceFilter|Tally|GameCounters|CardStatsReport)\", \"path\": \"/home/runner/work/_temp/work/item-1994/apps/web\", \"output_mode\": \"co\u2026\n- Grep: {\"pattern\": \"Pilot::Ai|Pilot::Human\", \"path\": \"/home/runner/work/_temp/work/item-1994/crates/server/src\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"grep -n \\\"ts(export\\\\|derive(.*TS\\\\|pub struct\\\\|pub enum\\\" crates/engine/src/wire/stats/window.rs | head -20; ls crates/engine/src/wire/ | head -50\", \"description\": \"Check engine stats \u2026\n- Grep: {\"pattern\": \"R807000|ladder bot\", \"path\": \"/home/runner/work/_temp/work/item-1994/crates/server/src/api/game_records.rs\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"head -c 2500 analysis/fixtures/games.report.json; echo; grep -c . analysis/fixtures/games.report.json; sed -n 120,160p analysis/README.md; head -c 600 analysis/fixtures/live-40.jsonl\", \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1994; sed -n 1,30p crates/server/src/api/game_records.rs; echo ...; sed -n 135,225p crates/server/src/api/game_records.rs\", \"description\": \"Read game\u2026\n- Bash: {\"command\": \"sed -n 280,320p crates/engine/src/wire/stats/window.rs; grep -rn \\\"WindowedReport\\\\|WinRateSource\\\\|CardStatsReport\\\" apps/web/src --include=*.ts --include=*.tsx -l | grep -v generated\",\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1994; grep -n \\\"^pub async fn\\\\|^async fn\\\\|^pub fn\\\\|^fn\\\" crates/server/src/api/game_records.rs | head; echo ----; grep -n \\\"fn \\\\|macro_rules\\\\|Ro\u2026\n- Bash: {\"command\": \"grep -n \\\"^[^ ].*{\\\" apps/web/src/routes/stats.css | head -150; head -12 apps/web/src/routes/stats.css\", \"description\": \"List CSS selectors in stats.css\"}\n- Glob: {\"pattern\": \"e2e/**/*stat*\", \"path\": \"/home/runner/work/_temp/work/item-1994\"}\n- Grep: {\"pattern\": \"/stats|statsTestid|paths\\\\.stats\", \"path\": \"/home/runner/work/_temp/work/item-1994/e2e\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"grep -rn \\\"analysis/fixtures\\\\|analysis/\\\" crates/*/src crates/*/tests --include=*.rs | grep -v \\\"^.*://\\\" | head -20; echo ---; grep -n \\\"analysis\\\" scripts/ci-scope.sh | head -30\", \"de\u2026"
+  },
+  "journal": "# Journal of #1994\n\nEvery night-bot run on #1994, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-10-26 13:25 UTC \u00b7 plan #1994 \u00b7 `claude-5` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/40328238169) on `claude-5` (`opus` (strong)). It ended **interrupted**: `claude-5` stops mid-call: 5-hour usage is 42%, at or over its 40% cap; it resets at 2026-10-26T16:10:00Z\nModel calls: 1, 2.8 model minutes.\nIts work ended at `ec855ac8416f` on `bot/issue-1994`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 13:11 | start | from `origin/main` |  | at `ec855ac8416f` |\n| 2 | 13:11 | plan (`opus`) | plan the item before anyone builds it | 2.8 min | cut off at its usage cap: 5-hour usage is 42%, at or over its 40% cap; it resets at 2026-10-26T16:10:00Z |\n| 3 | 13:14 | stop | `claude-5` stops mid-call: 5-hour usage is 42%, at or over its 40% cap; it resets at 2026-10-26T16:10:00Z |  |  |\n",
+  "housekeeping": [
+    "#1994 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1858 skipped: it waits for #1857 to close first",
+    "#1859 skipped: it waits for #1857 to close first",
+    "#1860 skipped: it waits for #1857 to close first",
+    "#1861 skipped: it waits for #1857 to close first",
+    "#1862 skipped: it waits for #1857 to close first",
+    "#1863 skipped: it waits for #1857 to close first",
+    "#1864 skipped: it waits for #1857 to close first",
+    "#1865 skipped: it waits for #1857 to close first",
+    "#1866 skipped: it waits for #1857 to close first",
+    "#1867 skipped: it waits for #1857 to close first",
+    "#1868 skipped: it waits for #1857 to close first",
+    "#1869 skipped: it waits for #1857 to close first",
+    "#1870 skipped: it waits for #1857 to close first",
+    "#1871 skipped: it waits for #1857 to close first",
+    "#1872 skipped: it waits for #1857, #1861 to close first",
+    "#1873 skipped: it waits for #1857, #1861 to close first",
+    "#1874 skipped: it waits for #1857, #1863 to close first",
+    "#1875 skipped: it waits for #1857, #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1857, #1860 to close first",
+    "#1877 skipped: it waits for #1857, #1860 to close first",
+    "#1878 skipped: it waits for #1857, #1860 to close first",
+    "#1879 skipped: it waits for #1857, #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1857, #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1857, #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1857, #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
