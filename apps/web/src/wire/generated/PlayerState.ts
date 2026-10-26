@@ -12,6 +12,7 @@ import type { HeroState } from "./HeroState";
 import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
+import type { StarscapeMap } from "./StarscapeMap";
 import type { TurnLog } from "./TurnLog";
 import type { VoteTally } from "./VoteTally";
 
@@ -166,4 +167,9 @@ votes?: VoteTally,
  * the game on it. Absent otherwise, so a game without one hashes as before this field existed
  * (D3).
  */
-fled?: FleeOpponent, };
+fled?: FleeOpponent, 
+/**
+ * R1847000: this player's starscape map, public. Absent until their first travel, so a game
+ * without one hashes as before this field existed (D14).
+ */
+starscape?: StarscapeMap, };

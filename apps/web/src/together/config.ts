@@ -8,14 +8,16 @@ import { PRESENCE_HEARTBEAT_MS, SOCIAL_POLL_MS } from "@jackioh/server-config";
  * How often a screen that shows the friends list (statuses, requests, the blocked list) reads it
  * again: once a heartbeat (`PRESENCE_HEARTBEAT_MS`), the pace a friend's status changes at. A read is
  * one transaction on the server however many friends there are, but it is still the social layer's
- * dearest, so no screen asks for it faster, and a match screen asks only while its chat list is open.
+ * dearest, so no screen asks for it faster, and off Play together a screen asks only while its friends
+ * panel is open (`FriendsButton.tsx`, #1831).
  */
 export const FRIENDS_POLL_MS = PRESENCE_HEARTBEAT_MS;
 
 /**
  * How often the unread counts and the challenges are read again (the challenge toast, on every
  * signed-in screen, and Play together): the server's `SOCIAL_POLL_MS`, which the e2e specs wait on too.
- * An open conversation keeps its own, faster pace (`CHAT_POLL_MS`, `ChatPanel.tsx`).
+ * One read of each per tab, however many screens show it (`socialPoll.ts`, #1831). An open
+ * conversation keeps its own, faster pace (`CHAT_POLL_MS`, `ChatPanel.tsx`).
  */
 export { SOCIAL_POLL_MS };
 

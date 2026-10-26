@@ -49,6 +49,7 @@ import Log from "./Log.tsx";
 import ResourceTray from "./ResourceTray.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
+import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
@@ -59,6 +60,7 @@ import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
 import { getAudioEngine } from "../audio/engine.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
+import { FriendsButton } from "../together/FriendsButton.tsx";
 import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
 import { KeywordLossProvider, keywordLossesFrom } from "./keywordLoss.ts";
@@ -465,6 +467,8 @@ function Seat({
         emotes={emotes?.(side)}
       />
       <ManaTray side={side} mana={seat.mana} credit={seat.credit} animating={animating} />
+      {/* R1847000: the seat's starscape map, both seats' once its player has first travelled. */}
+      {seat.starscape !== undefined && <StarscapeMap side={side} starscape={seat.starscape} />}
       <span className="piles">
         {/* R373: the rules' library is shown to players as the Deck. */}
         <Pile
@@ -801,6 +805,8 @@ export default function Board({
           {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
               sat on the practice HUD's Menu and the match bar's clock (integration). */}
           <AudioToggle className="audio-toggle--bar" />
+          {/* #1831: friends, and chat with one, from the board, beside the language button and the gear. */}
+          <FriendsButton placement="game" />
           <LanguageButton placement="game" />
           <SettingsButton placement="game" />
         </div>

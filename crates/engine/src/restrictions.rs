@@ -19,7 +19,12 @@
 //!    by Flying or Ranged units outside Defense Position (#783, R783002). `combat.rs` asks
 //!    `attack_restriction` for a declared attack (§4.2 step 2), for the Taunt wall (step 3: a Taunt
 //!    binds only the attackers that may attack it) and for every forced attack, which skips steps 1 to
-//!    3 (R53) but not these.
+//!    3 (R53) but not these. The Gauntlet (R1849005) is one more of them, an aura's rather than a
+//!    unit's: while one acts, the Units of its lanes attack only one another.
+//!
+//! Beside them, two Stinkyscape rules (#1849): Immune to Spell Damage (R1849000, asked by `damage.rs`),
+//! and the aura "Units cannot be in Defense Position", which reaches every Unit (R1849006, asked by
+//! `combat::why_cannot_switch_in` and the state check).
 //!
 //! A restriction a card prints is a static flag (`Script.staticFlags`), so a Vanilla takes it with the
 //! rest of the text (`scripts::script_of`).
@@ -31,11 +36,12 @@
 //! check here is its flag alone.
 
 use crate::catalog::def_of;
+use crate::config::GAUNTLET_LANES;
 use crate::damage::DamageTarget;
 use crate::layers::{AuraTable, unit_has};
-use crate::script::EffectContext;
+use crate::script::{EffectContext, StaticFlags};
 use crate::state::{CardInstance, EngineError, GameState, Position};
-use crate::wire::{CardType, KeywordKind, Row, Zone, has_keyword};
+use crate::wire::{CardType, KeywordKind, PLAYER_IDS, Row, Zone, has_keyword};
 use crate::zones::{card_at, slot_of};
 
 /// `faces::card_type_of` for a definition and a face alone (TS passed `{ defId, radiant }`, a card
@@ -154,6 +160,47 @@ pub fn tribal_hate_cannot_reach(
     names_tribal(tags) || names_tribal(not_tags)
 }
 
+/// Whether any card acting on either side of the field (§3.2; a face-down card's text asleep, R1487000,
+/// and a Dormant one's off, R1839000) carries a static flag `has` finds — an aura that reaches both
+/// players. It stops at the first.
+fn any_acting_flag(state: &GameState, has: impl Fn(&StaticFlags) -> bool) -> bool {
+    PLAYER_IDS.into_iter().any(|side| {
+        crate::zones::acting_on(state, side, crate::zones::StandingAt::AmongUnits)
+            .into_iter()
+            .filter(|card| !crate::preview::lasting_text_off(state, card))
+            .any(|card| has(&crate::scripts::flags_of(state, card)))
+    })
+}
+
+/// R1849000: "Immune to Spell Damage" — a Spell's hit on this Unit on the field deals nothing and is no
+/// damage instance (§4.4 step 0). Only damage: a Spell still targets it and does the rest to it.
+pub fn spell_damage_cannot_reach(
+    state: &GameState,
+    source: Option<&CardInstance>,
+    unit: &CardInstance,
+) -> bool {
+    matches!(unit.zone, Zone::Field { .. })
+        && is_spell_source(state, source)
+        && crate::scripts::flags_of(state, unit).immune_to_spell_damage == Some(true)
+}
+
+/// R1849005: whether a Gauntlet acts on the field now (Stinkyscape #157).
+pub fn gauntlet_acts(state: &GameState) -> bool {
+    any_acting_flag(state, |flags| flags.gauntlet == Some(true))
+}
+
+/// R1849005: whether the unit stands in the Gauntlet — a unit zone of one of `GAUNTLET_LANES`, on either
+/// side. A Unit a carrier holds or one standing in the backrow is outside it.
+pub fn in_gauntlet(state: &GameState, unit: &CardInstance) -> bool {
+    slot_of(state, unit).is_some_and(|at| at.row == Row::Units && GAUNTLET_LANES.contains(&at.lane))
+}
+
+/// R1849006: whether an aura that Units cannot be in Defense Position acts on the field now (Stinkyscape
+/// #23 Warp Disruptor). It reaches both sides.
+pub fn defense_barred(state: &GameState) -> bool {
+    any_acting_flag(state, |flags| flags.units_never_defense == Some(true))
+}
+
 // ---------------------------------------------------------------------------
 // The attack restrictions
 // ---------------------------------------------------------------------------
@@ -203,6 +250,13 @@ pub fn attack_restriction_in(
     }
     if cannot_attack(state, attacker) {
         return Err(EngineError::new("that unit cannot attack"));
+    }
+    // R1849005: inside the Gauntlet a Unit attacks only a Unit inside it, never a hero, and from
+    // outside no Unit attacks one inside. The cheap half first: the board walk only when they differ.
+    let inside = in_gauntlet(state, attacker);
+    let target_inside = matches!(target, DamageTarget::Unit { instance } if in_gauntlet(state, instance));
+    if inside != target_inside && gauntlet_acts(state) {
+        return Err(EngineError::new("the Gauntlet's Units fight only each other"));
     }
     let defender = match target {
         DamageTarget::Hero { .. } => return Ok(()),

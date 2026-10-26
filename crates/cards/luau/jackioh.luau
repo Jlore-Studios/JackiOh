@@ -94,6 +94,9 @@ embiggenCostOverride: number?,
 costMod: number?,
 temporary: boolean?,
 chinese: boolean?,
+statsOverride: AttackHealth?,
+armorOverride: number?,
+tuning: Tuning?,
 lucky: number?,
 copyOf: string?,
 memory: {[string]: JsonValue}?,
@@ -891,6 +894,7 @@ export type ForcedAttackerFilter = {
 side: ForcedSide?,
 defId: string?,
 summonedThisScript: boolean?,
+random: boolean?,
 }
 
 export type ForcedAttacksArgs = {
@@ -1502,9 +1506,14 @@ ballots: {Ballot},
 ["type"]: "fled",
 player: PlayerId,
 opponent: FleeOpponent,
+} | {
+["type"]: "starscapeTravelled",
+player: PlayerId,
+node: number,
+reward: StarscapeReward,
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "marketBought" | "marketSold" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn" | "autopilotEngaged" | "awakened" | "traded" | "resourceGained" | "resourceSold" | "resourceDiscarded" | "marketCreditsChanged" | "marketBought" | "marketSold" | "starshipFused" | "starshipLaunched" | "voteCast" | "votedOut" | "fled" | "starscapeTravelled"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect" | "voted-out" | "both-voted-out" | "fled" | "fled-decisive"
 
@@ -1788,6 +1797,11 @@ export type NumberWhich = NumberRef | string
 export type NumberedKey = "Armor" | "Lucky" | "Spell Damage" | "Brittle" | "Echo" | "Activate" | "Tribute"
 
 export type OffFieldZone = "hand" | "library" | "graveyard" | "exile"
+
+export type OwnTurnRedirect = {
+cap: number,
+multiplier: number?,
+}
 
 export type Phase = "setup" | "mulligan" | "start" | "main" | "end" | "over"
 
@@ -2262,6 +2276,8 @@ both: boolean?,
 
 export type SplitAmong = "enemies" | "enemyUnits"
 
+export type StarscapeReward = "heal" | "draw" | "mana" | "damage" | "edge"
+
 export type StatMod = {
 attack: number?,
 maxHealth: number?,
@@ -2320,6 +2336,15 @@ answersTargetedSpells: boolean?,
 embiggenGarden: number?,
 slumber: SlumberText?,
 starshipHull: boolean?,
+immuneToSpellDamage: boolean?,
+destroyedExiled: boolean?,
+enemyDestroyedExiled: boolean?,
+reflectsDamage: boolean?,
+reflectsToAttacker: boolean?,
+ownTurnRedirect: OwnTurnRedirect?,
+gauntlet: boolean?,
+unitsNeverDefense: boolean?,
+revealChance: number?,
 }
 
 export type StealAllArgs = {
@@ -2538,6 +2563,16 @@ export type TuneDirection = "degrade" | "upgrade"
 export type TuneMultiplier = {
 upgrade: number?,
 degrade: number?,
+}
+
+export type Tuning = {
+attack: number?,
+health: number?,
+addKeywords: {Keyword}?,
+removeKeywords: {KeywordKind}?,
+x: {[string]: number}?,
+numbers: {[string]: number}?,
+set: {[string]: number}?,
 }
 
 export type TuningChange = {

@@ -1,11 +1,11 @@
 // #936 S8 B58: `ChatPanel`, the conversation with one friend. It shows the page the server answers
 // (newest last), polls every CHAT_POLL_MS while it is open and never once it is closed, sends what is
 // typed as `POST /api/chat/:friendId {body}`, and shows a refusal (B53: empty, too long, not friends,
-// rate-limited) in the server's words without adding a message. `InMatchChat` is the board rail's
-// toggle listing online friends, each opening this panel.
+// rate-limited) in the server's words without adding a message. The Friends button's panel (#1831,
+// which replaced the board rail's chat toggle) lists friends, each opening this panel.
 // #1898: a failed read says why with Try again; a read that answers, or Try again, clears it.
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CHAT_POLL_MS } from "@jackioh/server-config";
@@ -14,7 +14,9 @@ import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
 import { must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
-import { InMatchChat } from "./InMatchChat.tsx";
+import { ChallengeToast } from "./ChallengeToast.tsx";
+import { FriendsButton } from "./FriendsButton.tsx";
+import { friendsTestid, togetherTestid } from "./testids.ts";
 
 const SLOW = { timeout: 5_000 } as const;
 
@@ -52,6 +54,7 @@ function serve(messages: ChatMessage[], special?: (call: Call) => Reply | undefi
       return { status: 201, body: { message: sent } };
     }
     if (call.method === "GET" && call.path === "/api/chat/unread") return { status: 200, body: { unread: {} } };
+    if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: { incoming: [], outgoing: [] } };
     return undefined;
   });
 }
@@ -407,69 +410,95 @@ describe("#1898 a failed read of the conversation", () => {
   });
 });
 
-describe("B58 the in-match chat toggle", () => {
+describe("B58 chat from the Friends panel", () => {
   const ONLINE: Friend = { ...ANN, status: "online", matchId: null, watchable: false, since: SINCE };
   const OFFLINE: Friend = { profileId: "f-cy", username: "Cy#4", status: "offline", matchId: null, watchable: false, since: SINCE };
 
   function serveFriends(): StubServer {
     return serve(conversation(), (call) =>
       call.method === "GET" && call.path === "/api/friends"
-        ? { status: 200, body: { friends: [ONLINE, OFFLINE], incoming: [], outgoing: [], blocked: [] } }
+        ? { status: 200, body: { friends: [OFFLINE, ONLINE], incoming: [], outgoing: [], blocked: [] } }
         : undefined,
     );
   }
 
-  it("B58 the toggle lists online friends and opens the chat panel with the one picked", async () => {
+  /** The shell's toast (the one poll) and a board's Friends button, with the panel open. */
+  async function openPanel(): Promise<HTMLElement> {
+    render(
+      <>
+        <ChallengeToast />
+        <FriendsButton placement="game" />
+      </>,
+    );
+    const button = await screen.findByTestId(friendsTestid.button, undefined, SLOW);
+    fireEvent.click(button);
+    await screen.findByTestId(friendsTestid.panel, undefined, SLOW);
+    return button;
+  }
+
+  function annsRow(): HTMLElement {
+    const row = screen.getAllByTestId(togetherTestid.friendRow).find((element) => element.getAttribute("data-profile-id") === ANN.profileId);
+    return must(row, "Ann's row");
+  }
+
+  it("B58 the panel's Chat opens the chat panel with the friend picked, on the screen the player is on", async () => {
     const server = serveFriends();
-    render(<InMatchChat />);
+    await openPanel();
     expect(screen.queryByTestId("chat-input")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /chat/i }));
-    const ann = await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    fireEvent.click(ann.closest("button") ?? ann);
+    await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toBeInTheDocument();
+    // The conversation has the panel's place: the panel itself is gone.
+    expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
     await waitFor(() => {
       expect(server.to("GET", `/api/chat/${ANN.profileId}`).length).toBeGreaterThan(0);
     }, SLOW);
   });
 
-  it("B58 closing the conversation, by its close control or by Escape, gives the focus back to the toggle, which names its list while open", async () => {
+  it("B58 closing the conversation, by its close control or by Escape, gives the focus back to the Friends button, which names its panel while open", async () => {
     serveFriends();
-    render(<InMatchChat />);
-    const toggle = screen.getByTestId("in-match-chat-toggle");
-    expect(toggle).not.toHaveAttribute("aria-controls");
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-controls", screen.getByTestId("in-match-chat-list").id);
-    const ann = must((await screen.findByText(wholeText("Ann#2"), undefined, SLOW)).closest("button"), "Ann's button");
-    fireEvent.click(ann);
+    const button = await openPanel();
+    const panel = screen.getByTestId(friendsTestid.panel);
+    expect(button).toHaveAttribute("aria-controls", panel.id);
+    await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toHaveFocus();
-    expect(toggle).not.toHaveAttribute("aria-controls");
+    expect(button).not.toHaveAttribute("aria-controls");
 
     fireEvent.click(screen.getByTestId("chat-close"));
     expect(screen.queryByTestId("chat-panel")).toBeNull();
-    expect(toggle).toHaveFocus();
+    expect(button).toHaveFocus();
 
-    fireEvent.click(toggle);
-    fireEvent.click(must((await screen.findByText(wholeText("Ann#2"), undefined, SLOW)).closest("button"), "Ann's button"));
+    fireEvent.click(button);
+    await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    fireEvent.click(within(annsRow()).getByTestId(togetherTestid.chatOpen));
     fireEvent.keyDown(await screen.findByTestId("chat-input", undefined, SLOW), { key: "Escape" });
     expect(screen.queryByTestId("chat-panel")).toBeNull();
-    expect(toggle).toHaveFocus();
+    expect(button).toHaveFocus();
   });
 
-  it("B58 the toggle does not list offline friends", async () => {
+  it("B58 the panel lists the friends who are on first, the offline ones last", async () => {
     serveFriends();
-    render(<InMatchChat />);
-    fireEvent.click(screen.getByRole("button", { name: /chat/i }));
+    await openPanel();
     await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
-    expect(screen.queryByText(wholeText("Cy#4"))).toBeNull();
+    const order = screen.getAllByTestId(togetherTestid.friendRow).map((row) => row.getAttribute("data-profile-id"));
+    expect(order).toEqual(["f-ann", "f-cy"]);
   });
 
-  it("B58 closed, the toggle shows no conversation and reads none", async () => {
+  it("B58 closed, the Friends button shows no conversation and reads neither a conversation nor the friends", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     const server = serveFriends();
-    render(<InMatchChat />);
+    render(
+      <>
+        <ChallengeToast />
+        <FriendsButton placement="game" />
+      </>,
+    );
     await settle(SOCIAL_POLL_MS + 1);
     expect(server.to("GET", "/api/chat/unread")).toHaveLength(2);
+    expect(screen.getByTestId(friendsTestid.button)).toBeInTheDocument();
     expect(screen.queryByTestId("chat-input")).toBeNull();
     expect(server.calls.some((call) => call.method === "GET" && call.path === `/api/chat/${ANN.profileId}`)).toBe(false);
+    expect(server.to("GET", "/api/friends")).toHaveLength(0);
   });
 });

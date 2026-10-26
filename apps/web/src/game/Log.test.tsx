@@ -151,6 +151,18 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(lines()).toEqual(["You drew the curve y = 2 across the board", "Opponent drew a curve across the board"]);
   });
 
+  it("R1847001 a starscape travel reads as the node its player's map reaches", () => {
+    render(
+      <Log
+        view={withEvents(fullBoardView(), [
+          { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+          { type: "starscapeTravelled", player: "p2", node: 20, reward: "edge" },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual(["Your starscape map reaches node 3", "The opponent's starscape map reaches node 20"]);
+  });
+
   it("malformed downloaded-replay curve cells keep the generic line", () => {
     render(
       <Log

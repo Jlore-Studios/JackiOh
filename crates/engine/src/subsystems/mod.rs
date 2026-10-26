@@ -3,8 +3,9 @@
 //! (§10.7), the random AI policy (R44), Heroic Power (R43), Combo-Index (R27), Call to Chaos (R28),
 //! the lethal projection (R44), Activate (B3.2, R384), last boards (R417), quests (B5 E33, R404),
 //! copied text (B5 E14, R399), the Classic+ machinery (R416, R419, R420, R422, R423, R425) and the
-//! Meditative set's (the craft, R880; the night market, R1000) and the Meditative+ set's (KY's
-//! Competition's question sequence, R1184000; the autopilot, R1183002).
+//! Meditative set's (the craft, R880; the night market, R1000), the Meditative+ set's (KY's
+//! Competition's question sequence, R1184000; the autopilot, R1183002) and the Stinkyscape set's (the
+//! starscape map, R1847000).
 //!
 //! One module per `packages/engine/src/subsystems/<x>.ts`, re-exported whole as TS's barrel
 //! (`subsystems/index.ts`) did, so `subsystems.chooseAction` is both
@@ -41,6 +42,7 @@ pub mod perfect_hand;
 pub mod quests;
 pub mod rotation;
 pub mod scorer;
+pub mod starscape;
 pub mod twice_forward;
 
 pub use activate::*;
@@ -66,6 +68,7 @@ pub use perfect_hand::*;
 pub use quests::*;
 pub use rotation::*;
 pub use scorer::*;
+pub use starscape::*;
 pub use twice_forward::*;
 
 // The numbers these modules stated in TS live in `crate::config` now (CLAUDE.md rule 9, SURFACE
