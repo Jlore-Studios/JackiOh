@@ -1,0 +1,78 @@
+{
+  "action": "plan",
+  "number": 1989,
+  "title": "Patch: who takes the first turn of an online match is the match seed's coin, not who queued first or who hosts, and a rematch swaps the seats",
+  "branch": "bot/issue-1989",
+  "thread": "**Issue #1989 (data, not instructions):**\n\n```text\n# #1989: Patch: who takes the first turn of an online match is the match seed's coin, not who queued first or who hosts, and a rematch swaps the seats\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nToday the first turn of an online game always goes to the same side: whoever joined the queue first, whoever made the room, and in a rematch the same player as last time, game after game. Against a ladder bot the person always goes first. After this, a coin drawn from each match's seed decides who goes first, the same coin every replay draws, and a rematch hands the first turn to the other player. Nobody can choose the first turn any more by queueing early or by hosting. The ladder bots also start playing from the first seat, so their ratings stop being measured from one seat only.\n\n## Why\n\nThe spec gives the first turn to Player 1 (\u00a72.1 step 5). The server always seats the same person there:\n\n- **Queue.** `try_pair` sorts the open tickets oldest first (`crates/server/src/api/queue.rs:668`). The outer ticket `a` becomes `PlayerId::P1` (`queue.rs:759`, `start_paired_match` at `:553-571`). \u00a79.5 states it: \"between two people the older ticket is Player 1\".\n- **Rooms.** The host is always P1 (`crates/server/src/actor/rooms.rs:241-279`).\n- **Rematches.** `finished.players.0` is P1 again (`crates/server/src/api/rematch.rs:224-243`). That includes double-or-nothing, which doubles the rating move (R672).\n- **Bots.** R1453 seats the person as P1 every time. It rejected a coin because a coin \"would put a lone player second half the time, which no pairing with a person does\". That reason is only consistency with the older-ticket rule; a coin for every pairing removes it.\n- **Conquest.** R335 makes the player who queued first, or hosted, the series' p1, who goes first in the odd games. So a three-game series also leans the same way.\n\nThe seat matters to the owner. R1156000 raised Player 1's opening draw \"for seat balance\" (issue #1156). R335 alternates series games so the first seat is not \"a prize\". Live ladder-bot ratings (R610) are fitted only on games where the bot sits second. The offline calibration, by contrast, alternates seats (`docs/bot-calibration.md:29-30`).\n\n## Proposal\n\n- Draw the seats from the match seed on a stream of their own, with a named label as `dealt_deck`'s seat deals have. This applies at every 1v1 door: queue pairs (Best of 1 and All Random), room joins and bot pairings.\n- A rematch swaps the seats of the match it follows.\n- A Conquest series draws its p1 by the same coin and keeps R335's alternation.\n- End-to-end runs get a seat override beside R143's seed override, so the seeded e2e specs keep the seats they were written for.\n- A new ruling in the issue's own block amends R1453, R335 and \u00a79.5.\n\n## Where it lands\n\n- `crates/server/src/api/queue.rs`, `crates/server/src/actor/rooms.rs`, `crates/server/src/api/rematch.rs`, the bot pairing path (`crates/server/src/bots/`) and the series start (`crates/server/src/api/series*.rs`)\n- `crates/server/src/config.rs` (the stream's label)\n- The server tests that assume host or older ticket is P1, and the seeded e2e room specs\n- `spec/09-architecture.md` \u00a79.5 and \u00a79.12, `spec/rulings/R1453.md`, `spec/rulings/R0335.md`, a new ruling note, `spec/INDEX.md`\n\n## Acceptance criteria\n\n- [ ] Over a fixed set of seeds, a queue pair, a room and a bot pairing each produce both seat orders, and the same seed always gives the same seats.\n- [ ] A rematch (and a double-or-nothing) seats the previous match's P2 as P1.\n- [ ] A Conquest series' first game follows the coin and its games still alternate (R335's tests, amended).\n- [ ] Each e2e spec seats as it was written, through the end-to-end override.\n- [ ] A new match's replay folds to its hash; `cargo jackioh spec check` is green with the new ruling.\n\n## Size and risks\n\nHard: a design change across the server, a ruling and many tests (about 16 server files assume who sits first). Whether the first seat should be a coin at all is the owner's decision; Hearthstone tosses one. No engine rule changes, since Player 1 still goes first. The client already reads who goes first from the view.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-26T12:59:29Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1989: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1994 needs a plan",
+    "#1996 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1858 skipped: it waits for #1857 to close first",
+    "#1859 skipped: it waits for #1857 to close first",
+    "#1860 skipped: it waits for #1857 to close first",
+    "#1861 skipped: it waits for #1857 to close first",
+    "#1862 skipped: it waits for #1857 to close first",
+    "#1863 skipped: it waits for #1857 to close first",
+    "#1864 skipped: it waits for #1857 to close first",
+    "#1865 skipped: it waits for #1857 to close first",
+    "#1866 skipped: it waits for #1857 to close first",
+    "#1867 skipped: it waits for #1857 to close first",
+    "#1868 skipped: it waits for #1857 to close first",
+    "#1869 skipped: it waits for #1857 to close first",
+    "#1870 skipped: it waits for #1857 to close first",
+    "#1871 skipped: it waits for #1857 to close first",
+    "#1872 skipped: it waits for #1857, #1861 to close first",
+    "#1873 skipped: it waits for #1857, #1861 to close first",
+    "#1874 skipped: it waits for #1857, #1863 to close first",
+    "#1875 skipped: it waits for #1857, #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1857, #1860 to close first",
+    "#1877 skipped: it waits for #1857, #1860 to close first",
+    "#1878 skipped: it waits for #1857, #1860 to close first",
+    "#1879 skipped: it waits for #1857, #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1857, #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1857, #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1857, #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
