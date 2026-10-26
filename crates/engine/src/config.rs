@@ -1924,6 +1924,14 @@ pub const VOTE_TALLY_SIZE: i32 = 3;
 /// other's loss, or a draw for both. The client reads it (`engineConfig.ts`).
 pub const LOSER_DRAWS_REASONS: &[crate::wire::GameOverReason] = &[crate::wire::GameOverReason::Fled];
 
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape M11 (issue #1845, R1845000–R1845002): hidden Nerfs and trade offers
+// ---------------------------------------------------------------------------------------------
+
+/// R1845002: the offer comes due at the start of the opponent's next turn, counted in their own turns
+/// (R1181000), so its badge counts down on the offerer's side while it waits.
+pub const TRADE_OFFER_TURNS: i32 = 1;
+
 #[cfg(test)]
 mod tests {
     use super::*;
