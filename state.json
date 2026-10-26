@@ -3036,8 +3036,13 @@
     "what": "revise #2016 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-26T19:17:37Z",
-    "notes": [],
+    "at": "2026-10-26T19:29:48Z",
+    "notes": [
+      "delivered revise #2012 on claude-8 (run 40381527912): approved",
+      "started revise #2012 on claude-6 (run 40387624919)",
+      "started revise #2016 on muse (run 40387801306)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -3742,7 +3747,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T19:17:37Z",
+  "loop_tick": "2026-10-26T19:29:48Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T18:46:11Z",
