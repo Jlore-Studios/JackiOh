@@ -2223,7 +2223,7 @@
       death: { voice: "robot", text: "Battery silent." },
     },
     "stinkyscape-054": { // Beam v4
-      play: { voice: "robot", text: "Beam array upgraded." },
+      play: { voice: "robot", text: "Beam array online." },
       attack: { voice: "robot", text: "Wide sweep." },
       death: { voice: "robot", text: "Array offline." },
     },

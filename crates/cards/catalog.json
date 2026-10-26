@@ -22779,7 +22779,7 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Get employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand, Buffed {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Get employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     },
     "radiant": {
       "keywords": [
@@ -22788,7 +22788,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nGet employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand, Buffed {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      "text": "Lucky 1\nGet employed! Its quest runs in three stages, one at a time.\nDeath: Resummon this at Stage 1.\nStage 1, Upload Resume.\nQuest: Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nStage 2, The Interview: one of three quests, drawn at random.\nQuest: Play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nStage 3, The Offer.\nQuest: Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
     }
   },
   "stinkyscape-112-1": {
