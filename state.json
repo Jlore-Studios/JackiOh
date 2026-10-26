@@ -1678,7 +1678,7 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-25T22:58:27Z",
-      "run_id": "pending:9007f83a-1792972773",
+      "run_id": "40247270662",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-26T00:00:30Z",
