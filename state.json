@@ -1605,7 +1605,7 @@
       "queued_at": "2026-10-26T02:45:50Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:4a42f145-1792984167",
+      "run_id": "40262760633",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-26T03:10:30Z",
