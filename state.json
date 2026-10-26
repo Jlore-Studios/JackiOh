@@ -73,99 +73,70 @@
   "items": {
     "1803": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-25T12:01:55Z",
-        "family": "gpt",
-        "kind": "work",
-        "notes": "## State\n\nPlan: audit pass 3's four findings against the full base-to-head diff and binding spec, then fix each finding that holds with focused regressions and run targeted plus required checks.\n\nDone: all four pass-3 findings held and are fixed. Focused engine/cards/tools suites and both exact fuzz seeds pass. Engine/cards/tools clippy, rustfmt, catalog, patches, spec, golden seed 160, and targeted Cypress ESLint pass. Final path/diff audit has no forbidden changes.\n\nNext: final status/whitespace check, then deliver the whole-branch PR report with every finding and exact validation evidence.\n\nDecisions: clear the internal saved-face marker during keep-instance Fuse instead of changing public state or the token-face schema; R77 already makes the transient definition the new printed face. Add tests under existing rulings rather than a new ruling because the spec already settles all four behaviors.\n\n## Log\n\n- Started pass-2 audit by reading repository instructions and the full branch diff; the diff is large because one JSONL golden line changed, so subsequent inspection will target semantic hunks and their base versions.\n- About to inspect relevant spec, docs, and implementation history before making changes.\n- Audit complete: every blocking finding matches the code and binding spec/docs.\n- About to make the focused engine/cards/tools edits and add regressions for Set Stats before Flicker and Shadowstep's Chinese exclusion.\n- Edits applied and rustfmt/diff whitespace checks pass.\n- About to run the focused flicker and Shadowstep tests; this will compile the touched engine/cards surfaces.\n- The first compile found one exhaustive AddToHandArgs initializer and one test type annotation; fixed both honestly.\n- `cargo test -p jackioh-cards c014_shadowstep`: 28 passed.\n- Focused engine flicker regression: 1 passed.\n- About to run the focused 1v1 and Duos serialized-restart tests.\n- 1v1 checkpoint test passed; Duos serialized-restart test passed.\n- About to run the two exact handicapped fuzz seeds from the failed daily jobs.\n- Exact handicapped fuzz seed 3278 now passes: 1/1 seed, no failures, slowest checkpoint 100 ms / 5000 ms, 168 actions, ended turn 35.\n- Exact handicapped fuzz seed 1557 now passes: 1/1 seed, no failures, slowest checkpoint 542 ms / 5000 ms, 305 actions, turn cap 60.\n- Luau export test could not start: Cargo attempted to download uncached `thiserror 2.0.21`, but this runner has no crates.io DNS/network access. No test compiled or ran.\n- Regenerated `spec/INDEX.md`. Registered `Tuning` in the Luau exporter and mechanically updated the committed API with `statsOverride`, `armorOverride`, `tuning`, and the `Tuning` declaration.\n- `cargo fmt --check` and `cargo jackioh golden check --seed 160` pass.\n- Touched-crate all-target clippy passed with warnings denied.\n- Catalog, patch-history, and spec checks passed; spec reports 1129 rulings, 2616 proofs, and 12042 valid links.\n- All four `duos_checkpoint_stage` tests passed. Final branch-wide diff/whitespace audit passed and contains no forbidden-path changes.\n- Added the v0.4.9 Shadowstep behavior to the replay-history comment; final rustfmt, diff, and rebuilt patch-history checks pass.\n- Began pass 3: worktree is clean; re-reading the entire branch change and governing spec before touching code.\n- Pass-3 audit complete: every finding reproduces a real untested or incorrect path; about to make the four focused fixes/regressions.\n- Focused edits applied; `cargo fmt --all` and `git diff --check` pass. About to compile and run the new engine regressions.\n- Fuse\u2192Flicker regression passed. Set Stats\u2192Reborn first run proved the 5/5 face and stored Armor survived, but a generic Rush Token has no printed Armor keyword for `armor_override` to replace; removed only that invalid rendered-Armor assertion and kept the field assertion.\n- Corrected Set Stats\u2192Reborn regression passes. `copyOf` Armor passes. Focused Shadowstep tuning test and all 28 Shadowstep tests pass. Entire effects_flicker (13), state-check module (14), and Fuse filters (49) pass.\n- About to run all-target warnings-as-errors for the touched engine and cards crates.\n- Touched-crate clippy (`jackioh-engine`, `jackioh-cards`, all targets, engine testkit, warnings denied) passed. About to replay handicapped fuzz seed 3278, the board-settlement failure.\n- Handicapped fuzz seed 3278 passed: 1/1, no panics/failures/mismatches/invariant or growth violations; 168 actions, turn 35, slowest checkpoint 101 ms/5000 ms. About to replay seed 1557, the checkpoint-bound failure.\n- Handicapped fuzz seed 1557 passed: 1/1, no failures/mismatches/violations; 305 actions, turn cap 60, 510 instances, slowest checkpoint 512 ms/5000 ms. About to run the repository metadata checks.\n- `cargo fmt --check`, catalog, patches and spec checks pass; spec counted 1129 rulings/2616 proofs/12042 links. Golden seed 160 replayed identically.\n- 1v1 checkpoint unit test passed; the mid-game Duos test and all four `duos_checkpoint_stage` tests passed. About to run tools clippy and the final audit.\n- Tools all-target clippy passed with warnings denied. Final base-to-worktree path/diff audit is clean and touches no forbidden path. About to retry the Luau export generator and lint the one touched e2e spec.\n- Luau export generator could not start because uncached `thiserror 2.0.21` requires crates.io and runner DNS is unavailable. Targeted ESLint on `40-custom-cards.cy.ts` passed. No e2e suite run, per prompt.\n",
-        "provider": "gpt",
-        "reason": "used its 3 review rounds with this owner; the work is kept for its Strong final audit",
-        "trail": "- ran `/bin/bash -lc 'cargo test -p jackioh-engine --features testkit --test rules statecheck::the_state_check_m2_t5'` (exit 0)\n- ran `/bin/bash -lc 'cargo test -p jackioh-engine --features testkit --test rules rules::fuse'` (exit 0)\n- said: All focused suites are now green: 13 Flicker tests, 14 state-check tests, 49 Fuse tests, the `copyOf` test, and all 28 Shadowstep tests. The new regressions fail on the reviewed omissions/stale-face bug and pass with the fix. Next I\u2019m running warnings-as-errors for the touched engine/cards crates, \u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- said: Clippy has checked dependencies and the engine, and is now in the cards/all-targets portion with no warnings reported. I\u2019m waiting for the command\u2019s final status before starting release fuzz builds.\n- ran `/bin/bash -lc 'cargo clippy -p jackioh-engine -p jackioh-cards --all-targets --features jackioh-engine/testkit -- -D warnings'` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- said: Clippy passed with warnings denied. The exact handicapped seed 3278 check is rebuilding the release engine/cards/Luau stack after the Fuse change; no compile or runtime failure has appeared.\n- said: The release build has progressed through the AI crate and is still active without diagnostics. After this one build, seed 1557 will reuse the same release binary.\n- said: The release build is now compiling/linking `jackioh-tools`; still no warning or failure output. I\u2019m continuing short polls through the final link and seed execution.\n- said: No diagnostics after another minute; this is the release link\u2019s quiet stage. The seed has not yet emitted its run summary.\n- said: The release build remains active and silent. This repository uses a costly optimized link; I\u2019m preserving the active build so both exact fuzz checks can share it.\n- ran `/bin/bash -lc 'cargo run --release -p jackioh-tools -- fuzz --from 3278 --seeds 1 --handicap'` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- ran `/bin/bash -lc 'cargo run --release -p jackioh-tools -- fuzz --from 1557 --seeds 1 --handicap'` (exit 0)\n- said: Both original daily failures now reproduce cleanly: seed 3278 passed with no panic and seed 1557 passed with a 512 ms checkpoint against the unchanged 5000 ms bound. I\u2019m moving through the required format/catalog/patch/spec checks, then I\u2019ll recheck the golden seed and focused checkpoint tests affe\u2026\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- ran `/bin/bash -lc 'cargo fmt --all -- --check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh catalog check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh patches check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh spec check'` (exit 0)\n- ran `/bin/bash -lc 'cargo jackioh golden check --seed 160'` (exit 0)\n- said: The required format, catalog, patch-history, and spec checks all pass, and golden seed 160 replays identically. The first focused checkpoint unit test is rebuilding the debug tools binary after the engine change; no diagnostics so far.\n- said: The focused checkpoint test remains in the quiet link stage of the tools test binary. The release-path checkpoint was already exercised successfully by both exact fuzz seeds; this is the unit-level complement.\n- said: The debug tools build has progressed through Luau and remains clean. I\u2019m continuing short polls through the final tools compile/link.\n- said: The build has reached the AI dependency and is still active without warnings or errors. This one compilation will also serve the second 1v1 and the Duos checkpoint filters.\n- ran `/bin/bash -lc 'cargo test -p jackioh-tools one_seed_crosses_its_checkpoint'` (exit 0)\n- ran `/bin/bash -lc 'cargo test -p jackioh-tools a_mid_game_state_survives_a_serialized_restart'` (exit 0)\n- ran `/bin/bash -lc 'cargo test -p jackioh-tools duos_checkpoint_stage'` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- ran `/bin/bash -lc 'cargo clippy -p jackioh-tools --all-targets -- -D warnings'` (exit 0)\n- said: All targeted verification is green, including tools clippy with warnings denied. I\u2019m doing the final base-to-worktree audit now: exact changed paths, forbidden-path check, whitespace/status review, and a last read of the pass-3 diff before writing the complete pull request description.\n- ran `/bin/bash -lc 'git status --short git diff --check git diff --stat 86430e35493dc2a7026b206e3ece57fd070e96f7 git diff --name-only 86430e35493dc2a7026b206e3ece57\u2026` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- ran `/bin/bash -lc 'cargo test -p jackioh-luau --features ts --test export_api'` (exit 101)\n- said: The Luau export generator still cannot start because the runner lacks the uncached `thiserror 2.0.21` crate and DNS/network access; this is the same environment limitation recorded by the earlier pass, not a test failure. Its generated declaration and exporter registration are present in the branch\u2026\n- ran `/bin/bash -lc 'pnpm exec eslint e2e/cypress/e2e/40-custom-cards.cy.ts'` (exit 0)\n- changed /home/agent-gpt/actions-runner/_work/_temp/work/item-1803/.bot-notes.md\n- ran `/bin/bash -lc \"cargo fmt --all -- --check git diff --check git status --short git diff --name-only 86430e35493dc2a7026b206e3ece57fd070e96f7 | sed -n '/\"'^'\"\\\\.\u2026` (exit 0)\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: flickered unit tokens keep their size\"} --> Closes #1803. ## What changed - Fixed fuzz (2/4), seed 3278: Flicker and Reborn now restore a token\u2019s summoned X/X and Armor after Set Stats. Fuse discards that saved pre-Fuse face because the fused transient \u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1908,
       "provider": "gpt",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40180558600",
       "started_at": "2026-10-25T09:25:06Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1817": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1909,
       "provider": "gpt",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40192855516",
       "started_at": "2026-10-25T12:22:55Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1818": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1910,
       "provider": "gpt",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40194384770",
       "started_at": "2026-10-25T12:43:28Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1820": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1972,
       "provider": "claude-8",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40275632228",
       "started_at": "2026-10-26T05:41:57Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1821": {
@@ -190,29 +161,23 @@
     },
     "1822": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1980,
       "provider": "muse",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40286508752",
       "started_at": "2026-10-26T07:33:24Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1823": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-25T11:40:29Z",
@@ -225,7 +190,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T11:40:31Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -233,41 +197,32 @@
       "planned_tier": "strong",
       "pr": 1974,
       "provider": "claude-6",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40276695952",
       "started_at": "2026-10-26T05:53:30Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1824": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1918,
       "provider": "claude-6",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40199028425",
       "started_at": "2026-10-25T13:44:51Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1826": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-25T13:56:53Z",
@@ -280,7 +235,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T13:56:54Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -288,69 +242,54 @@
       "planned_tier": "strong",
       "pr": 1978,
       "provider": "claude-1",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40276792620",
       "started_at": "2026-10-26T05:54:33Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1828": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1911,
       "provider": "claude-6",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40190013684",
       "started_at": "2026-10-25T11:42:45Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1829": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1931,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40209011667",
       "started_at": "2026-10-25T15:52:33Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1831": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T11:13:09Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -358,25 +297,20 @@
       "planned_tier": "strong",
       "pr": 1950,
       "provider": "claude-2",
-      "question": "",
       "round_tier": "medium",
       "run_id": "40235392274",
       "started_at": "2026-10-25T21:25:00Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1833": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T09:13:00Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -384,14 +318,11 @@
       "planned_tier": "strong",
       "pr": 1937,
       "provider": "claude-8",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40210612109",
       "started_at": "2026-10-25T16:12:58Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1834": {
@@ -416,13 +347,11 @@
     },
     "1841": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T09:40:43Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -430,47 +359,37 @@
       "planned_tier": "strong",
       "pr": 1923,
       "provider": "claude-4",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40200718040",
       "started_at": "2026-10-25T14:06:53Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1842": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 1924,
       "provider": "claude-2",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40200766079",
       "started_at": "2026-10-25T14:07:31Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1844": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T09:12:18Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -478,25 +397,20 @@
       "planned_tier": "strong",
       "pr": 1945,
       "provider": "claude-3",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40222455640",
       "started_at": "2026-10-25T18:41:34Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1845": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T10:13:12Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -504,25 +418,20 @@
       "planned_tier": "strong",
       "pr": 1947,
       "provider": "claude-6",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40222507849",
       "started_at": "2026-10-25T18:42:14Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1847": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T09:52:13Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -530,25 +439,20 @@
       "planned_tier": "strong",
       "pr": 1944,
       "provider": "claude-2",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40224061710",
       "started_at": "2026-10-25T19:01:51Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1849": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T09:39:59Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -556,25 +460,20 @@
       "planned_tier": "strong",
       "pr": 1961,
       "provider": "claude-1",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40257240434",
       "started_at": "2026-10-26T02:03:50Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1850": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T10:12:46Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
@@ -582,14 +481,11 @@
       "planned_tier": "strong",
       "pr": 1962,
       "provider": "claude-2",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40248342089",
       "started_at": "2026-10-26T00:13:54Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 3
     },
     "1853": {
@@ -646,13 +542,11 @@
     },
     "1889": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T09:13:20Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -660,14 +554,11 @@
       "planned_tier": "strong",
       "pr": 1906,
       "provider": "claude-6",
-      "question": "",
       "round_tier": "strong",
       "run_id": "40180283152",
       "started_at": "2026-10-25T09:21:04Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1895": {
@@ -745,7 +636,6 @@
     },
     "1898": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-25T15:49:09Z",
@@ -756,18 +646,8 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-25T16:25:05Z",
-        "family": "cognition",
-        "kind": "work",
-        "notes": "## State\n\nBuilt and verified. All three files changed per the plan; no departures from it.\n\n- `apps/web/src/together/testids.ts`: `chatTestid` gained `readError: \"chat-read-error\"` and\n  `retry: \"chat-retry\"`.\n- `apps/web/src/together/ChatPanel.tsx`: new `readFailure: ReadFailure | null` state; the poll's\n  failure arm sets it (`shown ?? readFailureOf(cause)`, keeps the first shown) instead of `error`;\n  the success arm clears it; `readNow` ref holds the live `read` for Try again; `retryRead` clears\n  and re-reads; the empty-conversation copy is gated on `readFailure === null`; the new alert with\n  `TryAgainButton` renders above the existing `chat-error` block.\n- `apps/web/src/together/ChatPanel.test.tsx`: new describe \"#1898 a failed read of the\n  conversation\" with 4 tests and a `serveRefusing` helper.\n\nVerified (all green):\n- `sh scripts/build-wasm.sh` then `pnpm --dir apps/web exec vitest run src/together/ChatPanel.test.tsx\n  src/together/InMatchChat.test.tsx src/together/TogetherRoute.test.tsx src/together/polling.test.tsx`\n  -> 4 files, 73 tests passed.\n- `pnpm --dir apps/web typecheck` -> clean. `pnpm exec eslint apps/web/src/together` -> clean.\n- `cargo fmt --check`, `cargo jackioh catalog check`, `cargo jackioh patches check`,\n  `cargo jackioh spec check` -> all OK.\n\nLeft: nothing. Ready to hand to the harness.\n\n## Log\n(earlier lines of the log were cut here)\n= null ? null : (` block, insert:\n   ```tsx\n   {readFailure === null ? null : (\n     <p className=\"notice chat-panel__error\" data-testid={chatTestid.readError} role=\"alert\">\n       {t(readFailure.message)}{\" \"}\n       <TryAgainButton retryAfterMs={readFailure.retryAfterMs} onRetry={retryRead} testId={chatTestid.retry} className=\"link-button\" />\n     </p>\n   )}\n   ```\n   The button sits inline inside the `<p>`, as in `practice/DeckPreview.tsx:66-71`. Leave the existing `chat-error` block, `loadEarlier`, `send` and `report` unchanged. A failed \"Show earlier\" still goes to `error`, because its own button is its retry.\n\n**Tests.**\n\nFile `apps/web/src/together/ChatPanel.test.tsx`.\n- Add a header line after line 5: `// #1898: a failed read says why with Try again; a read that answers, or Try again, clears it.`\n- Insert a new `describe(\"#1898 a failed read of the conversation\", () => { \u2026 })` after the `describe(\"B58 polling while open\", \u2026)` block and before `describe(\"B58 the in-match chat toggle\", \u2026)`.\n- Inside the describe, add this helper:\n  ```ts\n  /** The newest page's read is refused while `refused.read` holds; a test turns it off. */\n  function serveRefusing(messages: ChatMessage[], refused: { read: boolean }): StubServer {\n    return serve(messages, (call) =>\n      refused.read && call.method === \"GET\" && call.path === `/api/chat/${ANN.profileId}`\n        ? refusal(500, \"internal\", \"Something went wrong.\")\n        : undefined,\n    );\n  }\n  ```\n- Use the file's existing helpers (`serve`, `shown`, `type`, `send`, `settle`, `opened`, `SLOW`, `refusal`) and string test ids, as the file already does.\n\n1. `it(\"#1898 a failed first read says why and offers Try again, and never says the conversation is empty\", \u2026)`\n   - Setup: `vi.useFakeTimers();`, `serveRefusing([], { read: true })`, `render(<ChatPanel friend={ANN} onClose={vi.fn()} />)`, `await opened();`.\n   - Assert:\n     - `screen.getByTestId(\"chat-read-error\")` has text content \"Something went wrong.\"\n     - `screen.getByTestId(\"chat-retry\")` is enabled.\n     - `screen.queryByText(\"No messages yet. Say hello!\")` is null.\n     - `shown()` has length 0.\n   - Then `await settle(CHAT_POLL_MS);` (a second failed poll) and assert again that `chat-read-error` is present and \"No messages yet. Say hello!\" is absent.\n\n2. `it(\"#1898 a later poll that answers clears the failure and shows the conversation\", \u2026)`\n   - Setup: `vi.useFakeTimers();`, `const refused = { read: true };`, `serveRefusing(conversation(), refused)`, render, `await opened();`, assert `chat-read-error` is present.\n   - Then set `refused.read = false;` and `await settle(CHAT_POLL_MS);`.\n   - Assert that `queryByTestId(\"chat-read-error\")` and `queryByTestId(\"chat-retry\")` are both null and that `shown()` has length 2.\n\n3. `it(\"#1898 Try again reads the conversation at once and clears the failure\", \u2026)`\n   - Setup: `vi.useFakeTimers();`, `const refused = { read: true };`, `const server = serveRefusing([], refused);`, render, `await opened();`.\n   - `const before = server.to(\"GET\", \\`/api/chat/${ANN.profileId}\\`).length;`\n   - Set `refused.read = false;`, then `fireEvent.click(screen.getByTestId(\"chat-retry\"));` and `await settle();` (0 ms, so no poll fires).\n   - Assert:\n     - `server.to(\"GET\", \u2026)` has length `before + 1`.\n     - `chat-read-error` is null.\n     - `screen.getByText(\"No messages yet. Say hello!\")` is in the document: the read that answered empty may now say so.\n   - If the length is still `before`, use `await opened();` instead of `await settle();`. Change nothing else.\n\n4. `it(\"#1898 a read that answers leaves a refused send's words on screen\", \u2026)`\n   - Setup: `const words = \"You are sending messages too fast.\";`, `vi.useFakeTimers({ toFake: [\"setInterval\", \"clearInterval\"] });`, `serve(conversation(), (call) => (call.method === \"POST\" ? refusal(429, \"rate_limited\", words) : undefined));`, render.\n   - `await waitFor(() => { expect(shown()).toHaveLength(2); }, SLOW);`\n   - `type(\"hello again\"); send();`\n   - `await waitFor(() => { expect(screen.getByTestId(\"chat-error\")).toHaveTextContent(words); }, SLOW);`\n   - `await settle(CHAT_POLL_MS + 1);`\n   - Assert that `chat-error` still has text content `words` and that `queryByTestId(\"chat-read-error\")` is null.\n\nCommands:\n- `sh scripts/build-wasm.sh`, once, first. Without it vitest fails to import `wasm/pkg`.\n- `pnpm --dir apps/web exec vitest run src/together/ChatPanel.test.tsx src/together/InMatchChat.test.tsx src/together/TogetherRoute.test.tsx src/together/polling.test.tsx`\n- `pnpm --dir apps/web typecheck`\n- `pnpm exec eslint apps/web/src/together`\n\n**Done when.**\n- [ ] A failed first read shows `chat-read-error` with `chat-retry` and not the \"No messages yet\" copy (test 1).\n- [ ] A later successful poll clears the alert (test 2), and so does Try again (test 3).\n- [ ] A refused send still shows after a good poll (test 4).\n- [ ] Every existing test in `ChatPanel.test.tsx`, `InMatchChat.test.tsx`, `TogetherRoute.test.tsx` and `polling.test.tsx` passes.\n- [ ] Web typecheck and eslint are clean.\n- [ ] The harness checks pass: rustfmt, catalog, patches, rulings, clippy, cargo tests and web tests. Nothing in Rust changes, and no patch fragment is needed because no card changes.\n\n**Risks.**\n- **Clearing the shared `error` on a good read would break things.** It would erase a send or report refusal within `CHAT_POLL_MS` and turn the existing \"B58 a too-long message\u2026\" test red. The separate `readFailure` state (steps 4\u20135) avoids this; keep `error` as it is.\n- **Resetting the countdown.** Replacing the failure on every failed poll would restart `TryAgainButton`'s countdown. `shown ?? \u2026` keeps the first one, as `usePolled` does (`session.ts`).\n- **Answers out of order.** A poll and a Try-again read can answer in either order. A late failure after a success shows the alert again until the next good poll. That is acceptable, and no ticketing is added.\n- **Hidden information.** None is involved: the alert shows only the server's own refusal text (CLAUDE.md rule 7).\n\n**Open questions.** None. Decisions the issue left open, each with the alternative I rejected:\n- **Alert test id:** the read failure gets its own `chat-read-error`, so it and a refused send can both be on screen. Rejected: sharing the one `chat-error` element.\n- **What Try again does:** it calls the live read through a ref. Rejected: re-running the effect with a counter.\n- **Failed \"Show earlier\":** it stays in `error`. Rejected: moving it into the new retry path.\n- **e2e test ids:** `e2e/support/testids.ts` is not updated. Rejected: mirroring the two new ids there.\n",
-        "provider": "devin",
-        "reason": "built; no model on this subscription may approve it, so it waits for its final audit",
-        "trail": "- said: Let me verify the e2e testids mirror claim (plan says `in-match-chat-retry` isn't mirrored either):\n- ran `git diff apps/web/src/together/ChatPanel.tsx`\n- said: Confirmed \u2014 e2e mirrors only the ids its specs use; no update needed there. Final diff review:\n- ran `cargo fmt --check && echo \"FMT OK\" ; cargo jackioh catalog check 2>&1 | tail -3 ; cargo jackioh patches check 2>&1 | tail -3 ; cargo jackioh spec check 2>&1 | tail -5`\n- said: Diff matches the plan exactly. Now the harness checks (fast \u2014 no Rust changed):\n- get_output: {\"shell_id\": \"c2091f\", \"timeout\": 280000}\n- get_output: {\"shell_id\": \"c2091f\", \"timeout\": 280000}\n- ran `cargo jackioh catalog check 2>&1 | grep -i \"ok\\|fail\\|error\" | head -5; echo \"exit: $?\"`\n- said: All checks pass. Let me confirm `catalog check` explicitly printed ok (its tail got cut off):\n- ran `python3 - <<'PY' content = open('.bot-notes.md').read() marker = '## Plan (from the issue)' plan_idx = content.index(marker) new_state = '''## State Built and verified. All three files changed per th\u2026`\n- said: All checks green. Updating `.bot-notes.md` to final state:\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a failed chat read offers Try again and never passes for an empty conversation\"} --> ## What changed In `ChatPanel`, a failed read of the conversation's newest page used to land in the shared `error` state \u2014 which only `send`/`report` ever cleared\u2026\n- --- answer ---\n- The earlier run only planned \u2014 no build work done yet. Now let me read the remaining files the plan touches.Let me check the `refusal` helper signature and the `DeckPreview` precedent the plan cites.I have everything. The earlier run only produced the plan \u2014 no code yet. Let me update `.bot-notes.m\u2026\n- ## What changed\n- In `ChatPanel`, a failed read of the conversation's newest page used to land in the shared `error` state \u2014 which only `send`/`report` ever cleared \u2014 and it set `loaded`, so a failed first read rendered \"No messages yet. Say hello!\" as if the chat were simply empty. Now:\n- - A failed read sets a separate `readFailure` state (`ReadFailure` from `net/gate.ts`, the same shape `usePolled` uses) and renders its own `role=\"alert\"` line (`data-testid=\"chat-read-error\"`) with an inline `TryAgainButton` (`data-testid=\"chat-retry\"`), the same affordance `InMatchChat`'s friends\u2026\n- - The poll's success arm clears `readFailure`, so a later good poll \u2014 or the Try again click, which calls the effect's live `read` through a `readNow` ref \u2014 clears the alert.\n- - The empty-conversation copy is gated on `readFailure === null`, so a failed load never poses as an empty chat; once a read answers empty, the copy shows.\n- - Repeated failed polls keep the failure first shown (`shown ?? readFailureOf(cause)`), so a stated `retryAfterMs` wait is counted once instead of restarting `TryAgainButton`'s countdown every `CHAT_POLL_MS`.\n- - `chatTestid` gained `readError` and `retry`. A refused send or report still goes to `error` (`chat-error`) and survives good polls, since reads no longer touch it.\n- ## Tests\n- Four new tests in `ChatPanel.test.tsx` under `describe(\"#1898 a failed read of the conversation\")`:\n- 1. A failed first read shows `chat-read-error` with an enabled `chat-retry`, never the \"No messages yet\" copy \u2014 still true after a second failed poll.\n- 2. A later poll that answers clears the alert and shows the conversation.\n- 3. Try again fires a read at once (one extra GET, no poll wait) and clears the alert; the now-answered-empty conversation may then say \"No messages yet\".\n- 4. A good poll does not erase a refused send's `chat-error` words.\n- ## How I verified\n- - `sh scripts/build-wasm.sh` (required before vitest), then `pnpm --dir apps/web exec vitest run src/together/ChatPanel.test.tsx src/together/InMatchChat.test.tsx src/together/TogetherRoute.test.tsx src/together/polling.test.tsx` \u2192 **4 files, 73 tests passed**.\n- - `pnpm --dir apps/web typecheck` \u2192 clean. `pnpm exec eslint apps/web/src/together` \u2192 clean.\n- - `cargo fmt --check`, `cargo jackioh catalog check`, `cargo jackioh patches check`, `cargo jackioh spec check` \u2192 all OK (no Rust changed; no patch fragment needed since no card changed).\n- ## Decisions (all from the plan; none departed from it)\n- - **Separate `readFailure` state over clearing shared `error` on good reads** \u2014 clearing `error` would erase a send/report refusal within `CHAT_POLL_MS` and turn the existing too-long-message test red.\n- - **Try again calls the live `read` via a ref, not an effect restart** \u2014 a restart would reset `first` and restore the `earlier` cursor after earlier pages had loaded.\n- - **Failed \"Show earlier\" stays in `error`** \u2014 its own button is already its retry.\n- - **`e2e/support/testids.ts` not updated** \u2014 it mirrors only the ids e2e specs use; `in-match-chat-retry` isn't mirrored there either.\n- - Late answers racing (poll vs. retry read) can re-show the alert until the next good poll; no ticketing added, matching the plan's accepted risk.\n- ## Worth a second look\n- - The alert sits inline inside the `<p>` (`practice/DeckPreview.tsx` precedent), so `chat-read-error`'s text content is the message plus the button label \u2014 tests assert `toHaveTextContent` on the message only.\n- - `loaded` is no longer set on a failed read; its only consumer (the empty copy) is now also gated on `readFailure === null`."
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T15:49:10Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -775,17 +655,14 @@
       "planned_tier": "strong",
       "pr": 1926,
       "provider": "devin",
-      "question": "",
       "queued_at": "2026-10-25T14:18:08Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "weak",
       "run_id": "40209070347",
       "started_at": "2026-10-25T15:53:20Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "1899": {
@@ -946,7 +823,6 @@
     },
     "1904": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-25T15:14:24Z",
@@ -959,7 +835,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-25T15:14:25Z",
       "planned_by": "`claude-8` (claude, `opus`, strong)",
@@ -967,17 +842,14 @@
       "planned_tier": "strong",
       "pr": 1964,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-25T14:16:07Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40268944769",
       "started_at": "2026-10-26T04:24:46Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1906": {
@@ -992,30 +864,10 @@
       "feedback_since": "2026-10-25T09:21:04Z",
       "issue": 1889,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40180283152",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2a1c358d8af36641ad5ad84aa245a32fc439faf8",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1908": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "c189986b058983c3f31c23e035e5f84ae0389eeb",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -1037,43 +889,20 @@
       "interruptions": 0,
       "issue": 1803,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-25T23:59:39Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "40247364422",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-26T00:01:39Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40247364422",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d707e52237dc9c95fb32e866efbf4ec458b66d39",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1909": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-25T13:30:08Z",
         "by": "`gpt` (medium), `claude` (strong)",
@@ -1096,39 +925,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40197279577",
-      "self_check_findings": [],
       "started_at": "2026-10-25T13:21:59Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gpt",
-          "claude"
-        ],
-        "builder": "gpt",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gpt",
-            "run": "40192855516",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40197279577",
-            "tier": "strong"
-          }
-        ],
-        "sha": "34a6c45d018fc623fc69fc786964c6b29fc09d9a",
-        "tiers": {
-          "claude": "strong",
-          "gpt": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1910": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-25T13:48:45Z",
         "by": "`gpt` (medium), `claude` (strong)",
@@ -1151,35 +952,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40198956725",
-      "self_check_findings": [],
       "started_at": "2026-10-25T13:43:54Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gpt",
-          "claude"
-        ],
-        "builder": "gpt",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gpt",
-            "run": "40194384770",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40198956725",
-            "tier": "strong"
-          }
-        ],
-        "sha": "04173a57b413f5c531d44f1ebf9e5aedd84cd883",
-        "tiers": {
-          "claude": "strong",
-          "gpt": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1911": {
       "cleared": {
@@ -1193,26 +967,7 @@
       "feedback_since": "2026-10-25T11:42:45Z",
       "issue": 1828,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40190013684",
-            "tier": "strong"
-          }
-        ],
-        "sha": "6d87a8cb05200b061664b3c9fa2d83fe8ab94c3a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1916": {
       "action": "build",
@@ -1252,26 +1007,7 @@
       "feedback_since": "2026-10-25T13:44:51Z",
       "issue": 1824,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40199028425",
-            "tier": "strong"
-          }
-        ],
-        "sha": "37a4f7106d249c6aef92dff2cbcade2eb21f9518",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1923": {
       "cleared": {
@@ -1285,30 +1021,10 @@
       "feedback_since": "2026-10-25T14:06:53Z",
       "issue": 1841,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40200718040",
-            "tier": "strong"
-          }
-        ],
-        "sha": "36920e53f629a177c0fc3867525cbb11c481a6ac",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1924": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-25T21:21:43Z",
         "by": "`claude` (strong)",
@@ -1325,51 +1041,19 @@
       "interruptions": 0,
       "issue": 1842,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-2",
-      "question": "",
       "queued_at": "2026-10-25T20:18:19Z",
       "round_tier": "strong",
       "run_id": "40230386049",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-25T20:21:28Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 5,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/03-zones.md",
-            "spec/11-rulings.md"
-          ],
-          "from": "c34c197b1b8a825d8473709d8ae4150a7f5b02e9",
-          "main": "1d390096040bc8335c9fe29c5c3cf31e194512b1"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40230386049",
-            "tier": "strong"
-          }
-        ],
-        "sha": "7d1781ed6549b5f7141c05d3d94159b9e09fef3a",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 5
     },
     "1926": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-25T16:40:27Z",
         "by": "`gemini` (medium)",
@@ -1392,47 +1076,17 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40211981519",
-      "self_check_findings": [],
       "started_at": "2026-10-25T16:30:10Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "cognition",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "40211981519",
-            "tier": "medium"
-          }
-        ],
-        "sha": "b2fa586efea4ad829992a83afe862348ef22710b",
-        "tiers": {
-          "gemini": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1929": {
       "action": "plan",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-25T18:31:14Z",
         "difficulty": "medium",
         "provider": "claude-4",
         "tier": "strong",
         "why": "fails easy line 6: the change is all in .github/workflows/ci.yml plus a comment in scripts/ci-scope.sh; not hard: no engine, AI, migration or cross-crate design"
-      },
-      "handoff": {
-        "at": "2026-10-25T18:23:18Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "# Plan (opus, strong)\n\n**Human required:** a person makes the whole fix, because it lives in `.github/workflows/ci.yml` (the `rust-test` matrix) and no bot may change `.github/`. In one pull request, replace the matrix's `tools, wasm` entry with the three entries in Step 1 and reword two lines of `scripts/ci-scope.sh`'s header (Step 2). No other file changes.\n\n## Goal\n\n`rust (test tools, wasm)` took 7m 7s on main (`e9cfe3b`). Split it into three `rust-test` groups so that each one finishes under the 5-minute target. The three groups stay on the same `rust_tools_wasm` scope line and share the same cache. Every test that runs today still runs in exactly one group, and no test is changed, skipped or moved to the daily run. Done means each of the three jobs is under 5 minutes on the first push-to-main run after the merge.\n\n### What I measured (planner, on a 4-vCPU AMD EPYC runner with CI's `CARGO_INCREMENTAL=0` and `CARGO_PROFILE_TEST_DEBUG=0`)\n\n- **Where the group's time goes:**\n  - The tests take 161 s to run. The `jackioh` binary's unit tests are 154 s of that: 401 tests adding up to 491 s across 4 threads. `acceptance` takes 1.4 s, `luau` 2.8 s, and the rest about 0.\n  - Compiling the workspace crates takes about 130 s. The critical path is `jackioh-engine` at opt-level 2 (121 s), then the tools test binary (11 s).\n- **Unit-test time by module** (summed seconds / number of tests / slowest test, in seconds):\n\n  | Module | Sum | Tests | Slowest |\n  |---|---|---|---|\n  | `fuzz` | 196 | 47 | 41 |\n  | `selfplay` | 64 | 7 | 62.5 (`r1006001_\u2026`; 55 s run alone, the longest single test) |\n  | `duos_fuzz` | 55 | 25 | 22 |\n  | `positions` | 49 | 5 | 21 |\n  | `selfplay_records` | 37 | 2 | 23 |\n  | `gate` | 34 | 14 | 26.5 |\n  | `arena` | 26 | 18 | 10 |\n  | `stats` | 11 | \u2013 | \u2013 |\n  | all others | about 20 | \u2013 | \u2013 |\n\n- **The three proposed groups**, each run with its exact command:\n\n  | Group | Tests passed | Test time |\n  |---|---|---|\n  | `tools fuzz` | 52 | 64 s |\n  | `tools duos, selfplay` | 32 | 65 s |\n  | `tools, wasm` | 317 in the binary (4 ignored) + 28 in the other binaries | 43 s |\n\n  52 + 32 + 317 + 4 = 405, which is the whole `--list` of the binary.\n- **Compiling with `jackioh-luau` at opt-level 0:** 101 s for each of the first two groups (128 s at Cargo.toml's opt-level 2) and 104 s for `tools, wasm`. No card script is Luau any more (`git ls-files 'crates/cards/src/scripts/**/*.luau'` is empty). Only `replay`'s custom-card tests and `tests/luau.rs` touch the host, and both pass at opt-level 0.\n- **Estimate:** each group does about 57% of today's local work (about 165 s against 291 s). Scaled to the 7m 7s run, that is about 4m 20s to 4m 55s per job, depending on how much of the 7m 7s was runner setup.\n\n## Files to touch\n\n| Path | new/change | What |\n|---|---|---|\n| `.github/workflows/ci.yml` | change | In the `rust-test` job, under `strategy.matrix.include`, the entry `- group: tools, wasm` becomes three entries with a comment above them (Step 1). |\n| `scripts/ci-scope.sh` | change | Header comment, lines 13\u201314 only: name the two new groups that run on `rust_tools_wasm` (Step 2). |\n\nDo not touch:\n- any crate source or test;\n- `Cargo.toml` (a profile change was measured and rejected, see Risks);\n- `.github/workflows/super.yml`;\n- `crates/tools/tests/acceptance.rs` (`RUST_GROUPS` has one row per `ci-scope.sh` line, and that line does not change);\n- `apps/web/src/net/ci-scope.test.ts`;\n- `e2e/scripts/shard-specs.mjs` (no e2e job is involved).\n\nNo spec section or ruling governs this. It follows CLAUDE.md \"CI\" and ci.yml's header: a piece that grows is split further, never folded back into one long job.\n\n## Steps\n\n### Step 1. `.github/workflows/ci.yml`, job `rust-test`, `strategy.matrix.include`\n\nReplace these four lines (lines 308\u2013311 at base `46ae613`):\n\n```yaml\n          - group: tools, wasm\n            scope: tools_wasm\n            cache: tools-wasm\n            test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau\n```\n\nwith exactly this:\n\n```yaml\n          # The tools' unit tests, the `jackioh` binary's (about 160 s of games on four threads),\n          # in three groups by test name, all on the `rust_tools_wasm` line and sharing one cache,\n          # as `ai slow` shares `ai`'s: in one group they took the job past seven minutes (#1929).\n          # A name filter matches anywhere in a test's path, so `tools, wasm` skips exactly what the\n          # other two run (`fuzz::` matches `duos_fuzz::` too). Those two run the binary alone, so a\n          # test elsewhere (an integration test, a doc test) whose path held `fuzz::`, `selfplay::`\n          # or `positions::` would run in no group: name none so. No card script is Luau, so only\n          # `tools, wasm`'s few custom-card tests reach the Luau host, and each group builds\n          # jackioh-luau at opt-level 0 (about 25 s less compiling; mlua stays at Cargo.toml's 2).\n          - group: tools fuzz\n            scope: tools_wasm\n            cache: tools-wasm\n            test: -p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- fuzz:: positions:: --skip duos_fuzz::\n          - group: tools duos, selfplay\n            scope: tools_wasm\n            cache: tools-wasm\n            test: -p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- duos_fuzz:: selfplay::\n          - group: tools, wasm\n            scope: tools_wasm\n            cache: tools-wasm\n            test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau --config profile.test.package.jackioh-luau.opt-level=0 -- --skip fuzz:: --skip selfplay:: --skip positions::\n```\n\nPoints to keep when you paste it:\n- Each `--config` stays one unquoted word, because the `cargo test` step splits `TEST` on spaces. That step's script stays as it is (`cargo test $TEST`).\n- Do not add `doc:`, `luau:` or `binaries:` to any of the three entries.\n- Nothing else needs to change. Neither the `rust` summary job nor the scope step names groups: the scope step reads `rust_${{ matrix.scope }}`, and `tools_wasm` already exists.\n\n### Step 2. `scripts/ci-scope.sh`, header lines 13\u201314\n\nChange:\n\n```\n#   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is\n#   rust_cards_lib     `rust_tools_wasm`; `rust_engine` also runs `engine golden`)\n#   rust_cards\n```\n\nto:\n\n```\n#   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is\n#   rust_cards_lib     `rust_tools_wasm`, which also runs `tools fuzz` and `tools duos, selfplay`;\n#   rust_cards         `rust_engine` also runs `engine golden`)\n```\n\nThis is a comment only. No code in the script changes.\n\n## Tests\n\nRun these from the repository root.\n\n1. **Each group's command passes.** These are the commands ci.yml will run:\n   - `cargo test -p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- fuzz:: positions:: --skip duos_fuzz::` should report `52 passed`.\n   - `cargo test -p jackioh-tools --bin jackioh --config profile.test.package.jackioh-luau.opt-level=0 -- duos_fuzz:: selfplay::` should report `32 passed`.\n   - `cargo test --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau --config profile.test.package.jackioh-luau.opt-level=0 -- --skip fuzz:: --skip selfplay:: --skip positions::` should report `317 passed; \u2026 4 ignored` for `unittests src/main.rs`, and every other binary unchanged: acceptance 20, golden 1, luau 4, export_parity 3.\n2. **The three groups cover the binary exactly.** `cargo test -p jackioh-tools --bin jackioh -- --list 2>/dev/null | grep -c ': test$'` gives 405, which equals 52 + 32 + 317 + 4. If a test has landed in the base since, recount: the three counts must still add up to the `--list` total.\n3. **Existing tests s",
-        "provider": "claude-4",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "s | he\u2026\n- Bash: {\"command\": \"ls -t /home/runner/work/JackiOh/JackiOh/target/cargo-timings/ | head -5\", \"description\": \"Find cargo timings reports\"}\n- Bash: {\"command\": \"f=/home/runner/work/JackiOh/JackiOh/target/cargo-timings/cargo-timing-20261025T172908161Z-74bef679b136acc7.html; python3 - \\\"$f\\\" <<'EOF'\\nimport re, json, sys\\nt = open(sys.argv[1]).rea\u2026\n- Bash: {\"command\": \"until tail -n 3 /tmp/tw-t2-test.log 2>/dev/null | grep -q \\\"^real\\\"; do sleep 5; done; tail -n 4 /tmp/tw-t2-build.log; grep -a \\\"test result\\\\|^real\\\" /tmp/tw-t2-test.log\", \"description\"\u2026\n- Bash: {\"command\": \"sed -n 4255,4340p crates/tools/src/fuzz.rs\", \"description\": \"Read the slow fuzz endings-channel test\"}\n- Bash: {\"command\": \"env | grep -i \\\"^CARGO\\\\|^RUST\\\" | grep -vi token\", \"description\": \"Show cargo-related environment variables\"}\n- Bash: {\"command\": \"grep -n \\\"CARGO_\\\\|RUSTFLAGS\\\\|env:\\\" .github/workflows/ci.yml | head -30; sed -n 80,130p .github/workflows/ci.yml\", \"description\": \"Check ci.yml cargo environment settings\"}\n- Bash: {\"command\": \"O=\\\"--config profile.test.package.jackioh-engine.opt-level=1 --config profile.test.package.jackioh-cards.opt-level=1\\\"; (time cargo test -p jackioh-tools --bin jackioh $O --no-run --timi\u2026\n- Grep: {\"pattern\": \"tools, wasm|test tools\", \"path\": \"/home/runner/work/_temp/work/item-1929\", \"glob\": \"!target/**\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd crates/tools && /home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-97cbe4407df0b749 --list 2>/dev/null | grep \\\": test$\\\" | sed 's/: test$//' > /tmp/tw-names.txt; wc -l < /tm\u2026\n- Bash: {\"command\": \"until tail -n 3 /tmp/tw-o1-test.log 2>/dev/null | grep -q \\\"^real\\\"; do sleep 5; done; tail -n 4 /tmp/tw-o1-build.log; grep -a \\\"test result\\\\|^real\\\" /tmp/tw-o1-test.log\", \"description\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1929 && git show 82d7eb4b8 --format=%B --stat | head -40; git log -3 --format=\\\"%h %ad %s\\\" --date=iso 82d7eb4b8\", \"description\": \"Read the engine CI\u2026\n- Bash: {\"command\": \"cd crates/tools && B=/home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-97cbe4407df0b749; for t in selfplay::tests::r1006001_the_same_base_and_count_give_byte_identical_lines_on\u2026\n- Bash: {\"command\": \"ls -lt /home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-* | grep -v \\\"\\\\.d$\\\" | head\", \"description\": \"List the tools test binaries from each build\"}\n- Bash: {\"command\": \"cd crates/tools && for B in /home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-cb5a979990e83619 /home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-f9da4a099db928ee; do \u2026\n- tool error: Exit code 1 /bin/bash: line 1: cd: crates/tools: No such file or directory\n- Bash: {\"command\": \"for B in /home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-cb5a979990e83619 /home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh-f9da4a099db928ee; do RUSTC_BOOTSTRAP=1 $\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-1929 && (time cargo test -p jackioh-engine --features jackioh-engine/testkit --test golden --no-run) > /tmp/golden-build.log 2>&1; tail -n 3 /tmp/gol\u2026\n- Bash: {\"command\": \"(time cargo test -p jackioh-tools --bin jackioh -- fuzz::) 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -a \\\"Running\\\\|test result\\\\|^real\\\"; echo ---; (time cargo test --workspace --exclud\u2026\n- Bash: {\"command\": \"B=/home/runner/work/JackiOh/JackiOh/target/debug/deps; for f in acceptance-1573c13c32967ce5 golden-9e8e332f783861ae luau-4a05f91e7aeac546 export_parity-1d0e469467be06d2; do $B/$f --list \u2026\n- Bash: {\"command\": \"X=\\\"--exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau\\\"; (time cargo test -p jackioh-tools --bin jackioh -- fuzz:: --s\u2026\n- Bash: {\"command\": \"X=\\\"--exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau\\\"; (time cargo test -p jackioh-tools --bin jackioh -- duos_fuzz:\u2026\n- Bash: {\"command\": \"touch crates/engine/src/lib.rs; (time cargo test -p jackioh-tools --bin jackioh --no-run) 2>&1 | grep -a \\\"^real\\\"; touch crates/engine/src/lib.rs; (time cargo test -p jackioh-tools --bi\u2026\n- Bash: {\"command\": \"git ls-files 'crates/cards/src/scripts/**/*.luau' | head; git ls-files 'crates/cards/src/scripts/**/*.luau' | wc -l; git log -1 --format=\\\"%h %s\\\" -S \\\"profile.test.package.jackioh-luau\\\u2026\n- Bash: {\"command\": \"grep -c \\\"positions::\\\" /tmp/tw-names.txt; grep \\\"positions::\\\" /tmp/tw-names.txt | grep -v \\\"^positions::\\\"; L=\\\"--config profile.test.package.jackioh-luau.opt-level=0\\\"; (time cargo te\u2026\n- Bash: {\"command\": \"X=\\\"--exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau\\\"; L=\\\"--config profile.test.package.jackioh-luau.opt-level=0\\\";\u2026\n- Bash: {\"command\": \"L=\\\"--config profile.test.package.jackioh-luau.opt-level=0\\\"; cargo test -p jackioh-tools --bin jackioh --no-run $L 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -a \\\"Compiling\\\" | head -20\"\u2026\n- Bash: {\"command\": \"L=\\\"--config profile.test.package.jackioh-luau.opt-level=0\\\"; (time cargo test -p jackioh-tools --bin jackioh $L -- duos_fuzz:: selfplay::) 2>&1 | sed 's/\\\\x1b\\\\[[0-9;]*m//g' | grep -a \\\u2026\n- Bash: {\"command\": \"grep -n \\\"ci-scope\\\\|scripts/\\\" bot/tests/test_repo_meta.py | head -20\", \"description\": \"Check whether bot tests read ci-scope.sh's text\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-1929/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"fails easy line 6: the change is all in .github/workflows/ci.yml plu\u2026\n- Bash: {\"command\": \"git status --porcelain; wc -w .bot-plan.md\", \"description\": \"Confirm a clean tree and the plan's length\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"fails easy line 6: the change is all in .github/workflows/ci.yml plus a comment in scripts/ci-scope.sh; not hard: no engine, AI, migration or cross-crate design\"} --> **Human required:** a person makes the whole fix, because it lives in `.github/workflows/\u2026"
       },
       "kind": "build",
       "pending_request": false,
@@ -1441,15 +1095,12 @@
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "question": "a person makes the whole fix, because it lives in `.github/workflows/ci.yml` (the `rust-test` matrix) and no bot may change `.github/`. In one pull request, replace the matrix's `tools, wasm` entry with the three entries in Step 1 and reword two lines of `scripts/ci-scope.sh`'s header (Step 2). No other file changes.",
       "run_id": "40216510734",
       "started_at": "2026-10-25T17:26:51Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "1931": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-25T19:09:21Z",
         "by": "`claude` (strong)",
@@ -1466,50 +1117,19 @@
       "interruptions": 0,
       "issue": 1829,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-25T18:40:15Z",
       "round_tier": "strong",
       "run_id": "40222401199",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-25T18:40:52Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md"
-          ],
-          "from": "013253a2bd3828e264985922490bc47376e852ad",
-          "main": "3a9e0b85f42fb092c6fb750db28922738336fbee"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40222401199",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2dc658cc2e5c5f28b8bbb75370beaaf7b265149c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1937": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-25T20:30:31Z",
         "by": "`claude` (strong)",
@@ -1526,50 +1146,19 @@
       "interruptions": 0,
       "issue": 1833,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-8",
-      "question": "",
       "queued_at": "2026-10-25T19:30:57Z",
       "round_tier": "strong",
       "run_id": "40227210730",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-25T19:41:16Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/INDEX.md"
-          ],
-          "from": "ce180452c68c9d76e90f33eda95caedd5be08a65",
-          "main": "b665a5ae035bfc43bfdb421c599886c0974f1683"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40227210730",
-            "tier": "strong"
-          }
-        ],
-        "sha": "b59f4336339333a31a2fbe8b559321bd792bdf70",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1944": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T03:18:59Z",
         "by": "`claude` (strong)",
@@ -1586,50 +1175,19 @@
       "interruptions": 0,
       "issue": 1847,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-26T02:13:42Z",
       "round_tier": "strong",
       "run_id": "40259178072",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-26T02:27:18Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 4,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md"
-          ],
-          "from": "ea56c64e4be635baafc592cfb7cdec1269602a02",
-          "main": "e1da458311bb3188490c74de8f08f76f78ac0866"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40259178072",
-            "tier": "strong"
-          }
-        ],
-        "sha": "68b7bc98a5c4a774226a7cb6d81eb98c3b980377",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 4
     },
     "1945": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "0e41ceba968ed2248d7e0ff187e3d0327e4c8ad2",
       "ci_fixes": 2,
       "ci_reruns": {
@@ -1654,54 +1212,20 @@
       "interruptions": 0,
       "issue": 1844,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-26T03:51:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "40270327481",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-26T04:41:03Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 6,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/rules.test.ts",
-            "crates/cards/luau/jackioh.luau",
-            "crates/engine/src/script.rs",
-            "crates/engine/src/subsystems/fuse.rs"
-          ],
-          "from": "0e41ceba968ed2248d7e0ff187e3d0327e4c8ad2",
-          "main": "761dae6c900915ce3bf39dcfc21e1616bbe1f145"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40270327481",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2fa06d9d73bd3971b979420511aa6adb523fe75c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 6
     },
     "1947": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T00:43:28Z",
         "by": "`claude` (strong)",
@@ -1718,57 +1242,19 @@
       "interruptions": 0,
       "issue": 1845,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-25T21:55:35Z",
       "round_tier": "strong",
       "run_id": "40246006428",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-25T23:42:53Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/rules.test.ts",
-            "apps/web/src/wire/generated/CardInstance.ts",
-            "crates/ai/README.md",
-            "crates/engine/src/config.rs",
-            "crates/engine/src/state.rs",
-            "spec/10-engine-guide.md",
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "458ec1c3331256d519f5db913859e5479d104bb7",
-          "main": "6a3406b24328165950e60748e0d915c0d7019d29"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40246006428",
-            "tier": "strong"
-          }
-        ],
-        "sha": "fa9c85e52742b884851c83c18e0b3e63fed58e81",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1950": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T01:50:06Z",
         "by": "`claude` (strong)",
@@ -1785,46 +1271,16 @@
       "interruptions": 0,
       "issue": 1831,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-26T01:02:06Z",
       "round_tier": "medium",
       "run_id": "40253751528",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-26T01:20:28Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md"
-          ],
-          "from": "1a284786dedab4bb1bb68b20ab2e2b27c620442b",
-          "main": "c3af6db76704f90784f799cb58f4cf8fb79f9da8"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40253751528",
-            "tier": "strong"
-          }
-        ],
-        "sha": "7ff2aaa56a95ffc5e56be99eac410daacee54a8f",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "1953": {
       "action": "build",
@@ -1854,13 +1310,11 @@
     },
     "1954": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-26T01:14:45Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -1868,27 +1322,22 @@
       "planned_tier": "strong",
       "pr": 1970,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-26T00:29:59Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40272507347",
       "started_at": "2026-10-26T05:06:46Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "1955": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-26T01:14:18Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -1896,16 +1345,13 @@
       "planned_tier": "strong",
       "pr": 1968,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-26T00:34:21Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "40274730725",
       "started_at": "2026-10-26T05:31:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1956": {
@@ -2014,30 +1460,10 @@
       "feedback_since": "2026-10-26T02:03:50Z",
       "issue": 1849,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40257240434",
-            "tier": "strong"
-          }
-        ],
-        "sha": "42800a53ac0eadd40747d3d7eaeb0f05780c65fd",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1962": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T05:51:57Z",
         "by": "`claude` (strong)",
@@ -2052,38 +1478,16 @@
       "interruptions": 0,
       "issue": 1850,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-26T03:31:24Z",
       "round_tier": "strong",
       "run_id": "40268780669",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-26T04:22:51Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40268780669",
-            "tier": "strong"
-          }
-        ],
-        "sha": "94d93ec877ad8d4ffe87397beeb2c49c957736f3",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1963": {
       "action": "revise",
@@ -2135,7 +1539,6 @@
     },
     "1964": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T05:15:07Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -2158,39 +1561,11 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40272334919",
-      "self_check_findings": [],
       "started_at": "2026-10-26T05:04:44Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40268944769",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40272334919",
-            "tier": "strong"
-          }
-        ],
-        "sha": "d44e9a1dd42a83f27d29c0a0cb8773ec2775874e",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1968": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T07:30:17Z",
         "by": "`claude` (strong)",
@@ -2207,51 +1582,19 @@
       "interruptions": 0,
       "issue": 1955,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-26T06:30:09Z",
       "round_tier": "medium",
       "run_id": "40282662150",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-26T06:55:20Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "8080406807b97ee0e3ecb620a6260cae2f47ad95",
-          "main": "764d9104b1fba5af23cb835002dfc1fbf946b182"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40282662150",
-            "tier": "medium"
-          }
-        ],
-        "sha": "5a8b5e3e303334be3040da54a46d0938aaaa8d7b",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "1970": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T07:29:44Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -2274,35 +1617,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40285397428",
-      "self_check_findings": [],
       "started_at": "2026-10-26T07:22:24Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40272507347",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40285397428",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c8fce509515de4d473e534b4eaa3e1362b352957",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1971": {
       "action": "revise",
@@ -2374,26 +1690,7 @@
       "feedback_since": "2026-10-26T05:41:57Z",
       "issue": 1820,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40275632228",
-            "tier": "strong"
-          }
-        ],
-        "sha": "450877dc8a8e7f8aea1aaf112f4bc9e1d4cda2a6",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1974": {
       "cleared": {
@@ -2407,26 +1704,7 @@
       "feedback_since": "2026-10-26T05:53:30Z",
       "issue": 1823,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40276695952",
-            "tier": "strong"
-          }
-        ],
-        "sha": "38a0bb5bfdf2fad628d97a9bcaa89cbc9872f14c",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1975": {
       "action": "revise",
@@ -2498,30 +1776,10 @@
       "feedback_since": "2026-10-26T05:54:33Z",
       "issue": 1826,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "40276792620",
-            "tier": "strong"
-          }
-        ],
-        "sha": "ece90d46f318b868822a117afadb2046e0ea4e04",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "1980": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-26T08:29:27Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -2544,35 +1802,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "40291302624",
-      "self_check_findings": [],
       "started_at": "2026-10-26T08:18:02Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "40286508752",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "40291302624",
-            "tier": "strong"
-          }
-        ],
-        "sha": "383ff434450fb3f1b043b3015e9d1d10f31e2079",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "1981": {
       "action": "revise",
@@ -5147,9 +4378,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-25T09:13:53Z",
+    "at": "2026-10-26T09:15:26Z",
     "dropped": 0,
-    "shed": 0
+    "shed": 49
   },
   "rate_limited_until": null,
   "secrets": {
