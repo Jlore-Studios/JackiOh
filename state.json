@@ -2067,12 +2067,9 @@
     "what": "revise #1981 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-26T10:27:47Z",
+    "at": "2026-10-26T10:38:03Z",
     "notes": [
-      "delivered revise #1981 on claude-3 (run 40306669752): interrupted",
-      "delivered suggest on claude-3 (run 40303664436): interrupted",
-      "delivered revise #1963 on claude-7 (run 40296195774): approved",
-      "started revise #1981 on claude-7 (run 40308008005)",
+      "delivered revise #1960 on claude-1 (run 40301439976): approved",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -2779,7 +2776,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T10:27:47Z",
+  "loop_tick": "2026-10-26T10:38:03Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T09:30:02Z",
