@@ -2963,12 +2963,14 @@
     "what": "build #2015 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-26T18:28:48Z",
+    "at": "2026-10-26T18:48:02Z",
     "notes": [
-      "needs_plan: could not finish (IncompleteRead: IncompleteRead(219264 bytes read, 182118 more expected))",
-      "delivered plan #2010 on claude-7 (run 40371770600): failed",
-      "started plan #2010 on muse (run 40378621320)",
-      "started plan #2015 on claude-3 (run 40379071925)",
+      "delivered plan #2015 on claude-3 (run 40379071925): planned",
+      "delivered plan #2010 on muse (run 40378621320): planned",
+      "delivered revise #2012 on claude-8 (run 40371938958): approved",
+      "started revise #2012 on claude-8 (run 40381527912)",
+      "started build #2010 on muse (run 40381678755)",
+      "started build #2015 on claude-3 (run 40381824107)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -3675,7 +3677,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T18:28:48Z",
+  "loop_tick": "2026-10-26T18:48:02Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T18:46:11Z",
