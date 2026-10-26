@@ -15,6 +15,11 @@
 //!
 //! R1771000: `PUT /api/stats/player` keeps R1142000's summary inputs alone, for catalog cards, and
 //! drops every other key, id and value (`account_copy`).
+//!
+//! R1994000: `GET /api/stats/games` is the patch's game figures (the first seat's wins, the endings,
+//! the turns, R1256000's counts) over the window every card shares, read through the engine's
+//! `windowed_game_figures` off the totals' whole games (`StatsTotals.game_totals`, which outlive
+//! R1044001's purge), kept with the cards' windowed report and cached as long.
 
 use std::cmp::Ordering;
 use std::sync::{Arc, Mutex};
@@ -29,10 +34,11 @@ use tokio::sync::OnceCell;
 
 use jackioh_cards::patch_history;
 use jackioh_engine::wire::stats::{
-    CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, GameMode, GameSource, PatchStep,
-    PatchWindow, PilotFilter, SourceFilter, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest,
-    WindowSource, WindowedReport, add_stats, card_drills_of, card_family, card_stats_of, card_window,
-    collapse_gameless, patch_windows, played_delta, sources_of, win_rate, windowed_card_stats,
+    CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, GameFigures, GameMode, GameSource,
+    PatchStep, PatchWindow, PilotFilter, PilotPairFigures, SourceFilter, StatsTotals, Tally, TotalsKey,
+    WindowQuery, WindowRequest, WindowSource, WindowedGames, WindowedReport, add_stats, card_drills_of,
+    card_family, card_stats_of, card_window, collapse_gameless, patch_windows, played_delta, sources_of,
+    win_rate, windowed_card_stats, windowed_game_figures,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -291,6 +297,26 @@ pub struct PublicStatsCardsResponse {
     /// R1973002: every patch the page can show, newest first: the window the cards share, its
     /// versions oldest first (ask for its figures at the last), its games and its live games.
     pub patches: Vec<PatchWindow>,
+}
+
+/// R1994000: `GET /api/stats/games`'s body: counts and shares only, naming no game and no player.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicStatsGamesResponse {
+    pub patch: String,
+    /// The window every card shares, as `GET /api/stats/cards`' `source` reads it.
+    pub source: PublicStatsSource,
+    pub source_label: String,
+    pub mode: PublicStatsMode,
+    pub mode_label: String,
+    /// The games below which the page shows none of the figures.
+    pub min_sample: i64,
+    /// Every record the window counts, its whole game kept or, folded before migration 0062, not.
+    pub total_games: i64,
+    /// The counted records' whole games, or null when none is kept.
+    pub figures: Option<GameFigures>,
+    /// The same split by both seats' pilots, p1's first: a ladder bot's games (R1451) apart.
+    pub pairs: Vec<PilotPairFigures>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -554,9 +580,10 @@ impl KeptReports {
 /// R1367000: one patch's windowed figures for one `?source=` and `?pilot=`, and each version's live
 /// games, which the window of a card no counted deck held is read from, over the history as
 /// R1973001 reads it (a patch no game was played on read as a micro). R1973002: every patch the
-/// page can show, newest first.
+/// page can show, newest first. R1994000: the game figures over the window every card shares.
 struct KeptWindow {
     report: WindowedReport,
+    games: WindowedGames,
     live_games: IndexMap<String, i64>,
     history: Vec<PatchStep>,
     patches: Vec<PatchWindow>,
@@ -612,6 +639,7 @@ async fn kept_window(
                 request: source.request(),
             },
         );
+        let figures = windowed_game_figures(&totals, history, at, mode.filter(), source.request());
         let mut live_games: IndexMap<String, i64> = IndexMap::new();
         for key in totals.records.keys() {
             live_games
@@ -621,6 +649,7 @@ async fn kept_window(
         let games = |version: &str| totals.games(version);
         Ok::<_, ApiError>(Arc::new(KeptWindow {
             report,
+            games: figures,
             live_games,
             history: collapse_gameless(history, games),
             patches: patch_windows(history, games, |version| totals.live_games(version)),
@@ -933,6 +962,43 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         },
     };
 
+    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
+}
+
+/// GET /api/stats/games (R1994000): the game figures at `?patch=` (the current patch when missing),
+/// over the window every card shares under R654's gate as `GET /api/stats/cards` reads it: live
+/// games once the window has `PUBLIC_STATS_MIN_LIVE_GAMES`, else the previous window's, else AI
+/// games pad it (provisional). `?source=` and `?mode=` as for the cards. A game is read whole,
+/// whoever piloted its seats; `pairs` splits it by both pilots, so the games against a ladder bot
+/// (R1451) read apart from people's. `totalGames` counts every record of the window, those folded
+/// before the whole games were kept among them.
+pub async fn get_games(app: &Arc<App>, req: Req) -> ApiResult {
+    let patch = query_trimmed(&req, "patch").unwrap_or_else(|| app.catalog.version.clone());
+    let source_param = SourceParam::parse(req.query.get("source").map(String::as_str));
+    let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
+    let history = patch_history();
+    let kept = kept_window(
+        app,
+        &history,
+        &patch,
+        source_param,
+        PublicStatsPilot::Merged,
+        mode,
+    )
+    .await?;
+    let games = &kept.games;
+    let source = PublicStatsSource::of(games.window.source);
+    let response = PublicStatsGamesResponse {
+        patch,
+        source,
+        source_label: source.label().to_string(),
+        mode,
+        mode_label: mode.label().to_string(),
+        min_sample: CARD_STATS_MIN_SAMPLE,
+        total_games: games.records,
+        figures: games.figures.clone(),
+        pairs: games.pairs.clone(),
+    };
     Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 

@@ -41,8 +41,8 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
-    CardStatsFilter, GAME_SOURCES, GameMode, PilotFilter, SourceFilter, StatsTotals, card_stats,
-    card_stats_of, parse_game_record, sources_of,
+    CardStatsFilter, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter, StatsTotals, card_stats,
+    card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::api::series_rules::forfeit_series;
@@ -389,8 +389,9 @@ impl StoreHarness {
     }
 
     /// R1044000: every game record as one written before the totals were (migration 0041): not
-    /// folded, and the totals empty. In Postgres the rows' `folded` flag and the three totals
-    /// tables; in memory the ledger's flag and the one `StatsTotals`.
+    /// folded, and the totals empty. In Postgres the rows' `folded` flag and the four totals
+    /// tables (R1994000's game_totals among them); in memory the ledger's flag and the one
+    /// `StatsTotals`.
     pub async fn forget_game_record_folds(&self) {
         match &self.ends {
             Ends::Memory { data, .. } => {
@@ -403,7 +404,8 @@ impl StoreHarness {
             Ends::Postgres { admin } => {
                 sqlx::raw_sql(
                     "update public.game_records set folded = false;
-                     truncate public.record_totals, public.card_totals, public.decklist_totals;",
+                     truncate public.record_totals, public.card_totals, public.decklist_totals,
+                              public.game_totals;",
                 )
                 .execute(admin)
                 .await
@@ -517,7 +519,7 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// tables are no longer written by anything (R254) but are emptied all the same, so a test that
 /// wrote one by hand leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
-  public.game_records, public.record_totals, public.card_totals, public.decklist_totals,
+  public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_checkpoints, public.match_actions, public.tickets,
@@ -5341,6 +5343,95 @@ mod game_records {
         );
     }
 
+    /// A game report's groups by patch, mode and source: the store reads its totals in no order.
+    fn sorted(mut report: GameReport) -> GameReport {
+        report
+            .groups
+            .sort_by(|a, b| (&a.patch, a.mode, a.source).cmp(&(&b.patch, b.mode, b.source)));
+        report
+    }
+
+    /// R1994000: a record's whole game is folded with it, so its game figures read the same off the
+    /// totals once R1044001's purge has emptied its detail.
+    async fn r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail(
+        harness: &StoreHarness,
+    ) {
+        let mut records = mixed_records();
+        // p2 went first and won at the turn cap, both seats carrying R1256000's six counts.
+        let seat = |deck: &str, counts: [i32; 6]| {
+            let [
+                fatigue_draws,
+                fatigue_damage,
+                traps_set,
+                traps_fired,
+                switches,
+                upgrades,
+            ] = counts;
+            json!({ "deck": [deck], "opening": [], "drawn": [], "played": [],
+                    "fatigueDraws": fatigue_draws, "fatigueDamage": fatigue_damage, "trapsSet": traps_set,
+                    "trapsFired": traps_fired, "positionSwitches": switches, "radiantUpgrades": upgrades })
+        };
+        records.push(game_record(
+            "m-e",
+            json!({ "game": { "first": "p2", "winner": "p2", "reason": "turn-cap", "turns": 12, "seats": {
+                "p1": seat("core-001", [2, 3, 1, 1, 2, 0]),
+                "p2": seat("core-002", [0, 0, 2, 0, 1, 1]),
+            } } }),
+        ));
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let filters = [SourceFilter::Live, SourceFilter::All].map(|source| CardStatsFilter {
+            source,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        });
+        let figures = |totals: &StatsTotals| -> Vec<GameReport> {
+            filters
+                .iter()
+                .map(|filter| sorted(game_figures_of(totals, filter)))
+                .collect()
+        };
+        let expected: Vec<GameReport> = filters
+            .iter()
+            .map(|filter| sorted(game_report(&records, filter)))
+            .collect();
+        assert!(
+            expected[1].groups.iter().any(|group| group.figures.counted == 1),
+            "m-e's counts are read"
+        );
+        assert_eq!(
+            figures(&q!(harness, t => t.stats_totals_load(&every_total()))),
+            expected
+        );
+
+        const DAY: i64 = 86_400_000;
+        let now = harness.now();
+        harness.age_game_record("m-a", 8 * DAY).await;
+        harness.age_game_record("m-e", 8 * DAY).await;
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * DAY,
+            "matchActionsEndedBefore": now - 90 * DAY,
+            "playTelemetryEndedBefore": now - 365 * DAY,
+            "gameRecordsRecordedBefore": now - 7 * DAY,
+        }));
+        assert_eq!(
+            j(&q!(harness, t => t.purge_expired(&cutoffs)))["gameRecords"],
+            json!(2)
+        );
+        let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
+        assert_eq!(
+            ids_of(&held),
+            ["dev:v0.1.1:gather:1", "dev:v0.1.1:gather:2", "m-b", "m-c", "m-d"]
+        );
+        assert_eq!(
+            figures(&q!(harness, t => t.stats_totals_load(&every_total()))),
+            expected
+        );
+    }
+
     /// R1715000: a record whose detail does not read is set aside (marked folded with its detail
     /// emptied, counted nowhere, answered) and the records behind it in the queue are folded.
     async fn r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it(
@@ -5463,6 +5554,7 @@ mod game_records {
         r1596000_lists_the_finished_matches_whose_record_was_never_filed,
         r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
+        r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
     );
 }
 

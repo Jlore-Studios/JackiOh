@@ -131,9 +131,9 @@ exactly, means to three places).
 |---|---|
 | `fixtures/dev-40.jsonl` | 40 AI development games (R378), as `cargo jackioh stats` writes them |
 | `fixtures/dev-40.report.json` | `stats report` over them, as JSON |
-| `fixtures/games.report.json` | `stats report --games --source=all` over both fixtures' games, as JSON: the figures notebook 02's first-seat and ending cells are held to |
+| `fixtures/games.report.json` | `stats report --games --source=all` over both fixtures' games, as JSON: the figures notebook 02's first-seat and ending cells are held to; `crates/tools/src/stats.rs`'s R1994000 test holds it to the command |
 | `fixtures/counts.jsonl` | Five live v0.2.5f games, bo1 and bo3, three of whose records carry R1256000's counts and two written before them. **Made up** by hand: no run writes old and new records together |
-| `fixtures/counts.report.json` | `stats report --games --source=all` over it, as JSON: the figures notebook 02's switch and upgrade columns are held to |
+| `fixtures/counts.report.json` | `stats report --games --source=all` over it, as JSON: the figures notebook 02's switch and upgrade columns are held to; `crates/tools/src/stats.rs`'s R1994000 test holds it to the command |
 | `fixtures/live-40.jsonl` | 40 more AI games, filed as live ones: `make_live.py` gives them live ids, patches v0.2.5e (16) and v0.2.5f (24), the modes bo1 and bo3 and a human first seat. Not played by anyone: the notebooks' live and patch comparisons need records of that shape |
 | `fixtures/sweep-small.jsonl` | `cargo jackioh sweep --json` over four cards (pass 1 at Easy and Hard), as it wrote it |
 | `fixtures/repo/` | The files `load_generations` reads under a repository root: `crates/ai/generation.json` and `training/history/*.jsonl`. **Made up**: three promotions on two lanes, so the charts have a line. The real histories are empty until the first promotion |

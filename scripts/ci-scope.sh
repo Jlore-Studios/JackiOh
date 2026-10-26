@@ -40,7 +40,8 @@
 # training lanes' prompts and loop (training/*.md, training/loop.sh: Muse and the training box read
 # them, no job does; training/history/ is not among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
-# `notebooks` job runs its tests once a day).
+# `notebooks` job runs its tests once a day), but for the five record files and reports of
+# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to.
 # Nothing a test, a build or a check reads is on the list, and nothing under crates/: ci.yml's
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
@@ -83,7 +84,9 @@
 #    render.yaml too (the server's tests/api/health.rs reads its healthCheckPath, #861) server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
-#    and scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
+#    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
+#    counts.report.json (the tools' test that holds `stats report --games` to them, R1994000) tools,
+#    wasm; and scripts/build-wasm.sh (crates/wasm/tests/export_parity.rs holds the Luau module's factory
 #    types it writes to the C bindings) tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23), every Rust source for a file it includes from outside its crate, and every Rust source for
@@ -158,6 +161,8 @@ skipped() {
     .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/history/*) return 1 ;;
     training/*.md | training/loop.sh) ;;
+    analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) return 1 ;;
+    analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) return 1 ;;
     analysis/*) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
@@ -237,6 +242,8 @@ for file in $files; do
     e2e/support/config.ts) on rust_server ;;
     render.yaml) on rust_server rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md | scripts/build-wasm.sh) on rust_tools_wasm ;;
+    analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
+    analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
   esac
 
   case "$file" in
