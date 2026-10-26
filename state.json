@@ -2854,6 +2854,13 @@
     "2013": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T17:43:43Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails easy rule 2 and 6: crates/server's Dockerfile and script plus an apps/web test, and the Dockerfile is a build config; no engine, AI or migration work, so not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-1",
