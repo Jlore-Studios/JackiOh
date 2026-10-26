@@ -92,6 +92,9 @@ export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
 export type { SpawnZone } from "./generated/SpawnZone.ts";
+export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
+export type { StarscapeReward } from "./generated/StarscapeReward.ts";
+export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
@@ -223,6 +226,8 @@ export const GAME_EVENT_TYPES = [
   "voteCast",
   "votedOut",
   "fled",
+  // Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847001).
+  "starscapeTravelled",
   // #1850's card-on-card verbs: a permanent held beneath a card (R1850003).
   "held",
 ] as const satisfies readonly GameEventType[];

@@ -1,9 +1,11 @@
 // #936 S8 B57: `ChallengeToast`, mounted once in the shell. While signed in it reads
-// `GET /api/challenges`; an incoming challenge shows a toast naming the challenger, whose Accept goes
-// to `/play` with the room code filled in (the lobby's room link, R767: it fills the form and never
-// joins by itself) and whose Decline declines the challenge.
+// `GET /api/challenges`; an incoming challenge shows a toast naming the challenger, whose Accept joins
+// the room by its code with the deck picked in the toast and goes to the game (R1831000), with the
+// lobby's room link (R767) as the way in when the join is refused, and whose Decline declines the
+// challenge.
 //
-// SPEC S8 names no test id for the toast, so its buttons are found by their role and name.
+// SPEC S8 names no test id for the toast, so its buttons are found by their role and name, or by
+// the ids #1831 gave its Accept, deck picker and lobby link.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,9 +13,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { guardLeaving } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink } from "../net/roomLink.ts";
 import type { Challenge, PlayerRef } from "../net/social.ts";
-import { at, meBody, must, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { at, meBody, must, refusal, signIn, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { CHALLENGE_CHOICE_KEY, readChallengeChoice } from "./challengeChoice.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
+import { challengeToastTestid } from "./testids.ts";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
 
@@ -45,6 +49,18 @@ const OUTGOING: Challenge = {
 
 type Challenges = { incoming: Challenge[]; outgoing: Challenge[] };
 
+const DECK = { catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 } as const;
+const AGGRO = { ...DECK, id: "d-aggro", name: "Aggro", cards: [] };
+const CONTROL = { ...DECK, id: "d-control", name: "Control", cards: [] };
+const TRIO = { id: "t-one", name: "Trio One", deckIds: ["d-aggro", "d-control", null], createdAt: 0, updatedAt: 0 };
+
+function decksBody(decks: readonly object[] = [AGGRO, CONTROL]): object {
+  return { catalogVersion: "v1", decks, trios: [TRIO], limits: { decks: 20, trios: 10, nameLength: 40 } };
+}
+
+/** What the stub's room join answers: the match the player lands in. */
+const JOINED_MATCH = "m-9";
+
 function serve(challenges: Challenges, special?: (call: Call) => Reply | undefined): StubServer {
   return stubServer((call) => {
     const answer = special?.(call);
@@ -53,6 +69,12 @@ function serve(challenges: Challenges, special?: (call: Call) => Reply | undefin
       return { status: 200, body: meBody({ profile: { id: ME.profileId, status: "active" }, email: "me@example.test" }) };
     }
     if (call.method === "GET" && call.path === "/api/challenges") return { status: 200, body: challenges };
+    if (call.method === "GET" && call.path === "/api/decks") return { status: 200, body: decksBody() };
+    if (call.method === "POST" && /^\/api\/rooms\/[^/]+\/join$/.test(call.path)) {
+      const code = call.path.split("/")[3] ?? "";
+      const mode = (call.body as { mode?: string } | undefined)?.mode ?? "bo1";
+      return { status: 200, body: { matchId: JOINED_MATCH, seriesId: null, code, seat: "p2", mode } };
+    }
     if (call.method === "POST" && call.path.endsWith("/decline")) {
       challenges.incoming = challenges.incoming.filter((challenge) => !call.path.includes(challenge.challengeId));
       return { status: 204 };
@@ -110,12 +132,105 @@ describe("B57 the challenge toast", () => {
   );
 
   it(
-    "B57 Accept goes to /play with the room code filled in",
+    "R1831000 Accept joins with the remembered deck and goes to /match/m-9",
     async () => {
       signIn("tok-toast");
-      serve({ incoming: [INCOMING], outgoing: [] });
+      window.localStorage.setItem(CHALLENGE_CHOICE_KEY, JSON.stringify({ mode: "bo3", deckId: "d-control", trioId: null }));
+      const server = serve({ incoming: [INCOMING], outgoing: [] });
       render(<ChallengeToast />);
-      fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
+      const picker = await screen.findByTestId(challengeToastTestid.deck, undefined, SOON);
+      expect((picker as HTMLSelectElement).value).toBe("d-control");
+      expect([...(picker as HTMLSelectElement).options].map((option) => option.textContent)).toEqual(["Aggro", "Control"]);
+
+      fireEvent.click(screen.getByTestId(challengeToastTestid.accept));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      const joins = server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`);
+      expect(joins).toHaveLength(1);
+      expect(joins[0]?.body).toEqual({ mode: "bo1", deckId: "d-control" });
+      expect(screen.queryAllByTestId(challengeToastTestid.toast)).toHaveLength(0);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1831000 Accept declines nothing and joins once",
+    async () => {
+      signIn("tok-toast");
+      const server = serve({ incoming: [INCOMING], outgoing: [] });
+      render(<ChallengeToast />);
+      const accept = await screen.findByTestId(challengeToastTestid.accept, undefined, SOON);
+      fireEvent.click(accept);
+      fireEvent.click(accept);
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", "/api/challenges/ch-1/decline")).toHaveLength(0);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)).toHaveLength(1);
+      // The player skipped the lobby: no room link is waiting for them there (R767).
+      expect(readRoomLink()).toBeNull();
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1831000 the deck picked in the toast is the one joined with, and is remembered for the next accept",
+    async () => {
+      signIn("tok-toast");
+      const server = serve({ incoming: [INCOMING], outgoing: [] });
+      render(<ChallengeToast />);
+      const picker = await screen.findByTestId(challengeToastTestid.deck, undefined, SOON);
+      // Nothing remembered: the first deck.
+      expect((picker as HTMLSelectElement).value).toBe("d-aggro");
+      fireEvent.change(picker, { target: { value: "d-control" } });
+      fireEvent.click(screen.getByTestId(challengeToastTestid.accept));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "bo1", deckId: "d-control" });
+      // Accepting remembers the deck, and leaves the mode the player challenges in alone.
+      expect(readChallengeChoice()).toEqual({ mode: "bo1", deckId: "d-control", trioId: null });
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1831000 All Random joins with the mode alone",
+    async () => {
+      signIn("tok-toast");
+      const server = serve({ incoming: [{ ...INCOMING, mode: "random" }], outgoing: [] });
+      render(<ChallengeToast />);
+      fireEvent.click(await screen.findByTestId(challengeToastTestid.accept, undefined, SOON));
+      await waitFor(() => {
+        expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+      }, SOON);
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)[0]?.body).toEqual({ mode: "random" });
+      expect(screen.queryByTestId(challengeToastTestid.deck)).toBeNull();
+      expect(server.to("GET", "/api/decks")).toHaveLength(0);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1831000 a refused join shows the server's words and Open in lobby, which fills /play's code",
+    async () => {
+      signIn("tok-toast");
+      const server = serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
+        call.method === "POST" && call.path.endsWith("/join") ? refusal(409, "already_in_match", "finish your current match first") : undefined,
+      );
+      render(<ChallengeToast />);
+      expect(screen.queryByTestId(challengeToastTestid.lobby)).toBeNull();
+      fireEvent.click(await screen.findByTestId(challengeToastTestid.accept, undefined, SOON));
+
+      const words = await screen.findByTestId(challengeToastTestid.error, undefined, SOON);
+      expect(words).toHaveTextContent("finish your current match first");
+      expect(window.location.pathname).toBe("/decks");
+      expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)).toHaveLength(1);
+      // The toast stays, to try again or to open the lobby.
+      expect(screen.getByTestId(challengeToastTestid.accept)).not.toBeDisabled();
+
+      fireEvent.click(screen.getByTestId(challengeToastTestid.lobby));
       await waitFor(() => {
         expect(window.location.pathname).toBe("/play");
       }, SOON);
@@ -125,17 +240,36 @@ describe("B57 the challenge toast", () => {
   );
 
   it(
-    "B57 Accept neither declines the challenge nor joins the room by itself",
+    "R1831000 with no saved deck the toast offers only Open in lobby",
     async () => {
       signIn("tok-toast");
-      const server = serve({ incoming: [INCOMING], outgoing: [] });
+      serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
+        call.method === "GET" && call.path === "/api/decks" ? { status: 200, body: decksBody([]) } : undefined,
+      );
       render(<ChallengeToast />);
-      fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
+      const lobby = await screen.findByTestId(challengeToastTestid.lobby, undefined, SOON);
+      expect(screen.queryByTestId(challengeToastTestid.accept)).toBeNull();
+      expect(screen.queryByTestId(challengeToastTestid.deck)).toBeNull();
+
+      fireEvent.click(lobby);
       await waitFor(() => {
         expect(window.location.pathname).toBe("/play");
       }, SOON);
-      expect(server.to("POST", "/api/challenges/ch-1/decline")).toHaveLength(0);
-      expect(server.calls.some((call) => call.method === "POST" && call.path.startsWith("/api/rooms"))).toBe(false);
+      expect(readRoomLink()?.code).toBe(INCOMING.roomCode);
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1831000 decks that could not be read leave Open in lobby, not an Accept with nothing to join with",
+    async () => {
+      signIn("tok-toast");
+      serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
+        call.method === "GET" && call.path === "/api/decks" ? refusal(500, "internal", "The decks are out of reach.") : undefined,
+      );
+      render(<ChallengeToast />);
+      expect(await screen.findByTestId(challengeToastTestid.lobby, undefined, SOON)).toBeInTheDocument();
+      expect(screen.queryByTestId(challengeToastTestid.accept)).toBeNull();
     },
     TEST_MS,
   );
@@ -225,20 +359,54 @@ describe("B57 the challenge toast", () => {
   );
 
   it(
-    "R1754000 Accept on a page holding unsaved work waits for its note, and the toast stays until the player goes",
+    "R1754000 R1831000 Accept on a guarded page joins only once the guard lets go",
     async () => {
       signIn("tok-toast");
-      serve({ incoming: [INCOMING], outgoing: [] });
+      const server = serve({ incoming: [INCOMING], outgoing: [] });
       const held: (() => void)[] = [];
       const release = guardLeaving((leave) => {
         held.push(leave);
       });
       try {
         render(<ChallengeToast />);
-        fireEvent.click(await screen.findByRole("button", { name: /^accept/i }, SOON));
+        fireEvent.click(await screen.findByTestId(challengeToastTestid.accept, undefined, SOON));
         expect(held).toHaveLength(1);
         expect(window.location.pathname).toBe("/decks");
         expect(acceptButtons()).toHaveLength(1);
+        // Nothing is joined while the page asks: the player may keep their work.
+        expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)).toHaveLength(0);
+
+        act(() => {
+          must(held[0], "held move")();
+        });
+        await waitFor(() => {
+          expect(window.location.pathname).toBe(`/match/${JOINED_MATCH}`);
+        });
+        expect(server.to("POST", `/api/rooms/${INCOMING.roomCode}/join`)).toHaveLength(1);
+      } finally {
+        release();
+      }
+    },
+    TEST_MS,
+  );
+
+  it(
+    "R1754000 R1831000 Open in lobby on a guarded page waits for the note too",
+    async () => {
+      signIn("tok-toast");
+      serve({ incoming: [INCOMING], outgoing: [] }, (call) =>
+        call.method === "GET" && call.path === "/api/decks" ? { status: 200, body: decksBody([]) } : undefined,
+      );
+      const held: (() => void)[] = [];
+      const release = guardLeaving((leave) => {
+        held.push(leave);
+      });
+      try {
+        render(<ChallengeToast />);
+        fireEvent.click(await screen.findByTestId(challengeToastTestid.lobby, undefined, SOON));
+        expect(held).toHaveLength(1);
+        expect(window.location.pathname).toBe("/decks");
+        expect(screen.getAllByTestId(challengeToastTestid.toast)).toHaveLength(1);
 
         act(() => {
           must(held[0], "held move")();

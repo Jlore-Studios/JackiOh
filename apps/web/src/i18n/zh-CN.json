@@ -1121,6 +1121,9 @@
   "Waiting for {name}": "等待 {name} 回应",
   "Add friends by their username, see who is on, challenge them, watch their games, share replays and chat.": "通过用户名添加好友，看看谁在线，向他们发起挑战，观战他们的对局，分享回放，还能聊天。",
   "Friends": "好友",
+  "Friends, {count} waiting for you": "好友，{count} 项待处理",
+  "All of Play together": "一起玩的全部内容",
+  "Open in lobby": "在大厅中打开",
   "Loading your friends…": "正在加载好友…",
   "No friends yet. Ask a friend for their username, with its #tag if it has one, and add them above.": "还没有好友。向朋友要来他们的用户名（有 #标签 的话一并带上），然后在上方添加。",
   "Friend requests": "好友请求",
@@ -1155,7 +1158,6 @@
   "Message": "消息",
   "Write a message": "写一条消息",
   "Send": "发送",
-  "None of your friends are online.": "你的好友都不在线。",
   "Share with a friend": "分享给好友",
   "You have no friends to share with yet.": "你还没有可以分享的好友。",
   "Add one on Play together": "去“一起玩”添加一位",
@@ -3394,5 +3396,14 @@
   "You escaped the universe and left the AI behind.": "你逃离了宇宙，把AI留在了身后。",
   "The AI escaped the universe and left you behind.": "AI逃离了宇宙，把你留在了身后。",
   "Voted out": "被投票出局",
-  "Escaped the universe": "逃离了宇宙"
+  "Escaped the universe": "逃离了宇宙",
+  "Starscape map: node {at} of {total}": "星图：第{at}个节点，共{total}个",
+  "Heal your hero by {amount}": "为你的英雄恢复{amount}点生命值",
+  "Draw {amount}": "抽{amount}张牌",
+  "Gain {amount} mana": "获得{amount}点法力值",
+  "Deal {amount} damage to the enemy hero": "对敌方英雄造成{amount}点伤害",
+  "The edge of the universe": "宇宙的边缘",
+  "{whose} starscape map reaches node {node}": "{whose}星图到达第{node}个节点",
+  "Travel one node": "前进一个节点",
+  "Travel one node (free)": "前进一个节点（免费）"
 }

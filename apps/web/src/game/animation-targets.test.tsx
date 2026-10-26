@@ -168,6 +168,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     voteCast: { type: "voteCast", player: "p1", instanceId: unit, defId: "core-004", votes: 1, needed: 3 },
     votedOut: { type: "votedOut", player: "p1", ballots: [{ instanceId: unit, defId: "core-004" }] },
     fled: { type: "fled", player: "p1", opponent: "draw" },
+    starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
     held: { type: "held", player: "p2", instanceId: enemy, defId: "core-004", holderId: trap },
   };
 }

@@ -327,6 +327,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
       return t(COUNTER_LINE[event.counter], { target: capitalised(name.instance(event.instanceId)), value: event.value });
     case "jadeChanged":
       return capitalised(t("{whose} Jade Counter is {value}", { whose: name.whose(event.player), value: event.value }));
+    case "starscapeTravelled":
+      // R1847001: the node the travel reached; the map itself shows its reward.
+      return capitalised(t("{whose} starscape map reaches node {node}", { whose: name.whose(event.player), node: event.node }));
     case "costChanged": {
       // R177: a card this seat may not read arrives with its cost redacted to a negative sentinel.
       const target = capitalised(name.instance(event.instanceId, t("a card")));

@@ -248,6 +248,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   voteCast: { type: "voteCast", player: "p2", instanceId: "u1", defId: "core-073", votes: 1, needed: 3 },
   votedOut: { type: "votedOut", player: "p2", ballots: [{ instanceId: "u1", defId: "core-073" }] },
   fled: { type: "fled", player: "p1", opponent: "draw" },
+  // #1847 (R1847001).
+  starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   // #1850 (R1850003).
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
 };
@@ -350,6 +352,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   voteCast: "uiClick",
   votedOut: "trapSting",
   fled: "whoosh",
+  starscapeTravelled: "whoosh",
   held: "poof",
 };
 

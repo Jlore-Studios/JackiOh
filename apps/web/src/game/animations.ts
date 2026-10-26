@@ -928,6 +928,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R1847001 (Stinkyscape #148): a player travelled one node of their starscape map; their hero ticks
+  // as on `jadeChanged`, no fx, and the map redraws from the view.
+  starscapeTravelled: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
   // R1850003: a permanent goes beneath the card that holds it, fading off the board as an exiled card
   // does. Pre-update it is still on the board; the holder's own arrival, when it is new, is `summoned`.
   held: {

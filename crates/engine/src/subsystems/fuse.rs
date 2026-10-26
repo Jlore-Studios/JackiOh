@@ -1175,6 +1175,19 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 slumber: defined.iter().find_map(|f| f.slumber.clone()),
                 // R1852000: a fusion the Dormant Starship is in is still its hull.
                 starship_hull: any_flag(defined.iter().map(|f| f.starship_hull)),
+                immune_to_spell_damage: flags(|f| f.immune_to_spell_damage),
+                destroyed_exiled: flags(|f| f.destroyed_exiled),
+                enemy_destroyed_exiled: flags(|f| f.enemy_destroyed_exiled),
+                reflects_damage: flags(|f| f.reflects_damage),
+                reflects_to_attacker: flags(|f| f.reflects_to_attacker),
+                // R1849004: the largest cap of the ingredients' redirects, one stricter text.
+                own_turn_redirect: defined
+                    .iter()
+                    .filter_map(|f| f.own_turn_redirect)
+                    .max_by_key(|redirect| redirect.cap),
+                gauntlet: flags(|f| f.gauntlet),
+                units_never_defense: flags(|f| f.units_never_defense),
+                reveal_chance: numbers(|f| f.reveal_chance),
             })
         }
     }
@@ -1273,6 +1286,8 @@ fn combine_objects(records: &[Script]) -> Script {
         conditional_keywords: eager_read(records.iter().map(|s| s.conditional_keywords.clone()).collect()),
         after_attack: hooks(|s| s.after_attack.clone(), "afterAttack"),
         after_attacked: hooks(|s| s.after_attacked.clone(), "afterAttacked"),
+        evolve: hooks(|s| s.evolve.clone(), "evolve"),
+        ally_attacked: hooks(|s| s.ally_attacked.clone(), "allyAttacked"),
         plague_multiplier: None,
         echo_x: None,
         deck_triggers: lists_of_triggers(|s| s.deck_triggers.clone()),
@@ -2011,6 +2026,9 @@ fn keep_instance(
                 );
             }
         }
+        // R77: the transient definition is the card's new printed face. A token face saved before Set
+        // Stats described an ingredient and must not replace the fusion after Flicker or Reborn.
+        crate::zones::forget_summoned_token_face(live);
         live.stats_override = None;
         live.armor_override = None;
     }

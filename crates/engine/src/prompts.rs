@@ -1321,6 +1321,24 @@ pub fn run_fused_into(sink: &mut EngineSink<'_>, card: &CardInstance, controller
     )
 }
 
+/// R1849001: a Unit's `evolve` hook ("Evolve: X", Stinkyscape #91), run when an effect evolves it
+/// (`effects::evolve`). Resumable like the `fusedInto` hook above. Returns true when the whole hook ran.
+pub fn run_evolve(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
+    // A Vanilla card carries no text (§6.3), and a card without the hook has nothing to run.
+    if crate::scripts::script_of(sink.state, card).evolve.is_none() {
+        return true;
+    }
+    run_hook_resumable(
+        sink,
+        card,
+        "evolve",
+        HookResumableOptions {
+            controller: Some(controller),
+            ..HookResumableOptions::default()
+        },
+    )
+}
+
 /// MD-B18, R925: a card's "When this enters your hand" clause, run as the card arrives in a hand —
 /// after R151's start-of-game clause (`draw::run_arrival_hooks`). An effect list like any other, so
 /// it runs the resumable way too: a question in it pauses the effects after it. Returns true when

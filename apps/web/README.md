@@ -360,13 +360,22 @@ net/social.ts            fetch wrappers for every Play together route, typed (Fr
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
-together/InMatchChat.tsx the match board rail's chat toggle: online friends, each opening ChatPanel; the
-                         friends list is read only while its list is open
+together/FriendsButton.tsx  the Friends button at the top right of every signed-in screen (the nav, the
+                         landing and a board's controls) with its badge (incoming requests, challenges
+                         and unread chats), and its panel: the player's name#tag, the add form, the
+                         requests in, the friends online first with Challenge, Watch and Chat (the rows
+                         of FriendRows.tsx, shared with /together) and a link to /together; the friends
+                         list is read only while the panel is open, ChatPanel and ChallengeDialog open
+                         from it without leaving the screen
+together/socialPoll.ts   the one SOCIAL_POLL_MS read per tab (challenges and unread counts) the toast,
+                         the button and /together share, and the badge's count
 together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
                          PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS
-together/ChallengeToast.tsx  mounted once in the shell; polls GET /api/challenges while signed in and
-                         toasts an incoming challenge anywhere: Accept opens /play with the room code
-                         filled in (R767), Decline declines
+together/ChallengeToast.tsx  mounted once in the shell; reads GET /api/challenges (socialPoll.ts) while signed in and
+                         toasts an incoming challenge anywhere with a deck picker (the last deck used for
+                         its mode): Accept joins the room with it and goes to the game (R1831000), a
+                         refused join offers Open in lobby, /play with the room code filled in (R767);
+                         Decline declines
 together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
 duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
                          invite a friend by sending the code in chat, join by code; both players go to
@@ -402,8 +411,8 @@ any other build each throws the reason.
 
 Test ids, mirrored in `e2e/support/testids.ts`: `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
-`together-challenge`, `together-watch`, `together-chat-open`, `chat-input`, `chat-send`,
-`chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
+`together-challenge`, `together-watch`, `together-chat-open`, `friends-button`, `friends-badge`,
+`friends-panel`, `challenge-toast-accept`, `chat-input`, `chat-send`, `chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
 `duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
 `duos-ping-<kind>` and `duos-ping-marker`.
 

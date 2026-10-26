@@ -704,6 +704,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   votedOut: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   fled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 
+  // R1847001: a starscape travel sweeps one node on.
+  starscapeTravelled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
   // R1850003: a permanent held beneath a card leaves the board as an exiled card does.
   held: { sfx: "poof", cues: () => [sfx("poof")] },
 };

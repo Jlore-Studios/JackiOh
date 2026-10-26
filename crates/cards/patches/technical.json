@@ -1410,5 +1410,40 @@
     "pr": 1948,
     "title": "patches ship: v0.4.11b, v0.4.12, v0.4.12b",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "358e346c4e937af930dacc304a82d003f2dffe7a",
+    "pr": 1951,
+    "title": "patches log: 4bcae59..b67dead",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "6a3406b24328165950e60748e0d915c0d7019d29",
+    "pr": 1952,
+    "title": "the Stinkyscape phase 0 mechanics, part two: the Starship, staged Quests and two new endings",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "c3af6db76704f90784f799cb58f4cf8fb79f9da8",
+    "pr": 1947,
+    "title": "hidden Nerfs and trade offers",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "3779280e873b9fed6d75912787c35549facc96aa",
+    "pr": 1950,
+    "title": "friends in the top-right corner of every screen, and challenging a friend in fewer steps",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e1da458311bb3188490c74de8f08f76f78ac0866",
+    "pr": 1957,
+    "title": "patches ship: v0.4.12c",
+    "kind": "app"
   }
 ]

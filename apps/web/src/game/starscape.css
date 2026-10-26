@@ -1,0 +1,40 @@
+/* R1847000: a seat's starscape map (StarscapeMap.tsx), a row of small stars along the seat's foot.
+   It sits outside the seat's flow, so a map charted mid-game never changes the plate's height or the
+   desktop grid's columns. `data-visited` and `data-here` are the view's `at`, drawn as state. */
+
+.seat > .starscape {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.starscape-node {
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: var(--bg-sunken);
+}
+
+.starscape-node[data-visited="true"] {
+  border-color: var(--line);
+  background: var(--text-dim);
+  opacity: 0.6;
+}
+
+.starscape-node[data-here="true"] {
+  border-color: #fde68a;
+  background: #facc15;
+  box-shadow: 0 0 4px #facc15;
+}
+
+.starscape-node[data-reward="edge"] {
+  width: 8px;
+  height: 8px;
+  border-color: #c4b5fd;
+  background: radial-gradient(circle at 35% 30%, #c4b5fd, #6d28d9 60%, #2e1065);
+}

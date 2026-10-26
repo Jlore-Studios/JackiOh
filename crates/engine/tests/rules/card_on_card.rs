@@ -941,6 +941,32 @@ mod r1850003_hold_beneath {
     }
 
     #[test]
+    fn r1850003_a_held_cards_hidden_nerfs_ride_it_and_no_seats_copy_holds_them() {
+        // R1845000: a hidden Nerf rides its card in every zone, beneath a holder too, and the copy made
+        // for a seat (the dry run's, the AI's redaction) drops it there as from every other card.
+        const HIDDEN_NERFS: i32 = 2;
+        let counts = |state: &GameState| -> Vec<Option<i32>> {
+            state
+                .held
+                .iter()
+                .flatten()
+                .map(|entry| entry.card.hidden_nerfs)
+                .collect()
+        };
+        let mut state = playing("hidden-nerfs");
+        let held = put(&mut state, &cheap().id, slot(P2, Row::Units, 1), json!({}));
+        if let Some(live) = find_instance_mut(&mut state, &held.id) {
+            live.hidden_nerfs = Some(HIDDEN_NERFS);
+        }
+        ticketed(&mut state, &held.id);
+        assert_eq!(counts(&state), vec![Some(HIDDEN_NERFS)]);
+        for viewer in [P1, P2] {
+            let copy = subsystems::scorer::concealed_copy(&state, viewer);
+            assert_eq!(counts(&copy), vec![None], "{viewer:?}'s copy");
+        }
+    }
+
+    #[test]
     fn r1850003_a_rollback_moves_a_held_card_back_and_it_is_held_no_longer() {
         // R419: the snapshot's card goes back to its zone from wherever it is now, beneath its holder too.
         let mut state = playing("rollback");

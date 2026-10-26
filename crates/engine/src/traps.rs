@@ -45,6 +45,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::config::PERCENT;
 use crate::script::{EngineSink, TriggerDef};
 use crate::state::{
     CardInstance, GameState, Resume, WorkItem, active_first, find_instance, find_instance_mut,
@@ -391,6 +392,11 @@ pub fn fire_trap(
     if armed.is_empty() {
         return false;
     }
+    // R1849009: a trap with a chance to reveal rolls it now, once for the firing its triggers admitted;
+    // a miss leaves it set and emits nothing, as a `when` that declined does (R99).
+    if !chance_admits(sink, trap, controller) {
+        return false;
+    }
 
     // R154: the zone is read before the trap resolves, because firing it can move the card — a Trap
     // reaches its owner's graveyard on consumption and would then have no slot to report.
@@ -424,6 +430,29 @@ pub fn fire_trap(
         },
     );
     true
+}
+
+/// R1849009 (Stinkyscape #174 Aerelret, #22 Gatinsir): "30% chance to Reveal". A face-down trap whose
+/// face prints a chance fires only when the match rng's roll comes under it — its declared number
+/// `chance` where it declares it, out of `PERCENT` — and with the controller's Luck and the trap's
+/// Lucky (R987, R1440) rolling again, any hit enough. A trap without one, a face-up Field Trap firing
+/// again and a set card revealing (R783006) draw nothing, so no other firing moves the rng.
+fn chance_admits(sink: &mut EngineSink<'_>, trap: &CardInstance, controller: PlayerId) -> bool {
+    if trap.face_up == Some(true) || trap.set_as.is_some() {
+        return true;
+    }
+    let Some(printed) = crate::scripts::flags_of(sink.state, trap).reveal_chance else {
+        return true;
+    };
+    let percent = crate::params::declared_or(sink.state, trap, "chance", printed).clamp(0, PERCENT);
+    let chance = f64::from(percent) / f64::from(PERCENT);
+    let lucky =
+        (crate::query::lucky_on(sink.state, trap) + crate::query::luck_of(sink.state, controller)).max(0);
+    if lucky == 0 {
+        sink.rng.chance(chance)
+    } else {
+        sink.rng.lucky(lucky, |rng| rng.chance(chance), |a, b| a || b)
+    }
 }
 
 /// What is left of one trap's firing: its armed triggers from `at` on, then its end — consumed, and

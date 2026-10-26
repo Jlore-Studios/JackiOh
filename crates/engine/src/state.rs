@@ -23,7 +23,7 @@ use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, CustomCard, Enchantment,
     GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
-    SecretChoice, Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -405,6 +405,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub fixed_x: Option<i32>,
+    /// R1845000: Nerfs no seat may read, the owner's included, waiting to land at §10.5 step 3 of the
+    /// card's next play or cast (R1845001). Kept in every zone; a copy or a Transform is a new card
+    /// without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
+    /// and hashes as before (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hidden_nerfs: Option<i32>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -1113,6 +1120,23 @@ pub struct AnswerChain {
     pub depth: i32,
 }
 
+/// R1847000 (Stinkyscape #148 Alteran Reach): a player's starscape map (`subsystems::starscape`), charted
+/// from the match rng at their first travel. `nodes` is the map, node n at `nodes[n - 1]` and the edge
+/// last; `at` is the node they stand on, 0 the start; `travelled_on` is the `GameState.turn` of their
+/// last travel (R1847002).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarscapeMap {
+    pub nodes: Vec<StarscapeReward>,
+    pub at: i32,
+    pub travelled_on: i32,
+}
+
 /// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
 /// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
 /// hashes as before (B3).
@@ -1300,6 +1324,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub fled: Option<crate::wire::FleeOpponent>,
+    /// R1847000: this player's starscape map, public. Absent until their first travel, so a game
+    /// without one hashes as before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starscape: Option<StarscapeMap>,
 }
 
 /// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
@@ -1905,6 +1934,7 @@ pub fn create_player_state() -> PlayerState {
         market_credits: None,
         votes: None,
         fled: None,
+        starscape: None,
     }
 }
 
@@ -2232,6 +2262,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         granted_tags: None,
         grants: None,
         fixed_x: None,
+        hidden_nerfs: None,
     };
     *next_id += 1;
     instance
@@ -2531,6 +2562,28 @@ pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Opt
         &mut state.players.p2
     };
     side_cards_mut(side).find(|card| card.id == instance_id)
+}
+
+/// R1845000: no seat reads a hidden Nerf, the card's own owner included, so a copy of the state made
+/// for a seat holds none: on any card of either side, beneath a card that holds it (R1850003), nor in
+/// Rollback's snapshots (R419). The AI's `redact` (R185) and the dry run's `concealed_copy` (R222) both
+/// end with it.
+pub fn forget_hidden_nerfs(state: &mut GameState) {
+    for player in PLAYER_IDS {
+        for card in side_cards_mut(&mut state.players[player]) {
+            card.hidden_nerfs = None;
+        }
+    }
+    for held in state.held.iter_mut().flatten() {
+        held.card.hidden_nerfs = None;
+    }
+    for snapshot in state.board_history.iter_mut().flatten() {
+        for player in PLAYER_IDS {
+            for card in side_snapshot_instances_mut(&mut snapshot.sides[player]) {
+                card.hidden_nerfs = None;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

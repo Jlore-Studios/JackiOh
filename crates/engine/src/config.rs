@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, StarscapeReward, Tag, string_union,
 };
 
 /// §2.6, R1705000
@@ -1141,6 +1141,25 @@ pub const RESOURCE_RARITY_ODDS: &[(PrintedRarity, i32)] = &[
 ];
 
 // ---------------------------------------------------------------------------------------------
+// Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002,
+// `subsystems::starscape`).
+// ---------------------------------------------------------------------------------------------
+
+/// R1847000, R1847001: a starscape map's nodes, the edge the last: the travels from the start to the
+/// edge of the universe.
+pub const STARSCAPE_EDGE_TRAVELS: i32 = 20;
+/// R1847002: a travel's mana, the Radiant face's first each turn free.
+pub const STARSCAPE_TRAVEL_MANA: i32 = 1;
+/// R1847000, R1847001: the rewards a node before the edge may hold, one entry each, drawn uniformly,
+/// and each one's amount: the health healed, the cards drawn, the mana gained, the damage dealt.
+pub const STARSCAPE_REWARDS: &[(StarscapeReward, i32)] = &[
+    (StarscapeReward::Heal, 3),
+    (StarscapeReward::Draw, 1),
+    (StarscapeReward::Mana, 1),
+    (StarscapeReward::Damage, 2),
+];
+
+// ---------------------------------------------------------------------------------------------
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
 // ---------------------------------------------------------------------------------------------
 
@@ -1862,6 +1881,17 @@ pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
 pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
+// Stinkyscape's combat and replacement verbs (#1849, R1849000–R1849009; SPEC §4.2, §4.4, §6)
+// ---------------------------------------------------------------------------------------------
+
+/// R1849005 (Stinkyscape #157 The Gauntlet): "the middle 3 unit lanes", the 1-based lanes of the
+/// `UNIT_ZONES` whose Units the Gauntlet traps, on both sides.
+pub const GAUNTLET_LANES: [i32; 3] = [2, 3, 4];
+
+/// R1849009: what a chance in percent is out of ("30% chance to Reveal" is 30 of this).
+pub const PERCENT: i32 = 100;
+
+// ---------------------------------------------------------------------------------------------
 // The Starship (Stinkyscape, issue #1852; SPEC §6.1, §6.2, §6.3; R1852000–R1852007)
 // ---------------------------------------------------------------------------------------------
 
@@ -1904,6 +1934,14 @@ pub const VOTE_TALLY_SIZE: i32 = 3;
 /// draw for the player left. Every other ending is the same for both sides: the winner's win and the
 /// other's loss, or a draw for both. The client reads it (`engineConfig.ts`).
 pub const LOSER_DRAWS_REASONS: &[crate::wire::GameOverReason] = &[crate::wire::GameOverReason::Fled];
+
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape M11 (issue #1845, R1845000–R1845002): hidden Nerfs and trade offers
+// ---------------------------------------------------------------------------------------------
+
+/// R1845002: the offer comes due at the start of the opponent's next turn, counted in their own turns
+/// (R1181000), so its badge counts down on the offerer's side while it waits.
+pub const TRADE_OFFER_TURNS: i32 = 1;
 
 #[cfg(test)]
 mod tests {
