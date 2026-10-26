@@ -1525,8 +1525,9 @@ mod r258_all_random {
             ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["deck"],
             json!([])
         );
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // R1989000's coin seats the older ticket (R166: oldest first, ties on the ticket id). The
+        // server's ids are random, so the first enqueue is made older by a millisecond of the paused
+        // clock.
         tokio::time::advance(Duration::from_millis(1)).await;
 
         let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
@@ -1568,8 +1569,9 @@ mod r258_all_random {
         let two = active_profile(&app, "pin-two", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "spec-seed" })).await;
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // R1989000's coin seats the older ticket (R166: oldest first, ties on the ticket id). The
+        // server's ids are random, so the first enqueue is made older by a millisecond of the paused
+        // clock.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         let match_id = paired["matchId"].as_str().expect("a match id").to_string();
@@ -1632,7 +1634,7 @@ mod r1372_more_cards_from_the_newest_set {
             ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanSet"],
             "newest"
         );
-        // The older ticket is p1 (R166), as in R258's test above.
+        // R1989000's coin seats the older ticket (R166), as in R258's test above.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         assert_eq!(
@@ -2190,8 +2192,9 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
         let two = active_profile(&app, "rng-p2", 1000.0).await;
 
         enqueue_with(&app, &one, json!({ "mode": "random", "seed": "portrait-seed" })).await;
-        // The older ticket is p1 (R166: oldest first, ties on the ticket id). The server's ids are random,
-        // so the first enqueue is made older by a millisecond of the paused clock.
+        // R1989000's coin seats the older ticket (R166: oldest first, ties on the ticket id). The
+        // server's ids are random, so the first enqueue is made older by a millisecond of the paused
+        // clock.
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
         assert_eq!(paired["status"], "matched");

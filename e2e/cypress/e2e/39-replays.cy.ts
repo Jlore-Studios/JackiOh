@@ -59,13 +59,14 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
       seatTwoDecks = installed;
     });
 
-    // A Best-of-1 room, made by seat 1 and claimed by seat 2 (§9.5), as spec 06 makes one.
+    // A Best-of-1 room, made by seat 1 and claimed by seat 2 (§9.5), as spec 06 makes one: R1989000
+    // pins the host to p1 beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
         url: apiUrl("/api/rooms"),
         headers: bearerHeaders(seatOne.token),
-        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("39-replays") },
+        body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("39-replays"), seat: "p1" },
       }).then((created) => {
         roomCode = created.body.code;
       });

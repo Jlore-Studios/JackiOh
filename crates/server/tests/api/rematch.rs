@@ -1270,15 +1270,16 @@ mod r890000_a_seat_taken_mid_start {
         finished_match(&app, &finished, &a, &b, json!({})).await;
         offer(&app, &token_a, &finished, STAKE_NORMAL).await;
 
-        // The loser finds another game between the rematch's start and its flags: its seat claim
-        // loses. R1989000: the loser takes the new p1, the first seat flagged, so the race is rigged
-        // on the first flag write, not the second.
-        let b_elsewhere = b.clone();
+        // The loser finds another game between the rematch's start and its flags: the second
+        // seat claim loses. R1989000: the rematch swaps the seats, so `b` is flagged first as the
+        // new p1 and `a`, the new p2, is the seat taken mid-start.
+        let a_elsewhere = a.clone();
         let claims = Arc::new(AtomicU32::new(0));
+        let counted = Arc::clone(&claims);
         fake_lock(&app).await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
             if method == "profiles.setInMatch"
-                && claims.fetch_add(1, Ordering::SeqCst) == 0
-                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == b_elsewhere)
+                && counted.fetch_add(1, Ordering::SeqCst) == 1
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == a_elsewhere)
             {
                 row.in_match_id = Some("r89-elsewhere".to_string());
             }
@@ -1289,10 +1290,15 @@ mod r890000_a_seat_taken_mid_start {
         fake_lock(&app).await.before_call = None;
         assert_eq!(status, 409, "{refused}");
         assert_eq!(refused["error"]["code"], "already_in_match");
+        assert_eq!(
+            claims.load(Ordering::SeqCst),
+            2,
+            "the winner was flagged before the race"
+        );
         // No rematch row, the loser keeps its game, and the winner's flag went with the void.
         assert!(live_ids(&app).await.is_empty());
-        assert_eq!(in_match_of(&app, &b).await, json!("r89-elsewhere"));
-        assert_eq!(in_match_of(&app, &a).await, Value::Null);
+        assert_eq!(in_match_of(&app, &a).await, json!("r89-elsewhere"));
+        assert_eq!(in_match_of(&app, &b).await, Value::Null);
     }
 }
 
