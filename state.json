@@ -2452,15 +2452,22 @@
       }
     },
     "2004": {
+      "action": "revise",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T13:29:54Z",
       "issue": 1989,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-26T14:56:13Z",
+      "run_id": "pending:1d55f33b-1793026564",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-26T14:57:04Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -2483,9 +2490,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T14:45:57Z",
+    "at": "2026-10-26T14:57:04Z",
     "url": "",
-    "what": "build #1997 on claude-4"
+    "what": "revise #2004 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T14:40:33Z",
