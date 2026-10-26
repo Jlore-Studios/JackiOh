@@ -4379,6 +4379,11 @@
     "shed": 49
   },
   "rate_limited_until": null,
+  "runners_explained": {
+    "digest": "e0a58f0a4f36d24d",
+    "id": 6412474449,
+    "issue": 148
+  },
   "secrets": {
     "at": "2026-10-26T09:10:58Z",
     "set": [
