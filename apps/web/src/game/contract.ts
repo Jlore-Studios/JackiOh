@@ -123,6 +123,13 @@ export const testid = {
   tradeBar: "trade-bar",
   /** R1840000: a Resource in the viewer's own Resource tray (ResourceTray.tsx), played from there (R1840003). */
   trayCard: (instanceId: string): string => `tray-card-${instanceId}`,
+  /** R1853003: the Marketplace's toggle (Marketplace.tsx), and the panel it opens. */
+  marketplace: "marketplace-button",
+  marketplacePanel: "marketplace-panel",
+  /** R1853003: "Buy" under the Marketplace's lot `offer` (its index, which `marketBuy` names). */
+  marketBuy: (offer: number): string => `market-buy-${offer}`,
+  /** R1853003: the sale of a Resource in the viewer's own tray, at the Marketplace's quote. */
+  marketSell: (instanceId: string): string => `market-sell-${instanceId}`,
 } as const;
 
 /**

@@ -951,6 +951,26 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         );
         parts.push(format!("K{marks}"));
     }
+    // R1853004: an open Marketplace's deals change the seat's Credits, its tray and its stock, which are
+    // part of the position only while it is open, so every other signature stays as it was.
+    if let Some(market) = &state.marketplace {
+        let side = &state.players[seat];
+        parts.push(format!(
+            "W{}:{}:{:?}",
+            side.market_credits.unwrap_or(0),
+            side.resource_tray
+                .iter()
+                .flatten()
+                .map(card_signature)
+                .collect::<Vec<_>>()
+                .join(","),
+            market
+                .offers
+                .iter()
+                .map(|offer| offer.bought[seat])
+                .collect::<Vec<_>>()
+        ));
+    }
     parts.join("|")
 }
 

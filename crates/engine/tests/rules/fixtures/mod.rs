@@ -34,6 +34,7 @@ pub mod ky_competition;
 pub mod ky_test;
 pub mod last_boards;
 pub mod layered_summons;
+pub mod marketplace;
 pub mod mb22;
 pub mod meditative_riders;
 pub mod mplus_b03;

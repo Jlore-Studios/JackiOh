@@ -533,6 +533,12 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "marketCreditsChanged":
       // R1840005: Credits are public.
       return capitalised(t("{whose} Credits are {value}", { whose: name.whose(event.player), value: event.value }));
+    case "marketBought":
+      // R1853003: a purchase is hidden like a gain, so the other seat's line reads "a card"; the price is public.
+      return t("{seat} bought {card} for {credits} Credits", { seat: name.seat(event.player), card: named(event.defId), credits: event.credits });
+    case "marketSold":
+      // R1853003: a sale is public, and names its Resource.
+      return t("{seat} sold {card} for {credits} Credits", { seat: name.seat(event.player), card: named(event.defId), credits: event.credits });
     case "starshipFused":
       // R1852000: a piece died, and a copy of it fused into its owner's Dormant Starship.
       return t("{card} fused into {whose} Dormant Starship ({n} pieces)", {

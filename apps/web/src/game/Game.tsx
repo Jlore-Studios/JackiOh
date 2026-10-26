@@ -15,8 +15,10 @@
 // beside the board and hold no rule either: the Concede control asks "Concede this game?" before it
 // sends anything (ConfirmConcede.tsx; `concedeFor` is the seat that asked), and the draw offer's
 // notices, with the answering seat's Accept and Decline, come from the view (DrawOffer.tsx). So does
-// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), and R1838000's Trade
-// control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx).
+// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), R1838000's Trade
+// control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx),
+// and R1853003's Marketplace shop, its buys and sales live exactly as `legal` lists them
+// (Marketplace.tsx).
 //
 // `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
 // While the runner holds it back (the AI's last attack still playing out, say), the board draws the
@@ -46,6 +48,7 @@ import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import { TradeBar } from "./TradeControl.tsx";
+import Marketplace from "./Marketplace.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
@@ -741,6 +744,8 @@ export default function Game({
       )}
 
       {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
+      {/* R1853003: the Marketplace's shop, once the view carries it. */}
+      {replay ? null : <Marketplace view={shown} legal={legal} onAction={dispatch} />}
 
       {shown.result !== null ? (
         <GameResult
