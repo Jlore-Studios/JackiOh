@@ -107,6 +107,7 @@ export const shopTestid = {
   reveal: "cosmetic-reveal",
   equipLink: "cosmetic-packs-equip",
   slot: (index: number) => `cosmetic-slot-${String(index)}`,
+  equip: (index: number) => `cosmetic-slot-${String(index)}-equip`,
   shardBar: "shard-bar",
   shardBurst: "shard-burst",
   shardReveal: "shard-reveal",
