@@ -2112,10 +2112,10 @@
       "question": "",
       "queued_at": "2026-10-26T08:57:47Z",
       "round_tier": "strong",
-      "run_id": "40278165230",
+      "run_id": "pending:5b58dbda-1793005130",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-26T06:09:15Z",
+      "started_at": "2026-10-26T08:59:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -2647,9 +2647,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T08:58:36Z",
+    "at": "2026-10-26T08:59:46Z",
     "url": "",
-    "what": "revise #1983 on claude-3"
+    "what": "revise #1963 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T08:38:27Z",
