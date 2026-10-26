@@ -57,7 +57,6 @@ import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankCaption, rankShortWords } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
-import { InMatchChat } from "../together/InMatchChat.tsx";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import RematchButtons, { RematchWatcher } from "./Rematch.tsx";
@@ -501,8 +500,6 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       boardRail={
         <>
           <BackLink showSettings={false} />
-          {/* #936 B58: chat with a friend without leaving the board. */}
-          <InMatchChat />
           {/* R169: every live modifier in full, one tap away; on a phone the badges beside each hero are cut short. */}
           <ModifierList view={view} opponentLabel={t("Opponent")} />
           <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />

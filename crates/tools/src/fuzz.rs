@@ -1158,7 +1158,8 @@ struct CheckpointReport {
 /// checkpoint step, round-trips that state through JSON requiring identical hashes, then applies
 /// the rest of the log from the restored state and requires the live hash and ending — so the
 /// existing invariant, termination, growth and replay checks cover the restored game. Fails in
-/// the "checkpoint" stage, and past `CHECKPOINT_TIME_BOUND_MS`.
+/// the "checkpoint" stage, and past `CHECKPOINT_TIME_BOUND_MS`, which bounds the round trip and
+/// restored continuation, but not the prefix fold that reconstructs the checkpoint state (#1803).
 fn check_serial_restart(
     setup: &GameSetup,
     decks: &(Vec<String>, Vec<String>),
@@ -1170,7 +1171,6 @@ fn check_serial_restart(
         turn: live.turn,
         actions: log.len(),
     };
-    let started_at = Instant::now();
     let (step, was_paused) = checkpoint_step(&setup.stream("checkpoint-"), paused, log.len());
     register_all();
     let prefix = fold(&setup.fold_args(decks.clone(), log[..step].to_vec()));
@@ -1186,6 +1186,7 @@ fn check_serial_restart(
             at,
         ));
     }
+    let started_at = Instant::now();
     let mut state = verify_round_trip(&prefix.state, hash_state, round_trip)
         .map_err(|message| FuzzFailure::new(FailureStage::Checkpoint, message, at))?;
     for action in &log[step..] {
@@ -1242,9 +1243,10 @@ fn check_serial_restart(
 // Growth inside one action (#1254)
 // ---------------------------------------------------------------------------------------------
 
-/// The most wall-clock time one game's serialization checkpoint may take (#1387). A round
-/// trip is normally milliseconds — the state is already in memory and the fold replays its log
-/// with no I/O — so this bound only fires on pathological serialization blowup.
+/// The most wall-clock time one game's serialized restart may take (#1387): the state's round trip
+/// through JSON, its hashes, and the continuation from the restored state. It does not time the prefix
+/// fold that rebuilds the checkpoint state from turn 0: that setup cost grows with the checkpoint's
+/// position and a loaded runner stretched it past the bound (#1803: seed 1557 handicapped).
 pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 
 /// The most events one action may emit. Set from a 10,000-seed sweep of `main` at d981885 (seeds

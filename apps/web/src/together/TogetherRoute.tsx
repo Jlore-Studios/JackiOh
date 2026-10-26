@@ -4,15 +4,15 @@
 //
 // Behind the gate like `/play` (B54). Every list is the server's answer (`net/social.ts`), read again
 // without a reload: the friends list (statuses, requests, blocks) every `FRIENDS_POLL_MS`, the pace a
-// status changes at, and the challenges and unread counts every `SOCIAL_POLL_MS`; and each list again
-// at once after each of this page's own changes. Nothing here is a
-// rule (CLAUDE.md rule 7): which friend can be challenged or watched is what the server says of them
+// status changes at, and the challenges and unread counts every `SOCIAL_POLL_MS` (`socialPoll.ts`, the
+// one read of them every screen shares); and each list again at once after each of this page's own
+// changes. Nothing here is a rule (CLAUDE.md rule 7): which friend can be challenged or watched is what the server says of them
 // (`status`, `watchable`), and every refusal is shown in the server's words.
 //
 // A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
 // server says the game is `watchable`; Chat always; Remove and Block, each asking once.
 
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
@@ -20,22 +20,17 @@ import { CoopPanel } from "../duos/CoopPanel.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { withSession } from "../net/gate.ts";
-import { navigate } from "../net/navigate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
   cancelChallenge,
   cancelFriendRequest,
   declineFriendRequest,
-  getChallenges,
   getFriends,
   getSharedReplays,
-  getUnread,
   removeFriend,
-  sendFriendRequest,
   unblockPlayer,
   type Friend,
-  type FriendRequest,
   type PlayerRef,
   type SharedReplay,
 } from "../net/social.ts";
@@ -46,12 +41,13 @@ import { SHARED_ANCHOR } from "./anchors.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
-import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
-import { attempt, messageOf, unreadCountsOf, usePolled } from "./session.ts";
+import { FRIENDS_POLL_MS } from "./config.ts";
+import { AddFriend, FriendRow, RequestRow } from "./FriendRows.tsx";
+import { attempt, messageOf, usePolled } from "./session.ts";
+import { noteFriends, reloadSocial, useSocialPoll } from "./socialPoll.ts";
 import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 import { togetherTestid } from "./testids.ts";
-import { watchLink } from "./watchLink.ts";
-import { MODE_WORDS, Named, STATUS_WORDS } from "./words.tsx";
+import { MODE_WORDS, Named } from "./words.tsx";
 
 import "../auth/tavern.css";
 import "../routes/lobby.css";
@@ -65,251 +61,11 @@ function when(iso: string): string {
   return Number.isFinite(at) ? formatDateTime(at, { dateStyle: "medium", timeStyle: "short" }) : iso;
 }
 
-/** The add form (B55): a `name#tag`, and the server's answer to it. */
-function AddFriend({ onAdded }: { onAdded: () => void }): ReactElement {
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState<string | null>(null);
-
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const username = name.trim();
-    if (username.length === 0 || busy) return;
-    setBusy(true);
-    setError(null);
-    setSent(null);
-    attempt(() => sendFriendRequest(username))
-      .then(
-        () => {
-          setSent(username);
-          setName("");
-          onAdded();
-        },
-        (cause: unknown) => {
-          setError(messageOf(cause));
-        },
-      )
-      .finally(() => {
-        setBusy(false);
-      });
-  };
-
-  return (
-    <form className="together-add" onSubmit={submit}>
-      <label htmlFor="together-add-input">{t("Add a friend by their username")}</label>
-      <div className="together-add__row">
-        <input
-          id="together-add-input"
-          data-testid={togetherTestid.addInput}
-          value={name}
-          autoComplete="off"
-          spellCheck={false}
-          placeholder={t("name#tag")}
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-        />
-        <button type="submit" className="button-primary" data-testid={togetherTestid.addSubmit} disabled={busy || name.trim().length === 0} aria-busy={busy}>
-          {t("Add")}
-        </button>
-      </div>
-      {error === null ? null : (
-        <p className="notice" data-testid={togetherTestid.addError} role="alert">
-          {t(error)}
-        </p>
-      )}
-      {sent === null ? null : (
-        <p className="lobby-note" data-testid={togetherTestid.addSent} role="status">
-          <Named text={t("Friend request sent to {name}.")} name={sent} />
-        </p>
-      )}
-    </form>
-  );
-}
-
-type FriendRowProps = {
-  friend: Friend;
-  unread: number;
-  busy: boolean;
-  /** Gets the Challenge button pressed, which has the focus back once the dialog closes. */
-  onChallenge: (opener: HTMLElement) => void;
-  onChat: () => void;
-  onRemove: () => void;
-  onBlock: () => void;
-};
-
-/** One friend (B56): status, and what can be done with them now. */
-function FriendRow({ friend, unread, busy, onChallenge, onChat, onRemove, onBlock }: FriendRowProps): ReactElement {
-  const [asking, setAsking] = useState<"remove" | "block" | null>(null);
-  const questionId = useId();
-  const canChallenge = friend.status === "online";
-  const canWatch = friend.watchable && friend.matchId !== null;
-  return (
-    <li
-      className="together-row"
-      data-testid={togetherTestid.friendRow}
-      data-profile-id={friend.profileId}
-      data-status={friend.status}
-      data-watchable={friend.watchable ? "true" : "false"}
-    >
-      <span className="together-row__who">
-        <span className="together-dot" data-status={friend.status} aria-hidden="true" />
-        <Username name={friend.username} />
-        <span className="together-row__status">{t(STATUS_WORDS[friend.status])}</span>
-      </span>
-      {asking === null ? (
-        <span className="together-row__actions">
-          {canChallenge ? (
-            <button
-              type="button"
-              className="button-primary"
-              data-testid={togetherTestid.challenge}
-              disabled={busy}
-              onClick={(event) => {
-                onChallenge(event.currentTarget);
-              }}
-            >
-              {t("Challenge")}
-            </button>
-          ) : null}
-          {canWatch && friend.matchId !== null ? (
-            <button
-              type="button"
-              data-testid={togetherTestid.watch}
-              onClick={() => {
-                if (friend.matchId !== null) navigate(watchLink(friend.matchId, friend.profileId));
-              }}
-            >
-              {t("Watch")}
-            </button>
-          ) : null}
-          <button type="button" data-testid={togetherTestid.chatOpen} onClick={onChat}>
-            {t("Chat")}
-            {unread > 0 ? (
-              <span className="together-badge" data-testid={togetherTestid.unread} aria-label={t("{count} unread", { count: unread })}>
-                {unread}
-              </span>
-            ) : null}
-          </button>
-          <button
-            type="button"
-            className="link-button"
-            data-testid={togetherTestid.remove}
-            disabled={busy}
-            onClick={() => {
-              setAsking("remove");
-            }}
-          >
-            {t("Remove")}
-          </button>
-          <button
-            type="button"
-            className="link-button"
-            data-testid={togetherTestid.block}
-            disabled={busy}
-            onClick={() => {
-              setAsking("block");
-            }}
-          >
-            {t("Block")}
-          </button>
-        </span>
-      ) : (
-        // An inline question, not a modal: the row asks once before it removes or blocks (B56).
-        <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
-          <span className="together-row__question" id={questionId}>
-            {asking === "remove" ? (
-              <Named text={t("Remove {name} from your friends?")} name={friend.username} />
-            ) : (
-              <Named text={t("Block {name}? You stop being friends, and neither of you can reach the other.")} name={friend.username} />
-            )}
-          </span>
-          <button
-            type="button"
-            data-testid={togetherTestid.confirm}
-            disabled={busy}
-            onClick={() => {
-              const action = asking;
-              setAsking(null);
-              if (action === "remove") onRemove();
-              else onBlock();
-            }}
-          >
-            {asking === "remove" ? t("Remove") : t("Block")}
-          </button>
-          <button
-            type="button"
-            className="link-button"
-            data-testid={togetherTestid.keep}
-            onClick={() => {
-              setAsking(null);
-            }}
-          >
-            {t("Keep")}
-          </button>
-        </span>
-      )}
-    </li>
-  );
-}
-
-/** One request, either way (B55). */
-function RequestRow({
-  request,
-  direction,
-  busy,
-  onAccept,
-  onDecline,
-  onCancel,
-  onBlock,
-}: {
-  request: FriendRequest;
-  direction: "incoming" | "outgoing";
-  busy: boolean;
-  onAccept: () => void;
-  onDecline: () => void;
-  onCancel: () => void;
-  onBlock: () => void;
-}): ReactElement {
-  const other = direction === "incoming" ? request.from : request.to;
-  return (
-    <li className="together-row" data-testid={togetherTestid.requestRow} data-direction={direction} data-request-id={request.requestId} data-profile-id={other.profileId}>
-      <span className="together-row__who">
-        {direction === "incoming" ? (
-          <Named text={t("{name} wants to be friends")} name={other.username} />
-        ) : (
-          <Named text={t("Waiting for {name}")} name={other.username} />
-        )}
-      </span>
-      <span className="together-row__actions">
-        {direction === "incoming" ? (
-          <>
-            <button type="button" className="button-primary" data-testid={togetherTestid.requestAccept} disabled={busy} onClick={onAccept}>
-              {t("Accept")}
-            </button>
-            <button type="button" data-testid={togetherTestid.requestDecline} disabled={busy} onClick={onDecline}>
-              {t("Decline")}
-            </button>
-            <button type="button" className="link-button" data-testid={togetherTestid.requestBlock} disabled={busy} onClick={onBlock}>
-              {t("Block")}
-            </button>
-          </>
-        ) : (
-          <button type="button" data-testid={togetherTestid.requestCancel} disabled={busy} onClick={onCancel}>
-            {t("Cancel")}
-          </button>
-        )}
-      </span>
-    </li>
-  );
-}
-
 export function TogetherRoute(): ReactElement {
   useLocale();
   const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
-  const [challenges, reloadChallenges] = usePolled(getChallenges, SOCIAL_POLL_MS);
-  const [unread, reloadUnread] = usePolled(getUnread, SOCIAL_POLL_MS);
+  // The challenges and unread counts are the tab's one read of them (`socialPoll.ts`), shared with the shell's toast.
+  const social = useSocialPoll();
   const [shared, reloadShared] = usePolled(getSharedReplays, null);
   const lookup = useCatalogLookup();
   const [busy, setBusy] = useState(false);
@@ -318,6 +74,11 @@ export function TogetherRoute(): ReactElement {
   const [challenging, setChallenging] = useState<PlayerRef | null>(null);
   const [watching, setWatching] = useState<SharedReplay | null>(null);
   const challengeOpener = useRef<HTMLElement | null>(null);
+
+  // The Friends button's badge counts the requests this page last read.
+  useEffect(() => {
+    if (friends.kind === "ready") noteFriends(friends.value);
+  }, [friends]);
 
   // "Shared with me →" on `/replays` opens this page at its list.
   useEffect(() => {
@@ -372,8 +133,8 @@ export function TogetherRoute(): ReactElement {
   }
 
   const list = friends.kind === "ready" ? friends.value : null;
-  const counts: Readonly<Record<string, number>> = unread.kind === "ready" ? unreadCountsOf(unread.value) : {};
-  const outgoingChallenges = challenges.kind === "ready" ? challenges.value.outgoing : [];
+  const counts = social.unread;
+  const outgoingChallenges = social.outgoing;
 
   return (
     <div className="app-shell tavern lobby together-screen one-screen" data-testid={togetherTestid.root}>
@@ -521,7 +282,7 @@ export function TogetherRoute(): ReactElement {
                         data-testid={togetherTestid.cancelChallenge}
                         disabled={busy}
                         onClick={() => {
-                          act(() => cancelChallenge(challenge.challengeId), reloadChallenges);
+                          act(() => cancelChallenge(challenge.challengeId), reloadSocial);
                         }}
                       >
                         {t("Cancel")}
@@ -636,7 +397,7 @@ export function TogetherRoute(): ReactElement {
           friend={chatWith}
           onClose={() => {
             setChatWith(null);
-            reloadUnread();
+            reloadSocial();
           }}
         />
       )}
@@ -646,7 +407,7 @@ export function TogetherRoute(): ReactElement {
           onClose={closeChallenge}
           onSent={() => {
             closeChallenge();
-            reloadChallenges();
+            reloadSocial();
           }}
         />
       )}

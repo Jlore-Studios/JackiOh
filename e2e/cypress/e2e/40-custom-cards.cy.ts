@@ -232,6 +232,36 @@ function deckWith(customId: string): string[] {
   return [customId, ...allCardIds().slice(0, constants.DECK_SIZE - 1)];
 }
 
+/** Seeds tried, each a fresh deal, before the spec gives up on the card's coming to the human's opening hand. */
+const SEED_BUDGET = 25;
+
+/** The localStorage key under which practice keeps a game in progress. */
+const RESUME_KEY = "jackioh.practice.game";
+
+/**
+ * Start practice on the saved deck, on the first of `SEED`'s deals that puts the custom card in the human's
+ * opening hand, and say its seed. The deck is DECK_SIZE cards and the passive human is beaten on turn 9, so
+ * a card left to the draws (about one deal in three) arrives too late: a deal is found, not assumed, so
+ * a change to the deck, the shuffle or the AI moves it without breaking the spec (#1803).
+ */
+function startWithCardInHand(customId: string, attempt = 0): Cypress.Chainable<string> {
+  expect(attempt, `the custom card is in the opening hand of one of ${String(SEED_BUDGET)} deals`).to.be.lessThan(SEED_BUDGET);
+  const seed = `${SEED}:${String(attempt)}`;
+  const params = new URLSearchParams({ seed, seat: "p2", pace: "fast" });
+  // R668: a game left in progress would be picked up instead of the setup (practice/resume.ts's key).
+  cy.clearLocalStorage(RESUME_KEY);
+  cy.visitAs(me(), `${routes.practice()}?${params.toString()}`);
+  cy.get(ts(PRACTICE_DECK), { timeout: timeouts.view }).select("saved:1");
+  cy.get(ts(PRACTICE_START), { timeout: timeouts.view }).should("not.be.disabled").click();
+  cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("exist");
+  cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
+  return practiceHandle().then((handle) => {
+    const hand = handle.view?.you.hand;
+    const held = Array.isArray(hand) && hand.some((card) => card.defId === customId);
+    return held ? cy.wrap(seed, { log: false }) : startWithCardInHand(customId, attempt + 1);
+  });
+}
+
 describe("40 custom cards — made in the creator, kept on the account, played in practice and replayed", () => {
   before(() => {
     expect(SEED, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
@@ -300,11 +330,9 @@ describe("40 custom cards — made in the creator, kept on the account, played i
       });
 
       // R915009: practice with that deck runs in the Luau module; the AI's deck stays a normal deck.
-      const params = new URLSearchParams({ seed: SEED, seat: "p2", pace: "fast" });
-      cy.visitAs(me(), `${routes.practice()}?${params.toString()}`);
-      cy.get(ts(PRACTICE_DECK), { timeout: timeouts.view }).select("saved:1");
-      cy.get(ts(PRACTICE_START), { timeout: timeouts.view }).should("not.be.disabled").click();
-      cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("exist");
+      startWithCardInHand(customId).then((seed) => {
+        cy.wrap(seed, { log: false }).as("seed");
+      });
       keepWholeHand();
 
       untilPlayable(customId, 1).then((play) => {
@@ -327,10 +355,10 @@ describe("40 custom cards — made in the creator, kept on the account, played i
       });
 
       // R915006: the browser's log folds, with its custom card, to the browser's hash.
-      practiceHandle()
+      cy.get<string>("@seed").then((seed) => practiceHandle()
         .then((handle) => handle.snapshot())
         .then((debug) => {
-          expect(debug.seed).to.eq(SEED);
+          expect(debug.seed).to.eq(seed);
           expect(debug.customCards, "the game carries its custom card").to.have.length(1);
           expect(debug.decks.some((deck) => deck.includes(customId)), "the human's deck holds it").to.eq(true);
           cy.task<{ replayHash: string; browserHash: string; errors: unknown[] }>(
@@ -351,7 +379,7 @@ describe("40 custom cards — made in the creator, kept on the account, played i
             expect(result.browserHash, "hashState of the page's final state is the page's own hash").to.eq(debug.hash);
             expect(result.replayHash, "the CLI's fold, through the card kit, reaches the browser's state").to.eq(result.browserHash);
           });
-        });
+        }));
     });
   });
 });

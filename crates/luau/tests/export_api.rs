@@ -584,6 +584,7 @@ mod generator {
             GlitchOutcome,
             FengShuiOutcome,
             RedirectWhat,
+            Tuning,
             TuningChange,
             LibraryOverflowOutcome,
             ManaSpentFor,

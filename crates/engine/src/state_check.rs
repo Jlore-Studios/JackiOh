@@ -310,13 +310,10 @@ pub struct RebornFace {
     pub armor_override: Option<i32>,
 }
 
-fn reborn_face_of(unit: &CardInstance) -> Option<RebornFace> {
-    if unit.stats_override.is_none() && unit.armor_override.is_none() {
-        return None;
-    }
-    Some(RebornFace {
-        stats_override: unit.stats_override,
-        armor_override: unit.armor_override,
+fn reborn_face_of(state: &GameState, unit: &CardInstance) -> Option<RebornFace> {
+    crate::zones::summoned_token_face(state, unit).map(|face| RebornFace {
+        stats_override: face.stats_override,
+        armor_override: face.armor_override,
     })
 }
 
@@ -824,12 +821,14 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
             // R175: a unit token ceases to exist below and no pile will hold it, so its return is
             // carried by the pass itself, with the X/X it was summoned as.
             // Read off the snapshot: the move above has already reset the instance (R78).
-            let face = reborn_face_of(&card.snapshot);
+            let face = reborn_face_of(sink.state, &card.snapshot);
             pass.reborn.push(RebornEntry {
                 id: card.unit.id.clone(),
                 at,
                 token: if card.token {
-                    Some(card.snapshot.clone())
+                    let mut body = card.snapshot.clone();
+                    crate::zones::forget_set_stats(&mut body);
+                    Some(body)
                 } else {
                     None
                 },
