@@ -3100,9 +3100,12 @@
     "2026": {
       "action": "review",
       "asks": [],
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-26T18:52:49Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 2010,
       "kind": "review",
       "pending_request": false,
