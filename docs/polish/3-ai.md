@@ -527,7 +527,7 @@ export function candidateActions(state: GameState, seat: PlayerId): ActionBody[]
 The move order is a stable sort by tier, and ties keep `legalActions` order:
 0 an attack on the enemy hero ·
 1 an attack on a unit it kills and survives, read from `unitView` (Divine Shield on the target means no kill) ·
-1b an attack on a unit it kills at an even trade or better by the static trader's `trade_value`
+1b an attack on a unit it kills, or whose Cleave splash kills a neighbour of it (#1821), at an even trade or better by the static trader's `trade_value`
 (crates/ai/src/reply.rs: the target's worth less the attacker's when it dies too, at least 0), only each
 attacker's best (ties: the first), its others staying in 4 (#1779) ·
 2 `play` and `activatePower`, round-robin across source instances (every source's first variant,

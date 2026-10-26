@@ -53,7 +53,7 @@
 
 use std::time::Duration;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -74,11 +74,11 @@ use crate::bots::cosmetics::BotCosmetics;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
-    CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FoldedRecords,
-    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample,
-    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
-    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
+    ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow,
+    FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
+    LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow,
+    NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
     RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput,
@@ -327,7 +327,7 @@ fn deck_slots_or_none(value: Option<Value>) -> Result<Option<DeckSlots>, StoreEr
         .transpose()
 }
 
-/// R1834002: `matches.loadouts`, both seats' in seat order, or `null` on a match from before 0060.
+/// R1834002: `matches.loadouts`, both seats' in seat order, or `null` on a match from before 0061.
 fn loadouts_or_none(value: Option<Value>) -> Result<Option<(Loadout, Loadout)>, StoreError> {
     value
         .filter(|value| !value.is_null())
@@ -643,7 +643,7 @@ struct MatchDbRow {
     stake: Option<i16>,
     /// R768 (migration 0035): the final state's hash, written with the result.
     final_hash: Option<String>,
-    /// R1834002 (migration 0060): both seats' loadouts; null on every older row.
+    /// R1834002 (migration 0061): both seats' loadouts; null on every older row.
     loadouts: Option<Value>,
 }
 
@@ -782,7 +782,7 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         mode: row.mode.as_deref().map(queue_mode_of).transpose()?,
         stake: row.stake.map(stake_of).transpose()?,
         portraits,
-        // R1834002 (migration 0060): absent on a match from before it.
+        // R1834002 (migration 0061): absent on a match from before it.
         loadouts: loadouts_or_none(row.loadouts)?,
         // R768 (migration 0035): absent until the result writes it.
         final_hash: row.final_hash,
@@ -865,7 +865,7 @@ fn to_ticket(row: TicketRow) -> Result<Ticket, StoreError> {
         mode: queue_mode_of(&row.mode)?,
         deck: card_list_of(&row.frozen_deck)?,
         portrait: Some(row.portrait),
-        // R1834002 (migration 0060): null for none, and on a ticket from before it.
+        // R1834002 (migration 0061): null for none, and on a ticket from before it.
         deck_slots: deck_slots_or_none(row.deck_cosmetics)?,
         trio: trio_or_null(row.frozen_trio.as_ref())?,
         // R1372, R924000: migration 0036's column (0027's boolean, `true` read as "newest").
@@ -991,7 +991,7 @@ fn to_room(row: RoomRow) -> Result<Room, StoreError> {
         host_deck: card_list_of(&row.p1_deck)?,
         // R642: the host's portrait waits in the open row beside the host's deck (migration 0019).
         host_portrait: Some(row.p1_portrait),
-        // R1834002: the host deck's slots wait beside it (migration 0060).
+        // R1834002: the host deck's slots wait beside it (migration 0061).
         host_deck_slots: deck_slots_or_none(row.room_deck_cosmetics)?,
         host_trio: trio_or_null(row.room_trio.as_ref())?,
         // R1372, R924000: the host's lean waits in the open row too (migrations 0027 and 0036).
@@ -3175,7 +3175,7 @@ pub async fn matches_create(t: &mut PgTx<'_>, m: &MatchRow) -> Result<(), StoreE
         .bind(json(
             m.glitch_boards.as_ref().map_or(&no_board, |boards| &boards.1),
         )?)
-        // R1834002: the loadouts frozen as the match began (migration 0060), null when absent.
+        // R1834002: the loadouts frozen as the match began (migration 0061), null when absent.
         .bind(json_or_null(&m.loadouts)?)
         .execute(&mut **t)
         .await
@@ -4740,6 +4740,53 @@ pub async fn game_records_insert_batch(
     }
     stats_totals_add(t, &delta).await?;
     Ok(written)
+}
+
+/// R1976000: the ids `game_records` holds are read first and left out, then the batch is claimed
+/// with the count it will fold (`on conflict do nothing`: a batch held already answers `None`
+/// before anything is added), then the rest are added to the totals. One transaction, so a claim
+/// is never left without its counts, nor counts without their claim; a second import of the same
+/// file waits on the first's claim and then finds it held. No `app.*` function: the fold is the
+/// engine's, in Rust, as `game_records_insert_batch`'s is.
+pub async fn game_record_batch_fold(
+    t: &mut PgTx<'_>,
+    batch: &str,
+    records: &[GameRecord],
+) -> Result<Option<BatchFolded>, StoreError> {
+    run_as(t, None).await?;
+    let ids: Vec<&str> = records.iter().map(|record| record.id.as_str()).collect();
+    let held: Vec<String> =
+        sqlx::query_scalar("select id from public.game_records where id = any($1::text[])")
+            .bind(&ids)
+            .fetch_all(&mut **t)
+            .await
+            .map_err(db_error)?;
+    let mut seen: IndexSet<&str> = held.iter().map(String::as_str).collect();
+    let mut delta = StatsTotals::default();
+    let mut folded = 0;
+    for record in records {
+        if seen.insert(record.id.as_str()) {
+            delta.fold(record, true);
+            folded += 1;
+        }
+    }
+    let claimed = sqlx::query(
+        "insert into public.game_record_batches (batch, records) values ($1::text, $2::int)
+         on conflict (batch) do nothing",
+    )
+    .bind(batch)
+    .bind(i32::try_from(folded).map_err(|_| StoreError::from(format!("a batch of {folded} records")))?)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if claimed.rows_affected() == 0 {
+        return Ok(None);
+    }
+    stats_totals_add(t, &delta).await?;
+    Ok(Some(BatchFolded {
+        folded,
+        left_out: records.len() - folded,
+    }))
 }
 
 /// The filter on the indexed columns; each row whose detail is still held (R1044001) read back

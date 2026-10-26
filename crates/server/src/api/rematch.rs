@@ -401,18 +401,24 @@ async fn create_rematch(
         Ok::<_, ApiError>(taken)
     }
     .await;
-    // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant) and a
-    // fenced write both undo the rematch: stop the actor, then erase the live match with no result
-    // (R679), whose `on delete set null` releases the winner seat's flag and any bot flags
-    // `bots_claim_for_rematch` set, while a taken seat is untouched. The caller clears the offer
-    // claim and the seats re-offer; the lease gives the ledger's seats back as it drops.
+    // A seat taken mid-start (the compare-and-set's refusal, drift behind the ledger's grant), a
+    // fenced write and a write that failed (a database hiccup) all undo the rematch: kept without
+    // its flags it would refuse every socket and end in a draw nobody played. Stop the actor, then
+    // erase the live match with no result (R679), whose `on delete set null` releases the winner
+    // seat's flag and any bot flags `bots_claim_for_rematch` set, while a taken seat is untouched.
+    // The caller clears the offer claim and the seats re-offer; the lease gives the ledger's seats
+    // back as it drops.
     let refused = match seated {
-        Err(error) if error.code == ApiErrorCode::Unavailable => error,
         Err(error) => {
-            tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
-            lease.commit();
-            tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
-            return Ok(());
+            // A fenced write (`unavailable`) is a newer server taking over, not a failure.
+            if error.code != ApiErrorCode::Unavailable {
+                tracing::error!(
+                    event = "rematch.in_match_failed",
+                    matchId = %match_id,
+                    message = %error.message,
+                );
+            }
+            error
         }
         Ok(Some(taken)) => {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);

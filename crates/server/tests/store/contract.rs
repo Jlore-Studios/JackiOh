@@ -50,8 +50,8 @@ use jackioh_server::config::PersonaName;
 use jackioh_server::config::{STARTER_CARDS, USERNAME_CHANGE_COOLDOWN_MS};
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
-    FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
+    BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite,
+    Db, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
     MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room,
@@ -5404,6 +5404,53 @@ mod game_records {
         );
     }
 
+    /// R1976000: a batch is folded into the totals once, with no row per record, leaving out each
+    /// record whose id the table holds and each repeat in the batch; the claim and the counts land
+    /// together.
+    async fn r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds(
+        harness: &StoreHarness,
+    ) {
+        let records = mixed_records();
+        let batch = "a".repeat(64);
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records[..2])),
+            vec![true, true]
+        );
+        let mut file: Vec<GameRecord> = records.clone();
+        file.push(records[4].clone());
+        assert_eq!(
+            q!(harness, t => t.game_record_batch_fold(&batch, &file)),
+            Some(BatchFolded {
+                folded: records.len() - 2,
+                left_out: 3,
+            })
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // The same batch again folds nothing, whatever it holds.
+        assert_eq!(
+            q!(harness, t => t.game_record_batch_fold(&batch, &records[2..3])),
+            None
+        );
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+        // No row was written for the batch's records: only the two written a record at a time read.
+        let held = q!(harness, t => t.game_records_list(&query(json!({ "source": "all", "mode": null, "patch": null }))));
+        let mut written = records[..2].to_vec();
+        written.sort_by(|a, b| a.id.cmp(&b.id));
+        assert_eq!(ids_of(&held), ids_of(&written));
+        // A batch is a SHA-256 in lowercase hex, or nothing is claimed.
+        assert!(call!(harness, t => t.game_record_batch_fold("not-a-sha", &records)).is_err());
+        assert_eq!(
+            q!(harness, t => t.stats_totals_load(&every_total())),
+            loaded(&records)
+        );
+    }
+
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
@@ -5415,6 +5462,7 @@ mod game_records {
         r1044001_the_purge_empties_a_folded_records_detail_past_its_cutoff_and_keeps_its_id,
         r1596000_lists_the_finished_matches_whose_record_was_never_filed,
         r1715000_sets_an_unreadable_record_aside_and_folds_every_record_behind_it,
+        r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
     );
 }
 
@@ -9636,10 +9684,10 @@ mod economy {
 }
 
 // ---------------------------------------------------------------------------
-// Cosmetic loadouts (SPEC §14.2, #1834; migration 0060)
+// Cosmetic loadouts (SPEC §14.2, #1834; migration 0061)
 // ---------------------------------------------------------------------------
 
-/// Migration 0060: an account's own picks for its cards (R1834000), the slots and loadouts a ticket,
+/// Migration 0061: an account's own picks for its cards (R1834000), the slots and loadouts a ticket,
 /// a room, a trio and a match freeze (R1834002), a ladder bot's wardrobe and picks and what people
 /// own that it may (R1834005), and the people's seats `cosmetics-fit` reads (R1834006).
 mod cosmetic_loadouts {

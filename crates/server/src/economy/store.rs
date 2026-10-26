@@ -197,7 +197,7 @@ pub struct OwnedCosmetics {
     pub account: Vec<String>,
 }
 
-/// R1834000: one row of `public.card_cosmetic_picks` (migration 0060), what one card of the
+/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061), what one card of the
 /// account wears of its own: a foil, a finish, a border and whether its full art prints. A kind
 /// with no pick is absent and wears the account's pick (the Full-art cards setting, for
 /// `full_art`). An id is kept as it was written, one the registry does not know among them (a
@@ -404,7 +404,7 @@ pub struct EconomyTables {
     pub cosmetic_grants: Vec<CosmeticGrant>,
     /// Migration 0047's seeds, in the order they were issued.
     pub practice_seeds: Vec<PracticeSeed>,
-    /// R1834000: migration 0060's per-card picks, one per profile and card.
+    /// R1834000: migration 0061's per-card picks, one per profile and card.
     pub card_picks: Vec<(String, CardPicks)>,
 }
 

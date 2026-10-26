@@ -6,7 +6,7 @@
 //! ```
 //!
 //! Reads the loadouts people's seats froze over the last `BOT_COSMETIC_FIT_WINDOW_DAYS`
-//! (`matches.loadouts`, migration 0060; a ladder bot's seat is never one) and what each of those
+//! (`matches.loadouts`, migration 0061; a ladder bot's seat is never one) and what each of those
 //! people owns now (the ledger), and buckets them by account age (`BOT_COSMETIC_AGE_BUCKETS_DAYS`):
 //! a seat by its account's age as its match began, a person by their age at their latest match.
 //! Each bucket of at least `BOT_COSMETIC_FIT_MIN_SAMPLES` seats prints one `CosmeticFit`, to be

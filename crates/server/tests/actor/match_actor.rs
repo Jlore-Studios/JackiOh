@@ -5151,7 +5151,7 @@ mod r1834003_the_loadouts_frames {
 
     #[tokio::test(start_paused = true)]
     async fn r1834002_an_old_row_reads_as_defaults() {
-        // A row written before migration 0060 carries no `loadouts`: both seats wear every default,
+        // A row written before migration 0061 carries no `loadouts`: both seats wear every default,
         // and no card's picks are ever sent.
         let (_log, _guard) = Recorder::install();
         install_test_cards();

@@ -382,6 +382,7 @@ target/release/jackioh-server stats-cards --mode=random --patch=v0.2.5 --pilot=h
 target/release/jackioh-server stats-cards --card=core-002 --json
 cargo jackioh stats --patch v0.2.5 --out v0.2.5-dev.jsonl                   # a pre-release AI run
 target/release/jackioh-server stats-import v0.2.5-dev.jsonl                 # loaded; refused whole unless every line is a dev record
+target/release/jackioh-server stats-import --totals-only v0.2.5-dev.jsonl   # the same file as counts alone: no row per game, the file claimed once (R1976000)
 target/release/jackioh-server stats-cards --source=dev --patch=v0.2.5       # read beside the same patch's live games
 target/release/jackioh-server stats-export --out=live.jsonl                 # the records still held in full, a line each, in id order
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
@@ -397,7 +398,13 @@ counting a record file is read with, so a report is what the records gave. `stat
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
-retention purge; its row and id stay, so the same game is never written or counted again (R1044001). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
+retention purge; its row and id stay, so the same game is never written or counted again (R1044001).
+`stats-import --totals-only` files a development run's file as counts alone (R1976000): the same
+checks, then one transaction folds every record into the totals and writes no row of `game_records`,
+and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of its contents with how
+many it folded. The same file imported again folds nothing, and a record whose id `game_records`
+holds, or that the file repeats, is left out; the games themselves are read off the file, which the
+learn lane and the gather workflow keep as their runs' artifacts. A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
 
@@ -896,7 +903,7 @@ reward hook and the ladder read: the ranked plan rates each side by its own scor
 (`ranked::glicko2::rate_game_scored`, 1 and 0.5) and moves each season row by its own result
 (R1843004).
 
-Migration 0060 adds the cosmetic loadouts (#1834) and only adds objects. `card_cosmetic_picks` holds
+Migration 0061 adds the cosmetic loadouts (#1834) and only adds objects. `card_cosmetic_picks` holds
 an account's per-card picks, one row per account and card (`foil`, `finish`, `border`, `full_art`,
 at least one set), current state with no ledger, each id kept as written with no foreign key into
 the registry or the catalog; RLS lets an account read its own rows, and only the server writes,

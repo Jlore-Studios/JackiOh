@@ -1,10 +1,10 @@
--- Per-card picks on the account and the loadouts a match freezes (migration 0060, SPEC §14.2, §9.1;
--- R1834000, R1834002, R1834005; issue #1834). Runs after 32_portrait_cosmetics.sql; profiles 1 and 2
+-- Per-card picks on the account and the loadouts a match freezes (migration 0061, SPEC §14.2, §9.1;
+-- R1834000, R1834002, R1834005; issue #1834). Runs after 33_game_record_batches.sql; profiles 1 and 2
 -- (11111111-…, 22222222-…) are active by then (03 activated them), and core-001 is in public.cards
 -- (01's CHECK 10).
 \set ON_ERROR_STOP on
 
--- Same rules as 01-32: every check raises on failure (`raise exception 'FAIL (…): …'`), every
+-- Same rules as 01-33: every check raises on failure (`raise exception 'FAIL (…): …'`), every
 -- expected refusal is matched on its sqlstate (and, for a privilege, on the table it names), each
 -- check that could pass vacuously carries a guard, and every block runs inside a transaction that is
 -- rolled back. Nothing here selects into the log: the do blocks raise or say OK.
@@ -91,7 +91,7 @@ begin;
 do $$
 declare
   p1 constant uuid := '11111111-1111-1111-1111-111111111111';
-  -- [what, statement]. Each breaks one of 0060's checks and nothing else.
+  -- [what, statement]. Each breaks one of 0061's checks and nothing else.
   refused constant text[][] := array[
     ['a card id that is no slug',
      format($q$insert into public.card_cosmetic_picks (profile_id, card_id, foil) values (%L, 'Core-001', 'foil-rainbow')$q$, p1)],
@@ -356,18 +356,18 @@ declare
   n   bigint;
 begin
   -- Each column: jsonb, nullable, no default, and NULL on the rows written without it (every row
-  -- from before 0060, which every reader takes as none, or all defaults).
+  -- from before 0061, which every reader takes as none, or all defaults).
   for i in 1 .. array_length(shaped, 1) loop
     select data_type, is_nullable, column_default into col
       from information_schema.columns
      where table_schema = 'public' and table_name = shaped[i][1] and column_name = shaped[i][2];
     if not found or col.data_type <> 'jsonb' or col.is_nullable <> 'YES' or col.column_default is not null then
-      raise exception 'FAIL (0060): public.%.% is not a nullable jsonb with no default: %', shaped[i][1], shaped[i][2], col;
+      raise exception 'FAIL (0061): public.%.% is not a nullable jsonb with no default: %', shaped[i][1], shaped[i][2], col;
     end if;
     execute format('select count(*) from public.%I where %I = %L and %I is null',
                    shaped[i][1], shaped[i][3], shaped[i][4], shaped[i][2]) into n;
     if n <> 1 then
-      raise exception 'FAIL (0060): the % row written without public.%.% does not read it as NULL',
+      raise exception 'FAIL (0061): the % row written without public.%.% does not read it as NULL',
         shaped[i][1], shaped[i][1], shaped[i][2];
     end if;
   end loop;
@@ -377,7 +377,7 @@ begin
       execute format('update public.%I set %I = %L::jsonb where %I = %L',
                      refused[i][2], refused[i][3], refused[i][6], refused[i][4], refused[i][5]);
       get diagnostics n = row_count;
-      raise exception 'FAIL (0060): the schema took % (% rows)', refused[i][1], n;
+      raise exception 'FAIL (0061): the schema took % (% rows)', refused[i][1], n;
     exception
       when check_violation then null;
     end;
@@ -388,18 +388,18 @@ begin
                    taken[i][1], taken[i][2], taken[i][5], taken[i][3], taken[i][4]);
     get diagnostics n = row_count;
     if n <> 1 then
-      raise exception 'FAIL (0060): writing % to public.%.% touched % rows, so its refusals above touched none either',
+      raise exception 'FAIL (0061): writing % to public.%.% touched % rows, so its refusals above touched none either',
         taken[i][5], taken[i][1], taken[i][2], n;
     end if;
     execute format('update public.%I set %I = null where %I = %L',
                    taken[i][1], taken[i][2], taken[i][3], taken[i][4]);
   end loop;
-  raise notice 'OK (0060): the four columns are nullable jsonb, % shapes are refused and the % the store writes are taken',
+  raise notice 'OK (0061): the four columns are nullable jsonb, % shapes are refused and the % the store writes are taken',
     array_length(refused, 1), array_length(taken, 1);
 end $$;
 rollback;
 
-\echo '### R1834000: 0060 re-applies over rows of its own and changes none ###'
+\echo '### R1834000: 0061 re-applies over rows of its own and changes none ###'
 begin;
 insert into public.card_cosmetic_picks (profile_id, card_id, foil)
 values ('11111111-1111-1111-1111-111111111111', 'core-001', 'foil-rainbow');
@@ -407,7 +407,7 @@ create temp table r1834000_rows (n bigint not null) on commit drop;
 insert into r1834000_rows select count(*) from public.card_cosmetic_picks;
 -- What run.sh's apply_migration filters, a re-run's "already exists, skipping", is quieted here.
 set local client_min_messages = warning;
-\i /tmp/0060_cosmetic_loadouts.sql
+\i /tmp/0061_cosmetic_loadouts.sql
 set local client_min_messages = notice;
 do $$
 begin
@@ -415,12 +415,12 @@ begin
     raise exception 'FAIL (R1834000): % card picks before the re-apply, expected the one written', (select n from r1834000_rows);
   end if;
   if (select count(*) from public.card_cosmetic_picks) <> (select n from r1834000_rows) then
-    raise exception 'FAIL (R1834000): re-applying 0060 changed the card picks';
+    raise exception 'FAIL (R1834000): re-applying 0061 changed the card picks';
   end if;
   if (select count(*) from pg_policies where schemaname = 'public' and tablename = 'card_cosmetic_picks') <> 1 then
-    raise exception 'FAIL (R1834000): re-applying 0060 left other than one policy on card_cosmetic_picks';
+    raise exception 'FAIL (R1834000): re-applying 0061 left other than one policy on card_cosmetic_picks';
   end if;
-  raise notice 'OK (R1834000): 0060 re-applies over its own rows and changes none';
+  raise notice 'OK (R1834000): 0061 re-applies over its own rows and changes none';
 end $$;
 rollback;
 

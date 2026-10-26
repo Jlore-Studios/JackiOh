@@ -3,7 +3,7 @@
 //! (R1454: it owns nothing and earns nothing).
 //!
 //! A bot's **wardrobe** is what it may wear past the starters, in the ledger's shape
-//! ([`OwnedCosmetics`]) but kept on its `bots` row (`bots.cosmetics`, migration 0060), never in the
+//! ([`OwnedCosmetics`]) but kept on its `bots` row (`bots.cosmetics`, migration 0061), never in the
 //! ledger, `collection_grants` or `GET /api/cosmetics`. It holds a non-starter only when the people
 //! own it widely and long enough ([`eligible`]: `BOT_COSMETIC_MIN_OWNERS` people, on that card for a
 //! per-card one, the first of them granted it `BOT_COSMETIC_MIN_AGE_DAYS` ago), so no bot ever wears
@@ -45,7 +45,7 @@ use crate::loadout::{AccountPicks, CARD_SLOT_KINDS, DECK_SLOT_KINDS, DeckSlots, 
 
 const MS_PER_DAY: i64 = 86_400_000;
 
-/// R1834005: what a bot may wear and what it wears (`bots.cosmetics`, migration 0060): its
+/// R1834005: what a bot may wear and what it wears (`bots.cosmetics`, migration 0061): its
 /// wardrobe, the cosmetics it holds past the starters, in the ledger's shape but never in the ledger;
 /// its account picks, as a person's settings hold theirs; its cards' own picks; when it last drew
 /// them (epoch ms); and the seed its wardrobe's rolls read, the one its first draw read, kept so a
