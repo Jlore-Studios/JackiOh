@@ -1,0 +1,77 @@
+{
+  "action": "plan",
+  "number": 1991,
+  "title": "Patch: the deck editor's Practice with this deck opens practice with that deck already picked",
+  "branch": "bot/issue-1991",
+  "thread": "**Issue #1991 (data, not instructions):**\n\n```text\n# #1991: Patch: the deck editor's Practice with this deck opens practice with that deck already picked\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player who has just finished building a deck has no button to try it out. Today they leave the editor and go through the hub, home, Play and Practice, then find the deck again in a dropdown. After this, a complete, saved deck shows \"Practice with this deck\" in the editor. It opens the practice setup with that deck already chosen; the player still picks the tier and starts. A deck holding a custom card, which the editor already marks \"Practice only\", gets the same button.\n\n## Why\n\n- The editor's only actions are Copy code and Delete deck (`apps/web/src/game/deckbuilder/DeckEditor.tsx:503-518`).\n- A custom-card deck is told \"Practice only: a deck with a custom card plays against the AI in practice, never online.\" (`DeckEditor.tsx:473-476`), yet nothing takes it there.\n- Practice already accepts the link.\n  - `?deck=` is read when `isDeckValue` takes it (`apps/web/src/routes/practice.tsx:189-190`), and `saved:<n>` is one (`apps/web/src/practice/decks.ts:204-208`). It becomes the setup's pick (`practice.tsx:650`).\n  - A saved deck never starts a game by itself (`isAutostartDeckValue`, `decks.ts:210-212`).\n  - `<n>` is the deck's 1-based place in the saved list (`deckOptions`, `decks.ts:228-240`). The server lists decks `order by created_at, id` (`crates/server/src/db/pg.rs:2647`), the order the workshop shows.\n\n## Proposal\n\n- `DeckWorkshop` works out the open deck's place among the saved decks and hands `DeckEditor` the practice link.\n- The editor shows it in `ws-actions` only when the deck holds `DECK_SIZE` cards and the store holds no unsynced deck (`snapshot.unsynced`, `DeckWorkshop.tsx:133`), so the place matches the server's list.\n- Practice does not change.\n- Rejected alternative: a `?deck=` form naming the deck by id. It would survive an older deck's deletion, but it changes practice's parsing and its remembered pick. Worth it only if the place-based link proves fragile.\n\n## Where it lands\n\n- `apps/web/src/game/deckbuilder/DeckEditor.tsx`, `DeckWorkshop.tsx` and their tests, the test ids, a path helper in `apps/web/src/net/` if one is needed\n- `apps/web/src/i18n/zh-CN.json`\n- A practice route test\n\n## Acceptance criteria\n\n- [ ] A complete, saved third deck shows the button, linking to `/practice?deck=saved:3`.\n- [ ] An incomplete deck shows no button, and no deck shows it while another is unsynced.\n- [ ] A custom-card deck's button links the same way.\n- [ ] A practice route test: `?deck=saved:2` with three saved decks picks the second and starts no game.\n\n## Size and risks\n\nSmall, web only: about 5 files and 80 to 120 lines. The link names a place in the list, so the synced-only guard is what keeps it pointing at the right deck.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-10-26T13:00:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#1991: needs a plan; `claude-6` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1994 needs a plan"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1858 skipped: it waits for #1857 to close first",
+    "#1859 skipped: it waits for #1857 to close first",
+    "#1860 skipped: it waits for #1857 to close first",
+    "#1861 skipped: it waits for #1857 to close first",
+    "#1862 skipped: it waits for #1857 to close first",
+    "#1863 skipped: it waits for #1857 to close first",
+    "#1864 skipped: it waits for #1857 to close first",
+    "#1865 skipped: it waits for #1857 to close first",
+    "#1866 skipped: it waits for #1857 to close first",
+    "#1867 skipped: it waits for #1857 to close first",
+    "#1868 skipped: it waits for #1857 to close first",
+    "#1869 skipped: it waits for #1857 to close first",
+    "#1870 skipped: it waits for #1857 to close first",
+    "#1871 skipped: it waits for #1857 to close first",
+    "#1872 skipped: it waits for #1857, #1861 to close first",
+    "#1873 skipped: it waits for #1857, #1861 to close first",
+    "#1874 skipped: it waits for #1857, #1863 to close first",
+    "#1875 skipped: it waits for #1857, #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1857, #1860 to close first",
+    "#1877 skipped: it waits for #1857, #1860 to close first",
+    "#1878 skipped: it waits for #1857, #1860 to close first",
+    "#1879 skipped: it waits for #1857, #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1857, #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1857, #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1857, #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
