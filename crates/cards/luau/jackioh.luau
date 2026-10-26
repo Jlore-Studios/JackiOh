@@ -2332,6 +2332,9 @@ ownTurnRedirect: OwnTurnRedirect?,
 gauntlet: boolean?,
 unitsNeverDefense: boolean?,
 revealChance: number?,
+pilotsActions: number?,
+pilotsTurn: boolean?,
+hintsPlays: boolean?,
 }
 
 export type StealAllArgs = {
