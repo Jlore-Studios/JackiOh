@@ -2125,6 +2125,7 @@
     "1988": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "a0274ce4566f4d851049ab03324704b2428baf57",
       "ci_fixes": 1,
       "ci_reruns": {
         "5cbbfc8c559953517384e65b4aec650003a41e50": 1,
@@ -2140,7 +2141,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-10-26T12:41:20Z",
+      "feedback_since": "2026-10-26T14:31:38Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1956,
@@ -2154,11 +2155,11 @@
       "round_tier": "strong",
       "run_id": "40340410718",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-26T14:31:38Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 4,
       "votes": {
         "approvals": [
           "claude"
