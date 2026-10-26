@@ -468,14 +468,6 @@
     0 0 20px rgba(243, 201, 105, 0.35);
 }
 
-.landing .landing-cta-note {
-  margin-top: -4px;
-  color: color-mix(in srgb, var(--tavern-parchment) 70%, transparent);
-  font-size: 13px;
-  text-align: center;
-  text-wrap: pretty;
-}
-
 .landing .landing-ctas-secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -935,11 +927,4 @@
     align-items: center;
     column-gap: 20px;
   }
-}
-
-.landing .landing-stats-note {
-  margin: 16px auto 0;
-  max-width: var(--tavern-content);
-  font-size: 13px;
-  color: var(--tavern-text-dim);
 }

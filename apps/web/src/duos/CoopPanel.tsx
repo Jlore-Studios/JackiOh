@@ -223,9 +223,6 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
       <h2 id={headingId} className="play-panel__heading">
         {t("Duos co-op")}
       </h2>
-      <p className="lobby-note">
-        {t("Team up with a friend against two AI players: your team shares a pool of life, passes cards and ends its turns together.")}
-      </p>
       {live === null ? null : (
         <a className="button-primary" data-testid={duosTestid.coopRejoin} href={paths.duos(live)} onClick={followInApp(paths.duos(live))}>
           {t("Back to your co-op game")}

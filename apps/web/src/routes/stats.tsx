@@ -1569,7 +1569,7 @@ export default function StatsRoute(): ReactElement {
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
               <p className="stats-player-note">
-                {t("Player stats are public by default (opt-out in Settings). Elo ratings and rankings are kept separate.")}
+                {t("Player stats are public by default. Elo ratings and rankings are kept separate.")}
               </p>
             </div>
 

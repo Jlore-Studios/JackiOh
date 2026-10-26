@@ -16,7 +16,6 @@ export type Settings = {
   reduceMotion: boolean;
   /** R644 (§5): mute opponents' emotes, default off per device. */
   muteOpponentEmotes: boolean;
-  publicStats: boolean;
 };
 
 export type SettingKey = keyof Settings;
@@ -30,10 +29,12 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   hoverPreviews: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
-  publicStats: true,
 });
 
-/** The keys `parseSettings` keeps, in the order they are written to storage. */
+/**
+ * The keys `parseSettings` keeps, in the order they are written to storage. Any other stored key is
+ * dropped, such as the `publicStats` an older device kept (R2000000).
+ */
 const SETTING_KEYS: readonly SettingKey[] = [
   "dragToPlay",
   "confirmEndTurn",
@@ -41,7 +42,6 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "hoverPreviews",
   "reduceMotion",
   "muteOpponentEmotes",
-  "publicStats",
 ];
 
 /** B22: settings.css maps this <html> attribute to the reduced-motion scale. */

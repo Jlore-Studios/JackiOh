@@ -321,7 +321,6 @@ function Actions(): ReactElement {
       >
         {t("Play")}
       </a>
-      <p className="landing-cta-note">{t("Online first: every way to play, from one screen.")}</p>
       <div className="landing-ctas-secondary">
         <a
           className="landing-cta landing-cta--secondary"

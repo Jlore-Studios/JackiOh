@@ -338,13 +338,6 @@
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6), 0 0 24px rgba(243, 201, 105, 0.25);
 }
 
-.tavern.app-shell .patch-notes__intro {
-  margin: 0 auto;
-  max-width: 60ch;
-  font-size: 16px;
-  line-height: 1.5;
-}
-
 .tavern.app-shell .patch-notes .patch-status {
   align-items: center;
   text-align: center;

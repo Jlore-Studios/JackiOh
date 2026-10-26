@@ -824,11 +824,6 @@
   color: var(--tavern-gold-pale);
 }
 
-.tavern.play-screen.play-hub .play-way__note {
-  font-size: 13px;
-  color: var(--tavern-text-dim);
-}
-
 .tavern.play-screen.play-hub .play-panel--room {
   padding: 14px 16px 16px;
 }
@@ -937,7 +932,6 @@
 
   .tavern.play-screen.play-hub .play-mode-tile .lobby-mode__hint,
   .tavern.play-screen.play-hub .play-mode-tile__waiting,
-  .tavern.play-screen.play-hub .play-way__note,
   .tavern.play-screen.play-hub .play-panel--room .lobby-note {
     display: none;
   }

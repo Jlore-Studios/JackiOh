@@ -1216,11 +1216,6 @@ function PracticeScreen({
           <TutorialPath onStart={onStartLesson} />
           <header className="practice-lobby__header" ref={practiceHeader}>
             <h2 className="practice-lobby__title">{t("Practice against the AI")}</h2>
-            <p className="practice-intro">
-              {t(
-                "A full game against a computer opponent, right here in your browser. It plays the same way at every difficulty; only its resources change.",
-              )}
-            </p>
           </header>
           <PracticeSetup
             saved={saved}
