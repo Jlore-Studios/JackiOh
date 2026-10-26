@@ -265,7 +265,10 @@ repository admin:
    `-fill-2`, copies of the unpacked runner under the same user and login; `muse:fill=1` would
    register one. A runner in the middle of a job is left registered, and the same command run
    again once it ends removes it. The second registers `night-vm-muse-2-b2` beside
-   `night-vm-muse-b2`.
+   `night-vm-muse-b2`. A copy takes the directories a self-updated runner's `bin` and
+   `externals` link to (`bin.<version>`), never the links: a copied link made the copy run as
+   the first runner, in its directory and with its registration ("already configured",
+   2026-10-26), and the script removes such a copy and makes it again.
 5. **Deploy its starter**:
    ```sh
    TAG=jackioh-train-box STARTER_NAME=jackioh-muse-box-starter STARTER_ROLE=jackioh-muse-box-starter \
