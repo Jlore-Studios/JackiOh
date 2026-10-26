@@ -419,7 +419,11 @@ mod tests {
             (COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_TARGET_PACKS),
         ] {
             let packs = size as f64 / per_pack;
-            assert_eq!(packs.round() as usize, target, "{size} points fill in {packs} packs");
+            assert_eq!(
+                packs.round() as usize,
+                target,
+                "{size} points fill in {packs} packs"
+            );
         }
     }
 }

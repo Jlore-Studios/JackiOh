@@ -16,8 +16,8 @@ use jackioh_server::api::collection::{GrantInput, grant_cards, owned_map};
 use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
-    CARD_TOKEN_BAR_POINTS_PER_DUPLICATE, CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY,
-    COSMETIC_PACK_SLOTS, COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE, COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep,
+    CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
+    COSMETIC_TOKEN_BAR_SIZE, CosmeticTokenStep, PACK_FLOORED_SLOT,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, shipped};
 use jackioh_server::db::store::CollectionEntry;
@@ -31,6 +31,7 @@ use jackioh_server::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
 use jackioh_server::economy::tiers::cosmetic_odds;
+use jackioh_server::economy::tokens::cosmetic_bar_points;
 
 use crate::support::deps::{add_user, call, empty_test_app};
 use crate::support::store::fake;
@@ -230,6 +231,11 @@ async fn owns_cosmetic(app: &App, card_id: Option<&str>, cosmetic_id: &str) -> b
 /// An opening answered by the route, read back as the type the route serialises.
 fn opened(body: &Value) -> OpenedCosmeticPack {
     serde_json::from_value(body.clone()).unwrap_or_else(|error| panic!("{error}: {body}"))
+}
+
+/// The points an opening's spent slots added to each bar (R1953000).
+fn points(pack: &OpenedCosmeticPack) -> i64 {
+    pack.bars.slot_points.iter().sum()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -564,15 +570,9 @@ async fn r1306001_nothing_unowned_pays_bar_points() {
             .iter()
             .all(|slot| slot.grant == CosmeticSlotGrant::Bars)
     );
-    let spent = COSMETIC_PACK_SLOTS as i64;
-    assert_eq!(
-        counter_of(&app, Counter::CardTokenBar).await,
-        spent * CARD_TOKEN_BAR_POINTS_PER_DUPLICATE
-    );
-    assert_eq!(
-        counter_of(&app, Counter::CosmeticTokenBar).await,
-        spent * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE
-    );
+    let gain = points(&pack);
+    assert_eq!(counter_of(&app, Counter::CardTokenBar).await, gain);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenBar).await, gain);
     // The spent slots still count as one pack for the Chase Shard bar.
     assert_eq!(counter_of(&app, Counter::ChaseShardBar).await, 1);
     // One row per bar, carrying the opening's log.
@@ -590,6 +590,45 @@ async fn r1306001_nothing_unowned_pays_bar_points() {
     assert!(holdings(&app).await.card_cosmetics.is_empty());
 }
 
+/// R1953000: a cosmetic pack's spent slot, with nothing left unowned (R1306001), adds its rolled
+/// cosmetic rarity's points to each bar, each slot's in the answer in slot order.
+#[tokio::test]
+async fn r1953000_a_spent_cosmetic_slot_adds_its_rolled_rarity_s_points() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    // An empty registry drops nothing: every slot is spent.
+    let pack = open_cosmetic_pack(&app, PROFILE, &[], "r1953000")
+        .await
+        .expect("the opening");
+    let expected: Vec<i64> = pack
+        .slots
+        .iter()
+        .map(|slot| {
+            assert_eq!(slot.grant, CosmeticSlotGrant::Bars, "{slot:?}");
+            cosmetic_bar_points(slot.rarity)
+        })
+        .collect();
+    assert_eq!(pack.bars.slot_points, expected);
+    // The floored slot rolls Epic or better, so its points are at least an Epic's.
+    assert!(pack.bars.slot_points[PACK_FLOORED_SLOT] >= cosmetic_bar_points(COSMETIC_PACK_FLOOR_RARITY));
+    let gain: i64 = expected.iter().sum();
+    assert_eq!(counter_of(&app, Counter::CardTokenBar).await, gain);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenBar).await, gain);
+
+    // On the wire each slot's points are `bars.slotPoints`.
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(body["bars"]["slotPoints"], json!(opened(&body).bars.slot_points));
+}
+
 #[tokio::test]
 async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
     let (app, token) = setup().await;
@@ -600,14 +639,13 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
     let pack = open_cosmetic_pack(&app, PROFILE, &[], "bars-spent")
         .await
         .expect("the opening");
-    let spent = COSMETIC_PACK_SLOTS as i64;
     assert!(
         pack.slots
             .iter()
             .all(|slot| slot.grant == CosmeticSlotGrant::Bars)
     );
-    let card_gain = spent * CARD_TOKEN_BAR_POINTS_PER_DUPLICATE;
-    let cosmetic_gain = spent * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE;
+    let card_gain = points(&pack);
+    let cosmetic_gain = card_gain;
     assert_eq!(
         pack.bars,
         BarsSettled {
@@ -624,6 +662,7 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            slot_points: pack.bars.slot_points.clone(),
         }
     );
     // What it answers is what it left.
@@ -659,18 +698,20 @@ async fn a_cosmetic_pack_s_spent_slots_answer_each_bar_before_and_after() {
 async fn a_cosmetic_pack_answers_the_cycle_s_next_step_when_its_cosmetic_bar_pays() {
     let (app, _) = setup().await;
     grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
-    let gain = COSMETIC_PACK_SLOTS as i64 * COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE;
-    // One step into the cycle, so the next is its second (an Epic token).
+    // One step into the cycle, so the next is its second (an Epic token), and the bar one point
+    // short: the spent slots add at least that and less than a second size (R1953000).
     set_counter(&app, Counter::CosmeticTokenCycle, 1).await;
-    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE - gain).await;
+    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE - 1).await;
     let pack = open_cosmetic_pack(&app, PROFILE, &[], "bars-cycle")
         .await
         .expect("the opening");
+    let gain = points(&pack);
+    assert!(gain < COSMETIC_TOKEN_BAR_SIZE, "{gain}");
     assert_eq!(
         pack.bars.cosmetic,
         BarSettle {
-            before: COSMETIC_TOKEN_BAR_SIZE - gain,
-            after: 0,
+            before: COSMETIC_TOKEN_BAR_SIZE - 1,
+            after: gain - 1,
             size: COSMETIC_TOKEN_BAR_SIZE,
             pays: 1,
         }
@@ -724,6 +765,7 @@ async fn a_cosmetic_pack_with_no_spent_slot_answers_both_bars_unmoved() {
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
+            slot_points: vec![0; COSMETIC_PACK_SLOTS],
         }
     );
     assert_eq!(counter_of(&app, Counter::CardTokenBar).await, 7);
