@@ -2101,12 +2101,8 @@
     "what": "revise #1988 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-26T12:39:25Z",
-    "notes": [
-      "#1981: approved and green, so its strikes are cleared",
-      "started revise #1988 on claude-7 (run 40324462264)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-10-26T12:48:27Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -2811,7 +2807,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T12:39:25Z",
+  "loop_tick": "2026-10-26T12:48:27Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T09:30:02Z",
