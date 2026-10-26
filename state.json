@@ -1992,20 +1992,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md"
+            "apps/web/src/game/Board.tsx"
           ],
-          "from": "e7fe6e974c0b97115273e1ae7290a7fea82dd899",
-          "main": "837ebc38d949065577424c2084d5c4ebcea28f23"
+          "from": "fa24a2c8c352ac74762499ceae590dc21318c461",
+          "main": "44c4d2ccc7ae68b9e2cbd753d79e95849a6bb3c8"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40280257715",
+            "run": "40286356428",
             "tier": "strong"
           }
         ],
-        "sha": "fa24a2c8c352ac74762499ceae590dc21318c461",
+        "sha": "afd5285ebc74e30ee4c80579d24f0449e6968380",
         "tiers": {
           "claude": "strong"
         }
