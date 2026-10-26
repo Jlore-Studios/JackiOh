@@ -1,0 +1,61 @@
+{
+  "action": "plan",
+  "number": 2025,
+  "title": "Patch: the co-op replay's scrubber moves the board when it is let go, as the 1v1 replay's does, from one shared toolbar",
+  "branch": "bot/issue-2025",
+  "thread": "**Issue #2025 (data, not instructions):**\n\n```text\n# #2025: Patch: the co-op replay's scrubber moves the board when it is let go, as the 1v1 replay's does, from one shared toolbar\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn a replay of a co-op game, dragging the step slider rebuilds both boards at every step the slider passes. A drag across forty steps redraws the whole table forty times and stutters. A normal 1v1 replay instead waits until you let go, then jumps once.\n\nOnce this is built, the co-op replay behaves like the 1v1 one. The two replays also share one set of controls instead of two copies, so a later fix to one reaches both.\n\n## Why\n- In the 1v1 replay, `apps/web/src/replay/ReplayPlayer.tsx:138-139` reads: \"Where the scrubber is while it is held: the board moves when it is let go, not at every tick\". The hold is handled on pointer down and up (`:216-239`, `:369-377`).\n- The co-op replay, `apps/web/src/duos/DuosReplay.tsx`, does not hold:\n  - `:247-249` calls `goTo` on every `onChange` of the range input;\n  - `show` (`:122-131`) bumps `board` for any move that is not +1;\n  - `board` is the `DuosBoard` key (`:258`).\n\n  So each tick unmounts and mounts a fresh `DuosBoard`, with its own and its teammate's boards.\n- The toolbar itself is copied: `DuosReplay.tsx:186-255` against `ReplayPlayer.tsx:331-383`. `isTyping` is duplicated too (`DuosReplay.tsx:93`, \"As the replay player's \u2026 kept local\").\n\n## Proposal\n- One `apps/web/src/replay/ReplayToolbar.tsx` holds the step and turn buttons, Play, the scrubber with its held state, the readout slot and the extra-actions slot. Each replay passes its own callbacks.\n- Both replays render it, so the co-op replay moves its board on release, exactly as the 1v1 one does.\n- The testids stay as they are, since e2e reads them (`e2e/support/testids.ts`).\n\n## Where it lands\n- `apps/web/src/replay/ReplayToolbar.tsx` (new)\n- `apps/web/src/replay/ReplayPlayer.tsx`\n- `apps/web/src/duos/DuosReplay.tsx`\n- their tests\n- SPEC \u00a713.9 (a co-op match's replay): unchanged\n\n## Acceptance criteria\n- [ ] In `DuosReplay.test.tsx`, after a pointer down on the scrubber and changes to 3 and then 5, the shown step and the board's mount count are unchanged. After pointer up, the step is 5 and the board has mounted exactly once more. This mirrors `ReplayPlayer.test.tsx`'s scrub test.\n- [ ] Keyboard stepping, Play, and the focus going back after a remount behave as today in both replays (their existing tests stay green).\n- [ ] `DuosReplay.tsx` has no toolbar markup or `isTyping` of its own left.\n- [ ] `pnpm --dir apps/web test`, `typecheck` and eslint pass.\n\n## Size and risks\nMedium: 3 to 4 files in one app.\n\nRisks:\n- The 1v1 toolbar and the co-op toolbar sit in different places relative to their boards. The shared one must not depend on where it is mounted, or on the board being remounted around it.\n- The two replays' readouts differ (turns versus rounds), so the readout stays a slot each replay fills.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-10-26T22:56:20Z:\n\napprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2025: needs a plan; `claude-7` (claude, `opus`, strong) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#1872 skipped: it waits for #1861 to close first",
+    "#1873 skipped: it waits for #1861 to close first",
+    "#1874 skipped: it waits for #1863 to close first",
+    "#1875 skipped: it waits for #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1860 to close first",
+    "#1877 skipped: it waits for #1860 to close first",
+    "#1878 skipped: it waits for #1860 to close first",
+    "#1879 skipped: it waits for #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
