@@ -2523,6 +2523,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-26T15:28:44Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "40350158730",
       "self_check_findings": [],
       "started_at": "2026-10-26T15:31:22Z",
