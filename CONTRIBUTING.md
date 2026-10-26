@@ -13,6 +13,16 @@ For people and agents alike. This is a pointer page: the rules live in the files
   titled and labelled, how patches are numbered, and how a patch split over several pull requests
   goes live.
 
+## Contributor License Agreement
+
+Signing the [Contributor License Agreement](CLA.md) is mandatory: no pull request is reviewed until
+everyone who authored one of its commits has signed it. You keep the copyright in your contribution
+and grant the project's owner a perpetual, royalty-free, irrevocable license to use, sublicense and
+redistribute it, under any terms, closed and proprietary ones included. CLA Assistant checks every
+pull request (the `license/cla` status): until you sign, it fails and comments a link where you sign
+with one GitHub sign-in. You sign once, for every later pull request. `CLA.md` and the gist CLA
+Assistant shows hold the same text; changing one means changing the other, and everyone signs again.
+
 ## Issues
 
 Open one through a form (**New issue**): Patch, Bug, Architecture or CI, Night bot. Each starts the
