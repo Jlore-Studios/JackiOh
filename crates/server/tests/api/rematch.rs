@@ -42,7 +42,7 @@ use jackioh_server::api::results::record_result;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
-use jackioh_server::db::store::{MatchSeat, StartMatchInput};
+use jackioh_server::db::store::{MatchSeat, StartMatchInput, StoreError};
 
 use crate::support::deps::{add_user, call, test_app};
 use crate::support::store::{fake_lock, q, to_json};
@@ -1280,6 +1280,51 @@ mod r890000_a_seat_taken_mid_start {
         assert!(live_ids(&app).await.is_empty());
         assert_eq!(in_match_of(&app, &b).await, json!("r89-elsewhere"));
         assert_eq!(in_match_of(&app, &a).await, Value::Null);
+    }
+}
+
+// A seat-flag write that fails (#1895)
+
+/// A seat-flag write that fails for an ordinary reason undoes the rematch as a taken seat does: no
+/// live match, no flag, no seat, and the offer claim released so the next equal offer makes the game.
+mod a_failed_seat_flag_write {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_failed_seat_flag_write_voids_the_rematch_and_frees_the_offer() {
+        let app = test_app().await;
+        let (a, b, finished) = names("flag-fails");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+
+        fake_lock(&app).await.on_call = Some(Arc::new(|method: &str| {
+            if method == "profiles.setInMatch" {
+                return Err(StoreError::Other("the database hiccuped".to_string()));
+            }
+            Ok(())
+        }));
+        let (code, failed) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        fake_lock(&app).await.on_call = None;
+
+        assert_eq!(code, 500, "{failed}");
+        assert_eq!(failed["error"]["code"], "internal");
+        assert!(live_ids(&app).await.is_empty());
+        assert!(app.matches.live().is_empty());
+        assert_eq!(in_match_of(&app, &a).await, Value::Null);
+        assert_eq!(in_match_of(&app, &b).await, Value::Null);
+        assert_eq!(app.seats.of(&a), None);
+        assert_eq!(app.seats.of(&b), None);
+
+        // The claim is released: the status names no game, and the next equal offer makes one.
+        assert_eq!(status(&app, &token_a, &finished).await.1["matchId"], Value::Null);
+        let (code, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!(code, 200, "{created}");
+        let created_id = created["matchId"].as_str().expect("a match id").to_string();
+        assert_eq!(live_ids(&app).await, vec![json!(created_id)]);
+        assert_eq!(in_match_of(&app, &a).await, json!(created_id));
+        assert_eq!(in_match_of(&app, &b).await, json!(created_id));
     }
 }
 
