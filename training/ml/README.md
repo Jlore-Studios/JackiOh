@@ -74,8 +74,8 @@ quantized, as above, with its report) into `crates/ai/src/learned/weights.json` 
 the screen and the gate play the network that ships, the parent (`--parent-bin`, `tree`, or a build
 of `origin/main`), the candidate, and an 800-game paired screen on `improve-dev`, decided in advance.
 It prints the gate's command (`cargo jackioh promote --lane learn --parent-bin <parent>`) only when the
-screen's `edgeLow` is above zero, and exits 1 otherwise. The learn lane runs it weekly
-(`training/learn.md`).
+screen's `edgeLow` is above zero, and exits 1 otherwise. The learn lane runs it on every
+run, one after another (`training/learn.md`).
 
 ## The policy prior (#1171)
 

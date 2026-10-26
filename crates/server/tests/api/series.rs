@@ -37,7 +37,7 @@ use jackioh_server::api::series_rules::NewSeriesInput;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_MAX_GAMES, SERIES_PICK_SECONDS,
-    SERIES_SWEEP_INTERVAL_SECONDS,
+    SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
 };
 use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{MatchSeat, StoreError};
@@ -55,6 +55,7 @@ const SERIES_ID: &str = "series-1";
 const FIRST_MATCH: &str = "match-1";
 const PICK_MS: i64 = SERIES_PICK_SECONDS * 1000;
 const SWEEP_MS: i64 = SERIES_SWEEP_INTERVAL_SECONDS * 1000;
+const GRACE_MS: i64 = SERIES_START_GRACE_SECONDS * 1000;
 
 /// The E2E fixture accounts (`src/api/e2e.ts`'s `E2E_ACCOUNTS`, a contract with
 /// `e2e/support/config.ts`): the user id a profile is seeded under, and the token that signs in as it.
@@ -1228,5 +1229,46 @@ mod r890000_a_seat_taken_mid_start {
         assert_eq!(profile(&h.app, ALICE).await["inMatchId"], json!("r89-elsewhere"));
         assert_eq!(profile(&h.app, BOB).await["inMatchId"], Value::Null);
         assert!(h.logs.has("series.seat_taken"));
+    }
+}
+
+// A seat-flag write that fails (#1895)
+
+/// A seat-flag write that fails undoes the game as a taken seat does, so the sweeper can start the
+/// same game once the grace has passed.
+mod a_failed_seat_flag_write {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_failed_seat_flag_write_voids_the_game_and_the_sweeper_starts_it() {
+        let h = harness_at_1000().await;
+        h.fail_on(|method| {
+            if method == "profiles.setInMatch" {
+                return Err(StoreError::Other("the database hiccuped".to_owned()));
+            }
+            Ok(())
+        });
+        pick_both(&h, [0, 0]).await;
+        h.heal();
+
+        // A game that never started: no row, no actor, no flag, and the series still names it.
+        assert_eq!(match_row(&h.app, FIRST_MATCH).await, Value::Null);
+        assert!(started(&h).await.is_empty());
+        assert!(!h.app.matches.has(FIRST_MATCH));
+        assert_eq!(in_match(&h).await, json!([null, null]));
+        let series = row(&h).await;
+        assert_eq!(series["status"], "playing");
+        assert_eq!(series["nextMatchId"], FIRST_MATCH);
+        assert!(h.logs.has("series.start_failed"));
+
+        // Past the grace, the sweeper starts the same game.
+        advance(GRACE_MS).await;
+        assert_eq!(
+            sweep(&h).await,
+            json!({ "timedOut": [], "started": [SERIES_ID], "abandoned": [] })
+        );
+        assert!(h.app.matches.has(FIRST_MATCH));
+        assert_eq!(started(&h).await.len(), 1);
+        assert_eq!(in_match(&h).await, json!([FIRST_MATCH, FIRST_MATCH]));
     }
 }

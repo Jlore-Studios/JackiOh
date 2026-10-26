@@ -9,7 +9,8 @@
 // THE MOTION is transform and opacity only: the fill is a `scaleX` (`economy.css` holds the
 // keyframes, each taking its duration from `bars.ts`' constants through a custom property), and the
 // timers here move the bar from one sweep to the next. REDUCED MOTION (the panel's setting or the
-// system's) draws the end state at once and reports every fill, then `onDone`, straight away.
+// system's), or `still` (its owner's own switch, R1953000), draws the end state at once and reports
+// every fill, then `onDone`, straight away.
 //
 // A native `<progress>` always rests at `value` for screen readers (and the e2e specs), visually
 // hidden: the track beside it is the picture, and it is hidden from them.
@@ -40,6 +41,8 @@ export type FillBarProps = {
   onFill?: (fill: number) => void;
   /** Called once the bar rests at `value`. */
   onDone?: () => void;
+  /** Draw the end state at once, as under reduced motion, whatever the motion settings say. */
+  still?: boolean;
   testid?: string;
 };
 
@@ -73,8 +76,8 @@ export default function FillBar(props: FillBarProps): ReactElement {
   return <Bar key={`${String(size)}:${String(value)}:${String(from ?? "-")}:${String(fills)}`} {...props} />;
 }
 
-function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, testid }: FillBarProps): ReactElement {
-  const reduced = useReducedMotion();
+function Bar({ label, size, value, from, fills = 0, caption, onFill, onDone, still = false, testid }: FillBarProps): ReactElement {
+  const reduced = useReducedMotion() || still;
   const plan = useMemo(() => (from === undefined ? [] : segments(size, value, from, fills)), [size, value, from, fills]);
   const [position, setPosition] = useState<Position>({ step: 0, phase: from === undefined ? "done" : "sweep" });
   const told = useRef(0);

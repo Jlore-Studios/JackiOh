@@ -1,7 +1,7 @@
 //! `cli/card_stats.rs` (stats-cards), `cli/import_dev_records.rs` (stats-import) and
 //! `cli/export_records.rs` (stats-export), SPEC §9.11, R377 and R378, against the fake store: what
 //! the options read, that a development run is read only when asked for, that a file can add
-//! development records and nothing else, and that an export holds what stats-cards would read and
+//! development records and nothing else (a record at a time, or as totals only, R1976000), and that an export holds what stats-cards would read and
 //! reads back through the import. The store's own filtering is `tests/store/contract.rs`'s, against
 //! both stores; the arithmetic is the engine's `wire::stats`.
 //! (← `apps/server/test/db/card-stats.test.ts`)
@@ -11,14 +11,16 @@ use std::path::PathBuf;
 use indexmap::IndexMap;
 use serde_json::{Value, json};
 
-use jackioh_engine::wire::{GameRecord, GameSource, SourceFilter, parse_game_record_lines};
+use jackioh_engine::wire::{GameRecord, GameSource, SourceFilter, StatsTotals, parse_game_record_lines};
 use jackioh_server::cli::card_stats::{
     CardStatsOptions, card_stats_report, card_stats_window, parse_card_stats_args, render_card_stats,
 };
 use jackioh_server::cli::export_records::{
     ExportOptions, export_records, parse_export_args, read_records, render_records,
 };
-use jackioh_server::cli::import_dev_records::{import_dev_records, run_file_path};
+use jackioh_server::cli::import_dev_records::{
+    batch_of, import_dev_records, import_dev_records_totals_only, run_file_path,
+};
 use jackioh_server::db::store::Db;
 
 /// `{ ...base, ...partial }` on two JSON objects.
@@ -462,6 +464,130 @@ mod stats_import {
         let refused = refusal(&db, &spoofed).await;
         assert!(refused.contains("dev-force-core-090"), "{refused}");
         assert!(stored_ids(&db).await.is_empty());
+    }
+
+    /// The fake's totals and the batches `--totals-only` claimed.
+    async fn totals_and_batches(db: &Db) -> (StatsTotals, IndexMap<String, usize>) {
+        let Db::Fake(data) = db else {
+            panic!("these tests run on the fake store")
+        };
+        let data = data.lock().await;
+        (
+            data.tables.stats_totals.clone(),
+            data.tables.game_record_batches.clone(),
+        )
+    }
+
+    /// The totals the records make, folded in memory.
+    fn folded(records: &[GameRecord]) -> StatsTotals {
+        let mut totals = StatsTotals::default();
+        for record in records {
+            totals.fold(record, true);
+        }
+        totals
+    }
+
+    fn dev_report(argv: &[&str]) -> CardStatsOptions {
+        parse_card_stats_args(&args(argv)).expect("the options parse")
+    }
+
+    #[tokio::test]
+    async fn r1976000_a_file_filed_as_totals_only_counts_once_reads_the_same_and_leaves_no_record() {
+        let db = Db::fake();
+        let won_by_p2 = json!({ "game": { "first": "p2", "winner": "p2", "reason": "hero-death", "turns": 7,
+            "seats": {
+                "p1": { "deck": ["core-001"], "opening": [], "drawn": ["core-001"], "played": [] },
+                "p2": { "deck": ["core-002"], "opening": ["core-002"], "drawn": [], "played": ["core-002"] }
+            } } });
+        let run = [
+            dev("dev:v0.2.3:gather:1", json!({})),
+            dev("dev:v0.2.3:gather:2", won_by_p2),
+        ];
+        let text = lines(&run);
+
+        let first = import_dev_records_totals_only(&db, &text)
+            .await
+            .expect("the file folds");
+        assert_eq!(
+            (first.read, first.folded, first.left_out, first.again),
+            (2, 2, 0, false)
+        );
+        assert_eq!(first.batch, batch_of(&text));
+        assert_eq!(first.batch.len(), 64);
+        // No row per record: the file is the run's copy of every game.
+        assert!(stored_ids(&db).await.is_empty());
+        let (totals, batches) = totals_and_batches(&db).await;
+        assert_eq!(totals, folded(&run));
+        assert_eq!(
+            batches,
+            [(first.batch.clone(), 2)].into_iter().collect::<IndexMap<_, _>>()
+        );
+
+        // The same file again is the same batch: it folds nothing.
+        let again = import_dev_records_totals_only(&db, &text)
+            .await
+            .expect("the file is read again");
+        assert_eq!(
+            (again.read, again.folded, again.left_out, again.again),
+            (2, 0, 2, true)
+        );
+        assert_eq!(totals_and_batches(&db).await.0, folded(&run));
+
+        // Every figure reads what the records imported a record at a time give.
+        let rows = Db::fake();
+        import_dev_records(&rows, &text).await.expect("the file imports");
+        for argv in [
+            &["--source=dev"][..],
+            &["--source=dev", "--card=core-002", "--json"][..],
+        ] {
+            assert_eq!(
+                card_stats_report(&db, &dev_report(argv)).await.expect("a report"),
+                card_stats_report(&rows, &dev_report(argv))
+                    .await
+                    .expect("a report"),
+                "{argv:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn r1976000_leaves_out_a_record_imported_a_record_at_a_time_and_a_repeat_in_the_file() {
+        let db = Db::fake();
+        let one = dev("dev:v0.2.3:gather:1", json!({}));
+        let two = dev("dev:v0.2.3:gather:2", json!({}));
+        let three = dev("dev:v0.2.3:gather:3", json!({}));
+        import_dev_records(&db, &lines(std::slice::from_ref(&one)))
+            .await
+            .expect("the record imports");
+        let before = totals_and_batches(&db).await.0;
+
+        let text = lines(&[one.clone(), two.clone(), three.clone(), two.clone()]);
+        let outcome = import_dev_records_totals_only(&db, &text)
+            .await
+            .expect("the file folds");
+        assert_eq!(
+            (outcome.read, outcome.folded, outcome.left_out, outcome.again),
+            (4, 2, 2, false)
+        );
+        assert_eq!(totals_and_batches(&db).await.0, folded(&[one, two, three]));
+        assert_ne!(totals_and_batches(&db).await.0, before);
+        assert_eq!(stored_ids(&db).await, vec!["dev:v0.2.3:gather:1"]);
+    }
+
+    #[tokio::test]
+    async fn r1976000_refuses_what_a_record_at_a_time_refuses_and_claims_no_batch() {
+        let db = Db::fake();
+        for refused in [
+            lines(&[dev("dev:run:1", json!({})), game_record("forged-live", json!({}))]),
+            lines(&[dev("dev:v0.2.3:dev-force-core-090:1", json!({}))]),
+            lines(&[dev("5f0c3c1e-0000-4000-8000-000000000001", json!({}))]),
+        ] {
+            assert!(import_dev_records_totals_only(&db, &refused).await.is_err());
+        }
+        assert_eq!(
+            totals_and_batches(&db).await,
+            (StatsTotals::default(), IndexMap::new())
+        );
     }
 
     #[test]

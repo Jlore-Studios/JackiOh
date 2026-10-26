@@ -13,6 +13,9 @@
 // side wears, only what the account owns. Both read one cached answer per session.
 //
 // R1955000: an answer a Shop change dropped is read again by the mounted providers, not only the next screen's.
+//
+// R1953001: a cosmetic token spent in place (collection/TokenOffer.tsx) grants on a screen that stays
+// up, so `rereadOwnedCosmetics` drops that answer and has both providers read it again.
 
 import { createElement, useEffect, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react";
 
@@ -123,6 +126,15 @@ export function forgetOwnedCosmetics(): void {
   cached = null;
   forgotten += 1;
   for (const listener of [...forgottenListeners]) listener();
+}
+
+/**
+ * R1953001: drops the session's answer and has every mounted provider read it again, as
+ * `forgetOwnedCosmetics` does: called where an answer granted a cosmetic on a screen that stays up (a
+ * cosmetic token spent in place), so the locked entry it bought shows owned.
+ */
+export function rereadOwnedCosmetics(): void {
+  forgetOwnedCosmetics();
 }
 
 /**

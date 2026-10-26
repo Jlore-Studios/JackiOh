@@ -1,8 +1,7 @@
 // The token picker (#1309), from fixture responses: the card picker listing only unowned cards,
-// both bars and the cycle's next step, the Rare and Epic filters over the shipped registry, and a
-// redemption telling the page while a refused one changes nothing, and the page's next revision
-// reading the bars again. The tier rules live beside them as pure tests over crafted
-// registries, where Legendary, Mythic, chase, starter and owned entries can all appear.
+// both bars and the cycle's next step, a redemption telling the page while a refused one changes
+// nothing, and the page's next revision reading the bars again. R1953001: no cosmetic token is
+// picked here any more (collection/TokenOffer.test.tsx holds its tier rules); the held counts stay.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,17 +11,10 @@ import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
 import type { TokenBarsResponse } from "../net/api.ts";
+import { paths } from "../net/navigate.ts";
 import { refusal, stubServer, type Reply } from "../test/stubServer.ts";
-import { COSMETICS } from "../wire/generated/cosmetics.ts";
-import { collectionOf, ownedCosmeticsOf, tokenBars } from "./fixtures.ts";
-import {
-  fittingCards,
-  quantitiesOf,
-  redeemableCosmetics,
-  shopTestid as T,
-  unownedCards,
-  type RegistryCosmetic,
-} from "./shop.ts";
+import { collectionOf, tokenBars } from "./fixtures.ts";
+import { fittingCards, quantitiesOf, shopTestid as T, unownedCards, type RegistryCosmetic } from "./shop.ts";
 import TokenPicker from "./TokenPicker.tsx";
 
 afterEach(() => {
@@ -57,55 +49,6 @@ describe("#1309 the picker model", () => {
     expect(ids).toEqual(["core-002"]);
   });
 
-  it("a Rare token lists unowned Common and Rare cosmetics, an Epic token adds Epic", () => {
-    const registry: RegistryCosmetic[] = [
-      entry({ id: "common-foil", rarity: "Common" }),
-      entry({ id: "rare-foil", rarity: "Rare" }),
-      entry({ id: "epic-foil", rarity: "Epic" }),
-      entry({ id: "legendary-foil", rarity: "Legendary" }),
-      entry({ id: "mythic-table", kind: "table", rarity: "Mythic" }),
-      entry({ id: "chase-foil", rarity: "Rare", chase: true }),
-      entry({ id: "starter-foil", rarity: "Common", starter: true }),
-      entry({ id: "default-foil", rarity: "Rare", default: true }),
-    ];
-    const quantities = quantitiesOf(collectionOf());
-    const owned = ownedCosmeticsOf({ cards: [], account: [] });
-    expect(redeemableCosmetics("Rare", owned, quantities, registry).map((cosmetic) => cosmetic.id)).toEqual([
-      "common-foil",
-      "rare-foil",
-    ]);
-    expect(redeemableCosmetics("Epic", owned, quantities, registry).map((cosmetic) => cosmetic.id)).toEqual([
-      "common-foil",
-      "rare-foil",
-      "epic-foil",
-    ]);
-  });
-
-  it("neither token lists Legendary, Mythic, chase, starter or owned cosmetics", () => {
-    const registry: RegistryCosmetic[] = [
-      entry({ id: "legendary-foil", rarity: "Legendary" }),
-      entry({ id: "mythic-foil", rarity: "Mythic" }),
-      entry({ id: "epic-chase", rarity: "Epic", chase: true }),
-      entry({ id: "epic-starter", rarity: "Epic", starter: true }),
-      entry({ id: "rare-table", kind: "table", rarity: "Rare" }),
-      entry({ id: "rare-foil", rarity: "Rare" }),
-    ];
-    // Only core-001 is owned, and it already wears the foil; the table is on the account.
-    const quantities = quantitiesOf(collectionOf({ entries: [{ cardId: "core-001", quantity: 1 }] }));
-    const owned = ownedCosmeticsOf({
-      cards: [{ cardId: "core-001", cosmeticId: "rare-foil" }],
-      account: ["rare-table"],
-    });
-    for (const tier of ["Rare", "Epic"] as const) {
-      expect(redeemableCosmetics(tier, owned, quantities, registry)).toEqual([]);
-    }
-    const open = ownedCosmeticsOf({ cards: [], account: [] });
-    expect(redeemableCosmetics("Rare", open, quantities, registry).map((cosmetic) => cosmetic.id)).toEqual([
-      "rare-table",
-      "rare-foil",
-    ]);
-  });
-
   it("a full art fits only its named card, owned", () => {
     const fullArt = entry({ id: "fa", kind: "fullArt", rarity: "Epic", card: "core-001" });
     expect(fittingCards(fullArt, quantitiesOf(collectionOf()))).toEqual(["core-001"]);
@@ -122,7 +65,6 @@ function tokenServer(answers: { bars?: Reply; redeem?: Reply } = {}): ReturnType
       return answers.bars ?? { status: 200, body: tokenBars() };
     }
     if (call.method === "GET" && call.path === "/api/collection") return { status: 200, body: collectionOf() };
-    if (call.method === "GET" && call.path === "/api/cosmetics") return { status: 200, body: ownedCosmeticsOf() };
     if (call.method === "POST" && call.path === "/api/tokens/redeem-card") {
       return (
         answers.redeem ?? {
@@ -195,76 +137,29 @@ describe("#1309 the token picker", () => {
     expect(screen.getByTestId(T.cardBar)).toHaveAttribute("data-state", "resting");
   });
 
-  it("a Rare token lists no Epic, Legendary or Mythic cosmetic", async () => {
-    tokenServer();
-    render(<TokenPicker token={TOKEN} />);
-    await screen.findByTestId(T.tokenPanel);
-
-    // The shipped registry's unowned, non-starter Common and Rare cosmetics are #1833's per-card
-    // ones (R1833000), each for a card the account owns; its full arts are Epic.
-    const listed = [...document.querySelectorAll('[data-testid^="token-cosmetic-pick-"]')].map((pick) =>
-      (pick.getAttribute("data-testid") ?? "").replace("token-cosmetic-pick-", ""),
-    );
-    expect(listed).toEqual(
-      COSMETICS.filter((cosmetic) => !cosmetic.starter && !cosmetic.default && (cosmetic.rarity === "Common" || cosmetic.rarity === "Rare")).map(
-        (cosmetic) => cosmetic.id,
-      ),
-    );
-    expect(screen.queryByTestId(T.cosmeticNone)).toBeNull();
-    expect(screen.queryByTestId(T.cosmeticPick("full-art-big-d-fender"))).toBeNull();
-    expect(screen.queryByTestId(T.cosmeticPick("table-marble"))).toBeNull();
-    expect(screen.getByTestId(T.tierRare)).toBeEnabled();
-    expect(screen.getByTestId(T.tierEpic), "no Epic token is held").toBeDisabled();
-  });
-
-  it("R1833000 a token row shows a new cosmetic's name, rarity and look, and no token reaches a chase", async () => {
+  it("R1953001 the shop keeps the card picker and both bars but offers no cosmetic token", async () => {
     const bars = tokenBars();
-    tokenServer({
+    const server = tokenServer({
       bars: {
         status: 200,
-        body: { ...bars, tokens: { ...bars.tokens, cosmeticEpic: 1 } } satisfies TokenBarsResponse,
+        body: { ...bars, tokens: { ...bars.tokens, cosmeticRare: 2, cosmeticEpic: 1 } } satisfies TokenBarsResponse,
       },
     });
     render(<TokenPicker token={TOKEN} />);
-    await screen.findByTestId(T.tokenPanel);
 
-    // A Rare foil, on the first card the account owns, worn by that card's face.
-    const sunburst = screen.getByTestId(T.cosmeticPick("foil-sunburst")).closest(".token-row");
-    expect(sunburst).toHaveTextContent("Sunburst · Rare");
-    expect(sunburst).toHaveAttribute("data-rarity", "Rare");
-    const preview = screen.getByTestId(T.cosmeticPreview("foil-sunburst"));
-    expect(preview.querySelector(".cosmetic-look .cf")).toHaveAttribute("data-cosmetic-foil", "foil-sunburst");
-
-    // An Epic playmat, on the account: its look is a mini board.
-    fireEvent.click(screen.getByTestId(T.tierEpic));
-    expect(screen.getByTestId(T.cosmeticPick("table-marble")).closest(".token-row")).toHaveTextContent("Marble · Epic");
-    expect(screen.getByTestId(T.cosmeticPreview("table-marble")).querySelector(".collection-miniboard")).toHaveAttribute(
-      "data-table",
-      "table-marble",
-    );
-    // No chase at either tier: the Mythic foil and the Legendary playmat are the Chase Shard's.
-    for (const id of ["foil-void-shimmer", "table-obsidian-slab", "card-back-nebula"]) expect(screen.queryByTestId(T.cosmeticPick(id)), id).toBeNull();
-  });
-
-  it("an Epic token adds the Epic full arts, and never Legendary or Mythic", async () => {
-    const bars = tokenBars();
-    tokenServer({
-      bars: {
-        status: 200,
-        body: { ...bars, tokens: { ...bars.tokens, cosmeticEpic: 1 } } satisfies TokenBarsResponse,
-      },
-    });
-    render(<TokenPicker token={TOKEN} />);
-    await screen.findByTestId(T.tokenPanel);
-
-    fireEvent.click(screen.getByTestId(T.tierEpic));
-    // core-001 is owned, so its full art shows with a preview; Gary's is owned on core-004.
-    expect(screen.getByTestId(T.cosmeticPick("full-art-big-d-fender"))).toBeInTheDocument();
-    expect(screen.getByTestId(T.cosmeticPreview("full-art-big-d-fender"))).toHaveTextContent("Big D-fender");
-    expect(screen.queryByTestId(T.cosmeticPick("full-art-gary-the-gambler"))).toBeNull();
-    // The shipped registry's Legendary and Mythic cosmetics are all starters: never listed.
-    expect(screen.queryByText("Cracked ice")).toBeNull();
-    expect(screen.queryByText("Gilded edge")).toBeNull();
+    expect(await screen.findByTestId(T.cardBar)).toHaveTextContent("149 / 150");
+    expect(screen.getByTestId(T.cosmeticBar)).toHaveTextContent("30 / 150");
+    expect(screen.getByTestId(T.cardPick("core-002"))).toBeInTheDocument();
+    // The held cosmetic tokens still show, and a link says where they are spent.
+    expect(screen.getByTestId(T.heldRare)).toHaveTextContent("Rare tokens held: 2");
+    expect(screen.getByTestId(T.heldEpic)).toHaveTextContent("Epic tokens held: 1");
+    expect(screen.getByTestId(T.cosmeticSpend)).toHaveAttribute("href", paths.collection);
+    // No tier to choose and no cosmetic to pick: the Collection offers them in place.
+    expect(
+      document.querySelector('[data-testid^="token-cosmetic-pick-"], [data-testid^="token-cosmetic-preview-"], [data-testid^="token-tier-"]'),
+    ).toBeNull();
+    expect(screen.queryByRole("group", { name: "Cosmetic tokens" })).toBeNull();
+    expect(server.to("GET", "/api/cosmetics"), "the shop reads no owned cosmetics").toHaveLength(0);
   });
 
   it("a refused redemption shows its reason and changes nothing on screen", async () => {
@@ -304,7 +199,6 @@ describe("#1309 the token picker", () => {
     const server = stubServer((call) => {
       if (call.method === "GET" && call.path === "/api/tokens") return { status: 200, body: bars };
       if (call.method === "GET" && call.path === "/api/collection") return { status: 200, body: collectionOf() };
-      if (call.method === "GET" && call.path === "/api/cosmetics") return { status: 200, body: ownedCosmeticsOf() };
       return undefined;
     });
     const { rerender } = render(<TokenPicker token={TOKEN} />);
@@ -317,7 +211,6 @@ describe("#1309 the token picker", () => {
       expect(screen.getByTestId(T.cardBar)).toHaveTextContent("3 / 150");
     });
     expect(server.to("GET", "/api/collection")).toHaveLength(2);
-    expect(server.to("GET", "/api/cosmetics")).toHaveLength(2);
   });
 
   it("#1485 a failed read that works on the page's next revision shows the shop and drops the alert", async () => {

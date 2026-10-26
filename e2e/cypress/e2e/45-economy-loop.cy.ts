@@ -53,6 +53,8 @@ import {
   E2E_RESEED_PATH,
   FULL_ART_GATED_KEY,
   accounts,
+  apiUrl,
+  bearerHeaders,
   constants,
   inviteCodes,
   routes,
@@ -188,18 +190,10 @@ function econ(): E2EAccount {
   return accounts.econ();
 }
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 /** `GET path` as `account`, which must answer 200; yields the body. */
 function read<T extends object>(account: E2EAccount, path: string): Cypress.Chainable<T> {
   return cy
-    .request<T>({ method: "GET", url: api(path), headers: bearer(account) })
+    .request<T>({ method: "GET", url: apiUrl(path), headers: bearerHeaders(account.token) })
     .then((response) => {
       expect(response.status, `GET ${path}`).to.eq(200);
     })
@@ -289,8 +283,8 @@ function redeemTheGoodCode(loop: Loop): void {
   });
   cy.request<RedeemBody>({
     method: "POST",
-    url: api("/api/codes/redeem"),
-    headers: bearer(econ()),
+    url: apiUrl("/api/codes/redeem"),
+    headers: bearerHeaders(econ().token),
     body: { code: inviteCodes.good() },
   }).then((response) => {
     expect(response.status, "§9.4: the good code activates the account").to.eq(200);
@@ -347,8 +341,8 @@ function winALadderGame(loop: Loop): void {
   cy.then(() => {
     cy.request({
       method: "POST",
-      url: api("/api/queue"),
-      headers: bearer(accounts.p2()),
+      url: apiUrl("/api/queue"),
+      headers: bearerHeaders(accounts.p2().token),
       body: { mode: "bo1", deckId: theirDeck, seed: SEED },
     }).should((response) => {
       expect(response.status, "R143: the queue takes an end-to-end seed").to.eq(200);
@@ -583,8 +577,8 @@ function earnAFullArt(loop: Loop): void {
   read<TokensBody>(econ(), "/api/tokens").then((before) => {
     cy.request<TokensBody>({
       method: "POST",
-      url: api("/api/tokens/redeem-cosmetic"),
-      headers: bearer(econ()),
+      url: apiUrl("/api/tokens/redeem-cosmetic"),
+      headers: bearerHeaders(econ().token),
       body: { token: EPIC_TOKEN, cosmeticId: fullArt().id, cardId: fullArt().card },
     }).then((response) => {
       expect(response.status, `POST /api/tokens/redeem-cosmetic for ${fullArt().id}`).to.eq(200);
@@ -612,7 +606,7 @@ describe("R1310000 R1310003 the economy loop", () => {
   beforeEach(() => {
     expect(SEED, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
     // R144: every fixture as a boot leaves it, so e2e-econ is pending and the good code unspent.
-    cy.request({ method: "POST", url: api(E2E_RESEED_PATH) }).its("status").should("eq", 200);
+    cy.request({ method: "POST", url: apiUrl(E2E_RESEED_PATH) }).its("status").should("eq", 200);
   });
 
   it("a new account starts with the starter cards, wins on the ladder, opens a pack, redeems its tokens, is given a quest and earns a full art", () => {

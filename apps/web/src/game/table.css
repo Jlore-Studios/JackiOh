@@ -760,6 +760,7 @@
   }
 }
 
+/* R1953001: the Collection's mini boards (collection/collection.css) move their pads with these three. */
 @keyframes table-glint {
   0%,
   62%,

@@ -24,7 +24,7 @@
 
 import { socketProtocols } from "../../../apps/web/src/net/socketProtocols.ts";
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
-import { accounts, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   COOP_CODE,
   COOP_CREATE,
@@ -72,14 +72,6 @@ const GUEST_SLOT = 1;
 
 /** `handCardId("")` is the prefix, so no spec spells a testid format. */
 const HAND_CARD_PREFIX = handCardId("");
-
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
 
 /** `/ws/duos` beside the configured `/ws/match` (S6), as the client's `duosSocketUrl` finds it. */
 function duosSocketUrl(): string {
@@ -206,7 +198,7 @@ class DuosSocket {
 function endLiveDuos(first: E2EAccount, second: E2EAccount): void {
   const live: (string | null)[] = [];
   for (const account of [first, second]) {
-    cy.request<{ matchId: string | null }>({ method: "GET", url: api("/api/duos/live"), headers: bearer(account.token) }).then(
+    cy.request<{ matchId: string | null }>({ method: "GET", url: apiUrl("/api/duos/live"), headers: bearerHeaders(account.token) }).then(
       (answer) => {
         live.push(answer.body.matchId);
       },
@@ -298,8 +290,8 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     cy.then(() => {
       cy.request<{ matchId: string }>({
         method: "POST",
-        url: api(`/api/duos/rooms/${code}/join`),
-        headers: bearer(guestAccount.token),
+        url: apiUrl(`/api/duos/rooms/${code}/join`),
+        headers: bearerHeaders(guestAccount.token),
         body: { random: true },
       }).then((joined) => {
         matchId = joined.body.matchId;

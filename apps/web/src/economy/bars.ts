@@ -1,9 +1,10 @@
 // The pure parts of the bar that fills and the reward reveal (#1658, part of #1651, SPEC §14.5):
-// the segments one `FillBar` plays, the reward a bar's fill reveals in an opening, and the sting a
-// reward plays. Nothing here reads the DOM or a clock; the components keep the timers.
+// the segments one `FillBar` plays, the points each spent slot sends flying into an opening's bars
+// (R1953000), the reward a bar's fill reveals in an opening, and the sting a reward plays. Nothing
+// here reads the DOM or a clock; the components keep the timers.
 //
-// THE SERVER DECIDES (CLAUDE.md rule 7). A bar's points, its size and what a fill pays all come from
-// the server's answer; these functions only lay that answer out in time.
+// THE SERVER DECIDES (CLAUDE.md rule 7). A bar's points, its size, each slot's points and what a fill
+// pays all come from the server's answer; these functions only lay that answer out in time.
 
 import type { PrintedRarity } from "@jackioh/shared";
 
@@ -11,6 +12,7 @@ import { t } from "../i18n/i18n.ts";
 import type { OpeningBarsAnswer } from "../net/api.ts";
 import { RARITY_ORDER } from "../packs/packs.ts";
 import { nextStepWords } from "../shop/shop.ts";
+import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 
 /** How long a sweep across a whole bar takes; a shorter stretch takes its share of it. */
 export const FILL_MS = 900;
@@ -24,6 +26,12 @@ export const REVEAL_STAGGER_MS = 350;
 /** How long one reward takes to fly out. */
 export const REVEAL_FLY_MS = 450;
 
+/** How long a spent slot's points take to fly from the slot into the bars. */
+export const BAR_FLIGHT_MS = 650;
+
+/** The pause between one slot's points taking off and the next's. */
+export const BAR_FLIGHT_STAGGER_MS = 180;
+
 /** One stretch of a bar's animation: a sweep from one number of points to another. */
 export type Segment = {
   from: number;
@@ -34,6 +42,18 @@ export type Segment = {
 
 /** A bar's state in an opening's answer: its points before and after, its size and how often it paid. */
 export type OpeningBar = OpeningBarsAnswer["card"];
+
+/**
+ * One spent slot's points on their way to the bars (R1953000): the server's points, the slot's
+ * rarity (a card pack's card rarity, a cosmetic pack's cosmetic rarity), which tints the flight and
+ * sizes its burst, and the testid of the slot it takes off from.
+ */
+export type BarFlight = {
+  key: string;
+  points: number;
+  rarity: PrintedRarity | CosmeticRarity;
+  source: string;
+};
 
 /** What a reward is, which the reveal draws and the sting follows. */
 export type RevealKind = "cardToken" | "cosmeticToken" | "cosmeticPack" | "jlore" | "setPack" | "level";
@@ -87,9 +107,25 @@ export function segmentMs(segment: Segment, size: number): number {
   return Math.round((FILL_MS * Math.abs(segment.to - segment.from)) / size);
 }
 
-/** Whether an opening moved a bar: it paid, or its points changed. */
-export function barMoved(bar: OpeningBar): boolean {
-  return bar.pays > 0 || bar.before !== bar.after;
+/**
+ * The flights of an opening (R1953000): one for each slot the answer's `slotPoints` gives points,
+ * in slot order, with slot `index`'s rarity in `rarities` and its testid from `sourceOf`.
+ */
+export function flightsOf(
+  bars: OpeningBarsAnswer,
+  rarities: readonly (PrintedRarity | CosmeticRarity)[],
+  sourceOf: (index: number) => string,
+): BarFlight[] {
+  return bars.slotPoints.flatMap((points, index) =>
+    points > 0
+      ? [{ key: `flight-${String(index)}`, points, rarity: rarities[index] ?? "Common", source: sourceOf(index) }]
+      : [],
+  );
+}
+
+/** How long `count` flights take, the last one's take-off its stagger after the one before; none for none. */
+export function flightsMs(count: number): number {
+  return count > 0 ? (count - 1) * BAR_FLIGHT_STAGGER_MS + BAR_FLIGHT_MS : 0;
 }
 
 /**

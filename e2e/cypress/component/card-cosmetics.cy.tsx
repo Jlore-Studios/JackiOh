@@ -1,8 +1,9 @@
 // R1295000: the card cosmetics in a real browser. apps/web's vitest suite proves which attributes a
 // face wears (cards/cosmetics.test.tsx) and what the stylesheet declares; what only a style engine
 // can say is measured here: each of the nine items changes how the worn face draws and leaves the
-// plain face beside it as it was, a worn foil moves only on the worn face, the board minion wears
-// its border, and under Reduce motion every animated foil holds its still version.
+// plain face beside it as it was, a worn foil (R1953001: and a chase finish or border) moves only on
+// the worn face, the board minion wears its border, and under Reduce motion every animated foil
+// holds its still version. R1953001: a face wears its card's own picks, so each item is the card's.
 //
 // A face's look is what the cosmetics can reach, read off the computed styles: the root's edge,
 // the finish layer's background and shadow, the panel and the art's sheen.
@@ -10,11 +11,11 @@
 import { CATALOG } from "@jackioh/cards";
 import { CardFace, MinionFace, faceModel } from "../../../apps/web/src/cards/index.ts";
 import {
-  DEFAULT_CARD_COSMETICS,
+  CARD_SLOT_KINDS,
+  MOVING_FINISHES_AND_BORDERS,
   cosmeticsOf,
   resetCosmeticsForTests,
-  writeCosmetics,
-  type CosmeticKind,
+  writeCardPick,
 } from "../../../apps/web/src/cards/cosmetics.ts";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import { unit } from "../../../apps/web/src/test/fixtures.ts";
@@ -27,10 +28,8 @@ const FACE_BOX = { width: 150, height: 210 } as const;
 /** A board minion's box (keyword-visuals.cy.tsx's large size). */
 const MINION_BOX = { width: 81, height: 113 } as const;
 
-const KINDS: readonly CosmeticKind[] = ["foil", "finish", "border"];
-
 /** The nine items: every entry of every kind but its default. */
-const ITEMS = KINDS.flatMap((kind) =>
+const ITEMS = CARD_SLOT_KINDS.flatMap((kind) =>
   cosmeticsOf(kind)
     .filter((cosmetic) => !cosmetic.default)
     .map((cosmetic) => ({ kind, id: cosmetic.id })),
@@ -82,31 +81,36 @@ function moving(cf: HTMLElement): boolean {
   return cf.getAnimations({ subtree: true }).some((animation) => animation.playState === "running");
 }
 
+/** Clears the card's own picks, so its face wears the defaults. */
+function clearPicks(): void {
+  for (const kind of CARD_SLOT_KINDS) writeCardPick(DEF_ID, kind, null);
+}
+
 describe("R1295000 the card cosmetics on a face", () => {
   beforeEach(() => {
     __resetSettingsForTests();
     resetCosmeticsForTests();
-    writeCosmetics({ ...DEFAULT_CARD_COSMETICS });
+    clearPicks();
     cy.viewport(400, 300);
   });
 
   after(() => {
     __resetSettingsForTests();
     resetCosmeticsForTests();
-    writeCosmetics({ ...DEFAULT_CARD_COSMETICS });
+    clearPicks();
   });
 
   for (const item of ITEMS) {
     it(`R1295000 ${item.id} draws on the worn face and not on the plain one`, () => {
-      writeCosmetics({ [item.kind]: item.id });
+      writeCardPick(DEF_ID, item.kind, item.id);
       cy.mount(<Pair />);
       cy.document().should((doc) => {
         const worn = faceOf(doc, "worn");
         const plain = faceOf(doc, "plain");
         expect(worn.getBoundingClientRect().width, "the face fills its box").to.be.greaterThan(FACE_BOX.width / 2);
         expect(look(worn), item.id).to.not.equal(look(plain));
-        if (item.kind === "foil") {
-          expect(moving(worn), "the worn foil moves").to.equal(true);
+        if (item.kind === "foil" || MOVING_FINISHES_AND_BORDERS.has(item.id)) {
+          expect(moving(worn), "the worn foil, or chase finish or border, moves").to.equal(true);
           expect(moving(plain), "the plain face holds still").to.equal(false);
         }
       });
@@ -122,7 +126,7 @@ describe("R1295000 the card cosmetics on a face", () => {
       let edge = "";
       // A command, so that each border is the pick when its own faces mount, not the last one's.
       cy.then(() => {
-        writeCosmetics({ border: border.id });
+        writeCardPick(DEF_ID, "border", border.id);
       });
 
       cy.mount(<Pair />);
@@ -157,7 +161,7 @@ describe("R1295000 the card cosmetics on a face", () => {
   for (const foil of FOILS) {
     it(`R1295000 ${foil.id} holds its still version under Reduce motion`, () => {
       writeSettings({ reduceMotion: true });
-      writeCosmetics({ foil: foil.id });
+      writeCardPick(DEF_ID, "foil", foil.id);
       cy.mount(<Pair />);
       cy.get("html").should("have.attr", "data-reduce-motion", "true");
       cy.document().should((doc) => {
