@@ -5118,6 +5118,12 @@
         "number": 1990,
         "title": "Patch: practice offers a Beginner opponent below Easy, one that starts behind",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-26T13:03:16Z",
+        "number": 1992,
+        "title": "Patch: the result screen names your card of the game, with what it did",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
