@@ -7,6 +7,9 @@
 //! - `discard_resource` — "Discard a Narcor": the oldest tray Resource of those definitions ceases to
 //!   exist (R1840004). No hand rule reaches the tray, so a hand discard never takes one.
 //! - `gain_market_credits` — "Gain N Credits" (R1840005).
+//! - `add_market_lot` — "add a lot to the Marketplace for the rest of the game", Call to Chaos (Scape
+//!   Edition)'s "a Call to Chaos at 20": one card of a pool offered to its caster alone at a fixed
+//!   price (R1853005, `crate::marketplace`).
 //!
 //! R1855002: a card laid by a board replacement may carry a `resourcePool` rider in its memory
 //! (`RESOURCE_POOL_KEY`), the pool its own gains come from in place of the one its text names.
@@ -15,6 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::RESOURCE_TRAY_CAP;
 use crate::effects::targets::{PlayerSpec, player_of};
+use crate::marketplace::add_fixed_market_lot;
 use crate::resources::{add_market_credits, gain_resource, roll_resource};
 use crate::script::Effect;
 use crate::wire::GameEvent;
@@ -128,5 +132,26 @@ pub fn gain_market_credits(args: GainMarketCreditsArgs) -> Effect {
     Effect::new("gainMarketCredits", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
         add_market_credits(&mut ctx.sink, player, args.amount);
+    })
+}
+
+/// `addMarketLot`'s argument: the ids the lot is drawn from, its price in Credits, and whose lot it is
+/// (default the controller's own).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct AddMarketLotArgs {
+    pub pool: Vec<String>,
+    pub price: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R1853005: a lot for the rest of the game — one card of `pool`, drawn as it is added, offered to its
+/// player alone at `price` Credits that never move, a copy a cycle. Opens the Marketplace.
+pub fn add_market_lot(args: AddMarketLotArgs) -> Effect {
+    Effect::new("addMarketLot", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        add_fixed_market_lot(&mut ctx.sink, player, &args.pool, args.price);
     })
 }

@@ -19,7 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, StarscapeReward, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, PrintedRarity, Rarity, SetName, StarscapeReward, Tag,
+    string_union,
 };
 
 /// §2.6, R1705000
@@ -1139,6 +1140,55 @@ pub const RESOURCE_RARITY_ODDS: &[(PrintedRarity, i32)] = &[
     (PrintedRarity::Legendary, 5),
     (PrintedRarity::Mythic, 1),
 ];
+
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape's Marketplace (#1853, R1853000–R1853005; docs/stinkyscape-set.md ST3).
+// ---------------------------------------------------------------------------------------------
+
+/// R1853001: what one lot of `MarketLot` draws its cards from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MarketPool {
+    /// Every Resource in the catalog (`resources::resource_def_ids`).
+    Resources,
+    /// The ids named, those the catalog holds.
+    Ids(&'static [&'static str]),
+    /// Every card of the set that is no token, in catalog order.
+    Set(SetName),
+}
+
+/// R1853001: one lot of the Marketplace's table: `count` different cards of `pool`, each stocked
+/// `stock_min` to `stock_max` for each player.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MarketLot {
+    pub pool: MarketPool,
+    pub count: i32,
+    pub stock_min: i32,
+    pub stock_max: i32,
+}
+
+/// R1853001: the Marketplace's table of lots, rolled as it opens and every `MARKETPLACE_CYCLE_TURNS`.
+/// Empty until the set's own (S21) ships, so an open Marketplace offers nothing but the lots an effect
+/// adds; a test registers a fixture table (`testkit::register_marketplace_table`).
+pub const MARKETPLACE_TABLE: &[MarketLot] = &[];
+/// R1853001: the turns between two rolls of the offering, counted on `GameState.turn` from the turn
+/// it was last rolled.
+pub const MARKETPLACE_CYCLE_TURNS: i32 = 6;
+/// R1853002: the Credits a lot asks for each mana of its cost up to `MARKETPLACE_FULL_PRICE_MANA`.
+pub const MARKETPLACE_CREDITS_PER_MANA: i32 = 10;
+/// R1853002: the cost up to which each mana is priced at `MARKETPLACE_CREDITS_PER_MANA`.
+pub const MARKETPLACE_FULL_PRICE_MANA: i32 = 4;
+/// R1853002: the Credits a lot asks for each mana of its cost past `MARKETPLACE_FULL_PRICE_MANA`.
+pub const MARKETPLACE_CREDITS_PER_MANA_PAST: i32 = 5;
+/// R1853002: the price of a (0) card.
+pub const MARKETPLACE_ZERO_COST_PRICE: i32 = 5;
+/// R1853001: the chance a lot is rolled Radiant.
+pub const MARKETPLACE_RADIANT_CHANCE: f64 = 0.2;
+/// R1853002: a Radiant lot's price, as a multiple of its base face's.
+pub const MARKETPLACE_RADIANT_PRICE_MULTIPLIER: i32 = 2;
+/// R1853002: a price moves each turn within a tenth of its base: the base divided by this, rounded down.
+pub const MARKETPLACE_PRICE_SPREAD_DIVISOR: i32 = 10;
+/// R1853005: the stock each cycle renews for a lot an effect added for the rest of the game.
+pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
 
 // ---------------------------------------------------------------------------------------------
 // Stinkyscape #148 Alteran Reach's starscape map (#1847, R1847000–R1847002,

@@ -268,6 +268,16 @@ pub enum ActionBody {
     Trade {
         instance_id: String,
     },
+    /// R1853003: buy one copy of the Marketplace lot at index `offer` of its offering, for Credits and
+    /// no mana, in the sender's own main phase (`marketplace.rs`).
+    MarketBuy {
+        offer: i32,
+    },
+    /// R1853003: sell a Resource from the sender's Resource tray at the Marketplace, for its quote this
+    /// turn (`marketplace.rs`).
+    MarketSell {
+        instance_id: String,
+    },
     /// R345: the sender's own preference for R82's automatic turn end. A setting, not a move: it is
     /// accepted from either seat at any moment of a live game, changes nothing on the board, and is
     /// never offered by `legalActions`, so no policy ever sends it.
@@ -302,6 +312,8 @@ string_union! {
         Concede = "concede",
         EndTurn = "endTurn",
         Trade = "trade",
+        MarketBuy = "marketBuy",
+        MarketSell = "marketSell",
         SetAutoEndTurn = "setAutoEndTurn",
         Sandbox = "sandbox",
         Timeout = "timeout",
@@ -327,6 +339,8 @@ impl ActionBody {
             ActionBody::Concede => ActionType::Concede,
             ActionBody::EndTurn => ActionType::EndTurn,
             ActionBody::Trade { .. } => ActionType::Trade,
+            ActionBody::MarketBuy { .. } => ActionType::MarketBuy,
+            ActionBody::MarketSell { .. } => ActionType::MarketSell,
             ActionBody::SetAutoEndTurn { .. } => ActionType::SetAutoEndTurn,
             ActionBody::Sandbox { .. } => ActionType::Sandbox,
             ActionBody::Timeout => ActionType::Timeout,
