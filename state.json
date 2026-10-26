@@ -1667,15 +1667,30 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/cards/rules.test.ts",
+            "apps/web/src/wire/generated/CardInstance.ts",
+            "crates/ai/README.md",
+            "crates/engine/src/config.rs",
+            "crates/engine/src/state.rs",
+            "spec/10-engine-guide.md",
+            "spec/11-rulings.md",
+            "spec/INDEX.md"
+          ],
+          "from": "458ec1c3331256d519f5db913859e5479d104bb7",
+          "main": "6a3406b24328165950e60748e0d915c0d7019d29"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40231298126",
+            "run": "40246006428",
             "tier": "strong"
           }
         ],
-        "sha": "458ec1c3331256d519f5db913859e5479d104bb7",
+        "sha": "fa9c85e52742b884851c83c18e0b3e63fed58e81",
         "tiers": {
           "claude": "strong"
         }
