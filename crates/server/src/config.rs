@@ -2423,7 +2423,8 @@ impl TierWeights {
 }
 
 /// The shape of `TOKEN_BAR_POINTS_BY_CARD_RARITY` and `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY` (SPEC
-/// §14.5, R1953000): the token bar points a spent slot adds for each rarity it can roll.
+/// §14.5, R1953000, R1999000): the token bar points each opened slot adds for each rarity it can
+/// roll.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RarityPoints {
@@ -2521,16 +2522,17 @@ pub const PITY_LEGENDARY_PACKS: usize = 20;
 /// SPEC §14.4: the longest an account waits for a Mythic: of any 30 card packs in a row, at
 /// least one holds one. The longest wait of all, as SPEC §14.4 requires.
 pub const PITY_MYTHIC_PACKS: usize = 30;
-/// SPEC §14.5, R1953000: the points that fill the card token bar (#1953: 200). On a complete
-/// collection a card pack's spent duplicates add about 8.65 points under `CARD_TIER_WEIGHTS` (four
-/// slots at 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
+/// SPEC §14.5, R1953000, R1999000: the points that fill the card token bar (#1953: 200). On any
+/// collection a card pack's slots add about 8.65 points under `CARD_TIER_WEIGHTS` (four slots at
+/// 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
 /// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`).
 pub const CARD_TOKEN_BAR_SIZE: i64 = 200;
 /// SPEC §14.5, R1953000: the points that fill the cosmetic token bar (#1953: 200), the same points
 /// as the card token bar's, so likewise about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS` packs.
 pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 200;
-/// SPEC §14.5, R1953000: the points a card pack's spent duplicate adds to each token bar, by the
-/// card rarity its slot rolled, pity's force included (#1953: 1, 2, 3, 5 and 10).
+/// SPEC §14.5, R1953000, R1999000: the points each opened slot of a card pack adds to each token
+/// bar, whatever it grants, by the card rarity its slot rolled, pity's force included (#1953: 1,
+/// 2, 3, 5 and 10).
 pub const TOKEN_BAR_POINTS_BY_CARD_RARITY: RarityPoints = RarityPoints {
     common: 1,
     rare: 2,
@@ -2538,9 +2540,9 @@ pub const TOKEN_BAR_POINTS_BY_CARD_RARITY: RarityPoints = RarityPoints {
     legendary: 5,
     mythic: 10,
 };
-/// SPEC §14.5, §14.6, R1306001, R1953000: the points a cosmetic pack's spent slot, one with nothing
-/// left unowned, adds to each token bar, by the cosmetic rarity it rolled (#1953: 1, 2, 3, 5 and
-/// 10, as a card's).
+/// SPEC §14.5, §14.6, R1306001, R1953000, R1999000: the points each opened slot of a cosmetic pack
+/// adds to each token bar, whatever it grants, by the cosmetic rarity it rolled, not the one it
+/// fell to (#1953: 1, 2, 3, 5 and 10, as a card's).
 pub const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY: RarityPoints = RarityPoints {
     common: 1,
     rare: 2,
