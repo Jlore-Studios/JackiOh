@@ -457,13 +457,18 @@ as set up; turn one off with `enabled: false`, or for a while, without a pull re
 `/harness suspend <id>` (until `/harness resume <id>`). `python3 -m harness providers` in `bot/`
 prints each one and whether it could start now, and `/harness status` does the same on GitHub.
 
-**The morning start.** `claude-wake.yml` starts each Claude account's 5-hour session at 06:00
-America/Chicago (`wake.py`), Squishy's included, so it resets at 11:00 rather than at whatever hour
-the first run of the day lands. An account whose session the state file shows running, one
-suspended, and every account of a halted bot are left alone; each other one gets one turn of
-`claude-haiku-5-5` at low effort, in a job holding only its own secret. GitHub starts schedules
-late, so it fires in the hours before and sleeps until 06:00; run it by hand with `now` to wake
-them at any hour.
+**The wake.** `claude-wake.yml` starts each Claude account's 5-hour session at 06:00
+America/Chicago and every four hours around it (`wake.py`'s `WAKE_AT` and `EVERY`), Squishy's
+included, so it resets five hours later rather than at whatever hour its next run lands. An account
+whose session the state file shows running, one whose usage limit refused a call or has a window
+(the week's, say) full, one suspended, and every account of a halted bot are left alone; each other
+one gets one turn of `claude-haiku-5-5` at low effort, with no tools, skills or commands and a
+one-line system prompt (a few hundred tokens), in a job of its own holding only its secret, all at
+once. A ping its limit refuses is reported, not failed, and the next wake time tries it again.
+GitHub starts schedules late, so it fires every hour, and a run in the hour before a wake time
+sleeps until it; run it by hand with `now` to wake them at any hour. A new Claude account is woken
+once its secret is in `providers.SECRETS` and the workflow's `HARNESS_SECRETS_SET`, which
+`test_workflows.py` holds to it.
 
 **What each entry says.**
 - `cli`, `model` and `effort`: the reasoning effort, where the CLI takes one. agy's model names
@@ -1299,7 +1304,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `asks.py` | the reactions that follow a request from its comment to its answer |
 | `plan.py`, `work.py`, `deliver.py` | the jobs of a night run (`plan.peek` is the gate's first question) |
 | `quiet.py` | the retired gate wait: is anyone else spending the subscription (no subscription waits now) |
-| `wake.py` | the morning start (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago |
+| `wake.py` | the wake (`claude-wake.yml`): each Claude session not running gets one turn of Haiku at 06:00 Chicago and every four hours around it |
 | `providers.py` | `.harness/providers.json`: the subscriptions, their hours and limits, whether each is free |
 | `runner.py` | one backend per CLI (`claude`, `codex`, `agy`, `muse`): run it, read its answer, usage and refusals; plus the test fake |
 | `logins.py`, `vault.py` | a subscription's secret written as its CLI's login, or its login on the machine left where it is; a refreshed login kept encrypted |
