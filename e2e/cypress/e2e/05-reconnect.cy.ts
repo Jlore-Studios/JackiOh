@@ -215,13 +215,14 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     });
 
     // Seat 1 creates and seat 2 claims the seeded room (§9.5). R143 requires the E2E server to
-    // honour the optional §9.3 seed; bodies wait for the installed deck ids.
+    // honour the optional §9.3 seed; bodies wait for the installed deck ids. R1989000 pins seat 1
+    // to p1 beside the seed, so the spec keeps the seats it was written for.
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
         url: apiUrl("/api/rooms"),
         headers: bearerHeaders(seatOne.token),
-        body: { mode: "bo1", deckId: seatOneDeck, seed },
+        body: { mode: "bo1", deckId: seatOneDeck, seed, seat: "p1" },
       }).then((created) => {
         cy.request<{ matchId: string; seat: string }>({
           method: "POST",
