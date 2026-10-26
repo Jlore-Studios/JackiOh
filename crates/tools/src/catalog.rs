@@ -2172,10 +2172,24 @@ mod tests {
 
     #[test]
     fn r1178000_holds_the_meditative_plus_set_to_every_count_since_it_shipped() {
-        // Since its release (#1187) its entries (30, 32 since #1563) count toward the totals, and none is held apart.
+        // Since its release (#1187) its entries (30, 32 since #1563) count toward the totals, and none is held apart:
+        // the entries held apart are a held set's alone (R1857000's Stinkyscape, while it is held).
         let shipped = check_catalog(&shipped_catalog());
         assert_eq!(shipped.failures, Vec::<String>::new());
-        assert_eq!(shipped.unshipped_count, 0);
+        let held = shipped_catalog()
+            .values()
+            .filter(|entry| {
+                let set = entry
+                    .as_object()
+                    .and_then(|entry| entry.get("set"))
+                    .and_then(Json::as_str);
+                !SetName::ALL
+                    .iter()
+                    .any(|known| Some(known.as_str()) == set && set_ships(*known))
+            })
+            .count();
+        assert_eq!(shipped.unshipped_count, held);
+        assert_eq!(check_catalog(&without_stinkyscape()).unshipped_count, 0);
 
         // So a card it lacks fails, as any shipped set's would: the totals and the index.
         let mut missing = shipped_catalog();
