@@ -17,8 +17,12 @@
 //!    loadout, defaults included;
 //!  - `per_card_share`: the share of seats with a card of their own picks (a foil, a finish or a
 //!    border of its own), and `cards_per_deck_mean` the mean number of such cards those seats hold;
-//!  - `card_picks`: each foil's, finish's and border's share of the picks on those cards (an earned
-//!    one, which a seat can own only on a card, is never in `slots`);
+//!  - `card_picks`: each default's and starter's foil, finish and border's share of those cards'
+//!    picks of one, which every card may wear, so the share holds on any card a bot dresses;
+//!  - `earned_wear`: each earned foil, finish and border on its card (it is owned only on a card,
+//!    so never in `slots`, and a share pooled over every card would hold on none): of the seats
+//!    whose person owns it there and whose deck holds the card, the share whose card wears it
+//!    (ownership read now, as for `full_art_wear`);
 //!  - `full_art_wear`: of the seats whose person owns a full art and whose deck holds its card, the
 //!    share that printed it (ownership read now, so a full art granted after a match counts it as
 //!    not printed);
@@ -64,6 +68,8 @@ pub struct BucketCosmetics {
     pub per_card_share: f64,
     pub cards_per_deck_mean: f64,
     pub card_picks: Vec<(String, f64)>,
+    /// Each earned foil, finish and border: the cosmetic, its card, and its wear there.
+    pub earned_wear: Vec<(String, String, f64)>,
     pub full_art_wear: Vec<(String, f64)>,
     /// Each holding: the cosmetic, its card for a per-card one, and its share.
     pub ownership: Vec<(String, Option<String>, f64)>,
@@ -149,8 +155,12 @@ pub fn fit_cosmetics(
         } else {
             picked.iter().sum::<usize>() as f64 / picked.len() as f64
         };
-        // Each foil's, finish's and border's share of the picks the seats hold on their cards, in
-        // the registry's order: the earned ones, which a seat owns only on a card, among them.
+        // Each default's and starter's foil, finish and border's share of the seats' picks on their
+        // cards of one, in the registry's order. An earned one is owned on one card only, so its
+        // share of the picks pooled over every card would hold on none: it is `earned_wear`'s.
+        let every_card = |cosmetic: &Cosmetic| {
+            CARD_SLOT_KINDS.contains(&cosmetic.kind) && (cosmetic.default || cosmetic.starter)
+        };
         let mut on_cards: BTreeMap<&str, usize> = BTreeMap::new();
         for picks in seats.iter().flat_map(|sample| &sample.loadout.cards) {
             for kind in CARD_SLOT_KINDS {
@@ -159,15 +169,56 @@ pub fn fit_cosmetics(
                 }
             }
         }
-        let card_picks_total: usize = on_cards.values().sum();
+        let card_picks_total: usize = registry
+            .iter()
+            .filter(|cosmetic| every_card(cosmetic))
+            .filter_map(|cosmetic| on_cards.get(cosmetic.id.as_str()))
+            .sum();
         let card_picks = registry
             .iter()
-            .filter(|cosmetic| CARD_SLOT_KINDS.contains(&cosmetic.kind))
+            .filter(|cosmetic| every_card(cosmetic))
             .filter_map(|cosmetic| {
                 let count = on_cards.get(cosmetic.id.as_str()).copied()?;
                 Some((cosmetic.id.clone(), share(count, card_picks_total)))
             })
             .collect();
+        // Each earned foil, finish and border on each card a seat's person owns it on: of the seats
+        // that own it there and play the card, the share whose card wears it, in the registry's
+        // order, then by card.
+        let mut earned_wear = Vec::new();
+        for earned in registry.iter().filter(|cosmetic| {
+            CARD_SLOT_KINDS.contains(&cosmetic.kind) && !cosmetic.default && !cosmetic.starter
+        }) {
+            let on: BTreeSet<&str> = seats
+                .iter()
+                .flat_map(|sample| &owned_by(&sample.profile_id).cards)
+                .filter(|row| row.cosmetic_id == earned.id)
+                .map(|row| row.card_id.as_str())
+                .collect();
+            for card in on {
+                let could: Vec<&&LoadoutSample> = seats
+                    .iter()
+                    .filter(|sample| sample.deck.iter().any(|id| id == card))
+                    .filter(|sample| {
+                        owned_by(&sample.profile_id)
+                            .cards
+                            .iter()
+                            .any(|row| row.card_id == card && row.cosmetic_id == earned.id)
+                    })
+                    .collect();
+                if could.is_empty() {
+                    continue;
+                }
+                let worn = could
+                    .iter()
+                    .filter(|sample| {
+                        sample.loadout.card(card).and_then(|picks| picks.get(earned.kind))
+                            == Some(earned.id.as_str())
+                    })
+                    .count();
+                earned_wear.push((earned.id.clone(), card.to_string(), share(worn, could.len())));
+            }
+        }
         // Each full art: of the seats that own it and play its card, the share that printed it.
         let mut full_art_wear = Vec::new();
         for full_art in registry
@@ -234,6 +285,7 @@ pub fn fit_cosmetics(
             per_card_share: share(picked.len(), seats.len()),
             cards_per_deck_mean,
             card_picks,
+            earned_wear,
             full_art_wear,
             ownership,
         });
@@ -300,8 +352,16 @@ pub fn render_cosmetic_fits(rows: &[BucketCosmetics], min_samples: usize) -> Str
             })
             .collect::<Vec<String>>()
             .join(", ");
+        let earned_wear = row
+            .earned_wear
+            .iter()
+            .map(|(cosmetic, card, share)| {
+                format!("CosmeticWear {{ cosmetic: {cosmetic:?}, card: {card:?}, share: {share:.4} }}")
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
         out.push_str(&format!(
-            "    CosmeticFit {{ max_age_days: {max_age}, samples: {}, slots: &[{}], per_card_share: {:.4}, cards_per_deck_mean: {:.4}, card_picks: &[{}], full_art_wear: &[{}], ownership: &[{ownership}] }},\n",
+            "    CosmeticFit {{ max_age_days: {max_age}, samples: {}, slots: &[{}], per_card_share: {:.4}, cards_per_deck_mean: {:.4}, card_picks: &[{}], earned_wear: &[{earned_wear}], full_art_wear: &[{}], ownership: &[{ownership}] }},\n",
             row.samples,
             pairs(&row.slots),
             row.per_card_share,

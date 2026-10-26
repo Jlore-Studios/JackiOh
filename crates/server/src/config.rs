@@ -1689,16 +1689,26 @@ pub struct CosmeticOwnership {
     pub share: f64,
 }
 
+/// R1834006: an earned foil, finish or border on the one card a person owns it on: of the seats
+/// whose person owns `cosmetic` on `card` and whose deck holds that card, the share whose card wears
+/// it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CosmeticWear {
+    pub cosmetic: &'static str,
+    pub card: &'static str,
+    pub share: f64,
+}
+
 /// R1834005, R1834006: what people of one account age wear, over `samples` of their seats, for
 /// accounts up to `max_age_days` old (`None`: older than every bound of
 /// `BOT_COSMETIC_AGE_BUCKETS_DAYS`). `slots` is each cosmetic's share of the seats wearing it in its
 /// kind's slot (the six of a seat's loadout, defaults included; a kind it lists nothing of takes the
 /// prior's split). `per_card_share` is the share of seats with a pick of their own on some card,
-/// `cards_per_deck_mean` the mean number of cards such a seat picks, `card_picks` each foil's,
-/// finish's and border's share of the picks those cards hold (the earned ones a seat can only own
-/// on a card among them; empty, a card's pick takes the prior's split), `full_art_wear` each full art's
-/// share of the seats that own it and play its card that print it, and `ownership` each
-/// non-starter's share of the bucket's people that own it.
+/// `cards_per_deck_mean` the mean number of cards such a seat picks, `card_picks` each default's and
+/// starter's (a foil, a finish or a border every card may wear) share of those cards' picks of one,
+/// `earned_wear` each earned one's wear on its card (`CosmeticWear`; both empty, a card's pick takes
+/// the prior's split), `full_art_wear` each full art's share of the seats that own it and play its
+/// card that print it, and `ownership` each non-starter's share of the bucket's people that own it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CosmeticFit {
     pub max_age_days: Option<i64>,
@@ -1707,6 +1717,7 @@ pub struct CosmeticFit {
     pub per_card_share: f64,
     pub cards_per_deck_mean: f64,
     pub card_picks: &'static [(&'static str, f64)],
+    pub earned_wear: &'static [CosmeticWear],
     pub full_art_wear: &'static [(&'static str, f64)],
     pub ownership: &'static [CosmeticOwnership],
 }
@@ -1718,7 +1729,8 @@ pub const BOT_COSMETIC_FITS: &[CosmeticFit] = &[];
 
 /// R1834005: the hand-set prior every bucket draws from until a fit replaces it: no shares of its
 /// own (each slot `BOT_COSMETIC_PRIOR_DEFAULT_SHARE` default, the rest split among the starters),
-/// no full art's wear of its own (`BOT_COSMETIC_PRIOR_FULL_ART_WEAR`) and no ownership of its own
+/// no picks on cards of its own (a card's pick a kind at even odds, by the slots' split), no full
+/// art's wear of its own (`BOT_COSMETIC_PRIOR_FULL_ART_WEAR`) and no ownership of its own
 /// (`BOT_COSMETIC_PRIOR_OWNERSHIP`).
 pub const BOT_COSMETIC_PRIOR: CosmeticFit = CosmeticFit {
     max_age_days: None,
@@ -1727,6 +1739,7 @@ pub const BOT_COSMETIC_PRIOR: CosmeticFit = CosmeticFit {
     per_card_share: BOT_COSMETIC_PRIOR_PER_CARD_SHARE,
     cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
     card_picks: &[],
+    earned_wear: &[],
     full_art_wear: &[],
     ownership: &[],
 };

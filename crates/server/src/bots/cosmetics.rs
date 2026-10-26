@@ -360,12 +360,17 @@ pub fn draw_slots(
     }
 }
 
-/// One pick of `card`'s own: when `fit` lists people's `card_picks`, a foil, a finish or a border,
-/// kind and cosmetic drawn together among what `wardrobe` owns on the card at their shares of
-/// people's picks on cards (`draw_by_shares`, an earned one at its share over its owners on the
-/// card), since a seat's `slots` never hold a per-card kind's earned cosmetic (it is owned only on a
-/// card, R1834002); else, under the prior, one kind at even odds and a cosmetic of it by the
-/// prior's split. Never what the account wears on every card of that kind (`account`).
+/// Whether `fit` holds people's picks on cards (`card_picks`, `earned_wear`): the prior holds none.
+fn fits_card_picks(fit: &CosmeticFit) -> bool {
+    !fit.card_picks.is_empty() || !fit.earned_wear.is_empty()
+}
+
+/// One pick of `card`'s own: when `fit` holds people's picks on cards (`fits_card_picks`), a
+/// default's or a starter's foil, finish or border, kind and cosmetic drawn together at their
+/// shares of people's picks on cards (`card_picks`; an earned one is drawn by `wear_earned`, at its
+/// wear on its own card); else, under the prior, one kind at even odds and a cosmetic of it by the
+/// prior's split among what `wardrobe` owns on the card. Never what the account wears on every
+/// card of that kind (`account`).
 fn draw_card_pick<'r>(
     rng: &mut Rng,
     registry: &'r [Cosmetic],
@@ -380,12 +385,16 @@ fn draw_card_pick<'r>(
             .into_iter()
             .filter(move |cosmetic| cosmetic.id != seat)
     };
-    if fit.card_picks.is_empty() {
+    if !fits_card_picks(fit) {
         let kind = rng.pick(&CARD_SLOT_KINDS).copied()?;
         let candidates: Vec<&Cosmetic> = candidates_of(kind).collect();
         return pick_weighted(rng, fit, registry, &candidates);
     }
-    let candidates: Vec<&Cosmetic> = CARD_SLOT_KINDS.into_iter().flat_map(candidates_of).collect();
+    let candidates: Vec<&Cosmetic> = CARD_SLOT_KINDS
+        .into_iter()
+        .flat_map(candidates_of)
+        .filter(|cosmetic| cosmetic.default || cosmetic.starter)
+        .collect();
     draw_by_shares(
         rng,
         registry,
@@ -397,6 +406,40 @@ fn draw_card_pick<'r>(
     )
 }
 
+/// Under a fit holding people's picks on cards, `card`'s earned foils, finishes and borders: each
+/// that `wardrobe` owns on the card, in the registry's order, is worn at its `earned_wear` (none
+/// when the fit lists none: no person who owns it there and played the card wore it), a kind
+/// taking the first that rolls. The wardrobe holds each at its share of people that own it there,
+/// so the bots that play the card wear it at the share of people that do, however many cards
+/// their deck holds. Whether the card took a pick.
+fn wear_earned(
+    rng: &mut Rng,
+    registry: &[Cosmetic],
+    fit: &CosmeticFit,
+    wardrobe: &OwnedCosmetics,
+    picks: &mut CardPicks,
+) -> bool {
+    let card = picks.card_id.clone();
+    let mut took = false;
+    for cosmetic in registry.iter().filter(|cosmetic| {
+        CARD_SLOT_KINDS.contains(&cosmetic.kind)
+            && !cosmetic.default
+            && !cosmetic.starter
+            && owns(cosmetic, Some(&card), wardrobe)
+    }) {
+        let wear = fit
+            .earned_wear
+            .iter()
+            .find(|row| row.cosmetic == cosmetic.id && row.card == card)
+            .map_or(0.0, |row| row.share);
+        if picks.get(cosmetic.kind).is_none() && rng.chance(wear) {
+            picks.set(cosmetic.kind, Some(cosmetic.id.clone()));
+            took = true;
+        }
+    }
+    took
+}
+
 /// The share of seats that own `full_art` and play its card that print it.
 fn full_art_wear(fit: &CosmeticFit, full_art: &str) -> f64 {
     fit.full_art_wear
@@ -406,12 +449,13 @@ fn full_art_wear(fit: &CosmeticFit, full_art: &str) -> f64 {
 }
 
 /// R1834005: a bot's cards' own picks from `seed`, over its `decks` (each a list of card ids, in
-/// the order it holds them): for each deck, at the fit's per-card share, its `cards_per_deck_mean`
-/// cards (rounded, at least one) are each given a pick other than the account's, drawn among what
-/// the wardrobe owns on the card by people's picks on cards (`draw_card_pick`), a card picked for an earlier deck
-/// keeping that pick; then each card whose full art the wardrobe owns prints it at the fit's wear
-/// (the account's switch is on, so a card that does not is switched off). Sorted by card, each
-/// entry holding something.
+/// the order it holds them): for each deck, under a fit of people's picks on cards, each card no
+/// earlier deck held first wears what it earned at its wear (`wear_earned`); then, at the fit's
+/// per-card share, its `cards_per_deck_mean` cards (rounded, at least one), less those that just
+/// wore an earned one, are each given a pick other than the account's (`draw_card_pick`), a card
+/// picked already keeping that pick; then each card whose full art the wardrobe owns prints it at
+/// the fit's wear (the account's switch is on, so a card that does not is switched off). Sorted by
+/// card, each entry holding something.
 pub fn draw_card_picks(
     seed: &str,
     registry: &[Cosmetic],
@@ -430,12 +474,29 @@ pub fn draw_card_picks(
             .collect::<BTreeSet<&str>>()
             .into_iter()
             .collect();
+        let mut earned = 0;
+        if fits_card_picks(fit) {
+            for card in distinct.iter().filter(|card| !every.contains(*card)) {
+                let mut picks = CardPicks {
+                    card_id: card.to_string(),
+                    ..CardPicks::default()
+                };
+                if wear_earned(&mut rng, registry, fit, wardrobe, &mut picks) {
+                    cards.push(picks);
+                    earned += 1;
+                }
+            }
+        }
         every.extend(distinct.iter().copied());
         if !rng.chance(fit.per_card_share) || distinct.is_empty() {
             continue;
         }
         let many = (fit.cards_per_deck_mean.round().max(1.0) as usize).min(distinct.len());
-        for card in rng.shuffle(&distinct).into_iter().take(many) {
+        for card in rng
+            .shuffle(&distinct)
+            .into_iter()
+            .take(many.saturating_sub(earned))
+        {
             if cards.iter().any(|picks| picks.card_id == card) {
                 continue;
             }

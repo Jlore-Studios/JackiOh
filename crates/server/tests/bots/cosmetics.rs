@@ -20,7 +20,7 @@ use jackioh_server::config::{
     BOT_COSMETIC_FIT_MIN_SAMPLES, BOT_COSMETIC_FITS, BOT_COSMETIC_MIN_AGE_DAYS, BOT_COSMETIC_MIN_OWNERS,
     BOT_COSMETIC_PRIOR, BOT_COSMETIC_PRIOR_CARDS_PER_DECK, BOT_COSMETIC_PRIOR_DEFAULT_SHARE,
     BOT_COSMETIC_PRIOR_FULL_ART_WEAR, BOT_COSMETIC_PRIOR_OWNERSHIP, BOT_COSMETIC_REDRAW_DAYS, BOT_STRENGTHS,
-    CosmeticFit, CosmeticOwnership, PersonaName,
+    CosmeticFit, CosmeticOwnership, CosmeticWear, PersonaName,
 };
 use jackioh_server::cosmetics::{Cosmetic, CosmeticKind, CosmeticRarity, owns, registry};
 use jackioh_server::db::store::{BotDeck, BotRow, FrozenDeck, FrozenTrio, NewBot, ProfileCreateInput};
@@ -253,6 +253,7 @@ static EVERYONE_OWNS: CosmeticFit = CosmeticFit {
     per_card_share: 1.0,
     cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
     card_picks: &[],
+    earned_wear: &[],
     full_art_wear: &[],
     ownership: &[
         CosmeticOwnership {
@@ -437,6 +438,7 @@ static SHARES: [CosmeticFit; 1] = [CosmeticFit {
     per_card_share: 0.5,
     cards_per_deck_mean: 2.0,
     card_picks: &[],
+    earned_wear: &[],
     full_art_wear: &[("full-art-big-d-fender", 0.3)],
     ownership: &[CosmeticOwnership {
         cosmetic: "full-art-big-d-fender",
@@ -651,6 +653,7 @@ static OWNED_SHARES: CosmeticFit = CosmeticFit {
     per_card_share: 0.0,
     cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
     card_picks: &[],
+    earned_wear: &[],
     full_art_wear: &[],
     ownership: &[
         CosmeticOwnership {
@@ -711,9 +714,9 @@ fn r1834005_a_fitted_non_starter_is_worn_at_its_share_of_seats() {
 }
 
 /// A fit as `cosmetics-fit` prints one: the seats wear the card kinds' defaults alone (an earned
-/// foil is owned only on a card, so no seat's slot ever wears one), and every seat picks one card
-/// of its own, half the picks the starter Rainbow foil and half the earned Glitter foil, which one
-/// person in two owns on Big D-fender's card.
+/// foil is owned only on a card, so no seat's slot ever wears one), every seat picks one card of its
+/// own, the starter Rainbow foil when a starter, and one person in two owns the earned Glitter foil
+/// on Big D-fender's card, three in five of whom wear it there when they play it.
 static CARD_SHARES: CosmeticFit = CosmeticFit {
     max_age_days: Some(90),
     samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
@@ -724,7 +727,12 @@ static CARD_SHARES: CosmeticFit = CosmeticFit {
     ],
     per_card_share: 1.0,
     cards_per_deck_mean: 1.0,
-    card_picks: &[("foil-rainbow", 0.5), ("foil-glitter", 0.5)],
+    card_picks: &[("foil-rainbow", 1.0)],
+    earned_wear: &[CosmeticWear {
+        cosmetic: "foil-glitter",
+        card: "core-001",
+        share: 0.6,
+    }],
     full_art_wear: &[],
     ownership: &[CosmeticOwnership {
         cosmetic: "foil-glitter",
@@ -736,48 +744,57 @@ static CARD_SHARES: CosmeticFit = CosmeticFit {
 #[test]
 fn r1834005_a_fitted_cards_picks_wear_an_earned_foil_at_its_share() {
     // Under a fitted row the seat's slots list the card kinds' defaults alone, yet a bot's cards
-    // still pick, the earned foil among them at its share of people's picks on cards, worn only
-    // where its wardrobe holds it.
+    // still pick: the earned foil, worn only where its wardrobe holds it, by the bots that play its
+    // card at its owners' share times its wear there (one in two times three in five), however many
+    // other cards their deck holds, and a starter on the cards the fit's mean still leaves to dress.
     let registry = registry();
     let none = OwnedCosmetics::default();
     let eligible = vec![holding("foil-glitter", Some("core-001"))];
-    let deck = vec!["core-001".to_string()];
+    let worn_by_people = 0.5 * 0.6;
     let share = |count: usize| count as f64 / POOL as f64;
-    let mut worn: BTreeMap<String, usize> = BTreeMap::new();
-    for n in 0..POOL {
-        let seed = format!("card-share:{n}");
-        let wardrobe = draw_wardrobe(&seed, &CARD_SHARES, &eligible, &none);
-        let picks = draw_account(&seed, registry, &CARD_SHARES, &wardrobe);
-        assert_eq!(picks.get(CosmeticKind::Foil), Some("foil-none"), "{seed}");
-        let cards = draw_card_picks(
-            &seed,
-            registry,
-            &CARD_SHARES,
-            &wardrobe,
-            &picks,
-            &[deck.as_slice()],
-        );
-        let [card] = cards.as_slice() else {
-            panic!("{seed}: one card of its own, not {cards:?}");
-        };
-        let foil = card
-            .foil
-            .clone()
-            .unwrap_or_else(|| panic!("{seed}: {card:?} picks no foil"));
-        if foil == "foil-glitter" {
-            assert!(
-                holdings(&wardrobe).contains(&holding("foil-glitter", Some("core-001"))),
-                "{seed}: wears a Glitter foil it does not own"
+    for size in [1, 2, 15] {
+        let deck: Vec<String> = (1..=size).map(|n| format!("core-{n:03}")).collect();
+        let mut worn: BTreeMap<String, usize> = BTreeMap::new();
+        for n in 0..POOL {
+            let seed = format!("card-share:{size}:{n}");
+            let wardrobe = draw_wardrobe(&seed, &CARD_SHARES, &eligible, &none);
+            let picks = draw_account(&seed, registry, &CARD_SHARES, &wardrobe);
+            assert_eq!(picks.get(CosmeticKind::Foil), Some("foil-none"), "{seed}");
+            let cards = draw_card_picks(
+                &seed,
+                registry,
+                &CARD_SHARES,
+                &wardrobe,
+                &picks,
+                &[deck.as_slice()],
             );
+            let [card] = cards.as_slice() else {
+                panic!("{seed}: one card of its own, the fit's mean, not {cards:?}");
+            };
+            let foil = card
+                .foil
+                .clone()
+                .unwrap_or_else(|| panic!("{seed}: {card:?} picks no foil"));
+            if foil == "foil-glitter" {
+                assert_eq!(card.card_id, "core-001", "{seed}: Glitter off its card");
+                assert!(
+                    holdings(&wardrobe).contains(&holding("foil-glitter", Some("core-001"))),
+                    "{seed}: wears a Glitter foil it does not own"
+                );
+            }
+            *worn.entry(foil).or_default() += 1;
         }
-        *worn.entry(foil).or_default() += 1;
-    }
-    assert_eq!(worn.len(), 2, "{worn:?}");
-    for (id, expected) in CARD_SHARES.card_picks {
+        assert_eq!(worn.len(), 2, "{size} cards: {worn:?}");
+        let glitter = share(worn.get("foil-glitter").copied().unwrap_or(0));
         close(
-            share(worn.get(*id).copied().unwrap_or(0)),
-            *expected,
-            &format!("the cards' {id}"),
+            glitter,
+            worn_by_people,
+            &format!("{size} cards: Glitter on core-001"),
+        );
+        close(
+            share(worn.get("foil-rainbow").copied().unwrap_or(0)),
+            1.0 - worn_by_people,
+            &format!("{size} cards: Rainbow"),
         );
     }
 }
@@ -794,6 +811,7 @@ fn r1834005_an_aging_bot_owns_at_its_ages_share_not_more() {
         per_card_share: 0.0,
         cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
         card_picks: &[],
+        earned_wear: &[],
         full_art_wear: &[],
         ownership: &[CosmeticOwnership {
             cosmetic: "full-art-big-d-fender",
@@ -875,6 +893,7 @@ static REDRAW_FITS: [CosmeticFit; 2] = [
         per_card_share: 1.0,
         cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
         card_picks: &[],
+        earned_wear: &[],
         full_art_wear: &[],
         ownership: &[],
     },
@@ -885,6 +904,7 @@ static REDRAW_FITS: [CosmeticFit; 2] = [
         per_card_share: 1.0,
         cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
         card_picks: &[],
+        earned_wear: &[],
         full_art_wear: &[("full-art-big-d-fender", 0.0)],
         ownership: &[CosmeticOwnership {
             cosmetic: "full-art-big-d-fender",

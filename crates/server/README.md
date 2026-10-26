@@ -653,8 +653,9 @@ series still makes its picks.
   prints a `CosmeticFit` row for each bucket of at least `BOT_COSMETIC_FIT_MIN_SAMPLES` seats, to
   paste by hand into `BOT_COSMETIC_FITS`, and a comment keeping the prior for the rest: each slot
   item's share, defaults included, the share of seats with cards of their own picks and their mean
-  number, each foil's, finish's and border's share of those cards' picks (the earned ones, owned only
-  on a card, among them), each full art's wear rate and each non-starter's ownership rate. Aggregates only, no
+  number, each default's and starter's foil, finish and border's share of those cards' picks, each
+  earned one's wear on the card it is owned on (of the people who own it there and play the card),
+  each full art's wear rate and each non-starter's ownership rate. Aggregates only, no
   account id or username; it takes no option.
 - `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
   `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
