@@ -186,6 +186,8 @@ fn expected_rows() -> Vec<BucketCosmetics> {
             ]),
             per_card_share: 0.5,
             cards_per_deck_mean: 2.0,
+            // Anna's two: core-002's foil and core-005's border.
+            card_picks: pairs(&[("foil-rainbow", 0.5), ("border-wood", 0.5)]),
             full_art_wear: pairs(&[("full-art-big-d-fender", 0.5)]),
             // Boris alone: Anna's latest match is in the next bucket.
             ownership: vec![(
@@ -200,6 +202,7 @@ fn expected_rows() -> Vec<BucketCosmetics> {
             slots: defaults_at(1.0),
             per_card_share: 0.0,
             cards_per_deck_mean: 0.0,
+            card_picks: Vec::new(),
             full_art_wear: pairs(&[("full-art-gary-the-gambler", 0.0)]),
             ownership: vec![
                 (
@@ -220,6 +223,7 @@ fn expected_rows() -> Vec<BucketCosmetics> {
             slots: defaults_at(1.0),
             per_card_share: 0.0,
             cards_per_deck_mean: 0.0,
+            card_picks: Vec::new(),
             full_art_wear: Vec::new(),
             ownership: Vec::new(),
         },
@@ -246,6 +250,7 @@ fn assert_rows(actual: &[BucketCosmetics], expected: &[BucketCosmetics]) {
             close(row.cards_per_deck_mean, want.cards_per_deck_mean),
             "{row:?}"
         );
+        assert!(same_pairs(&row.card_picks, &want.card_picks), "{row:?}");
         assert!(same_pairs(&row.full_art_wear, &want.full_art_wear), "{row:?}");
         assert_eq!(row.ownership.len(), want.ownership.len(), "{row:?}");
         for (got, wanted) in row.ownership.iter().zip(&want.ownership) {
@@ -266,9 +271,9 @@ fn r1834006_people_only_rows() {
     assert_eq!(
         printed,
         "// jackioh-server cosmetics-fit: paste into BOT_COSMETIC_FITS, crates/server/src/config.rs\n\
-         \x20   CosmeticFit { max_age_days: Some(7), samples: 2, slots: &[(\"foil-none\", 0.5000), (\"foil-rainbow\", 0.5000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 0.5000), (\"table-felt\", 0.5000), (\"field-none\", 0.5000), (\"field-rain\", 0.5000), (\"card-back-standard\", 1.0000)], per_card_share: 0.5000, cards_per_deck_mean: 2.0000, full_art_wear: &[(\"full-art-big-d-fender\", 0.5000)], ownership: &[CosmeticOwnership { cosmetic: \"full-art-big-d-fender\", card: Some(\"core-001\"), share: 1.0000 }] },\n\
-         \x20   CosmeticFit { max_age_days: Some(30), samples: 1, slots: &[(\"foil-none\", 1.0000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 1.0000), (\"field-none\", 1.0000), (\"card-back-standard\", 1.0000)], per_card_share: 0.0000, cards_per_deck_mean: 0.0000, full_art_wear: &[(\"full-art-gary-the-gambler\", 0.0000)], ownership: &[CosmeticOwnership { cosmetic: \"full-art-big-d-fender\", card: Some(\"core-001\"), share: 1.0000 }, CosmeticOwnership { cosmetic: \"full-art-gary-the-gambler\", card: Some(\"core-004\"), share: 1.0000 }] },\n\
-         \x20   CosmeticFit { max_age_days: None, samples: 1, slots: &[(\"foil-none\", 1.0000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 1.0000), (\"field-none\", 1.0000), (\"card-back-standard\", 1.0000)], per_card_share: 0.0000, cards_per_deck_mean: 0.0000, full_art_wear: &[], ownership: &[] },\n"
+         \x20   CosmeticFit { max_age_days: Some(7), samples: 2, slots: &[(\"foil-none\", 0.5000), (\"foil-rainbow\", 0.5000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 0.5000), (\"table-felt\", 0.5000), (\"field-none\", 0.5000), (\"field-rain\", 0.5000), (\"card-back-standard\", 1.0000)], per_card_share: 0.5000, cards_per_deck_mean: 2.0000, card_picks: &[(\"foil-rainbow\", 0.5000), (\"border-wood\", 0.5000)], full_art_wear: &[(\"full-art-big-d-fender\", 0.5000)], ownership: &[CosmeticOwnership { cosmetic: \"full-art-big-d-fender\", card: Some(\"core-001\"), share: 1.0000 }] },\n\
+         \x20   CosmeticFit { max_age_days: Some(30), samples: 1, slots: &[(\"foil-none\", 1.0000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 1.0000), (\"field-none\", 1.0000), (\"card-back-standard\", 1.0000)], per_card_share: 0.0000, cards_per_deck_mean: 0.0000, card_picks: &[], full_art_wear: &[(\"full-art-gary-the-gambler\", 0.0000)], ownership: &[CosmeticOwnership { cosmetic: \"full-art-big-d-fender\", card: Some(\"core-001\"), share: 1.0000 }, CosmeticOwnership { cosmetic: \"full-art-gary-the-gambler\", card: Some(\"core-004\"), share: 1.0000 }] },\n\
+         \x20   CosmeticFit { max_age_days: None, samples: 1, slots: &[(\"foil-none\", 1.0000), (\"finish-plain\", 1.0000), (\"border-standard\", 1.0000), (\"table-tavern\", 1.0000), (\"field-none\", 1.0000), (\"card-back-standard\", 1.0000)], per_card_share: 0.0000, cards_per_deck_mean: 0.0000, card_picks: &[], full_art_wear: &[], ownership: &[] },\n"
     );
     // Aggregates only: no person's id, whole or in part, and no username field.
     for person in [ANNA, BORIS, CLEO] {
@@ -297,6 +302,7 @@ static PASTED: [CosmeticFit; 2] = [
         slots: &[("table-felt", 1.0)],
         per_card_share: 0.5,
         cards_per_deck_mean: 2.0,
+        card_picks: &[],
         full_art_wear: &[],
         ownership: &[],
     },
@@ -306,6 +312,7 @@ static PASTED: [CosmeticFit; 2] = [
         slots: &[("table-wood", 1.0)],
         per_card_share: 0.4,
         cards_per_deck_mean: 1.0,
+        card_picks: &[],
         full_art_wear: &[],
         ownership: &[],
     },

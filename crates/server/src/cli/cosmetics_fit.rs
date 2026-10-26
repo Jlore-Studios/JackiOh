@@ -17,6 +17,8 @@
 //!    loadout, defaults included;
 //!  - `per_card_share`: the share of seats with a card of their own picks (a foil, a finish or a
 //!    border of its own), and `cards_per_deck_mean` the mean number of such cards those seats hold;
+//!  - `card_picks`: each foil's, finish's and border's share of the picks on those cards (an earned
+//!    one, which a seat can own only on a card, is never in `slots`);
 //!  - `full_art_wear`: of the seats whose person owns a full art and whose deck holds its card, the
 //!    share that printed it (ownership read now, so a full art granted after a match counts it as
 //!    not printed);
@@ -61,6 +63,7 @@ pub struct BucketCosmetics {
     pub slots: Vec<(String, f64)>,
     pub per_card_share: f64,
     pub cards_per_deck_mean: f64,
+    pub card_picks: Vec<(String, f64)>,
     pub full_art_wear: Vec<(String, f64)>,
     /// Each holding: the cosmetic, its card for a per-card one, and its share.
     pub ownership: Vec<(String, Option<String>, f64)>,
@@ -146,6 +149,25 @@ pub fn fit_cosmetics(
         } else {
             picked.iter().sum::<usize>() as f64 / picked.len() as f64
         };
+        // Each foil's, finish's and border's share of the picks the seats hold on their cards, in
+        // the registry's order: the earned ones, which a seat owns only on a card, among them.
+        let mut on_cards: BTreeMap<&str, usize> = BTreeMap::new();
+        for picks in seats.iter().flat_map(|sample| &sample.loadout.cards) {
+            for kind in CARD_SLOT_KINDS {
+                if let Some(id) = picks.get(kind) {
+                    *on_cards.entry(id).or_default() += 1;
+                }
+            }
+        }
+        let card_picks_total: usize = on_cards.values().sum();
+        let card_picks = registry
+            .iter()
+            .filter(|cosmetic| CARD_SLOT_KINDS.contains(&cosmetic.kind))
+            .filter_map(|cosmetic| {
+                let count = on_cards.get(cosmetic.id.as_str()).copied()?;
+                Some((cosmetic.id.clone(), share(count, card_picks_total)))
+            })
+            .collect();
         // Each full art: of the seats that own it and play its card, the share that printed it.
         let mut full_art_wear = Vec::new();
         for full_art in registry
@@ -211,6 +233,7 @@ pub fn fit_cosmetics(
             slots,
             per_card_share: share(picked.len(), seats.len()),
             cards_per_deck_mean,
+            card_picks,
             full_art_wear,
             ownership,
         });
@@ -278,11 +301,12 @@ pub fn render_cosmetic_fits(rows: &[BucketCosmetics], min_samples: usize) -> Str
             .collect::<Vec<String>>()
             .join(", ");
         out.push_str(&format!(
-            "    CosmeticFit {{ max_age_days: {max_age}, samples: {}, slots: &[{}], per_card_share: {:.4}, cards_per_deck_mean: {:.4}, full_art_wear: &[{}], ownership: &[{ownership}] }},\n",
+            "    CosmeticFit {{ max_age_days: {max_age}, samples: {}, slots: &[{}], per_card_share: {:.4}, cards_per_deck_mean: {:.4}, card_picks: &[{}], full_art_wear: &[{}], ownership: &[{ownership}] }},\n",
             row.samples,
             pairs(&row.slots),
             row.per_card_share,
             row.cards_per_deck_mean,
+            pairs(&row.card_picks),
             pairs(&row.full_art_wear),
         ));
     }

@@ -209,13 +209,18 @@ fn pick_weighted<'r>(
         .iter()
         .map(|cosmetic| slot_weight(fit, registry, cosmetic, candidates))
         .collect();
+    pick_by(rng, candidates, &weights)
+}
+
+/// One of `candidates`, each at its weight of `weights`; `None` when none weighs anything.
+fn pick_by<'r>(rng: &mut Rng, candidates: &[&'r Cosmetic], weights: &[f64]) -> Option<&'r Cosmetic> {
     let total: f64 = weights.iter().sum();
     let roll = rng.next() * total;
     if total <= 0.0 {
         return None;
     }
     let mut at = 0.0;
-    for (cosmetic, weight) in candidates.iter().zip(&weights) {
+    for (cosmetic, weight) in candidates.iter().zip(weights) {
         at += weight;
         if roll < at {
             return Some(cosmetic);
@@ -223,7 +228,7 @@ fn pick_weighted<'r>(
     }
     candidates
         .iter()
-        .zip(&weights)
+        .zip(weights)
         .rev()
         .find(|(_, weight)| **weight > 0.0)
         .map(|(cosmetic, _)| *cosmetic)
@@ -242,17 +247,63 @@ fn owned_of_kind<'r>(
         .collect()
 }
 
-/// One slot of `kind`, drawn among what `wardrobe` owns there so that, across the bots, each
-/// cosmetic is worn at `fit`'s share of seats, the kind's default when nothing weighs anything.
+/// One of `candidates` (what a bot owns, of `kinds`, on `card` for a per-card kind), drawn so that,
+/// across the bots, each cosmetic of `kinds` is taken at its share of `shares`.
 ///
 /// A fitted share counts every seat, those that do not own the cosmetic among them, so weighing a
-/// non-starter by it among what one bot owns would count its ownership twice. So when the fit
-/// lists the kind, its non-starters are offered first, in the registry's order: each one the bot
-/// owns it takes at its share over the share of seats still undrawn before it and over its share of
-/// owners (`ownership_share`, the share its wardrobe holds it at), which wears it at its share of
-/// all bots; a bot that takes none draws among the starters and the default by their shares, which
-/// are then theirs too. A kind the fit lists nothing of takes the prior's split among what the
-/// wardrobe owns (`slot_weight`).
+/// non-starter by it among what one bot owns would count its ownership twice. So its non-starters
+/// are offered first, in the registry's order: each one the bot owns it takes at its share over the
+/// share of seats still undrawn before it and over its share of owners (`ownership_share`, the
+/// share its wardrobe holds it at), which takes it at its share of all bots; a bot that takes none
+/// draws among the starters and the default by their shares, which are then theirs too. `None`
+/// when nothing it owns weighs anything.
+fn draw_by_shares<'r>(
+    rng: &mut Rng,
+    registry: &'r [Cosmetic],
+    fit: &CosmeticFit,
+    shares: &[(&str, f64)],
+    kinds: &[CosmeticKind],
+    card: Option<&str>,
+    candidates: &[&'r Cosmetic],
+) -> Option<&'r Cosmetic> {
+    let share_of = |id: &str| {
+        shares
+            .iter()
+            .find(|(listed, _)| *listed == id)
+            .map_or(0.0, |(_, share)| *share)
+    };
+    let mut undrawn = 1.0;
+    for cosmetic in registry
+        .iter()
+        .filter(|cosmetic| kinds.contains(&cosmetic.kind) && !cosmetic.default && !cosmetic.starter)
+    {
+        let share = share_of(&cosmetic.id);
+        if share <= 0.0 {
+            continue;
+        }
+        let holding = (cosmetic.id.clone(), card.map(str::to_string));
+        let reach = undrawn * ownership_share(fit, &holding);
+        undrawn -= share;
+        if !candidates.iter().any(|owned| owned.id == cosmetic.id) {
+            continue;
+        }
+        if reach <= 0.0 || rng.chance(share / reach) {
+            return Some(cosmetic);
+        }
+    }
+    let common: Vec<&Cosmetic> = candidates
+        .iter()
+        .copied()
+        .filter(|cosmetic| cosmetic.default || cosmetic.starter)
+        .collect();
+    let weights: Vec<f64> = common.iter().map(|cosmetic| share_of(&cosmetic.id)).collect();
+    pick_by(rng, &common, &weights)
+}
+
+/// One slot of `kind`, drawn among what `wardrobe` owns so that, across the bots, each cosmetic is
+/// worn at `fit`'s share of seats (`draw_by_shares`), the kind's default when nothing weighs
+/// anything. A kind the fit lists nothing of takes the prior's split among what the wardrobe owns
+/// (`slot_weight`).
 fn draw_slot(
     rng: &mut Rng,
     registry: &[Cosmetic],
@@ -267,38 +318,7 @@ fn draw_slot(
             .any(|cosmetic| cosmetic.id == *id && cosmetic.kind == kind)
     });
     let drawn = if fitted {
-        let mut undrawn = 1.0;
-        let mut taken = None;
-        for cosmetic in registry
-            .iter()
-            .filter(|cosmetic| cosmetic.kind == kind && !cosmetic.default && !cosmetic.starter)
-        {
-            let share = fit
-                .slots
-                .iter()
-                .find(|(id, _)| *id == cosmetic.id)
-                .map_or(0.0, |(_, share)| *share);
-            if share <= 0.0 {
-                continue;
-            }
-            let reach = undrawn * ownership_share(fit, &(cosmetic.id.clone(), None));
-            undrawn -= share;
-            if !candidates.iter().any(|owned| owned.id == cosmetic.id) {
-                continue;
-            }
-            if reach <= 0.0 || rng.chance(share / reach) {
-                taken = Some(cosmetic);
-                break;
-            }
-        }
-        taken.or_else(|| {
-            let common: Vec<&Cosmetic> = candidates
-                .iter()
-                .copied()
-                .filter(|cosmetic| cosmetic.default || cosmetic.starter)
-                .collect();
-            pick_weighted(rng, fit, registry, &common)
-        })
+        draw_by_shares(rng, registry, fit, fit.slots, &[kind], None, &candidates)
     } else {
         pick_weighted(rng, fit, registry, &candidates)
     };
@@ -340,6 +360,43 @@ pub fn draw_slots(
     }
 }
 
+/// One pick of `card`'s own: when `fit` lists people's `card_picks`, a foil, a finish or a border,
+/// kind and cosmetic drawn together among what `wardrobe` owns on the card at their shares of
+/// people's picks on cards (`draw_by_shares`, an earned one at its share over its owners on the
+/// card), since a seat's `slots` never hold a per-card kind's earned cosmetic (it is owned only on a
+/// card, R1834002); else, under the prior, one kind at even odds and a cosmetic of it by the
+/// prior's split. Never what the account wears on every card of that kind (`account`).
+fn draw_card_pick<'r>(
+    rng: &mut Rng,
+    registry: &'r [Cosmetic],
+    fit: &CosmeticFit,
+    wardrobe: &OwnedCosmetics,
+    account: &AccountPicks,
+    card: &str,
+) -> Option<&'r Cosmetic> {
+    let candidates_of = |kind: CosmeticKind| {
+        let seat = account.get(kind).unwrap_or_default();
+        owned_of_kind(registry, wardrobe, kind, Some(card))
+            .into_iter()
+            .filter(move |cosmetic| cosmetic.id != seat)
+    };
+    if fit.card_picks.is_empty() {
+        let kind = rng.pick(&CARD_SLOT_KINDS).copied()?;
+        let candidates: Vec<&Cosmetic> = candidates_of(kind).collect();
+        return pick_weighted(rng, fit, registry, &candidates);
+    }
+    let candidates: Vec<&Cosmetic> = CARD_SLOT_KINDS.into_iter().flat_map(candidates_of).collect();
+    draw_by_shares(
+        rng,
+        registry,
+        fit,
+        fit.card_picks,
+        &CARD_SLOT_KINDS,
+        Some(card),
+        &candidates,
+    )
+}
+
 /// The share of seats that own `full_art` and play its card that print it.
 fn full_art_wear(fit: &CosmeticFit, full_art: &str) -> f64 {
     fit.full_art_wear
@@ -350,8 +407,8 @@ fn full_art_wear(fit: &CosmeticFit, full_art: &str) -> f64 {
 
 /// R1834005: a bot's cards' own picks from `seed`, over its `decks` (each a list of card ids, in
 /// the order it holds them): for each deck, at the fit's per-card share, its `cards_per_deck_mean`
-/// cards (rounded, at least one) are each given a pick of one kind other than the account's, drawn
-/// among what the wardrobe owns on the card by the fit's shares, a card picked for an earlier deck
+/// cards (rounded, at least one) are each given a pick other than the account's, drawn among what
+/// the wardrobe owns on the card by people's picks on cards (`draw_card_pick`), a card picked for an earlier deck
 /// keeping that pick; then each card whose full art the wardrobe owns prints it at the fit's wear
 /// (the account's switch is on, so a card that does not is switched off). Sorted by card, each
 /// entry holding something.
@@ -382,17 +439,9 @@ pub fn draw_card_picks(
             if cards.iter().any(|picks| picks.card_id == card) {
                 continue;
             }
-            let Some(kind) = rng.pick(&CARD_SLOT_KINDS).copied() else {
-                continue;
-            };
-            let seat = account.get(kind).unwrap_or_default();
-            let candidates: Vec<&Cosmetic> = owned_of_kind(registry, wardrobe, kind, Some(card))
-                .into_iter()
-                .filter(|cosmetic| cosmetic.id != seat)
-                .collect();
-            if let Some(picked) = pick_weighted(&mut rng, fit, registry, &candidates) {
+            if let Some(picked) = draw_card_pick(&mut rng, registry, fit, wardrobe, account, card) {
                 let at = entry(&mut cards, card);
-                cards[at].set(kind, Some(picked.id.clone()));
+                cards[at].set(picked.kind, Some(picked.id.clone()));
             }
         }
     }

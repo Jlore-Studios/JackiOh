@@ -1694,7 +1694,9 @@ pub struct CosmeticOwnership {
 /// `BOT_COSMETIC_AGE_BUCKETS_DAYS`). `slots` is each cosmetic's share of the seats wearing it in its
 /// kind's slot (the six of a seat's loadout, defaults included; a kind it lists nothing of takes the
 /// prior's split). `per_card_share` is the share of seats with a pick of their own on some card,
-/// `cards_per_deck_mean` the mean number of cards such a seat picks, `full_art_wear` each full art's
+/// `cards_per_deck_mean` the mean number of cards such a seat picks, `card_picks` each foil's,
+/// finish's and border's share of the picks those cards hold (the earned ones a seat can only own
+/// on a card among them; empty, a card's pick takes the prior's split), `full_art_wear` each full art's
 /// share of the seats that own it and play its card that print it, and `ownership` each
 /// non-starter's share of the bucket's people that own it.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -1704,6 +1706,7 @@ pub struct CosmeticFit {
     pub slots: &'static [(&'static str, f64)],
     pub per_card_share: f64,
     pub cards_per_deck_mean: f64,
+    pub card_picks: &'static [(&'static str, f64)],
     pub full_art_wear: &'static [(&'static str, f64)],
     pub ownership: &'static [CosmeticOwnership],
 }
@@ -1723,6 +1726,7 @@ pub const BOT_COSMETIC_PRIOR: CosmeticFit = CosmeticFit {
     slots: &[],
     per_card_share: BOT_COSMETIC_PRIOR_PER_CARD_SHARE,
     cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
     full_art_wear: &[],
     ownership: &[],
 };

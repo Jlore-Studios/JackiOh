@@ -252,6 +252,7 @@ static EVERYONE_OWNS: CosmeticFit = CosmeticFit {
     slots: &[],
     per_card_share: 1.0,
     cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
     full_art_wear: &[],
     ownership: &[
         CosmeticOwnership {
@@ -435,6 +436,7 @@ static SHARES: [CosmeticFit; 1] = [CosmeticFit {
     ],
     per_card_share: 0.5,
     cards_per_deck_mean: 2.0,
+    card_picks: &[],
     full_art_wear: &[("full-art-big-d-fender", 0.3)],
     ownership: &[CosmeticOwnership {
         cosmetic: "full-art-big-d-fender",
@@ -648,6 +650,7 @@ static OWNED_SHARES: CosmeticFit = CosmeticFit {
     ],
     per_card_share: 0.0,
     cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+    card_picks: &[],
     full_art_wear: &[],
     ownership: &[
         CosmeticOwnership {
@@ -707,6 +710,78 @@ fn r1834005_a_fitted_non_starter_is_worn_at_its_share_of_seats() {
     }
 }
 
+/// A fit as `cosmetics-fit` prints one: the seats wear the card kinds' defaults alone (an earned
+/// foil is owned only on a card, so no seat's slot ever wears one), and every seat picks one card
+/// of its own, half the picks the starter Rainbow foil and half the earned Glitter foil, which one
+/// person in two owns on Big D-fender's card.
+static CARD_SHARES: CosmeticFit = CosmeticFit {
+    max_age_days: Some(90),
+    samples: BOT_COSMETIC_FIT_MIN_SAMPLES,
+    slots: &[
+        ("foil-none", 1.0),
+        ("finish-plain", 1.0),
+        ("border-standard", 1.0),
+    ],
+    per_card_share: 1.0,
+    cards_per_deck_mean: 1.0,
+    card_picks: &[("foil-rainbow", 0.5), ("foil-glitter", 0.5)],
+    full_art_wear: &[],
+    ownership: &[CosmeticOwnership {
+        cosmetic: "foil-glitter",
+        card: Some("core-001"),
+        share: 0.5,
+    }],
+};
+
+#[test]
+fn r1834005_a_fitted_cards_picks_wear_an_earned_foil_at_its_share() {
+    // Under a fitted row the seat's slots list the card kinds' defaults alone, yet a bot's cards
+    // still pick, the earned foil among them at its share of people's picks on cards, worn only
+    // where its wardrobe holds it.
+    let registry = registry();
+    let none = OwnedCosmetics::default();
+    let eligible = vec![holding("foil-glitter", Some("core-001"))];
+    let deck = vec!["core-001".to_string()];
+    let share = |count: usize| count as f64 / POOL as f64;
+    let mut worn: BTreeMap<String, usize> = BTreeMap::new();
+    for n in 0..POOL {
+        let seed = format!("card-share:{n}");
+        let wardrobe = draw_wardrobe(&seed, &CARD_SHARES, &eligible, &none);
+        let picks = draw_account(&seed, registry, &CARD_SHARES, &wardrobe);
+        assert_eq!(picks.get(CosmeticKind::Foil), Some("foil-none"), "{seed}");
+        let cards = draw_card_picks(
+            &seed,
+            registry,
+            &CARD_SHARES,
+            &wardrobe,
+            &picks,
+            &[deck.as_slice()],
+        );
+        let [card] = cards.as_slice() else {
+            panic!("{seed}: one card of its own, not {cards:?}");
+        };
+        let foil = card
+            .foil
+            .clone()
+            .unwrap_or_else(|| panic!("{seed}: {card:?} picks no foil"));
+        if foil == "foil-glitter" {
+            assert!(
+                holdings(&wardrobe).contains(&holding("foil-glitter", Some("core-001"))),
+                "{seed}: wears a Glitter foil it does not own"
+            );
+        }
+        *worn.entry(foil).or_default() += 1;
+    }
+    assert_eq!(worn.len(), 2, "{worn:?}");
+    for (id, expected) in CARD_SHARES.card_picks {
+        close(
+            share(worn.get(*id).copied().unwrap_or(0)),
+            *expected,
+            &format!("the cards' {id}"),
+        );
+    }
+}
+
 #[test]
 fn r1834005_an_aging_bot_owns_at_its_ages_share_not_more() {
     // The pool draws each refresh from a seed of its own; a bot that ages six times still owns Big
@@ -718,6 +793,7 @@ fn r1834005_an_aging_bot_owns_at_its_ages_share_not_more() {
         slots: &[],
         per_card_share: 0.0,
         cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+        card_picks: &[],
         full_art_wear: &[],
         ownership: &[CosmeticOwnership {
             cosmetic: "full-art-big-d-fender",
@@ -798,6 +874,7 @@ static REDRAW_FITS: [CosmeticFit; 2] = [
         slots: &[],
         per_card_share: 1.0,
         cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+        card_picks: &[],
         full_art_wear: &[],
         ownership: &[],
     },
@@ -807,6 +884,7 @@ static REDRAW_FITS: [CosmeticFit; 2] = [
         slots: &[],
         per_card_share: 1.0,
         cards_per_deck_mean: BOT_COSMETIC_PRIOR_CARDS_PER_DECK,
+        card_picks: &[],
         full_art_wear: &[("full-art-big-d-fender", 0.0)],
         ownership: &[CosmeticOwnership {
             cosmetic: "full-art-big-d-fender",
