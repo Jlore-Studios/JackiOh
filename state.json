@@ -2282,11 +2282,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-26T13:40:26Z",
+        "at": "2026-10-26T14:29:30Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The hard rule names 'a database migration' outright and this adds 0062; on size alone (~11 files, <100 lines) it would have read medium."
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "a database migration (rule line 5) is hard by the rule, besides a new ruling and spec edits; nothing here was close"
       },
       "failures": 0,
       "forced": false,
