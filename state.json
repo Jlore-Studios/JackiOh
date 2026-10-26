@@ -3354,6 +3354,13 @@
     "2025": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T23:07:17Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 1, size: about 330 lines added plus removed (the moved toolbar counts twice), close to the 400 limit; it also refactors where the scrubber's held state lives, shared by two replays mounted differently"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
