@@ -145,11 +145,6 @@
   color: var(--tavern-gold-pale);
 }
 
-.tavern.app-shell .collection-door__hint {
-  font-size: 13px;
-  color: var(--tavern-text-dim);
-}
-
 /* ---- R1655000: a card in context (CardCosmeticsView) -------------------------------------------
    The Collection's card view: the card large beside a strip of what it may wear. The global wood
    button rule (tavern.css) weighs 0,6,1, so each button here repeats its `:not()` chain to outrank it.

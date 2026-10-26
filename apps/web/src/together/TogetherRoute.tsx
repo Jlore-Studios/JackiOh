@@ -145,9 +145,6 @@ export function TogetherRoute(): ReactElement {
           <h1>JackiOh</h1>
         </div>
         <p className="together-hero__title">{t("Play together")}</p>
-        <p className="together-hero__lead">
-          {t("Add friends by their username, see who is on, challenge them, watch their games, share replays and chat.")}
-        </p>
       </header>
 
       {error === null ? null : (

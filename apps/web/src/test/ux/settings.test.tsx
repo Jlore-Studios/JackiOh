@@ -1,4 +1,4 @@
-// S8; B19, B20, B21, B22, B23, B24 and B41: settings-store and panel contracts.
+// S8; B19, B20, B21, B22, B23, B24, B41 and R2000000: settings-store and panel contracts.
 // Reset the module-scoped store before every test.
 
 import { readFileSync } from "node:fs";
@@ -38,9 +38,8 @@ const DEFAULTS: Settings = {
   hoverPreviews: true,
   reduceMotion: false,
   muteOpponentEmotes: false,
-  publicStats: true,
 };
-const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "publicStats", "reduceMotion"];
+const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "reduceMotion"];
 
 afterEach(() => {
   cleanup();
@@ -766,6 +765,22 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     for (const [key] of SWITCHES) expect(dialog.contains(switchFor(key)), key).toBe(true);
     expect(switchFor("hoverPreviews").checked).toBe(false);
     expect(switchFor("dragToPlay").checked).toBe(true);
+  });
+});
+
+// R2000000: no opt-out from public player statistics
+
+describe("R2000000 Settings has no public player statistics opt-out", () => {
+  it("R2000000 the panel has no public stats switch, and a publicStats an older device stored is dropped", () => {
+    store({ dragToPlay: false, publicStats: false });
+
+    expect(readSettings()).toEqual({ ...DEFAULTS, dragToPlay: false });
+    expect(Object.keys(readSettings()).sort()).toEqual(KEYS);
+
+    render(<SettingsPanel onClose={noop} slots={[]} />);
+
+    expect(screen.queryByTestId("setting-publicStats")).toBeNull();
+    expect(document.body).not.toHaveTextContent(/public player/iu);
   });
 });
 

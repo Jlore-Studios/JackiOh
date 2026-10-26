@@ -61,7 +61,6 @@ describe("R388 the /patch-notes route", () => {
     // The newest patch sits in the open line, and no shut line lists a patch until it is opened.
     expect(within(sets[0] ?? document.body).getAllByTestId(patchTestid.patch)[0]?.dataset.version).toBe(shipped.at(-1)?.version);
     for (const set of sets.slice(1)) expect(within(set).queryAllByTestId(patchTestid.patch)).toEqual([]);
-    expect(screen.getByText(/Every JackiOh patch, set by set, newest first\./u)).toBeInTheDocument();
   });
 
   it("R388 has a tab title, a canonical link and a heading", () => {
