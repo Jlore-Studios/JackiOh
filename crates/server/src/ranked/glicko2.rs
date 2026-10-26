@@ -3,7 +3,8 @@
 //!
 //! One rated game is one rating period: each side is updated against the other's rating from before
 //! the game. A draw scores 0.5 for both, a concede and a disconnect are losses (§2.5's endings decide
-//! who won; this file only reads the score).
+//! who won; this file only reads the score), and a fled game scores 1 for the fleer and 0.5 for the
+//! other side (R1843004, `rate_game_scored`).
 //!
 //! Pure and deterministic: only IEEE-754 arithmetic, `exp`, `ln` and `sqrt`, and the volatility
 //! iteration runs a fixed rule to a fixed tolerance. `tests/api/glicko2.rs` checks it against
@@ -168,7 +169,13 @@ pub struct RatedGame {
 /// R603: one rated game between `a` and `b`, `score_a` being a's score (b's is `1 - score_a`). Each
 /// side is rated against the other's rating from before the game.
 pub fn rate_game(a: &Glicko, b: &Glicko, score_a: Score) -> RatedGame {
-    let score_b: Score = 1.0 - score_a;
+    rate_game_scored(a, b, score_a, 1.0 - score_a)
+}
+
+/// R1843004: `rate_game` for a game whose two scores do not add up to 1: a fled game is a win (1) for
+/// the fleer and a draw (0.5) for the other side. Each side is still rated against the other's
+/// rating from before the game, with its own score; Glicko-2's period reads one side at a time.
+pub fn rate_game_scored(a: &Glicko, b: &Glicko, score_a: Score, score_b: Score) -> RatedGame {
     RatedGame {
         a: glicko2_period(
             a,

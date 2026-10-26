@@ -1,0 +1,28 @@
+/*
+ * R1833000: a cosmetic's look (CosmeticLook.tsx), as wide as the place that draws it: its card's
+ * face wearing it, a mini board (collection.css draws it here as on a tile) or a card back. The
+ * place sizes it: a pack slot's face (packs.css), a token or Chase Shard row (shop.css).
+ */
+
+.cosmetic-look {
+  display: block;
+  width: 100%;
+}
+
+.cosmetic-look > .collection-sample {
+  display: block;
+}
+
+.cosmetic-look > .collection-sample > .cf {
+  width: 100%;
+  height: auto;
+}
+
+.cosmetic-look__back {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  border-radius: 7% / 5%;
+}

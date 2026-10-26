@@ -212,7 +212,9 @@ pub fn targetable_options(state: &GameState, args: &OpenPromptArgs) -> Vec<Promp
             if card.zone.z() != ZoneName::Field {
                 return true;
             }
-            !crate::restrictions::immutable_bars(state, source, card)
+            // R1839000: nobody targets a Dormant card.
+            !crate::slumber::is_slumbering(card)
+                && !crate::restrictions::immutable_bars(state, source, card)
                 && crate::targeting::may_target(state, args.player, spell_source, card, None)
         })
         .cloned()

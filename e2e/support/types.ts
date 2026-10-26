@@ -70,7 +70,9 @@ export type ActionBody =
   | { type: "offerDraw" }
   | { type: "answerDraw"; accept: boolean }
   | { type: "concede" }
-  | { type: "endTurn" };
+  | { type: "endTurn" }
+  // R1838000: a Trade of a Tradable hand card.
+  | { type: "trade"; instanceId: string };
 
 export type ActionInput = ActionBody & { playerId: PlayerId };
 export type Action = ActionBody & { playerId: PlayerId; nonce: string };

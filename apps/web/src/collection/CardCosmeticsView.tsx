@@ -11,7 +11,7 @@
 //
 // A preview writes no pick. A face wears only what the store holds, and `cards/cosmetics.ts` has no
 // seam to draw one wearing an id it does not, so a preview of a foil, finish or border is a second
-// copy of the face, drawn unworn, to which `SampleFace` gives the four attributes
+// copy of the face, drawn unworn, to which `SampleFace` (CosmeticLook.tsx) gives the four attributes
 // `useCosmeticAttributes` would (React never sets them on an unworn face, so nothing fights over
 // them), by the same `wornCosmetics`. A full art changes how the face is built, which only the store
 // reaches, so its preview holds the pick for as long as the item is shown and gives it back as the
@@ -27,7 +27,6 @@ import type { CardDef } from "@jackioh/shared";
 
 import { CardArt, CardDetail, CardFace, faceModel } from "../cards/index.ts";
 import {
-  DEFAULT_CARD_COSMETICS,
   OwnershipContext,
   normalizeCosmetics,
   ownsCosmetic,
@@ -40,12 +39,11 @@ import {
   writeCardFullArt,
   writeCardPick,
   type CardPicks,
-  type CardSlotKind,
-  type CosmeticId,
 } from "../cards/cosmetics.ts";
 import { OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
+import { SampleFace } from "./CosmeticLook.tsx";
 import {
   NO_FULL_ART_ID,
   cardStrip,
@@ -55,43 +53,6 @@ import {
   type StripItem,
   type StripKind,
 } from "./collection.ts";
-
-/** The attributes of a face's cosmetics (`CosmeticAttributes`, cards/cosmetics.ts). */
-const COSMETIC_ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
-
-/**
- * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default. A preview's foil
- * holds still, as the cap on moving foils (COSMETIC_FOIL_ANIMATED_MAX) belongs to the faces of a game.
- */
-function attributesOf(wears: Record<CardSlotKind, CosmeticId>): Record<(typeof COSMETIC_ATTRIBUTES)[number], string | undefined> {
-  const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
-  return {
-    "data-cosmetic-foil": foiled ? wears.foil : undefined,
-    "data-cosmetic-motion": foiled ? "static" : undefined,
-    "data-finish": wears.finish === DEFAULT_CARD_COSMETICS.finish ? undefined : wears.finish,
-    "data-frame": wears.border === DEFAULT_CARD_COSMETICS.border ? undefined : wears.border,
-  };
-}
-
-/** `face` drawn unworn, wearing `wears` by the attributes its stylesheet (cards/cosmetics.css) keys on. */
-function SampleFace({ face, layout, wears }: { face: FaceModel; layout: "full" | "compact"; wears: Record<CardSlotKind, CosmeticId> }): ReactElement {
-  const host = useRef<HTMLSpanElement>(null);
-  const attributes = attributesOf(wears);
-  useLayoutEffect(() => {
-    const root = host.current?.firstElementChild;
-    if (root === null || root === undefined) return;
-    for (const name of COSMETIC_ATTRIBUTES) {
-      const value = attributes[name];
-      if (value === undefined) root.removeAttribute(name);
-      else root.setAttribute(name, value);
-    }
-  });
-  return (
-    <span ref={host} className="collection-sample">
-      <CardFace face={face} layout={layout} />
-    </span>
-  );
-}
 
 /**
  * The large face: the card wearing its own picks, and over it, while a foil, finish or border is

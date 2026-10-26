@@ -1248,3 +1248,31 @@
   margin: 2px 0 0;
   padding-left: 16px;
 }
+
+/* R1854000: a staged quest's stages, in order, each marked done, now or to come (StateNotes.tsx). */
+.inspect-quest-stages {
+  align-items: flex-start;
+}
+
+.inspect-quest-stage-list {
+  margin: 4px 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.inspect-quest-stage-list > li {
+  margin-top: 4px;
+}
+
+.inspect-quest-stage-list > li[data-stage-state="upcoming"] {
+  color: var(--text-dim, #9aa1b8);
+}
+
+.inspect-quest-stage-name {
+  font-weight: 800;
+}
+
+.inspect-quest-stage-goals {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}

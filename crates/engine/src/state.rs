@@ -115,6 +115,68 @@ pub struct Grant {
     pub params: IndexMap<String, i32>,
 }
 
+/// R1839000, R1839001: a Dormant card's status (SPEC §6.1 Dormant, `CardInstance.slumber`): on the
+/// field, filling its zone, and out of every attack's, target's and effect's reach until it awakens
+/// (`slumber.rs`). `turns` is "Dormant for N turns"'s countdown: how many more of its controller's
+/// turns must start before it awakens at the start of the last of them; absent, it sleeps until an
+/// effect awakens it (`effects::awaken`, the Dormant Starship's Activate). Named apart from the
+/// "dormant" of a card beneath a Stack pile (§3.2, R13), which is a place, not a status.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct Slumber {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub turns: Option<i32>,
+}
+
+/// R1852000, R1852005: a Starship's memory (`CardInstance.starship`, `starship.rs`): the Starship
+/// Pieces fused into it, in the order they fused, and — once it has launched (R1852003) — the name it
+/// took and when. Started as the Dormant Starship enters the field; a status, so R78's reset takes it
+/// off as the card leaves the field. Absent on every other card, so a game with no Starship serializes
+/// and hashes as before (D14).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipMemory {
+    /// R1852005: each piece a copy of which fused into it, oldest first.
+    pub pieces: Vec<StarshipPieceRecord>,
+    /// R1852004: the name it took as it launched; absent while it is Dormant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub name: Option<String>,
+    /// R1852005: the order it launched in among every Starship of the game (`GameState.next_seq` as it
+    /// launched), so "the launched Starship" is the latest; absent while it is Dormant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub launched: Option<u32>,
+}
+
+/// R1852005: one piece a Starship holds — the definition its copy fused in on, and whether on its
+/// Radiant face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipPieceRecord {
+    pub def_id: String,
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub radiant: Option<bool>,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -273,6 +335,20 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub frozen: Option<i32>,
+    /// R1839000: the card is Dormant (`slumber.rs`): it entered the field printing it
+    /// (`StaticFlags.slumber`) and has not awakened. A status, never text: it goes with R78's reset as
+    /// the card leaves the field, and an awakening takes it off. Absent on every other card, so a game
+    /// with no Dormant card serializes and hashes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
+    /// R1852000, R1852005: the card is a Starship — the Dormant Starship, whose hull text
+    /// (`StaticFlags.starshipHull`) started this as it entered the field — and this is its memory: the
+    /// pieces fused into it and, once it has launched, its name. A status, never text: R78's reset takes
+    /// it off with the card leaving the field. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starship: Option<StarshipMemory>,
     /// R429: how many times this card has been played, the play under way included — counted at §10.5
     /// step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
     /// (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -321,6 +397,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grants: Option<Vec<Grant>>,
+    /// R1848003 (Stinkyscape #102 Book of Nono-Words, "their prices are set at 1, 2, 3, 4"): the X an
+    /// X-cost card is set at, so its player chooses none: it is played for this X, which is its price
+    /// (R65: exactly X, no modifier reaching it) and what its text reads. A price, so it rides a hand,
+    /// a library and a bounce as `costOverride` does and R766 takes it off a card reaching a graveyard
+    /// or an exile pile; a copy is a new card without it (R57). Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fixed_x: Option<i32>,
     /// R1845000: Nerfs no seat may read, the owner's included, waiting to land at §10.5 step 3 of the
     /// card's next play or cast (R1845001). Kept in every zone; a copy or a Transform is a new card
     /// without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
@@ -570,6 +654,21 @@ pub enum ModifierKind {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         echo: Option<i32>,
+    },
+    // ---- Stinkyscape (issue #1848) ----
+    /// R1848002 (Stinkyscape #13 Asphyxiants Cloud, "your next Spell this turn has Poisonous"): the next
+    /// Spell this player plays face-up (a cast included, R70) has `keyword` for its resolution, given
+    /// at §10.5 step 4 as Forever&'s enchantment is (`play_steps::give_next_spell_keywords`), which
+    /// spends it. Expiry `thisTurn`; several are each spent by that one Spell.
+    KeywordNextSpell {
+        keyword: Keyword,
+    },
+    // ---- Stinkyscape's Starship (issue #1852) ----
+    /// R1852006: "Your Starship launch costs (N)": this player's next launch by the Activate costs
+    /// `cost` (`starship::launch_cost`), the least of several, until a launch it prices spends it
+    /// (expiry `used`).
+    StarshipLaunchCost {
+        cost: i32,
     },
 }
 
@@ -1106,6 +1205,18 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draws: Option<DrawCount>,
+    /// R1838000: how many Trades this player has made on turn `turn`, kept as `draws` is: a count kept
+    /// for an earlier turn reads as 0 (`trade::trades_this_turn`). Absent until their first Trade, so a
+    /// game nobody trades in hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades: Option<DrawCount>,
+    /// R1838000: the Trades this player may make each turn, once an effect has set a figure of their
+    /// own; absent means `TRADES_PER_TURN` (`trade::trades_per_turn_of`), so a game that never sets
+    /// one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades_per_turn: Option<i32>,
     // ---- Meditative player fields (docs/meditative-set.md M5, ME-HANDCAP) ----
     /// R1143: this player's hand size for the rest of the game, once an effect has set one (Meditative
     /// #79 Touched by KY), the latest setting winning; every rule that reads the hand cap reads it
@@ -1125,6 +1236,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub lost_refresh_through: Option<i32>,
+    /// R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
+    /// started", inside the cap): negative once theirs were stolen, positive once they stole some
+    /// (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
+    /// hashes as it did before this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_crystals: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
     /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
     /// hashes as it did before this field existed.
@@ -1158,6 +1276,48 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub answer_chain: Option<AnswerChain>,
+    // ---- Stinkyscape player fields (#1840, `resources`) ----
+    /// R1840000: this player's Resource tray, oldest first: the Resources they hold beside the hand,
+    /// at most `RESOURCE_TRAY_CAP`, read as a hand is (§9.1). Absent while it holds none (never
+    /// `Some(empty)`), so a game without a Resource hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub resource_tray: Option<Vec<CardInstance>>,
+    /// R1840005: this player's Credits, public, gained by selling Resources and spent at the
+    /// Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
+    /// Absent until first gained, so a game without Credits hashes as it did before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub market_credits: Option<i32>,
+    /// R1843000 (Stinkyscape #18's Brains): the votes cast this turn to remove this player from the
+    /// game (`effects::vote_out`). Absent until a first vote, so a game without one hashes as before
+    /// this field existed (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub votes: Option<VoteTally>,
+    /// R1843002 (Stinkyscape #148.1 Edge of the Universe): set when this player flees
+    /// (`effects::flee`), with what it leaves the other player; the state check's game-end point ends
+    /// the game on it. Absent otherwise, so a game without one hashes as before this field existed
+    /// (D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fled: Option<crate::wire::FleeOpponent>,
+}
+
+/// R1843000: one player's votes to remove them from the game, on turn `turn` (`PlayerState.votes`).
+/// A tally kept for an earlier turn counts nothing: the first vote of a later turn starts it again.
+/// `ballots` holds one card per definition, in the order they voted; `VOTE_TALLY_SIZE` of them remove
+/// the player at the state check's game-end point (`win_conditions::vote_check`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct VoteTally {
+    pub turn: i32,
+    pub ballots: Vec<crate::wire::Ballot>,
 }
 
 string_union! {
@@ -1711,12 +1871,19 @@ pub fn create_player_state() -> PlayerState {
         hand_cap: None,
         jade: None,
         lost_refresh_through: None,
+        mana_crystals: None,
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
         duos: None,
         autopilot: None,
         answer_chain: None,
+        trades: None,
+        trades_per_turn: None,
+        resource_tray: None,
+        market_credits: None,
+        votes: None,
+        fled: None,
     }
 }
 
@@ -2031,6 +2198,8 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         enchantments: None,
         berserk: None,
         frozen: None,
+        slumber: None,
+        starship: None,
         times_played: None,
         flashback_spent: None,
         chinese: None,
@@ -2041,6 +2210,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         set_as: None,
         granted_tags: None,
         grants: None,
+        fixed_x: None,
         hidden_nerfs: None,
     };
     *next_id += 1;
@@ -2304,6 +2474,8 @@ fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
         // B5 E21: a backrow pile's dormant cards and a carrier's Unit are on the board too (R446).
         .chain(side.backrow_piles.iter().flatten().flatten())
         .chain(side.carried.iter().flatten().flatten())
+        // R1840000: a Resource in the tray is a card the state holds, as a hand card is.
+        .chain(side.resource_tray.iter().flatten())
         // R98: a card that asks a question mid-resolution is still itself, and §10.5 parks it here
         // between its play and its destination, so a resumed step finds `ctx.self` rather than null.
         .chain(side.resolving.iter())
@@ -2319,6 +2491,7 @@ fn side_cards_mut(side: &mut PlayerState) -> impl Iterator<Item = &mut CardInsta
         .chain(side.backrow.iter_mut().flatten())
         .chain(side.backrow_piles.iter_mut().flatten().flatten())
         .chain(side.carried.iter_mut().flatten().flatten())
+        .chain(side.resource_tray.iter_mut().flatten())
         .chain(side.resolving.iter_mut())
 }
 

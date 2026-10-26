@@ -213,13 +213,11 @@ export function cardStrip(defId: string, canEquip: (defId: string, cosmeticId: C
 export type AccountTile = { cosmetic: Cosmetic; owned: boolean };
 
 /**
- * R1579000, R1655000: `kind`'s entries in the registry's order, each owned or not. A default and a
- * starter are owned by every account (§14.2); the server lists the rest (`owned.account`). `owned`
- * is null while that list is unread or refused, when nothing counts past the defaults and starters.
+ * R1579000, R1655000: `kind`'s entries in the registry's order, each owned or not as `owns` says.
+ * R1833000: `owns` is `useOwnsAccountCosmetic`'s: a default and a starter are owned by every account
+ * (§14.2), the server lists the rest (`GET /api/cosmetics`' account list) while ownership decides, and
+ * every one is owned where it does not.
  */
-export function accountTiles(kind: DeckSlotKind, owned: OwnedCosmeticsResponse | null): AccountTile[] {
-  return cosmeticsOf(kind).map((cosmetic) => ({
-    cosmetic,
-    owned: cosmetic.default || cosmetic.starter || owned?.account.includes(cosmetic.id) === true,
-  }));
+export function accountTiles(kind: DeckSlotKind, owns: (id: string) => boolean): AccountTile[] {
+  return cosmeticsOf(kind).map((cosmetic) => ({ cosmetic, owned: owns(cosmetic.id) }));
 }

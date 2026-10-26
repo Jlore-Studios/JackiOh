@@ -40,6 +40,11 @@ export type Tag =
   | "Acclaimed"
   | "Wincon"
   | "Potion"
+  | "Terminus"
+  | "Quest"
+  | "Otherworldly"
+  | "Other-Origins"
+  | "Jelly Bean"
   | "Token";
 
 /** §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token". */
@@ -159,7 +164,13 @@ export type Keyword =
   /** #783, R783010: Locks its zone as it arrives as a Unit, or as it is revealed as a Trap. */
   | { kind: "Crater" }
   /** #783, R783012: may be played from its owner's graveyard once, at its cost. */
-  | { kind: "Flashback" };
+  | { kind: "Flashback" }
+  /** R1838000: may be Traded from its owner's hand: into the deck at random for a draw, at no mana, one a turn. */
+  | { kind: "Tradable" }
+  /** #1852, R1852000: when it dies, a copy of it fuses into its owner's Dormant Starship. */
+  | { kind: "Starship Piece" }
+  /** #1852, R1852003: a launched Starship. */
+  | { kind: "Starship" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -197,6 +208,9 @@ export const KEYWORD_KINDS = [
   "Cloaked",
   "Crater",
   "Flashback",
+  "Tradable",
+  "Starship Piece",
+  "Starship",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

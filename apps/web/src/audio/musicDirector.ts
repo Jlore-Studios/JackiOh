@@ -6,6 +6,7 @@
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
 
+import { seatOutcome } from "../game/outcome.ts";
 import { HIDDEN_DEF_ID, MUSIC_LOW_HEALTH_FRACTION } from "./constants.ts";
 import type { MusicRequest } from "./music.ts";
 import { MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, nextRotation, startTrack } from "./musicData.ts";
@@ -137,7 +138,9 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
     lowHealth = view.you.hero.health > 0 && view.you.hero.health <= LOW_HEALTH_AT;
     const inPlay = view.phase === "start" || view.phase === "main" || view.phase === "end";
     opponentTurn = inPlay && view.active !== view.viewer;
-    result = view.result === null ? null : view.result.winner === "draw" ? "draw" : view.result.winner === view.viewer ? "victory" : "defeat";
+    // R1843004: as the game ended for this seat, so the other player's `fled` plays the draw.
+    const outcome = view.result === null ? null : seatOutcome(view.result.winner, view.result.reason, view.viewer);
+    result = outcome === null ? null : outcome === "draw" ? "draw" : outcome === "win" ? "victory" : "defeat";
     if (result !== null) sink.stopIntro();
   }
 

@@ -30,14 +30,15 @@ use jackioh_server::db::store::{
     MatchActionRow, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError,
     Ticket,
 };
-use jackioh_server::ranked::glicko2::{Glicko, rate_game};
+use jackioh_server::ranked::glicko2::{Glicko, rate_game, rate_game_scored};
 use jackioh_server::ranked::season::season_id_of;
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::support::deps::test_app;
 use crate::support::engine::{
-    TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game, fake_deck, hand_card, hand_ids, install_test_cards,
+    TEST_FLEE, TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game, fake_deck, hand_card, hand_ids,
+    install_test_cards,
 };
 use crate::support::store::{fake_ref, store};
 
@@ -220,7 +221,7 @@ fn play_from(turn: i32, inputs: &[Value]) -> (TerminalOutcome, i32) {
     let s = jackioh_engine::testkit::scenario(json!({
         "seed": "seed-1",
         "turn": turn,
-        "p1": { "hand": ["test-lethal", "test-mutual-lethal"], "mana": 10 },
+        "p1": { "hand": ["test-lethal", "test-mutual-lethal", TEST_FLEE], "mana": 10 },
         "p2": {},
     }));
     let mut state = s.state().clone();
@@ -652,6 +653,65 @@ mod results_m7_t2 {
             },
         )
         .await;
+    }
+
+    /// R1843004: a ranked game the engine ends by `fled` is the fleer's win and the other player's
+    /// draw: each side rated with its own score (1 and 0.5) against the other's rating from before,
+    /// each season moved by its own result, and each record counting a win and a draw.
+    #[tokio::test]
+    async fn r1843004_a_fled_game_rates_the_fleers_win_and_the_others_draw() {
+        install_test_cards();
+        let app = scenario(ScenarioOptions {
+            ratings: Some((1000.0, 1200.0)),
+            ..Default::default()
+        })
+        .await;
+        let row = j(&record(
+            &app,
+            &[json!({ "type": "play", "card": TEST_FLEE, "playerId": "p1" })],
+        )
+        .await);
+        assert_eq!(row["reason"], "fled");
+        let fresh = |rating: f64| Glicko {
+            rating,
+            deviation: RATING_DEVIATION_START,
+            volatility: RATING_VOLATILITY_START,
+        };
+        let rated = rate_game_scored(&fresh(1000.0), &fresh(1200.0), 1.0, 0.5);
+        expect_one_ending(
+            &app,
+            Ending {
+                winner: Some(A),
+                reason: "fled",
+                rating_after: (rated.a.rating, rated.b.rating),
+            },
+        )
+        .await;
+        // The fleer's move is a win's; the other side's is a draw's, not a loss's.
+        let (won, lost) = rating_move(1000.0, 1200.0, 1.0);
+        assert_eq!(rated.a.rating, won);
+        assert!(rated.b.rating > lost, "a draw costs less than a loss");
+        assert_eq!(rated.b.rating, rating_move(1000.0, 1200.0, 0.5).1);
+        let ranks = table(&app, |data| j(&data.tables.season_ranks)).await;
+        assert_eq!(
+            map(&ranks, |rank| json!([
+                rank["profileId"],
+                rank["wins"],
+                rank["losses"],
+                rank["draws"]
+            ])),
+            json!([[A, 1, 0, 0], [B, 0, 0, 1]]),
+        );
+        let games = table(&app, |data| j(&data.tables.rated_games)).await;
+        assert_match(&games[0], &json!({ "winnerSide": 0, "reason": "fled" }));
+        assert_eq!(
+            j(&store!(&app, |t| t.results_record_for(B))),
+            json!({ "wins": 0, "losses": 0, "draws": 1 })
+        );
+        assert_eq!(
+            j(&store!(&app, |t| t.results_record_for(A))),
+            json!({ "wins": 1, "losses": 0, "draws": 0 })
+        );
     }
 
     #[tokio::test]

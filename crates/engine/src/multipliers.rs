@@ -43,7 +43,7 @@ pub fn extra_runs(state: &GameState, player: PlayerId, kind: Multiplied) -> i32 
     let mut highest = TRIGGER_EXTRA_NONE;
     for card in cards {
         // R1487000: a face-down card's text sleeps until it is revealed or face-up.
-        if crate::preview::lasting_text_dormant(state, card) {
+        if crate::preview::lasting_text_off(state, card) {
             continue;
         }
         let script = crate::scripts::script_of(state, card);
