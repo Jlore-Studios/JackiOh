@@ -1162,9 +1162,10 @@ mod tests {
             assert_eq!(roll_opening(&pool, &holdings, &starters, &seed), today);
             assert_eq!(roll_opening(&pool, &holdings, &below_floor, &seed), today);
         }
-        // On the shipped registry, an account owning every portrait (R1827000) has no account
-        // cosmetic left to drop: on a pool with no full art's card, every slot a duplicate takes
-        // its tier's, its card's and its cosmetic tier's three draws, as before.
+        // On the shipped registry, an account owning every account cosmetic (R1827000, R1833000)
+        // has none left to drop: on a pool with no full art's card, every slot a duplicate takes its
+        // tier's, its card's, its cosmetic tier's and its pick's four draws, and no global one, since
+        // #1833's per-card cosmetics hold an unowned one of every tier for every card.
         let shipped = crate::cosmetics::shipped().unwrap_or_else(|error| panic!("cosmetics.json: {error}"));
         let all = Holdings {
             owned: owning(&ids),
@@ -1177,7 +1178,7 @@ mod tests {
         for seed in 0..50 {
             let opening =
                 roll_opening(&pool, &all, &shipped, &format!("r1661001-shipped-{seed}")).expect("an opening");
-            assert_eq!(opening.draws as usize, 3 * PACK_SLOTS);
+            assert_eq!(opening.draws as usize, 4 * PACK_SLOTS);
         }
     }
 

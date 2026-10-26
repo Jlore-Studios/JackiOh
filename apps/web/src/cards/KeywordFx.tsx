@@ -395,6 +395,43 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
+  Tradable: () => (
+    <Part className="kw-glyph-art kw-trade" anim fit="contain">
+      <path d="M14 34 H74" stroke="#0b0d12" strokeWidth="10" strokeLinecap="round" />
+      <path d="M14 34 H74" stroke="#9fe0a8" strokeWidth="5" strokeLinecap="round" />
+      <path d="M66 18 L88 34 L66 50 Z" fill="#9fe0a8" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M86 66 H26" stroke="#0b0d12" strokeWidth="10" strokeLinecap="round" />
+      <path d="M86 66 H26" stroke="#9fe0a8" strokeWidth="5" strokeLinecap="round" />
+      <path d="M34 50 L12 66 L34 82 Z" fill="#9fe0a8" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+    </Part>
+  ),
+
+  // R1852000: a hull plate with its rivets, a part waiting to be built into a ship.
+  "Starship Piece": () => (
+    <Part className="kw-glyph-art kw-starship-piece" anim fit="contain">
+      <path d="M18 24 H70 L84 38 V78 H18 Z" fill="#7d8ea8" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M18 50 H84" stroke="#0b0d12" strokeWidth="3" />
+      {[
+        [28, 34],
+        [60, 34],
+        [28, 66],
+        [72, 66],
+      ].map(([x = 0, y = 0]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="4" fill="#d9e2f0" stroke="#0b0d12" strokeWidth="2" />
+      ))}
+    </Part>
+  ),
+
+  // R1852003: a launched ship, nose up, its flame below.
+  Starship: () => (
+    <Part className="kw-glyph-art kw-starship" anim fit="contain">
+      <path d="M50 6 C66 20 70 40 66 70 H34 C30 40 34 20 50 6 Z" fill="#e6ecf7" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <circle cx="50" cy="36" r="8" fill="#5b8cff" stroke="#0b0d12" strokeWidth="3" />
+      <path d="M34 56 L20 74 L34 70 Z M66 56 L80 74 L66 70 Z" fill="#c23b3b" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M40 72 C42 84 46 90 50 96 C54 90 58 84 60 72 Z" fill="#ffb35c" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
+    </Part>
+  ),
+
   Lucky: () => (
     <>
       <Part className="kw-glyph-art" fit="contain">

@@ -55,6 +55,8 @@ mod tests {
     const MULCH: &str = "classicplus-064";
     const FIG: &str = "core-047"; // Fig of Life: (3) Spell, Fruit. "Heal a target 20."
     const GRAPE: &str = "classicplus-065-1"; // Rotten Grape: (1) Spell, Fruit, Token.
+    const TREE: &str = "classicplus-063"; // Fruit Tree: (3) Field Spell, no Fruit since #1837.
+    const PRODUCE: &str = "classicplus-068"; // Organic Produce: (4) Field Spell, no Fruit since #1837.
     const FILLER: &str = "core-005";
 
     use crate::scenario;
@@ -95,6 +97,20 @@ mod tests {
         }))
     }
 
+    /// R1837000: Fruit Tree and Organic Produce, the two Field Spells that make Fruit, played before a
+    /// Fig of Life; only the Fig takes (1) off.
+    fn after_the_field_spells_and_a_fig(radiant: bool) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": { "hand": [{ "def": MULCH, "radiant": radiant }, TREE, PRODUCE, FIG, FILLER], "mana": 30 },
+            "p2": { "hand": [FILLER] },
+        }));
+        s.play(TREE, json!({ "zone": 1 }));
+        s.play(PRODUCE, json!({ "zone": 2 }));
+        assert_eq!(hand_cost(&s, PlayerId::P1), 5);
+        play_fig(&mut s);
+        s
+    }
+
     fn kinds(keywords: &[Keyword]) -> Vec<String> {
         keywords.iter().map(|keyword| keyword.kind().as_str().to_string()).collect()
     }
@@ -130,6 +146,12 @@ mod tests {
             assert_eq!(hand_cost(&s, PlayerId::P1), 4);
             play_fig(&mut s);
             assert_eq!(hand_cost(&s, PlayerId::P1), 3);
+        }
+
+        #[test]
+        fn r1837000_fruit_tree_and_organic_produce_are_no_fruits_and_their_plays_count_for_nothing() {
+            let s = after_the_field_spells_and_a_fig(false);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
         }
 
         #[test]
@@ -262,6 +284,12 @@ mod tests {
                 kinds(&stats.keywords),
                 vec!["Rush".to_string(), "Trample".to_string(), "Divine Shield".to_string()]
             );
+        }
+
+        #[test]
+        fn r1837000_fruit_tree_and_organic_produce_count_for_nothing_on_this_face_either() {
+            let s = after_the_field_spells_and_a_fig(true);
+            assert_eq!(hand_cost(&s, PlayerId::P1), 4);
         }
     }
 }

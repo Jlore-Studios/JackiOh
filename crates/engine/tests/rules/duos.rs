@@ -73,6 +73,8 @@ const EMBER: &str = "fx-duos-ember";
 /// A 1-cost Unit: at the start of its controller's turn, that turn ends (R456, as a Tommy Tempo drawn
 /// at its start ends it).
 const STALL: &str = "fx-duos-stall";
+/// A 9-cost Tradable Spell that does nothing: a Trade on offer and no play (R1838003).
+const TRADABLE: &str = "fx-duos-tradable";
 
 const BOLT_DAMAGE: i32 = 6;
 const NUKE_DAMAGE: i32 = 25;
@@ -152,6 +154,12 @@ fn catalog() -> CardDefs {
         unit(BRUTE, "D15", BRUTE_ATTACK, 5, "brute"),
         unit(EMBER, "D16", 1, 1, "ember"),
         unit(STALL, "D17", 1, 1, "stall"),
+        json_as(json!({
+            "id": TRADABLE, "index": "D18", "name": "Duos tradable", "set": "Core", "type": "Spell",
+            "tags": [], "rarity": "Common", "token": false, "cost": 9,
+            "base": { "keywords": [{ "kind": "Tradable" }], "text": "Tradable" },
+            "radiant": { "keywords": [{ "kind": "Tradable" }], "text": "Tradable" },
+        })),
     ] {
         defs.insert(def.id.clone(), def);
     }
@@ -1413,6 +1421,28 @@ mod b9_idle_round_seats {
         assert!(!duos_seats_to_act(&state).contains(&A1));
         assert!(duos_seats_to_act(&state).contains(&A2), "A2 still holds moves");
         refused(&state, A1, end_turn());
+    }
+
+    #[test]
+    fn r1838003_a_trade_on_offer_keeps_a_round_seat_in_the_round_until_it_is_made() {
+        let mut state = begun("r1838003-duos");
+        side_mut(&mut state, A1).hand.clear();
+        let noop = give(&mut state, A1, NOOP);
+        let tradable = give(&mut state, A1, TRADABLE);
+        side_mut(&mut state, A1).mana.current = 0;
+        let body = legal_play(&state, A1, &noop);
+        let state = ok(&state, A1, body);
+        assert_eq!(
+            state.ended,
+            [false, false],
+            "a Trade left is something to do (R82)"
+        );
+        let trade = duel(ActionBody::Trade {
+            instance_id: tradable,
+        });
+        assert!(duos_legal_actions(&state, A1).contains(&trade));
+        let state = ok(&state, A1, trade);
+        assert_eq!(state.ended, [true, false], "the Trade made, nothing is left");
     }
 
     #[test]

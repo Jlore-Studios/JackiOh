@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::mana::{NEXT_REFRESH_MODIFIER_ID, mana_event, refresh_some_mana};
 use crate::script::Effect;
-use crate::wire::GameEvent;
+use crate::wire::{GameEvent, opponent_of};
 
 /// `gainMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -89,5 +89,26 @@ pub fn next_turn_mana(args: NextTurnManaArgs) -> Effect {
             modifier_id: NEXT_REFRESH_MODIFIER_ID.to_string(),
             added,
         });
+    })
+}
+
+/// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward).
+/// The running card's controller takes their opponent's mana crystals (`mana::move_mana_crystals`):
+/// the opponent loses their maximum mana and as much current mana, and the thief gains the crystals,
+/// full, up to their cap. Each side whose mana changed is announced (`manaChanged`); a steal from a
+/// player with no maximum mana does nothing and announces nothing.
+pub fn steal_mana_crystals() -> Effect {
+    Effect::new("stealManaCrystals", move |ctx| {
+        let thief = ctx.controller;
+        let victim = opponent_of(thief);
+        let (lost, gained) = crate::mana::move_mana_crystals(ctx.sink.state, thief, victim);
+        if lost > 0 {
+            let event = mana_event(victim, &ctx.sink.state.players[victim]);
+            ctx.sink.events.push(event);
+        }
+        if gained > 0 {
+            let event = mana_event(thief, &ctx.sink.state.players[thief]);
+            ctx.sink.events.push(event);
+        }
     })
 }

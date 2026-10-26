@@ -96,12 +96,30 @@ use crate::username::{render_username, username_key};
 pub type PgTx<'a> = Transaction<'a, Postgres>;
 
 /// The endings that always have a winner (`GameOverReason`, `crates/engine/src/wire/events.rs`): one
-/// hero died, a player conceded, a player's disconnect grace ran out, or an effect won the game for
-/// one player (`won-by-effect`, R1412). The others (`both-heroes-dead`, `draw-accepted`, `turn-cap`,
-/// `match-ceiling`) are draws, and `alt-win` is either: two players holding an alternative win draw
-/// (R850). `results_record_for` reads a winnerless decisive row as the deleted winner's (migration
-/// 0012).
-const DECISIVE_REASONS: &[&str] = &["hero-death", "concede", "disconnect", "won-by-effect"];
+/// hero died, a player conceded, a player's disconnect grace ran out, an effect won the game for
+/// one player (`won-by-effect`, R1412), a player was voted out (`voted-out`, R1843000), or a player
+/// fled and chose a loss for the other (`fled-decisive`, R1843002). The others (`both-heroes-dead`,
+/// `draw-accepted`, `turn-cap`, `match-ceiling`, `both-voted-out`) are draws, `alt-win` is either: two
+/// players holding an alternative win draw (R850), and `fled` is a win for its winner and a draw for
+/// the other player, or a draw for both when two fled (`LOSER_DRAWS_REASONS`, R1843004).
+/// `results_record_for` reads a winnerless decisive row as the deleted winner's (migration 0012).
+const DECISIVE_REASONS: &[&str] = &[
+    "hero-death",
+    "concede",
+    "disconnect",
+    "won-by-effect",
+    "voted-out",
+    "fled-decisive",
+];
+
+/// R1843004: the endings whose winner's opponent draws (the engine's `LOSER_DRAWS_REASONS`), as the
+/// strings `results.reason` holds.
+fn loser_draws_reasons() -> Vec<String> {
+    jackioh_engine::config::LOSER_DRAWS_REASONS
+        .iter()
+        .map(|reason| reason.as_str().to_string())
+        .collect()
+}
 
 // ---------------------------------------------------------------------------
 // The role the server acts as
@@ -4031,6 +4049,9 @@ pub async fn tickets_cancel(t: &mut PgTx<'_>, ticket_id: &str, _at: i64) -> Resu
 /// Since migration 0012 a row also has no winner when the winner deleted their account. The
 /// reason tells the two apart: a `DECISIVE_REASONS` ending always had a winner, so for the
 /// player who is left it is still a loss, not a draw.
+///
+/// R1843004: a `fled` row (`LOSER_DRAWS_REASONS`) is the winner's win and the other player's draw,
+/// whether its winner is still there or not.
 pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<ProfileRecord, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let decisive: Vec<String> = DECISIVE_REASONS.iter().map(|reason| reason.to_string()).collect();
@@ -4038,15 +4059,21 @@ pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<Pr
         "select
            count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
            count(*) filter (where winner_profile_id is distinct from $1::uuid
-                              and (winner_profile_id is not null
-                                   or reason = any($2::text[])))                         as losses,
-           count(*) filter (where winner_profile_id is null
-                              and reason <> all($2::text[]))                             as draws
+                              and ((winner_profile_id is not null
+                                    and reason <> all($3::text[]))
+                                   or (winner_profile_id is null
+                                       and reason = any($2::text[]))))                   as losses,
+           count(*) filter (where (winner_profile_id is null
+                                   and reason <> all($2::text[]))
+                              or (winner_profile_id is distinct from $1::uuid
+                                  and winner_profile_id is not null
+                                  and reason = any($3::text[])))                         as draws
          from public.results
         where p1_profile_id = $1::uuid or p2_profile_id = $1::uuid",
     )
     .bind(profile_id)
     .bind(decisive)
+    .bind(loser_draws_reasons())
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;

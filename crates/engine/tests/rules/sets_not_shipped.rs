@@ -441,7 +441,9 @@ mod r1178000_the_meditative_plus_set_ships_from_its_release_in_its_place_after_m
         );
         let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
         assert_eq!(at(Tag::Potion), at(Tag::Wincon).map(|at| at + 1));
-        assert_eq!(at(Tag::Token), at(Tag::Potion).map(|at| at + 1));
+        // #1837's five tags follow it, and Token stays last (R1837000).
+        assert_eq!(at(Tag::Terminus), at(Tag::Potion).map(|at| at + 1));
+        assert_eq!(at(Tag::Token), Some(Tag::ALL.len() - 1));
     }
 }
 
@@ -587,9 +589,72 @@ mod r1424_the_tribal_tags_name_peoples_and_factions {
             Tag::Prime,
             Tag::Wincon,
             Tag::Potion,
+            Tag::Terminus,
+            Tag::Quest,
+            Tag::Otherworldly,
+            Tag::OtherOrigins,
+            Tag::JellyBean,
             Tag::Token,
         ] {
             assert!(!TRIBAL_TAGS.contains(&tag), "{tag} is no tribe");
         }
+    }
+}
+
+/// R1837000: the five tags #1837 puts on shipped cards ahead of the Stinkyscape set. Fixture cards
+/// only (CLAUDE.md: the engine does not depend on crates/cards); the real cards' tags are
+/// `crates/cards/tests/cross/catalog.rs`'s.
+mod r1837000_terminus_quest_otherworldly_other_origins_and_jelly_bean {
+    use super::*;
+
+    const NEW: [(Tag, &str); 5] = [
+        (Tag::Terminus, "Terminus"),
+        (Tag::Quest, "Quest"),
+        (Tag::Otherworldly, "Otherworldly"),
+        (Tag::OtherOrigins, "Other-Origins"),
+        (Tag::JellyBean, "Jelly Bean"),
+    ];
+
+    #[test]
+    fn r1837000_the_five_parse_as_written_follow_potion_in_the_union_and_name_no_tribe() {
+        let at = |tag: Tag| Tag::ALL.iter().position(|each| *each == tag);
+        let potion = at(Tag::Potion).expect("Potion is in the union");
+        for (offset, (tag, text)) in NEW.iter().enumerate() {
+            assert_eq!(tag.as_str(), *text);
+            assert_eq!(json_as::<Tag>(json!(text)), *tag);
+            assert_eq!(at(*tag), Some(potion + 1 + offset), "{tag}");
+            assert!(!TRIBAL_TAGS.contains(tag), "{tag} is no tribe");
+            assert!(!POOL_TOKEN_TAGS.contains(tag), "{tag}'s pool takes no token");
+        }
+        assert_eq!(at(Tag::Token), Some(potion + 1 + NEW.len()));
+    }
+
+    /// A pool by one of the five holds that tag's cards and, as any tag outside `POOL_TOKEN_TAGS`,
+    /// none of its tokens unless it asks for them: Other-Origins, carried by tokens alone, draws an
+    /// empty pool until a card that reads it decides otherwise.
+    #[test]
+    fn r1837000_a_pool_by_one_of_them_holds_its_cards_and_none_of_its_tokens() {
+        let defs: Vec<CardDef> = vec![
+            card("core-026", "Core", "26", &["Jelly Bean"], false),
+            card("core-027", "Core", "27", &["Jelly Bean"], false),
+            card("core-100", "Core", "100", &["Terminus"], false),
+            card("classic-090", "Classic", "90", &["Quickdraw", "Quest"], false),
+            card("classicplus-032", "Classic+", "32", &["Otherworldly"], false),
+            card("classicplus-032-1", "Classic+", "32.1", &["Other-Origins"], true),
+            card("classicplus-032-2", "Classic+", "32.2", &["Other-Origins"], true),
+        ];
+        register_catalog(defs.into_iter().map(|def| (def.id.clone(), def)).collect());
+        assert_eq!(
+            pool(json!({ "tags": ["Jelly Bean"] })),
+            vec!["core-026", "core-027"]
+        );
+        assert_eq!(pool(json!({ "tags": ["Terminus"] })), vec!["core-100"]);
+        assert_eq!(pool(json!({ "tags": ["Quest"] })), vec!["classic-090"]);
+        assert_eq!(pool(json!({ "tags": ["Otherworldly"] })), vec!["classicplus-032"]);
+        assert_eq!(pool(json!({ "tags": ["Other-Origins"] })), Vec::<String>::new());
+        assert_eq!(
+            pool(json!({ "tags": ["Other-Origins"], "withTokens": true })),
+            vec!["classicplus-032-1", "classicplus-032-2"]
+        );
     }
 }

@@ -668,6 +668,13 @@ export function powerOfId(instanceId: string): string {
   return `power-${instanceId}`;
 }
 
+// R1838000: the Trade control on a Tradable hand card, and its bar on a 1v1 board (contract.ts).
+export function tradeId(instanceId: string): string {
+  return `trade-${instanceId}`;
+}
+
+export const TRADE_BAR = "trade-bar";
+
 export function pilePlayId(instanceId: string): string {
   return `pile-play-${instanceId}`;
 }
