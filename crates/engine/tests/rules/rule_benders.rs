@@ -666,7 +666,9 @@ mod r831008 {
 
 mod r1956001 {
     use super::*;
-    use jackioh_engine::effects::{AddToHandArgs, PlayerSpec, SummonArgs, add_to_hand, summon};
+    use jackioh_engine::effects::{
+        AddToHandArgs, FlickerArgs, PlayerSpec, SummonArgs, add_to_hand, flicker, summon,
+    };
     use jackioh_engine::resolve::apply_effects;
     use jackioh_engine::testkit::golden;
 
@@ -733,6 +735,58 @@ mod r1956001 {
         let seen = foe.opponent.units[1].as_ref().expect("the token, public");
         assert_eq!(seen.created, Some(true), "Created is public on the field (R943)");
         assert_eq!(seen.created_by, None, "its generator is its owner's alone");
+    }
+
+    #[test]
+    fn r1956001_a_created_trap_keeps_its_generator_through_each_fresh_face_down_id() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "benders-generator-face-down",
+            "p1": { "mana": 10, "hand": [VANILLA], "library": library() },
+            "p2": { "hand": [FILLER], "library": library() },
+        }));
+        let a = s.hand(P1)[0].clone();
+        run_as(
+            &mut s,
+            &a,
+            add_to_hand(AddToHandArgs {
+                def_id: Some(SHEEPISH.to_string()),
+                ..Default::default()
+            }),
+        );
+        let made = created_in_hand(&s, P1);
+        assert_eq!(generator(&s, &made.id).as_deref(), Some(VANILLA));
+
+        // Set face-down from hand, it takes a fresh id (R227), and its generator follows it.
+        s.play(made.id.as_str(), json!({ "zone": 2 }));
+        let set = s.backrow(P1, 2).expect("the Trap, set");
+        assert_ne!(set.id, made.id, "a face-down card takes a fresh id");
+        assert_eq!(generator(&s, &set.id).as_deref(), Some(VANILLA));
+        assert_eq!(generator(&s, &made.id), None, "the id it had names nothing");
+        let own = s.view(P1);
+        let Some(Some(BackrowView::Public(own_trap))) = own.you.backrow.get(1) else {
+            panic!("the owner reads its own Trap")
+        };
+        assert_eq!(own_trap.created_by.as_deref(), Some(VANILLA));
+
+        // Flickered, it re-enters face-down with another fresh id, still A's.
+        run_as(&mut s, &set, flicker(FlickerArgs::default()));
+        let back = s.backrow(P1, 2).expect("the Trap, flickered");
+        assert_ne!(back.id, set.id, "a flickered Trap takes a fresh id");
+        assert_eq!(generator(&s, &back.id).as_deref(), Some(VANILLA));
+        assert_eq!(generator(&s, &set.id), None);
+
+        // What the Trap makes carries A, the root, and not the Trap.
+        run_as(
+            &mut s,
+            &back,
+            summon(SummonArgs {
+                def_id: Some(PLAIN.to_string()),
+                ..Default::default()
+            }),
+        );
+        let unit = s.unit(P1, 1).expect("the unit the Trap made");
+        assert_eq!(generator(&s, &unit.id).as_deref(), Some(VANILLA));
     }
 
     #[test]

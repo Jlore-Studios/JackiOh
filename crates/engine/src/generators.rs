@@ -42,6 +42,14 @@ fn record(state: &mut GameState, owner: PlayerId, root: String, card: &CardInsta
     state.generators.insert(card.id.clone(), root);
 }
 
+/// R227: a Created card that takes a fresh id going face-down (set from hand, summoned or flickered
+/// into a backrow) keeps its generator, as C+ #35's history keeps the card (R419).
+pub fn rename_generator(state: &mut GameState, from: &str, to: &str) {
+    if let Some(root) = state.generators.shift_remove(from) {
+        state.generators.insert(to.to_string(), root);
+    }
+}
+
 /// The generator a card's own generator recorded, or the card's own definition.
 fn root_of(state: &GameState, maker: &CardInstance) -> String {
     state
