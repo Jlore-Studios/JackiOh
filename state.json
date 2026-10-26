@@ -3279,28 +3279,10 @@
     "what": "build #1867 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-26T22:32:44Z",
+    "at": "2026-10-26T22:45:36Z",
     "notes": [
-      "#1861 needs a plan",
-      "#1862 needs a plan",
-      "#1863 needs a plan",
-      "#1864 needs a plan",
-      "#1865 needs a plan",
-      "#1866 needs a plan",
-      "#1867 needs a plan",
-      "#1868 needs a plan",
-      "#1869 needs a plan",
-      "#1870 needs a plan",
-      "#1871 needs a plan",
-      "started plan #1858 on claude-1 (run 40413432807)",
-      "started plan #1859 on claude-4 (run 40413509725)",
-      "started plan #1861 on claude-6 (run 40413599462)",
-      "started plan #1862 on claude-5 (run 40413688276)",
-      "started plan #1863 on claude-7 (run 40413773431)",
-      "started plan #1864 on claude-2 (run 40413860124)",
-      "started build #1860 on muse (run 40413955474)",
-      "started build #1867 on muse (run 40414043669)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-27T00:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` is busy; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 95h 20m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
+      "#2020 needs a plan",
+      "delivered plan #1862 on claude-5 (run 40413688276): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -4006,7 +3988,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T22:32:44Z",
+  "loop_tick": "2026-10-26T22:45:36Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T21:35:26Z",
