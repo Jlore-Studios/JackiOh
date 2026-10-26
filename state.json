@@ -980,15 +980,15 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-4",
       "question": "",
       "queued_at": "2026-10-25T23:59:39Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "",
-      "run_id": "40246171427",
+      "run_id": "pending:299ebd94-1792972844",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-25T23:45:10Z",
+      "started_at": "2026-10-26T00:01:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -1706,9 +1706,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T00:00:30Z",
+    "at": "2026-10-26T00:01:39Z",
     "url": "",
-    "what": "revise #1950 on claude-7"
+    "what": "revise #1908 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-25T23:38:19Z",
