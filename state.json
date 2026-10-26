@@ -2748,7 +2748,7 @@
       }
     },
     "2010": {
-      "action": "build",
+      "action": "plan",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -2772,12 +2772,12 @@
       "previous_branch": "bot/old/issue-2010-20261026-2149",
       "previous_pr": 2026,
       "previous_why": "it failed 3 times at `difficulty:medium` (the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1; `claude-7` (claude, opus) rejected it: `task`: The pull request does not say which of super run 40337807269's failed jobs the change fixes or how each fix was checked, and the issue requi); it was raised to `difficulty:hard`",
-      "provider": "muse",
+      "provider": "claude-8",
       "question": "",
       "queued_at": "2026-10-26T21:49:12Z",
       "round_tier": "",
-      "run_id": "40381678755",
-      "started_at": "2026-10-26T18:52:49Z",
+      "run_id": "pending:000bc107-1793051400",
+      "started_at": "2026-10-26T21:50:43Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -3146,9 +3146,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T21:40:58Z",
+    "at": "2026-10-26T21:50:43Z",
     "url": "",
-    "what": "review #2026 on claude-7"
+    "what": "plan #2010 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-26T21:38:25Z",
