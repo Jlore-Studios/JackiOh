@@ -18,6 +18,14 @@
   idle runner is retired at once, and a runner in the middle of a job is throttled to
   throttledCpus (the job keeps going, slowly, and nothing is lost) until it is calm again.
 
+  Every heartbeatSeconds it writes a heartbeat (Send-Heartbeat): this PC's load, whether it is
+  calm, and each runner container with the CPUs it uses and whether it is throttled, as pc.json
+  in a secret gist of the signed-in account. The status issue's runners section reads it
+  (bot/harness/dashboard.py), so it says what the PC and its gather job are doing. The gist is
+  made once; its id is kept in pc-gist.txt beside the scripts and in the repository variable
+  JACKIOH_PC_GIST, which bot-status.yml hands the status loop. A heartbeat that fails is logged
+  and tried again at the next beat: it never holds a runner up.
+
   No container is ever given a GPU. Runs in the foreground; install-task.ps1 starts it at logon.
   Log: logs\supervisor.log.
 #>
@@ -41,6 +49,9 @@ $nextStart = [datetime]::MinValue
 $queued = @()
 $startCooldownSeconds = 15
 $retireGraceMinutes = 1
+$heartbeatSeconds = if ($null -ne $cfg.heartbeatSeconds) { [int]$cfg.heartbeatSeconds } else { 120 }
+$lastHeartbeat = [datetime]::MinValue
+$gistFile = Join-Path $PSScriptRoot 'pc-gist.txt'
 
 function Log([string]$msg) {
   $line = '{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $msg
@@ -270,6 +281,53 @@ function Remove-StaleRunners($runners) {
   } catch { Log "stale-runner sweep failed: $_" }
 }
 
+# A request body for `gh api --input`, as UTF-8 without the byte-order mark PowerShell 5.1's
+# Set-Content writes, which GitHub's JSON parser refuses.
+function Write-Body([string]$path, $body) {
+  [System.IO.File]::WriteAllText($path, ($body | ConvertTo-Json -Depth 5 -Compress), (New-Object System.Text.UTF8Encoding $false))
+}
+
+# The heartbeat (see the top): pc.json in the gist pc-gist.txt names, made, and named to the
+# repository as JACKIOH_PC_GIST, the first time.
+function Send-Heartbeat($sample, [bool]$calm, $runners) {
+  $cpus = @{}
+  if ($runners.Count) {
+    $s = Run 'docker' (@('stats', '--no-stream', '--format', '{{.ID}}|{{.CPUPerc}}') + @($runners | ForEach-Object Id))
+    if ($s.Code -eq 0) {
+      foreach ($line in ($s.Out -split "`n")) {
+        $f = $line.Trim() -split '\|'
+        if ($f.Count -ge 2) { $cpus[$f[0]] = [math]::Round([double]($f[1].TrimEnd('%').Trim()) / 100, 1) }
+      }
+    }
+  }
+  $beat = [ordered]@{
+    at = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    calm = $calm
+    cpu = [math]::Round($sample.Cpu, 1)
+    memGB = [math]::Round($sample.Mem, 1)
+    logical = $logical
+    runners = @($runners | ForEach-Object {
+      [ordered]@{ name = $_.Name; label = $_.Label; busy = [bool]$_.Busy; cpus = $cpus[$_.Id]; throttled = [bool]$throttled[$_.Id] }
+    })
+  }
+  $files = @{ 'pc.json' = @{ content = ($beat | ConvertTo-Json -Depth 4 -Compress) } }
+  $bodyFile = Join-Path $env:TEMP 'jackioh-pc-heartbeat.json'
+  $id = if (Test-Path $gistFile) { (Get-Content $gistFile -Raw).Trim() } else { '' }
+  if ($id) {
+    Write-Body $bodyFile @{ files = $files }
+    $r = Run 'gh' @('api', '-X', 'PATCH', "gists/$id", '--input', $bodyFile)
+    if ($r.Code -eq 0) { return }
+    if ($r.Out -notmatch '404|Not Found') { Log "heartbeat not sent: $(@($r.Out -split "`n")[0])"; return }
+    Log "the heartbeat's gist $id is gone; making another"
+  }
+  Write-Body $bodyFile @{ description = "JackiOh: this PC's heartbeat, for $repo's status issue"; public = $false; files = $files }
+  $made = GhJson @('api', '-X', 'POST', 'gists', '--input', $bodyFile)
+  Set-Content -Path $gistFile -Value $made.id -Encoding ascii -NoNewline
+  $v = Run 'gh' @('variable', 'set', 'JACKIOH_PC_GIST', '--repo', $repo, '--body', $made.id)
+  if ($v.Code -eq 0) { Log "heartbeat gist $($made.id) made, and named to $repo as JACKIOH_PC_GIST" }
+  else { Log "heartbeat gist $($made.id) made, but not named to $repo ($(@($v.Out -split "`n")[0])): set the variable JACKIOH_PC_GIST to it" }
+}
+
 # The labels wanted now, at most `room` of them: one per queued job, then each standby label not
 # already among them.
 function Wanted([string[]]$queuedLabels, [string[]]$servable, [int]$room) {
@@ -310,6 +368,11 @@ while ($true) {
   $busy = @($runners | Where-Object Busy)
   $idle = @($runners | Where-Object { -not $_.Busy })
   foreach ($r in $busy) { Set-Throttle $r (-not $calm); $unwanted.Remove($r.Id) }
+
+  if ($heartbeatSeconds -gt 0 -and ((Get-Date) - $lastHeartbeat).TotalSeconds -ge $heartbeatSeconds) {
+    $lastHeartbeat = Get-Date
+    try { Send-Heartbeat $sample $calm $runners } catch { Log "heartbeat failed: $_" }
+  }
 
   $room = [int]$cfg.maxJobs - $busy.Count
   if (-not $calm -or $room -le 0) {

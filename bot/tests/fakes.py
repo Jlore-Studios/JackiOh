@@ -418,12 +418,18 @@ class FakeGitHub:
             raise GitHubError("no run", 404)
         return dict(self.runs[str(run_id)])
 
-    def list_runs(self, workflow: str, *, status: str = "", limit: int = 30) -> list[dict]:
+    def list_runs(self, workflow: str, *, status: str = "", limit: int = 30,
+                  cached: bool = False) -> list[dict]:
         # A run that names its workflow is listed only for it; one that does not, for any.
         return [r for r in self.runs.values() if r.get("workflow", workflow) == workflow][:limit]
 
     def rerun_failed_jobs(self, run_id: Any) -> None:
         self.reruns.append(run_id)
+
+    def get_gist(self, gist_id: str, *, cached: bool = False) -> dict[str, Any]:
+        if gist_id not in getattr(self, "gists", {}):
+            raise GitHubError("no gist", 404)
+        return copy.deepcopy(self.gists[gist_id])
 
     def list_repo_runs(self, *, status: str, limit: int = 100, cached: bool = False) -> list[dict]:
         return [dict(r) for r in self.runs.values() if r.get("status") == status][:limit]
