@@ -201,11 +201,15 @@ describe("crates/server/tests/deploy/rehearse.sh", () => {
     expect(at).toEqual([...at].sort((a, b) => a - b));
     expect(new Set(at).size).toBe(at.length);
     const stage = (from: number): string => dockerfile.slice(from, dockerfile.indexOf("\nFROM ", from + 1));
-    const copied = (text: string): string[] => [...text.matchAll(/^COPY (crates\/\S+) \.\/\1$/gm)].map((match) => match[1] ?? "");
+    const copied = (text: string): string[] => [...text.matchAll(/^(COPY crates\/\S+ \.\/\S+)$/gm)].map((match) => match[1] ?? "");
     const game = stage(at[2] ?? -1);
     const crates = stage(at[4] ?? -1);
-    expect(copied(game)).toEqual(["crates/engine", "crates/cards", "crates/ai"]);
-    expect(copied(crates)).toEqual(["crates/server"]);
+    expect(copied(game)).toEqual([
+      "COPY crates/engine ./crates/engine",
+      "COPY crates/cards ./crates/cards",
+      "COPY crates/ai ./crates/ai",
+    ]);
+    expect(copied(crates)).toEqual(["COPY crates/server ./crates/server"]);
     expect(game).not.toContain("\nCOPY crates ./crates\n");
     expect(crates).not.toContain("\nCOPY crates ./crates\n");
     expect(stage(at[7] ?? -1)).not.toContain("\nCOPY ");
