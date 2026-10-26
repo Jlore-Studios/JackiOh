@@ -2006,10 +2006,9 @@
     "what": "build #1953 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-26T03:29:22Z",
+    "at": "2026-10-26T03:42:24Z",
     "notes": [
-      "delivered build #1850 on claude-2 (run 40248342089): approved",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-26T05:00:00Z; it can start a build or a plan again in 1h 27m; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` 5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-26T04:40:00Z; it can start a build or a plan again in 1h 07m; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 5h 27m; `muse` its last run could not work, 6 times in a row (the muse CLI failed at once: muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1908 (explicit)); it is left alone until 2026-10-26T04:14:47Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 114h 28m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-26T05:10:00Z; it can start a build or a plan again in 1h 37m; `devin` is idle, but nothing queued is for it"
+      "delivered build #1953 on claude-3 (run 40263739809): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -2715,7 +2714,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T03:29:22Z",
+  "loop_tick": "2026-10-26T03:42:24Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-25T20:07:06Z",
