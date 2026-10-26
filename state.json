@@ -1973,6 +1973,8 @@
       }
     },
     "1962": {
+      "action": "revise",
+      "asks": [],
       "cleared": {
         "at": "2026-10-26T03:30:35Z",
         "by": "`claude` (strong)",
@@ -1983,10 +1985,15 @@
       "feedback_since": "2026-10-26T00:13:54Z",
       "issue": 1850,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-10-26T03:31:24Z",
+      "run_id": "pending:e6d0816b-1792988518",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-26T04:22:51Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -2043,9 +2050,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T04:08:40Z",
+    "at": "2026-10-26T04:22:51Z",
     "url": "",
-    "what": "suggestions on claude-8"
+    "what": "revise #1962 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-26T04:06:06Z",
