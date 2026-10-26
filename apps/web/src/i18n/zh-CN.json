@@ -3397,5 +3397,14 @@
   "You escaped the universe and left the AI behind.": "你逃离了宇宙，把AI留在了身后。",
   "The AI escaped the universe and left you behind.": "AI逃离了宇宙，把你留在了身后。",
   "Voted out": "被投票出局",
-  "Escaped the universe": "逃离了宇宙"
+  "Escaped the universe": "逃离了宇宙",
+  "Starscape map: node {at} of {total}": "星图：第{at}个节点，共{total}个",
+  "Heal your hero by {amount}": "为你的英雄恢复{amount}点生命值",
+  "Draw {amount}": "抽{amount}张牌",
+  "Gain {amount} mana": "获得{amount}点法力值",
+  "Deal {amount} damage to the enemy hero": "对敌方英雄造成{amount}点伤害",
+  "The edge of the universe": "宇宙的边缘",
+  "{whose} starscape map reaches node {node}": "{whose}星图到达第{node}个节点",
+  "Travel one node": "前进一个节点",
+  "Travel one node (free)": "前进一个节点（免费）"
 }

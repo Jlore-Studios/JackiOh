@@ -22,6 +22,7 @@ import type { RotationDirection } from "./RotationDirection";
 import type { Row } from "./Row";
 import type { SecretChoice } from "./SecretChoice";
 import type { SpellAnswer } from "./SpellAnswer";
+import type { StarscapeReward } from "./StarscapeReward";
 import type { SwapWhat } from "./SwapWhat";
 import type { TuningChange } from "./TuningChange";
 import type { Winner } from "./Winner";
@@ -153,4 +154,4 @@ radiant?: true, } | { "type": "resourceSold", player: PlayerId, instanceId: stri
  * Set when the Resource sold is Radiant (R1840001: its Radiant face's price). Only ever
  * `Some(true)`.
  */
-radiant?: true, credits: number, } | { "type": "resourceDiscarded", player: PlayerId, instanceId: string, defId: string, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, };
+radiant?: true, credits: number, } | { "type": "resourceDiscarded", player: PlayerId, instanceId: string, defId: string, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "starshipFused", player: PlayerId, instanceId: string, pieceId: string, defId: string, pieces: number, } | { "type": "starshipLaunched", player: PlayerId, instanceId: string, defId: string, name: string, pieces: Array<string>, } | { "type": "voteCast", player: PlayerId, instanceId: string, defId: string, votes: number, needed: number, } | { "type": "votedOut", player: PlayerId, ballots: Array<Ballot>, } | { "type": "fled", player: PlayerId, opponent: FleeOpponent, } | { "type": "starscapeTravelled", player: PlayerId, node: number, reward: StarscapeReward, };

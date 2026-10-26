@@ -703,6 +703,9 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   voteCast: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   votedOut: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   fled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+
+  // R1847001: a starscape travel sweeps one node on.
+  starscapeTravelled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */
