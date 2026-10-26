@@ -2029,7 +2029,25 @@
       "feedback_since": "2026-10-26T07:42:26Z",
       "issue": 1956,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "40287439224",
+            "tier": "strong"
+          }
+        ],
+        "sha": "d2dc3080d80d28938c47735b6120b6c86c104f4b",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
