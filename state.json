@@ -2214,6 +2214,13 @@
     "1994": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T13:41:01Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Line 5 of the easy rule fails and I can tell: it needs database migration 0062, so it is hard by definition, not a judgment call."
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
