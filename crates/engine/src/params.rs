@@ -358,9 +358,20 @@ impl ParamContext for CostArgs<'_> {
 pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
     let state = ctx.param_state();
     let self_ = ctx.param_self();
+    // R1850000: a copier with no running text named reads the numbers of the text it copied, on the
+    // face it copied.
+    let copied = if ctx.param_def_id().is_none() {
+        self_.and_then(crate::subsystems::unit_text::unit_text_of)
+    } else {
+        None
+    };
+    let radiant = copied
+        .as_ref()
+        .map_or_else(|| ctx.param_radiant(), |copy| copy.radiant);
     let mut def_id: String = match ctx
         .param_def_id()
         .map(str::to_string)
+        .or_else(|| copied.map(|copy| copy.def_id))
         .or_else(|| self_.map(|card| card.def_id.clone()))
     {
         Some(def_id) => def_id,
@@ -387,7 +398,7 @@ pub fn param<C: ParamContext + ?Sized>(ctx: &C, key: &str) -> i32 {
         key,
         ParamValueOptions {
             def_id: Some(def_id),
-            radiant: Some(ctx.param_radiant()),
+            radiant: Some(radiant),
         },
     )
 }
