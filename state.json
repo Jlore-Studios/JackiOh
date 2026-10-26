@@ -929,7 +929,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-25T14:15:52Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:ffd32e38-1793000556",
+      "run_id": "40287523360",
       "started_at": "2026-10-26T07:43:14Z",
       "stop_requested": false,
       "suggestion": true,
