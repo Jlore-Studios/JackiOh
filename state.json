@@ -2757,7 +2757,7 @@
         "tier": "medium",
         "why": "spans engine, web and e2e with a shared-surface view fix: fails easy lines 2, 5 and 7"
       },
-      "failures": 2,
+      "failures": 0,
       "handoff": {
         "at": "2026-10-26T18:46:11Z",
         "family": "muse",
@@ -2768,13 +2768,16 @@
         "trail": "- `apps/web/src/game/Log.test.tsx` (in the `#552` describe):\n- ```tsx\n- it(\"a line that opens on the viewer's own seat opens with a capital: a lock, an unlock, a trap and the hero's health\", () => {\n- expect(\n- lines(\n- withEvents(baseView(), [\n- { type: \"locked\", player: \"p1\", row: \"units\", lane: 2 },\n- { type: \"unlocked\", player: \"p1\", row: \"backrow\", lane: 1 },\n- { type: \"trapFired\", instanceId: \"c1\", defId: \"core-005\", controller: \"p1\", row: \"backrow\", lane: 1 },\n- { type: \"healthSet\", player: \"p1\", health: 10, sourceId: null },\n- ]),\n- ),\n- ).toEqual([\n- \"Your lane 2 was locked\",\n- \"Your backrow lane 1 was unlocked\",\n- `Your trap ${nameOf(\"core-005\")} fired`,\n- \"Your hero's health was set to 10\",\n- ]);\n- });\n- ```\n- Commands: `cargo test -p jackioh-engine --features testkit --test rules r1020`; the full `--test rules`; `cargo test -p jackioh-tools fuzz_regression_corpus`; `cargo jackioh fuzz --regress`; `cargo jackioh fuzz --from 3760 --seeds 1` and `--from 5609 --seeds 1` (each `1 passed`); `cargo jackioh fuz\u2026\n- ## Done when\n- - [ ] Seeds 3760 and 5609 pass; `--regress` replays the new record green; both new `r1020_` tests pass and fail with step 4 reverted.\n- - [ ] The Log test passes; specs 36 and 40 pass locally, output in the PR.\n- - [ ] Step-12 wave times and results in the PR; the PR names the fixed super jobs (fuzz 2/4, 3/4, 4/4, e2e 1/8, 4/8) and how each was checked.\n- - [ ] `cargo fmt --check`, `cargo jackioh catalog check`, `patches check`, `spec check`, clippy on touched crates, cargo tests with no diff under `apps/web/src/wire/`, web tests, and `cargo jackioh classify --base origin/main --claims` reporting no card that plays differently (views only).\n- ## Risks\n- - **Over-hiding.** A card reads unread only when gone from state and last put in a library, where it was hidden anyway. Guarded by `cargo jackioh golden check` (replays views) plus the full rules suite.\n- - **Duos.** The new check runs before the `duel` branch; a pass takes hand cards, never library ones, so R1074000 is unchanged; still run `--duos --seeds 200`.\n- - **Determinism.** View-only: no state, hash or replay change.\n- - **Spec 36.** The helper stays in hand and is read by `readHands` like any held card; if a later catalog drops CN in a Bottle, `source` is `undefined` and Prestige fails as now (the last spec test names it).\n- - **Spec 40.** Rounds with no qualifying enemy unit just pass the turn; `TURN_BUDGET` (12) still bounds the wait.\n- ## Open questions\n- - Prestige's seat is dealt CN in a Bottle, which puts a Radiant card in hand. Rejected: counting a Trade of Prestige as its play (weakens \"every card played\"); dealing H1B Printer (needs a play and a turn). A person may prefer another source.\n- - No workflow change is needed. One observation for a person: super.yml runs each shard's handicapped wave only when its plain wave passes, so shards 2 and 3 never ran theirs; the Duos/handicap-only failures (if any) belong in a follow-up.\n- Confirmed: `catalog-version` prints `v0.4.12c`, matching the record name in the plan. No change needed \u2014 the plan stands as delivered.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-2010 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-2010/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-26T18:49:38Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
+      "pr": 2026,
       "provider": "muse",
-      "round_tier": "",
+      "question": "",
+      "round_tier": "medium",
       "run_id": "40381678755",
       "started_at": "2026-10-26T18:52:49Z",
       "stop_requested": false,
@@ -2784,7 +2787,7 @@
       ],
       "strikes": 2,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "2011": {
       "cleared": {
