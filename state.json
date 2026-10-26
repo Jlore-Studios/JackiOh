@@ -2966,6 +2966,14 @@
       "started_at": "2026-10-26T18:53:48Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "2016": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-26T17:48:38Z",
+      "issue": 2013,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
