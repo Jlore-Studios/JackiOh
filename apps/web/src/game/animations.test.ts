@@ -134,6 +134,9 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   resourceSold: 700,
   resourceDiscarded: 250,
   marketCreditsChanged: 200,
+  // Issue #1853 (the Marketplace, R1853003).
+  marketBought: 250,
+  marketSold: 250,
   // Stinkyscape's Starship (R1852000, R1852003).
   starshipFused: 400,
   starshipLaunched: 600,
@@ -264,6 +267,9 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
   marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  // Issue #1853 (the Marketplace, R1853003).
+  marketBought: { type: "marketBought", player: "p1", instanceId: "m1", defId: "core-008", credits: 40 },
+  marketSold: { type: "marketSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
   starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
   starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
   voteCast: { type: "voteCast", player: "p2", instanceId: "c7", defId: "core-073", votes: 2, needed: 3 },
@@ -349,7 +355,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(92);
+    expect(rows).toHaveLength(94);
   });
 
   it("gives every row an animation name and a testid template", () => {

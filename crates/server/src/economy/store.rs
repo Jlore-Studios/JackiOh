@@ -199,7 +199,7 @@ pub struct OwnedCosmetics {
 
 /// R1834000: one row of `public.card_cosmetic_picks` (migration 0061), what one card of the
 /// account wears of its own: a foil, a finish, a border and whether its full art prints. A kind
-/// with no pick is absent and wears the account's pick (the Full-art cards setting, for
+/// with no pick is absent and wears its kind's default (R1953001; the Full-art cards setting, for
 /// `full_art`). An id is kept as it was written, one the registry does not know among them (a
 /// newer client's), and judged only where it is worn (`loadout::freeze_loadout`, R1834002).
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]

@@ -1230,20 +1230,22 @@ async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
         person: PlayerId::P1,
         seed: "seed-bot-dressed".to_string(),
     };
-    let seat = |table: &str, card_back: &str, foil: &str| {
+    // Both accounts' foils are left at the default: a card with no pick of its own wears its
+    // kind's default, never the account's (R1953001), for a bot as for a person.
+    let seat = |table: &str, card_back: &str| {
         json!({
             "table": table,
             "field": "field-none",
             "cardBack": card_back,
-            "foil": foil,
+            "foil": "foil-none",
             "finish": "finish-plain",
             "border": "border-standard",
         })
     };
     let frame = json!({
         "type": "loadouts",
-        "p1": seat("table-wood", "card-back-starfield", "foil-holo-sweep"),
-        "p2": seat("table-felt", "card-back-lacquer", "foil-rainbow"),
+        "p1": seat("table-wood", "card-back-starfield"),
+        "p2": seat("table-felt", "card-back-lacquer"),
     });
     assert_eq!(m.socket.of_type("loadouts"), vec![frame]);
     let types: Vec<String> = m

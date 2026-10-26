@@ -132,6 +132,9 @@ pub const CLIENT_ACTION_TYPES: &[ActionType] = &[
     ActionType::EndTurn,
     // R1838000: a Trade of a Tradable hand card, judged by the reducer as `legal_actions` lists it.
     ActionType::Trade,
+    // R1853003: a buy or a sale at the Marketplace, judged by the reducer as `legal_actions` lists it.
+    ActionType::MarketBuy,
+    ActionType::MarketSell,
     ActionType::SetAutoEndTurn,
 ];
 
@@ -244,10 +247,11 @@ pub enum ServerMessage {
     /// once the actor has checked that every end names something the receiver may see.
     Aim { from: PlayerId, aim: Option<Aim> },
     /// R1834002, R1834003: both seats' loadouts as the match froze them, seat-level half only (the
-    /// deck slots and the account's card picks, none naming a card), sent on join and again on
-    /// reconnect before the view, as `portraits` rides — and to a watcher as it attaches. A row on the
-    /// match, never a field of `PlayerView` (cosmetics are no rule, CLAUDE.md rule 7). Every id is one
-    /// the seat's account owned as the match began, else its kind's default.
+    /// deck slots and the card slots, the latter their kinds' defaults since R1953001, none naming a
+    /// card), sent on join and again on reconnect before the view, as `portraits` rides — and to a
+    /// watcher as it attaches. A row on the match, never a field of `PlayerView` (cosmetics are no
+    /// rule, CLAUDE.md rule 7). Every id is one the seat's account owned as the match began, else its
+    /// kind's default.
     Loadouts { p1: SeatLoadout, p2: SeatLoadout },
     /// R1834003: the own picks of cards of `seat`'s deck, each sent after the first view to this
     /// socket that shows a card that deck dealt, still as the card it was dealt as, and never again
@@ -706,6 +710,20 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 return Err(malformed(r#""trade.instanceId" must be a string"#));
             };
             Ok(ActionBody::Trade {
+                instance_id: instance_id.to_string(),
+            })
+        }
+        ActionType::MarketBuy => {
+            let Some(offer) = non_negative_int(raw.get("offer")) else {
+                return Err(malformed(r#""marketBuy.offer" must be a non-negative integer"#));
+            };
+            Ok(ActionBody::MarketBuy { offer })
+        }
+        ActionType::MarketSell => {
+            let Some(instance_id) = is_string(raw.get("instanceId")) else {
+                return Err(malformed(r#""marketSell.instanceId" must be a string"#));
+            };
+            Ok(ActionBody::MarketSell {
                 instance_id: instance_id.to_string(),
             })
         }

@@ -1,7 +1,8 @@
 // `/collection` (#1307, SPEC §14): the screen reads each panel's answers with the caller's token,
 // shows each panel's own loading message and error, and never goes blank when a read is refused.
 // R1579000: it is the hub of four doors, its Cards and Cosmetics sections open in place by
-// `?section=`, and Cosmetics is where a cosmetic is equipped.
+// `?section=`, and Cosmetics is where a cosmetic is equipped. R1953001: with no defaults of every
+// card left in it.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,7 @@ import {
   readCosmetics,
   resetCosmeticsForTests,
   writeCardPick,
+  writeCosmetics,
 } from "../cards/cosmetics.ts";
 import { collectionTestid as T } from "../collection/collection.ts";
 import { fullCollection, questsHeld, tracksOf } from "../collection/fixtures.ts";
@@ -24,6 +26,7 @@ import {
   getOwnedCosmetics,
   getPacks,
   getQuests,
+  getTokens,
   getTracks,
   getWallet,
   type CollectionResponse,
@@ -32,7 +35,7 @@ import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
 import { packsInfo } from "../packs/fixtures.ts";
 import { SETTINGS_GROUPS } from "../settings/groups.ts";
-import { cosmeticPacksInfo, ownedCosmeticsOf, walletInfo } from "../shop/fixtures.ts";
+import { cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../shop/fixtures.ts";
 import { navTestid } from "./nav.tsx";
 import CollectionRoute from "./collection.tsx";
 import { questsTestid } from "./QuestsPanel.tsx";
@@ -48,6 +51,7 @@ vi.mock("../net/api.ts", async (importOriginal) => {
     getOwnedCosmetics: vi.fn(),
     getTracks: vi.fn(),
     getQuests: vi.fn(),
+    getTokens: vi.fn(),
   };
 });
 
@@ -62,6 +66,7 @@ function answerAll(): void {
   vi.mocked(getTracks).mockResolvedValue(tracksOf());
   vi.mocked(getQuests).mockResolvedValue(questsHeld());
   vi.mocked(getOwnedCosmetics).mockResolvedValue(ownedCosmeticsOf());
+  vi.mocked(getTokens).mockResolvedValue(tokenBars());
 }
 
 beforeEach(() => {
@@ -257,22 +262,18 @@ describe("R1579000 the Collection hub", () => {
     if (group === undefined) throw new Error("no cosmetics settings group");
     const changed = vi.fn();
     const unsubscribe = group.subscribe(changed);
-    // R1655000: the playmat, backdrop and card back are tiles, each a click on an owned one; the defaults of every card stay selects.
-    expect(screen.queryByTestId(T.equip("table"))).toBeNull();
+    // R1655000: the playmat, backdrop and card back are tiles, each a click on an owned one.
     fireEvent.click(within(screen.getByTestId(T.tile("table-felt"))).getByRole("button"));
     fireEvent.click(within(screen.getByTestId(T.tile("card-back-starfield"))).getByRole("button"));
-    fireEvent.change(screen.getByTestId(T.equip("foil")), { target: { value: "foil-rainbow" } });
     unsubscribe();
 
     expect(screen.getByTestId(T.tile("table-felt"))).toHaveAttribute("data-equipped", "true");
-    expect(readCosmetics()).toMatchObject({ table: "table-felt", cardBack: "card-back-starfield", foil: "foil-rainbow" });
+    expect(readCosmetics()).toMatchObject({ table: "table-felt", cardBack: "card-back-starfield" });
     expect(JSON.parse(localStorage.getItem(COSMETICS_SETTINGS_KEY) ?? "null")).toMatchObject({
       table: "table-felt",
       cardBack: "card-back-starfield",
-      foil: "foil-rainbow",
     });
     expect(group.read()["table"]).toBe("table-felt");
-    expect(group.read()["foil"]).toBe("foil-rainbow");
     expect(changed).toHaveBeenCalled();
     expect(getOwnedCosmetics).toHaveBeenCalledTimes(1);
     expect(getOwnedCosmetics).toHaveBeenCalledWith(TOKEN);
@@ -291,13 +292,30 @@ describe("R1579000 the Collection hub", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
     expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "cosmetics");
-    expect(await screen.findByTestId(T.equip("foil"))).toBeInTheDocument();
+    expect(await screen.findByTestId(T.tiles("table"))).toBeInTheDocument();
 
     act(() => {
       window.history.replaceState(null, "", paths.collection);
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
     expect(screen.getByTestId(T.screen)).toHaveAttribute("data-section", "hub");
+  });
+
+  it("R1953001 the Cosmetics tab has no Defaults for every card section", async () => {
+    answerAll();
+    // The synced settings hold a foil, a finish and a border no select can change any more.
+    writeCosmetics({ foil: "foil-rainbow", finish: "finish-linen", border: "border-wood" });
+    render(<CollectionRoute token={TOKEN} />);
+
+    fireEvent.click(screen.getByTestId(T.door("cosmetics")));
+    expect(await screen.findByTestId(T.ownedCosmetic("full-art-gary-the-gambler", "core-004"))).toBeInTheDocument();
+    expect(screen.queryByText("Defaults for every card")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Defaults for every card" })).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Equipped" })).toBeInTheDocument();
+    expect(screen.getByTestId(T.tiles("table"))).toBeInTheDocument();
+    // R1655000 freezes the group's shape: the picks stay stored, untouched.
+    expect(readCosmetics()).toMatchObject({ foil: "foil-rainbow", finish: "finish-linen", border: "border-wood" });
   });
 
   it("R1579000 an unknown section opens the hub", () => {

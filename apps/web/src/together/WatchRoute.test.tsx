@@ -640,8 +640,9 @@ describe("R1834004 the watched board wears both seats' loadouts", () => {
     socket.frame({
       type: "loadouts",
       p1: { ...DEFAULT_CARD_COSMETICS, border: seatBorder },
-      p2: { ...DEFAULT_CARD_COSMETICS, table, border: theirBorder },
+      p2: { ...DEFAULT_CARD_COSMETICS, table },
     });
+    socket.frame({ type: "cardLoadouts", seat: "p2", cards: [{ cardId: "core-004", border: theirBorder }] });
     socket.frame({
       type: "view",
       view: baseView({
@@ -652,9 +653,10 @@ describe("R1834004 the watched board wears both seats' loadouts", () => {
       legal: [],
     });
 
-    // Nobody wears the device's picks here: the lower seat wears its loadout, its card's own pick over it.
+    // Nobody wears the device's picks here: the lower seat's card wears its own pick, and a card with
+    // none its kind's default, never the seat's border (R1953001).
     expect(screen.getByTestId("hand-card-h-1").querySelector(".cf")?.getAttribute("data-frame")).toBe(cardBorder);
-    expect(screen.getByTestId("hand-card-h-2").querySelector(".cf")?.getAttribute("data-frame")).toBe(seatBorder);
+    expect(screen.getByTestId("hand-card-h-2").querySelector(".cf")?.hasAttribute("data-frame")).toBe(false);
     // And the friend's opponent wears theirs.
     expect(document.querySelector('.card[data-owner="p2"] > .cf')?.getAttribute("data-frame")).toBe(theirBorder);
     expect(document.querySelector(".field")?.getAttribute("data-their-table")).toBe(table);

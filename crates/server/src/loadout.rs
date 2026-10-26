@@ -4,10 +4,11 @@
 //! reads it (CLAUDE.md rule 7).
 //!
 //! R1834002: when a match starts, each seat's loadout is frozen on its row ([`freeze_loadout`]):
-//! the deck's three slots (the deck's pick, else the account's, else the kind's default), the
-//! account's foil, finish and border, and the picks of each card in the deck, each resolved to a
-//! registry id the account owns at that moment and the kind's default otherwise, so no unknown or
-//! unowned id ever reaches another client. A row from before #1834 reads as [`Loadout::defaults`].
+//! the deck's three slots (the deck's pick, else the account's, else the kind's default) and the
+//! picks of each card in the deck, each resolved to a registry id the account owns at that moment
+//! and the kind's default otherwise, so no unknown or unowned id ever reaches another client. A card
+//! with no pick of a kind wears its default, never the account's (R1953001), so the seat's foil,
+//! finish and border are always the defaults. A row from before #1834 reads as [`Loadout::defaults`].
 //!
 //! R1834003: the seat-level half travels whole, on join and on reconnect (`loadouts`). A card's own
 //! picks travel only once a card dealt from that seat's deck, still showing as what it was dealt,
@@ -136,7 +137,8 @@ impl AccountPicks {
 }
 
 /// R1834002: what a seat wears on its side and on every card that has no pick of its own, each a
-/// registry id of its kind: the `loadouts` frame's half for one seat.
+/// registry id of its kind: the `loadouts` frame's half for one seat. Its foil, finish and border
+/// are their kinds' defaults (R1953001), kept so the frame keeps its shape.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatLoadout {
@@ -260,13 +262,13 @@ impl CardPicks {
 ///  - a deck slot wears the deck's pick when the deck carries one, owned, and the default when it
 ///    is not (the deck's word is final, as the deck builder draws it); else the account's pick,
 ///    owned; else the default;
-///  - a card slot wears the account's pick, owned on every card (a default or a starter);
-///  - each card of the deck wears its own pick of a kind when that is owned on the card, the
-///    account's pick when its own is not owned (or it has none) and the account's is owned on the
-///    card, and the default when its own is an id the registry has none of for its kind, as its
-///    owner's client draws it (R1655000). Its full art prints when the account owns that full art
-///    and the card's own switch, else the account's Full-art cards setting, is on. A card is listed
-///    only where it differs from the seat.
+///  - a card slot wears its kind's default: since R1953001 a card with no pick of its own never
+///    wears the account's foil, finish or border, which nothing sets any more;
+///  - each card of the deck wears its own pick of a kind when that is owned on the card, and the
+///    default when it has none, does not own it or picks an id the registry has none of for its
+///    kind, as its owner's client draws it (R1655000, R1953001). Its full art prints when the
+///    account owns that full art and the card's own switch, else the account's Full-art cards
+///    setting, is on. A card is listed only where it differs from the seat.
 pub fn freeze_loadout(
     registry: &[Cosmetic],
     owned: &OwnedCosmetics,
@@ -295,12 +297,6 @@ pub fn freeze_loadout(
         };
         seat.set(kind, worn.unwrap_or_else(|| default(kind)));
     }
-    for kind in CARD_SLOT_KINDS {
-        seat.set(
-            kind,
-            owned_pick(kind, account.get(kind), None).unwrap_or_else(|| default(kind)),
-        );
-    }
 
     let distinct: BTreeSet<&str> = deck_cards.iter().map(String::as_str).collect();
     let mut cards = Vec::new();
@@ -311,14 +307,9 @@ pub fn freeze_loadout(
             ..CardPicks::default()
         };
         for kind in CARD_SLOT_KINDS {
-            let accounts = || owned_pick(kind, account.get(kind), Some(card));
-            let worn = match own.and_then(|picks| picks.get(kind)) {
-                Some(id) if entry_of(kind, id).is_none() => default(kind),
-                Some(id) => owned_pick(kind, Some(id), Some(card))
-                    .or_else(accounts)
-                    .unwrap_or_else(|| default(kind)),
-                None => accounts().unwrap_or_else(|| default(kind)),
-            };
+            let worn = own
+                .and_then(|picks| owned_pick(kind, picks.get(kind), Some(card)))
+                .unwrap_or_else(|| default(kind));
             if worn != seat.get(kind) {
                 entry.set(kind, Some(worn));
             }
@@ -547,7 +538,8 @@ mod tests {
         assert_eq!(loadout.seat.table, "table-default");
         assert_eq!(loadout.seat.field, "field-starter");
         assert_eq!(loadout.seat.card_back, "card-back-default");
-        assert_eq!(loadout.seat.foil, "foil-starter");
+        // R1953001: a card slot is its default, whatever the account's settings still hold.
+        assert_eq!(loadout.seat.foil, "foil-default");
         assert_eq!(loadout.seat.finish, "finish-default");
         assert!(loadout.cards.is_empty());
         // No deck (All Random): the account's, then the default.
@@ -634,15 +626,21 @@ mod tests {
                 foil: Some("foil-earned".to_owned()),
                 ..CardPicks::default()
             },
-            // Not owned on this card: the account's pick, which the seat already wears.
+            // Not owned on this card: the default, which the seat already wears.
             CardPicks {
                 card_id: "core-003".to_owned(),
                 foil: Some("foil-earned".to_owned()),
                 ..CardPicks::default()
             },
-            // An id the registry does not know: the default, the card's word final.
+            // The account's own finish: the card's pick, since the seat wears the default (R1953001).
             CardPicks {
                 card_id: "core-004".to_owned(),
+                finish: Some("finish-starter".to_owned()),
+                ..CardPicks::default()
+            },
+            // An id the registry does not know: the default, the card's word final.
+            CardPicks {
+                card_id: "core-005".to_owned(),
                 finish: Some("finish-from-a-newer-client".to_owned()),
                 ..CardPicks::default()
             },
@@ -653,9 +651,11 @@ mod tests {
                 ..CardPicks::default()
             },
         ];
-        let deck = cards(&["core-001", "core-002", "core-002", "core-003", "core-004"]);
+        let deck = cards(&[
+            "core-001", "core-002", "core-002", "core-003", "core-004", "core-005",
+        ]);
         let loadout = freeze_loadout(&registry, &owned, &picks, None, &card_picks, &deck);
-        assert_eq!(loadout.seat.finish, "finish-starter");
+        assert_eq!(loadout.seat.finish, "finish-default");
         assert_eq!(
             loadout.cards,
             vec![
@@ -671,7 +671,7 @@ mod tests {
                 },
                 CardPicks {
                     card_id: "core-004".to_owned(),
-                    finish: Some("finish-default".to_owned()),
+                    finish: Some("finish-starter".to_owned()),
                     ..CardPicks::default()
                 },
             ]

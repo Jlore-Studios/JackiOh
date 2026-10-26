@@ -150,6 +150,12 @@
   padding-bottom: 14px;
 }
 
+/* R1953000: while a cosmetic pack's token bars are pinned at the top (economy/OpeningBars.tsx), the
+   page starts below them, as the card pack's scene does (packs.css). */
+.tavern.app-shell.shop-screen:has(.cosmetic-packs-panel .opening-hud) {
+  padding-top: 10rem;
+}
+
 .tavern.app-shell.shop-screen .panel--auth {
   flex: 0 1 auto;
   min-height: 0;

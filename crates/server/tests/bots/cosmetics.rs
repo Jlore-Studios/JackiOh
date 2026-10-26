@@ -497,7 +497,7 @@ fn wear(fit: &CosmeticFit) -> Worn {
                 card.card_id
             );
             for kind in CARD_SLOT_KINDS {
-                // A card's own pick is never what the account wears on every card.
+                // A card's own pick is never the account's own pick of its kind.
                 assert!(
                     card.get(kind).is_none() || card.get(kind) != picks.get(kind),
                     "{seed}: {card:?} repeats the account's {kind:?}"

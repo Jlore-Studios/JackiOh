@@ -583,9 +583,15 @@ export type BarSettle = { before: number; after: number; size: number; pays: num
 
 /**
  * What an opening did to both token bars (R1305000, R1305001): `cosmeticPaid` is the cycle's steps
- * the cosmetic bar paid, in order, so its length is `cosmetic.pays`.
+ * the cosmetic bar paid, in order, so its length is `cosmetic.pays`, and `slotPoints` the points
+ * each slot added to each bar, in slot order, 0 for a slot that was not spent (R1953000).
  */
-export type OpeningBarsAnswer = { card: BarSettle; cosmetic: BarSettle; cosmeticPaid: CosmeticTokenStep[] };
+export type OpeningBarsAnswer = {
+  card: BarSettle;
+  cosmetic: BarSettle;
+  cosmeticPaid: CosmeticTokenStep[];
+  slotPoints: number[];
+};
 
 /**
  * `POST /api/packs/open`: the slots in order, the pity counters after them, the packs of that kind

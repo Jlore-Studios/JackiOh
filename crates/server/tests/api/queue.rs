@@ -2226,7 +2226,8 @@ mod r1834002_the_loadout_the_ticket_freezes {
         let rival_deck_id = next_uuid();
 
         // The deck picks a playmat and a card back; the account a playmat the deck's beats, a
-        // backdrop the deck leaves to it, and a foil.
+        // backdrop the deck leaves to it, and a foil that no card wears, since a card with no pick
+        // of its own wears its kind's default (R1953001).
         save_with_slots(
             &app,
             &swapper,
@@ -2323,7 +2324,7 @@ mod r1834002_the_loadout_the_ticket_freezes {
                         "table": "table-felt",
                         "field": "field-rain",
                         "cardBack": "card-back-lacquer",
-                        "foil": "foil-rainbow",
+                        "foil": "foil-none",
                         "finish": "finish-plain",
                         "border": "border-standard",
                     },

@@ -5,7 +5,7 @@
 
 import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { INSTALLED_DECK_NAMES, INSTALLED_TRIO_NAME, mintId, type InstalledLoadout } from "../../support/commands.ts";
-import { accounts, constants, routes, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, constants, routes, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   DECK_LIST,
   TRIO_CODE_OUTPUT,
@@ -32,14 +32,6 @@ const DECK_SIZE = constants.DECK_SIZE;
 const DECK_ROWS = `${ts(DECK_LIST)} [data-testid^="${deckRowId("")}"]`;
 
 type ErrorBody = { error: { code: string; message: string; details?: unknown } };
-
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
 
 function openWorkshop(account: E2EAccount): void {
   cy.visitAs(account, routes.deckbuilder());
@@ -133,8 +125,8 @@ describe("26 trio codes — copy, import, and the caps (R339–R341)", () => {
       cy.savedDecks(importer).then((saved) => {
         cy.request<ErrorBody>({
           method: "POST",
-          url: api("/api/trios/import"),
-          headers: bearer(importer),
+          url: apiUrl("/api/trios/import"),
+          headers: bearerHeaders(importer.token),
           body: {
             catalogVersion: saved.catalogVersion,
             trio: { id: mintId(), name: INSTALLED_TRIO_NAME },

@@ -9,7 +9,7 @@ import {
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { mintId } from "../../support/commands.ts";
-import { accounts, constants, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   DECK_CAP,
   DECK_CAP_REASON,
@@ -53,14 +53,6 @@ const DECK_SIZE = constants.DECK_SIZE;
 const RETRY_TIMEOUT_MS = DECK_AUTOSAVE_RETRY_SECONDS * MS_PER_SECOND + timeouts.view;
 
 const DECK_ROWS = `${ts(DECK_LIST)} [data-testid^="${deckRowId("")}"]`;
-
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
 
 function openWorkshop(account: E2EAccount): void {
   cy.visitAs(account, routes.deckbuilder());
@@ -142,7 +134,7 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
     const me = workshopAccount();
     const before = [cardId(1), cardId(2), cardId(3), cardId(4), cardId(5)];
     const added = cardId(6);
-    const decksUrl = api("/api/decks/*");
+    const decksUrl = apiUrl("/api/decks/*");
 
     cy.saveDeck(me, { name: "Travel", cards: before }).then((deckId) => {
       openWorkshop(me);
@@ -290,13 +282,13 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
 
                   cy.request<{ mode: string }>({
                     method: "POST",
-                    url: api("/api/queue"),
-                    headers: bearer(me),
+                    url: apiUrl("/api/queue"),
+                    headers: bearerHeaders(me.token),
                     body: { mode: "bo3", trioId, seed },
                   })
                     .its("body.mode")
                     .should("eq", "bo3");
-                  cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(me) })
+                  cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(me.token) })
                     .its("status")
                     .should("eq", 200);
                 });
@@ -345,8 +337,8 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
     cy.savedDecks(me).then((saved) => {
       cy.request<{ error: { code: string; details?: { limit?: number } } }>({
         method: "PUT",
-        url: api(`/api/decks/${mintId()}`),
-        headers: bearer(me),
+        url: apiUrl(`/api/decks/${mintId()}`),
+        headers: bearerHeaders(me.token),
         body: { name: "One too many", cards: [], catalogVersion: saved.catalogVersion },
         failOnStatusCode: false,
       }).should((response) => {

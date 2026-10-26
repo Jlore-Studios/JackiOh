@@ -19,7 +19,7 @@ import OwnedCards from "../collection/OwnedCards.tsx";
 import TracksPanel from "../collection/TracksPanel.tsx";
 import WalletPanel from "../collection/WalletPanel.tsx";
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
-import OwnedCosmetics, { CardCosmeticsControls } from "../collection/CosmeticsPanel.tsx";
+import OwnedCosmetics from "../collection/CosmeticsPanel.tsx";
 import { collectionSectionOf, collectionTestid, type CollectionPart } from "../collection/collection.ts";
 import { t } from "../i18n/i18n.ts";
 import {
@@ -209,7 +209,7 @@ function CardsSection({ token }: { token: string }): ReactElement {
       <h2>{t("Cards")}</h2>
       <div className="collection-body" data-testid={collectionTestid.body}>
         <Section part="cards" title={t("Owned cards")} loading={t("Loading your cards…")} read={cards}>
-          {(collection) => <OwnedCards collection={collection} />}
+          {(collection) => <OwnedCards collection={collection} token={token} />}
         </Section>
         <Section part="wallet" title={t("Wallet")} loading={t("Loading your wallet…")} read={wallet}>
           {(held) => <WalletPanel wallet={held.wallet} packs={held.packs} cosmeticPacks={held.cosmeticPacks} />}
@@ -225,8 +225,9 @@ function CardsSection({ token }: { token: string }): ReactElement {
 
 /**
  * What is equipped, the only place to pick it (R1579000), and what the account owns. R1655000: the
- * playmat, backdrop and card back are tiles; the defaults of every card stay selects, and a card's
- * own picks are set from the card in the Cards section.
+ * playmat, backdrop and card back are tiles, and a card's own picks are set from the card in the
+ * Cards section. R1953001: no defaults of every card any more, so a card with no pick of its own
+ * wears its kind's default, and a locked tile offers a held cosmetic token in place.
  */
 function CosmeticsSection({ token }: { token: string }): ReactElement {
   const owned = useRead(token, getOwnedCosmetics);
@@ -242,12 +243,7 @@ function CosmeticsSection({ token }: { token: string }): ReactElement {
               "Your side of the board wears these in every game. A deck can pick its own playmat, backdrop and card back in the deck builder.",
             )}
           </p>
-          <AccountCosmeticTiles />
-        </section>
-        <section className="collection-section">
-          <h3 className="account-heading">{t("Defaults for every card")}</h3>
-          <p>{t("A card wears these until it picks its own: open it in the Cards section.")}</p>
-          <CardCosmeticsControls />
+          <AccountCosmeticTiles token={token} />
         </section>
         <Section part="cosmetics" title={t("Owned")} loading={t("Loading your cosmetics…")} read={owned}>
           {(value) => <OwnedCosmetics owned={value} />}

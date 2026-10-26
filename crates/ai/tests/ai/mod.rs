@@ -23,6 +23,7 @@ pub mod hidden_nerfs;
 pub mod ky_competition;
 pub mod learned;
 pub mod lost_mana;
+pub mod marketplace;
 pub mod match_refusal;
 pub mod match_setup;
 pub mod meditative_plus;

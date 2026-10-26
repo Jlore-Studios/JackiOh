@@ -2418,6 +2418,18 @@ impl TierWeights {
     }
 }
 
+/// The shape of `TOKEN_BAR_POINTS_BY_CARD_RARITY` and `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY` (SPEC
+/// §14.5, R1953000): the token bar points a spent slot adds for each rarity it can roll.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RarityPoints {
+    pub common: i64,
+    pub rare: i64,
+    pub epic: i64,
+    pub legendary: i64,
+    pub mythic: i64,
+}
+
 /// The shape of `PACK_UNOWNED_WEIGHTS` and `COSMETIC_PACK_CARD_WEIGHTS`: how a draw weighs the
 /// cards the account owns against the ones it does not (SPEC §14.3, §14.6). A card's weight is
 /// its side's number, so an unowned card is drawn `unowned / owned` times as often as an owned
@@ -2484,10 +2496,10 @@ pub const PACK_FLOOR_RARITY: PrintedRarity = PrintedRarity::Rare;
 /// SPEC §14.6, R1339000: the floor of a cosmetic pack's floored slot: it rolls
 /// `COSMETIC_TIER_WEIGHTS`, and a Common or a Rare becomes Epic (Epic 950, Legendary 45, Mythic 5).
 pub const COSMETIC_PACK_FLOOR_RARITY: CosmeticRarity = CosmeticRarity::Epic;
-/// SPEC §14.3, R1661001: a duplicate's global cosmetic roll (#1661: 10%): with an account cosmetic
-/// left unowned, one draw below `TIER_WEIGHT_TOTAL`, and a draw below this drops an account
-/// cosmetic in place of the duplicate's per-card one.
-pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 100;
+/// SPEC §14.3, R1661001, R1953000: a duplicate's global cosmetic roll (#1953: 2%, was #1661's 10%):
+/// with an account cosmetic left unowned, one draw below `TIER_WEIGHT_TOTAL`, and a draw below this
+/// drops an account cosmetic in place of the duplicate's per-card one.
+pub const GLOBAL_COSMETIC_ROLL_WEIGHT: u32 = 20;
 // SPEC §14.3, R1661001: the hit is a share of the same total, so it cannot pass it.
 const _: () = assert!(GLOBAL_COSMETIC_ROLL_WEIGHT <= TIER_WEIGHT_TOTAL);
 /// SPEC §14.2, §14.3, R1661000, R1661001: the rarity every account cosmetic but its kind's default
@@ -2505,23 +2517,40 @@ pub const PITY_LEGENDARY_PACKS: usize = 20;
 /// SPEC §14.4: the longest an account waits for a Mythic: of any 30 card packs in a row, at
 /// least one holds one. The longest wait of all, as SPEC §14.4 requires.
 pub const PITY_MYTHIC_PACKS: usize = 30;
-/// SPEC §14.5: the points that fill the card token bar: 150 is
-/// `CARD_TOKEN_BAR_POINTS_PER_DUPLICATE * PACK_SLOTS * CARD_TOKEN_BAR_TARGET_PACKS`, so the
-/// bar fills exactly at its target on a complete collection.
-pub const CARD_TOKEN_BAR_SIZE: i64 = 150;
-/// SPEC §14.5: the points that fill the cosmetic token bar, likewise exactly at its target.
-pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 150;
-/// SPEC §14.5: the points a spent duplicate adds to the card token bar. Derived by the
-/// simulation in `economy/math.rs`: one point per duplicate fills `CARD_TOKEN_BAR_SIZE` in
-/// `CARD_TOKEN_BAR_TARGET_PACKS` packs of `PACK_SLOTS` duplicates each.
-pub const CARD_TOKEN_BAR_POINTS_PER_DUPLICATE: i64 = 1;
-/// SPEC §14.5: the points a spent duplicate adds to the cosmetic token bar, likewise.
-pub const COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE: i64 = 1;
-/// SPEC §14.5: the card packs the card token bar takes to fill, on average (#1333's table: ~30).
-pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 30;
-/// SPEC §14.5: the card packs the cosmetic token bar takes to fill, on average (#1333's table:
-/// ~30).
-pub const COSMETIC_TOKEN_BAR_TARGET_PACKS: usize = 30;
+/// SPEC §14.5, R1953000: the points that fill the card token bar (#1953: 200). On a complete
+/// collection a card pack's spent duplicates add about 8.65 points under `CARD_TIER_WEIGHTS` (four
+/// slots at 1.61 and the floored one at 2.21, before pity), so the bar fills about once every
+/// `CARD_TOKEN_BAR_TARGET_PACKS` packs (`economy/math.rs`).
+pub const CARD_TOKEN_BAR_SIZE: i64 = 200;
+/// SPEC §14.5, R1953000: the points that fill the cosmetic token bar (#1953: 200), the same points
+/// as the card token bar's, so likewise about once every `COSMETIC_TOKEN_BAR_TARGET_PACKS` packs.
+pub const COSMETIC_TOKEN_BAR_SIZE: i64 = 200;
+/// SPEC §14.5, R1953000: the points a card pack's spent duplicate adds to each token bar, by the
+/// card rarity its slot rolled, pity's force included (#1953: 1, 2, 3, 5 and 10).
+pub const TOKEN_BAR_POINTS_BY_CARD_RARITY: RarityPoints = RarityPoints {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    legendary: 5,
+    mythic: 10,
+};
+/// SPEC §14.5, §14.6, R1306001, R1953000: the points a cosmetic pack's spent slot, one with nothing
+/// left unowned, adds to each token bar, by the cosmetic rarity it rolled (#1953: 1, 2, 3, 5 and
+/// 10, as a card's).
+pub const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY: RarityPoints = RarityPoints {
+    common: 1,
+    rare: 2,
+    epic: 3,
+    legendary: 5,
+    mythic: 10,
+};
+/// SPEC §14.5: the card packs the card token bar takes to fill, on average (#1333's table: ~30;
+/// #1953's points and size: 23, `CARD_TOKEN_BAR_SIZE` over the mean points of a pack, rounded,
+/// held by `economy/math.rs`).
+pub const CARD_TOKEN_BAR_TARGET_PACKS: usize = 23;
+/// SPEC §14.5: the card packs the cosmetic token bar takes to fill, on average (#1953: 23, as the
+/// card token bar's).
+pub const COSMETIC_TOKEN_BAR_TARGET_PACKS: usize = 23;
 /// SPEC §14.5: the steps the cosmetic token bar pays, in order, verbatim.
 pub const COSMETIC_TOKEN_CYCLE: [CosmeticTokenStep; 6] = [
     CosmeticTokenStep::Rare,

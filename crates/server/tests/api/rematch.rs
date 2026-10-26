@@ -1460,9 +1460,10 @@ mod r1638000_a_rematch_across_a_patch {
 }
 
 /// R1834002: a Best-of-1 rematch plays the same decks under the deck slots their seats wore, which
-/// its own loadout judges again as it begins; the card slots and the cards' own picks are read from
-/// the accounts again. A finished match from before loadouts has no slots to replay, so its rematch
-/// wears the accounts' picks.
+/// its own loadout judges again as it begins; the cards' own picks are read from the accounts again,
+/// and the card slots are their kinds' defaults (R1953001), whatever the finished seat or the account
+/// holds. A finished match from before loadouts has no slots to replay, so its rematch wears the
+/// accounts' picks.
 mod r1834002_a_rematch_keeps_the_slots {
     use super::*;
 
@@ -1514,10 +1515,11 @@ mod r1834002_a_rematch_keeps_the_slots {
         let rematch_id = created["matchId"].as_str().expect("a match id").to_string();
         let rematch = match_row(&app, &rematch_id).await;
         assert_eq!(rematch["players"], json!([a, b]));
-        // The deck slots are the finished seat's; the foil is the account's now.
+        // The deck slots are the finished seat's; the foil is neither the finished seat's nor the
+        // account's, but the default.
         assert_eq!(
             rematch["loadouts"][0]["seat"],
-            seat("table-felt", "field-rain", "card-back-lacquer", "foil-holo-sweep")
+            seat("table-felt", "field-rain", "card-back-lacquer", "foil-none")
         );
         assert_eq!(
             rematch["loadouts"][1]["seat"],

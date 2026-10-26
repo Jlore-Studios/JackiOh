@@ -1275,7 +1275,8 @@ mod r1834002_a_conquest_game_wears_the_picked_deck {
         .await;
         assert_eq!(status, 200, "{body}");
 
-        // Alice plays her second deck, so its slots and none of her first deck's.
+        // Alice plays her second deck, so its slots and none of her first deck's; her account's
+        // border dresses no card, each wearing its own picks or its kinds' defaults (R1953001).
         pick_both(&h, [1, 2]).await;
         let row = match_row(&h.app, FIRST_MATCH).await;
         let alice = row["players"]
@@ -1290,7 +1291,7 @@ mod r1834002_a_conquest_game_wears_the_picked_deck {
                 "cardBack": "card-back-blueprint",
                 "foil": "foil-none",
                 "finish": "finish-plain",
-                "border": "border-bone",
+                "border": "border-standard",
             })
         );
         assert_eq!(

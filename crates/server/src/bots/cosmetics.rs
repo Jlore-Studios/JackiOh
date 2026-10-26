@@ -369,8 +369,10 @@ fn fits_card_picks(fit: &CosmeticFit) -> bool {
 /// default's or a starter's foil, finish or border, kind and cosmetic drawn together at their
 /// shares of people's picks on cards (`card_picks`; an earned one is drawn by `wear_earned`, at its
 /// wear on its own card); else, under the prior, one kind at even odds and a cosmetic of it by the
-/// prior's split among what `wardrobe` owns on the card. Never what the account wears on every
-/// card of that kind (`account`).
+/// prior's split among what `wardrobe` owns on the card. Never the account's own pick of that kind
+/// (`account`): under a fit of people's loadouts that is the kind's default (no card wears the
+/// account's, R1953001), which a frozen card's entry never holds, since it lists only what differs
+/// from its seat (R1834002).
 fn draw_card_pick<'r>(
     rng: &mut Rng,
     registry: &'r [Cosmetic],

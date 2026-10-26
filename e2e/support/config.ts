@@ -49,6 +49,16 @@ export const server = {
   ws: () => env("wsUrl", "ws://localhost:8787/ws/match"),
 };
 
+/** A6: `path` on the API's origin, as every networked spec and command requests it. */
+export function apiUrl(path: string): string {
+  return `${server.http()}${path}`;
+}
+
+/** A6: the `authorization: Bearer <token>` header the server's signed-in routes read. */
+export function bearerHeaders(token: string): Record<string, string> {
+  return { authorization: `Bearer ${token}` };
+}
+
 /** R144: the `E2E=1` server's reseed (`POST`, no token): the fixture accounts and invite codes as a boot leaves them. */
 export const E2E_RESEED_PATH = "/api/e2e/reseed";
 

@@ -1,7 +1,8 @@
 // R1295000: on the board, only the viewer's own cards wear the device's card cosmetics — the hand,
 // the units and face-up backrow cards it owns, a unit the opponent has taken included — and only on
 // a board that wears them (`wearCosmetics`). The opponent's cards, and every card on a board that
-// wears none, draw the defaults whatever the device picked.
+// wears none, draw the defaults whatever the device picked. R1953001: what a card wears is its own
+// picks, never the account's synced foil, finish and border, which every test here holds non-default.
 //
 // R1297000: the same holds for the deck slots: the playmat under the viewer's half of the field, the
 // backdrop behind it, and the back of the viewer's face-down cards and deck pile. A saved deck's
@@ -9,8 +10,9 @@
 //
 // R1834004: an online board carries both seats' frozen loadouts (R1834002), and every seat whose cards
 // do not wear the device's picks wears its own: its half (playmat, backdrop, card back) and its cards,
-// by owner, under the same rarity rules. The viewer's "Show opponents' cosmetics" off leaves only the
-// seat the board is seen from dressed.
+// by owner, each its card's own picks over its kinds' defaults (R1953001: never the seat's foil, finish
+// and border), under the same rarity rules. The viewer's "Show opponents' cosmetics" off leaves only
+// the seat the board is seen from dressed.
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
@@ -20,6 +22,7 @@ import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import {
+  CARD_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
   cosmeticsOf,
   deckCosmeticsOf,
@@ -92,6 +95,13 @@ afterEach(() => {
 });
 
 describe("R1295000 the board's cards and the device's cosmetics", () => {
+  beforeEach(() => {
+    // The view's cards (core-004 in hand and as units, core-020 in the backrow) each pick their own.
+    for (const defId of ["core-004", "core-020"]) {
+      for (const kind of CARD_SLOT_KINDS) writeCardPick(defId, kind, item(kind));
+    }
+  });
+
   it("R1295000 the opponent's cards draw the defaults whatever the device picked; the viewer's own wear them", () => {
     render(<Board view={view()} wearCosmetics />);
 
@@ -254,13 +264,14 @@ describe("R1655000 the board's cards and the picks of each card", () => {
     vi.useRealTimers();
   });
 
-  it("R1655000 the viewer's copy wears its card's picks, another card keeps the account's, the opponent's copy the defaults", () => {
+  it("R1655000 the viewer's copy wears its card's picks, another card and the opponent's copy the defaults", () => {
     writeCardPick(OWN, "border", CARD_BORDER);
     render(<Board view={picksView()} wearCosmetics />);
 
     const hand = screen.getByTestId("hand-you");
     expect(frameOf(hand, OWN)).toBe(CARD_BORDER);
-    expect(frameOf(hand, OTHER)).toBe(BORDER);
+    // R1953001: a card with no pick of its own draws the default, not the account's border.
+    expect(frameOf(hand, OTHER)).toBeNull();
     // The viewer's unit of the same card wears them too; the opponent's copy draws the defaults.
     const yours = facesOwnedBy("p1");
     expect(yours).toHaveLength(1);
@@ -387,9 +398,19 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
   const [THEIR_FINISH] = others("finish");
   const lookup = lookupFromDefs(CATALOG);
 
+  /** The picks of the view's cards (core-004 as units, core-020 in the backrow), each this border. */
+  function bordered(border: CosmeticId): Record<string, CardPicks> {
+    return { "core-004": { border }, "core-020": { border } };
+  }
+
   function faceOf(owner: string, defId: string): HTMLElement | null {
     return document.querySelector<HTMLElement>(`.card[data-owner="${owner}"][data-def-id="${defId}"] > .cf`);
   }
+
+  beforeEach(() => {
+    // The viewer's own copies of the view's cards pick their border (R1953001: never the account's).
+    for (const defId of ["core-004", "core-020"]) writeCardPick(defId, "border", BORDER);
+  });
 
   afterEach(() => {
     writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
@@ -436,7 +457,7 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
   });
 
   it("R1834004 a stolen unit keeps its owner's look", () => {
-    const loadouts: SeatLoadouts = { p1: loadout({ border: THIRD_BORDER }), p2: loadout({ border: THEIR_BORDER }) };
+    const loadouts: SeatLoadouts = { p1: loadout({}, bordered(THIRD_BORDER)), p2: loadout({}, bordered(THEIR_BORDER)) };
     render(<Board view={view()} wearCosmetics loadouts={loadouts} />);
 
     // Their unit on the viewer's side wears their border; the viewer's on theirs, the device's.
@@ -454,11 +475,30 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
     for (const face of facesOwnedBy("p1")) expect(face.getAttribute("data-frame")).toBe(THIRD_BORDER);
   });
 
+  it("R1834004 a card of theirs with no pick of its own wears its kind's default, never its seat's", () => {
+    // R1953001: a seat's foil, finish and border dress no card, as its owner's own client draws it.
+    const theirs = loadout({ foil: THEIR_FOIL, finish: THEIR_FINISH, border: THEIR_BORDER }, { "core-004": { finish: THEIR_FINISH } });
+    render(<Board view={view()} wearCosmetics loadouts={{ p1: loadout(), p2: theirs }} />);
+
+    expect(facesOwnedBy("p2")).toHaveLength(3);
+    for (const face of facesOwnedBy("p2")) {
+      expect(face.getAttribute("data-cosmetic-foil")).toBeNull();
+      expect(face.getAttribute("data-frame")).toBeNull();
+    }
+    // Their units of core-004 wear its own finish; their backrow card, which picks none, the default.
+    expect(faceOf("p2", "core-004")?.getAttribute("data-finish")).toBe(THEIR_FINISH);
+    expect(faceOf("p2", "core-020")?.hasAttribute("data-finish")).toBe(false);
+  });
+
   it("R1834004 Mythic, Radiant and B16 hold on the opponent's faces", () => {
-    // Their seat picks a foil, a finish and a border, and the Mythic and the Radiant card pick their own too.
+    // Their cards pick a foil, a finish and a border of their own, the Mythic and the Radiant card among them.
     const theirs = loadout(
-      { foil: THEIR_FOIL, finish: THEIR_FINISH, border: THEIR_BORDER, cardBack: THEIR_BACK },
-      { "core-100": { foil: THEIR_FOIL, border: THIRD_BORDER }, "core-022": { foil: THEIR_FOIL, finish: THEIR_FINISH, border: THIRD_BORDER } },
+      { cardBack: THEIR_BACK },
+      {
+        "core-008": { foil: THEIR_FOIL, finish: THEIR_FINISH, border: THEIR_BORDER },
+        "core-100": { foil: THEIR_FOIL, finish: THEIR_FINISH, border: THIRD_BORDER },
+        "core-022": { foil: THEIR_FOIL, finish: THEIR_FINISH, border: THIRD_BORDER },
+      },
     );
     render(
       <CatalogContext.Provider value={lookup}>
@@ -470,7 +510,7 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
     expect(plain?.getAttribute("data-cosmetic-foil")).toBe(THEIR_FOIL);
     expect(plain?.getAttribute("data-finish")).toBe(THEIR_FINISH);
     expect(plain?.getAttribute("data-frame")).toBe(THEIR_BORDER);
-    // A Mythic face wears no cosmetic foil, and its own border over the seat's.
+    // A Mythic face wears no cosmetic foil, but its finish and border.
     const mythic = faceOf("p2", "core-100");
     expect(mythic?.getAttribute("data-cosmetic-foil")).toBeNull();
     expect(mythic?.getAttribute("data-finish")).toBe(THEIR_FINISH);
@@ -533,7 +573,7 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
 
   it("R1834004 the showcase of the opponent's play wears their loadout, and a card they set their card back", () => {
     const turn: GameEvent = { type: "turnStarted", player: "p2", turn: 4 };
-    const loadouts: SeatLoadouts = { p1: loadout(), p2: loadout({ border: THEIR_BORDER, cardBack: THEIR_BACK }) };
+    const loadouts: SeatLoadouts = { p1: loadout(), p2: loadout({ cardBack: THEIR_BACK }, { "core-032": { border: THEIR_BORDER } }) };
     const played: GameEvent[] = [
       { type: "cardPlayed", player: "p2", instanceId: "c7", defId: "core-032", costPaid: 1 },
       { type: "summoned", player: "p2", instanceId: "c7", defId: "core-032", row: "units", lane: 2 },
@@ -569,8 +609,11 @@ describe("R1834004 the other seat wears its frozen loadout", () => {
   it("R1834004 Show opponents' cosmetics off draws defaults everywhere but the viewer's own side", () => {
     writeCosmetics({ table: TABLE });
     const loadouts: SeatLoadouts = {
-      p1: loadout({ table: THEIR_TABLE, border: THIRD_BORDER }),
-      p2: loadout({ table: THIRD_TABLE, field: THEIR_FIELD, cardBack: THIRD_BACK, border: THEIR_BORDER }, { "core-004": { finish: THEIR_FINISH } }),
+      p1: loadout({ table: THEIR_TABLE }, bordered(THIRD_BORDER)),
+      p2: loadout(
+        { table: THIRD_TABLE, field: THEIR_FIELD, cardBack: THIRD_BACK },
+        { "core-004": { border: THEIR_BORDER, finish: THEIR_FINISH }, "core-020": { border: THEIR_BORDER } },
+      ),
     };
     writeCardSettings({ opponentCosmetics: false });
 

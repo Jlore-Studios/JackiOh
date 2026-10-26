@@ -1,10 +1,11 @@
 // R1834002: the loadout each seat of an online match wears, frozen by the server when the match
-// began: the six picks of its account (its deck's deck slots over them) and, for each of its cards
-// the receiver has been shown, that card's own picks. R1834003: the server sends the seats' picks in
+// began: its seat's six picks (its deck's deck slots over its account's, and its foil, finish and
+// border, which are their kinds' defaults since R1953001) and, for each of its cards the receiver has
+// been shown, that card's own picks. R1834003: the server sends the seats' picks in
 // a `loadouts` frame on every join and reconnect, before the view, and the picks of each card the
 // view has shown in a `cardLoadouts` frame after it, once per socket; a replay's page carries both
 // (`net/api.ts`). This module reads them, as untrusted input: an id this client does not know draws
-// as its kind's default, and a card's kind the entry lacks wears its seat's pick.
+// as its kind's default, and a card's kind the entry lacks wears its kind's default (R1953001).
 //
 // R1834004: the server checked every pick against the seat's own account (R1834001), so nothing here
 // asks whether the viewer owns it; a `TheirCopy` hands the owner's loadout to the faces of its copy

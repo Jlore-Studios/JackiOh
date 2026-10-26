@@ -5,11 +5,13 @@
 //
 // Hovering or focusing an item shows it on the large card; clicking one the card owns equips it on
 // this card alone (`writeCardPick`, `writeCardFullArt`), and a locked one, which `useCanEquip` says no
-// to, equips nothing. `Use default` of a kind clears the card's pick, which leaves the card to the
-// account's. The view decides nothing (CLAUDE.md rule 7): it sets a pick in the device's store, which
-// `cards/cardPicksSync.ts` sends to the account (R1834000), for the viewer's own faces and, frozen as
-// an online match begins, the opponent's sight of them (R1834002); `GET /api/cosmetics` is the answer
-// to what the viewer owns.
+// to, equips nothing. `Use default` of a kind clears the card's pick, which leaves the card to its
+// kind's default (R1953001). The view decides nothing (CLAUDE.md rule 7): it sets a pick in the
+// device's store, which `cards/cardPicksSync.ts` sends to the account (R1834000), for the viewer's own
+// faces and, frozen as an online match begins, the opponent's sight of them (R1834002);
+// `GET /api/cosmetics` is the answer to what the viewer owns. R1953001: a locked one a held cosmetic
+// token covers offers that token in place (TokenOffer.tsx), on a card the account owns `MAX_COPIES`
+// of, the only card a token's per-card cosmetic goes on.
 //
 // A preview writes no pick. A face wears only what the store holds, and `cards/cosmetics.ts` has no
 // seam to draw one wearing an id it does not, so a preview of a foil, finish or border is a second
@@ -25,17 +27,18 @@
 
 import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
 
+import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 
 import { CardArt, CardDetail, CardFace, faceModel } from "../cards/index.ts";
 import {
+  DEFAULT_CARD_COSMETICS,
   OwnershipContext,
   normalizeCosmetics,
   ownsCosmetic,
   resolveCosmetic,
   useCanEquip,
   useCardPicks,
-  useCosmetics,
   wornCosmetics,
   writeCardFullArt,
   writeCardPick,
@@ -44,6 +47,7 @@ import {
 import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import { SampleFace } from "./CosmeticLook.tsx";
 import {
   NO_FULL_ART_ID,
@@ -54,6 +58,7 @@ import {
   type StripItem,
   type StripKind,
 } from "./collection.ts";
+import TokenOffer, { offerTier, useHeldTokens } from "./TokenOffer.tsx";
 
 /**
  * The large face: the card wearing its own picks, and over it, while a foil, finish or border is
@@ -61,7 +66,6 @@ import {
  */
 function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | null }): ReactElement {
   const own = useOwnCopy();
-  const account = useCosmetics();
   const card = useCardPicks(face.defId);
   const owned = useContext(OwnershipContext);
   const largeFace = <CardFace face={face} layout="full" worn={own} />;
@@ -69,8 +73,9 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   if (preview !== null && preview.kind !== "fullArt") {
     const picks: CardPicks = { ...card };
     picks[preview.kind] = resolveCosmetic(preview.kind, preview.id);
-    // What it would wear were it the card's pick: the shown item, and the card's other picks where they are owned.
-    const wears = wornCosmetics(face, account, picks, (id) => id === preview.id || ownsCosmetic(owned, face.defId, id));
+    // What it would wear were it the card's pick: the shown item, and the card's other picks where
+    // they are owned, each kind it has none of its default (R1953001).
+    const wears = wornCosmetics(face, DEFAULT_CARD_COSMETICS, picks, (id) => id === preview.id || ownsCosmetic(owned, face.defId, id));
     sample = (
       <span className="collection-cardview__preview" data-testid={T.cardViewPreview} data-previewing={preview.id} aria-hidden="true">
         <SampleFace face={face} layout="full" wears={wears} />
@@ -128,6 +133,7 @@ function StripKindGroup({
   hide,
   equip,
   clear,
+  offer,
 }: {
   group: StripGroup;
   def: CardDef;
@@ -137,6 +143,8 @@ function StripKindGroup({
   hide: (item: StripItem) => void;
   equip: (item: StripItem) => void;
   clear: (kind: StripKind) => void;
+  /** R1953001: what a locked item offers, a held token that covers it, else nothing. */
+  offer: (item: StripItem) => ReactElement | null;
 }): ReactElement {
   const own = group.kind === "fullArt" ? picks.fullArt : picks[group.kind];
   return (
@@ -196,6 +204,7 @@ function StripKindGroup({
                 <span className="collection-strip__rarity">{t(item.rarity)}</span>
                 {item.owned ? null : <span className="collection-strip__lock">{t("Locked")}</span>}
               </button>
+              {item.owned ? null : offer(item)}
             </li>
           );
         })}
@@ -224,10 +233,16 @@ function trapTab(event: KeyboardEvent<HTMLElement>): void {
 export default function CardCosmeticsView({
   def,
   owned,
+  copies = 0,
+  token = null,
   onClose,
 }: {
   def: CardDef;
   owned: boolean;
+  /** The copies of the card the account owns, as `GET /api/collection` answers. */
+  copies?: number;
+  /** R1953001: the session's token, which reads the held cosmetic tokens; none offers none. */
+  token?: string | null;
   onClose: () => void;
 }): ReactElement {
   const canEquip = useCanEquip();
@@ -236,6 +251,11 @@ export default function CardCosmeticsView({
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
+  const strip = cardStrip(def.id, canEquip);
+  // R1953001: the held tokens are read only where one may be offered: a locked item on a card owned at
+  // MAX_COPIES, the only card a token's per-card cosmetic goes on (the server's `choice_of`).
+  const offering = copies >= MAX_COPIES && strip.some((group) => group.items.some((item) => !item.owned));
+  const [tokens, setTokens] = useHeldTokens(offering ? token : null);
 
   // Focus moves in and goes back to the card that opened the view; Escape closes it, unless the card's text is over it.
   useLayoutEffect(() => {
@@ -265,6 +285,23 @@ export default function CardCosmeticsView({
     if (kind === "fullArt") writeCardFullArt(def.id, null);
     else writeCardPick(def.id, kind, null);
   };
+  const offer = (item: StripItem): ReactElement | null => {
+    const cosmetic = COSMETICS.find((entry) => entry.id === item.id);
+    const tier = cosmetic === undefined || !offering ? null : offerTier(cosmetic, tokens);
+    if (token === null || tokens === null || tier === null) return null;
+    return (
+      <TokenOffer
+        token={token}
+        tier={tier}
+        held={tokens}
+        cosmeticId={item.id}
+        cardId={def.id}
+        onRedeemed={setTokens}
+        testid={T.tokenOffer(item.id)}
+        errorTestid={T.tokenOfferError(item.id)}
+      />
+    );
+  };
 
   return (
     <OwnCopy own>
@@ -284,7 +321,7 @@ export default function CardCosmeticsView({
             <p className="collection-cardview__hint">
               {t("Hover or focus a cosmetic to see it on the card. Choose one to wear it on this card only.")}
             </p>
-            {cardStrip(def.id, canEquip).map((group) => (
+            {strip.map((group) => (
               <StripKindGroup
                 key={group.kind}
                 group={group}
@@ -299,6 +336,7 @@ export default function CardCosmeticsView({
                 }}
                 equip={equip}
                 clear={clear}
+                offer={offer}
               />
             ))}
             <div className="collection-cardview__actions">
