@@ -2776,7 +2776,10 @@
       "feedback_since": "2026-10-26T14:32:59Z",
       "issue": 1994,
       "kind": "revise",
+      "queued_at": "2026-10-26T16:48:54Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
