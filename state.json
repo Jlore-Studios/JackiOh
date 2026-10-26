@@ -2129,25 +2129,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/wire/generated/GameState.ts",
-            "crates/ai/README.md",
-            "crates/engine/src/state.rs"
-          ],
-          "from": "da1cfc25a87818d7223a6b9d526c49fe3a289ddd",
-          "main": "9543ef3aafeb14dc07c0b38e021222163475b593"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40313924820",
+            "run": "40324462264",
             "tier": "strong"
           }
         ],
-        "sha": "5cbbfc8c559953517384e65b4aec650003a41e50",
+        "sha": "9297f2633bea5fc5b3aa14b864b82bd733fa67c0",
         "tiers": {
           "claude": "strong"
         }
