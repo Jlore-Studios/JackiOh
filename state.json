@@ -3486,10 +3486,8 @@
     "what": "plan #1861 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-26T23:16:24Z",
-    "notes": [
-      "delivered plan #1858 on claude-4 (run 40416585725): interrupted"
-    ],
+    "at": "2026-10-26T23:17:48Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
