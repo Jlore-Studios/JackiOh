@@ -38,14 +38,14 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Position, Selection, effective_life,
-    find_instance, has_keyword, legal_actions, pierces, reduce_unpiloted, subsystems, takes_strike_back,
-    unit_view,
+    Action, ActionBody, AttackTarget, CardInstance, GameState, KeywordKind, PlayerId, Position, Selection,
+    effective_life, find_instance, has_keyword, legal_actions, pierces, reduce_unpiloted, subsystems,
+    takes_strike_back, unit_view,
 };
 
-use crate::candidates::{blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
+use crate::candidates::{Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of};
 use crate::config::{AI_EVAL, AI_REPLY};
-use crate::evaluate::{NextSwing, coming_mana, evaluate, kill_worth, unit_worth};
+use crate::evaluate::{NextSwing, coming_mana, evaluate, heal_worth, kill_worth, unit_worth};
 use crate::learned::finalist_score;
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
@@ -68,8 +68,11 @@ pub(crate) struct Trade {
 /// nothing is worth a little per point dealt, so a second attacker can finish what the first one
 /// started. A Cleave attack also prices what its splash kills or unshields on the target's neighbours
 /// (R63): a killed neighbour at `AI_REPLY.cleave_share` of its worth, a popped neighbour shield at the
-/// same share of the Divine Shield weight. `kills` says whether the strike kills the target itself; the
-/// move order reads both (`candidates.rs`'s even trades, #1779). Its screen (#1796), 400 games of
+/// same share of the Divine Shield weight. A Trample attacker's hits add what they land beyond each
+/// struck unit's health on the target's hero, priced as a face hit (`reply_face_value`, §4.4 step 9),
+/// and a Lifesteal attacker's add what healing its own hero by all they deal is worth (`heal_worth`,
+/// step 8; #1820). `kills` says whether the strike kills the target itself; the move order reads both
+/// (`candidates.rs`'s even trades, #1779). Its screen (#1796), 400 games of
 /// improve-dev against the parent (`633568b99`), read 196-202 with 2 aborted, edge -0.015 (-0.041 to
 /// 0.011).
 pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> Trade {
@@ -93,14 +96,28 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
     if t.first_strike && !a.first_strike && dies {
         kills = false;
     }
+    // §4.3 step 1: an attacker a First Strike defender destroys first strikes nothing at all.
+    let lands = !(t.first_strike && !a.first_strike && dies);
+    // §4.4 step 5: a Trample attacker's hit counts on a unit only up to its health, the rest being step
+    // 9's hit on the hero.
+    let trample = has_keyword(&a.view.keywords, KeywordKind::Trample);
+    let on_unit = |dealt: i32, to: &Side| {
+        if trample {
+            dealt.min(to.view.health.max(0))
+        } else {
+            dealt
+        }
+    };
 
     // R63: the splash belongs to the attack, so it lands whenever the strike does — every case but
     // the defender-first one above, where the attacker is destroyed before it strikes at all.
     let mut cleave_value = 0.0;
-    if has_keyword(&a.view.keywords, KeywordKind::Cleave) && !(t.first_strike && !a.first_strike && dies) {
+    let mut splashed = 0;
+    if has_keyword(&a.view.keywords, KeywordKind::Cleave) && lands {
         for neighbour in cleaved_neighbours(state, attacker, target) {
             let n = side_of(state, &neighbour);
             let splash = blow(&a, combat.splash, combat.poisonous, &n);
+            splashed += on_unit(splash.dealt, &n);
             if splash.kills {
                 cleave_value += AI_REPLY.cleave_share * unit_worth(state, &neighbour, &AI_EVAL);
             } else if splash.pops_shield {
@@ -119,6 +136,33 @@ pub(crate) fn trade_value(state: &GameState, attacker: &CardInstance, target_id:
     }
     if dies {
         value -= kill_worth(state, attacker, &AI_EVAL);
+    }
+    // §4.4 step 9: what the attack's hits deal beyond each unit's health goes on to the target's hero
+    // through its Armor and caps (`projected_damage`: a Cleave's hits too, R176, and nothing when a
+    // First Strike defender destroys the attacker first).
+    let trampled = if trample {
+        subsystems::projected_damage(
+            state,
+            attacker,
+            &AttackTarget::Unit {
+                instance: target.clone(),
+            },
+        )
+    } else {
+        0
+    };
+    if trampled > 0 {
+        value += reply_face_value(state, target.controller, trampled);
+    }
+    // §4.4 step 8: Lifesteal heals the attacker's hero by what each of its hits deals, which step 5 does
+    // not cap at the unit's health but for a Trample hit, whose rest heals as it lands on the hero.
+    if lands && has_keyword(&a.view.keywords, KeywordKind::Lifesteal) {
+        value += heal_worth(
+            state,
+            attacker.controller,
+            on_unit(out.dealt, &t) + splashed + trampled,
+            &AI_EVAL,
+        );
     }
     Trade {
         value: value + cleave_value,
@@ -566,7 +610,8 @@ pub fn reply_score(
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::testkit::{Scenario, Value, json, scenario};
+    use jackioh_engine::config::HERO_HEALTH;
+    use jackioh_engine::testkit::{Keyword, Scenario, Value, json, scenario};
 
     use super::*;
 
@@ -576,6 +621,13 @@ mod tests {
     const CURVATURE: &str = "core-077";
     /// #8 Mr. Vanilla, a vanilla 4/4.
     const VANILLA: &str = "core-008";
+    /// #67 Zoomerbin Oomen, a 1/2.
+    const OOMEN: &str = "core-067";
+    /// #20 Pointmaster, a 7/1 First Strike.
+    const POINTMASTER: &str = "core-020";
+    /// M+ #7 Life Mage, whose Radiant face makes healing its controller's hero twice as effective
+    /// (R1180003).
+    const LIFE_MAGE: &str = "meditativeplus-007";
 
     /// p1's `attacker` facing p2's Radiant Mommy Barker.
     fn facing_barker(attacker: Value) -> Scenario {
@@ -589,6 +641,20 @@ mod tests {
     /// The worth of Mommy Barker's Reborn body (§4.5 step 4): its Radiant 4/4 at 1 health, no Reborn.
     fn barker_return() -> f64 {
         4.0 * AI_EVAL.attack + AI_EVAL.health
+    }
+
+    /// `setup`'s scenario with `keywords` granted to its Mr. Vanilla.
+    fn vanilla_with(setup: Value, keywords: &[Keyword]) -> Scenario {
+        jackioh_cards::register_all();
+        let mut s = scenario(setup);
+        s.card_mut(VANILLA).granted_keywords.extend_from_slice(keywords);
+        s
+    }
+
+    /// What healing a 1v1 hero at `life` by `amount` is worth on `hero_value`'s curve.
+    fn healed(life: i32, amount: i32) -> f64 {
+        let start = f64::from(HERO_HEALTH);
+        AI_EVAL.hero_health * ((f64::from(life + amount) * start).sqrt() - (f64::from(life) * start).sqrt())
     }
 
     #[test]
@@ -634,5 +700,137 @@ mod tests {
         let expected = unit_worth(s.state(), vanilla, &AI_EVAL)
             - (unit_worth(s.state(), barker, &AI_EVAL) - barker_return());
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_trample_kill_adds_the_excess_it_lands_on_the_hero() {
+        let s = vanilla_with(
+            json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [OOMEN] } }),
+            &[Keyword::Trample],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        let kill = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL);
+        // §4.4 step 9: 4 on a 2-health Oomen sends 2 on to p2's hero.
+        let expected = kill + AI_REPLY.face_per_damage * 2.0;
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+        assert!(trade.value > kill, "{}", trade.value);
+    }
+
+    #[test]
+    fn an_indestructible_target_lets_no_trample_through() {
+        let mut s = vanilla_with(
+            json!({ "p1": { "field": [VANILLA] }, "p2": { "field": [OOMEN] } }),
+            &[Keyword::Trample],
+        );
+        s.card_mut(OOMEN).granted_keywords.push(Keyword::Indestructible);
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        // §4.4 step 4: the Oomen takes no damage, so there is no step 5 and no excess for step 9.
+        assert!(!trade.kills);
+        assert!(trade.value.abs() < 1e-9, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_lifesteal_hit_is_worth_the_heal_of_all_it_deals() {
+        let s = vanilla_with(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "field": [OOMEN] } }),
+            &[Keyword::Lifesteal],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        // §4.4 step 5: all 4 dealt heal, not only the Oomen's 2 health.
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 4);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_trample_lifesteal_hit_heals_what_lands_on_the_unit_and_on_the_hero() {
+        let s = vanilla_with(
+            json!({
+                "p1": { "health": 10, "field": [VANILLA] },
+                "p2": { "armor": 1, "field": [OOMEN] },
+            }),
+            &[Keyword::Trample, Keyword::Lifesteal],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        // 2 land on the Oomen and 2 trample on, of which p2's Armor takes 1: 3 heal.
+        let expected =
+            kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + AI_REPLY.face_per_damage * 1.0 + healed(10, 3);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    #[test]
+    fn a_healing_multiplier_doubles_the_lifesteal_heal_it_prices() {
+        let s = vanilla_with(
+            json!({
+                "p1": { "health": 10, "field": [VANILLA, { "def": LIFE_MAGE, "radiant": true }] },
+                "p2": { "field": [OOMEN] },
+            }),
+            &[Keyword::Lifesteal],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(OOMEN).id);
+        assert!(trade.kills);
+        // R1180003: the Radiant Life Mage doubles the 4 healed.
+        let expected = kill_worth(s.state(), s.card(OOMEN), &AI_EVAL) + healed(10, 8);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    #[test]
+    fn an_attacker_a_first_strike_defender_destroys_first_heals_nothing() {
+        let s = vanilla_with(
+            json!({ "p1": { "health": 10, "field": [VANILLA] }, "p2": { "field": [POINTMASTER] } }),
+            &[Keyword::Lifesteal],
+        );
+        let trade = trade_value(s.state(), s.card(VANILLA), &s.card(POINTMASTER).id);
+        // §4.3 step 1: the Pointmaster's 7 destroys the Vanilla before it strikes.
+        assert!(!trade.kills);
+        let expected = AI_REPLY.chip_per_damage * 1.0 - kill_worth(s.state(), s.card(VANILLA), &AI_EVAL);
+        assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    /// p2's best reply attack at `health`: its Lifesteal Mr. Vanilla and its Radiant Professor
+    /// Curvature, a 6/6, facing p1's Zoomerbin Oomen.
+    fn best_reply_attack(health: i32) -> (Scenario, ActionBody) {
+        let s = vanilla_with(
+            json!({
+                "active": "p2",
+                "p1": { "field": [OOMEN] },
+                "p2": { "health": health, "field": [VANILLA, { "def": CURVATURE, "radiant": true }] },
+            }),
+            &[Keyword::Lifesteal],
+        );
+        let best = ranked_attacks(
+            s.state(),
+            PlayerId::P1,
+            &legal_actions(s.state(), PlayerId::P2),
+            false,
+        )
+        .into_iter()
+        .next()
+        .expect("an attack worth making");
+        (s, best)
+    }
+
+    #[test]
+    fn at_low_life_the_lifesteal_trade_outranks_a_plain_face_hit() {
+        // At 3 life the Oomen's kill and the heal of 4 outweigh the Curvature's 6 on the face.
+        let (s, best) = best_reply_attack(3);
+        assert_eq!(
+            best,
+            ActionBody::Attack {
+                attacker_id: s.card(VANILLA).id.clone(),
+                target_id: s.card(OOMEN).id.clone(),
+            }
+        );
+        // At full life the same heal is worth less than the face hit.
+        let (s, best) = best_reply_attack(HERO_HEALTH);
+        assert_eq!(
+            best,
+            ActionBody::Attack {
+                attacker_id: s.card(CURVATURE).id.clone(),
+                target_id: "hero-p1".to_owned(),
+            }
+        );
     }
 }
