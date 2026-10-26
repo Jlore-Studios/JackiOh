@@ -2521,9 +2521,12 @@
         "sha": "d5c22d4b7bf02922c0c661a9b7b92f242d2791cb"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T13:44:26Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1991,
       "kind": "review",
       "pending_request": false,
