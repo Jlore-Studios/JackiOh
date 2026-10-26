@@ -96,8 +96,9 @@ fn remember_seed(code: &str, seed: &str, seat: Option<PlayerId>, expires_at: i64
 }
 
 /// The seed for this room, consumed, with the host's and the joiner's seat pins beside it. The
-/// host's seed wins over the joiner's: the room came first. R1989000 resolves the pins at the join,
-/// the host's first: a honored pin skips the seed's coin.
+/// host's seed wins over the joiner's: the room came first. A seat-only pin carries no seed (R143),
+/// so the joiner's seed is honored then. R1989000 resolves the pins at the join, the host's first:
+/// a honored pin skips the seed's coin.
 fn take_seed_for_room(
     code: &str,
     joiner_seed: Option<String>,
@@ -105,7 +106,8 @@ fn take_seed_for_room(
 ) -> (Option<String>, Option<PlayerId>, Option<PlayerId>) {
     let held = seeds().shift_remove(code);
     match held {
-        Some(entry) => (Some(entry.seed), entry.seat, joiner_seat),
+        Some(entry) if !entry.seed.is_empty() => (Some(entry.seed), entry.seat, joiner_seat),
+        Some(entry) => (joiner_seed, entry.seat, joiner_seat),
         None => (joiner_seed, None, joiner_seat),
     }
 }

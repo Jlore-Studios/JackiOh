@@ -1755,6 +1755,17 @@ mod r1989000_the_seed_coin_seats_the_room {
     }
 
     #[tokio::test]
+    async fn r1989000_a_host_seat_only_pin_keeps_the_joiners_seed() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(true).await;
+        let (joined, row) = played(&h, json!({ "seat": "p1" }), json!({ "seed": "from-the-joiner" })).await;
+        assert_eq!(row["seed"], "from-the-joiner");
+        assert_eq!(row["players"], json!([HOST, GUEST]));
+        assert_eq!(joined["seat"], "p2");
+        assert_eq!(e2e_room_seed_count() as i64, 0);
+    }
+
+    #[tokio::test]
     async fn r1989000_seat_is_refused_outside_end_to_end_mode_on_both_doors() {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
