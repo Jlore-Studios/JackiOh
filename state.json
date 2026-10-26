@@ -1556,43 +1556,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "BUILD.md",
-            "apps/web/src/audio/cues.test.ts",
-            "apps/web/src/audio/cues.ts",
             "apps/web/src/cards/rules.test.ts",
-            "apps/web/src/game/animation-targets.test.tsx",
-            "apps/web/src/game/animations.fx.test.ts",
-            "apps/web/src/game/animations.test.ts",
-            "apps/web/src/game/animations.ts",
-            "apps/web/src/i18n/zh-CN.json",
-            "apps/web/src/wire/generated/GameEvent.ts",
-            "apps/web/src/wire/generated/GameEventType.ts",
-            "apps/web/src/wire/generated/PlayerState.ts",
-            "apps/web/src/wire/index.ts",
-            "crates/cards/luau/jackioh.luau",
-            "crates/engine/src/config.rs",
-            "crates/engine/src/state.rs",
-            "crates/engine/src/view_for.rs",
-            "crates/engine/src/wire/events.rs",
-            "crates/engine/tests/rules/fixtures/mod.rs",
-            "crates/engine/tests/rules/mod.rs",
-            "spec/06-keywords.md",
-            "spec/10-engine-guide.md",
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "spec/11-rulings.md"
           ],
-          "from": "71ea1aec22cfff52bdd32935c52bf954c28bd6f1",
-          "main": "6a3406b24328165950e60748e0d915c0d7019d29"
+          "from": "58c3fc4f6245652b69bcd0200432681bd4376dad",
+          "main": "c3af6db76704f90784f799cb58f4cf8fb79f9da8"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40245931678",
+            "run": "40253660807",
             "tier": "strong"
           }
         ],
-        "sha": "58c3fc4f6245652b69bcd0200432681bd4376dad",
+        "sha": "ea56c64e4be635baafc592cfb7cdec1269602a02",
         "tiers": {
           "claude": "strong"
         }
