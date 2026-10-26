@@ -35,7 +35,7 @@
   background: var(--bg-sunken);
   color: var(--text);
   text-align: left;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .creator-list__item--on {
@@ -167,7 +167,7 @@
   border-radius: 6px 6px 0 0;
   background: var(--bg-sunken);
   color: var(--text-dim);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .creator-tabs .creator-tab--on {

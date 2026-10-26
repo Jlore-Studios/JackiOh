@@ -346,9 +346,9 @@ fn no_pack_held() -> ApiError {
 /// grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the
 /// cosmetics, the Chase Shard bar's one unless it is full (R1306002), and both token bars' points
 /// for the spent slots, each its rolled cosmetic rarity's (R1953000), each bar that reached its
-/// size paying its tokens with the overflow kept (R1305000, R1306001). Every economy row's `ref` is the opening's log; the collection's rows
-/// have no `ref` and share the opening's `at`. No pack held is 409. Every refusal and failure
-/// returns before the commit, so it writes nothing.
+/// size paying its tokens with the overflow kept (R1305000, R1306001). Every economy row's `ref`
+/// is the opening's log; the collection's rows have no `ref` and share the opening's `at`. No pack
+/// held is 409. Every refusal and failure returns before the commit, so it writes nothing.
 pub async fn open_cosmetic_pack(
     app: &App,
     profile_id: &str,

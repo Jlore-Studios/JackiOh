@@ -196,7 +196,7 @@
   font: inherit;
   font-weight: 700;
   letter-spacing: 0.04em;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 /* A caret drawn in borders (no character for a screen reader to read): down when shut, up when open. */
@@ -309,7 +309,7 @@
   color: var(--text, #efe0bf);
   font: inherit;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 /* ---- the Patch notes page (routes/patch-notes.tsx, in the tavern) ----------------------------- */
@@ -403,7 +403,7 @@
   line-height: 1.2;
   text-align: left;
   text-decoration: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell .patch-notes .patch-set__toggle:hover {
@@ -670,7 +670,7 @@
 }
 
 .tavern.app-shell .patch-card__face {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell .patch-card__body {
@@ -703,7 +703,7 @@
   font-weight: 600;
   text-align: left;
   text-decoration: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell .patch-notes .patch-name:hover {

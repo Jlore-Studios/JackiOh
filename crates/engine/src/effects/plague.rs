@@ -237,7 +237,14 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
             .into_iter()
             .cloned()
             .collect();
-        let pool: Vec<CardInstance> = if mode.is_some_and(|mode| mode.target_enemies) {
+        let pool: Vec<CardInstance> = if mode.is_some_and(|mode| mode.friends_only) {
+            // R1850004: a cast for its caster's own side places there alone.
+            crate::random_cast::friends_only(sink.state, player, &now, |card: &CardInstance| {
+                Selection::Instance {
+                    instance_id: card.id.clone(),
+                }
+            })
+        } else if mode.is_some_and(|mode| mode.target_enemies) {
             prefer_enemies(
                 sink.state,
                 player,

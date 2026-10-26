@@ -58,7 +58,7 @@
   border-radius: 0.6rem;
   background: transparent;
   color: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   touch-action: none;
 }
 
@@ -134,7 +134,7 @@
   border-radius: 7% / 5%;
   background: transparent;
   box-shadow: 0 0 1rem var(--slot-glow);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   touch-action: manipulation;
 }
 

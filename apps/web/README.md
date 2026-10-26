@@ -268,7 +268,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         backdrop and card back as preview tiles (collection/AccountCosmeticTiles.tsx), on
                         the same store and `cosmetics` settings group as before (R633), beside the owned
                         list from GET /api/cosmetics (collection/CosmeticsPanel.tsx), with no defaults of
-                        every card, so a card with no pick of its own wears its kind's default (R1953001); a card of the Cards section opens large wearing its own picks
+                        every card, so a card with no pick of its own wears its kind's default (R1953001); a
+                        card of the Cards section opens large wearing its own picks
                         (collection/CardCosmeticsView.tsx, R1655000), over a strip of what it may wear drawn
                         as live previews, which equip on that card alone, kept on the device
                         (`jackioh.cosmetics.cards.v1`, cards/cosmetics.ts) and worn where the ledger says
@@ -276,7 +277,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000): the hub of four do
                         and the deck builder's slot picker offer what the account owns, and an unowned
                         stored pick draws as the default (R1833000); a locked tile or strip item a held
                         Rare or Epic cosmetic token covers offers it in place (collection/TokenOffer.tsx,
-                        POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again; collection/
+                        POST /api/tokens/redeem-cosmetic, R1953001), and ownership is read again;
+                        collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel, CosmeticsPanel), their
                         model and CosmeticLook.tsx, a cosmetic's look in the reveals and the shop's rows;
                         every one renders the server's answers and decides nothing (rule 7)
@@ -329,7 +331,8 @@ shop/                   #1309: spending what the economy pays, on /shop (R158000
                         when the wallet (`GET /api/wallet`) is short; the token picker shows both token
                         bars as filling bars and the cycle's next step (`GET /api/tokens`), a card token browsing
                         unowned cards (`POST /api/tokens/redeem-card`) and the cosmetic tokens held, with a
-                        link to the Collection, where they are spent on a locked cosmetic (R1953001); the cosmetic packs open through a simple reveal (`POST
+                        link to the Collection, where they are spent on a locked cosmetic (R1953001); the
+                        cosmetic packs open through a simple reveal (`POST
                         /api/cosmetic-packs/open`), with the Chase Shard bar (`GET /api/cosmetic-packs`)
                         filling from the opening's `shardBefore` and, only when full, its reward moment: the
                         Legendary-or-Mythic choice (`POST /api/cosmetic-packs/chase`); every

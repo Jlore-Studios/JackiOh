@@ -334,7 +334,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell button.collection-strip__item:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):is(:hover, :focus-visible) {
@@ -460,7 +460,7 @@
   border-radius: 10px;
   background: transparent;
   box-shadow: none;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .tavern.app-shell button.collection-tile__button:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):is(:hover, :focus-visible),
