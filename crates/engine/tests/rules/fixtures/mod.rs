@@ -24,6 +24,7 @@ pub mod freeze;
 pub mod fruit;
 pub mod generation;
 pub mod harness;
+pub mod hidden_trades;
 pub mod instance_data;
 pub mod jade;
 pub mod keywords_783;

@@ -1096,6 +1096,8 @@ fn gifted_hook_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         feng_shui_step(sink, run);
         gifted_program_step(sink, run);
         garden_step(sink, run);
+        // R1845001: the card played takes its hidden Nerfs, after a replacement and with its face set.
+        crate::effects::hidden_nerfs::land_hidden_nerfs(sink, &run.instance_id);
         run.hook_ids = Some(
             trigger_holders_with_hook(sink.state, HookName::OnPlayHook, None)
                 .into_iter()
