@@ -2970,7 +2970,7 @@
       "verdict_rounds": 1
     },
     "2016": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_fixed_head": "f6f5ed7f9a17a83f065507f7b82f5fafaeeb768a",
       "ci_fixes": 1,
@@ -2991,18 +2991,18 @@
       "forced": false,
       "interruptions": 0,
       "issue": 2013,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-10-26T20:36:07Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "40387801306",
+      "run_id": "pending:f8d5b16a-1793046998",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-26T19:33:30Z",
+      "started_at": "2026-10-26T20:37:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -3092,9 +3092,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T20:12:51Z",
+    "at": "2026-10-26T20:37:23Z",
     "url": "",
-    "what": "suggestions on claude-3"
+    "what": "review #2016 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T20:27:24Z",
