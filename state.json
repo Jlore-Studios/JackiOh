@@ -1958,10 +1958,10 @@
     "what": "review #1985 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-26T09:13:58Z",
+    "at": "2026-10-26T09:23:58Z",
     "notes": [
-      "delivered review #1985 on claude-5 (run 40297563446): interrupted",
-      "started review #1985 on claude-1 (run 40298298624)",
+      "delivered review #1985 on claude-1 (run 40298298624): reviewed",
+      "delivered revise #1960 on claude-4 (run 40294182943): approved",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -2668,7 +2668,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T09:13:58Z",
+  "loop_tick": "2026-10-26T09:23:58Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T08:58:13Z",
