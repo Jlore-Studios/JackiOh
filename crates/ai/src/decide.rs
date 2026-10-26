@@ -435,23 +435,26 @@ fn plan(
     // the search below plays on as if it had not seen it, kept off every line that wins this turn.
     // Played, it is first trimmed to the actions it needs (R1965000): only its first action is
     // played, and a lethal found behind a free step that changes nothing would play that step at
-    // every decision.
+    // every decision. A trim the counter stops before it has a first action it can vouch for leaves
+    // no lethal to play: the decision goes on below as if none were found, its counter as spent.
     let mut passed_over: Option<ActionBody> = None;
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
         && let Some(first_lethal) = lethal.first().cloned()
     {
-        if !passes_over_lethal(style, rng) {
-            let lethal = trim_lethal(&dets, seat, lethal, counter);
+        if passes_over_lethal(style, rng) {
+            passed_over = Some(first_lethal);
+        } else if let Some(trimmed) = trim_lethal(&dets, seat, lethal, counter)
+            && let Some(first) = trimmed.first().cloned()
+        {
             return Plan::Searched {
-                action: lethal.first().cloned().unwrap_or(first_lethal),
+                action: first,
                 reason: DecisionReason::Lethal,
-                line: lethal,
+                line: trimmed,
                 score: AI_EVAL.win - f64::from(public.turn),
                 stopped_by: None,
                 runners_up: Vec::new(),
             };
         }
-        passed_over = Some(first_lethal);
     }
 
     // 6. The beam on determinization 0, keeping enough nodes back to score the finalists after the

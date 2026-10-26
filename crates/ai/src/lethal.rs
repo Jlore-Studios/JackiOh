@@ -415,28 +415,27 @@ pub fn find_lethal_with_quick_nodes(
 /// R1965000: `line`, a lethal `find_lethal` proved on `dets`, cut down to the actions it needs, for
 /// `decide`, which plays only a line's first action and then plans again. A walk may prove a lethal
 /// behind steps it does not need: the best-first walk takes the longer line on a tied `ready_gap`, and
-/// a free play that leaves the gap where it was (a (0) Spell that does nothing, or The Coin, played
+/// a free play that leaves the gap where it was (a (0) Spell that draws nothing, or The Coin, played
 /// again from the graveyard under C #90 In Too Deep's reward L, R454) can stand in front of the same
 /// lethal at every decision, so playing the untrimmed line's first action could repeat it without
 /// end. First the shortest suffix that still wins on every world of `dets` (`wins_on`), so the action
 /// played is one the rest of the line cannot win without; then, one at a time from the front, each
 /// action the line still wins without, starting over after each, until it needs every action left.
-/// Each try costs a node a step, at most `lethal_max_depth` tries a pass and one pass for each action
-/// it drops; when the counter runs out, the line is kept as far as it was cut.
+/// Each try is `wins_on`'s replay through `simulate`, charged as the walks' own proof is: at most
+/// `lethal_max_depth` tries a pass and one pass for each action it drops. `None` when the counter
+/// stops it before it has found that suffix: the line it holds then may open with such a free play,
+/// and a clock that stops each decision at the same point would have it played every time. When the
+/// counter stops it after, the line is kept as far as it was cut.
 pub fn trim_lethal(
     dets: &[GameState],
     seat: PlayerId,
     mut line: Vec<ActionBody>,
     counter: &dyn NodeCounter,
-) -> Vec<ActionBody> {
+) -> Option<Vec<ActionBody>> {
     for start in (1..line.len()).rev() {
-        match wins_on(dets, seat, &line[start..], counter) {
-            None => return line,
-            Some(true) => {
-                line.drain(..start);
-                break;
-            }
-            Some(false) => {}
+        if wins_on(dets, seat, &line[start..], counter)? {
+            line.drain(..start);
+            break;
         }
     }
     // The line less its first action does not win: the suffixes above included it.
@@ -453,5 +452,5 @@ pub fn trim_lethal(
             Some(false) => at += 1,
         }
     }
-    line
+    Some(line)
 }
