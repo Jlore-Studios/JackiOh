@@ -455,6 +455,11 @@ pub struct CastMode {
     pub random: bool,
     pub target_enemies: bool,
     pub casts: i32,
+    /// R1850004: its target picks are narrowed to its caster's own hero and permanents, strictly: a
+    /// declaration with none of those is passed. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub friends_only: Option<bool>,
 }
 
 /// A unit zone holds a Stack pile, top card first (§3.2).
@@ -1565,6 +1570,12 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, CardDef>>", optional))]
     pub custom_defs: IndexMap<String, CardDef>,
+    /// R1850003: the permanents held beneath a card until it leaves the field (`effects::hold`), in the
+    /// order they were taken. D14: absent until the first is held, so a game that never holds one
+    /// hashes exactly as before this field existed. Never in a view: the view sees `held` events.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub held: Option<Vec<HeldCard>>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1797,6 +1808,23 @@ pub struct AnnounceRecord {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub countered: Option<bool>,
+}
+
+/// R1850003: a permanent held beneath another card (`holder_id`) until that card leaves the field
+/// after `holder_mark` (`stays::exit_mark` as it was taken), then summoned for `to`. `card` is the
+/// card as it left the field, reset as R78 resets a card that leaves it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HeldCard {
+    pub holder_id: String,
+    pub holder_mark: u32,
+    pub to: PlayerId,
+    pub card: CardInstance,
 }
 
 /// B5 E4: a card as a play record names it — the definition and the face it was played with.
@@ -2378,6 +2406,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         sandbox: options.sandbox.filter(|sandbox| *sandbox),
         custom_cards,
         custom_defs,
+        held: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
@@ -2547,13 +2576,17 @@ pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Opt
 }
 
 /// R1845000: no seat reads a hidden Nerf, the card's own owner included, so a copy of the state made
-/// for a seat holds none: on any card of either side, nor in Rollback's snapshots (R419). The AI's
-/// `redact` (R185) and the dry run's `concealed_copy` (R222) both end with it.
+/// for a seat holds none: on any card of either side, beneath a card that holds it (R1850003), nor in
+/// Rollback's snapshots (R419). The AI's `redact` (R185) and the dry run's `concealed_copy` (R222) both
+/// end with it.
 pub fn forget_hidden_nerfs(state: &mut GameState) {
     for player in PLAYER_IDS {
         for card in side_cards_mut(&mut state.players[player]) {
             card.hidden_nerfs = None;
         }
+    }
+    for held in state.held.iter_mut().flatten() {
+        held.card.hidden_nerfs = None;
     }
     for snapshot in state.board_history.iter_mut().flatten() {
         for player in PLAYER_IDS {

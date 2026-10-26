@@ -2286,6 +2286,7 @@
   "The board went back {n} turns": "棋盘回到了{n}个回合之前",
   "{who} rolled: {names}": "{who}掷出了：{names}",
   "{card} flickered": "{card}闪现了",
+  "{card} is held beneath {holder}": "{card}被压在{holder}之下",
   "{seat} could not draw more this turn": "{seat}本回合无法再抽牌",
   "{seat} traded a card": "{seat}交易了一张牌",
   "{seat} gained a Resource": "{seat}获得了一个资源",

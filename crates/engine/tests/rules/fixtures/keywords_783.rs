@@ -288,7 +288,7 @@ pub fn crater_spell() -> CardDef {
     def(7858, "crater-spell", "Spell", 1, json!([{ "kind": "Crater" }]))
 }
 
-/// A Crater Field Spell, on which Crater does nothing.
+/// A Crater Field Spell, which Locks its backrow zone as it enters (R1850006).
 pub fn crater_field() -> CardDef {
     def(
         7859,

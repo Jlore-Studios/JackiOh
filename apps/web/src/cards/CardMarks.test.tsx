@@ -20,6 +20,8 @@ import { marksTestid } from "./CardMarks.tsx";
 import { StateNotes, hasStateNotes } from "./inspect/StateNotes.tsx";
 import {
   DEFAULT_MARK_COLOR,
+  DUO_MARK,
+  DUO_MARK_COLOR,
   MARK_PALETTES,
   MARK_WORDS,
   UNKNOWN_MARK_WORDS,
@@ -114,6 +116,21 @@ describe("R437 the mark on the board", () => {
     const badge = marks?.querySelector<HTMLElement>(".card-mark-badge");
     expect(badge?.getAttribute("title")).toBe(MARK_WORDS.destroy?.text);
     expect(badge?.querySelector(".card-mark-badge__text")?.textContent).toBe(MARK_WORDS.destroy?.text);
+  });
+
+  it("R1850001 the Duo mark is drawn gold with its own words", () => {
+    const { view, ids } = markedView([{ mark: DUO_MARK, color: DUO_MARK_COLOR }]);
+    const root = renderBoard(view);
+    for (const id of Object.values(ids)) {
+      const marks = aura(root, id);
+      expect(marks?.getAttribute("data-marks"), id).toBe("duo");
+      expect(marks?.getAttribute("data-mark-color"), id).toBe("gold");
+      expect(marks?.style.getPropertyValue("--mark-rim"), id).toBe(MARK_PALETTES.gold.rim);
+      const badge = marks?.querySelector<HTMLElement>(".card-mark-badge");
+      expect(badge?.getAttribute("title"), id).toBe(markWords("duo").text);
+      expect(badge?.querySelector(".card-mark-badge__text")?.textContent, id).toBe(markWords("duo").text);
+    }
+    expect(markWords("duo")).not.toEqual(UNKNOWN_MARK_WORDS);
   });
 
   it("R437 the colour key maps through the palette table, one badge per mark, and an unknown key falls back to the default", () => {

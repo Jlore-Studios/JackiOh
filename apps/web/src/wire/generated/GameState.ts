@@ -12,6 +12,7 @@ import type { EchoItem } from "./EchoItem";
 import type { FieldExits } from "./FieldExits";
 import type { GameCounters } from "./GameCounters";
 import type { GameResult } from "./GameResult";
+import type { HeldCard } from "./HeldCard";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { MarkRecord } from "./MarkRecord";
@@ -206,4 +207,10 @@ customCards?: { [key in string]: CustomCard },
  * R915000: the definition each of `custom_cards`' frames builds (`custom::custom_def`), which
  * `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
  */
-customDefs?: { [key in string]: CardDef }, };
+customDefs?: { [key in string]: CardDef }, 
+/**
+ * R1850003: the permanents held beneath a card until it leaves the field (`effects::hold`), in the
+ * order they were taken. D14: absent until the first is held, so a game that never holds one
+ * hashes exactly as before this field existed. Never in a view: the view sees `held` events.
+ */
+held?: Array<HeldCard>, };

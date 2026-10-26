@@ -1057,6 +1057,16 @@ pub enum GameEvent {
         node: i32,
         reward: StarscapeReward,
     },
+    /// R1850003: the permanent `instance_id` (of `player`'s field) is held beneath the card
+    /// `holder_id` until that card leaves the field — off the field, in no pile, and back as a summon.
+    /// Only a face-up card is held, so both read it as it happens; a view judges the card and its
+    /// holder by where each is now, as `exiled` is (R97).
+    Held {
+        player: PlayerId,
+        instance_id: String,
+        def_id: String,
+        holder_id: String,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -1203,6 +1213,7 @@ string_union! {
         VotedOut = "votedOut",
         Fled = "fled",
         StarscapeTravelled = "starscapeTravelled",
+        Held = "held",
     }
 }
 
@@ -1382,6 +1393,7 @@ impl GameEvent {
             GameEvent::VotedOut { .. } => GameEventType::VotedOut,
             GameEvent::Fled { .. } => GameEventType::Fled,
             GameEvent::StarscapeTravelled { .. } => GameEventType::StarscapeTravelled,
+            GameEvent::Held { .. } => GameEventType::Held,
         }
     }
 }
@@ -1468,9 +1480,9 @@ mod tests {
         // (R1838001); its Resources' four, `resourceGained` (R1840000), `resourceSold`
         // (R1840001), `resourceDiscarded` (R1840004) and `marketCreditsChanged` (R1840005); the
         // Starship's two, `starshipFused` (R1852000) and `starshipLaunched` (R1852003); #1843's
-        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); and the starscape map one,
-        // `starscapeTravelled` (R1847001).
-        assert_eq!(GAME_EVENT_TYPES.len(), 91);
+        // three, `voteCast`, `votedOut` and `fled` (R1843000, R1843002); the starscape map one,
+        // `starscapeTravelled` (R1847001); and #1850's one, `held` (R1850003).
+        assert_eq!(GAME_EVENT_TYPES.len(), 92);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

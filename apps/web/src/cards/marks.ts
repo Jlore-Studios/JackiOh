@@ -73,6 +73,12 @@ export const ALLURE_MARK = "allure";
 /** The engine's `ALLURE_MARK_COLOR` (`effects/delay.rs`). */
 export const ALLURE_MARK_COLOR: MarkColor = "pink";
 
+/** The engine's `DUO_MARK` (`effects/delay.rs`): the mark Duo and Squad put on a card they will make Radiant (R1850001). */
+export const DUO_MARK = "duo";
+
+/** The engine's `DUO_MARK_COLOR` (`effects/delay.rs`): Allure's aura, recoloured for Radiance. */
+export const DUO_MARK_COLOR: MarkColor = "gold";
+
 export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
   // Meditative #76 Do or Die: "At the start of your next turn, steal each marked card" (your: the caster's).
   steal: { name: "Steal", text: "Marked: stolen at the start of its marker's next turn" },
@@ -87,6 +93,8 @@ export const MARK_WORDS: Readonly<Record<string, MarkWords>> = {
     name: "Allure",
     text: "Marked: joins its marker's side at the start of their next turn, or is destroyed with no room",
   },
+  // Duo and Squad (R1850001): Stinkyscape #110 iKwzki's one permanent, its Radiant face's every permanent of yours.
+  duo: { name: "Duo", text: "Marked: made Radiant at the start of its marker's next turn" },
 };
 
 /** The words for a mark the table does not know. */

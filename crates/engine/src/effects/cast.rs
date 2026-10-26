@@ -65,6 +65,10 @@ pub struct CastHow {
     /// R453: a resolved Spell goes to exile instead of its graveyard ("Cast them, then exile them").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub afterward: Option<CastAfterward>,
+    /// R1850004 (Stinkyscape #139 Wormhole, "cast it beneficially for yourself"): every target pick
+    /// is the caster's own hero or a card they control on the field; a declaration with none is passed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub friends_only: Option<bool>,
 }
 
 /// The piles a card that exists may be cast from: never the field, where it already is.
@@ -87,6 +91,11 @@ fn options_of(how: &CastHow) -> CastOptions {
             None
         },
         target_enemies: if how.target_enemies == Some(true) {
+            Some(true)
+        } else {
+            None
+        },
+        friends_only: if how.friends_only == Some(true) {
             Some(true)
         } else {
             None
@@ -442,6 +451,7 @@ pub fn cast_random(args: CastRandomArgs) -> Effect {
             afterward: args.afterward,
             aim_at: None,
             aim_only: None,
+            friends_only: None,
         };
         let radiant = args.radiant == Some(true);
         EffectPart {

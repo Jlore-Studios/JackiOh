@@ -173,6 +173,14 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1847000: the starscape map, which no card prints until Stinkyscape #148 is built (S23); that
     // card may move it into the glossary.
     "Starscape map",
+    // R1850000–R1850005: #1850's card-on-card verbs, rules vocabulary until Stinkyscape's cards print
+    // them (#1836), which may make a term of one (Duo, Squad).
+    "Copy a Unit's text",
+    "Duo / Squad",
+    "Exile aura",
+    "Hold beneath",
+    "Cast it for yourself",
+    "Radiant at N keywords",
   ],
 };
 
