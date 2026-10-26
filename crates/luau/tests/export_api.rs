@@ -23,6 +23,7 @@ mod generator {
     use jackioh_luau::api::all_specs;
     use jackioh_luau::api::aura::{AuraApplies, AuraArgs, AuraFilter, CloakHandAuraArgs, DefenseArmorArgs};
     use jackioh_luau::api::cast::CastEachArgs;
+    use jackioh_luau::api::choose_where::ChooseTargetWhereArgs;
     use jackioh_luau::api::draw_while::DrawWhileArgs;
     use jackioh_luau::api::each::{CardsSource, ForEachCardArgs};
     use jackioh_luau::api::kill_credit::WithKillCreditArgs;
@@ -643,6 +644,7 @@ mod generator {
             DefenseArmorArgs,
             CloakHandAuraArgs,
             CastEachArgs,
+            ChooseTargetWhereArgs,
             DrawWhileArgs,
             CardsSource,
             ForEachCardArgs,
@@ -789,7 +791,6 @@ mod generator {
             ChooseCostInHandArgs,
             ChooseCraftArgs,
             ChooseAnswerArgs,
-            ChooseTargetWhereArgs,
             ChooseCellArgs,
             FlipCoinsArgs,
             FlipCoinKeywordArgs,

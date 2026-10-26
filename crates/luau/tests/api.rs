@@ -1179,6 +1179,100 @@ fn gap9_kill_credit_pairs_and_then_by_name() {
     assert_eq!(effects[0].kind, "damage");
 }
 
+/// #1904: runs `gap_choose_where`'s cry on `face` as a P1 hand card (with none, `with_self` false)
+/// against two enemy units, and answers the prompt it opened, or the error its build gave.
+fn run_choose_where(
+    face: Face,
+    with_self: bool,
+) -> (
+    Result<Option<jackioh_engine::PendingChoice>, jackioh_luau::LuauError>,
+    Vec<String>,
+) {
+    use jackioh_engine::testkit::{EngineSink, PlayerId, Rng};
+    common::ensure_installed();
+    let code = fixture!("gap_choose_where");
+    load_card("lx-gapwhere-load", code).expect("gap_choose_where loads: admits is a sub-hook");
+    let site = Site {
+        card: "lx-gapwhere",
+        face,
+        hook: "cry",
+    };
+    let mut state = scenario(json!({
+        "seed": "lx-gapwhere",
+        "p1": { "hand": ["lx-p-for-each"] },
+        "p2": { "field": ["lx-fx-001", "lx-fx-002"] },
+    }))
+    .state()
+    .clone();
+    let foes = jackioh_engine::active_units_of(&state, PlayerId::P2);
+    assert_eq!(foes.len(), 2, "the scope offers two enemy units");
+    let admitted: Vec<String> = foes
+        .iter()
+        .filter(|unit| unit.def_id == "lx-fx-002")
+        .map(|unit| unit.id.clone())
+        .collect();
+    let probe = jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
+        .into_iter()
+        .next()
+        .expect("a hand card to run as")
+        .clone();
+    let mut events = Vec::new();
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    let mut ctx = EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
+    if with_self {
+        ctx.self_ = Some(probe);
+    }
+    let effects = match run_hook(site, code, &mut ctx) {
+        Ok(effects) => effects,
+        Err(error) => return (Err(error), admitted),
+    };
+    for effect in effects {
+        (effect.apply)(&mut ctx);
+    }
+    drop(ctx);
+    (Ok(state.pending.clone()), admitted)
+}
+
+/// #1904: `choose_target_where`'s `where` resolves by name and is asked for each card the scope
+/// offers: of the two enemy units, the prompt offers only the one `admits` admits.
+#[test]
+fn choose_target_where_by_name_offers_only_what_its_where_admits() {
+    let (pending, admitted) = run_choose_where(Face::Base, true);
+    assert_eq!(admitted.len(), 1, "admits takes one of the two");
+    let pending = pending.expect("the cry builds").expect("a target prompt");
+    let offered: Vec<jackioh_engine::Selection> = pending
+        .options
+        .iter()
+        .map(|option| option.selection.clone())
+        .collect();
+    let expected: Vec<jackioh_engine::Selection> = admitted
+        .into_iter()
+        .map(|instance_id| jackioh_engine::Selection::Instance { instance_id })
+        .collect();
+    assert_eq!(offered, expected);
+}
+
+/// #1904: with no running card the named `where` has nothing to ask with, so it admits nothing
+/// and the prompt fizzles, as one with no target in scope does.
+#[test]
+fn choose_target_where_by_name_with_no_running_card_admits_nothing() {
+    let (pending, _) = run_choose_where(Face::Base, false);
+    assert!(pending.expect("the cry builds").is_none(), "no prompt opens");
+}
+
+/// #1904: a `where` naming no face function fails as the verb builds, naming the card, face and
+/// name, rather than offering every card the scope holds.
+#[test]
+fn choose_target_where_naming_no_face_function_fails_as_it_builds() {
+    let (pending, _) = run_choose_where(Face::Radiant, true);
+    let Err(error) = pending else {
+        panic!("a where naming no face function is refused");
+    };
+    let message = error.to_string();
+    assert!(message.contains("lx-gapwhere radiant cry"), "{message}");
+    assert!(message.contains("admit: no such face function"), "{message}");
+}
+
 /// Gap 10: one function under two hooks shares one adapter, so `Arc::ptr_eq` holds the way it
 /// does for a Rust script that clones one hook (`classicplus-070`).
 #[test]

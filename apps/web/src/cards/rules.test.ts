@@ -165,6 +165,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Steal mana crystals",
     // R1849001: Stinkyscape's, rules only until the set's cards print it as a term.
     "Evolve",
+    // R1844000, R1844001, R1844002: Stinkyscape's M10, which no card prints until the set's cards do.
+    "Autopilot aura",
+    "Pareto hint",
+    "Do something helpful",
     // R1845000, R1845002: engine primitives no shipped card prints yet; the Stinkyscape cards that print
     // them (#123, #77) give them glossary entries.
     "Hidden Nerf",

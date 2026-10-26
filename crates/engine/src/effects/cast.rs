@@ -13,7 +13,9 @@
 //!    InfiniScepter's copy of the Spell it remembers; Classic+ #37 Wardrum's copies), which the caster
 //!    owns and which lands in the caster's graveyard after it resolves (R87);
 //!  - `castRandom` — random cards from a pool, every choice random (Classic+ #47 Jogg's Box, #38.1
-//!    Solarius Prime), never the casting card's own definition (B4.1, R387).
+//!    Solarius Prime), never the casting card's own definition (B4.1, R387);
+//!  - `helpfulCast` — a `castNew` of the perfect pool's top card ranked for the caster (Stinkyscape
+//!    #147.2 Wardrum Blob, R1844002).
 //!
 //! A cast verb that would begin a cast past RANDOM_CAST_CHAIN_CAP inside a random cast's chain resolves
 //! into nothing (R452), as R28's Call to Chaos cap does.
@@ -36,6 +38,7 @@ use crate::resolve::{CastAfterward, CastOptions, cast_card, lazy_part};
 use crate::script::{Effect, EffectContext, EffectPart, EngineSink};
 use crate::state::{CostRule, ModifierExpiry, ModifierKind, find_instance_mut, new_instance};
 use crate::subsystems::call_to_chaos::{CHAOS_CHAIN_KEY, CHAOS_TAG, chaos_chain_of};
+use crate::subsystems::perfect_hand::{RankPerfectHandOptions, rank_perfect_hand};
 use crate::wire::{Enchantment, PlayerId, Zone, ZoneName};
 
 /// How a cast verb casts (`resolve.CastOptions`, without the choices R70 leaves to the caster).
@@ -276,6 +279,46 @@ pub fn cast_new(args: CastNewArgs) -> Effect {
         card.radiant = def.radiant.or(args.radiant).unwrap_or(false);
         let options = options_of(&args.how);
         cast_card(&mut sink_of(ctx), &card, options);
+    })
+}
+
+/// `helpful_cast`'s argument.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct HelpfulCastArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radiant: Option<bool>,
+}
+
+/// R1844002 (Stinkyscape #147.2 Wardrum Blob): "do something helpful". The perfect pool is ranked
+/// for the caster as C+ #27's hand is (`rank_perfect_hand`, the running card's ids left out, R387),
+/// and its top card is `castNew`'s: free, counted as a play, its choices the caster's (R70). With
+/// `radiant` the pool is ranked by its Radiant faces and the pick is cast Radiant. Outside the
+/// caster's main phase the ranking reads printed data alone, as §10.7's always does there.
+pub fn helpful_cast(args: HelpfulCastArgs) -> Effect {
+    let radiant = args.radiant == Some(true);
+    cast_new(CastNewArgs {
+        def: CastNewDef::Read(Arc::new(move |ctx| {
+            let self_def_id = ctx
+                .live_self()
+                .map(|card| card.def_id.clone())
+                .or_else(|| ctx.def_id.clone());
+            let ranked = rank_perfect_hand(
+                ctx.sink.state,
+                ctx.controller,
+                RankPerfectHandOptions {
+                    radiant: Some(radiant),
+                    self_def_id,
+                },
+            );
+            ranked.first().map(|top| CastDef {
+                def_id: top.def.id.clone(),
+                radiant: Some(radiant),
+            })
+        })),
+        radiant: Some(radiant),
+        how: CastHow::default(),
     })
 }
 

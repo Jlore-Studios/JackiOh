@@ -410,6 +410,7 @@ data: {[string]: JsonValue}?,
 export type ChooseTargetWhereArgs = {
 step: string,
 scope: TargetScope?,
+where: string?,
 prompt: string?,
 data: {[string]: JsonValue}?,
 }
@@ -2345,6 +2346,9 @@ ownTurnRedirect: OwnTurnRedirect?,
 gauntlet: boolean?,
 unitsNeverDefense: boolean?,
 revealChance: number?,
+pilotsActions: number?,
+pilotsTurn: boolean?,
+hintsPlays: boolean?,
 }
 
 export type StealAllArgs = {

@@ -420,6 +420,8 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
         turn,
         extra: extra.then_some(true),
     });
+    // R1844000: an autopilot aura takes the turn as it begins, so the start's prompts are its too.
+    crate::subsystems::autopilot::engage_aura(sink, player);
     // R1853001, R1853002: an open Marketplace moves its prices and quotes, and re-rolls each cycle.
     crate::marketplace::marketplace_turn_start(sink);
     // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
@@ -711,6 +713,8 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     sink.state.players[player].ai_turn = false;
     // R1183002: the autopilot played this turn and ends with it.
     sink.state.players[player].autopilot = None;
+    // R1844001: so does the Pareto hint the `pareto_hint` verb showed for it.
+    sink.state.players[player].pareto_hint = None;
     clear_return_flags(sink.state);
     // R637: a Temporary card still in `player`'s hand is discarded now, after every end-of-turn step.
     crate::temporary::discard_temporary_cards(sink, player);

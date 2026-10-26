@@ -31,6 +31,15 @@
 //! 4. Otherwise the turn ends.
 //!
 //! It never activates an ability, switches a position, emotes, offers or answers a draw or concedes.
+//!
+//! R1844000 (Stinkyscape #46 Circadian Halfcycler, #47 Circadian Fullcycler): the autopilot as an
+//! aura. While a card with `pilots_actions` or `pilots_turn` acts on a player's field, each of their
+//! turns engages it as the turn begins (`engage_aura`), its start included. `due` reads the aura again
+//! before every step (`aura_reach`): a whole turn beats any count, the largest count holds, and with
+//! no aura left the turn is the player's. A count takes R456's actions, a play or an attack, never an
+//! answer, which is part of the action that asked: once the count is spent and nothing is open, the
+//! turn is handed back for good (`release_spent_aura`), so a prompt the player's own action opens is
+//! theirs. Cognitive Offloading played on such a turn takes the rest of it whole (`engage`).
 
 use crate::config::{AUTOPILOT_ANSWERS_TRIED, SCORER_LOW_HEALTH};
 use crate::duos_life::effective_life;
@@ -46,29 +55,112 @@ use crate::wire::{Action, ActionBody, ActionType, GameEvent, Phase, PlayerId, Wi
 
 /// R1183002: the autopilot takes `player`'s turn from now to its end — on `player`'s own turn only,
 /// with no game result, and once a turn (a second engagement that turn changes nothing). Emits
-/// `autopilotEngaged`.
+/// `autopilotEngaged`. R1844000: on a turn an aura engaged, the rest of it becomes whole.
 pub fn engage(sink: &mut EngineSink<'_>, player: PlayerId) {
     if sink.state.result.is_some() || sink.state.active != player {
         return;
     }
     let turn = sink.state.turn;
-    if sink.state.players[player]
-        .autopilot
-        .is_some_and(|status| status.turn == turn)
+    if let Some(status) = sink.state.players[player].autopilot.as_mut()
+        && status.turn == turn
+    {
+        if status.aura_actions.take().is_some() {
+            sink.events.push(GameEvent::AutopilotEngaged { player, turn });
+        }
+        return;
+    }
+    sink.state.players[player].autopilot = Some(Autopilot {
+        turn,
+        actions: 0,
+        aura_actions: None,
+    });
+    sink.events.push(GameEvent::AutopilotEngaged { player, turn });
+}
+
+/// R1844000: how much of a turn an autopilot aura plays.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuraReach {
+    /// The first this-many R456 actions.
+    Actions(i32),
+    /// The whole turn.
+    Turn,
+}
+
+/// R1844000: the reach of the autopilot auras acting on `player`'s field (§3.2: the units on top of
+/// their piles and the face-up backrow) — a whole turn when any says so, else the largest count, which
+/// never adds up with another; `None` with neither. The count is printed, never a declared number.
+pub fn aura_reach(state: &GameState, player: PlayerId) -> Option<AuraReach> {
+    let mut most: Option<i32> = None;
+    for card in crate::damage::acting_texts_of(state, player) {
+        for text in crate::scripts::texts_of(state, &card) {
+            if text.flags.pilots_turn == Some(true) {
+                return Some(AuraReach::Turn);
+            }
+            if let Some(count) = text.flags.pilots_actions.filter(|count| *count > 0) {
+                most = Some(most.map_or(count, |held| held.max(count)));
+            }
+        }
+    }
+    most.map(AuraReach::Actions)
+}
+
+/// R1844000: an autopilot aura takes `player`'s turn as it begins — on their own turn, with no game
+/// result and an aura acting on their field. Emits `autopilotEngaged`. A card that arrives later in
+/// the turn waits for their next.
+pub fn engage_aura(sink: &mut EngineSink<'_>, player: PlayerId) {
+    if sink.state.result.is_some() || sink.state.active != player || aura_reach(sink.state, player).is_none()
     {
         return;
     }
-    sink.state.players[player].autopilot = Some(Autopilot { turn, actions: 0 });
+    let turn = sink.state.turn;
+    sink.state.players[player].autopilot = Some(Autopilot {
+        turn,
+        actions: 0,
+        aura_actions: Some(0),
+    });
     sink.events.push(GameEvent::AutopilotEngaged { player, turn });
+}
+
+/// R1844000: the active player's aura status goes once it has nothing left to play — its count spent,
+/// or its aura gone — and nothing is open, so the rest of the turn, and any prompt their own action
+/// opens in it, is theirs. A status of Cognitive Offloading's (no aura count) is left alone.
+pub fn release_spent_aura(state: &mut GameState) {
+    let player = state.active;
+    let Some(taken) = state.players[player]
+        .autopilot
+        .and_then(|status| status.aura_actions)
+    else {
+        return;
+    };
+    if state.pending.is_some() {
+        return;
+    }
+    let spent = match aura_reach(state, player) {
+        None => true,
+        Some(AuraReach::Actions(limit)) => taken >= limit,
+        Some(AuraReach::Turn) => false,
+    };
+    if spent {
+        state.players[player].autopilot = None;
+    }
 }
 
 /// Whether the active player's autopilot owes an action now: theirs for this turn, no result, the
 /// mulligans done, and either their main phase with nothing open or a prompt of theirs open.
+/// R1844000: on an aura's turn, only while an aura still acts and its count is not spent — or a
+/// prompt of theirs is open, which the last counted action asked.
 pub fn due(state: &GameState) -> Option<PlayerId> {
     let player = state.active;
     let status = state.players[player].autopilot?;
     if state.result.is_some() || status.turn != state.turn || state.mulligan.is_some() {
         return None;
+    }
+    if let Some(taken) = status.aura_actions {
+        match aura_reach(state, player) {
+            None => return None,
+            Some(AuraReach::Actions(limit)) if taken >= limit && state.pending.is_none() => return None,
+            Some(_) => {}
+        }
     }
     match &state.pending {
         Some(pending) => (pending.player_id == player).then_some(player),

@@ -1148,8 +1148,8 @@ pub struct ResourceQuote {
 
 /// R1183002 (Meditative+ #18 Cognitive Offloading): the engine plays the rest of this player's turn
 /// `turn` (`subsystems::autopilot`); `actions` counts what it has taken, toward
-/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, cleared at that
-/// turn's cleanup.
+/// `AUTOPILOT_MAX_ACTIONS`. Set by the `autopilot` verb on its caster's own turn, or by an autopilot
+/// aura as its controller's turn begins (R1844000), cleared at that turn's cleanup.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -1160,6 +1160,11 @@ pub struct ResourceQuote {
 pub struct Autopilot {
     pub turn: i32,
     pub actions: i32,
+    /// R1844000: the R456 actions taken on a turn an autopilot aura engaged, read against the aura's
+    /// count; absent for Cognitive Offloading's whole turn.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub aura_actions: Option<i32>,
 }
 
 /// R1180006: the answering card last named for a player (R1180005) and the answers before it in that
@@ -1348,6 +1353,11 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub autopilot: Option<Autopilot>,
+    /// R1844001: the turn this player is shown the Pareto hint for (the `pareto_hint` verb); absent
+    /// otherwise, so a game without it hashes as before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub pareto_hint: Option<i32>,
     /// R1180006: the answer chain under way (R1180005) — the card last named to answer one of this
     /// player's Spells and how many answers led to it. Absent but while one is, so a game without an
     /// answering card hashes as before this field existed (D9).
@@ -1966,6 +1976,7 @@ pub fn create_player_state() -> PlayerState {
         won_by_effect: None,
         duos: None,
         autopilot: None,
+        pareto_hint: None,
         answer_chain: None,
         trades: None,
         trades_per_turn: None,
