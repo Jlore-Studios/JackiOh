@@ -85,6 +85,8 @@ const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   classic: 0x79bdaf98,
   classicplus: 0x5921ab01,
   meditative: 0x16056737,
+  // R1857000: the held Stinkyscape set's own, under which none of its cards repeats a shipped card's picture.
+  stinkyscape: 0x275c6732,
 };
 /** Salt the motif's and the family twist's own streams, so neither moves anything else. */
 const MOTIF_SALT = 0x165667b1;

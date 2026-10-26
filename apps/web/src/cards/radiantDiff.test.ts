@@ -119,7 +119,9 @@ describe("R277 the word diff", () => {
     // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.10's Classic #29 Book of Vital
     // Kill's (its Radiant face does not end the turn either). Meditative+ #11 Living Mana Potion's is the
     // designer's: its base text less the Tribute it activates with; its doubled stats carry its marks.
-    // So are #12 Living Armor Potion's and #13 Living Health Potion's: twelve silent faces in all.
+    // So are #12 Living Armor Potion's and #13 Living Health Potion's. The held Stinkyscape set's #9
+    // Ticketed's Radiant face is the designer's base text less Brittle 3, and #149 Wildar's less the
+    // Call to Chaos it gives the opponent (R1857000): fourteen silent faces in all.
     expect(silent).toEqual([
       "core-055",
       "classic-028",
@@ -133,6 +135,8 @@ describe("R277 the word diff", () => {
       "meditativeplus-011",
       "meditativeplus-012",
       "meditativeplus-013",
+      "stinkyscape-009",
+      "stinkyscape-149",
     ]);
   });
 });

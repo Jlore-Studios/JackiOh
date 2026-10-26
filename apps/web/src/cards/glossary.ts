@@ -75,6 +75,10 @@
 //
 // Issue #1852 (R1852000–R1852007) adds §6.1's Starship Piece and Starship, keyword kinds, §6.2's "When
 // launched" and §6.3's Launch. No card prints them yet (Stinkyscape's cards will).
+//
+// R1857000, R910000: the held Stinkyscape set's faces print these terms mid-sentence, so their spellings
+// bold too: "launch" and "launches" (Launch), "fuses" (Fuse), "Floated" (Float), "Allured" (Allure) and
+// "end the turn" (End the turn).
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -305,7 +309,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Float: trigger(
     "Float",
     'The mana a player leaves unspent when their turn ends. "Float reduces cost": whenever you Float, this costs that much less',
-    { aliases: ["Floats"] },
+    { aliases: ["Floats", "Floated"] },
   ),
   // Patch v0.2.0 (B3.2, R384): "Activate", "Activate 2", "Activate ♾️" are this one term.
   Activate: trigger(
@@ -331,7 +335,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   ),
   Recruit: verb("Recruit", "Summon from deck, scanning top down"),
   // R910000: the lower-case and past spellings the cards print mid-sentence.
-  Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4", { aliases: ["fuse", "fused"] }),
+  Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4", { aliases: ["fuse", "fused", "fuses"] }),
   Transform: verb("Transform", "Replace a card with another in place", { aliases: ["transform", "transforms"] }),
   Vanilla: verb("Vanilla", "Remove a unit's text and return it to its printed stats"),
   Lock: verb("Lock", "Zone can't be played into", { aliases: ["Locked"] }),
@@ -351,7 +355,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   }),
   "Set health": verb("Set health", "A hero's health becomes N"),
   Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another", { aliases: ["redirected"] }),
-  "End the turn": verb("End the turn", "The turn ends from an effect"),
+  "End the turn": verb("End the turn", "The turn ends from an effect", { aliases: ["end the turn"] }),
   "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again"),
   "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", {
     aliases: ["Look at your opponent's hand"],
@@ -359,6 +363,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Allure: verb(
     "Allure",
     "Steal the marked enemy permanents at the start of your next turn; one you have no room for is destroyed",
+    { aliases: ["Allured"] },
   ),
   // R1174000, R910000: the verb that sets Frozen, bold in the spellings a card prints.
   Freeze: verb("Freeze", "The Unit loses its next attack or position switch, and thaws at the end of the turn it could have made one", {
@@ -367,7 +372,9 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // R1839002: the one verb that reaches a Dormant card.
   Awaken: verb("Awaken", "A Dormant card awakens now"),
   // R1852003: a Dormant Starship's awakening, which fires every Cry fused into it.
-  Launch: verb("Launch", "Your Dormant Starship awakens: every Cry fused into it fires, then every When launched"),
+  Launch: verb("Launch", "Your Dormant Starship awakens: every Cry fused into it fires, then every When launched", {
+    aliases: ["launch", "launches"],
+  }),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
   Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death", {

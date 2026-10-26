@@ -18,6 +18,9 @@
 //   (Devil's Pact, with its keywords, and the Radiant faces of Bob's Plan and KY's Competition),
 //   one #1704 did (The House's Radiant face, its Cry and its Activate), and #1828's Can't attack put
 //   both faces of Jungle Loser a line over.
+// The held Stinkyscape set (R1857000) prints its rows before its cards are built: its two Call to
+// Chaos editions (#150 and #151) take "colon" as the other three do, and every other face its rows
+// put over the limit clamps, until the card's part (docs/stinkyscape-set.md ST13) writes its own.
 // Only a face that prints its catalog text takes a short form: in play a #98 Heroic Power prints its
 // rolled power and a Call to Chaos "???" (inPlay.ts) instead.
 //
@@ -68,6 +71,41 @@ export const SHORT_FORMS: Readonly<Record<string, { base?: ShortForm; radiant?: 
   "meditativeplus-004": { base: "clamp", radiant: "clamp" },
   "meditativeplus-020": { radiant: "clamp" },
   "meditativeplus-024": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-004-4": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-004-5": { radiant: "clamp" },
+  "stinkyscape-007": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-016": { base: "clamp" },
+  "stinkyscape-018-1": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-018-2": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-018-3": { radiant: "clamp" },
+  "stinkyscape-023": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-024": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-025": { base: "clamp" },
+  "stinkyscape-039": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-077": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-087": { radiant: "clamp" },
+  "stinkyscape-112": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-116": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-139": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-143": { radiant: "clamp" },
+  "stinkyscape-147": { radiant: "clamp" },
+  "stinkyscape-148": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-150": { base: "colon", radiant: "colon" },
+  "stinkyscape-151": { base: "colon", radiant: "colon" },
+  "stinkyscape-153": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-154": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-157": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-163": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-164": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-166": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-167": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-169": { base: "clamp" },
+  "stinkyscape-170": { base: "clamp" },
+  "stinkyscape-171": { base: "clamp" },
+  "stinkyscape-172": { base: "clamp" },
+  "stinkyscape-173": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-t-dormant-starship": { base: "clamp", radiant: "clamp" },
+  "stinkyscape-t-anomaly-found": { base: "clamp", radiant: "clamp" },
 };
 
 /** What ends a short form, in place of its last full stop or colon: the text goes on in the extended description. */
