@@ -2241,15 +2241,22 @@
       }
     },
     "1971": {
+      "action": "revise",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T04:23:51Z",
       "issue": 1916,
       "kind": "revise",
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-26T07:13:17Z",
+      "run_id": "pending:9de38286-1792998793",
       "self_check_findings": [],
       "source": "conflict",
+      "started_at": "2026-10-26T07:13:54Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -2272,9 +2279,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T06:55:20Z",
+    "at": "2026-10-26T07:13:54Z",
     "url": "",
-    "what": "revise #1968 on muse"
+    "what": "revise #1971 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T07:02:01Z",
