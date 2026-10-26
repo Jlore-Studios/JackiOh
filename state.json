@@ -1979,11 +1979,13 @@
         "by": "`claude` (strong)",
         "sha": "efaf94cfaa7145dd4871d7411bb073185904bd41"
       },
+      "closed_at": "2026-10-26T09:51:04Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T07:43:14Z",
       "issue": 1903,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
