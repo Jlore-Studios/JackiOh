@@ -7,58 +7,31 @@
 // CLAUDE.md rule 7: the picks are the lobby's (`routes/play.tsx`), with no verdict of their own here;
 // whether a deck may be played is the server's, at the room.
 //
-// A modal like the client's others (`game/ConfirmConcede.tsx`, #1569): the focus moves to the checked
-// mode when it opens, Tab and Shift+Tab stay inside, Escape closes it wherever the focus is, and the
-// caller gives the focus back to the Challenge button that opened it (`TogetherRoute.tsx`).
+// It opens on the last mode and deck (or trio) a challenge was sent with from this browser, else the
+// first saved deck in Best of 1 (`challengeChoice.ts`, #1831), so a repeat challenge is Challenge and
+// Enter: the focus moves to Send as soon as the picks are in.
+//
+// A modal like the client's others (`game/ConfirmConcede.tsx`, #1569): the focus starts on the checked
+// mode (on Send once the decks are read), Tab and Shift+Tab stay inside, Escape closes it wherever
+// the focus is, and the caller gives the focus back to the button that opened it (`TogetherRoute.tsx`,
+// `FriendsButton.tsx`).
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement } from "react";
 
-import { DECK_SIZE } from "@jackioh/engine/config";
-
 import { t, useLocale } from "../i18n/i18n.ts";
-import { getDecks, type ModeChoice, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
+import { getDecks, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
 import { withSession } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { createChallenge, type PlayerRef } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
+import { choiceOf, pickDeck, pickTrio, readChallengeChoice, rememberChallengeChoice } from "./challengeChoice.ts";
 import { followChallenge } from "./follow.ts";
+import { tabStops, useModalKeys } from "./modalKeys.ts";
 import { attempt, messageOf } from "./session.ts";
 import { challengeModeTestid, togetherTestid } from "./testids.ts";
 import { CHALLENGE_MODES, MODE_WORDS, Named } from "./words.tsx";
 
 type Saved = { decks: readonly SavedDeck[]; trios: readonly SavedTrio[] };
-
-/** What Tab may land on in the dialog. */
-const TAB_STOPS = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])";
-
-/** The dialog's tab stops in order; the mode group is one stop, its checked radio, as the browser's own Tab takes it. */
-function tabStops(dialog: HTMLElement): HTMLElement[] {
-  return [...dialog.querySelectorAll<HTMLElement>(TAB_STOPS)].filter(
-    (element) => !(element instanceof HTMLInputElement && element.type === "radio" && !element.checked),
-  );
-}
-
-/** The first complete deck, else the first; as the lobby picks one with nothing remembered. */
-function firstDeck(decks: readonly SavedDeck[]): SavedDeck | null {
-  return decks.find((deck) => deck.cards.length === DECK_SIZE) ?? decks[0] ?? null;
-}
-
-/** The first trio with three decks, else the first. */
-function firstTrio(trios: readonly SavedTrio[]): SavedTrio | null {
-  return trios.find((trio) => trio.deckIds.every((id) => id !== null)) ?? trios[0] ?? null;
-}
-
-/** What a room is made with for `mode`, or null while its pick is missing (`choiceFor` in `routes/play.tsx`). */
-function choiceOf(mode: QueueMode, deckId: string | null, trioId: string | null): ModeChoice | null {
-  switch (mode) {
-    case "random":
-      return { mode: "random" };
-    case "bo1":
-      return deckId === null ? null : { mode: "bo1", deckId };
-    case "bo3":
-      return trioId === null ? null : { mode: "bo3", trioId };
-  }
-}
 
 export function ChallengeDialog({
   friend,
@@ -71,7 +44,8 @@ export function ChallengeDialog({
 }): ReactElement {
   useLocale();
   const titleId = useId();
-  const [mode, setMode] = useState<QueueMode>("bo1");
+  const [initial] = useState(readChallengeChoice);
+  const [mode, setMode] = useState<QueueMode>(initial.mode);
   const [saved, setSaved] = useState<Saved | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [deckReads, setDeckReads] = useState(0);
@@ -80,6 +54,7 @@ export function ChallengeDialog({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const dialog = useRef<HTMLFormElement>(null);
+  const sendButton = useRef<HTMLButtonElement>(null);
 
   // Keyboard and screen-reader users start inside the dialog, on the mode it opens with.
   useEffect(() => {
@@ -87,34 +62,7 @@ export function ChallengeDialog({
     if (form !== null) tabStops(form)[0]?.focus({ preventScroll: true });
   }, []);
 
-  // Both keys are read at the window, in the capture phase, so they hold wherever the focus is (a
-  // click on the dialog's text or the dimmed page takes it off the controls): Escape closes, and Tab
-  // and Shift+Tab step through the dialog's stops, wrapping, never onto the page behind the scrim.
-  useEffect(() => {
-    function onKey(event: globalThis.KeyboardEvent): void {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const form = dialog.current;
-      if (form === null) return;
-      const order = tabStops(form);
-      if (order.length === 0) return;
-      const focused = document.activeElement;
-      const at = focused instanceof HTMLElement ? order.indexOf(focused) : -1;
-      const next = event.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : at === order.length - 1 ? 0 : at + 1;
-      event.preventDefault();
-      event.stopPropagation();
-      order[next]?.focus();
-    }
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("keydown", onKey, true);
-    };
-  }, [onClose]);
+  useModalKeys(dialog, onClose);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,8 +70,8 @@ export function ChallengeDialog({
       (answer) => {
         if (cancelled) return;
         setSaved({ decks: answer.decks, trios: answer.trios });
-        setDeckId(firstDeck(answer.decks)?.id ?? null);
-        setTrioId(firstTrio(answer.trios)?.id ?? null);
+        setDeckId(pickDeck(answer.decks, initial.deckId)?.id ?? null);
+        setTrioId(pickTrio(answer.trios, initial.trioId)?.id ?? null);
       },
       (cause: unknown) => {
         if (!cancelled) setLoadError(messageOf(cause));
@@ -132,9 +80,19 @@ export function ChallengeDialog({
     return () => {
       cancelled = true;
     };
-  }, [deckReads]);
+  }, [deckReads, initial]);
 
   const choice = choiceOf(mode, deckId, trioId);
+
+  // The first time the picks are complete the player can send, so the focus goes to Send (#1831); a
+  // later change of mode leaves it where the player put it, and so does a focus already off the dialog
+  // (it was closed, or the page behind clicked, while the decks were read).
+  const focusedSend = useRef(false);
+  useEffect(() => {
+    if (choice === null || focusedSend.current) return;
+    focusedSend.current = true;
+    if (dialog.current?.contains(document.activeElement) === true) sendButton.current?.focus({ preventScroll: true });
+  }, [choice]);
 
   const send = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -144,6 +102,7 @@ export function ChallengeDialog({
     attempt(() => createChallenge({ ...choice, friendId: friend.profileId }))
       .then(
         () => {
+          rememberChallengeChoice(choice, true);
           // The shell takes the challenger to the game once the friend joins (`follow.ts`).
           followChallenge();
           onSent();
@@ -287,7 +246,7 @@ export function ChallengeDialog({
         )}
 
         <div className="together-actions">
-          <button type="submit" className="button-primary" data-testid={togetherTestid.challengeSend} disabled={choice === null || sending} aria-busy={sending}>
+          <button ref={sendButton} type="submit" className="button-primary" data-testid={togetherTestid.challengeSend} disabled={choice === null || sending} aria-busy={sending}>
             {t("Send challenge")}
           </button>
           <button type="button" className="link-button" data-testid={togetherTestid.challengeClose} onClick={onClose}>
