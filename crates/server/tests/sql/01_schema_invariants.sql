@@ -1101,4 +1101,59 @@ begin
     total;
 end $$;
 
+\echo '=== CHECK 20 (#1996): the queue readout and the refile sweep read only their window, each through its own index ==='
+-- GET /api/queue/population runs tickets_recent_waits and results_count_since (src/db/pg.rs) on
+-- every waiting client's poll, over the last QUEUE_READOUT_WINDOW_SECONDS, and the refile sweep
+-- (api/retention.rs) runs game_records_unfiled over the last GAME_RECORD_REFILE_WINDOW_SECONDS. No
+-- purge shortens the three tables, so each must reach its rows through an index on its time bound
+-- (migration 0062). With sequential scans priced out, each plan must read none of the three whole
+-- and must use its own index. The name is what matters: without 0062 the planner still avoids a
+-- Seq Scan, through an index that only filters (tickets_pairing_scan_idx on status, which holds
+-- every claimed ticket ever written) or one it reads whole (results_p2_ended_at_idx). Each probe is
+-- pg.rs's query with its bounds as literals, the values a call binds.
+do $$
+declare
+  now_ms   constant bigint := (extract(epoch from clock_timestamp()) * 1000)::bigint;
+  hour_ms  constant bigint := 3600 * 1000;      -- QUEUE_READOUT_WINDOW_SECONDS
+  day_ms   constant bigint := 24 * 3600 * 1000; -- GAME_RECORD_REFILE_WINDOW_SECONDS
+  grace_ms constant bigint := 10 * 60 * 1000;   -- GAME_RECORD_REFILE_GRACE_SECONDS
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[
+    array['tickets_claimed_at_idx', format(
+      'select mode, enqueued_at, claimed_at from public.tickets
+        where status = ''claimed'' and claimed_at >= to_timestamp(%s::double precision / 1000.0)
+        order by claimed_at, id', now_ms - hour_ms)],
+    array['results_ended_at_idx', format(
+      'select count(*) as games from public.results
+        where ended_at >= to_timestamp(%s::double precision / 1000.0)', now_ms - hour_ms)],
+    array['matches_over_ended_at_idx', format(
+      'select m.id from public.matches m
+        where m.status = ''over'' and m.final_hash is not null
+          and m.ended_at >= to_timestamp(%s::double precision / 1000.0)
+          and m.ended_at < to_timestamp(%s::double precision / 1000.0)
+          and exists (select 1 from public.results r where r.match_id = m.id)
+          and exists (select 1 from public.match_actions a where a.match_id = m.id)
+          and not exists (select 1 from public.game_records g where g.id = m.id::text)
+        order by m.ended_at, m.id', now_ms - day_ms, now_ms - grace_ms)]];
+  -- Local to this block's transaction: the files after this one plan as they always have.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][2] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (tickets|results|matches)\M' then
+      raise exception E'FAIL (CHECK 20): the query % serves reads its table whole:\n%', probes[i][1], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M') then
+      raise exception E'FAIL (CHECK 20): the query % serves does not use it:\n%', probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 20): the readout''s two queries and the refile scan each read their window through % and read no table whole',
+    'tickets_claimed_at_idx, results_ended_at_idx and matches_over_ended_at_idx';
+end $$;
+
 \echo '=== ALL CHECKS RAN ==='

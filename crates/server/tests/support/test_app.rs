@@ -140,6 +140,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         replays: jackioh_server::api::replays::Replays::default(),
         card_stats: jackioh_server::api::stats::KeptReports::default(),
         queue_presence: jackioh_server::api::queue::QueuePresence::new(),
+        queue_readout: jackioh_server::api::queue::KeptReadout::default(),
         rematch_offers: jackioh_server::api::rematch::RematchOffers::default(),
         seats: jackioh_server::seats::Seats::default(),
         social: jackioh_server::social::Social::default(),

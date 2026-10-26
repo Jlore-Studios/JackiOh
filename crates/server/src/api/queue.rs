@@ -65,8 +65,8 @@ use crate::bots::fallback::{
 };
 use crate::config::{
     BOT_RECENT_OPPONENTS, BOT_VS_BOT_MAX_LIVE, MATCHMAKER_SWEEP_INTERVAL_SECONDS,
-    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE,
-    QUEUE_WAIT_STEP_SECONDS, rating_window,
+    QUEUE_READOUT_CACHE_TTL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS,
+    QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, rating_window,
 };
 use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
@@ -222,6 +222,36 @@ impl QueuePresence {
 impl Default for QueuePresence {
     fn default() -> QueuePresence {
         QueuePresence::new()
+    }
+}
+
+// R1996000 — the readout, kept
+
+/// SPEC §11 R1996000: the queue readout last counted, with when, in epoch ms, kept for
+/// `QUEUE_READOUT_CACHE_TTL_SECONDS` so the polls of every waiting client inside it share one
+/// count. One answer for every caller: the readout names nobody (R640002). Not shared in flight:
+/// readouts that miss together each count, and the last to finish is kept. One per `App`, so a
+/// restart or a test starts with none.
+#[derive(Default)]
+pub struct KeptReadout {
+    kept: Mutex<Option<(i64, Value)>>,
+}
+
+impl KeptReadout {
+    /// The answer counted less than `QUEUE_READOUT_CACHE_TTL_SECONDS` before `now`, if one was.
+    fn fresh(&self, now: i64) -> Option<Value> {
+        let ttl_ms = QUEUE_READOUT_CACHE_TTL_SECONDS * MS_PER_SECOND as i64;
+        self.kept
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .as_ref()
+            .filter(|(counted_at, _)| now - counted_at < ttl_ms)
+            .map(|(_, body)| body.clone())
+    }
+
+    /// `body` was counted at `now`: it replaces what was kept.
+    fn keep(&self, now: i64, body: Value) {
+        *self.kept.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some((now, body));
     }
 }
 
@@ -1455,12 +1485,19 @@ pub fn expected_wait_seconds(waits_ms: &[i64]) -> Option<i64> {
 /// (R257), the expected wait the tickets claimed in it call for (`expected_wait_seconds`, null when
 /// too few were), and the games that ended in it. A pairing with a bot is a claim and a game against
 /// one is a game, like any other. No count of open tickets: one told a lone queuer that a bot came.
+///
+/// R1996000: counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept (`KeptReadout`).
 pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
     population_route(app).await
 }
 
 async fn population_route(app: &App) -> ApiResult {
-    let since = now_ms() - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND as i64;
+    let now = now_ms();
+    // R1996000: a readout counted inside the TTL answers until it runs out.
+    if let Some(body) = app.queue_readout.fresh(now) {
+        return Ok(json(200, body));
+    }
+    let since = now - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND as i64;
     let mut tx = app.db.begin(None).await?;
     let waits = tx.tickets_recent_waits(since).await?;
     let games = tx.results_count_since(since).await?;
@@ -1474,8 +1511,7 @@ async fn population_route(app: &App) -> ApiResult {
         bo3: expected_wait_seconds(&by_mode.bo3),
         random: expected_wait_seconds(&by_mode.random),
     };
-    Ok(json(
-        200,
-        json!({ "gamesLastHour": games, "expectedWaitSeconds": expected }),
-    ))
+    let body = json!({ "gamesLastHour": games, "expectedWaitSeconds": expected });
+    app.queue_readout.keep(now, body.clone());
+    Ok(json(200, body))
 }
