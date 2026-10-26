@@ -82,6 +82,7 @@ const PINNED: &[(&str, &str)] = &[
         "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql",
         "972e8478",
     ),
+    ("0059_voted_out_and_fled.sql", "a40e0655"),
 ];
 
 /// `PINNED[name]`.

@@ -12,6 +12,7 @@ import type { Difficulty } from "@jackioh/engine/config";
 import type { GameOverReason, PlayerId, PlayerView } from "@jackioh/shared";
 
 import XpReveal from "../economy/XpReveal.tsx";
+import { seatOutcome } from "../game/outcome.ts";
 import { t } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "./config.ts";
 import { earningText, type PracticeEarning } from "./earning.ts";
@@ -23,9 +24,9 @@ export type PracticeOutcome = "win" | "loss" | "draw";
 
 type Result = NonNullable<PlayerView["result"]>;
 
+/** R1843004: the AI's `fled` is a draw for the human (`game/outcome.ts`). */
 export function outcomeOf(result: Result, viewer: PlayerId): PracticeOutcome {
-  if (result.winner === "draw") return "draw";
-  return result.winner === viewer ? "win" : "loss";
+  return seatOutcome(result.winner, result.reason, viewer);
 }
 
 export const OUTCOME_TITLE: Readonly<Record<PracticeOutcome, string>> = {
@@ -34,8 +35,8 @@ export const OUTCOME_TITLE: Readonly<Record<PracticeOutcome, string>> = {
   draw: "Draw",
 };
 
-/** Why the game ended, from the human's side of the table. */
-function reasonText(outcome: PracticeOutcome, reason: GameOverReason): string {
+/** Why the game ended, from the human's side of the table. `winner` tells two fleers' draw apart. */
+function reasonText(outcome: PracticeOutcome, reason: GameOverReason, winner: PlayerId | "draw"): string {
   switch (reason) {
     case "hero-death":
       return outcome === "win" ? "The AI's hero has fallen." : "Your hero has fallen.";
@@ -62,6 +63,21 @@ function reasonText(outcome: PracticeOutcome, reason: GameOverReason): string {
     case "won-by-effect":
       // R850: an effect won the game outright.
       return outcome === "win" ? "Your card won the game." : "The AI's card won the game.";
+    case "voted-out":
+      // R1843000: a player's tally filled, and the cards that voted removed them.
+      return outcome === "win" ? "The AI was voted out of the game." : "You were voted out of the game.";
+    case "both-voted-out":
+      // R1843001: both tallies filled at once.
+      return "Both players were voted out together.";
+    case "fled":
+      // R1843002, R1843004: a win for the fleer and a draw for the other player; two fleers draw.
+      if (outcome === "win") return "You escaped the universe. The AI draws.";
+      return winner === "draw" ? "Both players escaped the universe." : "The AI escaped the universe. You draw.";
+    case "fled-decisive":
+      // R1843002: the fleer chose a loss for the other player.
+      return outcome === "win"
+        ? "You escaped the universe and left the AI behind."
+        : "The AI escaped the universe and left you behind.";
   }
 }
 
@@ -135,7 +151,7 @@ export function PracticeResult({
         <h2 className="practice-result__title" id={titleId}>
           {t(OUTCOME_TITLE[outcome])}
         </h2>
-        <p className="practice-result__reason">{t(reasonText(outcome, result.reason))}</p>
+        <p className="practice-result__reason">{t(reasonText(outcome, result.reason, result.winner))}</p>
         <p className="practice-result__meta">{t("Practice")} · {t(DIFFICULTY_LABEL[difficulty])}</p>
         {earning === undefined ? null : (
           <p

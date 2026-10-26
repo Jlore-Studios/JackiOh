@@ -11,6 +11,7 @@ import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
 import type { SetAs } from "./SetAs";
 import type { Slumber } from "./Slumber";
+import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 import type { Zone } from "./Zone";
@@ -123,6 +124,13 @@ frozen?: number,
  */
 slumber?: Slumber, 
 /**
+ * R1852000, R1852005: the card is a Starship — the Dormant Starship, whose hull text
+ * (`StaticFlags.starshipHull`) started this as it entered the field — and this is its memory: the
+ * pieces fused into it and, once it has launched, its name. A status, never text: R78's reset takes
+ * it off with the card leaving the field. Absent on every other card (D14).
+ */
+starship?: StarshipMemory, 
+/**
  * R429: how many times this card has been played, the play under way included — counted at §10.5
  * step 4 (casts too, R70; a countered play never reaches it) for a card whose script asks
  * (`StaticFlags.countsPlays`, #31 KY's Math Equation) and absent on every other card. Kept in every
@@ -177,4 +185,11 @@ grants?: Array<Grant>,
  * a library and a bounce as `costOverride` does and R766 takes it off a card reaching a graveyard
  * or an exile pile; a copy is a new card without it (R57). Absent on every other card.
  */
-fixedX?: number, };
+fixedX?: number, 
+/**
+ * R1845000: Nerfs no seat may read, the owner's included, waiting to land at §10.5 step 3 of the
+ * card's next play or cast (R1845001). Kept in every zone; a copy or a Transform is a new card
+ * without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
+ * and hashes as before (D3).
+ */
+hiddenNerfs?: number, };

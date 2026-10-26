@@ -5,6 +5,7 @@ import type { CardInstance } from "./CardInstance";
 import type { DrawCount } from "./DrawCount";
 import type { DrawOfferState } from "./DrawOfferState";
 import type { DuosLife } from "./DuosLife";
+import type { FleeOpponent } from "./FleeOpponent";
 import type { GameLog } from "./GameLog";
 import type { Handicap } from "./Handicap";
 import type { HeroState } from "./HeroState";
@@ -12,6 +13,7 @@ import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RowFlags } from "./RowFlags";
 import type { TurnLog } from "./TurnLog";
+import type { VoteTally } from "./VoteTally";
 
 export type PlayerState = { hero: HeroState, mana: ManaState, hand: Array<CardInstance>, library: Array<CardInstance>, graveyard: Array<CardInstance>, exile: Array<CardInstance>, 
 /**
@@ -101,6 +103,13 @@ jade?: number,
  */
 lostRefreshThrough?: number, 
 /**
+ * R1854003: the mana crystals effects have moved on this player's count (§2.3's "turns you have
+ * started", inside the cap): negative once theirs were stolen, positive once they stole some
+ * (`mana::max_mana_for`). Absent (never 0 stored) while none moved, so a game without a steal
+ * hashes as it did before this field existed (D3).
+ */
+manaCrystals?: number, 
+/**
  * R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
  * starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
  * hashes as it did before this field existed.
@@ -144,4 +153,17 @@ resourceTray?: Array<CardInstance>,
  * Marketplace (`resources::add_market_credits`). Named apart from Jlarna's credit line (R1223).
  * Absent until first gained, so a game without Credits hashes as it did before this field existed.
  */
-marketCredits?: number, };
+marketCredits?: number, 
+/**
+ * R1843000 (Stinkyscape #18's Brains): the votes cast this turn to remove this player from the
+ * game (`effects::vote_out`). Absent until a first vote, so a game without one hashes as before
+ * this field existed (D3).
+ */
+votes?: VoteTally, 
+/**
+ * R1843002 (Stinkyscape #148.1 Edge of the Universe): set when this player flees
+ * (`effects::flee`), with what it leaves the other player; the state check's game-end point ends
+ * the game on it. Absent otherwise, so a game without one hashes as before this field existed
+ * (D3).
+ */
+fled?: FleeOpponent, };

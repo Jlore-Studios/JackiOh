@@ -582,6 +582,12 @@ pub const INFLATION_ROLL_SIDES: i32 = 100;
 /// R1848006: what Inflation adds to a card's price when it hits ("cost (1) more").
 pub const INFLATION_COST: i32 = 1;
 
+// ---- Stinkyscape's staged Quests (issue #1854, R1854000–R1854004) ----
+
+/// R1854000: the number of a staged quest's first stage, the one that opens as the card enters (its
+/// stages count from it: `completed_stage_of`, `open_stage`, `QuestMemory.stage`).
+pub const FIRST_QUEST_STAGE: u32 = 1;
+
 // ---- v0.2.0 constants: prompts and generation (E18, E19, E23–E25) ----
 
 // generation (E19, E23–E25), below A6a's prompts constants:
@@ -1854,6 +1860,58 @@ pub const HALF_DAMAGE_TO_HEROES_DIVISOR: i32 = 2;
 /// R1841003: "Float reduces Tribute requirement by 1": what each of its owner's Floats takes off the
 /// card's Tribute X, whatever the Float's size (`float::float_lowers_tribute`).
 pub const FLOAT_TRIBUTE_REDUCTION: i32 = 1;
+
+// ---------------------------------------------------------------------------------------------
+// The Starship (Stinkyscape, issue #1852; SPEC §6.1, §6.2, §6.3; R1852000–R1852007)
+// ---------------------------------------------------------------------------------------------
+
+/// R1852000: the card the engine summons for a player whose Starship Piece dies while they have no
+/// Dormant Starship — Stinkyscape's Dormant Starship, a 0/0 Unit that prints Dormant and the hull
+/// (`StaticFlags.starshipHull`). Its catalog entry ships with the set's cards (S02); until then no
+/// catalog holds it, and a piece's death summons nothing.
+pub const DORMANT_STARSHIP_DEF_ID: &str = "stinkyscape-t-dormant-starship";
+/// R1852000: the unit zone a Dormant Starship is stacked onto when its player's unit row is full
+/// ("stack it on top of your Lane 3 front row, regardless if it's Locked or not").
+pub const STARSHIP_FULL_ROW_LANE: i32 = 3;
+/// R1852003: what a Dormant Starship's Activate costs to launch it ("Activate: pay (3) to awaken").
+pub const STARSHIP_LAUNCH_COST: i32 = 3;
+/// R1852003: how many times a turn the launch may be activated (once; a launched Starship has no
+/// launch left to activate).
+pub const STARSHIP_LAUNCH_USES: i32 = 1;
+/// R1852004: the names a launched Starship takes, one drawn at random, each with the tag a Starship
+/// must hold for the name to be in the draw (`None` suits any ship). The names are names only.
+pub const STARSHIP_NAMES: &[(&str, Option<Tag>)] = &[
+    ("The Ninth Life", Some(Tag::Felinor)),
+    ("Frontier's Promise", Some(Tag::Human)),
+    ("The Celestial Archive", Some(Tag::Ky)),
+    ("The Lantern Ferry", Some(Tag::Cn)),
+    ("The Jlockeed Skylark", Some(Tag::Jlockeed)),
+    ("Ember of Departure", None),
+    ("The Silent Choir", None),
+];
+
+// ---------------------------------------------------------------------------------------------
+// Two new endings, voted out and fled (#1843, SPEC §2.5, R1843000–R1843005)
+// ---------------------------------------------------------------------------------------------
+
+/// R1843000: the votes of different cards in one turn that remove a player from the game, a loss for
+/// them (Stinkyscape #18's three Brains, MELCHIOR, BALTHASAR and CASPER).
+pub const VOTE_TALLY_SIZE: i32 = 3;
+
+/// R1843004: the endings that are a win for the winner and a draw, not a loss, for the other player
+/// (Stinkyscape #148.1 Edge of the Universe's `fled`). The ladder rates the two sides so, and a game
+/// of one with no winner (two fleers at once, or a fleer who has since deleted their account) is a
+/// draw for the player left. Every other ending is the same for both sides: the winner's win and the
+/// other's loss, or a draw for both. The client reads it (`engineConfig.ts`).
+pub const LOSER_DRAWS_REASONS: &[crate::wire::GameOverReason] = &[crate::wire::GameOverReason::Fled];
+
+// ---------------------------------------------------------------------------------------------
+// Stinkyscape M11 (issue #1845, R1845000–R1845002): hidden Nerfs and trade offers
+// ---------------------------------------------------------------------------------------------
+
+/// R1845002: the offer comes due at the start of the opponent's next turn, counted in their own turns
+/// (R1181000), so its badge counts down on the offerer's side while it waits.
+pub const TRADE_OFFER_TURNS: i32 = 1;
 
 #[cfg(test)]
 mod tests {

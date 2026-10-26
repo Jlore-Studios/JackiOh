@@ -163,6 +163,11 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
     resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
     marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+    starshipFused: { type: "starshipFused", player: "p1", instanceId: unit, pieceId: "u2", defId: "core-008", pieces: 2 },
+    starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: unit, defId: "core-008", name: "Ember of Departure", pieces: ["core-008"] },
+    voteCast: { type: "voteCast", player: "p1", instanceId: unit, defId: "core-004", votes: 1, needed: 3 },
+    votedOut: { type: "votedOut", player: "p1", ballots: [{ instanceId: unit, defId: "core-004" }] },
+    fled: { type: "fled", player: "p1", opponent: "draw" },
   };
 }
 

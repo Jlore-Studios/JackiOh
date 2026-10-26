@@ -93,6 +93,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   // R1839000, R1839001: a Dormant card, with its countdown.
   if (unit?.slumber !== undefined) inPlay.dormant = { turns: unit.slumber.turns ?? null };
   if (unit?.frozenForever === true) inPlay.frozenForever = true;
+  // R1852000, R1852004: a Starship, with the pieces fused into it and the name it launched under.
+  if (unit?.starship !== undefined) inPlay.starship = { pieces: unit.starship.pieces.length, name: unit.starship.name ?? null };
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
   // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.

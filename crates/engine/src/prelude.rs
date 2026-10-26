@@ -49,6 +49,11 @@ pub use crate::script::*;
 pub use crate::secrets::*;
 // R1839000–R1839002: Dormant's reads and its "When this awakens" (the `awaken` verb is the effects').
 pub use crate::slumber::{is_slumbering, slumber_turns_of, when_this_awakens};
+// R1852000–R1852007: the Starship's reads and its "When launched" (the launch price is the effects').
+pub use crate::starship::{
+    STARSHIP_LAUNCH_ABILITY, building_a_ship, dormant_starship_of, is_dormant_starship, is_launched_starship,
+    launch_cost, launched_starship_of, starship_pieces_of, when_launched,
+};
 pub use crate::state::*;
 pub use crate::times_played::*;
 pub use crate::traps::*;

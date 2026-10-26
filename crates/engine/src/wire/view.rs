@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::state::{DuosLife, Slumber};
+use crate::state::{DuosLife, Slumber, StarshipMemory};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
     CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
@@ -216,11 +216,46 @@ pub struct QuestOpenView {
     pub progress: i32,
     pub goal: i32,
     pub rewards: Vec<QuestItemView>,
+    /// R1854002: the cost a play must have paid to meet a "play a card that costs …" goal, the number
+    /// the quest card remembers when it holds one. Absent for every other goal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cost: Option<i32>,
+}
+
+string_union! {
+    /// R1854000: where a staged quest's line stands with one of its stages.
+    pub enum QuestStageState {
+        Done = "done",
+        Current = "current",
+        Upcoming = "upcoming",
+    }
+}
+
+/// R1854000, §10.8: one stage of a staged quest as the board shows it, to both players: its name, its
+/// state, its goals (the one drawn once it has opened, every one it may draw before), its reward's text,
+/// and, while the line waits to hear back with it, the turns left (R1854004).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestStageView {
+    pub name: String,
+    pub state: QuestStageState,
+    pub goals: Vec<String>,
+    pub reward: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hear_back: Option<i32>,
 }
 
 /// B5 E33, R404, §10.8: a quest line as the board shows it. Each open quest carries its text, its
 /// progress against its goal ("1/2") and the rewards it offers; `auras` are the rewards held while the
-/// card stays on the field (In Too Deep's L and M).
+/// card stays on the field (In Too Deep's L and M). R1854000: a staged quest's line adds its stages,
+/// in order; absent on a tree's line.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -231,6 +266,9 @@ pub struct QuestOpenView {
 pub struct QuestView {
     pub open: Vec<QuestOpenView>,
     pub auras: Vec<QuestItemView>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub stages: Option<Vec<QuestStageView>>,
 }
 
 /// B5 E14, R399: what a copier's text is now (`CardView.copies`).
@@ -512,6 +550,12 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub frozen_forever: Option<bool>,
+    /// R1852000, R1852005: the card is a Starship (public on the field on both seats): `pieces` the
+    /// Starship Pieces fused into it, oldest first, and, once it has launched, `name`, the name it took.
+    /// What the board's Starship badge and its list of pieces read. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starship: Option<StarshipMemory>,
     /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
     /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
     /// Only ever `Some(true)`.

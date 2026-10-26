@@ -9,6 +9,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, plain, stacker};
+use crate::rules::fixtures::harness::sink_for;
 use crate::rules::fixtures::mplus_b07::{
     RAISE_BY, SET_TO, banner, camp, ghoul, harmony, kidnapper, party, plain_spell, register_b07_fixtures,
     snatch, spark, stoic, summit, xerox,
@@ -160,6 +161,55 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
         );
         s.play(harmony.id.as_str(), json!({ "zone": 1 }));
         assert_eq!(stats_of(&s, &token), (SET_TO, SET_TO, SET_TO));
+    }
+
+    /// R175, R444: a set Radiant Ghoul that returns as it was summoned wears its doubled X/X again, with
+    /// no tuning left of the set that made it wear 3/3.
+    #[test]
+    fn r1185002_a_set_radiant_ghoul_flickered_wears_its_doubled_summoned_face() {
+        let mut s = board(
+            "r1185002-ghoul-flicker",
+            json!({ "hand": [harmony.id, plain.id] }),
+            json!({
+                "hand": [plain.id],
+                "field": [{ "def": ghoul.id, "lane": 1, "radiant": true, "statsOverride": { "attack": 2, "health": 2 } }],
+            }),
+        );
+        let token = id_at(&s, P2, 1);
+        s.play(harmony.id.as_str(), json!({ "zone": 1 }));
+        assert_eq!(stats_of(&s, &token), (SET_TO, SET_TO, SET_TO));
+        let set = s.card(token.as_str()).clone();
+        assert!(jackioh_engine::zones::flicker_in_place(s.state_mut(), &set));
+        assert_eq!(
+            stats_of(&s, &token),
+            (4, 4, 4),
+            "R175, R444: the Flickered token is its summoned 2/2, doubled (R349), not the 3/3 set"
+        );
+        assert_eq!(s.card(token.as_str()).tuning, None);
+    }
+
+    /// R175: the same through Reborn, whose body is the card as it left, reset.
+    #[test]
+    fn r1185002_a_set_radiant_ghoul_returns_through_reborn_wearing_its_doubled_summoned_face() {
+        let mut s = board(
+            "r1185002-ghoul-reborn",
+            json!({ "hand": [harmony.id, plain.id] }),
+            json!({
+                "hand": [plain.id],
+                "field": [{ "def": ghoul.id, "lane": 1, "radiant": true, "statsOverride": { "attack": 2, "health": 2 } }],
+            }),
+        );
+        let token = id_at(&s, P2, 1);
+        s.play(harmony.id.as_str(), json!({ "zone": 1 }));
+        s.card_mut(token.as_str()).granted_keywords.push(Keyword::Reborn);
+        s.card_mut(token.as_str()).damage = SET_TO;
+        state_check(&mut sink_for(s.state_mut()));
+        assert_eq!(
+            stats_of(&s, &token),
+            (4, 4, 1),
+            "R175: back at 1 health as its summoned 2/2, doubled (R349), not the 3/3 set"
+        );
+        assert_eq!(s.card(token.as_str()).tuning, None);
     }
 
     #[test]

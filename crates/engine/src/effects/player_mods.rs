@@ -194,3 +194,30 @@ pub fn give_next_spell_keyword(args: GiveNextSpellKeywordArgs) -> Effect {
         );
     })
 }
+
+/// `starshipLaunchCosts`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct StarshipLaunchCostArgs {
+    /// What the launch costs (#144 Prepare For Liftoff's 0).
+    pub cost: i32,
+}
+
+/// R1852006 (Stinkyscape #144 Prepare For Liftoff): "Your Starship launch costs (N)." A
+/// `StarshipLaunchCost` player modifier on the controller, until a launch it prices spends it (expiry
+/// `used`): their next launch by its Activate costs N (`starship::launch_cost`, the least of several,
+/// never below 0). A Starship an effect awakens launches for nothing and spends none of it.
+pub fn starship_launch_costs(args: StarshipLaunchCostArgs) -> Effect {
+    Effect::new("starshipLaunchCosts", move |ctx| {
+        let player = ctx.controller;
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::Used,
+            ModifierKind::StarshipLaunchCost {
+                cost: args.cost.max(0),
+            },
+        );
+    })
+}

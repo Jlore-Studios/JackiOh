@@ -888,6 +888,46 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R1852000: a dead piece's copy merges into its owner's Dormant Starship, which the `fused` before it
+  // drew; the Starship's piece count rises with the next view.
+  starshipFused: {
+    animation: "jk-fuse-merge",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R1852003: the Starship launches where it stands, its Dormant badge gone and its name on its face.
+  starshipLaunched: {
+    animation: "jk-radiant-pulse",
+    durationMs: 600,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // Issue #1843 (R1843000): a card votes to remove a player; it flares where it stands, or the voted
+  // player's backrow when the viewer cannot see it, and the log counts the tally.
+  voteCast: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId> | backrow-<side>",
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
+  },
+  // R1843000: the cards agree, and the banner says the player is voted out before the result.
+  votedOut: {
+    animation: "jk-banner",
+    durationMs: 1200,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
+  // R1843002: the fleer's hero fades out of the universe under a banner, before the result.
+  fled: {
+    animation: "jk-exile-fade",
+    durationMs: 900,
+    testid: "hero-<side>",
+    fx: { recipe: "banner" },
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /**

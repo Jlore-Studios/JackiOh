@@ -42,6 +42,8 @@ import {
   brittleWords,
   distinctEnchantments,
   dormantWords,
+  STARSHIP_GLYPH,
+  starshipWords,
   enchantmentWords,
   stateBadges,
 } from "./cardState.ts";
@@ -690,6 +692,48 @@ describe("R1848000 Frozen forever: the frost badge says it never thaws, on eithe
     expect(thawing?.getAttribute("aria-label")).toBe(FROZEN_WORDS);
     const theirs = screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="frozen"]');
     expect(theirs?.getAttribute("aria-label")).toBe(FROZEN_FOREVER_WORDS);
+  });
+});
+
+/* -------------------------------------------------------------------------- R1852000 Starship */
+
+describe("R1852000 the Starship: a comet badge with its pieces on a Dormant Starship, and its launched name, from the view alone", () => {
+  it("R1852000 R1852005 a Dormant Starship wears the comet with its piece count on either seat, and a launched one prints the name it took", () => {
+    vi.useFakeTimers();
+    const pieces = [{ defId: "core-008" }, { defId: "core-011", radiant: true as const }];
+    renderBoard(
+      baseView({
+        you: emptySide("p1", {
+          units: [
+            unit("p1", { instanceId: "u1", defId: "core-008", slumber: {}, starship: { pieces }, canAct: false }),
+            unit("p1", { instanceId: "u2", defId: "core-008" }),
+            unit("p1", { instanceId: "u4", defId: "core-008", starship: { pieces, name: "Ember of Departure", launched: 1 } }),
+            null,
+            null,
+          ],
+        }),
+        opponent: emptySide("p2", {
+          units: [unit("p2", { instanceId: "u3", defId: "core-008", slumber: {}, starship: { pieces: [{ defId: "core-008" }] } }), null, null, null, null],
+        }),
+      }),
+    );
+    const root = screen.getByTestId(testid.card("u1"));
+    const badge = root.querySelector('.cf-state[data-state="starship"]');
+    expect(badge?.textContent).toBe(`${STARSHIP_GLYPH}2`);
+    expect(badge?.getAttribute("aria-label")).toBe(starshipWords(2, false));
+    expect(badge?.getAttribute("data-starship")).toBe("dormant");
+    // It is Dormant too, with the moon beside the comet.
+    expect(root.querySelector('.cf-state[data-state="dormant"]')).not.toBeNull();
+    expect(screen.getByTestId(testid.card("u2")).querySelector('.cf-state[data-state="starship"]')).toBeNull();
+    // The opponent's Dormant Starship shows its pieces too: the memory is public.
+    const theirs = screen.getByTestId(testid.card("u3")).querySelector('.cf-state[data-state="starship"]');
+    expect(theirs?.textContent).toBe(`${STARSHIP_GLYPH}1`);
+    // A launched Starship wears the launched comet and prints the name it took.
+    const launched = screen.getByTestId(testid.card("u4"));
+    const comet = launched.querySelector('.cf-state[data-state="starship"]');
+    expect(comet?.getAttribute("data-starship")).toBe("launched");
+    expect(comet?.getAttribute("aria-label")).toBe(starshipWords(2, true));
+    expect(launched.textContent).toContain("Ember of Departure");
   });
 });
 

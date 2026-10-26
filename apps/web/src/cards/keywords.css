@@ -47,6 +47,8 @@
   --kw-period-cloak: 3.6s;
   --kw-period-quake: 2.6s;
   --kw-period-rewind: 3s;
+  --kw-period-plate: 3.2s;
+  --kw-period-launch: 1.6s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -429,6 +431,16 @@
   animation: kw-trade-swap var(--kw-period-rewind) ease-in-out infinite;
 }
 
+/* R1852000: a Starship Piece's hull plate glints as it waits to be built in. */
+.cf .kw-fx[data-keyword-fx="Starship Piece"][data-kw-motion="on"] .kw-anim {
+  animation: kw-starship-piece-glint var(--kw-period-plate) ease-in-out infinite alternate;
+}
+
+/* R1852003: a launched Starship's rocket rides its thrust. */
+.cf .kw-fx[data-keyword-fx="Starship"][data-kw-motion="on"] .kw-anim {
+  animation: kw-starship-thrust var(--kw-period-launch) ease-in-out infinite;
+}
+
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
   animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
 }
@@ -715,6 +727,25 @@
   }
   50% {
     transform: translateX(6%);
+  }
+}
+
+@keyframes kw-starship-piece-glint {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.7;
+  }
+}
+
+@keyframes kw-starship-thrust {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4%);
   }
 }
 

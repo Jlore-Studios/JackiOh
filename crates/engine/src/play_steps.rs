@@ -1096,6 +1096,8 @@ fn gifted_hook_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         feng_shui_step(sink, run);
         gifted_program_step(sink, run);
         garden_step(sink, run);
+        // R1845001: the card played takes its hidden Nerfs, after a replacement and with its face set.
+        crate::effects::hidden_nerfs::land_hidden_nerfs(sink, &run.instance_id);
         run.hook_ids = Some(
             trigger_holders_with_hook(sink.state, HookName::OnPlayHook, None)
                 .into_iter()
@@ -1784,6 +1786,11 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
             .map(|n| crate::params::declared_or(sink.state, b, "buffs", n))
     });
 
+    // R1852007: whether the play lands on a Dormant Starship, read before it lands.
+    let onto_starship = run
+        .zone
+        .and_then(|zone| card_at(sink.state, zone))
+        .is_some_and(crate::starship::exiles_stacked_play);
     let placed = match run.zone {
         Some(zone) => {
             // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile.
@@ -1846,6 +1853,16 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    // R1852007: a Stack card played onto a Dormant Starship lands, is played and counted, and is exiled
+    // at once, before anything of it resolves: step 5 finds it gone, so its Cry is lost (R17). The
+    // Starship tops its zone again, still Dormant.
+    if placed && onto_starship {
+        if let Some(on_top) = find_instance(sink.state, &card.id).cloned() {
+            crate::zones::exile_to_pile(sink, on_top);
+        }
+        run.echo_queued = true;
+        return true;
+    }
     // R783010: a Crater Unit Locks the zone it was played into, before its Cry.
     crate::crater::lock_on_arrival(sink, &card.id);
     if placed

@@ -134,6 +134,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `played_ids_this_turn`, `played_earlier`, `was_played_this_turn` | the turn's plays, §6.2's Combo count, the one-shot gate of §5.1's "return to hand" spells |
 | `active_units_of`, `dormant_units_of`, `card_at`, `slots_of`, `slot_of` | the field, by lane (§3.2, R13) |
 | `units_on_field_of`, `is_slumbering`, `slumber_turns_of` | the Units filling a side's zones, Dormant ones included, which `active_units_of` leaves out; whether a card is Dormant and its countdown (§6.1, R1839000) |
+| `building_a_ship`, `dormant_starship_of`, `is_dormant_starship`, `launched_starship_of`, `is_launched_starship`, `starship_pieces_of`, `launch_cost`, `when_launched` | the Starship (§6.1, §6.2, R1852000–R1852006): whether a player has a Dormant Starship and which, a player's launched Starship, the pieces a Starship holds, what a launch costs now, and a piece's "When launched" trigger; the price rule is the verb `starship_launch_costs` |
 | `face_of`, `stats_with_buffs`, `unit_view` | a unit through the §10.4 layers, never off the instance |
 | `def_of`, `printed_cost`, `effective_cost`, `query_cost`, `own_cost`, `cost_now` | a definition and its costs (R65, R386, R396, R455) |
 | `tags_of(state, card)` | the card's tags now — its definition's plus what effects granted (R923); every instance-level tag read goes through it |
@@ -156,6 +157,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `freeze::frozen_forever(card)` | whether a Unit is Frozen forever, which never thaws (R1848000) |
 | `subsystems::feng_shui::{last_element, element_preview}` | the last-played elements and their `preview` lines (R982, Meditative #40) |
 | `subsystems::activation_paid(ctx)` | what an Activate paid (R384, C #21) |
+| `subsystems::completed_stage_of(ctx, event)`, `subsystems::quest_stages_of(state, card)`, `subsystems::quest_memory_of(card)` | the stage (1 for the first) a staged quest's own `questCompleted` names, its stages, and its line: the stage it stands at and its wait to hear back (R1854000, R1854004, Stinkyscape #7, #112) |
 
 Board facts live in `crates/engine/src/query.rs`; if the one you need is missing, add it there and
 test it there. Randomness goes through `ctx`'s rng and every pool through `catalog.query` (§3).

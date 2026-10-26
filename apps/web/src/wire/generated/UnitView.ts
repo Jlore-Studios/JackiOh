@@ -13,6 +13,7 @@ import type { Position } from "./Position";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
 import type { Slumber } from "./Slumber";
+import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 
@@ -65,6 +66,12 @@ slumber?: Slumber,
  * as `frozen` is. Absent otherwise. Only ever `Some(true)`.
  */
 frozenForever?: true, 
+/**
+ * R1852000, R1852005: the card is a Starship (public on the field on both seats): `pieces` the
+ * Starship Pieces fused into it, oldest first, and, once it has launched, `name`, the name it took.
+ * What the board's Starship badge and its list of pieces read. Absent otherwise.
+ */
+starship?: StarshipMemory, 
 /**
  * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
  * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.

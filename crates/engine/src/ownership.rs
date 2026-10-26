@@ -80,6 +80,10 @@ pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Playe
         zone,
         readable_from: Some(readable_from),
     });
+    // R1854002: a card taken from the other player is a steal for the thief's quests.
+    if from != thief {
+        crate::subsystems::quests::note_steal(sink, thief);
+    }
     true
 }
 
