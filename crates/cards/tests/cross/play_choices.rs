@@ -19,6 +19,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
+
+use super::{targets_of, tributes_of};
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use super::craft_fused;
@@ -65,26 +67,10 @@ fn plays_of(state: &GameState, card: &CardInstance) -> Vec<ActionBody> {
         .collect()
 }
 
-/// A play's `targets`, empty when it names none (TS `play.targets ?? []`).
-fn targets_of(action: &ActionBody) -> Vec<Selection> {
-    match action {
-        ActionBody::Play { targets, .. } => targets.clone().unwrap_or_default(),
-        _ => Vec::new(),
-    }
-}
-
 /// A play's `modes`, empty when it names none (TS `play.modes ?? []`).
 fn modes_of(action: &ActionBody) -> Vec<String> {
     match action {
         ActionBody::Play { modes, .. } => modes.clone().unwrap_or_default(),
-        _ => Vec::new(),
-    }
-}
-
-/// A play's `tributes`, empty when it names none (TS `play.tributes ?? []`).
-fn tributes_of(action: &ActionBody) -> Vec<String> {
-    match action {
-        ActionBody::Play { tributes, .. } => tributes.clone().unwrap_or_default(),
         _ => Vec::new(),
     }
 }

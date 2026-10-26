@@ -31,15 +31,6 @@ fn setup(opts: Value) -> Scenario {
     scenario(opts)
 }
 
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(g: &Scenario, player: &'static str, lane: i32) -> CardInstance {
-    g.unit(player, lane)
-        .unwrap_or_else(|| panic!("setup: {player} should hold a unit in lane {lane}"))
-}
-
 fn backrow_at(g: &Scenario, player: &'static str, lane: i32) -> CardInstance {
     g.backrow(player, lane)
         .unwrap_or_else(|| panic!("setup: {player} should hold a backrow card in lane {lane}"))
@@ -73,7 +64,7 @@ mod r30_a_stolen_twinspells_grant_is_its_new_controllers {
         g.end_turn();
 
         // p2 takes it with K-Pop Fanatic, so no Spell of p2's is in flight when control changes.
-        g.play(KPOP, json!({ "targets": at(&twinspell) }));
+        g.play(KPOP, json!({ "targets": pick::instance(&twinspell) }));
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P1);
         g.end_turn();
@@ -118,9 +109,9 @@ mod s6_2_a_start_of_turn_hook_belongs_to_its_controllers_turn {
             },
             "p2": { "hand": [VANILLA], "field": [{ "def": MROW, "lane": 1 }], "graveyard": [SEVEN_SEVEN], "library": LIBRARY },
         }));
-        let moths = unit_at(&g, "p1", 1);
-        let digger = unit_at(&g, "p1", 2);
-        let mrow = unit_at(&g, "p2", 1);
+        let moths = g.unit_at("p1", 1);
+        let digger = g.unit_at("p1", 2);
+        let mrow = g.unit_at("p2", 1);
         let p2_hand = g.hand("p2").len();
 
         // p1's start of turn queues Moths (lane 1), then Gravedigger (lane 2). Moths compels Mrow, which

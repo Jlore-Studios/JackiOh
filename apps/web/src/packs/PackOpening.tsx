@@ -8,8 +8,10 @@
 // shown. A refused open leaves the pack sealed on screen with the server's words beside it.
 //
 // The pack is a `PackObject` (#1663): the sealed button around it takes the tap and the swipe, and the
-// object draws the press and the tear. Once every card shows, the scene mounts the opening's two token
-// bars (`OpeningBars`, SPEC §14.5) above its actions.
+// object draws the press and the tear. Once the server has answered, the opening's two token bars
+// (`OpeningBars`, SPEC §14.5) sit pinned at the top of the viewport at their points before, and once
+// every card shows they play: each spent duplicate's points fly from its card into them, then they
+// fill (R1953000).
 //
 // REDUCED MOTION (the panel's setting or the system's) shows the results at once: no tear, no flip,
 // no hold and no effects. A skip-all shows the same, with the best card's sting played once.
@@ -38,6 +40,7 @@ import { CardBack, CardFace, faceModel } from "../cards/index.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { CosmeticLook, hasLook } from "../collection/CosmeticLook.tsx";
 import EquipButton from "../collection/EquipButton.tsx";
+import { flightsOf } from "../economy/bars.ts";
 import OpeningBars from "../economy/OpeningBars.tsx";
 import { resolveAnchor } from "../fx/anchors.ts";
 import { FX_DEFAULT_SEED, FX_INTENSITY_SCALE } from "../fx/constants.ts";
@@ -229,6 +232,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
       className="pack-scene"
       data-testid={packTestid.scene}
       data-motion={reduced ? "reduce" : "full"}
+      data-hud={opened === null ? undefined : "true"}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -292,7 +296,7 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
                       )}
                     </div>
                     <p className="pack-slot__outcome" data-testid={packTestid.outcome(index)}>
-                      {slotOutcome(slot)}
+                      {slotOutcome(slot, opened.bars.slotPoints[index] ?? 0)}
                     </p>
                     {/* R1833000: a cosmetic's own rarity, never its card's (R1333000), a chase marked. */}
                     {cosmetic === null ? null : (
@@ -336,7 +340,14 @@ export function PackScene({ pack, opened, busy, error, left, onTear, onNext, onC
         </p>
       )}
 
-      {all && opened !== null ? <OpeningBars bars={opened.bars} testid={packTestid.bars} /> : null}
+      {opened !== null ? (
+        <OpeningBars
+          bars={opened.bars}
+          flights={flightsOf(opened.bars, opened.slots.map((slot) => slot.rarity), packTestid.slot)}
+          play={all}
+          testid={packTestid.bars}
+        />
+      ) : null}
 
       <div className="pack-actions">
         {all ? null : (

@@ -13,6 +13,8 @@
 
 use jackioh_engine::testkit::*;
 
+use super::{fixture, register_fixture_script};
+
 const TIMMY: &str = "core-011";
 const BIGOT: &str = "core-002";
 const RIGHT_HOUSE: &str = "core-003";
@@ -47,10 +49,6 @@ fn count(s: &Scenario, type_: GameEventType) -> usize {
         .iter()
         .filter(|event| event.event_type() == type_)
         .count()
-}
-
-fn aim(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
 }
 
 fn exertion_json(s: &Scenario, card: &CardInstance) -> Value {
@@ -91,7 +89,7 @@ mod r42_and_r89_the_unit_whose_damage_instance_was_lethal {
         let hand_before = s.hand("p1").len();
 
         // Hit Job destroys it: no damage instance at all, so no killer and no draw.
-        s.play(HIT_JOB, json!({ "targets": aim(&dfender) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&dfender) }));
 
         s.expect_in_zone(&dfender, "graveyard");
         let destroyed = s
@@ -360,27 +358,6 @@ fn fixture_def(id: &str, type_: &str, face: Value) -> CardDef {
     }))
 }
 
-fn register_fixture_script(id: &str, script: Script) {
-    let mut all: IndexMap<String, CardScripts> = scripts::registered_scripts().clone();
-    all.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(all);
-}
-
-/// A fixture card: a transient def in the match state and its script in the registry.
-fn fixture(s: &mut Scenario, id: &str, type_: &str, script: Script) {
-    let face = json!({ "keywords": [], "text": id });
-    s.state_mut()
-        .transient_defs
-        .insert(id.to_string(), fixture_def(id, type_, face));
-    register_fixture_script(id, script);
-}
-
 /// A face-down trap of `player`'s in a backrow lane (R33).
 fn set_trap(s: &mut Scenario, def_id: &str, player: PlayerId, lane: i32) -> CardInstance {
     let row = Row::Backrow;
@@ -528,7 +505,7 @@ fn asking_window_trap(s: &mut Scenario, id: &str, then: &'static str) {
     fixture(
         s,
         id,
-        "Trap",
+        CardType::Trap,
         Script {
             triggers: vec![
                 TriggerDef::new(
@@ -568,6 +545,7 @@ fn asking_window_trap(s: &mut Scenario, id: &str, then: &'static str) {
             .collect(),
             ..Script::default()
         },
+        None,
     );
 }
 
@@ -584,7 +562,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "health": 20, "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "edge-r6-vaporize", "Trap", vaporize());
+        fixture(&mut s, "edge-r6-vaporize", CardType::Trap, vaporize(), None);
         set_trap(&mut s, "edge-r6-vaporize", PlayerId::P2, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
         s.card_mut(&sorcerer).granted_keywords.push(Keyword::Reborn);
@@ -611,7 +589,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": RIGHT_HOUSE, "lane": 2 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "edge-r6-shatter", "Trap", shatter());
+        fixture(&mut s, "edge-r6-shatter", CardType::Trap, shatter(), None);
         set_trap(&mut s, "edge-r6-shatter", PlayerId::P1, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
         let defender = must(s.unit("p2", 2), "p2's Right-house defender");
@@ -639,7 +617,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "health": 20, "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "edge-r6-turncoat", "Trap", turncoat());
+        fixture(&mut s, "edge-r6-turncoat", CardType::Trap, turncoat(), None);
         set_trap(&mut s, "edge-r6-turncoat", PlayerId::P2, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
 
@@ -665,7 +643,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "edge-r6-defector", "Trap", defector());
+        fixture(&mut s, "edge-r6-defector", CardType::Trap, defector(), None);
         set_trap(&mut s, "edge-r6-defector", PlayerId::P1, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
         let vanilla = must(s.unit("p2", 3), "p2's Mr. Vanilla");
@@ -699,7 +677,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "edge-r6-swapper", "Trap", swapper());
+        fixture(&mut s, "edge-r6-swapper", CardType::Trap, swapper(), None);
         set_trap(&mut s, "edge-r6-swapper", PlayerId::P2, 5);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
         let vanilla = must(s.unit("p2", 3), "p2's Mr. Vanilla");
@@ -789,7 +767,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
                 "library": [GIGA, GIGA],
             },
         }));
-        fixture(&mut s, "edge-r6-vaporize", "Trap", vaporize());
+        fixture(&mut s, "edge-r6-vaporize", CardType::Trap, vaporize(), None);
         set_trap(&mut s, "edge-r6-vaporize", PlayerId::P2, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
 
@@ -924,7 +902,7 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
             watcher(),
             AttackHealth { attack: 2, health: 2 },
         );
-        fixture(&mut s, "edge-r6-defector", "Trap", defector());
+        fixture(&mut s, "edge-r6-defector", CardType::Trap, defector(), None);
         let watcher_card = place_unit(&mut s, "edge-r7-watcher", PlayerId::P2, 2);
         set_trap(&mut s, "edge-r6-defector", PlayerId::P1, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
@@ -964,7 +942,7 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
             watcher(),
             AttackHealth { attack: 2, health: 2 },
         );
-        fixture(&mut s, "edge-r7-caller", "Trap", caller());
+        fixture(&mut s, "edge-r7-caller", CardType::Trap, caller(), None);
         set_trap(&mut s, "edge-r7-caller", PlayerId::P2, 1);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
         let p2_hand = s.hand("p2").len();
@@ -1149,8 +1127,8 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "cw8-prick", "Trap", prick());
-        fixture(&mut s, "cw8-snap", "Trap", snap());
+        fixture(&mut s, "cw8-prick", CardType::Trap, prick(), None);
+        fixture(&mut s, "cw8-snap", CardType::Trap, snap(), None);
         set_trap(&mut s, "cw8-prick", PlayerId::P2, 1);
         set_trap(&mut s, "cw8-snap", PlayerId::P2, 2);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");
@@ -1173,8 +1151,8 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
         }));
-        fixture(&mut s, "cw8-ask-prick", "Trap", ask_prick());
-        fixture(&mut s, "cw8-snap", "Trap", snap());
+        fixture(&mut s, "cw8-ask-prick", CardType::Trap, ask_prick(), None);
+        fixture(&mut s, "cw8-snap", CardType::Trap, snap(), None);
         set_trap(&mut s, "cw8-ask-prick", PlayerId::P2, 1);
         set_trap(&mut s, "cw8-snap", PlayerId::P2, 2);
         let sorcerer = must(s.unit("p1", 1), "p1's Twisted Sorcerer");

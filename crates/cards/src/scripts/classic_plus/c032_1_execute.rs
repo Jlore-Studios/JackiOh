@@ -66,13 +66,6 @@ mod tests {
     const UNBREAKABLE: &str = "classic-041";
     const FILLER: &str = "core-005";
 
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        match s.unit(player, lane) {
-            Some(unit) => json!([{ "pick": "instance", "instanceId": unit.id }]),
-            None => panic!("no unit in {player} lane {lane}"),
-        }
-    }
-
     fn destroyed(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -96,7 +89,7 @@ mod tests {
                     "p1": { "hand": [EXECUTE, FILLER] },
                     "p2": { "field": [{ "def": MENACE, "damage": 1 }, TIMMY] },
                 }));
-                let targets = at(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(EXECUTE, json!({ "targets": targets }));
                 assert_eq!(destroyed(&s), [MENACE]);
                 s.expect_in_zone(TIMMY, "field");
@@ -106,7 +99,7 @@ mod tests {
             fn s8_7_a_damaged_unit_of_your_own_is_a_target_too() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [EXECUTE, FILLER], "field": [{ "def": TIMMY, "damage": 2 }] } }));
-                let targets = at(&s, P1, 1);
+                let targets = pick::unit_at(&s, P1, 1);
                 s.play(EXECUTE, json!({ "targets": targets }));
                 assert_eq!(destroyed(&s), [TIMMY]);
             }
@@ -118,7 +111,7 @@ mod tests {
                     "p1": { "hand": [EXECUTE, FILLER] },
                     "p2": { "field": [MENACE, { "def": TIMMY, "damage": 1 }] },
                 }));
-                let targets = at(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.expect_refused(|s| s.play(EXECUTE, json!({ "targets": targets })));
             }
 
@@ -139,7 +132,7 @@ mod tests {
                     "p1": { "hand": [EXECUTE, FILLER] },
                     "p2": { "field": [{ "def": UNBREAKABLE, "damage": 1, "position": "DEF" }] },
                 }));
-                let targets = at(&s, P2, 1);
+                let targets = pick::unit_at(&s, P2, 1);
                 s.play(EXECUTE, json!({ "targets": targets }));
                 s.expect_in_zone(UNBREAKABLE, "field");
                 assert_eq!(s.stats(UNBREAKABLE).position, Position::Atk);

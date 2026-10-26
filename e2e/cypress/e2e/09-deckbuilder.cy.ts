@@ -4,7 +4,7 @@
 
 import { CARD_NAMES, TOKEN_NAMES, cardId, tokenId } from "../../support/cards.ts";
 import { INSTALLED_TRIO_NAME, mintId, type SavedDecksBody } from "../../support/commands.ts";
-import { accounts, constants, deckMirrorKey, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, constants, deckMirrorKey, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   DECK_COMPARE_SELECT,
   DECK_COUNT,
@@ -81,20 +81,12 @@ const sentence = {
 type Issue = { rule: string; message: string; deck?: number; cardId?: string };
 type ErrorBody = { error: { code: string; message: string; details?: unknown } };
 
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(account: E2EAccount): Record<string, string> {
-  return { authorization: `Bearer ${account.token}` };
-}
-
 /** A 422 is an assertion result, not a Cypress request failure. */
 function enqueue(account: E2EAccount, body: Record<string, unknown>): Cypress.Chainable<Cypress.Response<ErrorBody & { mode?: string }>> {
   return cy.request<ErrorBody & { mode?: string }>({
     method: "POST",
-    url: api("/api/queue"),
-    headers: bearer(account),
+    url: apiUrl("/api/queue"),
+    headers: bearerHeaders(account.token),
     body,
     failOnStatusCode: false,
   });
@@ -287,7 +279,7 @@ describe("09 deck workshop — L1 to L6 in the builder and at the queue, a compa
     });
 
     // R256 restores unconfirmed local drafts over the server copy.
-    cy.request<{ profile: { id: string } }>({ method: "GET", url: api("/api/auth/me"), headers: bearer(me) })
+    cy.request<{ profile: { id: string } }>({ method: "GET", url: apiUrl("/api/auth/me"), headers: bearerHeaders(me.token) })
       .its("body.profile.id")
       .then((profileId) => {
         const now = Date.now();
@@ -325,8 +317,8 @@ describe("09 deck workshop — L1 to L6 in the builder and at the queue, a compa
       for (const draft of drafts) {
         cy.request<ErrorBody>({
           method: "PUT",
-          url: api(`/api/decks/${draft.id}`),
-          headers: bearer(me),
+          url: apiUrl(`/api/decks/${draft.id}`),
+          headers: bearerHeaders(me.token),
           body: { name: draft.name, cards: draft.cards, catalogVersion: version },
           failOnStatusCode: false,
         }).should((response) => {
@@ -402,13 +394,13 @@ describe("09 deck workshop — L1 to L6 in the builder and at the queue, a compa
         expect(response.status, "R253: a legal deck queues Best of 1").to.eq(200);
         expect(response.body.mode).to.eq("bo1");
       });
-      cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(me) }).its("status").should("eq", 200);
+      cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(me.token) }).its("status").should("eq", 200);
 
       enqueue(me, { mode: "bo3", trioId: installed.trioId, seed }).should((response) => {
         expect(response.status, `R253: "${INSTALLED_TRIO_NAME}", three disjoint legal decks, queues Best of 3`).to.eq(200);
         expect(response.body.mode).to.eq("bo3");
       });
-      cy.request({ method: "DELETE", url: api("/api/queue"), headers: bearer(me) }).its("status").should("eq", 200);
+      cy.request({ method: "DELETE", url: apiUrl("/api/queue"), headers: bearerHeaders(me.token) }).its("status").should("eq", 200);
     });
   });
 });

@@ -1,12 +1,15 @@
 # The learn lane (#466, #1012; training/learn.md): the learned evaluation, retrained on fresh
 # self-play and promoted to main by the same gate as every AI, with no LLM anywhere in it
-# (docs/learned-eval.md D2). Weekly, and by dispatch (`gh workflow run learn.yml`). It runs with nobody
-# watching it and with main moving under it (training/learn.md, Running unattended):
+# (docs/learned-eval.md D2). One run after another (#1976: each starts the next as it ends, `next`),
+# daily to start the lane again if that chain stops, and by dispatch (`gh workflow run learn.yml`). It
+# runs with nobody watching it and with main moving under it (training/learn.md, Running unattended):
 #
 #   plan      names the export's seed base (`learned-<catalog>-<date>-<run>`, never a gate's or the dev
-#             set's, R1006002). A lane pull request still open is left to merge while its checks are
-#             green or running; one with a failed check, or open LEARN_PR_STALE_HOURS, is closed and the
-#             run goes on, so a stuck promotion never holds the lane
+#             set's, R1006002). A lane pull request with a failed check, or open LEARN_PR_STALE_HOURS,
+#             is closed and the run goes on, so a stuck promotion never holds the lane. One whose
+#             checks are green or running is left to merge, and the export goes ahead beside it: by the
+#             time this run gates, about 40 hours on, it has merged (and when it has not, this run's
+#             pass waits behind it, as its artifact)
 #   export    selfplay.yml, called: `games` games in `shards` jobs, one after another on the local
 #             runner, in five rounds; none with `export_run`, which retrains on an earlier run's
 #             export (its artifacts are kept 30 days)
@@ -23,6 +26,15 @@
 #             every lane. When main kept moving through every try, the run starts another on the same
 #             export (at most LEARN_CHAIN_MAX in a row). Each stage's report is kept as the run's
 #             `learn-<run>` artifact and in its summary, whether or not it passed.
+#   import    once the retrain has ended, however it ended: the export's games filed as development
+#             records (`cargo jackioh stats from-selfplay`, R1676000, folded by the export's own build
+#             as the retrain's positions are) and imported into production's card statistics as totals
+#             only (`jackioh-server stats-import --totals-only`, R1976000) over
+#             STATS_IMPORT_DATABASE_URL; without it, nothing is filed
+#   next      the next run, started as this one ends, unless another is already on its way (a chain
+#             on this export, or the schedule's) or this one took under LEARN_NEXT_MIN_MINUTES (it
+#             broke early: the daily schedule tries again), so the PC is always exporting, retraining
+#             or gating while it is idle
 #   watch     when CI finishes red on the lane's pull request: its failed jobs run once more (a flaky
 #             test); red again, the pull request is closed with the failed jobs named, and a run on the
 #             same export starts (at most LEARN_CHAIN_MAX in a row), on main as it is by then.
@@ -30,9 +42,9 @@
 # Every job runs on the owner's PC, the local runner (`jackioh-selfplay-local`, bot/machine/README.md,
 # The local runner), and none on GitHub's runners. It takes one job at a time, and only while the PC is
 # otherwise idle, so a run's 100,000 games take about 40 hours of an idle PC (about 2,500 games an hour
-# on its six CPUs) and a week's run may take several days. A job no runner takes in 24 hours (the PC
-# off, asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next week's
-# run comes anyway (training/learn.md, Running unattended).
+# on its six CPUs) and a run may take several days. A job no runner takes in 24 hours (the PC off,
+# asleep or busy all day) GitHub fails; the lane goes on with what finished, and the next run comes
+# anyway (training/learn.md, Running unattended).
 #
 # Pushing ai/learn and opening its pull request take LEARN_LANE_TOKEN, a fine-grained token that can
 # write contents and pull requests on this repository alone (a pull request opened with the run's
@@ -43,7 +55,7 @@ name: learn
 
 on:
   schedule:
-    - cron: "23 6 * * 1"
+    - cron: "23 6 * * *"
   workflow_dispatch:
     inputs:
       games:
@@ -82,6 +94,8 @@ env:
   LEARN_GATE_TRIES: "3"
   # Runs the lane starts by itself on one export, one after another.
   LEARN_CHAIN_MAX: "2"
+  # A run that took less than this broke early: it starts no next run, and the schedule tries again.
+  LEARN_NEXT_MIN_MINUTES: "60"
 
 # A watch run never waits behind a retrain, nor replaces one waiting to start.
 concurrency:
@@ -119,14 +133,15 @@ jobs:
               | select((.conclusion // "") | test("^(FAILURE|TIMED_OUT|CANCELLED|STARTUP_FAILURE|ACTION_REQUIRED)$"))
               | .name] | unique | join(", ")')
             if [ -z "$failed" ] && [ "$age" -lt $((LEARN_PR_STALE_HOURS * 3600)) ]; then
-              echo "the learn lane's pull request #$number is open and not failing: it merges first" >> "$GITHUB_STEP_SUMMARY"
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              exit 0
+              # It merges while this run exports; should it still be open when this run gates, this
+              # run's pass waits behind it (the retrain's "a promotion still open" step).
+              echo "the learn lane's pull request #$number is open and not failing: it merges while this run exports" >> "$GITHUB_STEP_SUMMARY"
+            else
+              why=${failed:+"its checks failed ($failed)"}
+              why=${why:-"it has been open more than $LEARN_PR_STALE_HOURS hours"}
+              gh pr close "$number" -R "$REPO" --comment "The learn lane closes this promotion: $why. Run ${RUN} retrains on main as it is now (training/learn.md, Running unattended)."
+              echo "closed the lane's pull request #$number: $why" >> "$GITHUB_STEP_SUMMARY"
             fi
-            why=${failed:+"its checks failed ($failed)"}
-            why=${why:-"it has been open more than $LEARN_PR_STALE_HOURS hours"}
-            gh pr close "$number" -R "$REPO" --comment "The learn lane closes this promotion: $why. Run ${RUN} retrains on main as it is now (training/learn.md, Running unattended)."
-            echo "closed the lane's pull request #$number: $why" >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -n "$EXPORT_RUN" ]; then
             # An earlier run's export, retrained on again: its seed names its shards' artifacts.
@@ -172,6 +187,7 @@ jobs:
     permissions:
       contents: read
       actions: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -286,8 +302,28 @@ jobs:
             echo "::error::learn-promote.sh stopped (exit $status) before it decided anything"
             exit 1
           fi
-      - name: deliver (push ai/learn, open its pull request, auto-merge)
+      # A pass while the lane's last promotion is still open (its checks green or running, as the
+      # plan left it, about 40 hours ago) waits behind it: pushing ai/learn again would close it. The
+      # pass stays this run's artifact (promotion.patch), and the next run gates on main once that
+      # promotion has merged.
+      - name: a promotion still open, so this one waits
+        id: waits
         if: ${{ steps.gate.outputs.stage == 'ready' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list -R "$REPO" --head ai/learn --state open --json number --jq '.[0].number // empty')
+          echo "open=$open" >> "$GITHUB_OUTPUT"
+          if [ -n "$open" ]; then
+            echo "::warning::the gate passed, but the lane's pull request #$open is still open: this promotion waits behind it, as the run's artifact (promotion.patch)"
+            echo "the gate passed behind the open promotion #$open: kept as the artifact \`promotion.patch\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "no promotion open: deliver goes on"
+          fi
+      - name: deliver (push ai/learn, open its pull request, auto-merge)
+        if: ${{ steps.gate.outputs.stage == 'ready' && steps.waits.outputs.open == '' }}
         env:
           LEARN_LANE_TOKEN: ${{ secrets.LEARN_LANE_TOKEN }}
           REPO: ${{ github.repository }}
@@ -353,6 +389,124 @@ jobs:
             crates/ai/src/learned/weights.json
           if-no-files-found: ignore
           retention-days: 90
+
+  import:
+    name: file the export's games (stats-import --totals-only)
+    needs: [plan, export, retrain]
+    # Once the retrain has ended, however it ended, so the AI never waits on it. Only for a run that
+    # played an export: a run on an earlier one's (export_run) filed nothing new.
+    if: ${{ !cancelled() && needs.plan.outputs.run == 'true' && !inputs.export_run }}
+    runs-on: jackioh-selfplay-local
+    # The PC's runner slows a job to half a CPU while the PC is busy.
+    timeout-minutes: 1440
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - id: db
+        name: the stats database
+        env:
+          DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so the export's games are filed nowhere (training/learn.md, Setting it up)"
+            echo "set=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "set=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: ${{ steps.db.outputs.set == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - if: ${{ steps.db.outputs.set == 'true' }}
+        uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - if: ${{ steps.db.outputs.set == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: selfplay-${{ needs.plan.outputs.seed }}-*
+          path: ${{ runner.temp }}/export
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+      # The build that played the export files it, as it folds the retrain's positions, so a rules
+      # change merged since drops none of its games (R1676000). Kept 3 days; past that, main's build.
+      - if: ${{ steps.db.outputs.set == 'true' }}
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: selfplay-jackioh
+          path: ${{ runner.temp }}/exporter
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+      - name: file the games (cargo jackioh stats from-selfplay)
+        id: file
+        if: ${{ steps.db.outputs.set == 'true' }}
+        run: |
+          set -euo pipefail
+          mapfile -t logs < <(find "$RUNNER_TEMP/export" -name 'selfplay-*.jsonl' | sort -V)
+          if [ "${#logs[@]}" = 0 ]; then
+            echo "no shard of the export finished: nothing to file" >> "$GITHUB_STEP_SUMMARY"
+            echo "filed=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          bin="$RUNNER_TEMP/exporter/target/release/jackioh"
+          if ! tar -xzf "$RUNNER_TEMP/exporter/jackioh.tgz" -C "$RUNNER_TEMP/exporter" 2> /dev/null \
+            || ! "$bin" stats from-selfplay --help > /dev/null 2>&1; then
+            cargo build --release -q -p jackioh-tools
+            bin=target/release/jackioh
+          fi
+          "$bin" stats from-selfplay "${logs[@]}" --out "$RUNNER_TEMP/records.jsonl" > "$RUNNER_TEMP/filed.txt"
+          cat "$RUNNER_TEMP/filed.txt"
+          {
+            echo "## The export's games, filed (${#logs[@]} shards)"
+            echo '```'
+            tail -n 20 "$RUNNER_TEMP/filed.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "filed=$(grep -c . "$RUNNER_TEMP/records.jsonl" || true)" >> "$GITHUB_OUTPUT"
+      - name: import them (jackioh-server stats-import --totals-only)
+        if: ${{ steps.db.outputs.set == 'true' && steps.file.outputs.filed != '0' }}
+        env:
+          DATABASE_URL: ${{ secrets.STATS_IMPORT_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          cargo build --release -q -p jackioh-server
+          target/release/jackioh-server stats-import --totals-only "$RUNNER_TEMP/records.jsonl" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  next:
+    name: start the next run
+    needs: [plan, export, retrain, import]
+    if: ${{ !cancelled() && github.event_name != 'workflow_run' }}
+    runs-on: jackioh-selfplay-local
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          started=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .run_started_at)
+          minutes=$(( ($(date -u +%s) - $(date -u -d "$started" +%s)) / 60 ))
+          if [ "$minutes" -lt "$LEARN_NEXT_MIN_MINUTES" ]; then
+            echo "::warning::this run took $minutes minutes, under $LEARN_NEXT_MIN_MINUTES: it broke early, so it starts no next run, and the daily schedule tries again"
+            exit 0
+          fi
+          # A run on this export that `main kept moving` or `watch` started, or the schedule's, is
+          # already on its way: it follows this one, and its own `next` comes after it.
+          others=$(gh api "repos/$REPO/actions/workflows/learn.yml/runs?per_page=30" --jq '[.workflow_runs[]
+            | select(.id != '"$RUN_ID"' and .event != "workflow_run")
+            | select([.status] | inside(["queued", "pending", "waiting", "requested", "in_progress"]))] | length')
+          if [ "$others" != 0 ]; then
+            echo "another learn run is on its way, and follows this one" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh workflow run learn.yml -R "$REPO" --ref main
+          echo "started the next run" >> "$GITHUB_STEP_SUMMARY"
 
   watch:
     name: watch the lane's pull request

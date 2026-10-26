@@ -129,13 +129,6 @@ mod tests {
         vec![FODDER; count]
     }
 
-    fn on_unit(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit for {player} in lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     mod spiteful_stab {
         use super::*;
 
@@ -207,7 +200,7 @@ mod tests {
                 "p1": { "hand": [STAB], "health": 20, "exile": pile_of(1) },
                 "p2": { "field": [SPONGE] }
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(STAB, json!({ "targets": targets }));
             // 2 + floor(10/5) + 1 = 5.
             s.expect_stats(SPONGE, json!({ "health": 4, "maxHealth": 9 }));
@@ -218,7 +211,7 @@ mod tests {
             // #25 4-mana 7/7 prints Armor 7; 2 + floor(10/5) = 4 is fully absorbed and R63 makes it a
             // non-event rather than four separate hits.
             let mut s = board(json!({ "p1": { "hand": [STAB], "health": 20 }, "p2": { "field": ["core-025"] } }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(STAB, json!({ "targets": targets }));
             s.expect_stats("core-025", json!({ "health": 7, "maxHealth": 7 }));
         }
@@ -293,7 +286,7 @@ mod tests {
                 "p1": { "hand": [{ "def": STAB, "radiant": true }], "health": 24, "exile": pile_of(1) },
                 "p2": { "field": [SPONGE] },
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(STAB, json!({ "targets": targets }));
             // 4 + floor(6/3) + 2 × 1 = 8.
             s.expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));

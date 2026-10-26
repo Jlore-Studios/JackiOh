@@ -25,19 +25,7 @@ const RUSH_TOKEN: &str = "core-t-rush";
 const BREAD: &str = "core-t-bread";
 const LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
-use super::scenario;
-
-/// `[{ pick: "instance", instanceId: card.id }]`.
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} lane {lane} is empty"),
-    }
-}
+use super::{register_fixture_script, scenario};
 
 fn unit_id(g: &Scenario, player: PlayerId, lane: i32) -> Option<String> {
     g.unit(player, lane).map(|card| card.id.clone())
@@ -65,18 +53,6 @@ fn hits_from(events: &[GameEvent], source: &str) -> Vec<GameEvent> {
 
 fn events_json(events: &[GameEvent]) -> String {
     serde_json::to_string(events).expect("events serialise")
-}
-
-fn register_fixture_script(id: &str, script: Script) {
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
 }
 
 /// A Core-set Common definition named after its id, with the same face on both sides.
@@ -137,20 +113,20 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
             },
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
-        let token = unit_at(&g, PlayerId::P1, 1);
+        let token = g.unit_at(PlayerId::P1, 1);
         // 3/3 printed, +3/+3 from the radiant Farm's aura, 4 damage taken: alive at 2.
         g.expect_stats(&token.id, json!({ "attack": 6, "maxHealth": 6, "health": 2 }));
 
         // Felinor Fiender (Stack) goes on top of it: the token is dormant and the aura stops reaching
         // it, but nothing hit it and the check does not look under the pile.
         g.play(FIENDER, json!({ "zone": 1 }));
-        let fiender = unit_at(&g, PlayerId::P1, 1);
+        let fiender = g.unit_at(PlayerId::P1, 1);
         assert_eq!(fiender.def_id, FIENDER);
         assert!(!destroyed_ids(&g).contains(&token.id));
         g.expect_in_zone(&token.id, "field");
 
         // The top leaves; the token resumes on top of the zone, and the Farm's aura reaches it again.
-        g.play(HIT_JOB, json!({ "targets": at(&fiender) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(token.id.clone()));
         g.expect_stats(&token.id, json!({ "attack": 6, "maxHealth": 6, "health": 2 }));
     }
@@ -167,15 +143,15 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
             },
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
-        let buried = unit_at(&g, PlayerId::P1, 1);
-        let felinor = unit_at(&g, PlayerId::P1, 2);
+        let buried = g.unit_at(PlayerId::P1, 1);
+        let felinor = g.unit_at(PlayerId::P1, 2);
         // 5/7 printed plus Big Felinor's 3/10, with 10 damage: alive at 7.
         g.expect_stats(&buried.id, json!({ "attack": 8, "maxHealth": 17, "health": 7 }));
 
         g.play(FIENDER, json!({ "zone": 1 }));
         assert_ne!(unit_id(&g, PlayerId::P1, 1), Some(buried.id.clone()));
 
-        g.play(HIT_JOB, json!({ "targets": at(&felinor) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&felinor) }));
         g.expect_in_zone(&felinor.id, "graveyard");
         assert!(!destroyed_ids(&g).contains(&buried.id));
         g.expect_in_zone(&buried.id, "field");
@@ -206,9 +182,9 @@ mod r13_the_state_check_never_reaches_under_a_stack_pile {
             .expect("the buried Fiender")
             .granted_keywords
             .push(Keyword::Reborn);
-        let felinor = unit_at(&g, PlayerId::P1, 2);
+        let felinor = g.unit_at(PlayerId::P1, 2);
 
-        g.play(HIT_JOB, json!({ "targets": at(&felinor) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&felinor) }));
         g.expect_in_zone(&felinor.id, "graveyard");
 
         // B is not on the field, so it neither dies nor returns; A still acts for lane 1. R175 puts a
@@ -232,7 +208,7 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
             },
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
-        let bread = unit_at(&g, PlayerId::P1, 1);
+        let bread = g.unit_at(PlayerId::P1, 1);
         // The card as it stands, written in the state.
         let live = g.card(&bread.id).id.clone();
         find_instance_mut(g.state_mut(), &live)
@@ -241,7 +217,7 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
             .push(Keyword::Reborn);
         assert_eq!(g.stats(&bread.id).max_health, 3);
 
-        g.play(HIT_JOB, json!({ "targets": at(&bread) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&bread) }));
 
         // "Returns ... at 1 health without Reborn", a unit token included: 3/3 with 2 damage.
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(bread.id.clone()));
@@ -311,7 +287,7 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
         // dormant when the Fiender died, registering nothing (R153), and R212 answers an event "as the
         // board stood when it happened": like a Reborn body, it comes back into play because of that
         // death and does not see it.
-        g.play(HIT_JOB, json!({ "targets": at(&fiender) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         let hits = hits_from(g.last_events(), &watcher.id);
         assert_eq!(hits, Vec::<GameEvent>::new(), "{}", events_json(g.last_events()));
@@ -339,7 +315,7 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
         // Hit Job kills the Fiender inside its own resolution, so the watcher resumes before step 7's
         // `cardResolved`: it lay dormant as the play began and registered nothing then (R153), and R119
         // counts it with the arrivals the play's `cardResolved` names, as it does a Reborn body.
-        g.play(HIT_JOB, json!({ "targets": at(&fiender) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         let hits = hits_from(g.last_events(), &watcher.id);
         assert_eq!(hits, Vec::<GameEvent>::new(), "{}", events_json(g.last_events()));
@@ -426,7 +402,7 @@ mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3
         let watcher = place_hit_watcher(&mut g, "fixture:r11-hit-watcher", 1);
         let fiender = g.card(FIENDER).clone();
         g.play(&fiender.id, json!({ "zone": 1 }));
-        g.play(HIT_JOB, json!({ "targets": at(&fiender) }));
+        g.play(HIT_JOB, json!({ "targets": pick::instance(&fiender) }));
         // The Fiender died on top of the watcher, which resumed then and answered nothing of it.
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         assert_eq!(g.state().players.p2.hero.health, 20);

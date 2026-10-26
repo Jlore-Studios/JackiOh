@@ -71,8 +71,9 @@ evaluation prefers) on every determinization, and plays the first action of the 
 re-plans after every action, so a lethal the solver proves is played trimmed to the actions it needs
 (`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action it
 still wins without, R1965000). A free play that changes nothing (a (0) Spell back from the graveyard under
-In Too Deep's reward L, R454, or The Coin) could otherwise open the same lethal at every decision. Each line tries its moves in move order (`candidates.rs`): attacks on the
-enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
+In Too Deep's reward L, R454, or The Coin) could otherwise open the same lethal at every decision. Each line
+tries its moves in move order (`candidates.rs`): attacks on the enemy hero, kills the attacker survives, each
+attacker's best kill (its target, or with Cleave a neighbour, #1821) at an even trade or better by the
 opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
 of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
@@ -345,7 +346,9 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   fell back (`DecisionReason::Fallback`); `sim_panics` and `first_sim_panic` are the panics `decide`'s
   search caught and the first one's message (#1429).
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
-  and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
+  and its teammate can (a round seat that has not ended, can afford it and has a place for it: an
+  open zone of its row or, failing that, any play of it the engine lists, onto a Stack, into the
+  backrow with Flying, onto an Equip host or a stack base, or into a zone its Tribute frees), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
   seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
   rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays

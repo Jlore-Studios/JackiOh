@@ -149,12 +149,12 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     live(state, &card.id)
 }
 
-fn unit_at(state: &GameState, lane: i32, player: PlayerId) -> Option<CardInstance> {
+fn unit_in(state: &GameState, lane: i32, player: PlayerId) -> Option<CardInstance> {
     card_at(state, slot(player, Row::Units, lane)).cloned()
 }
 
 fn keyword_kinds_at(state: &GameState, lane: i32) -> Vec<KeywordKind> {
-    unit_at(state, lane, PlayerId::P1)
+    unit_in(state, lane, PlayerId::P1)
         .map(|card| card.granted_keywords.iter().map(Keyword::kind).collect())
         .unwrap_or_default()
 }
@@ -208,7 +208,7 @@ mod summon_with_random_keywords_r21_s7_80 {
             RunOptions::default(),
         );
 
-        let token = unit_at(&state, 1, PlayerId::P1);
+        let token = unit_in(&state, 1, PlayerId::P1);
         assert_eq!(token.as_ref().map(|card| card.def_id.as_str()), Some(RUSH_TOKEN));
         let kinds = keyword_kinds_at(&state, 1);
         assert_eq!(kinds.len(), 2);
@@ -305,7 +305,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
 
         // R64: the leftmost free zone, and one `summoned` event for it.
         assert_eq!(summoned_lanes(&events), vec![1]);
-        let copy = unit_at(&state, 1, PlayerId::P1).expect("the copy");
+        let copy = unit_in(&state, 1, PlayerId::P1).expect("the copy");
         let source = live(&state, &source.id);
         assert_ne!(copy.id, source.id);
         assert_eq!(copy.def_id, source.def_id);
@@ -377,7 +377,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
             RunOptions::default(),
         );
 
-        let copy = unit_at(&state, 1, PlayerId::P1).expect("the copy");
+        let copy = unit_in(&state, 1, PlayerId::P1).expect("the copy");
         assert_eq!(copy.damage, 0);
         assert_eq!(
             copy.exertion,
@@ -428,7 +428,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
             },
         );
 
-        let copy = unit_at(&state, 1, PlayerId::P1).expect("the copy");
+        let copy = unit_in(&state, 1, PlayerId::P1).expect("the copy");
         assert!(copy.vanilla);
         assert!(copy.granted_keywords.is_empty());
         // R781003: a copy made Vanilla is at its printed stats, so the buffs R57 carries go.
@@ -462,7 +462,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         );
 
         assert_eq!(
-            unit_at(&state, 2, PlayerId::P1).map(|card| card.def_id),
+            unit_in(&state, 2, PlayerId::P1).map(|card| card.def_id),
             Some(crier().id)
         );
         assert!(events_of_type(&events, GameEventType::Damage).is_empty());
@@ -543,7 +543,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
 
         assert!(events.is_empty());
         assert_eq!(state.next_id, ids_before);
-        assert!(unit_at(&state, 1, PlayerId::P1).is_none());
+        assert!(unit_in(&state, 1, PlayerId::P1).is_none());
     }
 }
 
@@ -567,7 +567,7 @@ mod summon_random_s5_1_s10_7_r60_67 {
                     RunOptions::default(),
                 );
                 assert_eq!(events_of_type(&events, GameEventType::Summoned).len(), 1);
-                unit_at(&state, 1, PlayerId::P1).map(|card| card.def_id)
+                unit_in(&state, 1, PlayerId::P1).map(|card| card.def_id)
             })
             .collect();
 
@@ -599,7 +599,7 @@ mod summon_random_s5_1_s10_7_r60_67 {
             );
 
             assert_eq!(
-                unit_at(&state, 1, PlayerId::P1).map(|card| card.def_id),
+                unit_in(&state, 1, PlayerId::P1).map(|card| card.def_id),
                 Some(pool_b().id)
             );
         }
@@ -706,8 +706,8 @@ mod summon_random_s5_1_s10_7_r60_67 {
             RunOptions::default(),
         );
         assert_eq!(
-            unit_at(&second, 1, PlayerId::P1).map(|card| card.def_id),
-            unit_at(&first, 1, PlayerId::P1).map(|card| card.def_id)
+            unit_in(&second, 1, PlayerId::P1).map(|card| card.def_id),
+            unit_in(&first, 1, PlayerId::P1).map(|card| card.def_id)
         );
     }
 

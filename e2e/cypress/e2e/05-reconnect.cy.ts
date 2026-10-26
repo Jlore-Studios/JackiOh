@@ -11,7 +11,7 @@ import {
   TURN_CLOCK_SECONDS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { CARD_NAMES } from "../../support/cards.ts";
-import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
   END_TURN,
   GRACE_OPPONENT,
@@ -32,9 +32,6 @@ import {
 import type { ActionInput, Lane, PlayerId, Side } from "../../support/types.ts";
 
 // Local scaffolding; ASK items belong in `e2e/support/**`.
-
-/** ASK: A6 supplies ready-made tokens; localStorage must survive `cy.reload()`. */
-const SESSION_STORAGE_KEY = "jackioh.e2e.session";
 
 /** Seat 2 lives in Node for the whole file; `tasks/index.ts` resets the sockets per spec. */
 const SEAT_TWO = "seat-two";
@@ -60,22 +57,6 @@ const PROFESSOR_CURVATURE = spec8Name(77);
 
 /** R48/R65's live discount has no `(next turn)` suffix. */
 const CURVATURE_LIVE_LABEL = "(4)+ Cost cards cost (1) less";
-
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
-
-function visitAs(token: string, path: string): void {
-  cy.visit(path, {
-    onBeforeLoad(win) {
-      win.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-    },
-  });
-}
 
 // Reading seat 2's socket.
 
@@ -238,14 +219,14 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(seatOne.token),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
         body: { mode: "bo1", deckId: seatOneDeck, seed },
       }).then((created) => {
         cy.request<{ matchId: string; seat: string }>({
           method: "POST",
-          url: api(`/api/rooms/${created.body.code}/join`),
-          headers: bearer(seatTwo.token),
+          url: apiUrl(`/api/rooms/${created.body.code}/join`),
+          headers: bearerHeaders(seatTwo.token),
           body: { mode: "bo1", deckId: seatTwoDeck },
         }).then((joined) => {
           expect(joined.body.seat, "the joiner is seat 2 (§9.5)").to.eq(SEAT_TWO_ID);
@@ -263,7 +244,7 @@ describe("05 reconnect — a networked game reloaded mid-prompt", () => {
         token: seatTwo.token,
         matchId,
       });
-      visitAs(seatOne.token, routes.match(matchId));
+      cy.visitAs(seatOne, routes.match(matchId));
     });
 
     // R9/R265 mulligans open together; answer browser first, then socket.

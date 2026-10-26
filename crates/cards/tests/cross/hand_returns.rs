@@ -33,7 +33,7 @@ const CRAFT: &str = "core-099";
 const MENACE: &str = "core-019";
 const CHAOS: &str = "core-095";
 
-use super::scenario;
+use super::{fixture, scenario};
 
 /// Whether a base #95's single roll at `cursor` is `effect`, the pick 095's own tests use (R28).
 fn rolls(seed: &str, cursor: u32, effect: &str) -> bool {
@@ -322,39 +322,6 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
 const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
 const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
 const RENO: &str = "core-053";
-
-/// A fixture card: a transient def in the match state and its script in the registry.
-fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: Option<AttackHealth>) {
-    let stats = stats.unwrap_or(AttackHealth { attack: 2, health: 2 });
-    let face = if type_ == CardType::Unit {
-        json!({ "attack": stats.attack, "health": stats.health, "keywords": [], "text": id })
-    } else {
-        json!({ "keywords": [], "text": id })
-    };
-    let def: CardDef = json_as(json!({
-        "id": id,
-        "index": id,
-        "name": id,
-        "set": "Core",
-        "type": type_,
-        "tags": [],
-        "rarity": "Common",
-        "token": false,
-        "cost": 0,
-        "base": face.clone(),
-        "radiant": face,
-    }));
-    s.state_mut().transient_defs.insert(id.to_string(), def);
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
-}
 
 mod r155_5_1_an_end_of_turn_return_belongs_to_the_turn_the_spell_was_played_on {
     use super::*;

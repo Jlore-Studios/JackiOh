@@ -497,11 +497,14 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
 
     With `--companions`, each other bot (Squishy, #60) is swept (with `--sweep`) and drawn by a
     process of its own (`_companions`), and its section goes into the issue apart from the night
-    bot's. `--section-only` is that process: it prints this bot's section and writes nothing."""
+    bot's. `--section-only` is that process: it prints this bot's section and writes nothing.
+    With `--runners-every`, the issue's runners section is redrawn alone that often between the
+    rewrites (`dashboard.refresh_runners`), so it is never older than that."""
     if getattr(args, "section_only", False):
         print(dashboard_mod.section(_ctx(cfg, write=False)))
         return 0
     every = max(0, int(getattr(args, "every", 0) or 0))
+    runners = max(0, int(getattr(args, "runners_every", 0) or 0))
     deadline = time.monotonic() + max(0, int(getattr(args, "for_seconds", 0) or 0))
     since = _run_created(cfg)
     if getattr(args, "controller", False) and cfg.controller:
@@ -535,7 +538,15 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
             print(redact(f"::warning::the disk issue was not settled: {exc}"), flush=True)
         if not every or time.monotonic() + every > deadline:
             return 0
-        time.sleep(every)
+        due = time.monotonic() + every
+        while runners and time.monotonic() + runners < due:
+            time.sleep(runners)
+            try:
+                note = dashboard_mod.refresh_runners(_ctx(cfg))
+                print(redact(f"runners: {note}"), flush=True)
+            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
+                print(redact(f"::warning::the runners were not redrawn: {exc}"), flush=True)
+        time.sleep(max(0.0, due - time.monotonic()))
 
 
 def _stats_sections(cfg: Config, args: argparse.Namespace) -> Any:
@@ -806,9 +817,12 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
     dashboard = sub.add_parser("dashboard", help="rewrite the pinned status issue (bot-status "
-                               "runs it every five minutes)")
+                               "runs it every five minutes, its runners every two)")
     dashboard.add_argument("--every", type=int, default=0,
                            help="seconds between rewrites; 0 rewrites it once")
+    dashboard.add_argument("--runners-every", type=int, default=0,
+                           help="seconds between redraws of the runners section alone, between "
+                           "the rewrites; 0 draws it only with them")
     dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
                            help="how long to keep rewriting it, in seconds")
     dashboard.add_argument("--sweep", action="store_true",

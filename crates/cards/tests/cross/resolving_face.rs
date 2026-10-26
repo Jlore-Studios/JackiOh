@@ -35,18 +35,6 @@ const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-/// The one-instance selection list naming `id`.
-fn at(id: &str) -> Value {
-    json!([{ "pick": "instance", "instanceId": id }])
-}
-
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
-
 fn backrow_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
     match g.backrow(player, lane) {
         Some(card) => card.clone(),
@@ -142,7 +130,7 @@ mod r213_gifted_programs_first_cheap_card_is_its_controllers_first_of_the_turn {
         // p1 takes the Gifted Program, and has played nothing costing 1 or less this turn: an Activate
         // plays no card. Stockpile is p1's first cheap card, so it resolves its radiant text.
         g.state_mut().players.p1.mana.current = 1;
-        g.activate(CHURCH, json!({ "targets": at(&gifted) }));
+        g.activate(CHURCH, json!({ "targets": pick::id(&gifted) }));
         assert_eq!(g.card(gifted.as_str()).controller, PlayerId::P1);
         let stockpile = g.card(STOCKPILE).id.clone();
         let hand_before = g.hand(PlayerId::P1).len();
@@ -302,7 +290,7 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
                 .map(|held| held.id.clone()),
             "setup: the crafted card",
         );
-        let panther = unit_at(&g, PlayerId::P2, 1).id;
+        let panther = g.unit_at(PlayerId::P2, 1).id;
         let hero = json!({ "pick": "hero", "player": "p2" });
 
         // It costs 0, so it is the first card costing 1 or less this turn: step 3 makes it Radiant, and
