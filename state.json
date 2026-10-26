@@ -2657,13 +2657,21 @@
       }
     },
     "1985": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T08:18:51Z",
       "issue": 1895,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "claude-5",
       "queued_at": "2026-10-26T09:08:31Z",
+      "run_id": "pending:a91728df-1793005790",
       "self_check_findings": [],
+      "started_at": "2026-10-26T09:10:43Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -2686,9 +2694,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T08:59:46Z",
+    "at": "2026-10-26T09:10:43Z",
     "url": "",
-    "what": "revise #1963 on claude-7"
+    "what": "review #1985 on claude-5"
   },
   "last_sweep": {
     "at": "2026-10-26T08:55:10Z",
