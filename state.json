@@ -1803,7 +1803,7 @@
       "provider": "claude-3",
       "queued_at": "2026-10-26T00:34:56Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:643c716d-1792975520",
+      "run_id": "40250963155",
       "started_at": "2026-10-26T00:46:16Z",
       "stop_requested": false,
       "taken_asks": []
