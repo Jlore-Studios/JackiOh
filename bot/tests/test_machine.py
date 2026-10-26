@@ -186,8 +186,145 @@ class RegisterRunnersTests(unittest.TestCase):
         self.assertIn('./config.sh remove --token "$remove_token"', text)
         # A runner in the middle of a job is never removed.
         removal = text.split("Past this box's count")[1].split("for lane in $(seq")[0]
-        self.assertLess(removal.index("Runner.Worker"), removal.index("config.sh remove"))
+        self.assertLess(removal.index('busy "$dir"'), removal.index("config.sh remove"))
         self.assertEqual(subprocess.run(["bash", "-n", str(REGISTER)]).returncode, 0)
+
+
+#: A runner's own config.sh, as far as the on-box script sees it: its root is where its bin really
+#: is (a self-update leaves bin a link to bin.<version>), its registration is that root's .runner,
+#: and configuring writes that root's svc.sh, named for the runner.
+FAKE_CONFIG = r'''#!/bin/bash
+root="$(dirname "$(readlink -f ./bin)")"
+if [ "$1" = remove ]; then rm -f "$root/.runner"; exit 0; fi
+[ -f "$root/.runner" ] && { echo "Cannot configure the runner because it is already configured."; exit 1; }
+while [ $# -gt 0 ]; do case "$1" in --name) n="$2"; shift;; --labels) l="$2"; shift;; esac; shift; done
+printf '{"agentName":"%s","labels":"%s"}\n' "$n" "$l" > "$root/.runner"
+cat > "$root/svc.sh" <<SVC
+#!/bin/bash
+name="actions.runner.$n.service"
+case "\$1" in
+  install) echo "\$name" > .service; touch "\$UNITS/\$name";;
+  uninstall) rm -f .service "\$UNITS/\$name";;
+  start) touch "\$SVCSTATE/\$name";;
+  stop) rm -f "\$SVCSTATE/\$name";;
+esac
+SVC
+chmod +x "$root/svc.sh"
+'''
+
+
+class OnBoxTests(unittest.TestCase):
+    """register-runners.sh's on-box script, run against a fake home and stubbed sudo, systemctl and
+    pgrep, on a runner that has updated itself (its bin a link to bin.<version>). Copying that link
+    made every second runner of a user run as its first: "already configured", and a fill-in
+    runner registered in the first's directory under the first's service name (2026-10-26)."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp)
+        for name in ("bin", "units", "svc"):
+            (self.tmp / name).mkdir()
+        self.home = self.tmp / "home" / "agent-muse"
+        self.first = self.home / "actions-runner"
+        for name in ("bin", "externals"):
+            (self.first / f"{name}.2.0").mkdir(parents=True)
+            (self.first / f"{name}.2.0" / "x").write_text("x")
+            (self.first / name).symlink_to(self.first / f"{name}.2.0")
+        (self.first / "config.sh").write_text(FAKE_CONFIG)
+        for name in ("env.sh", "run.sh", "run-helper.sh.template", ".env", ".path"):
+            (self.first / name).write_text("")
+        stubs = {"sudo": '[ "$1" = "-u" ] && shift 2\nexec "$@"',
+                 "systemctl": 'name="${@: -1}"\nif [ -f "$SVCSTATE/$name" ]; then '
+                              '[ "$2" = "--quiet" ] || echo active; exit 0; fi\n'
+                              '[ "$2" = "--quiet" ] || echo inactive; exit 3',
+                 "pgrep": "exit 1"}
+        for name, body in stubs.items():
+            (self.tmp / "bin" / name).write_text(f"#!/bin/bash\n{body}\n")
+        for path in [*(self.tmp / "bin").iterdir(), self.first / "config.sh", self.first / "env.sh",
+                     self.first / "run.sh"]:
+            path.chmod(0o755)
+        script = REGISTER.read_text(encoding="utf-8").split("<<'EOF'\n", 1)[1].split("\nEOF\n")[0]
+        self.remote = self.tmp / "remote.sh"
+        self.remote.write_text(script.replace("/home/", f"{self.tmp}/home/")
+                               .replace("/run/night-vm-last-busy", f"{self.tmp}/last-busy"))
+        self.env = {**os.environ, "PATH": f"{self.tmp / 'bin'}{os.pathsep}{os.environ['PATH']}",
+                    "SVCSTATE": str(self.tmp / "svc"), "UNITS": str(self.tmp / "units")}
+        self.shell(self.first, "./config.sh --name night-vm-muse --labels night-vm-muse && "
+                               "./svc.sh install && ./svc.sh start")
+
+    def shell(self, cwd, command):
+        subprocess.run(["bash", "-c", command], cwd=cwd, env=self.env, check=True,
+                       capture_output=True)
+
+    def register(self, *entries, box=""):
+        return subprocess.run(["bash", str(self.remote), "OWNER/REPO", "REG", "REMOVE", box,
+                               *entries], env=self.env, capture_output=True, text=True)
+
+    def runner(self, name):
+        directory = self.home / name
+        registered = directory / ".runner"
+        return (directory.joinpath("bin").is_symlink(),
+                registered.read_text().split('"')[3] if registered.exists() else "",
+                (directory / ".service").read_text().strip()
+                if (directory / ".service").exists() else "")
+
+    def test_each_copy_is_a_runner_of_its_own(self):
+        done = self.register("muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("night-vm-muse: removed from this box", done.stdout)
+        self.assertEqual(self.runner("actions-runner-fill"),
+                         (False, "night-vm-muse-fill", "actions.runner.night-vm-muse-fill.service"))
+        self.assertEqual(self.runner("actions-runner-fill-2"),
+                         (False, "night-vm-muse-fill-2",
+                          "actions.runner.night-vm-muse-fill-2.service"))
+        self.assertEqual(self.runner("actions-runner")[1:], ("", ""))
+        self.assertEqual(sorted(p.name for p in (self.tmp / "units").iterdir()),
+                         ["actions.runner.night-vm-muse-fill-2.service",
+                          "actions.runner.night-vm-muse-fill.service"])
+        # Run again, it changes nothing.
+        again = self.register("muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2")
+        self.assertEqual((again.returncode, again.stdout.count("active as agent-muse")), (0, 2))
+
+    def test_a_copy_linked_into_the_first_runner_is_made_again(self):
+        # What the copy of the links left on the night box: the fill-in runner's registration in
+        # the first runner's directory, its service under the first's name, and copies that run
+        # as the first.
+        self.shell(self.first, "./svc.sh stop && ./svc.sh uninstall && ./config.sh remove && "
+                               "./config.sh --name night-vm-muse-fill --labels night-vm-muse-fill")
+        for name in ("actions-runner-fill", "actions-runner-fill-2", "actions-runner-2"):
+            copy = self.home / name
+            copy.mkdir()
+            (copy / "bin").symlink_to(self.first / "bin.2.0")
+            shutil.copy(self.first / "config.sh", copy / "config.sh")
+        (self.home / "actions-runner-fill" / ".service").write_text(
+            "actions.runner.night-vm-muse.service\n")
+        stale = self.home / "actions-runner-fill" / "svc.sh"
+        stale.write_text((self.first / "svc.sh").read_text().replace("night-vm-muse-fill",
+                                                                     "night-vm-muse"))
+        stale.chmod(0o755)
+        (self.tmp / "units" / "actions.runner.night-vm-muse.service").write_text("")
+        done = self.register("muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(self.runner("actions-runner-fill")[:2], (False, "night-vm-muse-fill"))
+        self.assertEqual(self.runner("actions-runner-fill-2")[:2], (False, "night-vm-muse-fill-2"))
+        self.assertFalse((self.home / "actions-runner-2").exists())
+        self.assertEqual(sorted(p.name for p in (self.tmp / "units").iterdir()),
+                         ["actions.runner.night-vm-muse-fill-2.service",
+                          "actions.runner.night-vm-muse-fill.service"])
+
+    def test_a_job_on_a_linked_copy_is_left_alone(self):
+        (self.tmp / "bin" / "pgrep").write_text(
+            '#!/bin/bash\ncase "$*" in *bin.2.0/Runner.Worker*) exit 0;; esac\nexit 1\n')
+        done = self.register("muse=night-vm-muse=0")
+        self.assertIn("night-vm-muse: busy with a job", done.stdout)
+        self.assertEqual(self.runner("actions-runner")[1], "night-vm-muse")
+
+    def test_the_muse_box_adds_its_second_runner(self):
+        done = self.register("muse=night-vm-muse=2", box="b2")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(self.runner("actions-runner-2"),
+                         (False, "night-vm-muse-2-b2", "actions.runner.night-vm-muse-2-b2.service"))
+        self.assertEqual(self.runner("actions-runner")[1], "night-vm-muse")
 
 
 class SetupTests(unittest.TestCase):
