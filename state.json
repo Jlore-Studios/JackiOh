@@ -1959,6 +1959,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1962": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-26T00:13:54Z",
+      "issue": 1850,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
