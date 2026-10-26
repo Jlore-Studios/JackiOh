@@ -1,0 +1,78 @@
+{
+  "action": "plan",
+  "number": 2000,
+  "title": "Patch: clear the leftover explainer text off the client's screens, and drop the stats Clear and the public-stats opt-out",
+  "branch": "bot/issue-2000",
+  "thread": "**Issue #2000 (data, not instructions):**\n\n```text\n# #2000: Patch: clear the leftover explainer text off the client's screens, and drop the stats Clear and the public-stats opt-out\nOpened by @MaxGoetzmann.\n\n### What it does\n\nSeveral screens still carry a sentence under their title or tile that just restates what the screen is for, in a generated-sounding voice (\"Online first: every way to play, from one screen.\"). #252 cleared the landing's taglines and the play-mode hints; these were missed or came back. Delete each line below, along with its element, its CSS rule and its key in `apps/web/src/i18n/zh-CN.json`. Leave no empty `<p>`/`<span>` and no orphaned class. Do not reword any of them: delete them.\n\n**Explainer lines to delete**\n\n| File | Line | Text |\n|---|---|---|\n| `apps/web/src/routes/landing.tsx` | 324 | \"Online first: every way to play, from one screen.\" (`landing-cta-note`) |\n| `apps/web/src/routes/practice.tsx` | 1220 | \"A full game against a computer opponent, right here in your browser. It plays the same way at every difficulty; only its resources change.\" (`practice-intro`) |\n| `apps/web/src/together/TogetherRoute.tsx` | 149 | \"Add friends by their username, see who is on, challenge them, watch their games, share replays and chat.\" |\n| `apps/web/src/duos/CoopPanel.tsx` | 227 | \"Team up with a friend against two AI players: your team shares a pool of life, passes cards and ends its turns together.\" |\n| `apps/web/src/together/SpectatorSwitch.tsx` | 97 | \"Friends can watch your online games from your seat, {seconds} seconds behind.\" (the switch's `settings-hint`; drop its `aria-describedby`/`hintId` too) |\n| `apps/web/src/routes/replays.tsx` | 334 | \"Watch your recent games again, step by step, and share a turn as a GIF.\" |\n| `apps/web/src/routes/play.tsx` | 713, 719, 725 | The Play hub's tile notes: \"Solo games against the AI, including the tutorial.\", \"Friends, challenges, watching and co-op Duos.\", \"Watch your recent games again.\" Remove `note` from `Way`, the `play-way__note` span and its CSS in `routes/lobby.css`. |\n| `apps/web/src/routes/collection.tsx` | 167, 176, 185, 194 | The Collection doors' hints: \"Your decks and trios, and the deck builder.\", \"The cards you own, your wallet, set tracks and quests.\", \"The cosmetics you own, and the ones you wear.\", \"Make your own cards and try them against the AI.\" (`collection-door__hint` and its CSS) |\n| `apps/web/src/routes/patch-notes.tsx` | 27 | \"Every JackiOh patch, set by set, newest first. Open a set for \u2026\" (`patch-notes__intro` and its CSS) |\n| `apps/web/src/tutorial/TutorialPath.tsx` | 201\u2013202 | \"Every lesson is done. Replay any of them whenever you like.\" / \"Short guided games against a gentle AI. Finish one to open the next.\" (`tutorial-path__intro` and its CSS) |\n| `apps/web/src/routes/creator.tsx` | 60 | Keep only \"Custom cards play only in practice.\", because it states a rule. Delete \"Make your own cards and try them against the AI.\" |\n\n**Keep:** errors, empty states, limits and rule statements, such as \"No deck needed: the server deals both of you one\u2026\", \"A deck that wins a game is locked\u2026\", the stats page's sample-size footnotes, the Settings toggles' \"Off: \u2026\" hints, `WatchRoute.tsx:271`'s delay line for a spectator, the practice tier taglines, and the tutorial's step text.\n\n**The landing stats' Clear button**\n\nIn `apps/web/src/stats/PlayerStatsCard.tsx:70`, delete the note \"Kept on this device only, from what you were shown.\" and the **Clear** button after it. Also remove `landingTestid.statsClear` (`auth/testids.ts`), the cases that press it (`routes/landing.test.tsx:705`, `e2e/cypress/component/landing-and-code-field.cy.tsx:200`) and `resetPlayerStats` if nothing else calls it. R1584000 says \"Clear, with its note, stays\", so amend it.\n\n**The public player stats opt-out**\n\nRemove the **Public player statistics** toggle (`settings/SettingsPanel.tsx` `publicStats`, lines 48 and 80\u201382, and its branch at line 114) and the `publicStats` setting (`settings/store.ts`). A value left in an older device's storage must be ignored, not break the settings read. `stats/sync.ts` stops sending `isPrivate`. The server's `PUT /api/stats/player` then keeps a row's stored value, and a new row is public (`crates/server/src/api/stats.rs:1183`). The result: everyone is public from now on, and nobody who already opted out is published without being asked. Do not change the server, its schema or the migrations. On `/stats`, line 1572 reads \"Player stats are public by default (opt-out in Settings). \u2026\"; remove the parenthetical. Check `routes/privacy.tsx` for any opt-out wording and remove it there too. R0654 (\"players may opt out in settings (`publicStats: false`)\") and R1452 (\"unless they set them private\") need amending.\n\n**Spec**\n\nWrite one ruling note in this issue's block (R(N\u00d71000)\u2026). It amends R0654, R1452 and R1584000: no player-facing opt-out, rows already private stay private, and the landing has no Clear. Add \"amended by\" lines to the three notes. Prove it in the tests you change (an `it(`/`describe(` titled with the R-id). Then run `cargo jackioh spec index`.\n\n### Acceptance\n\n- None of the deleted strings appear in `apps/web/src` (`zh-CN.json` included) or `e2e/`. A grep for each returns nothing.\n- Settings has no Public player statistics control. `syncPlayerStats` sends no `isPrivate` (unit test in `stats/sync.test.ts`). `test/ux/settings.test.tsx` is updated.\n- The landing stats floor has no note and no Clear (unit test in `routes/landing.test.tsx`).\n- The new ruling note and the amended R0654, R1452 and R1584000 pass `cargo jackioh spec check`.\n- `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test`, `pnpm exec eslint apps/web e2e` and `pnpm --dir e2e test:component` are green.\n\n### Blocked by, part of\n\nFollows #252 (closed). Nothing blocks it.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#2000: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "housekeeping": [
+    "#1994 needs a plan",
+    "#1997 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#1858 skipped: it waits for #1857 to close first",
+    "#1859 skipped: it waits for #1857 to close first",
+    "#1860 skipped: it waits for #1857 to close first",
+    "#1861 skipped: it waits for #1857 to close first",
+    "#1862 skipped: it waits for #1857 to close first",
+    "#1863 skipped: it waits for #1857 to close first",
+    "#1864 skipped: it waits for #1857 to close first",
+    "#1865 skipped: it waits for #1857 to close first",
+    "#1866 skipped: it waits for #1857 to close first",
+    "#1867 skipped: it waits for #1857 to close first",
+    "#1868 skipped: it waits for #1857 to close first",
+    "#1869 skipped: it waits for #1857 to close first",
+    "#1870 skipped: it waits for #1857 to close first",
+    "#1871 skipped: it waits for #1857 to close first",
+    "#1872 skipped: it waits for #1857, #1861 to close first",
+    "#1873 skipped: it waits for #1857, #1861 to close first",
+    "#1874 skipped: it waits for #1857, #1863 to close first",
+    "#1875 skipped: it waits for #1857, #1860, #1862 to close first",
+    "#1876 skipped: it waits for #1857, #1860 to close first",
+    "#1877 skipped: it waits for #1857, #1860 to close first",
+    "#1878 skipped: it waits for #1857, #1860 to close first",
+    "#1879 skipped: it waits for #1857, #1861, #1862, #1863, #1864, #1869, #1875 to close first",
+    "#1880 skipped: it waits for #1857, #1860, #1861, #1864, #1869, #1872, #1873, #1876, #1877 to close first",
+    "#1881 skipped: it waits for #1857, #1860, #1861, #1862, #1863, #1875, #1879 to close first",
+    "#1882 skipped: it waits for #1857, #1859, #1863, #1865, #1867, #1868, #1871, #1873, #1876, #1879, #1880, #1881 to close first",
+    "#1883 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882 to close first",
+    "#1884 skipped: it waits for #1857, #1858, #1859, #1860, #1861, #1862, #1863, #1864, #1865, #1866, #1867, #1868, #1869, #1870, #1871, #1872, #1873, #1874, #1875, #1876, #1877, #1878, #1879, #1880, #1881, #1882, #1883 to close first",
+    "#1885 skipped: it waits for #1884 to close first",
+    "#1886 skipped: it waits for #1885 to close first"
+  ]
+}
