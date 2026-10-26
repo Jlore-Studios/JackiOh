@@ -583,8 +583,10 @@ mod duos_life_r964000 {
 /// actions it needs (`trim_lethal`).
 mod free_replays_r1965000 {
     use super::*;
-    use jackioh_ai::{AiOptions, AiTurnResult, play_ai_turn, trim_lethal};
-    use jackioh_engine::testkit::{Scenario, subsystems};
+    use std::cell::Cell;
+
+    use jackioh_ai::{AiOptions, AiTurnResult, decide, play_ai_turn, trim_lethal};
+    use jackioh_engine::testkit::{Action, Scenario, reduce, subsystems};
 
     const IN_TOO_DEEP: &str = "classic-090";
     const LAST_HURRAH: &str = "classic-037";
@@ -713,7 +715,7 @@ mod free_replays_r1965000 {
             matches!(found.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == coin),
             "the walk opens with the Coin: {found:?}"
         );
-        let trimmed = trim_lethal(&dets, AI, found, &counter);
+        let trimmed = trim_lethal(&dets, AI, found, &counter).expect("the trim fits the budget");
         let bigot = mine(&start, AI, BIGOT).id;
         let seven = mine(&start, AI, SEVEN_SEVEN).id;
         let token = mine(&start, HUMAN, FELINOR_TOKEN).id;
@@ -731,6 +733,60 @@ mod free_replays_r1965000 {
             ]
         );
         assert!(counter.used() <= AI_BUDGET.nodes, "{} nodes", counter.used());
+    }
+
+    /// The decisions a clock-stopped turn below may take before it must have ended.
+    const CLOCKED_DECISIONS: usize = 30;
+
+    /// A clock that stops a decision inside the trim (a slow device under the practice clock, a ladder
+    /// bot's acting clock) leaves no proved lethal to play: the decision ends the turn, as one the clock
+    /// stops inside the solver does. It never plays the untrimmed line's Coin, which a clock stopping
+    /// each decision at the same point would have played at every one. Every stop from the first node
+    /// to the last of the unhurried decision is tried, so the trim's window is among them.
+    #[test]
+    fn r1965000_a_clock_that_stops_the_trim_plays_no_coin_and_the_turn_ends() {
+        let start = board(&[COIN]);
+        let coin = mine(&start, AI, COIN).id;
+        let unhurried = decide(
+            &start,
+            AI,
+            &mut AiOptions::with_budget(create_rng("r1965000", 0), AI_BUDGET),
+        )
+        .expect("the AI acts")
+        .stats
+        .nodes;
+        for stop_after in 0..=unhurried {
+            let mut state = start.clone();
+            let mut rng = create_rng("r1965000", 0);
+            for n in 0..CLOCKED_DECISIONS {
+                let polls = Cell::new(0usize);
+                let stop = || {
+                    polls.set(polls.get() + 1);
+                    polls.get() > stop_after
+                };
+                let mut ai = AiOptions {
+                    rng,
+                    budget: AI_BUDGET,
+                    should_stop: Some(&stop),
+                };
+                let decision = decide(&state, AI, &mut ai).expect("the AI acts");
+                rng = ai.rng;
+                assert!(
+                    !matches!(&decision.action, ActionBody::Play { instance_id, .. } if *instance_id == coin),
+                    "stopped after {stop_after} polls, decision {n} plays the Coin"
+                );
+                let next = reduce(&state, &Action::new(decision.action, AI, format!("t{n}")));
+                assert_eq!(next.error, None, "stopped after {stop_after} polls, decision {n}");
+                state = next.state;
+                if state.result.is_some() || state.active != AI {
+                    break;
+                }
+            }
+            assert!(
+                state.result.is_some() || state.active != AI,
+                "stopped after {stop_after} polls, the turn did not end"
+            );
+        }
     }
 
     /// A replay the lethal does need is kept: Base Camp, already played this turn and back in the
@@ -770,7 +826,7 @@ mod free_replays_r1965000 {
             matches!(found.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == camp),
             "{found:?}"
         );
-        assert_eq!(trim_lethal(&dets, AI, found.clone(), &counter), found);
+        assert_eq!(trim_lethal(&dets, AI, found.clone(), &counter), Some(found));
 
         let turn = ai_turn(&start);
         assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));

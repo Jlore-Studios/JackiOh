@@ -69,12 +69,13 @@ less the body it comes back as, #1796; plus a Trample attacker's excess on the h
 attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. It
 re-plans after every action, so a lethal the solver proves is played trimmed to the actions it needs
-(`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action it
-still wins without, R1965000). A free play that changes nothing (a (0) Spell back from the graveyard under
-In Too Deep's reward L, R454, or The Coin) could otherwise open the same lethal at every decision. Each line
-tries its moves in move order (`candidates.rs`): attacks on the enemy hero, kills the attacker survives, each
-attacker's best kill (its target, or with Cleave a neighbour, #1821) at an even trade or better by the
-opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
+(`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action
+it still wins without, R1965000; none, when the budget or the clock stops the trim before it has that
+suffix). A free play (a (0) Spell back from the graveyard under In Too Deep's reward L, R454, or The Coin)
+could otherwise open the same lethal at every decision. Each line tries its moves in move order
+(`candidates.rs`): attacks on the enemy hero, kills the attacker survives, each attacker's best kill (its
+target, or with Cleave a neighbour, #1821) at an even trade or better by the opponent model's own read
+(`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
 of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the
 other attacks, position switches and End Turn; the root expands its first `root_branching` and each deeper step
 its first `branching`, End Turn always among them. Inside one card's plays, each way of being played (its
