@@ -245,6 +245,10 @@ class GitHub:
             "POST", f"{self._r}/issues/{int(number)}/comments", {"body": with_marker(body)}
         )
 
+    def update_comment(self, comment_id: int, body: str) -> dict[str, Any]:
+        return self.request("PATCH", f"{self._r}/issues/comments/{int(comment_id)}",
+                            {"body": with_marker(body)})
+
     def react(self, comment_id: int, content: str, *, review_comment: bool = False) -> None:
         kind = "pulls/comments" if review_comment else "issues/comments"
         try:

@@ -191,6 +191,14 @@ class FakeGitHub:
         self.comments.setdefault(number, []).append(comment)
         return comment
 
+    def update_comment(self, comment_id: int, body: str) -> dict[str, Any]:
+        for comments in self.comments.values():
+            for comment in comments:
+                if comment["id"] == comment_id:
+                    comment["body"] = with_marker(body)
+                    return dict(comment)
+        raise GitHubError("no comment", 404)
+
     def react(self, comment_id: int, content: str, *, review_comment: bool = False) -> None:
         self.reacted.append((comment_id, content))
 

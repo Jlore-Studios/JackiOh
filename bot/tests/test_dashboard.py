@@ -560,23 +560,29 @@ class StatisticsTests(unittest.TestCase):
         dashboard.update(later)
         self.assertIsNone(stats.kept(gh.threads[number]["body"]))
 
-    def test_more_runners_busy_drop_their_explanation_before_a_count(self):
-        """Between counts the issue keeps its statistics; when the runners grow past GitHub's
-        limit, their explanation goes rather than the statistics being counted again."""
+    def test_more_runners_busy_are_cut_to_the_room_before_a_count(self):
+        """Between counts the issue keeps its statistics; when more runners are busy than the
+        issue has room for, fewer are listed rather than the statistics counted again."""
         from harness import stats
         from tests.support import DAY
         from tests.test_stats import world
         gh, ctx = world()
         dashboard.update(ctx, stats=True)
         [number] = opened(gh)
-        body = gh.threads[number]["body"]
-        self.assertIn(dashboard.EXPLAIN_SUMMARY, body)
+        for n in range(12):
+            gh.runs[str(900 + n)] = {"id": 900 + n, "status": "in_progress",
+                                     "path": ".github/workflows/ci.yml", "event": "push",
+                                     "display_title": "Patch: something", "created_at": iso(DAY)}
+            gh.jobs[str(900 + n)] = [{"name": f"shard {n}", "status": "in_progress",
+                                      "labels": ["ubuntu-latest"],
+                                      "runner_name": f"GitHub Actions {n}"}]
         soon = make_ctx(gh, at=DAY + timedelta(minutes=20))
+        body = dashboard.render(soon, (), stats.kept(gh.threads[number]["body"]))
         with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")), \
                 mock.patch.object(dashboard, "MAX_BODY", len(body) - 500):
             self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
         body = gh.threads[number]["body"]
-        self.assertNotIn(dashboard.EXPLAIN_SUMMARY, body)
+        self.assertIn("…and ", body)
         self.assertIsNotNone(stats.kept(body))
 
     def test_a_body_too_long_for_github_lists_fewer_merges_then_none(self):
@@ -595,19 +601,21 @@ class StatisticsTests(unittest.TestCase):
         with mock.patch.object(dashboard, "MAX_BODY", len(full) - 1):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
-        # Then the runners' explanation, with every merge listed again, before the statistics.
-        view.runners = dashboard.runners_section(ctx, view.state)
-        full = dashboard.render(ctx, (), stats.block(ctx, facts), view)
-        with mock.patch.object(dashboard, "MAX_BODY", len(full) - 1):
-            body = dashboard.fit(ctx, view, (), draw)
-        self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
-        self.assertIn(dashboard.EXPLAIN_SUMMARY, body)
+        # Then fewer busy runners, with no merge listed, before the statistics go.
+        busy = {"name": "work", "status": "in_progress", "labels": ["ubuntu-latest"],
+                "runner_name": "GitHub Actions 1"}
+        gh.runs["900"] = {"id": 900, "status": "in_progress", "path": "x/ci.yml", "event": "push"}
+        gh.jobs["900"] = [dict(busy, runner_name=f"GitHub Actions {n}") for n in range(6)]
+        view = dashboard.look(ctx)
+        view.found = dashboard.read_runners(ctx)
+        view.runners = dashboard.runners_section(ctx, view.state, view.found)
         bare = dashboard.render(ctx, (), stats.block(ctx, facts, shown=0), view)
         with mock.patch.object(dashboard, "MAX_BODY", len(bare) - 1):
             body = dashboard.fit(ctx, view, (), draw)
-        self.assertNotIn(dashboard.EXPLAIN_SUMMARY, body)
+        self.assertRegex(body, r"\n…and \d more\.\n")
+        self.assertLessEqual(len(body), len(bare) - 1)
         self.assertIsNotNone(stats.kept(body))
-        view.runners = dashboard.short_runners(dashboard.runners_section(ctx, view.state))
+        view.runners = dashboard.runners_section(ctx, view.state, view.found, room=0)
         with mock.patch.object(dashboard, "MAX_BODY", len(dashboard.render(ctx, (), "", view))):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertIsNone(stats.kept(body))  # left out last of all
@@ -814,22 +822,58 @@ class RunnersTests(unittest.TestCase):
         self.assertIn(f"🟢 **{dashboard.RUNNER_ROWS + 4} runners busy**", body)
         self.assertEqual(body.count(" (Linux) | "), dashboard.RUNNER_ROWS)
         self.assertIn("…and 4 more.", body)
+        # With no room for a table, the runners are counted and the rest still says what waits.
+        tight = dashboard.runners_section(self.ctx, self.ctx.store.load(), room=0)
+        self.assertNotIn("| Runner |", tight)
+        self.assertIn(f"{dashboard.RUNNER_ROWS + 4} not listed: no room.", tight)
+        self.assertIn("⏳ **Queued for a runner:**", tight)
+        self.assertTrue(tight.endswith(dashboard.RUNNERS_END))
 
-    def test_what_each_runner_is_for_comes_from_the_pool(self):
-        body = self.section()
-        self.assertIn(dashboard.EXPLAIN_SUMMARY, body)
-        self.assertIn("| `ubuntu-latest` | GitHub's Linux", body)
+    def test_what_each_runner_is_for_is_a_comment_kept_from_the_pool(self):
+        """The explanation changes only with the pool or the workflows, so it is a comment on
+        the status issue, written once and again only when its text changes; the section links
+        it."""
+        self.gh.add_issue(148, dashboard.TITLE, "x", user=OPERATOR)
+        state = self.ctx.store.load()
+        self.assertIn("What each runner and workflow is for is in a comment below.",
+                      dashboard.runners_section(self.ctx, state))
+        dashboard.explain(self.ctx, 148, state)
+        [comment] = self.gh.comments[148]
+        text = comment["body"]
+        self.assertTrue(text.startswith("## 🖥️ What each runner is for"))
+        self.assertIn(dashboard.EXPLAINED, text)
+        self.assertIn("| `ubuntu-latest` | GitHub's Linux", text)
         self.assertIn("| `night-vm-devin` | the bot's AWS boxes, 6 lanes | `bot-night`'s `work` for "
-                      "`devin`: `devin` with `swe-2-max`, as the user `agent-devin` |", body)
-        self.assertIn("| `night-vm-gpt` | the bot's AWS boxes | ", body)
-        self.assertIn(f"| `{dashboard.LOCAL_LABEL}` | the owner's PC", body)
-        self.assertIn("**voice**: renders a branch's voice lines", body)
-        # Left out, in one line, when the issue is too full for it.
-        short = dashboard.short_runners(body)
-        self.assertNotIn(dashboard.EXPLAIN_SUMMARY, short)
-        self.assertIn("What each runner is for is left out while the issue is this full", short)
-        self.assertTrue(short.endswith(dashboard.RUNNERS_END))
-        self.assertIn("building #37 on `claude-1`", short)
+                      "`devin`: the `devin` CLI with `swe-2-max`, as the Linux user "
+                      "`agent-devin`, which holds that login alone |", text)
+        self.assertIn("| `night-vm-gpt` | the bot's AWS boxes, 1 lane | ", text)
+        self.assertIn(f"| `{dashboard.LOCAL_LABEL}` | the owner's PC", text)
+        self.assertIn("| `voice` | renders a branch's voice lines", text)
+        # None of the statistics' outcomes reads it as a run's.
+        from harness import stats
+        self.assertEqual(stats.classify(text), "other")
+        self.assertIn("What each runner and workflow is for: [its comment](https://github.com/"
+                      f"jgoetzmann/JackiOh/issues/148#issuecomment-{comment['id']}).",
+                      dashboard.runners_section(self.ctx, state))
+        # Unchanged, it costs nothing; changed, it is rewritten in place; deleted, written again.
+        with mock.patch.object(self.gh, "update_comment", side_effect=AssertionError("written")), \
+                mock.patch.object(self.gh, "create_comment", side_effect=AssertionError("posted")):
+            dashboard.explain(self.ctx, 148, self.ctx.store.load())
+        with mock.patch.object(dashboard, "BOXES_NOTE", "Another note."):
+            dashboard.explain(self.ctx, 148, self.ctx.store.load())
+        self.assertEqual(len(self.gh.comments[148]), 1)
+        self.assertIn("Another note.", self.gh.comments[148][0]["body"])
+        self.gh.comments[148].clear()
+        dashboard.explain(self.ctx, 148, self.ctx.store.load())
+        self.assertEqual(len(self.gh.comments[148]), 1)
+        self.assertNotIn("Another note.", self.gh.comments[148][0]["body"])
+        # A rewrite of the issue writes it, and links it in the same rewrite.
+        self.ctx.store.update(lambda s: s.update(dashboard={"issue": 148},
+                                                 runners_explained=None))
+        self.gh.comments[148].clear()
+        dashboard.update(self.ctx)
+        [comment] = self.gh.comments[148]
+        self.assertIn(f"#issuecomment-{comment['id']}", self.gh.threads[148]["body"])
 
     def test_every_workflow_says_what_it_is_for(self):
         on_disk = {path.name for path in (ROOT / ".github" / "workflows").glob("*.yml")}
@@ -854,7 +898,7 @@ class RunnersTests(unittest.TestCase):
         with mock.patch.object(self.gh, "list_repo_runs", side_effect=GitHubError("down", 502)):
             body = self.section()
         self.assertIn("The runs going could not be read at 22:00.", body)
-        self.assertIn(dashboard.EXPLAIN_SUMMARY, body)  # the explanation stands regardless
+        self.assertIn("What each runner and workflow is for", body)  # its link stands regardless
         self.assertTrue(body.endswith(dashboard.RUNNERS_END))
 
     def test_the_issue_carries_it_after_running_now_and_before_the_queue(self):
@@ -878,13 +922,14 @@ class RunnersTests(unittest.TestCase):
         self.assertTrue(body.endswith(dashboard.RUNNERS_END + "\nbottom"))
         self.assertNotIn("old runners", body)
         self.assertIn("building #37 on `claude-1`", body)
-        # Near GitHub's limit, the runners' explanation goes; past it, the redraw waits.
+        # Near GitHub's limit, fewer runners are listed; past it, the redraw waits.
         self.gh.threads[148]["body"] = before
         full = len(before) + len(self.section()) - len(dashboard.RUNNERS_START + "\nold runners\n"
                                                         + dashboard.RUNNERS_END)
         with mock.patch.object(dashboard, "MAX_BODY", full - 1):
             self.assertEqual(dashboard.refresh_runners(self.ctx), "redrew #148's runners")
-        self.assertNotIn(dashboard.EXPLAIN_SUMMARY, self.gh.threads[148]["body"])
+        self.assertLessEqual(len(self.gh.threads[148]["body"]), full - 1)
+        self.assertIn("…and 2 more.", self.gh.threads[148]["body"])
         self.gh.threads[148]["body"] = before
         with mock.patch.object(dashboard, "MAX_BODY", len(before)):
             self.assertIn("would pass GitHub's limit", dashboard.refresh_runners(self.ctx))
