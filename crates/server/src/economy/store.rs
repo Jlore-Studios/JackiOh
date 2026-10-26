@@ -190,11 +190,49 @@ pub struct CardCosmetic {
 
 /// An account's cosmetics (§14.2): per card, and the account cosmetics by id. The starter
 /// cosmetics, owned by every account, have no row.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnedCosmetics {
     pub cards: Vec<CardCosmetic>,
     pub account: Vec<String>,
+}
+
+/// R1834000: one row of `public.card_cosmetic_picks` (migration 0061), what one card of the
+/// account wears of its own: a foil, a finish, a border and whether its full art prints. A kind
+/// with no pick is absent and wears its kind's default (R1953001; the Full-art cards setting, for
+/// `full_art`). An id is kept as it was written, one the registry does not know among them (a
+/// newer client's), and judged only where it is worn (`loadout::freeze_loadout`, R1834002).
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CardPicks {
+    pub card_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub foil: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub finish: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_art: Option<bool>,
+}
+
+impl CardPicks {
+    /// Whether the card has no pick of its own at all, which the store keeps as no row.
+    pub fn is_empty(&self) -> bool {
+        self.foil.is_none() && self.finish.is_none() && self.border.is_none() && self.full_art.is_none()
+    }
+}
+
+/// R1834005: how many people own a cosmetic, on one card for a per-card one (`card_id`) or on the
+/// account (`None`), and when one was first granted it (epoch ms; `None` when no grant row shows
+/// it, as for a portrait migration 0057 handed out). A ladder bot's profile is never counted.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CosmeticOwners {
+    pub cosmetic_id: String,
+    pub card_id: Option<String>,
+    pub owners: i64,
+    pub first_granted_at: Option<i64>,
 }
 
 /// The human's deck of a practice game (§9.9), as its seed was issued for it: a list of card ids
@@ -366,6 +404,8 @@ pub struct EconomyTables {
     pub cosmetic_grants: Vec<CosmeticGrant>,
     /// Migration 0047's seeds, in the order they were issued.
     pub practice_seeds: Vec<PracticeSeed>,
+    /// R1834000: migration 0061's per-card picks, one per profile and card.
+    pub card_picks: Vec<(String, CardPicks)>,
 }
 
 // ---------------------------------------------------------------------------
@@ -601,6 +641,39 @@ impl Tx<'_> {
         economy_dispatch!(self, cosmetics_grant(grant))
     }
 
+    /// R1834000: the account's per-card picks, by card.
+    pub async fn economy_card_picks_get(&mut self, profile_id: &str) -> StoreResult<Vec<CardPicks>> {
+        economy_dispatch!(self, card_picks_get(profile_id))
+    }
+
+    /// R1834000: writes one card's picks whole, replacing what it held; picks with nothing in them
+    /// delete its row. A current-state table with no ledger: a pick is no holding (§14.11).
+    pub async fn economy_card_picks_put(
+        &mut self,
+        profile_id: &str,
+        picks: &CardPicks,
+        at: i64,
+    ) -> StoreResult<()> {
+        economy_dispatch!(self, card_picks_put(profile_id, picks, at))
+    }
+
+    /// R1834000: a device's one-time upload: writes each card's picks the account holds no row for
+    /// and never touches one it holds, an empty entry writing nothing. Answers how many it wrote.
+    pub async fn economy_card_picks_upload(
+        &mut self,
+        profile_id: &str,
+        picks: &[CardPicks],
+        at: i64,
+    ) -> StoreResult<u64> {
+        economy_dispatch!(self, card_picks_upload(profile_id, picks, at))
+    }
+
+    /// R1834005: every cosmetic some person owns, with how many own it where and when the first
+    /// was granted, by cosmetic then card. Read by the ladder bots' wardrobes, never by a client.
+    pub async fn economy_cosmetic_owners(&mut self) -> StoreResult<Vec<CosmeticOwners>> {
+        economy_dispatch!(self, cosmetic_owners())
+    }
+
     /// §14.11: every economy ledger row of the account, each table's oldest first.
     pub async fn economy_ledger_get(&mut self, profile_id: &str) -> StoreResult<EconomyLedger> {
         economy_dispatch!(self, ledger_get(profile_id))
@@ -683,6 +756,7 @@ pub fn remove_economy_rows(tables: &mut EconomyTables, profile_id: &str) {
         .cosmetic_grants
         .retain(|grant| grant.profile_id != profile_id);
     tables.practice_seeds.retain(|seed| seed.profile_id != profile_id);
+    tables.card_picks.retain(|(owner, _)| owner != profile_id);
 }
 
 // ---------------------------------------------------------------------------
@@ -695,9 +769,10 @@ mod pg {
     use time::OffsetDateTime;
 
     use super::{
-        CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, GameJloreTotals, HeldQuest,
-        InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics, PracticeSeed, QuestBook,
-        QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal, literal, track_after,
+        CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
+        GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
+        PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, from_literal,
+        literal, track_after,
     };
     use crate::config::SET_TRACK_FIRST_LEVEL;
     use crate::db::pg::PgTx;
@@ -1254,6 +1329,141 @@ mod pg {
         Ok(true)
     }
 
+    fn card_picks_of(row: &PgRow) -> Result<CardPicks, StoreError> {
+        Ok(CardPicks {
+            card_id: row.try_get("card_id")?,
+            foil: row.try_get("foil")?,
+            finish: row.try_get("finish")?,
+            border: row.try_get("border")?,
+            full_art: row.try_get("full_art")?,
+        })
+    }
+
+    pub async fn card_picks_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<CardPicks>, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        sqlx::query(
+            r#"select card_id, foil, finish, border, full_art from public.card_cosmetic_picks
+                where profile_id = $1::uuid
+                order by card_id collate "C""#,
+        )
+        .bind(profile_id)
+        .fetch_all(&mut **t)
+        .await?
+        .iter()
+        .map(card_picks_of)
+        .collect()
+    }
+
+    /// One statement: the upsert, or the delete of a card left with no pick.
+    pub async fn card_picks_put(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        picks: &CardPicks,
+        at: i64,
+    ) -> Result<(), StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        if picks.is_empty() {
+            sqlx::query(
+                "delete from public.card_cosmetic_picks where profile_id = $1::uuid and card_id = $2::text",
+            )
+            .bind(profile_id)
+            .bind(picks.card_id.as_str())
+            .execute(&mut **t)
+            .await?;
+            return Ok(());
+        }
+        sqlx::query(
+            "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at)
+             values ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::boolean,
+                     to_timestamp($7::double precision / 1000.0))
+             on conflict (profile_id, card_id) do update
+                set foil = excluded.foil, finish = excluded.finish, border = excluded.border,
+                    full_art = excluded.full_art, updated_at = excluded.updated_at",
+        )
+        .bind(profile_id)
+        .bind(picks.card_id.as_str())
+        .bind(picks.foil.as_deref())
+        .bind(picks.finish.as_deref())
+        .bind(picks.border.as_deref())
+        .bind(picks.full_art)
+        .bind(at)
+        .execute(&mut **t)
+        .await?;
+        Ok(())
+    }
+
+    /// One insert per card, each passing over a card the account already holds a row for.
+    pub async fn card_picks_upload(
+        t: &mut PgTx<'_>,
+        profile_id: &str,
+        picks: &[CardPicks],
+        at: i64,
+    ) -> Result<u64, StoreError> {
+        run_as(t, Some(profile_id)).await?;
+        let mut written = 0;
+        for card in picks.iter().filter(|card| !card.is_empty()) {
+            written += sqlx::query(
+                "insert into public.card_cosmetic_picks (profile_id, card_id, foil, finish, border, full_art, updated_at)
+                 values ($1::uuid, $2::text, $3::text, $4::text, $5::text, $6::boolean,
+                         to_timestamp($7::double precision / 1000.0))
+                 on conflict (profile_id, card_id) do nothing",
+            )
+            .bind(profile_id)
+            .bind(card.card_id.as_str())
+            .bind(card.foil.as_deref())
+            .bind(card.finish.as_deref())
+            .bind(card.border.as_deref())
+            .bind(card.full_art)
+            .bind(at)
+            .execute(&mut **t)
+            .await?
+            .rows_affected();
+        }
+        Ok(written)
+    }
+
+    /// The holdings of every person's account, counted by cosmetic and card, beside each one's
+    /// first grant.
+    pub async fn cosmetic_owners(t: &mut PgTx<'_>) -> Result<Vec<CosmeticOwners>, StoreError> {
+        run_as(t, None).await?;
+        sqlx::query(
+            r#"with held as (
+                 select c.profile_id, c.card_id, c.cosmetic_id from public.card_cosmetics c
+                 union all
+                 select a.profile_id, null, a.cosmetic_id from public.account_cosmetics a
+               ), owners as (
+                 select h.cosmetic_id, h.card_id, count(distinct h.profile_id)::bigint as owners
+                   from held h
+                   join public.profiles p on p.id = h.profile_id and p.kind = 'human'
+                  group by h.cosmetic_id, h.card_id
+               ), firsts as (
+                 select g.cosmetic_id, g.card_id, min(g.at) as first_at
+                   from public.cosmetic_grants g
+                   join public.profiles p on p.id = g.profile_id and p.kind = 'human'
+                  where g.delta > 0
+                  group by g.cosmetic_id, g.card_id
+               )
+               select o.cosmetic_id, o.card_id, o.owners, f.first_at
+                 from owners o
+                 left join firsts f
+                   on f.cosmetic_id = o.cosmetic_id and f.card_id is not distinct from o.card_id
+                order by o.cosmetic_id collate "C", o.card_id collate "C" nulls first"#,
+        )
+        .fetch_all(&mut **t)
+        .await?
+        .iter()
+        .map(|row| -> Result<CosmeticOwners, StoreError> {
+            let first_at: Option<OffsetDateTime> = row.try_get("first_at")?;
+            Ok(CosmeticOwners {
+                cosmetic_id: row.try_get("cosmetic_id")?,
+                card_id: row.try_get("card_id")?,
+                owners: row.try_get("owners")?,
+                first_granted_at: first_at.map(ms_of),
+            })
+        })
+        .collect()
+    }
+
     /// A transaction-scoped advisory lock on the account's id, as `db::pg::USERNAME_LOCK_SQL` takes
     /// one on a username: released by the commit or the rollback.
     pub async fn lock_account(t: &mut PgTx<'_>, profile_id: &str) -> Result<(), StoreError> {
@@ -1506,12 +1716,13 @@ mod pg {
 
 mod fake {
     use super::{
-        CardCosmetic, CosmeticGrant, CounterEntry, CounterGrant, EconomyLedger, EconomyTables,
-        GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason, OwnedCosmetics,
-        PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after, literal,
-        track_after,
+        CardCosmetic, CardPicks, CosmeticGrant, CosmeticOwners, CounterEntry, CounterGrant, EconomyLedger,
+        EconomyTables, GameJloreTotals, HeldQuest, InventoryEntry, InventoryGrant, JloreGrant, JloreReason,
+        OwnedCosmetics, PracticeSeed, QuestBook, QuestChange, QuestGrant, SetTrack, TrackGrant, count_after,
+        literal, track_after,
     };
     use crate::db::fake::FakeTx;
+    use crate::db::store::ProfileKind;
     use crate::db::store::StoreError;
 
     /// The unit fake's two seams (`db::fake`'s `call`): its fault-injection hook, then its race hook,
@@ -1827,6 +2038,113 @@ mod fake {
             tables.cosmetic_grants.push(grant.clone());
         }
         Ok(changed)
+    }
+
+    pub fn card_picks_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<CardPicks>, StoreError> {
+        let tables = call(f, "economy.cardPicks.get")?;
+        let rows = tables
+            .card_picks
+            .iter()
+            .filter(|(owner, _)| owner == profile_id)
+            .map(|(_, picks)| picks.clone())
+            .collect();
+        Ok(sorted_by(rows, |picks: &CardPicks| picks.card_id.clone()))
+    }
+
+    pub fn card_picks_put(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        picks: &CardPicks,
+        _at: i64,
+    ) -> Result<(), StoreError> {
+        let tables = call(f, "economy.cardPicks.put")?;
+        let held = tables
+            .card_picks
+            .iter()
+            .position(|(owner, held)| owner == profile_id && held.card_id == picks.card_id);
+        match (held, picks.is_empty()) {
+            (Some(at), true) => {
+                tables.card_picks.remove(at);
+            }
+            (Some(at), false) => tables.card_picks[at].1 = picks.clone(),
+            (None, true) => {}
+            (None, false) => tables.card_picks.push((profile_id.to_string(), picks.clone())),
+        }
+        Ok(())
+    }
+
+    pub fn card_picks_upload(
+        f: &mut FakeTx<'_>,
+        profile_id: &str,
+        picks: &[CardPicks],
+        _at: i64,
+    ) -> Result<u64, StoreError> {
+        let tables = call(f, "economy.cardPicks.upload")?;
+        let mut written = 0;
+        for card in picks.iter().filter(|card| !card.is_empty()) {
+            let held = tables
+                .card_picks
+                .iter()
+                .any(|(owner, held)| owner == profile_id && held.card_id == card.card_id);
+            if !held {
+                tables.card_picks.push((profile_id.to_string(), card.clone()));
+                written += 1;
+            }
+        }
+        Ok(written)
+    }
+
+    pub fn cosmetic_owners(f: &mut FakeTx<'_>) -> Result<Vec<CosmeticOwners>, StoreError> {
+        let people: Vec<String> = f
+            .tables()
+            .profiles
+            .iter()
+            .filter(|profile| profile.kind == ProfileKind::Human)
+            .map(|profile| profile.id.clone())
+            .collect();
+        let tables = call(f, "economy.cosmeticOwners")?;
+        let held = tables
+            .card_cosmetics
+            .iter()
+            .map(|(owner, owned)| (owner, Some(owned.card_id.clone()), owned.cosmetic_id.clone()))
+            .chain(
+                tables
+                    .account_cosmetics
+                    .iter()
+                    .map(|(owner, cosmetic_id)| (owner, None, cosmetic_id.clone())),
+            )
+            .filter(|(owner, _, _)| people.contains(owner));
+        let mut out: Vec<CosmeticOwners> = Vec::new();
+        for (_, card_id, cosmetic_id) in held {
+            match out
+                .iter_mut()
+                .find(|row| row.cosmetic_id == cosmetic_id && row.card_id == card_id)
+            {
+                Some(row) => row.owners += 1,
+                None => {
+                    let first_granted_at = tables
+                        .cosmetic_grants
+                        .iter()
+                        .filter(|grant| {
+                            grant.delta > 0
+                                && grant.cosmetic_id == cosmetic_id
+                                && grant.card_id == card_id
+                                && people.contains(&grant.profile_id)
+                        })
+                        .map(|grant| grant.at)
+                        .min();
+                    out.push(CosmeticOwners {
+                        cosmetic_id,
+                        card_id,
+                        owners: 1,
+                        first_granted_at,
+                    });
+                }
+            }
+        }
+        Ok(sorted_by(out, |row| {
+            (row.cosmetic_id.clone(), row.card_id.clone())
+        }))
     }
 
     /// The fake's transactions already run one at a time (`db::fake::FakeTx`), so its lock is

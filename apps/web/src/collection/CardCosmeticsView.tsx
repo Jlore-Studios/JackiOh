@@ -6,24 +6,26 @@
 // Hovering or focusing an item shows it on the large card; clicking one the card owns equips it on
 // this card alone (`writeCardPick`, `writeCardFullArt`), and a locked one, which `useCanEquip` says no
 // to, equips nothing. `Use default` of a kind clears the card's pick, which leaves the card to its
-// kind's default (R1953001). The view decides nothing (CLAUDE.md rule 7): it sets a device pick that
-// only the viewer's own faces wear, and `GET /api/cosmetics` is the answer to what the viewer owns.
-// R1953001: a locked one a held cosmetic token covers offers that token in place (TokenOffer.tsx),
-// on a card the account owns `MAX_COPIES` of, the only card a token's per-card cosmetic goes on.
+// kind's default (R1953001). The view decides nothing (CLAUDE.md rule 7): it sets a pick in the
+// device's store, which `cards/cardPicksSync.ts` sends to the account (R1834000), for the viewer's own
+// faces and, frozen as an online match begins, the opponent's sight of them (R1834002);
+// `GET /api/cosmetics` is the answer to what the viewer owns. R1953001: a locked one a held cosmetic
+// token covers offers that token in place (TokenOffer.tsx), on a card the account owns `MAX_COPIES`
+// of, the only card a token's per-card cosmetic goes on.
 //
 // A preview writes no pick. A face wears only what the store holds, and `cards/cosmetics.ts` has no
 // seam to draw one wearing an id it does not, so a preview of a foil, finish or border is a second
 // copy of the face, drawn unworn, to which `SampleFace` (CosmeticLook.tsx) gives the four attributes
 // `useCosmeticAttributes` would (React never sets them on an unworn face, so nothing fights over
-// them), by the same `wornCosmetics`. A full art changes how the face is built, which only the store
-// reaches, so its preview holds the pick for as long as the item is shown and gives it back as the
-// item stops being shown: a boolean comes back exactly, as a foil's id (which may be one a newer
-// client wrote) would not.
+// them), by the same `wornCosmetics`. A full art changes how the face is built, so its preview puts
+// the large face below a `FullArtShown` (fullArt.ts), which prints it as that pick would, behind the
+// same ownership. R1834000: the store is never held for a preview, since every write to it is sent to
+// the account, and a preview the page never gave back would stand there as a pick opponents are shown.
 //
 // The card's text and meta stay one click away: `Card text` opens the detail view over this one.
 // Every animation here is a transform or opacity (collection.css) and holds still under reduced motion.
 
-import { useContext, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from "react";
 
 import { MAX_COPIES } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
@@ -34,7 +36,6 @@ import {
   OwnershipContext,
   normalizeCosmetics,
   ownsCosmetic,
-  readCardPicks,
   resolveCosmetic,
   useCanEquip,
   useCardPicks,
@@ -43,7 +44,7 @@ import {
   writeCardPick,
   type CardPicks,
 } from "../cards/cosmetics.ts";
-import { OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
+import { FullArtShown, OwnCopy, useOwnCopy } from "../cards/fullArt.ts";
 import type { FaceModel } from "../cards/model.ts";
 import { t } from "../i18n/i18n.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
@@ -67,6 +68,7 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   const own = useOwnCopy();
   const card = useCardPicks(face.defId);
   const owned = useContext(OwnershipContext);
+  const largeFace = <CardFace face={face} layout="full" worn={own} />;
   let sample: ReactElement | null = null;
   if (preview !== null && preview.kind !== "fullArt") {
     const picks: CardPicks = { ...card };
@@ -83,59 +85,17 @@ function LargeFace({ face, preview }: { face: FaceModel; preview: StripItem | nu
   return (
     <span className="collection-cardview__stage">
       <span className="collection-cardview__face" data-testid={T.cardViewFace}>
-        <CardFace face={face} layout="full" worn={own} />
+        {preview !== null && preview.kind === "fullArt" && preview.owned ? (
+          <FullArtShown defId={face.defId} on={preview.id !== NO_FULL_ART_ID}>
+            {largeFace}
+          </FullArtShown>
+        ) : (
+          largeFace
+        )}
       </span>
       {sample}
     </span>
   );
-}
-
-/**
- * While `preview` is a full art the card owns, the card holds that pick so its face prints as it
- * would, and gives its own back when the item stops being shown, the view closes or the page is
- * left. It returns `settle`, which says the pick now stands (the item was clicked), so it is not
- * given back, and `held`, the card's own full-art pick while a preview holds the store's (null for
- * none), so the strip says what the card wears and not what it is shown in.
- */
-function useFullArtPreview(defId: string, preview: StripItem | null): { settle: () => void; held: { fullArt: boolean | null } | null } {
-  const settled = useRef(false);
-  const held = useRef<{ fullArt: boolean | null } | null>(null);
-  // Settling changes what the strip reads, where the store may not change: the preview held the same pick.
-  const [, rerender] = useReducer((count: number) => count + 1, 0);
-  const shown = preview !== null && preview.kind === "fullArt" && preview.owned ? preview.id !== NO_FULL_ART_ID : null;
-  useEffect(() => {
-    if (shown === null) return undefined;
-    const before = readCardPicks(defId).fullArt ?? null;
-    settled.current = false;
-    held.current = { fullArt: before };
-    writeCardFullArt(defId, shown);
-    const giveBack = (): void => {
-      held.current = null;
-      if (!settled.current) writeCardFullArt(defId, before);
-      settled.current = true;
-    };
-    window.addEventListener("pagehide", giveBack);
-    return () => {
-      window.removeEventListener("pagehide", giveBack);
-      giveBack();
-    };
-  }, [defId, shown]);
-  return {
-    settle: () => {
-      settled.current = true;
-      held.current = null;
-      rerender();
-    },
-    held: held.current,
-  };
-}
-
-/** `picks` with the full-art pick `held` in place of the one a preview holds. */
-function withFullArt(picks: CardPicks, held: boolean | null): CardPicks {
-  const out: CardPicks = { ...picks };
-  if (held === null) delete out.fullArt;
-  else out.fullArt = held;
-  return out;
 }
 
 /** Whether `item` is the card's own pick of its kind. */
@@ -291,8 +251,6 @@ export default function CardCosmeticsView({
   const [textOpen, setTextOpen] = useState(false);
   const closeButton = useRef<HTMLButtonElement>(null);
   const face = useMemo(() => faceModel({ defId: def.id, def, radiant: false }), [def]);
-  const { settle, held } = useFullArtPreview(def.id, preview);
-  const worn = held === null ? picks : withFullArt(picks, held.fullArt);
   const strip = cardStrip(def.id, canEquip);
   // R1953001: the held tokens are read only where one may be offered: a locked item on a card owned at
   // MAX_COPIES, the only card a token's per-card cosmetic goes on (the server's `choice_of`).
@@ -320,12 +278,8 @@ export default function CardCosmeticsView({
 
   const equip = (item: StripItem): void => {
     if (!item.owned) return;
-    if (item.kind === "fullArt") {
-      settle();
-      writeCardFullArt(def.id, item.id !== NO_FULL_ART_ID);
-    } else {
-      writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
-    }
+    if (item.kind === "fullArt") writeCardFullArt(def.id, item.id !== NO_FULL_ART_ID);
+    else writeCardPick(def.id, item.kind, resolveCosmetic(item.kind, item.id));
   };
   const clear = (kind: StripKind): void => {
     if (kind === "fullArt") writeCardFullArt(def.id, null);
@@ -373,7 +327,7 @@ export default function CardCosmeticsView({
                 group={group}
                 def={def}
                 face={face}
-                picks={worn}
+                picks={picks}
                 show={(item) => {
                   setPreview(item);
                 }}

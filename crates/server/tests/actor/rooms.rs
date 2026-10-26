@@ -1129,6 +1129,126 @@ mod r642_the_portraits_on_a_rooms_match {
     }
 }
 
+// R1834002 — the loadouts on a room's match
+
+/// R1834002, the room half: a Best-of-1 room freezes the host deck's slots at `POST /api/rooms`
+/// with the deck, as R642 freezes its portrait, and the joiner's with the join; the match row keeps
+/// both seats' loadouts, each slot the deck's pick, else the account's, else the default.
+mod r1834002_the_loadouts_on_a_rooms_match {
+    use super::*;
+
+    fn defaults() -> Value {
+        json!({
+            "table": "table-tavern",
+            "field": "field-none",
+            "cardBack": "card-back-standard",
+            "foil": "foil-none",
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    }
+
+    #[tokio::test]
+    async fn r1834002_a_rooms_match_freezes_both() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let put_deck = |token: String, deck_id: String, slots: Value| {
+            let app = Arc::clone(&h.app);
+            async move {
+                let mut body = json!({ "name": "Deck", "cards": deck(), "catalogVersion": jackioh_cards::catalog_version() });
+                if let (Some(body), Some(slots)) = (body.as_object_mut(), slots.as_object()) {
+                    body.extend(slots.clone());
+                }
+                call(
+                    &app,
+                    "PUT",
+                    &format!("/api/decks/{deck_id}"),
+                    Some(token.as_str()),
+                    body,
+                )
+                .await
+                .0
+            }
+        };
+        assert_eq!(
+            put_deck(h.host.clone(), uuid(1), json!({ "tableCosmetic": "table-felt" })).await,
+            200
+        );
+        assert_eq!(
+            put_deck(
+                h.guest.clone(),
+                uuid(2),
+                json!({ "fieldCosmetic": "field-embers" })
+            )
+            .await,
+            200
+        );
+        // The guest's account picks a card back its deck leaves to it.
+        let (status, _, body) = call(
+            &h.app,
+            "PUT",
+            "/api/settings",
+            Some(h.guest.as_str()),
+            json!({ "groups": { "cosmetics": { "at": 1, "values": { "cardBack": "card-back-starfield", "field": "field-rain" } } } }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        let (status, created) = h.create(json!({ "mode": "bo1", "deckId": uuid(1) })).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+        assert_eq!(
+            h.rooms().await[0]["hostDeckSlots"],
+            json!({ "table": "table-felt" })
+        );
+        // A re-save while the room waits does not reach it.
+        assert_eq!(
+            put_deck(h.host.clone(), uuid(1), json!({ "tableCosmetic": "table-wood" })).await,
+            200
+        );
+        assert_eq!(
+            h.rooms().await[0]["hostDeckSlots"],
+            json!({ "table": "table-felt" })
+        );
+
+        let (status, joined) = h.join(&code, json!({ "mode": "bo1", "deckId": uuid(2) })).await;
+        assert_eq!(status, 200, "{joined}");
+        let row = started(&h.app).await.remove(0);
+        let mut host = defaults();
+        host["table"] = json!("table-felt");
+        let mut guest = defaults();
+        guest["field"] = json!("field-embers");
+        guest["cardBack"] = json!("card-back-starfield");
+        assert_eq!(row["loadouts"][0]["seat"], host);
+        assert_eq!(row["loadouts"][1]["seat"], guest);
+    }
+
+    #[tokio::test]
+    async fn r1834002_an_all_random_room_wears_the_accounts_picks() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (status, _, body) = call(
+            &h.app,
+            "PUT",
+            "/api/settings",
+            Some(h.host.as_str()),
+            json!({ "groups": { "cosmetics": { "at": 1, "values": { "table": "table-neon-grid" } } } }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let (status, created) = h.create(json!({ "mode": "random" })).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+        let (status, joined) = h.join(&code, json!({ "mode": "random" })).await;
+        assert_eq!(status, 200, "{joined}");
+        let row = started(&h.app).await.remove(0);
+        let mut host = defaults();
+        host["table"] = json!("table-neon-grid");
+        assert_eq!(row["loadouts"][0]["seat"], host);
+        assert_eq!(row["loadouts"][1]["seat"], defaults());
+    }
+}
+
 // R890000 — a match seat is claimed atomically (§9.5)
 
 /// R890000, the room half: the join seats both seats compare-and-set before the start, and a

@@ -850,12 +850,14 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
             player: PlayerId::P1,
             deck: match_row.decks.0.clone(),
             portrait: None,
+            deck_slots: None,
         },
         MatchSeat {
             profile_id: match_row.players.1.clone(),
             player: PlayerId::P2,
             deck: match_row.decks.1.clone(),
             portrait: None,
+            deck_slots: None,
         },
     )
 }

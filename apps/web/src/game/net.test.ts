@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
+import { DEFAULT_CARD_COSMETICS, cosmeticsOf, type CardCosmetics, type CosmeticKind } from "../cards/cosmetics.ts";
 import { socketProtocols, tokenFromProtocols } from "../net/socketProtocols.ts";
 import { baseView, pendingFor } from "../test/fixtures.ts";
 import {
@@ -548,6 +549,63 @@ describe("portraits and emotes", () => {
     h.client.sendEmote("sob");
     expect(h.socket().sent).toEqual([]);
     expect(h.client.snapshot().error).toBeNull();
+  });
+});
+
+// Loadouts (R1834003)
+
+describe("loadouts", () => {
+  /** The registry's first entry of `kind` that is not its default. */
+  const item = (kind: CosmeticKind): string => cosmeticsOf(kind).find((cosmetic) => !cosmetic.default)?.id ?? "";
+  /** A seat's six picks as the `loadouts` frame carries them: every default but those named. */
+  const seat = (picks: Partial<CardCosmetics> = {}): CardCosmetics => ({ ...DEFAULT_CARD_COSMETICS, ...picks });
+  const THEIRS = seat({ table: item("table"), cardBack: item("cardBack"), border: item("border") });
+
+  it("R1834003 loadouts and cardLoadouts reach the snapshot", () => {
+    const h = connected();
+    expect(h.client.snapshot().loadouts).toBeNull();
+
+    // A card's picks that come before any `loadouts` frame are kept for it.
+    h.socket().deliver({ type: "cardLoadouts", seat: "p2", cards: [{ cardId: "core-004", foil: item("foil"), fullArt: true }] });
+    expect(h.client.snapshot().loadouts).toBeNull();
+    h.socket().deliver({ type: "loadouts", p1: seat(), p2: THEIRS });
+    expect(h.client.snapshot().loadouts).toEqual({
+      p1: { seat: seat(), cards: {} },
+      p2: { seat: THEIRS, cards: { "core-004": { foil: item("foil"), fullArt: true } } },
+    });
+
+    // Later cards merge in by seat and card id. A kind the entry names is its word (an id this client
+    // does not know draws as the default), a kind it leaves out stays out, and only `true` prints a full art.
+    h.socket().deliver({
+      type: "cardLoadouts",
+      seat: "p1",
+      cards: [{ cardId: "core-005", finish: "finish-from-a-newer-client", border: item("border"), fullArt: false }],
+    });
+    const merged = {
+      p1: { seat: seat(), cards: { "core-005": { finish: DEFAULT_CARD_COSMETICS.finish, border: item("border") } } },
+      p2: { seat: THEIRS, cards: { "core-004": { foil: item("foil"), fullArt: true } } },
+    };
+    expect(h.client.snapshot().loadouts).toEqual(merged);
+
+    // A reconnect's hello brings both seats' picks again, and what the cards' frames sent stands.
+    h.socket().drop();
+    h.runTimers();
+    h.socket().open();
+    h.socket().deliver({ type: "loadouts", p1: seat(), p2: THEIRS });
+    expect(h.client.snapshot().loadouts).toEqual(merged);
+
+    // A malformed frame is no frame, and costs the board nothing it held.
+    for (const frame of [
+      { type: "loadouts", p1: seat() },
+      { type: "loadouts", p1: seat(), p2: { ...THEIRS, table: 4 } },
+      { type: "loadouts", p1: "loadout", p2: THEIRS },
+      { type: "cardLoadouts", seat: "p3", cards: [] },
+      { type: "cardLoadouts", seat: "p1", cards: "core-004" },
+    ]) {
+      expect(parseServerFrame(JSON.stringify(frame)), JSON.stringify(frame)).toBeNull();
+      h.socket().deliver(frame);
+    }
+    expect(h.client.snapshot().loadouts).toEqual(merged);
   });
 });
 

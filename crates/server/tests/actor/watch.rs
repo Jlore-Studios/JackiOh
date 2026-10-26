@@ -23,8 +23,12 @@ use tokio::time::Instant;
 use jackioh_engine::EMOTE_WINDOW_MS;
 use jackioh_server::actor::ws_server::{WS_SUBPROTOCOL, bearer_protocol};
 use jackioh_server::app::App;
-use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH, WS_IDLE_TIMEOUT_SECONDS};
-use jackioh_server::db::store::StartMatchInput;
+use jackioh_server::config::{
+    PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH,
+    WS_IDLE_TIMEOUT_SECONDS,
+};
+use jackioh_server::db::store::{PlayerSettingsLimits, PlayerSettingsMergeInput, StartMatchInput};
+use jackioh_server::economy::store::CardPicks;
 
 use super::duos::{
     Account, PROMPTLY, Served, WsClient, account, api, assert_refused_for_its_sign_in, ms,
@@ -126,12 +130,51 @@ struct World {
 }
 
 async fn world(ranked: bool) -> World {
+    world_dressed(ranked, false).await
+}
+
+/// R1834002: dresses both players before their match starts: the friend's account wears a playmat,
+/// and every card of both decks a pick of its own (the friend's a border, the rival's a foil).
+async fn dress(app: &Arc<App>, friend: &Account, rival: &Account) {
+    let mut tx = app.db.begin(None).await.expect("a store transaction");
+    let input: PlayerSettingsMergeInput = serde_json::from_value(json!({
+        "profileId": friend.id,
+        "groups": { "cosmetics": { "at": 1, "values": { "table": "table-felt" } } },
+        "at": 1,
+    }))
+    .expect("a PlayerSettingsMergeInput");
+    let limits = PlayerSettingsLimits {
+        max_groups: i64::try_from(PLAYER_SETTINGS_GROUPS_MAX).expect("a cap"),
+        max_bytes: i64::try_from(PLAYER_SETTINGS_BYTES_MAX).expect("a cap"),
+    };
+    tx.player_settings_merge(&input, &limits)
+        .await
+        .expect("playerSettings.merge");
+    for card in fake_deck(&[]) {
+        for (who, picks) in [
+            (friend, json!({ "cardId": card, "border": "border-bone" })),
+            (rival, json!({ "cardId": card, "foil": "foil-rainbow" })),
+        ] {
+            let picks: CardPicks = serde_json::from_value(picks).expect("a CardPicks");
+            tx.economy_card_picks_put(&who.id, &picks, 1)
+                .await
+                .expect("economy.cardPicks.put");
+        }
+    }
+    tx.commit().await.expect("commit");
+}
+
+/// `world`, the players dressed first when `dressed` says so (R1834002).
+async fn world_dressed(ranked: bool, dressed: bool) -> World {
     install_test_cards();
     let app = empty_test_app().await;
     let friend = account(&app, 11, "Fern").await;
     let rival = account(&app, 12, "Rex").await;
     let watcher = account(&app, 13, "Wes").await;
     befriend(&app, &watcher, &friend).await;
+    if dressed {
+        dress(&app, &friend, &rival).await;
+    }
     let match_id = uuid(400);
     start_match(&app, &match_id, &friend, &rival, ranked).await;
     let p1 = create_fake_socket();
@@ -982,5 +1025,110 @@ mod r1379000_the_credential_on_the_handshake {
         let renewed = w.watch(&w.watcher).await;
         assert!(renewed.of_type("error").is_empty(), "{:?}", renewed.frames());
         assert_eq!(w.app.matches.watcher_count(&w.match_id), 1);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1834003 — a watcher wears the seats' loadouts, by the view it watches
+// ---------------------------------------------------------------------------------------------
+
+/// R1834002, R1834003: a watcher is sent both seats' loadouts as it attaches, before any view, as a
+/// seat's socket is; a card's own picks follow only the delayed view that first shows that card of
+/// that seat's deck, once, so the watcher learns no card sooner than its views show it.
+mod r1834003_a_watcher_wears_the_seats_loadouts {
+    use super::*;
+
+    /// Every `(instanceId, defId)` a view JSON names, wherever it names one.
+    fn named_cards(view: &Value) -> Vec<(String, String)> {
+        let mut named = Vec::new();
+        let mut stack = vec![view];
+        while let Some(value) = stack.pop() {
+            match value {
+                Value::Object(fields) => {
+                    if let (Some(Value::String(instance)), Some(Value::String(def))) =
+                        (fields.get("instanceId"), fields.get("defId"))
+                    {
+                        named.push((instance.clone(), def.clone()));
+                    }
+                    stack.extend(fields.values());
+                }
+                Value::Array(entries) => stack.extend(entries),
+                _ => {}
+            }
+        }
+        named
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834003_a_watcher_follows_its_delayed_view() {
+        let w = world_dressed(false, true).await;
+        let watcher = w.watch(&w.watcher).await;
+        tokio::time::sleep(BEFORE_THE_PLAYERS_ACT).await;
+        let acted = Instant::now();
+        w.keep_both().await;
+        let delay = ms(SPECTATE_DELAY_MS);
+        let (_, at, _) = watcher
+            .wait_for(0, delay + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && frame["view"]["phase"] == "main"
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the turn begin: {:?}", watcher.frames()));
+        assert!(at >= acted + delay);
+        settle().await;
+
+        let frames = watcher.frames();
+        let defaults = json!({
+            "table": "table-tavern",
+            "field": "field-none",
+            "cardBack": "card-back-standard",
+            "foil": "foil-none",
+            "finish": "finish-plain",
+            "border": "border-standard",
+        });
+        let mut friend = defaults.clone();
+        friend["table"] = json!("table-felt");
+        // The loadouts come first, before any view, and once.
+        assert_eq!(
+            frames.first(),
+            Some(&json!({ "type": "loadouts", "p1": friend, "p2": defaults }))
+        );
+        assert_eq!(watcher.of_type("loadouts").len(), 1);
+
+        // Each card's picks follow a view that shows that card, and only the friend's seat's: the
+        // rival's hand is a count in the friend's view, and nothing of it is on the field yet.
+        let mut view: Option<Value> = None;
+        let mut sent: Vec<String> = Vec::new();
+        for frame in &frames {
+            match frame["type"].as_str() {
+                Some("view") => view = Some(frame["view"].clone()),
+                Some("cardLoadouts") => {
+                    let shown = named_cards(view.as_ref().expect("a view before any card's picks"));
+                    assert_eq!(frame["seat"], "p1", "{frame}");
+                    for entry in frame["cards"].as_array().into_iter().flatten() {
+                        let card = entry["cardId"].as_str().unwrap_or_default().to_string();
+                        assert!(shown.iter().any(|(_, def)| *def == card), "{card} was not shown");
+                        assert_eq!(entry["border"], "border-bone", "{entry}");
+                        assert!(!sent.contains(&card), "{card} was sent twice");
+                        sent.push(card);
+                    }
+                }
+                _ => {}
+            }
+        }
+        // Every card the friend holds, as the watcher's latest view shows it, has had its picks.
+        let latest = view.expect("a view");
+        let held: Vec<String> = latest["you"]["hand"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|card| card["defId"].as_str().map(str::to_string))
+            .collect();
+        assert!(!held.is_empty());
+        for card in held {
+            assert!(
+                sent.contains(&card),
+                "{card} is shown and its picks were not sent"
+            );
+        }
     }
 }

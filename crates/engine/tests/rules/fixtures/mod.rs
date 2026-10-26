@@ -4,6 +4,7 @@
 
 pub mod activate;
 pub mod ai_wheel;
+pub mod anomalies;
 pub mod blueprint;
 pub mod board_history;
 pub mod call_to_chaos_meditative;

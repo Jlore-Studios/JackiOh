@@ -298,6 +298,15 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     [match.sendAim, relayedAim, viewer],
   );
 
+  // R1834004: the viewer's own side wears the deck slots its seat froze when the match began (R1834002),
+  // so the deck it queued with; the account's choice until the first `loadouts` frame.
+  const loadouts = match.loadouts;
+  const ownSeat = viewer === undefined || loadouts === null ? null : loadouts[viewer].seat;
+  const deckCosmetics = useMemo(
+    () => (ownSeat === null ? null : { table: ownSeat.table, field: ownSeat.field, cardBack: ownSeat.cardBack }),
+    [ownSeat],
+  );
+
   // The clock frame of the turn the view is on (Clock.tsx `useFrameFor`): a view that has moved on
   // to the next turn never reads the last turn's deadline, even for the moment before its frame lands.
   const clock = useFrameFor(match.clock, turnKeyOf(view));
@@ -423,6 +432,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       aim={aim}
       trackStats
       wearCosmetics
+      deckCosmetics={deckCosmetics}
+      loadouts={loadouts}
       // A refused socket's reason is the console's (above); the board says it in a player's words.
       error={
         refusedWith === null

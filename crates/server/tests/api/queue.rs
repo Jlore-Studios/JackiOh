@@ -1999,6 +1999,7 @@ mod a_failed_start_does_not_end_the_sweep {
                 &[BotDeck {
                     cards: lone,
                     portrait: pick_portrait_from_seed("bot-deck").to_string(),
+                    slots: None,
                 }],
                 &app.catalog.version
             )
@@ -2146,6 +2147,251 @@ mod r642_the_portrait_the_ticket_freezes_and_the_seed_deals {
             pick_portrait_from_seed("portrait-seed:portrait:p2"),
         ]);
         assert_eq!(row["portraits"], expected);
+    }
+}
+
+// R1834002 — the loadout the ticket freezes and the match keeps
+
+/// R1834002, the queue half: a Best-of-1 ticket freezes its deck's three slots with the deck, as
+/// R642 freezes its portrait, and the match row keeps each seat's loadout, resolved as the match
+/// begins: the deck's pick, else the account's, else the default, every id one the account owns;
+/// the account's card picks; and the own picks of the cards its deck dealt, and no other card's. An
+/// All Random seat has no deck slots, so it wears the account's.
+mod r1834002_the_loadout_the_ticket_freezes {
+    use super::*;
+    use jackioh_server::cosmetics::{full_art_of, registry};
+    use jackioh_server::economy::store::CardPicks;
+
+    /// Writes the `cosmetics` settings group through `PUT /api/settings`.
+    async fn wear(app: &Arc<App>, token: &str, values: Value) {
+        let (status, body) = request(
+            app,
+            "PUT",
+            "/api/settings",
+            token,
+            Some(json!({ "groups": { "cosmetics": { "at": 1, "values": values } } })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    /// Saves a deck with its slots through `PUT /api/decks/:id`.
+    async fn save_with_slots(app: &Arc<App>, token: &str, deck_id: &str, cards: &[String], slots: Value) {
+        let mut body = json!({ "name": "The deck", "cards": cards, "catalogVersion": app.catalog.version });
+        if let (Some(body), Some(slots)) = (body.as_object_mut(), slots.as_object()) {
+            body.extend(slots.clone());
+        }
+        let (status, answer) = request(app, "PUT", &format!("/api/decks/{deck_id}"), token, Some(body)).await;
+        assert_eq!(status, 200, "{answer}");
+    }
+
+    /// Picks for one card through `PUT /api/card-picks`.
+    async fn pick(app: &Arc<App>, token: &str, body: Value) {
+        let (status, answer) = request(app, "PUT", "/api/card-picks", token, Some(body)).await;
+        assert_eq!(status, 200, "{answer}");
+    }
+
+    /// Every kind's default, as a seat that froze nothing wears.
+    fn defaults() -> Value {
+        json!({
+            "table": "table-tavern",
+            "field": "field-none",
+            "cardBack": "card-back-standard",
+            "foil": "foil-none",
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_best_of_1_freezes_the_loadout() {
+        let app = test_app().await;
+        let swapper = active_profile(&app, "dresser", 1000.0).await;
+        let rival = active_profile(&app, "plain", 1000.0).await;
+        let [mine, theirs, _] = decks_from();
+        let full_art_card = mine
+            .iter()
+            .find(|card| full_art_of(registry(), card).is_some())
+            .cloned()
+            .expect("a deck card with a full art");
+        let full_art = full_art_of(registry(), &full_art_card)
+            .map(|c| c.id.clone())
+            .unwrap_or_default();
+        let plain_card = mine
+            .iter()
+            .find(|card| full_art_of(registry(), card).is_none())
+            .cloned()
+            .expect("a deck card with no full art");
+        let deck_id = next_uuid();
+        let rival_deck_id = next_uuid();
+
+        // The deck picks a playmat and a card back; the account a playmat the deck's beats, a
+        // backdrop the deck leaves to it, and a foil that no card wears, since a card with no pick
+        // of its own wears its kind's default (R1953001).
+        save_with_slots(
+            &app,
+            &swapper,
+            &deck_id,
+            &mine,
+            json!({ "tableCosmetic": "table-felt", "cardBackCosmetic": "card-back-lacquer" }),
+        )
+        .await;
+        wear(
+            &app,
+            &swapper,
+            json!({ "table": "table-wood", "field": "field-rain", "foil": "foil-rainbow" }),
+        )
+        .await;
+        // A card of the deck picks a border; one outside it picks one too, which never freezes; the
+        // full art the account owns prints by the account's Full-art switch, on by default.
+        pick(
+            &app,
+            &swapper,
+            json!({ "cardId": plain_card, "border": "border-bone" }),
+        )
+        .await;
+        pick(
+            &app,
+            &swapper,
+            json!({ "cardId": theirs[0], "border": "border-bone" }),
+        )
+        .await;
+        let mut tx = app.db.begin(None).await.expect("begin");
+        tx.economy_cosmetics_grant(&CosmeticGrant {
+            profile_id: "dresser".to_string(),
+            card_id: Some(full_art_card.clone()),
+            cosmetic_id: full_art.clone(),
+            delta: 1,
+            reason: EconomyReason::Dev,
+            reference: None,
+            dev: true,
+            at: now_ms(),
+        })
+        .await
+        .expect("economy.cosmetics.grant");
+        // The rival's store holds what no write check would take now: an id from a newer client and
+        // a full art it does not own. Both freeze as nothing of its own.
+        tx.economy_card_picks_put(
+            "plain",
+            &CardPicks {
+                card_id: theirs[1].clone(),
+                foil: Some("foil-from-a-newer-client".to_string()),
+                full_art: Some(true),
+                ..CardPicks::default()
+            },
+            now_ms(),
+        )
+        .await
+        .expect("economy.cardPicks.put");
+        tx.commit().await.expect("commit");
+        assert_eq!(save(&app, &rival, &rival_deck_id, &theirs, None).await, 200);
+
+        let (_, queued) = enqueue_with(&app, &swapper, json!({ "mode": "bo1", "deckId": deck_id })).await;
+        let ticket_id = queued["ticketId"].as_str().unwrap_or("").to_string();
+        assert_eq!(
+            ticket(&app, &ticket_id).await["deckSlots"],
+            json!({ "table": "table-felt", "cardBack": "card-back-lacquer" })
+        );
+        // A re-save while the ticket is open does not reach it.
+        save_with_slots(
+            &app,
+            &swapper,
+            &deck_id,
+            &mine,
+            json!({ "tableCosmetic": "table-neon-grid" }),
+        )
+        .await;
+        assert_eq!(
+            ticket(&app, &ticket_id).await["deckSlots"],
+            json!({ "table": "table-felt", "cardBack": "card-back-lacquer" })
+        );
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (_, paired) = enqueue_with(&app, &rival, json!({ "mode": "bo1", "deckId": rival_deck_id })).await;
+        assert_eq!(paired["status"], "matched");
+
+        let row = matches_table(&app).await.last().cloned().expect("the match row");
+        assert_eq!(row["players"], json!(["dresser", "plain"]));
+        let mut cards = vec![
+            json!({ "cardId": full_art_card, "fullArt": true }),
+            json!({ "cardId": plain_card, "border": "border-bone" }),
+        ];
+        cards.sort_by(|a, b| a["cardId"].as_str().cmp(&b["cardId"].as_str()));
+        assert_eq!(
+            row["loadouts"],
+            json!([
+                {
+                    "seat": {
+                        "table": "table-felt",
+                        "field": "field-rain",
+                        "cardBack": "card-back-lacquer",
+                        "foil": "foil-none",
+                        "finish": "finish-plain",
+                        "border": "border-standard",
+                    },
+                    "cards": cards,
+                },
+                { "seat": defaults(), "cards": [] },
+            ])
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1834002_all_random_wears_the_accounts_picks() {
+        let _seeds = SEED_MAP.lock().await;
+        let app = test_app().await;
+        let one = active_profile(&app, "random-dresser", 1000.0).await;
+        let two = active_profile(&app, "random-plain", 1000.0).await;
+        wear(
+            &app,
+            &one,
+            json!({ "table": "table-wood", "cardBack": "card-back-starfield" }),
+        )
+        .await;
+        // A border on every playable card: only the cards dealt to the seat freeze.
+        let picks: Vec<Value> = pool()
+            .iter()
+            .map(|card| json!({ "cardId": card, "border": "border-wood" }))
+            .collect();
+        let (status, body) = request(
+            &app,
+            "POST",
+            "/api/card-picks/upload",
+            &one,
+            Some(json!({ "cards": picks })),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        enqueue_with(&app, &one, json!({ "mode": "random", "seed": "loadout-seed" })).await;
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (_, paired) = enqueue_with(&app, &two, json!({ "mode": "random" })).await;
+        assert_eq!(paired["status"], "matched");
+        // An All Random ticket freezes no slots: there is no deck to carry them.
+        for row in tickets_table(&app).await {
+            assert_eq!(nullable(&row, "deckSlots"), Value::Null);
+        }
+
+        let row = matches_table(&app).await.last().cloned().expect("the match row");
+        assert_eq!(row["players"], json!(["random-dresser", "random-plain"]));
+        let mut seat = defaults();
+        seat["table"] = json!("table-wood");
+        seat["cardBack"] = json!("card-back-starfield");
+        assert_eq!(row["loadouts"][0]["seat"], seat);
+        let mut dealt: Vec<String> = row["decks"][0]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|card| card.as_str().map(str::to_string))
+            .collect();
+        dealt.sort();
+        dealt.dedup();
+        let frozen: Vec<Value> = dealt
+            .iter()
+            .map(|card| json!({ "cardId": card, "border": "border-wood" }))
+            .collect();
+        assert!(!frozen.is_empty());
+        assert_eq!(row["loadouts"][0]["cards"], Value::Array(frozen));
+        assert_eq!(row["loadouts"][1], json!({ "seat": defaults(), "cards": [] }));
     }
 }
 
