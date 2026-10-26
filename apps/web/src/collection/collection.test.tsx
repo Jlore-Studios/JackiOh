@@ -20,8 +20,10 @@ import {
   readCardPicks,
   readCosmetics,
   resetCosmeticsForTests,
+  subscribeCardPickWrites,
   writeCardPick,
   writeCosmetics,
+  type CardPickChange,
 } from "../cards/cosmetics.ts";
 import { FullArtOwned } from "../cards/fullArt.ts";
 import {
@@ -483,7 +485,7 @@ describe("R1655000 a card in context", () => {
     expect(item(BIG_D_ART)).toHaveAttribute("data-equipped", "true");
   });
 
-  it("R1655000 a full art is shown by holding its pick, which is given back when it stops being shown", () => {
+  it("R1655000 a full art is shown while it is shown, and stands once chosen", () => {
     writeCardSettings({ fullArt: false });
     open(BIG_D, OWNS_BIG_D_ART);
     expect(large().getAttribute("data-full-art")).toBeNull();
@@ -493,7 +495,7 @@ describe("R1655000 a card in context", () => {
     fireEvent.mouseLeave(item(BIG_D_ART));
     expect(large().getAttribute("data-full-art")).toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({});
-    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe("{}");
+    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBeNull();
 
     // Clicked, the pick stands past the pointer leaving.
     fireEvent.mouseEnter(item(BIG_D_ART));
@@ -532,24 +534,37 @@ describe("R1655000 a card in context", () => {
     expect(readCardPicks(BIG_D)).toEqual({ fullArt: true });
   });
 
-  it("R1655000 a shown full art is given back when the view closes or the page is left", () => {
+  it("R1834000 a shown full art writes no pick, so none is sent to the account, whether the view closes or the page is left", () => {
     writeCardSettings({ fullArt: false });
     writeCardPick(BIG_D, "border", "border-bone");
+    const stored = localStorage.getItem(CARD_PICKS_SETTINGS_KEY);
+    const writes: [string, CardPickChange][] = [];
+    const unsubscribe = subscribeCardPickWrites((defId, change) => {
+      writes.push([defId, change]);
+    });
     open(BIG_D, OWNS_BIG_D_ART);
 
     fireEvent.focus(item(BIG_D_ART));
-    expect(readCardPicks(BIG_D).fullArt).toBe(true);
+    expect(large().getAttribute("data-full-art"), "the large card shows it").toBe("true");
+    expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
     fireEvent.click(screen.getByTestId(T.cardViewClose));
     expect(screen.queryByTestId(T.cardView)).toBeNull();
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
 
     fireEvent.click(screen.getByTestId(T.card(BIG_D)));
+    fireEvent.focus(item(NO_FULL_ART_ID));
     fireEvent.focus(item(BIG_D_ART));
-    expect(readCardPicks(BIG_D).fullArt).toBe(true);
     act(() => {
       window.dispatchEvent(new Event("pagehide"));
     });
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-bone" });
+    expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe(stored);
+    expect(writes, "no preview reaches the account's sync").toEqual([]);
+
+    // Chosen, it is a write like any other.
+    fireEvent.click(item(BIG_D_ART));
+    expect(writes).toEqual([[BIG_D, { fullArt: true }]]);
+    unsubscribe();
   });
 
   it("R1655000 Escape closes the view, but the card's text open over it takes the Escape first", () => {

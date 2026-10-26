@@ -28,6 +28,8 @@
 // watched or replayed online game), prints its full art where its owner's loadout says so for that
 // card, which the server checked against the owner's account (R1834001): the client still infers no
 // one's ownership. The viewer's own Full-art cards setting and `FullArtAllowed` hold over it.
+// R1834000: since every write of a card's pick is sent to the account, a preview writes none:
+// `FullArtShown` shows a full art on an own copy in place of the card's pick, behind the same ownership.
 //
 // Presentation only (CLAUDE.md rule 7): the face is drawn differently and plays the same.
 
@@ -136,13 +138,26 @@ export function ownsFullArt(owned: FullArtOwnership, defId: string, own: boolean
   return own && id !== undefined && ownsCosmetic(owned, defId, id);
 }
 
+/** R1834000: a full-art pick shown on a card's own copies below it in place of the one the store holds. */
+const FullArtShownContext = createContext<{ defId: string; on: boolean } | null>(null);
+
+/**
+ * R1834000: the viewer's own copies of `defId` below it print as if the card's full-art pick were
+ * `on`, without the store holding it: the Collection's preview of a full art, which must write no pick,
+ * since every write of one is sent to the account (cards/cardPicksSync.ts).
+ */
+export function FullArtShown({ defId, on, children }: { defId: string; on: boolean; children?: ReactNode }): ReactElement {
+  return createElement(FullArtShownContext.Provider, { value: { defId, on } }, children);
+}
+
 /**
  * R1108000: whether a copy of `defId` prints full art, which is off below a `FullArtAllowed` of
  * false. R1313000: and off where ownership decides and it is not the viewer's own (`worn`, or below
  * an `OwnCopy`) with its full art owned. R1655000: an own copy's own pick (`writeCardFullArt`)
  * decides first; the Full-art cards setting decides where the card has none, and for every copy
  * that is not the viewer's own. R1834004: a copy that is not, below a `TheirCopy`, prints only where
- * its owner's loadout picks the card's full art, and the setting is on.
+ * its owner's loadout picks the card's full art, and the setting is on. Below a `FullArtShown` of
+ * `defId`, an own copy reads its pick from there.
  */
 export function useFullArt(defId: string, worn: boolean = false): boolean {
   const { fullArt } = useCardSettings();
@@ -150,7 +165,9 @@ export function useFullArt(defId: string, worn: boolean = false): boolean {
   const owned = useContext(OwnershipContext);
   const ownCopy = useContext(OwnCopyContext);
   const theirs = useContext(TheirCopyContext);
-  const pick = useCardPicks(defId).fullArt;
+  const shown = useContext(FullArtShownContext);
+  const stored = useCardPicks(defId).fullArt;
+  const pick = shown?.defId === defId ? shown.on : stored;
   const own = worn || ownCopy;
   if (!own && theirs !== null) return theirs.cards[defId]?.fullArt === true && fullArt && allowed;
   return (own ? (pick ?? fullArt) : fullArt) && allowed && ownsFullArt(owned, defId, own);
