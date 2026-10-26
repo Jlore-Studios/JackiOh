@@ -1,0 +1,9 @@
+{
+  "seed": 3760,
+  "catalogVersion": "v0.4.12c",
+  "decks": [
+    ["classicplus-028", "classic-088", "classicplus-047", "classicplus-072", "classic-030", "classicplus-007", "core-050", "core-027", "core-080", "classicplus-022", "meditative-034", "core-079", "meditative-090", "classic-004", "core-073", "classic-062", "core-033", "classic-054", "classicplus-029", "classicplus-077", "meditative-047", "meditative-073", "core-047", "core-039", "classic-070"],
+    ["meditative-023", "core-075", "classicplus-017", "meditative-092", "meditative-068", "classic-061", "classic-052", "classic-022", "classicplus-076", "meditativeplus-020", "classic-044", "meditative-087", "classic-041", "classic-005", "core-029", "meditative-086", "meditativeplus-022", "classic-073", "classicplus-067", "meditative-042", "meditative-046", "meditative-079", "classic-020", "meditative-038", "core-053"]
+  ],
+  "found": "Super run 40337807269 on main (ec855ac, schedule): fuzz 2/4 failed on seed 3760 with an I6 invariant violation on turn 35 — a card shuffled into a library and then eaten by Meditative #47 Taotie's random-library Fuse read by id in a seat's view of its shuffledIn event, though a library card is hidden from both seats (R1020). Fixed by #2010 (view_for's in_library redaction), proven by fuse_random.rs's r1020_a_card_shuffled_into_the_library_and_then_fused_away_never_reads. The decks are decks_for_seed(3760) over the 396-card pool of catalog.json at 73eacdb8c (v0.4.12c)."
+}

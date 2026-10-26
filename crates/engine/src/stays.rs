@@ -260,7 +260,7 @@ pub struct LaterMoves {
 /// its replacement arrives (§6.3 Replace) — while a Fuse keeps the instance of a target on the field
 /// (R77), so only the ingredients that ceased to exist are moved by it. A change of control, a
 /// rotation and a board swap are not moves: the card stays on the field (R171, R174).
-fn moved_by(event: &GameEvent) -> Vec<String> {
+pub(crate) fn moved_by(event: &GameEvent) -> Vec<String> {
     match event {
         GameEvent::CardPlayed { instance_id, .. }
         | GameEvent::Summoned { instance_id, .. }
