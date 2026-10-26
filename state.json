@@ -6721,11 +6721,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": null,
-    "last_run": "2026-10-26T21:20:03Z",
-    "provider": "claude-3",
+    "idle_since": "2026-10-26T20:46:07Z",
+    "last_run": "2026-10-26T20:12:51Z",
+    "provider": null,
     "requested": false,
-    "run_id": "40403469197",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": null,
