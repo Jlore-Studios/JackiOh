@@ -10,6 +10,11 @@
 //! the card had at the version before its own opened) when that one is not short too; only when both
 //! are do AI development games pad the current window (provisional).
 //!
+//! R1968001: a patch that a later version replaced before any game, live or development, was played on
+//! it is read as a micro over the families it plays (`collapse_gameless`): it opens no window for the
+//! cards it left alone, so a run of patches shipped back to back does not empty every card's figures.
+//! The newest version keeps its tier, since a patch just shipped has had no time for games.
+//!
 //! The engine is pure (CLAUDE.md rule 4), so the patch history is an argument: each shipped version
 //! in `patches.json`'s order with its tier and play set (`PatchStep`). `jackioh_cards::patch_history`
 //! builds it from the compiled-in history. A version string is compared for equality and never
@@ -204,6 +209,65 @@ pub fn card_window(
     window_in(&history, at, family, request, &live_games)
 }
 
+/// R1968001: `history` with every patch that a later version replaced before a game was played on it
+/// read as a micro over the families it plays. `games` answers every record filed under a version,
+/// live and development alike. The newest version, and every major, keeps its tier.
+pub fn collapse_gameless(history: &[PatchStep], games: impl Fn(&str) -> i64) -> Vec<PatchStep> {
+    let newest = history.len().saturating_sub(1);
+    history
+        .iter()
+        .enumerate()
+        .map(|(index, step)| {
+            if step.tier == PatchTier::Patch && index < newest && games(&step.version) == 0 {
+                PatchStep {
+                    tier: PatchTier::Micro,
+                    ..step.clone()
+                }
+            } else {
+                step.clone()
+            }
+        })
+        .collect()
+}
+
+/// R1968002: a patch as the statistics page lists it: the window every card shares, opened by a major
+/// or a patch with games, with its micros and the patches `collapse_gameless` folds into it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PatchWindow {
+    /// Its versions, oldest first: the first opened it, and the last is the one to ask its figures at.
+    pub versions: Vec<String>,
+    /// Every record filed under them, and the live ones among them.
+    pub games: i64,
+    pub live_games: i64,
+}
+
+/// R1968002: every window the cards share over `history` as `collapse_gameless` reads it, newest
+/// first. `games` and `live_games` answer a version's records, as for `collapse_gameless` and R654.
+pub fn patch_windows(
+    history: &[PatchStep],
+    games: impl Fn(&str) -> i64,
+    live_games: impl Fn(&str) -> i64,
+) -> Vec<PatchWindow> {
+    let mut windows: Vec<PatchWindow> = Vec::new();
+    for (index, step) in collapse_gameless(history, &games).iter().enumerate() {
+        if index == 0 || step.opens(None) {
+            windows.push(PatchWindow {
+                versions: Vec::new(),
+                games: 0,
+                live_games: 0,
+            });
+        }
+        if let Some(window) = windows.last_mut() {
+            window.versions.push(step.version.clone());
+            window.games += games(&step.version);
+            window.live_games += live_games(&step.version);
+        }
+    }
+    windows.reverse();
+    windows
+}
+
 /// R1367000: what `windowed_card_stats` reads.
 #[derive(Clone, Debug)]
 pub struct WindowQuery<'a> {
@@ -265,7 +329,8 @@ struct Part {
 /// games and decks of those records. Every caller of public card figures reads them here:
 /// `GET /api/stats/cards`, `cargo jackioh stats report --window` and `cargo jackioh winrates`.
 pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
-    let (history, at) = resolve(query.history, query.at);
+    let collapsed = collapse_gameless(query.history, |version| totals.games(version));
+    let (history, at) = resolve(&collapsed, query.at);
     // Each version's totals apart, so a version's figures read only its own keys.
     let mut by_version: IndexMap<&str, StatsTotals> = IndexMap::new();
     for (key, records) in &totals.records {
@@ -624,5 +689,95 @@ mod tests {
         assert_eq!(a.stats.in_deck.games, 2);
         // The window every card shares holds v1's 999 and v2's one, and clears.
         assert_eq!(report.patch.source, WindowSource::Live);
+    }
+
+    #[test]
+    fn r1968001_a_patch_no_game_was_played_on_is_read_as_a_micro_over_its_plays() {
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Patch, &[A]),
+            step("v3", PatchTier::Patch, &[]),
+            step("v4", PatchTier::Patch, &[]),
+        ];
+        // v2 had no game before v3 replaced it; v3 had one; v4, the newest, has none yet.
+        let games = |version: &str| i64::from(version == "v1" || version == "v3");
+        let tiers: Vec<PatchTier> = collapse_gameless(&history, games)
+            .iter()
+            .map(|step| step.tier)
+            .collect();
+        assert_eq!(
+            tiers,
+            [
+                PatchTier::Major,
+                PatchTier::Micro,
+                PatchTier::Patch,
+                PatchTier::Patch
+            ]
+        );
+        // A major keeps its tier, games or none.
+        let majors = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Major, &[]),
+        ];
+        assert_eq!(collapse_gameless(&majors, none), majors);
+
+        // Over the figures: v3 had a game, so at v3 it opens every card's window as a patch does.
+        let mut totals = StatsTotals::default();
+        totals.fold(&game("m1", GameSource::Live, "v1", &[A, B]), false);
+        totals.fold(&game("m3", GameSource::Live, "v3", &[A, B]), false);
+        let report = windowed_card_stats(&totals, &query(&history[..3], "v3"));
+        assert_eq!(versions(&report.patch), ["v3"]);
+        let b = report.card(B).expect("B is held");
+        assert_eq!(versions(&b.window), ["v3"]);
+        // At v2, read after v3 shipped: v2 is a micro of v1's window, so B keeps v1's game.
+        let report = windowed_card_stats(&totals, &query(&history[..3], "v2"));
+        assert_eq!(versions(&report.patch), ["v1", "v2"]);
+        let b = report.card(B).expect("B is held");
+        assert_eq!(
+            (versions(&b.window), b.stats.in_deck.games),
+            (vec!["v1", "v2"], 1)
+        );
+        let a = report.card(A);
+        assert!(a.is_none_or(|a| versions(&a.window) == ["v2"]));
+        // A development game counts as a game: v2 with one keeps its tier.
+        totals.fold(&game("dev:v2:s:1", GameSource::Dev, "v2", &[B]), false);
+        let report = windowed_card_stats(&totals, &query(&history[..3], "v2"));
+        assert_eq!(versions(&report.patch), ["v2"]);
+    }
+
+    #[test]
+    fn r1968002_patch_windows_lists_each_shared_window_newest_first_with_its_games() {
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v1b", PatchTier::Micro, &[A]),
+            step("v2", PatchTier::Patch, &[A]),
+            step("v3", PatchTier::Patch, &[B]),
+            step("v3b", PatchTier::Micro, &[]),
+        ];
+        let games = |version: &str| match version {
+            "v1" => 10,
+            "v1b" => 5,
+            "v3" => 7,
+            "v3b" => 1,
+            _ => 0,
+        };
+        let live = |version: &str| i64::from(version == "v3");
+        let windows = patch_windows(&history, games, live);
+        let listed: Vec<(Vec<&str>, i64, i64)> = windows
+            .iter()
+            .map(|window| {
+                (
+                    window.versions.iter().map(String::as_str).collect(),
+                    window.games,
+                    window.live_games,
+                )
+            })
+            .collect();
+        // v2 had no game, so it folds into v1's window.
+        assert_eq!(
+            listed,
+            [(vec!["v3", "v3b"], 8, 1), (vec!["v1", "v1b", "v2"], 15, 0)]
+        );
+        assert!(patch_windows(&[], none, none).is_empty());
     }
 }

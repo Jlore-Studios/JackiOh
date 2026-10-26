@@ -30,9 +30,9 @@ use tokio::sync::OnceCell;
 use jackioh_cards::patch_history;
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardWindow, GameMode, GameSource, PatchStep,
-    PilotFilter, SourceFilter, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource,
-    WindowedReport, add_stats, card_drills_of, card_family, card_stats_of, card_window, played_delta,
-    sources_of, win_rate, windowed_card_stats,
+    PatchWindow, PilotFilter, SourceFilter, StatsTotals, Tally, TotalsKey, WindowQuery, WindowRequest,
+    WindowSource, WindowedReport, add_stats, card_drills_of, card_family, card_stats_of, card_window,
+    collapse_gameless, patch_windows, played_delta, sources_of, win_rate, windowed_card_stats,
 };
 use jackioh_engine::{CardCost, CardDef, CardDefs, Pilot};
 
@@ -288,6 +288,9 @@ pub struct PublicStatsCardsResponse {
     pub total_games: i64,
     pub cards: Vec<PublicCardStat>,
     pub summary: PublicStatsSummary,
+    /// R1968002: every patch the page can show, newest first: the window the cards share, its
+    /// versions oldest first (ask for its figures at the last), its games and its live games.
+    pub patches: Vec<PatchWindow>,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -549,19 +552,23 @@ impl KeptReports {
 }
 
 /// R1367000: one patch's windowed figures for one `?source=` and `?pilot=`, and each version's live
-/// games, which the window of a card no counted deck held is read from.
+/// games, which the window of a card no counted deck held is read from, over the history as
+/// R1968001 reads it (a patch no game was played on read as a micro). R1968002: every patch the
+/// page can show, newest first.
 struct KeptWindow {
     report: WindowedReport,
     live_games: IndexMap<String, i64>,
+    history: Vec<PatchStep>,
+    patches: Vec<PatchWindow>,
 }
 
 impl KeptWindow {
     /// The window of a card, held or not.
-    fn window_of(&self, history: &[PatchStep], id: &str, request: WindowRequest) -> CardWindow {
+    fn window_of(&self, id: &str, request: WindowRequest) -> CardWindow {
         match self.report.card(id) {
             Some(card) => card.window.clone(),
             None => card_window(
-                history,
+                &self.history,
                 &self.report.at,
                 Some(card_family(id)),
                 request,
@@ -611,7 +618,13 @@ async fn kept_window(
                 .entry(key.patch.clone())
                 .or_insert_with(|| totals.live_games(&key.patch));
         }
-        Ok::<_, ApiError>(Arc::new(KeptWindow { report, live_games }))
+        let games = |version: &str| totals.games(version);
+        Ok::<_, ApiError>(Arc::new(KeptWindow {
+            report,
+            live_games,
+            history: collapse_gameless(history, games),
+            patches: patch_windows(history, games, |version| totals.live_games(version)),
+        }))
     };
     let known = at == app.catalog.version || history.iter().any(|step| step.version == at);
     if !known {
@@ -804,7 +817,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         let held = report.card(id);
         let stat = held.map(|card| &card.stats);
         let total_decks = held.map(|card| card.decks).unwrap_or(0);
-        let window = kept.window_of(&history, id, request);
+        let window = kept.window_of(id, request);
         let (in_deck_games, _) = stat.map(|stat| tally_of(&stat.in_deck)).unwrap_or((0, 0));
         let rate = stat.and_then(|stat| win_rate(&stat.in_deck));
         let (played_games, played_wins) = stat.map(|stat| tally_of(&stat.played)).unwrap_or((0, 0));
@@ -907,6 +920,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         min_sample: CARD_STATS_MIN_SAMPLE,
         total_games: report.games,
         cards,
+        patches: kept.patches.clone(),
         summary: PublicStatsSummary {
             total_games: report.games,
             live_games: live_games_count,

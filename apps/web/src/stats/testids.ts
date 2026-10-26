@@ -4,11 +4,6 @@ export const statsTestid = {
   screen: "stats-screen",
   tabCards: "stats-tab-cards",
   tabPlayers: "stats-tab-players",
-  /** R1935000: the Daily runs tab, its table and its Retry. */
-  tabCi: "stats-tab-ci",
-  ciTable: "stats-ci-table",
-  ciRetry: "stats-ci-retry",
-  ciSummary: "stats-ci-summary",
   /** R1966000: the Sets tab, its leaders, its table, its strongest and weakest cards and its Retry. */
   tabSets: "stats-tab-sets",
   setsLeaders: "stats-sets-leaders",
@@ -16,6 +11,11 @@ export const statsTestid = {
   setsOutliers: "stats-sets-outliers",
   setsRetry: "stats-sets-retry",
   summaryTiles: "stats-summary-tiles",
+  /** R1968002: the patch bar, its picker and the patch before and after. */
+  patchBar: "stats-patch-bar",
+  patchSelect: "stats-patch-select",
+  patchPrevious: "stats-patch-previous",
+  patchNext: "stats-patch-next",
   summaryTotalGames: "stats-summary-total-games",
   provisionalBanner: "stats-provisional-banner",
   fallbackToggle: "stats-fallback-toggle",
