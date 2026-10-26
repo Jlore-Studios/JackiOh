@@ -19,6 +19,11 @@
 //! the Armor's part of the hit (`absorbed`, R1360), and a hit the Armor takes whole, which R63's zero
 //! rule stops, is reported by `damageAbsorbed` (R1361), a report that nothing answers.
 //!
+//! Stinkyscape's verbs (#1849) add three steps, each read off a static flag and skipped without it:
+//! a Spell's hit on a Unit immune to Spell Damage is no instance (R1849000); before Divine Shield and
+//! Armor, an own-turn redirect moves a hero's hit to the opponent (step 0a, R1849004); and after
+//! Lifesteal, a reflecting Unit deals what it took again, from itself (step 8a, R1849003).
+//!
 //! Duos co-op (#936 S3) writes a hero's health only through `duos_life.rs`: a Duos seat's own HP,
 //! then its team's pool (B13, B14), and step 4a judges a hit against both (B17). Without a Duos life
 //! on the hero each of those is the arithmetic it replaced, so a 1v1 game is unchanged (B3).
@@ -35,7 +40,10 @@ use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HALF_DAMAGE_TO_HEROES
 use crate::replacements::LethalHitTo;
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
-use crate::wire::{GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword};
+use crate::wire::{
+    GameEvent, Keyword, KeywordKind, PlayerId, RedirectWhat, Row, ZoneName, armor_of, has_keyword,
+    opponent_of,
+};
 
 /// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
 /// object was: a target is built once per hit and matched at every card and test that aims one, and a
@@ -468,6 +476,33 @@ fn land(
         DamageTarget::Hero { .. } => None,
     };
 
+    // R1849000: a Spell's hit on a Unit immune to Spell Damage is no damage instance at all — before
+    // Divine Shield, which stays, and with no Trample excess to send on.
+    if let Some(live) = &unit
+        && crate::restrictions::spell_damage_cannot_reach(sink.state, source, live)
+    {
+        return Landed::default();
+    }
+
+    // R1849004, step 0a: on its controller's own turn, a hit on a hero whose side carries an own-turn
+    // redirect goes to the opponent's hero instead, up to each card's cap this turn; what no cap takes
+    // lands here as the rest of the same hit.
+    if let DamageTarget::Hero { player } = target
+        && redirects < DAMAGE_REDIRECT_CAP
+        && let Some(moved) = own_turn_redirect(sink, args, *player, amount_in, redirects, caught)
+    {
+        let rest = amount_in - moved.taken;
+        let here = if rest > 0 {
+            land_hit(sink, args, rest, redirects + 1, caught)
+        } else {
+            0
+        };
+        return Landed {
+            dealt: moved.dealt + here,
+            held: 0,
+        };
+    }
+
     // Step 1: Divine Shield negates the whole hit and is gone.
     if let Some(live) = &unit {
         let view = crate::layers::unit_view(sink.state, live);
@@ -700,6 +735,11 @@ fn land(
         heal_hero(sink, source_card.controller, dealt);
     }
 
+    // R1849003, step 8a: what a reflecting Unit took is dealt again, from it.
+    if let Some(live) = &unit {
+        reflect_damage(sink, live, source, flags, dealt);
+    }
+
     // Step 9: Trample sends the excess on (`send_excess`).
     let held = send_excess(sink, args, &unit, trample_excess, caught, hold);
     Landed { dealt, held }
@@ -809,6 +849,145 @@ fn adjacent_units_of(
                 && !crate::restrictions::spell_cannot_reach(state, source, neighbour)
         })
         .collect()
+}
+
+/// R1849004: where a card with an own-turn redirect notes how much it has moved this turn,
+/// `{ turn, moved }`, as an Activate ability notes its uses (`subsystems::activate`).
+const OWN_TURN_REDIRECT_KEY: &str = "ownTurnRedirect";
+
+/// What an own-turn redirect did to one hit: how much it took off the hero, and what that dealt to
+/// the opponent's hero.
+struct Moved {
+    taken: i32,
+    dealt: i32,
+}
+
+/// R1849004 (Stinkyscape #5 Masochism Unmasked), §4.4 step 0a: on `player`'s own turn, a hit of
+/// `amount` on their hero is taken off it by each card acting on their side that redirects, in R68's
+/// order, as much as the card's cap has left this turn, and dealt to the opponent's hero as a new
+/// instance from the same source, times the card's multiplier. The cap counts what is taken off the
+/// hero, so the Radiant face's doubling deals up to twice it. `None` when nothing moved, which is
+/// every hit without such a card: nothing is read but the flag, and nothing is written.
+fn own_turn_redirect(
+    sink: &mut DamageSink<'_>,
+    args: &DamageArgs,
+    player: PlayerId,
+    amount: i32,
+    redirects: u32,
+    caught: &[String],
+) -> Option<Moved> {
+    if sink.state.active != player {
+        return None;
+    }
+    let mut rest = amount;
+    let mut dealt = 0;
+    for card in acting_texts_of(sink.state, player) {
+        if rest <= 0 {
+            break;
+        }
+        let Some(redirect) = crate::scripts::flags_of(sink.state, &card).own_turn_redirect else {
+            continue;
+        };
+        // R386: the card's declared numbers `cap` and `multiplier` where it declares them.
+        let cap = crate::params::declared_or(sink.state, &card, "cap", redirect.cap).max(0);
+        let multiplier =
+            crate::params::declared_or(sink.state, &card, "multiplier", redirect.multiplier.unwrap_or(1))
+                .max(1);
+        let turn = sink.state.turn;
+        let used = card
+            .memory
+            .get(OWN_TURN_REDIRECT_KEY)
+            .filter(|record| record.get("turn").and_then(serde_json::Value::as_i64) == Some(i64::from(turn)))
+            .and_then(|record| record.get("moved").and_then(serde_json::Value::as_i64))
+            .map_or(0, |moved| moved as i32);
+        let take = rest.min(cap - used);
+        if take <= 0 {
+            continue;
+        }
+        if let Some(live) = find_instance_mut(sink.state, &card.id) {
+            live.memory.insert(
+                OWN_TURN_REDIRECT_KEY.to_string(),
+                serde_json::json!({ "turn": turn, "moved": used + take }),
+            );
+        }
+        let opponent = opponent_of(player);
+        sink.events.push(GameEvent::Redirected {
+            what: RedirectWhat::Damage,
+            from_id: format!("hero-{player}"),
+            to_id: format!("hero-{opponent}"),
+            by_instance_id: Some(card.id.clone()),
+        });
+        let moved = DamageArgs {
+            target: DamageTarget::Hero { player: opponent },
+            ..args.clone()
+        };
+        dealt += land_hit(
+            sink,
+            &moved,
+            take.saturating_mul(multiplier),
+            redirects + 1,
+            caught,
+        );
+        rest -= take;
+    }
+    if rest == amount {
+        return None;
+    }
+    Some(Moved {
+        taken: amount - rest,
+        dealt,
+    })
+}
+
+/// R1849003 (Stinkyscape #104 Reflective Plating), §4.4 step 8a: what `unit` was just dealt, when its
+/// text reflects it, is dealt again from it as new instances — to the enemy hero, and on the Radiant
+/// face also to the attacker whose own strike it was (Cleave's included), while that attacker is on
+/// the field. A strike back, a Unit's text and a Spell are never "the attacker", so two Radiant
+/// Platings fighting end after one reflection each: a reflected hit is no attacker's strike.
+fn reflect_damage(
+    sink: &mut DamageSink<'_>,
+    unit: &CardInstance,
+    source: Option<&CardInstance>,
+    flags: Option<&DamageFlags>,
+    dealt: i32,
+) {
+    let text = crate::scripts::flags_of(sink.state, unit);
+    let to_hero = text.reflects_damage == Some(true);
+    let to_attacker =
+        text.reflects_to_attacker == Some(true) && flags.is_some_and(|flags| flags.attacking == Some(true));
+    if !(to_hero || to_attacker) || dealt <= 0 {
+        return;
+    }
+    let Some(now) = find_instance(sink.state, &unit.id).cloned() else {
+        return;
+    };
+    if to_hero {
+        let hit = DamageArgs {
+            source: Some(now.clone()),
+            target: DamageTarget::Hero {
+                player: opponent_of(now.controller),
+            },
+            amount: dealt,
+            flags: None,
+        };
+        land_hit(sink, &hit, dealt, 0, &[]);
+    }
+    if !to_attacker {
+        return;
+    }
+    let Some(attacker) = source.and_then(|source| find_instance(sink.state, &source.id).cloned()) else {
+        return;
+    };
+    if !crate::zones::acts_on_field(sink.state, &attacker) {
+        return;
+    }
+    let hit = DamageArgs {
+        source: Some(now),
+        target: DamageTarget::Unit { instance: attacker },
+        amount: dealt,
+        flags: None,
+    };
+    land_hit(sink, &hit, dealt, 0, &[]);
 }
 
 /// `controllerOf(target)` on TS's live object: the unit's controller as it stands now.

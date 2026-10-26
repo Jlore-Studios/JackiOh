@@ -169,8 +169,10 @@ The batches could not edit this file or `crates/luau`, so they wrote these in
 their notes (folded into `README.md` §4–§6; most from batches 11–19, one also
 from batch 7); each is checked here against the code and is still **open**.
 Every card named stays in Rust on it (PORTING.md §5's first reason). With the
-true gaps above, they account for all 23 of the 28 non-L14 Rust cards that are
-kept for a missing API; the other five are under "Not API gaps" below.
+true gaps above, they account for 22 of the 28 non-L14 Rust cards that are
+kept for a missing API; the other five are under "Not API gaps" below, and
+classic-032 Felinor Feelings' gap, a named `where`, is under "Fixed since the
+port".
 
 - **The action's events before the script's window** — classic-014
   Shadowstep (batch 13), classicplus-012-8 Frostspatula (batches 7 and 11).
@@ -181,13 +183,6 @@ kept for a missing API; the other five are under "Not API gaps" below.
   made in the pass of its own death; both lie before the window, which a
   trigger opens when its run begins (batch 13). Wanted: a reader for the
   action's events before the window, or for the pass a trigger answers.
-- **A named `where` for `choose_target_where`** — classic-032 Felinor Feelings
-  (batch 13). `ChooseTargetWhereArgs.where_` is `#[serde(skip)]`
-  (`crates/engine/src/effects/choose_where.rs`) and `api/choose_where.rs` binds
-  the engine's args as they are, so a Luau `where` is dropped and the Radiant
-  face would offer every enemy permanent. The lanes are read after the Cry's
-  own summon, so a precomputed set will not do. Wanted: a named predicate, as
-  `aura_filter` is for the aura.
 - **A `cast_new` definition read as the cast applies** — classicplus-037
   Wardrum (batch 12). `CastNewDef::Read` is `#[serde(skip)]`
   (`crates/engine/src/effects/cast.rs`); `J.cast_new` takes only a fixed `def`
@@ -287,6 +282,18 @@ Added by #442's reconcile, with `main` merged in (`README.md` §7):
 the face fix: only an adapter both faces share picks its face by `ctx.radiant`
 (`script.rs`'s direct hooks; since #871 only a hook both faces hold the function
 under shares one).
+
+## Fixed since the port
+
+- **A named `where` for `choose_target_where`** (#1904; `api/choose_where.rs`;
+  `choose_target_where_by_name_offers_only_what_its_where_admits`). `where`
+  names a face function, `admits` (`vm::SUB_HOOKS`), called as
+  `face[where](ctx, card)` for each card the scope offers (`card` nil for a
+  hero) with a `J.HookArgs` `ctx`, the running card as it stands now; it
+  answers whether to offer the card. It is asked as the effect applies, so a
+  lane the Cry's own summon filled counts. A name the face does not hold fails
+  as the verb builds; with no running card nothing is admitted. Example:
+  `J.choose_target_where({ step = "steal", scope = { side = "enemy", of = { "unit" } }, where = "admits" })`.
 
 ## Fixed in part 28 (#464): each gap's Luau form
 
