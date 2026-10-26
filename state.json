@@ -2526,7 +2526,25 @@
       "feedback_since": "2026-10-26T13:44:26Z",
       "issue": 1991,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "muse"
+        ],
+        "builder": "muse",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "run": "40333244244",
+            "tier": "medium"
+          }
+        ],
+        "sha": "d5c22d4b7bf02922c0c661a9b7b92f242d2791cb",
+        "tiers": {
+          "muse": "medium"
+        }
+      }
     }
   },
   "labels_synced": "7853ef3862488cbb",
