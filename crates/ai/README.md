@@ -341,7 +341,9 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   fell back (`DecisionReason::Fallback`); `sim_panics` and `first_sim_panic` are the panics `decide`'s
   search caught and the first one's message (#1429).
 - `duos_passes` names the hand cards to pass now, best first: a card the seat cannot play this turn
-  and its teammate can (a round seat that has not ended, can afford it and has a zone for it), when
+  and its teammate can (a round seat that has not ended, can afford it and has a place for it: an
+  open zone of its row or, failing that, any play of it the engine lists, onto a Stack, into the
+  backrow with Flying, onto an Equip host or a stack base, or into a zone its Tribute frees), when
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
   seat cannot; never more than the passes left or the teammate's free hand slots. Immediate passes
   rank by the teammate's best bounded follow-up (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays
