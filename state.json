@@ -1581,11 +1581,9 @@
       "ci_run_id": 40259053248,
       "ci_sha": "d7d43bd2946b79d328834dbf7dc46b77423b6284",
       "cleared": {
-        "at": "2026-10-26T02:25:54Z",
+        "at": "2026-10-26T03:50:59Z",
         "by": "`claude` (strong)",
-        "carried_from": "0f428a9ef6b10100e253ff5aa48736e7e93eef0e",
-        "resolved_by": "`claude` (strong)",
-        "sha": "d7d43bd2946b79d328834dbf7dc46b77423b6284"
+        "sha": "0e41ceba968ed2248d7e0ff187e3d0327e4c8ad2"
       },
       "died": 0,
       "difficulty": "hard",
