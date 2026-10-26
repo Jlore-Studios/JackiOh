@@ -2222,6 +2222,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "1997": {
+      "suggestion": true
+    },
     "1999": {
       "action": "plan",
       "asks": [],
