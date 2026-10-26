@@ -10,7 +10,8 @@ import { RAPID_SFX } from "../audio/constants.ts";
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import type { SfxId } from "../audio/types.ts";
-import { cosmeticsOf } from "../cards/cosmetics.ts";
+import { DEFAULT_CARD_COSMETICS, cosmeticsOf } from "../cards/cosmetics.ts";
+import type { SeatLoadouts } from "../cards/loadouts.ts";
 import { fullBoardView } from "../test/fixtures.ts";
 import Board from "./Board.tsx";
 import SandSurface, {
@@ -72,16 +73,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function Field({ table }: { table?: string }): ReactElement {
+function Field({ table, theirTable }: { table?: string; theirTable?: string }): ReactElement {
   const field = useRef<HTMLDivElement>(null);
   return (
     <div data-testid="field" ref={field}>
-      <SandSurface field={field} disabled={false} table={table} />
+      <SandSurface field={field} disabled={false} table={table} theirTable={theirTable} />
     </div>
   );
 }
 
-/** The Board test's bounds: a 100×100 field at the origin, so client (30, 40) taps (30, 40). */
+/**
+ * The tests' bounds: a 100×100 field at the origin, so a client point taps the same point. #2015: `y`
+ * under 50 is the opponent's half, so `press` taps the viewer's by default.
+ */
 function stubBounds(field: HTMLElement): void {
   Object.defineProperty(field, "getBoundingClientRect", {
     configurable: true,
@@ -89,7 +93,7 @@ function stubBounds(field: HTMLElement): void {
   });
 }
 
-function press(field: HTMLElement, x = 30, y = 40, pointerId = 1): void {
+function press(field: HTMLElement, x = 30, y = 70, pointerId = 1): void {
   fireEvent.pointerDown(field, { clientX: x, clientY: y, pointerId });
 }
 
@@ -187,6 +191,59 @@ describe("SandSurface taps", () => {
     press(field);
     expect(field.querySelector(".tap-mark--neon")).not.toBeNull();
     expect(playedIds()).toEqual(["tapNeon"]);
+  });
+
+  it("#2015 each half taps in its own playmat: yours below the centre line, sand above with no opponent's", () => {
+    render(<Field table="table-marble" />);
+    const field = screen.getByTestId("field");
+    stubBounds(field);
+
+    press(field, 30, 70);
+    expect(playedIds()).toEqual(["tapStone"]);
+    expect(field.querySelector(".tap-mark--stone")).not.toBeNull();
+    expect(field.querySelector(".sand-mark")).toBeNull();
+
+    press(field, 30, 20, 2);
+    expect(playedIds()).toEqual(["tapStone", "sand"]);
+    expect(field.querySelector(".sand-mark--grain")).not.toBeNull();
+  });
+
+  it("#2015 the opponent's half taps in their playmat, and an absent one of yours taps as sand", () => {
+    render(<Field theirTable="table-astral" />);
+    const field = screen.getByTestId("field");
+    stubBounds(field);
+
+    press(field, 30, 20);
+    expect(playedIds()).toEqual(["tapAstral"]);
+    expect(field.querySelector(".tap-mark--astral")).not.toBeNull();
+
+    press(field, 30, 70, 2);
+    expect(playedIds()).toEqual(["tapAstral", "sand"]);
+    expect(field.querySelector(".sand-mark--grain")).not.toBeNull();
+  });
+
+  it("#2015 Board hands the opponent's playmat to the field's upper half", () => {
+    const loadouts: SeatLoadouts = {
+      p1: { seat: { ...DEFAULT_CARD_COSMETICS }, cards: {} },
+      p2: { seat: { ...DEFAULT_CARD_COSMETICS, table: "table-astral" }, cards: {} },
+    };
+    const mounted = render(
+      <Board
+        view={fullBoardView()}
+        wearCosmetics
+        deckCosmetics={{ table: "table-marble", field: null, cardBack: null }}
+        loadouts={loadouts}
+      />,
+    );
+    const field = mounted.container.querySelector<HTMLElement>(".field");
+    if (field === null) throw new Error("fixture must draw a field");
+    stubBounds(field);
+
+    press(field, 30, 20);
+    press(field, 30, 70, 2);
+    expect(playedIds()).toEqual(["tapAstral", "tapStone"]);
+    expect(field.querySelector(".tap-mark--astral")).not.toBeNull();
+    expect(field.querySelector(".tap-mark--stone")).not.toBeNull();
   });
 
   it("#1954 neon's hue and astral's stars come from variationFor, never Math.random", () => {
