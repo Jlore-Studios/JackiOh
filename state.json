@@ -1999,7 +1999,10 @@
       "feedback_since": "2026-10-26T01:37:40Z",
       "issue": 1853,
       "kind": "revise",
+      "queued_at": "2026-10-26T04:07:53Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
