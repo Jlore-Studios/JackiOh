@@ -1649,6 +1649,14 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub marketplace: Option<Marketplace>,
+    /// R1956001: each Created card's generator by instance id: the catalog id of the card whose
+    /// script minted it, or that card's own generator when it was Created too
+    /// (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
+    /// `replay::hash_state` leaves it out, and only the card's owner is told it (`CardView.createdBy`).
+    /// Empty, and absent from the JSON, until a card's script creates a card.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, String>>", optional))]
+    pub generators: IndexMap<String, String>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -2482,6 +2490,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         custom_defs,
         held: None,
         marketplace: None,
+        generators: IndexMap::new(),
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 

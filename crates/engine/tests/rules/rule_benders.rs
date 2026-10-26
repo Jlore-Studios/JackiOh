@@ -1,7 +1,8 @@
 //! The rule benders' engine proofs (issue #526): ME-TRIBAL's immunity ([[R940]]), the zeroed
 //! refresh ([[R941]]), the backrow fill ([[R942]]), ME-CREATED ([[R943]]) and the aimed cast with
-//! the lane watch ([[R946]]), and Showdown's empty lane ([[R831008]]). Real cards through
-//! `scenario()` (registered first), the keyword granted through `granted_keywords`.
+//! the lane watch ([[R946]]), Showdown's empty lane ([[R831008]]) and, from issue #1956, a Created
+//! card's generator ([[R1956001]]). Real cards through `scenario()` (registered first), the keyword
+//! granted through `granted_keywords`.
 
 use jackioh_engine::effects::{
     CardScope, CardScopeOptions, CardZone, FillBoardArgs, ScopeSide, TuneArgs, TuneDirection,
@@ -660,5 +661,240 @@ mod r831008 {
         }));
         let empty: Vec<i32> = (1..=5).filter(|lane| lane_is_empty(s.state(), *lane)).collect();
         assert_eq!(empty, vec![5]);
+    }
+}
+
+mod r1956001 {
+    use super::*;
+    use jackioh_engine::effects::{
+        AddToHandArgs, FlickerArgs, PlayerSpec, SummonArgs, add_to_hand, flicker, summon,
+    };
+    use jackioh_engine::resolve::apply_effects;
+    use jackioh_engine::testkit::golden;
+
+    const MR_TOKEN: &str = "core-015"; // Me and Mr Token: "Cry: Summon a Rush Token."
+    const SHEEPISH: &str = "core-041"; // A Trap, set face down.
+
+    /// Run `effect` as `maker`'s script, its controller's.
+    fn run_as(s: &mut Scenario, maker: &CardInstance, effect: Effect) {
+        let mut sink = Sink::for_state(s.state());
+        let state = s.state_mut();
+        let mut engine = sink.on(state);
+        let mut ctx = make_context(
+            &mut engine,
+            Some(maker),
+            HookOptions {
+                controller: Some(maker.controller),
+                ..Default::default()
+            },
+        );
+        apply_effects(&[effect], &mut ctx);
+    }
+
+    fn generator(s: &Scenario, id: &str) -> Option<String> {
+        s.state().generators.get(id).cloned()
+    }
+
+    fn created_in_hand(s: &Scenario, player: PlayerId) -> CardInstance {
+        s.hand(player)
+            .into_iter()
+            .find(|card| card.created == Some(true))
+            .expect("a Created card in the hand")
+    }
+
+    fn json_text(view: &PlayerView) -> String {
+        serde_json::to_string(view).expect("a view serialises")
+    }
+
+    #[test]
+    fn r1956001_a_token_a_cry_summons_carries_the_card_that_summoned_it() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "benders-generator-cry",
+            "p1": { "mana": 10, "hand": [MR_TOKEN], "library": library() },
+            "p2": { "hand": [FILLER], "library": library() },
+        }));
+        s.play(MR_TOKEN, json!({ "zone": 1 }));
+        let played = s.unit(P1, 1).expect("Me and Mr Token");
+        let token = s.unit(P1, 2).expect("its Rush Token");
+        assert_eq!(token.created, Some(true));
+        assert_eq!(generator(&s, &token.id).as_deref(), Some(MR_TOKEN));
+        assert_eq!(generator(&s, &played.id), None, "a dealt card has no generator");
+        let own = s.view(P1);
+        assert_eq!(
+            own.you.units[1]
+                .as_ref()
+                .and_then(|unit| unit.created_by.as_deref()),
+            Some(MR_TOKEN)
+        );
+        assert_eq!(
+            own.you.units[0].as_ref().and_then(|unit| unit.created_by.clone()),
+            None
+        );
+        let foe = s.view(P2);
+        let seen = foe.opponent.units[1].as_ref().expect("the token, public");
+        assert_eq!(seen.created, Some(true), "Created is public on the field (R943)");
+        assert_eq!(seen.created_by, None, "its generator is its owner's alone");
+    }
+
+    #[test]
+    fn r1956001_a_created_trap_keeps_its_generator_through_each_fresh_face_down_id() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "benders-generator-face-down",
+            "p1": { "mana": 10, "hand": [VANILLA], "library": library() },
+            "p2": { "hand": [FILLER], "library": library() },
+        }));
+        let a = s.hand(P1)[0].clone();
+        run_as(
+            &mut s,
+            &a,
+            add_to_hand(AddToHandArgs {
+                def_id: Some(SHEEPISH.to_string()),
+                ..Default::default()
+            }),
+        );
+        let made = created_in_hand(&s, P1);
+        assert_eq!(generator(&s, &made.id).as_deref(), Some(VANILLA));
+
+        // Set face-down from hand, it takes a fresh id (R227), and its generator follows it.
+        s.play(made.id.as_str(), json!({ "zone": 2 }));
+        let set = s.backrow(P1, 2).expect("the Trap, set");
+        assert_ne!(set.id, made.id, "a face-down card takes a fresh id");
+        assert_eq!(generator(&s, &set.id).as_deref(), Some(VANILLA));
+        assert_eq!(generator(&s, &made.id), None, "the id it had names nothing");
+        let own = s.view(P1);
+        let Some(Some(BackrowView::Public(own_trap))) = own.you.backrow.get(1) else {
+            panic!("the owner reads its own Trap")
+        };
+        assert_eq!(own_trap.created_by.as_deref(), Some(VANILLA));
+
+        // Flickered, it re-enters face-down with another fresh id, still A's.
+        run_as(&mut s, &set, flicker(FlickerArgs::default()));
+        let back = s.backrow(P1, 2).expect("the Trap, flickered");
+        assert_ne!(back.id, set.id, "a flickered Trap takes a fresh id");
+        assert_eq!(generator(&s, &back.id).as_deref(), Some(VANILLA));
+        assert_eq!(generator(&s, &set.id), None);
+
+        // What the Trap makes carries A, the root, and not the Trap.
+        run_as(
+            &mut s,
+            &back,
+            summon(SummonArgs {
+                def_id: Some(PLAIN.to_string()),
+                ..Default::default()
+            }),
+        );
+        let unit = s.unit(P1, 1).expect("the unit the Trap made");
+        assert_eq!(generator(&s, &unit.id).as_deref(), Some(VANILLA));
+    }
+
+    #[test]
+    fn r1956001_a_created_card_carries_its_root_generator_and_only_its_owner_is_told() {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "benders-generators",
+            "p1": { "hand": [VANILLA], "library": library() },
+            "p2": { "hand": [FILLER], "library": library() },
+        }));
+        let a = s.hand(P1)[0].clone();
+        // A makes a card in its owner's hand: Created, by A.
+        run_as(
+            &mut s,
+            &a,
+            add_to_hand(AddToHandArgs {
+                def_id: Some(FILLER.to_string()),
+                ..Default::default()
+            }),
+        );
+        let made = created_in_hand(&s, P1);
+        assert_eq!(generator(&s, &made.id).as_deref(), Some(VANILLA));
+        // The card A made summons a unit and sets a Trap: each carries A, the root, and never the card
+        // between.
+        for def_id in [PLAIN, SHEEPISH] {
+            run_as(
+                &mut s,
+                &made,
+                summon(SummonArgs {
+                    def_id: Some(def_id.to_string()),
+                    ..Default::default()
+                }),
+            );
+        }
+        let unit = s.unit(P1, 1).expect("the unit");
+        let trap = s.backrow(P1, 1).expect("the Trap");
+        assert_eq!(generator(&s, &unit.id).as_deref(), Some(VANILLA));
+        assert_eq!(generator(&s, &trap.id).as_deref(), Some(VANILLA));
+        // A card A gives the other player is theirs, and records nothing of A's.
+        run_as(
+            &mut s,
+            &a,
+            add_to_hand(AddToHandArgs {
+                def_id: Some(FILLER.to_string()),
+                player: Some(PlayerSpec::Enemy),
+                ..Default::default()
+            }),
+        );
+        let given = created_in_hand(&s, P2);
+        assert_eq!(
+            generator(&s, &given.id),
+            None,
+            "a card given away records nothing"
+        );
+        assert_eq!(generator(&s, &a.id), None, "a dealt card records nothing");
+
+        // The owner is told on every card it reads: in its hand, on the field and in its backrow.
+        let own = s.view(P1);
+        let HandView::Cards(hand) = &own.you.hand else {
+            panic!("the owner's hand is cards")
+        };
+        let in_hand = |id: &str| {
+            hand.iter()
+                .find(|card| card.instance_id == id)
+                .and_then(|card| card.created_by.clone())
+        };
+        assert_eq!(in_hand(&made.id).as_deref(), Some(VANILLA));
+        assert_eq!(in_hand(&a.id), None, "a card nothing generated carries none");
+        assert_eq!(
+            own.you.units[0]
+                .as_ref()
+                .and_then(|unit| unit.created_by.as_deref()),
+            Some(VANILLA)
+        );
+        let Some(Some(BackrowView::Public(own_trap))) = own.you.backrow.first() else {
+            panic!("the owner reads its own Trap")
+        };
+        assert_eq!(own_trap.created_by.as_deref(), Some(VANILLA));
+        assert!(json_text(&own).contains("createdBy"));
+
+        // The other player is told nothing: not on the public unit, not through the hidden hand or
+        // the face-down Trap, and not on the card it was given.
+        let foe = s.view(P2);
+        let seen = foe.opponent.units[0].as_ref().expect("the unit is public");
+        assert_eq!(seen.created, Some(true), "Created is public on the field (R943)");
+        assert_eq!(seen.created_by, None);
+        assert!(matches!(foe.opponent.hand, HandView::Count { .. }));
+        assert!(matches!(
+            foe.opponent.backrow.first(),
+            Some(Some(BackrowView::FaceDown(_)))
+        ));
+        assert!(!json_text(&foe).contains("createdBy"));
+
+        // It plays no part in the game: the hash and the golden views leave it out, and a JSON round
+        // trip keeps it.
+        let mut bare = s.state().clone();
+        bare.generators.clear();
+        assert_eq!(hash_state(s.state()), hash_state(&bare));
+        assert_eq!(
+            golden::hashed_state_text(s.state()),
+            golden::hashed_state_text(&bare)
+        );
+        let texts = golden::view_texts(s.state());
+        assert_eq!(texts, golden::view_texts(&bare));
+        assert!(!texts[0].contains("createdBy"));
+        let back: GameState =
+            serde_json::from_value(serde_json::to_value(s.state()).expect("a state serialises"))
+                .expect("and deserialises");
+        assert_eq!(back.generators, s.state().generators);
     }
 }

@@ -48,6 +48,7 @@ import {
   resetCosmeticsForTests,
   resolveCosmetic,
   resolveDeckCosmetic,
+  useCosmetics,
   wornCosmetics,
   wornDeckCosmetics,
   writeCardFullArt,
@@ -57,7 +58,7 @@ import {
   type CosmeticId,
   type CosmeticKind,
 } from "./cosmetics.ts";
-import { OwnCopy } from "./fullArt.ts";
+import { FullArtOwned, OwnCopy } from "./fullArt.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
@@ -799,6 +800,151 @@ describe("R1655000 the picks of each card", () => {
     const preview = screen.getByTestId(INSPECT_FACE).querySelector(".cf");
     expect(preview?.getAttribute("data-frame")).toBeNull();
     expect(preview?.getAttribute("data-finish")).toBeNull();
+  });
+});
+
+describe("R1956000 R1956001 picks across tabs, and a Created card's generator", () => {
+  /** A card with picks of its own, and a second border apart from the account's `PICKS.border`. */
+  const OWN = "core-004";
+  const CARD_BORDER = secondItem("border");
+  const TABLE = firstItem("table");
+
+  /** Another tab's write: storage changes there, and this window hears of it. */
+  function anotherTabWrites(key: string | null, value?: unknown): void {
+    if (key !== null && value !== undefined) localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(new StorageEvent("storage", { key }));
+  }
+
+  /** The account store's playmat as a board reads it (R1297000), mounted beside a face. */
+  function AccountTable(): ReactElement {
+    return <span data-testid="account-table">{useCosmetics().table}</span>;
+  }
+
+  it("R1956000 a pick another tab stores reaches what this tab draws at once, the card's and the account's", () => {
+    const { container } = render(
+      <>
+        <CardFace face={face(OWN)} worn />
+        <AccountTable />
+      </>,
+    );
+    const shown = root(container);
+    const table = screen.getByTestId("account-table");
+    expect(shown.getAttribute("data-frame")).toBeNull();
+
+    act(() => {
+      anotherTabWrites(CARD_PICKS_SETTINGS_KEY, { [OWN]: { border: CARD_BORDER } });
+    });
+    // The same face, re-rendered with no remount.
+    expect(root(container)).toBe(shown);
+    expect(shown.getAttribute("data-frame")).toBe(CARD_BORDER);
+    expect(readCardPicks(OWN)).toEqual({ border: CARD_BORDER });
+
+    act(() => {
+      anotherTabWrites(COSMETICS_SETTINGS_KEY, { table: TABLE, border: PICKS.border });
+    });
+    expect(table.textContent).toBe(TABLE);
+    expect(readCosmetics().border).toBe(PICKS.border);
+    // R1953001: the account's border dresses no card, so the face keeps its own.
+    expect(shown.getAttribute("data-frame")).toBe(CARD_BORDER);
+
+    // Another key is none of these stores'; a cleared storage (a null key) is both.
+    act(() => {
+      localStorage.clear();
+      anotherTabWrites("jackioh.something-else", 1);
+    });
+    expect(shown.getAttribute("data-frame")).toBe(CARD_BORDER);
+    expect(table.textContent).toBe(TABLE);
+    act(() => {
+      localStorage.clear();
+      anotherTabWrites(null);
+    });
+    expect(shown.getAttribute("data-frame")).toBeNull();
+    expect(table.textContent).toBe(DEFAULT_CARD_COSMETICS.table);
+    expect(readCosmetics()).toEqual(DEFAULT_CARD_COSMETICS);
+    expect(readCardPicks(OWN)).toEqual({});
+  });
+
+  it("R1956000 a face mounted after another tab's pick draws it, though none was mounted to hear it", () => {
+    render(
+      <>
+        <CardFace face={face(OWN)} worn />
+        <AccountTable />
+      </>,
+    );
+    cleanup();
+    // Nothing is mounted while the other tab writes.
+    anotherTabWrites(CARD_PICKS_SETTINGS_KEY, { [OWN]: { border: CARD_BORDER, finish: PICKS.finish } });
+    anotherTabWrites(COSMETICS_SETTINGS_KEY, { table: TABLE });
+    const { container } = render(
+      <>
+        <CardFace face={face(OWN)} worn />
+        <AccountTable />
+      </>,
+    );
+    expect(root(container).getAttribute("data-frame")).toBe(CARD_BORDER);
+    expect(root(container).getAttribute("data-finish")).toBe(PICKS.finish);
+    expect(screen.getByTestId("account-table").textContent).toBe(TABLE);
+  });
+
+  it("R1956001 a Created card wears its generator's foil, finish and border, owned on the generator, never its full art", () => {
+    const GENERATOR = OWN;
+    // Big D-fender, a hero portrait's card, which prints full art.
+    const CREATED = "core-001";
+    const created = (defId: string = CREATED, radiant = false): FaceModel =>
+      faceModel({ defId, def: CATALOG[defId], radiant, inPlay: { created: true, createdBy: GENERATOR } });
+    writeCardPick(GENERATOR, "foil", PICKS.foil);
+    writeCardPick(GENERATOR, "border", "border-stone");
+    writeCardPick(GENERATOR, "finish", "finish-parchment");
+    // The generator's own full art is off; the Created card's is its own card's, the setting's.
+    writeCardFullArt(GENERATOR, false);
+    // The Created card's own picks are not what it wears.
+    writeCardPick(CREATED, "border", CARD_BORDER);
+
+    let { container } = render(<CardFace face={created()} worn />);
+    let shown = root(container);
+    expect(shown.getAttribute("data-frame")).toBe("border-stone");
+    expect(shown.getAttribute("data-finish")).toBe("finish-parchment");
+    expect(shown.getAttribute("data-cosmetic-foil")).toBe(PICKS.foil);
+    expect(shown.getAttribute("data-full-art")).toBe("true");
+    cleanup();
+
+    // Ownership is the generator's: what the ledger lists on it is worn, what it does not is not.
+    ({ container } = render(
+      <FullArtOwned owned={new Map([[GENERATOR, new Set(["border-stone"])]])}>
+        <CardFace face={created()} worn />
+      </FullArtOwned>,
+    ));
+    shown = root(container);
+    expect(shown.getAttribute("data-frame")).toBe("border-stone");
+    expect(shown.getAttribute("data-finish")).toBeNull();
+    cleanup();
+    // A ledger listing them on the Created card's own definition owns nothing on the generator.
+    ({ container } = render(
+      <FullArtOwned owned={new Map([[CREATED, new Set(["border-stone", "finish-parchment"])]])}>
+        <CardFace face={created()} worn />
+      </FullArtOwned>,
+    ));
+    shown = root(container);
+    expect(shown.getAttribute("data-frame")).toBeNull();
+    expect(shown.getAttribute("data-finish")).toBeNull();
+    cleanup();
+
+    // The Created card's own rarity holds: a Mythic face wears no cosmetic foil, a Radiant face nothing.
+    ({ container } = render(
+      <>
+        <CardFace face={created("core-096")} worn />
+        <CardFace face={created(CREATED, true)} worn />
+        <CardFace face={created()} />
+      </>,
+    ));
+    const [mythic, radiant, unworn] = [...container.querySelectorAll<HTMLElement>(".cf")];
+    expect(mythic?.getAttribute("data-cosmetic-foil")).toBeNull();
+    expect(mythic?.getAttribute("data-frame")).toBe("border-stone");
+    for (const attribute of ATTRIBUTES) {
+      expect(radiant?.getAttribute(attribute), attribute).toBeNull();
+      // Not the viewer's own: the defaults, whatever its generator wears.
+      expect(unworn?.getAttribute(attribute), attribute).toBeNull();
+    }
   });
 });
 
