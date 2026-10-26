@@ -1425,25 +1425,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md",
-            "spec/rulings/R1655000.md"
-          ],
-          "from": "afd5285ebc74e30ee4c80579d24f0449e6968380",
-          "main": "458f267701364eaf4252eabd2ae788abb7b66d2d"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40294182943",
+            "run": "40301439976",
             "tier": "strong"
           }
         ],
-        "sha": "b75ed467de788c5264d7a1996eabee0164b89088",
+        "sha": "60ab1e394ca2292b5e842e8a053f2d882fc77103",
         "tiers": {
           "claude": "strong"
         }
