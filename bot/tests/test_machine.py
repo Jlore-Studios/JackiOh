@@ -155,6 +155,21 @@ class RegisterRunnersTests(unittest.TestCase):
         self.assertEqual(self.handed("muse=1", box="b2")[3:], ["b2", "muse=night-vm-muse=1"])
         self.assertEqual(self.handed("muse=0")[4:], ["muse=night-vm-muse=0"])
 
+    def test_the_night_box_takes_muses_fill_in_runners(self):
+        """Muse's two lanes of its own are on the Muse box, and its fill-in runners
+        (providers.json `fill_in`) on the night box, one per lane of gpt's and agy's."""
+        self.assertIn("muse:fill=night-vm-muse-fill=2", self.handed())
+        self.assertEqual(self.handed("gpt", "agy", "devin", "muse=0", "muse:fill")[4:],
+                         ["gpt=night-vm-gpt=1", "agy=night-vm-agy=1", "devin=night-vm-devin=6",
+                          "muse=night-vm-muse=0", "muse:fill=night-vm-muse-fill=2"])
+        self.assertEqual(self.handed("muse=2", box="b2")[3:], ["b2", "muse=night-vm-muse=2"])
+        self.assertEqual(self.handed("muse:fill=1")[4:], ["muse:fill=night-vm-muse-fill=1"])
+        self.assertNotEqual(self.run_script("gpt:fill").returncode, 0)
+        # Its runners live apart from the subscription's own, which never count them as lanes.
+        text = REGISTER.read_text(encoding="utf-8")
+        self.assertIn('base="$first${kind:+-$kind}"', text)
+        self.assertIn('for dir in "$base" "$base"-*; do', text)
+
     def test_it_refuses_an_unknown_id_a_bad_count_or_a_bad_suffix(self):
         for args, box, message in ((("nobody",), "", "nobody: no provider"),
                                    (("muse=two",), "", "muse=two: the runners here"),

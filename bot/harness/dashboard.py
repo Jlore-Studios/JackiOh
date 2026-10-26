@@ -869,7 +869,7 @@ LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<tim
               "the PC is otherwise idle", "`learn`, every job of it, back to back, `selfplay` "
               "exports and `gather`")
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
-              "machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops "
+              "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
               "(`pc-<id>-<time>`). The PC's supervisor sends a heartbeat every two minutes (its "
@@ -891,6 +891,11 @@ def explanation(ctx: Context) -> str:
                         f"`work` for `{provider.id}`: the `{provider.cli}` CLI with "
                         f"`{provider.model}`, as the Linux user `agent-{provider.id}`, which holds "
                         "that login alone |")
+            if provider.fill_in is not None:
+                of = ", ".join(f"`{i}`" for i in provider.fill_in.of)
+                rows.append(f"| `{provider.fill_in.runs_on}` | the bot's AWS boxes, in the lanes "
+                            f"of {of} | `{provider.id}`'s `work` in those lanes while they cannot "
+                            "start work (capped, off, backing off), as the same user |")
     rows.append("| `{}` | {} | {} |".format(*LOCAL_ROLE))
     flows = [f"| `{name.removesuffix('.yml')}` | {what} |" for name, what in sorted(WORKFLOWS.items())]
     return "\n".join([
@@ -1212,22 +1217,25 @@ def runner_diagram(ctx: Context, state: dict[str, Any], found: Found, boxes: int
     for _, job in found.queued:
         for label in job.get("labels") or []:
             asked[str(label)] = asked.get(str(label), 0) + 1
-    night = [busy_box(run, job, True) for run, job in by_place.get(1, [])]
-    for provider in pool.ordered():
-        label = provider.runs_on
-        if not pool.on_machine(provider.id) or label in held:
-            continue
-        night.append(([f"<b>{_text(label)}</b>", f"⏳ {asked[label]} queued for it",
-                       "the box is starting, or full"], "next") if asked.get(label)
-                     else ([f"<b>{_text(label)}</b>", "💤 no job", "idle, or the box is off"],
-                           "closed"))
-    if night:
-        lines += _boxes("nb", f"The night box (AWS): {len(by_place.get(1, []))} busy", night)
+    if by_place.get(1):
+        lines += _boxes("nb", f"The night box (AWS): {len(by_place[1])} busy",
+                        [busy_box(run, job, True) for run, job in by_place[1]])
         groups.append("nb")
     if by_place.get(2):
         lines += _boxes("mb", f"The Muse box (AWS): {len(by_place[2])} busy",
                         [busy_box(run, job, True) for run, job in by_place[2]])
         groups.append("mb")
+    # The machine's labels no job holds, its fill-in ones (`FillIn`) among them, apart from the
+    # boxes: which box a label's runners are on is register-runners.sh's to say, not the pool's.
+    labels = [label for p in pool.ordered() if pool.on_machine(p.id)
+              for label in (p.runs_on, *((p.fill_in.runs_on,) if p.fill_in else ()))]
+    idle = [([f"<b>{_text(label)}</b>", f"⏳ {asked[label]} queued for it",
+              "its box is starting, or full"], "next") if asked.get(label)
+            else ([f"<b>{_text(label)}</b>", "💤 no job", "idle, or its box is off"], "closed")
+            for label in dict.fromkeys(labels) if label not in held]
+    if idle:
+        lines += _boxes("nj", "The AWS boxes' labels with no job", idle)
+        groups.append("nj")
     pc_jobs = by_place.get(3, [])
     pc = [busy_box(run, job, True) for run, job in pc_jobs]
     with_jobs = {str(job.get("runner_name") or "") for _, job in pc_jobs}

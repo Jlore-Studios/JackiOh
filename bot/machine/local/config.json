@@ -10,6 +10,7 @@
   ],
   "maxJobs": 1,
   "cpuPercentBelow": 50,
+  "startCpuPercentBelow": 15,
   "memoryGBBelow": 24,
   "calmSeconds": 60,
   "sampleSeconds": 5,

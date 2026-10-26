@@ -54,7 +54,7 @@ run.
 
 ## How a lane runs
 
-The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs three systemd services,
+The training box (an EC2 `m7i-flex.large` set up by #306's part 39, always on until it became the Muse box, an `m7i-flex.xlarge` since 2026-10-26) runs three systemd services,
 `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, each as its own Linux user
 (`agent-train-improve`, `agent-train-unban`, `agent-train-gather`) with its own checkout (the two
 training lanes also hold a Muse login and GitHub token, which the gather lane needs neither of). Each runs

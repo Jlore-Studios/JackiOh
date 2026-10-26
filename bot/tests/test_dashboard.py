@@ -824,12 +824,17 @@ class RunnersTests(unittest.TestCase):
         self.assertIn('        gh0["<b>bot-night · work</b><br/>building #37 on claude-1<br/>Build, '
                       'check and review<br/>47m"]:::busy', diagram)
         self.assertIn("        gh0 ~~~ gh1\n", diagram)
-        # The night box: no job on three labels; Muse's is held on the Muse box.
-        self.assertIn('    subgraph nb["The night box (AWS): 0 busy"]', diagram)
-        self.assertIn('nb0["<b>night-vm-agy</b><br/>💤 no job<br/>idle, or the box is off"]'
+        # No job on the night box, so no group of its own; Muse's runner is on the Muse box.
+        self.assertNotIn('subgraph nb[', diagram)
+        self.assertIn('    subgraph mb["The Muse box (AWS): 1 busy"]', diagram)
+        # The machine's labels no job holds, Muse's fill-in label among them (#2028), in a group
+        # of their own: which box a label's runners are on is not the pool's to say.
+        self.assertIn('    subgraph nj["The AWS boxes\' labels with no job"]', diagram)
+        self.assertIn('nj0["<b>night-vm-muse-fill</b><br/>💤 no job<br/>idle, or its box is off"]'
+                      ':::closed', diagram)
+        self.assertIn('nj1["<b>night-vm-agy</b><br/>💤 no job<br/>idle, or its box is off"]'
                       ':::closed', diagram)
         self.assertNotIn("<b>night-vm-muse</b>", diagram)
-        self.assertIn('    subgraph mb["The Muse box (AWS): 1 busy"]', diagram)
         self.assertIn('mb0["<b>night-vm-muse-b2</b><br/>🟢 bot-night · work<br/>revising #49 on '
                       'muse<br/>after Set up job<br/>19m"]:::busy', diagram)
         # The queued jobs by label, the most first, each with its longest wait and its first.
@@ -838,13 +843,13 @@ class RunnersTests(unittest.TestCase):
                       '(unit 2/4)"]:::next', diagram)
         self.assertIn('qu1["<b>jackioh-selfplay-local</b><br/>⏳ 1 job<br/>the longest 1h 30m'
                       '<br/>learn · plan"]:::next', diagram)
-        self.assertIn("    gh ~~~ nb ~~~ mb ~~~ pc ~~~ qu\n", diagram)
+        self.assertIn("    gh ~~~ mb ~~~ nj ~~~ pc ~~~ qu\n", diagram)
         self.assertIn("classDef busy fill:#1f883d", diagram)
         self.assertNotIn("ghost", diagram)  # one row each: nothing to pad
         # A label no runner holds but a job waits for: the box is starting, or full.
         self.gh.jobs["104"][0]["labels"] = ["night-vm-gpt"]
         diagram = self.section().split("```mermaid\n")[1].split("```")[0]
-        self.assertIn('["<b>night-vm-gpt</b><br/>⏳ 1 queued for it<br/>the box is starting, or '
+        self.assertIn('["<b>night-vm-gpt</b><br/>⏳ 1 queued for it<br/>its box is starting, or '
                       'full"]:::next', diagram)
 
     def pc(self, beat=None, *, gist: str = "g1") -> str:

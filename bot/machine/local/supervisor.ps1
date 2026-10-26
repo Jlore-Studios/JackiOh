@@ -4,11 +4,13 @@
 
   Every sampleSeconds it reads this PC's CPU and memory, leaving out what its own runner
   containers use. "Calm" means every sample of the last calmSeconds had CPU under
-  cpuPercentBelow and used memory under memoryGBBelow (config.json).
+  cpuPercentBelow and used memory under memoryGBBelow (config.json). "Quiet" is calm with every
+  sample's CPU under startCpuPercentBelow too: a new runner starts only then, while one already
+  up stays as long as it is calm.
 
   Each entry of config.json's `serve` is one runner label. A runner here is one ephemeral
   container: it registers with that one label (a single-use JIT config), takes one job and is
-  gone. While it is calm and fewer than maxJobs jobs run here:
+  gone. While it is quiet and fewer than maxJobs jobs run here:
   - a label with a job queued for it (in one of the entry's `workflows`) gets a runner;
   - a `standby` label (jackioh-selfplay-local) keeps one idle runner registered, so it shows Idle
     under Settings -> Actions -> Runners and a dispatch starts at once;
@@ -40,6 +42,7 @@ $logDir = Join-Path $PSScriptRoot 'logs'
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $logFile = Join-Path $logDir 'supervisor.log'
 $windowSize = [math]::Ceiling($cfg.calmSeconds / $cfg.sampleSeconds)
+$startCpuBelow = if ($null -ne $cfg.startCpuPercentBelow) { $cfg.startCpuPercentBelow } else { $cfg.cpuPercentBelow }
 $samples = New-Object System.Collections.Generic.Queue[object]
 $throttled = @{}      # container id -> $true while throttled
 $unwanted = @{}       # container id -> when it was first idle with no label wanting it
@@ -339,15 +342,15 @@ function Wanted([string[]]$queuedLabels, [string[]]$servable, [int]$room) {
   , $want
 }
 
-Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s; at most {4} job(s); no GPU" -f `
-  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs)
-$wasCalm = $null
+Log ("supervisor up on $repo, serving {0}; calm = CPU < {1}% and memory < {2} GB for {3}s, and a runner starts only at CPU < {5}%; at most {4} job(s); no GPU" -f `
+  (@($cfg.serve | ForEach-Object { $_.label }) -join ', '), $cfg.cpuPercentBelow, $cfg.memoryGBBelow, $cfg.calmSeconds, $cfg.maxJobs, $startCpuBelow)
+$wasState = $null
 while ($true) {
   $d = Run 'docker' @('info', '--format', '{{.ServerVersion}}') 30
   if ($d.Code -ne 0) {
-    if ($wasCalm -ne 'nodocker') {
+    if ($wasState -ne 'nodocker') {
       Log "Docker is not answering ($(@($d.Out -split "`n")[0])); waiting"
-      $wasCalm = 'nodocker'
+      $wasState = 'nodocker'
     }
     Start-Sleep -Seconds 30
     continue
@@ -358,9 +361,12 @@ while ($true) {
   while ($samples.Count -gt $windowSize) { [void]$samples.Dequeue() }
   $over = @($samples | Where-Object { $_.Cpu -ge $cfg.cpuPercentBelow -or $_.Mem -ge $cfg.memoryGBBelow })
   $calm = ($samples.Count -ge $windowSize) -and ($over.Count -eq 0)
-  if ($calm -ne $wasCalm) {
-    Log ("{0}: CPU {1:N0}%, memory {2:N1} GB (without the runners and yielding containers)" -f $(if ($calm) { 'calm' } else { 'busy' }), $sample.Cpu, $sample.Mem)
-    $wasCalm = $calm
+  $quiet = $calm -and -not @($samples | Where-Object { $_.Cpu -ge $startCpuBelow }).Count
+  # quiet: a runner may start; calm: one already up keeps going at full speed; busy: neither.
+  $state = if ($quiet) { 'quiet' } elseif ($calm) { 'calm' } else { 'busy' }
+  if ($state -ne $wasState) {
+    Log ("{0}: CPU {1:N0}%, memory {2:N1} GB (without the runners and yielding containers)" -f $state, $sample.Cpu, $sample.Mem)
+    $wasState = $state
   }
 
   if (((Get-Date) - $lastSweep).TotalMinutes -ge 10) { Remove-StaleRunners $runners; $lastSweep = Get-Date }
@@ -401,7 +407,7 @@ while ($true) {
     elseif (((Get-Date) - $unwanted[$r.Id]).TotalMinutes -ge $retireGraceMinutes) { Stop-IdleRunner $r 'nothing wants it' }
   }
   # Idle runners count against maxJobs too, so two jobs landing at once never run past it.
-  if ($missing.Count -and ($busy.Count + $idle.Count) -lt [int]$cfg.maxJobs -and (Get-Date) -ge $nextStart) {
+  if ($quiet -and $missing.Count -and ($busy.Count + $idle.Count) -lt [int]$cfg.maxJobs -and (Get-Date) -ge $nextStart) {
     $label = $missing[0]
     $why = if ($label -in $queued) { "a queued $label job" } else { "standby for $label" }
     try { Start-Runner $label $why } catch { Log "start failed: $_" }
