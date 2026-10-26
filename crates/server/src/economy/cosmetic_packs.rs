@@ -7,10 +7,10 @@
 //!   `COSMETIC_PACK_FLOOR_RARITY` (R1339000), on the cosmetics' own scale and with no pity; a slot
 //!   grants one unowned cosmetic, for a card or the account, leaning toward the cards the account
 //!   owns, and its card when the account lacks it, or falls to the nearest rarity with something
-//!   unowned, or pays bar points.
+//!   unowned, or, with nothing unowned at all, grants nothing.
 //! - [`open_cosmetic_pack`]: under the account's lock, one unopened cosmetic pack spent, its
 //!   slots rolled from a fresh seed and every grant written, its cards, cosmetics, the Chase
-//!   Shard bar's one and both token bars' points for the spent slots (R1306002), with the
+//!   Shard bar's one and both token bars' points for every slot (R1306002, R1999000), with the
 //!   opening's log (its catalog, cosmetics, seed and result) in the `ref` of every economy row it
 //!   writes (R1306003). The whole opening or nothing: every refusal returns before the commit,
 //!   and the dropped `Tx` rolls it all back.
@@ -99,8 +99,9 @@ pub enum CosmeticSlotGrant {
         card_id: Option<String>,
         card_granted: bool,
     },
-    /// A spent slot: nothing at all was left to own, so it pays both token bars the points of the
-    /// cosmetic rarity it rolled (R1306001, R1953000).
+    /// A spent slot: nothing at all was left to own, so it grants nothing. Like every slot, it
+    /// adds the points of the cosmetic rarity it rolled to both token bars (R1306001, R1953000,
+    /// R1999000).
     Bars,
 }
 
@@ -345,10 +346,11 @@ fn no_pack_held() -> ApiError {
 /// opening from `seed` ([`roll_cosmetic_pack`] over the shipped sets' pool) and writes every
 /// grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the
 /// cosmetics, the Chase Shard bar's one unless it is full (R1306002), and both token bars' points
-/// for the spent slots, each its rolled cosmetic rarity's (R1953000), each bar that reached its
-/// size paying its tokens with the overflow kept (R1305000, R1306001). Every economy row's `ref`
-/// is the opening's log; the collection's rows have no `ref` and share the opening's `at`. No pack
-/// held is 409. Every refusal and failure returns before the commit, so it writes nothing.
+/// for every slot, each its rolled cosmetic rarity's whatever it grants (R1953000, R1999000), each
+/// bar that reached its size paying its tokens with the overflow kept (R1305000, R1306001). Every
+/// economy row's `ref` is the opening's log; the collection's rows have no `ref` and share the
+/// opening's `at`. No pack held is 409. Every refusal and failure returns before the commit, so it
+/// writes nothing.
 pub async fn open_cosmetic_pack(
     app: &App,
     profile_id: &str,
@@ -446,16 +448,18 @@ pub async fn open_cosmetic_pack(
         shard += 1;
     }
 
-    // A spent slot's points are its rolled cosmetic rarity's (R1306001, R1953000).
+    // Each slot's points are its rolled cosmetic rarity's, not the one it fell to, whatever it
+    // grants (R1306001, R1953000, R1999000).
     let slot_points: Vec<i64> = opening
         .slots
         .iter()
-        .map(|slot| match slot.grant {
-            CosmeticSlotGrant::Bars => cosmetic_bar_points(slot.rarity),
-            CosmeticSlotGrant::Cosmetic { .. } => 0,
-        })
+        .map(|slot| cosmetic_bar_points(slot.rarity))
         .collect();
-    let spent = slot_points.iter().filter(|points| **points > 0).count();
+    let spent = opening
+        .slots
+        .iter()
+        .filter(|slot| slot.grant == CosmeticSlotGrant::Bars)
+        .count();
     let bars = settle_bars(&mut tx, profile_id, &counters, slot_points, &reference, at).await?;
 
     tx.commit().await?;

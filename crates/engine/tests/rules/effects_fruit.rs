@@ -17,7 +17,9 @@ use crate::rules::fixtures::feng_shui::{FS, register_feng_shui};
 use crate::rules::fixtures::fruit::{
     FRUIT_SCRIPTS, cast_on_draw, fruit_catalog, grape_roller, mythic, priced_draw, replacer,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, live, live_mut, new_game, put, set_library, slot,
+};
 use crate::rules::fixtures::jade::{JADE_SCRIPTS, jade_catalog};
 use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
@@ -94,14 +96,6 @@ fn run(
 /// `run(state, effect, self)` with TS's defaults (no targets, p1).
 fn run_as(state: &mut GameState, effect: Effect, self_: &CardInstance) -> Vec<GameEvent> {
     run(state, effect, Some(self_), vec![], PlayerId::P1)
-}
-
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
 }
 
 fn zone_of(state: &GameState, id: &str) -> Option<ZoneName> {

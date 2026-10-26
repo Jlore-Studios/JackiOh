@@ -29,11 +29,13 @@ use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::generation::{
-    GEN_SCRIPTS, LAB_POOL, Run, act, ai_spell, ai_unit, answer, big_unit, body, deck_fusion, felinor_a,
+    GEN_SCRIPTS, LAB_POOL, Run, advance, ai_spell, ai_unit, answer, big_unit, body, deck_fusion, felinor_a,
     felinor_b, felinor_c, field_trap, frozen, fuse_a, fuse_b, fuser, hand_card, immutable, lab, mutate, pick,
     plain_trap, playing, replayed, slime, slop, x_unit,
 };
-use crate::rules::fixtures::harness::{json_of, matches_object, put, round_trip, set_library, slot};
+use crate::rules::fixtures::harness::{
+    json_of, live, live_mut, matches_object, put, round_trip, set_library, slot,
+};
 
 /// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. The events and
 /// the rng are kept beside the state, so the test can change the state between calls as TS's shared
@@ -84,17 +86,6 @@ fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
-/// The card under `id` as the state holds it now (TS's live object).
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
 fn input(literal: Value) -> ActionInput {
@@ -475,7 +466,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let lab_card = hand_card(&mut start.state, &lab.id, P1);
         let cost_before = effective_cost(&start.state, &live(&start.state, &card.id), Default::default());
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(
                 json!({ "type": "play", "instanceId": lab_card.id, "targets": [pick(&card.id)], "playerId": "p1" }),
@@ -543,7 +534,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let lab_card = hand_card(&mut start.state, &lab.id, P1);
         live_mut(&mut start.state, &lab_card.id).radiant = true;
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(
                 json!({ "type": "play", "instanceId": lab_card.id, "targets": [pick(&card.id)], "playerId": "p1" }),
@@ -693,7 +684,7 @@ mod r470_a_fusion_keeps_a_hand_or_deck_card_where_it_is_and_its_cost_doesnt_chan
         let list_before = json_of(view_for(&start.state, P1))["you"]["ownLibrary"].clone();
         let spell = hand_card(&mut start.state, &deck_fusion.id, P1);
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })),
         );
@@ -773,7 +764,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
         let spell = hand_card(&mut start.state, &slop.id, P1);
         let hand_before = start.state.players.p1.hand.len();
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })),
         );
@@ -811,7 +802,7 @@ mod e23_fuse_three_generated_cards_into_the_hand_classic_plus_43 {
         let spell = hand_card(&mut start.state, &slop.id, P1);
         live_mut(&mut start.state, &spell.id).radiant = true;
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })),
         );
@@ -901,7 +892,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         let spell = hand_card(&mut start.state, &mutate.id, P1);
         let mut run1 = frozen(&start);
         let enemy_hero = run1.state.players.p2.hero.health;
-        run1 = act(
+        run1 = advance(
             &run1,
             input(
                 json!({ "type": "play", "instanceId": spell.id, "targets": [pick(&enemy.id)], "playerId": "p1" }),
@@ -991,7 +982,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         );
         let spell = hand_card(&mut start.state, &mutate.id, P1);
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(
                 json!({ "type": "play", "instanceId": spell.id, "targets": [pick(&enemy_trap.id)], "playerId": "p1" }),
@@ -1029,7 +1020,7 @@ mod e23_fuse_an_enemy_card_onto_one_of_yours_of_its_type_classic_78_radiant {
         lonely.state.players.p1.hand = vec![];
         let again = hand_card(&mut lonely.state, &mutate.id, P1);
         let mut run2 = frozen(&lonely);
-        run2 = act(
+        run2 = advance(
             &run2,
             input(
                 json!({ "type": "play", "instanceId": again.id, "targets": [pick(&target.id)], "playerId": "p1" }),
@@ -1053,7 +1044,7 @@ mod e23_discover_twice_and_fuse_both_onto_this_classic_plus_30 {
         let mut start = playing("fuse-felinor");
         let card = hand_card(&mut start.state, &fuser.id, P1);
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             input(json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })),
         );
@@ -1234,7 +1225,7 @@ mod r1087_a_fused_animated_keyword_applies_at_once {
             }
         });
         run(&mut game.state, &mut sink, bounce, None);
-        game = act(
+        game = advance(
             &game,
             json!({
                 "type": "play",

@@ -69,8 +69,8 @@ pub struct OpenedPack {
 }
 
 /// One token bar across an opening (R1305000): its points `before` the opening and `after` it (the
-/// overflow a pay leaves kept), its `size` and how many times it `pays` in this opening. A bar no
-/// spent duplicate moved has `before == after` and `pays == 0`.
+/// overflow a pay leaves kept), its `size` and how many times it `pays` in this opening. Every
+/// opening moves both bars, since every slot adds points (R1999000).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarSettle {
@@ -83,8 +83,8 @@ pub struct BarSettle {
 /// What an opening did to both token bars (R1305000, R1305001), for the client to animate from
 /// where each stood to where the opening left it: the cosmetic bar's `cosmetic_paid` are the
 /// cycle's steps it paid, in order, so its length is `cosmetic.pays`, and `slot_points` are the
-/// points each slot added to each bar, in slot order, 0 for a slot that was not spent, so the
-/// client can send each spent slot's points to the bars without counting them (R1953000).
+/// points each slot added to each bar, in slot order, every slot's its rolled rarity's, so the
+/// client can send each slot's points to the bars without counting them (R1953000, R1999000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct BarsSettled {
@@ -287,16 +287,10 @@ pub(crate) async fn grant_unlocked(
     Ok(())
 }
 
-/// The points each of a card pack's slots adds to each token bar, in slot order (R1953000): a spent
-/// duplicate's are its slot's card rarity's ([`card_bar_points`]), and any other slot's are 0.
+/// The points each of a card pack's slots adds to each token bar, in slot order: its slot's card
+/// rarity's ([`card_bar_points`]), whatever it grants (R1953000, R1999000).
 pub fn slot_bar_points(slots: &[Slot]) -> Vec<i64> {
-    slots
-        .iter()
-        .map(|slot| match slot.grant {
-            SlotGrant::Bars { .. } => card_bar_points(slot.rarity),
-            SlotGrant::Card | SlotGrant::Cosmetic { .. } => 0,
-        })
-        .collect()
+    slots.iter().map(|slot| card_bar_points(slot.rarity)).collect()
 }
 
 /// Both token bars' points for an opening's slots, `slot_points` each slot's to each bar
@@ -314,15 +308,15 @@ pub(crate) async fn settle_bars(
     reference: &Option<String>,
     at: i64,
 ) -> Result<BarsSettled, ApiError> {
-    // Every spent slot's points go to both bars (R1953000).
+    // Every slot's points go to both bars (R1953000, R1999000).
     let gained: i64 = slot_points.iter().sum();
     let card_bar_before = bar_before(counters, Counter::CardTokenBar);
     let cosmetic_bar_before = bar_before(counters, Counter::CosmeticTokenBar);
     let cycle_before = bar_before(counters, Counter::CosmeticTokenCycle);
 
-    // The card token bar (R1305000): the spent duplicates' points accrue, and a bar that reaches
-    // its size pays card tokens and keeps the overflow, in this transaction. The paying write
-    // replaces the accrual row, so still one row per bar per opening.
+    // The card token bar (R1305000): the slots' points accrue, and a bar that reaches its size
+    // pays card tokens and keeps the overflow, in this transaction. The paying write replaces the
+    // accrual row, so still one row per bar per opening.
     let (card_pays, card_remainder) = settle_bar(card_bar_before, gained, CARD_TOKEN_BAR_SIZE);
     if card_pays > 0 {
         grant_counter(
@@ -437,11 +431,12 @@ pub(crate) async fn settle_bars(
 /// counters (the pity counters and both bars with the cycle's position), rolls the opening from
 /// `seed` (`roll::roll_opening`) and writes every grant: the pack spent, the new cards (the
 /// collection and its ledger, reason `pack`), the cosmetics, a per-card one on its slot's card and
-/// an account one on none (R1661001), each pity counter that moved, both bars' points for the
-/// spent duplicates, each its slot's rarity's (R1953000), and each bar that reached its size paying
-/// its tokens with the overflow kept (R1305000, R1305001). Every economy row's `ref` is the opening's log; the
-/// collection's rows have no `ref` and share the opening's `at`. No pack held is 409. Every
-/// refusal and failure returns before the commit, so it writes nothing.
+/// an account one on none (R1661001), each pity counter that moved, both bars' points for every
+/// slot, each its slot's rarity's whatever it grants (R1953000, R1999000), and each bar that
+/// reached its size paying its tokens with the overflow kept (R1305000, R1305001). Every economy
+/// row's `ref` is the opening's log; the collection's rows have no `ref` and share the opening's
+/// `at`. No pack held is 409. Every refusal and failure returns before the commit, so it writes
+/// nothing.
 pub async fn open_pack(
     app: &App,
     profile_id: &str,
@@ -553,7 +548,11 @@ pub async fn open_pack(
     }
 
     let slot_points = slot_bar_points(&opening.slots);
-    let spent = slot_points.iter().filter(|points| **points > 0).count();
+    let spent = opening
+        .slots
+        .iter()
+        .filter(|slot| matches!(slot.grant, SlotGrant::Bars { .. }))
+        .count();
 
     let bars = settle_bars(&mut tx, profile_id, &counters, slot_points, &reference, at).await?;
 

@@ -11,7 +11,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::{HIDDEN_ID, view_for};
 
-use crate::rules::fixtures::harness::{setup_catalog, spread};
+use crate::rules::fixtures::harness::{run_effect, setup_catalog, spread};
 use crate::rules::fixtures::resources::*;
 
 const P1: PlayerId = PlayerId::P1;
@@ -39,29 +39,8 @@ fn board(seed: &str, active: &str, p1: Value, p2: Value) -> Scenario {
     scenario(json!({ "seed": seed, "active": active, "p1": side(p1), "p2": side(p2) }))
 }
 
-/// TS `run(state, effect, self, targets, controller)`: one effect on a sink over `state`, the rng cursor
-/// written back; its events.
-fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
-}
-
 fn gain(state: &mut GameState, player: PlayerId, args: Value) -> Vec<GameEvent> {
-    run(state, gain_resources(json_as(args)), player)
+    run_effect(state, gain_resources(json_as(args)), player)
 }
 
 fn tray(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
@@ -176,7 +155,7 @@ fn r1840000_hand_verbs_never_reach_the_tray() {
     ];
     for (name, verb) in verbs {
         let mut state = base.clone();
-        run(&mut state, verb, P1);
+        run_effect(&mut state, verb, P1);
         assert!(state.players[P1].hand.is_empty(), "{name} empties the hand");
         assert_eq!(tray_ids(&state, P1), held, "{name} leaves the tray as it was");
         assert!(
@@ -484,7 +463,7 @@ fn r1840004_discard_resource_takes_the_oldest_match_and_it_ceases_to_exist() {
     let mut state = s.state().clone();
     let ids = tray_ids(&state, P1);
     let discard = |state: &mut GameState, def_ids: Value| {
-        run(state, discard_resource(json_as(json!({ "defIds": def_ids }))), P1)
+        run_effect(state, discard_resource(json_as(json!({ "defIds": def_ids }))), P1)
     };
 
     let events = discard(&mut state, json!([COMMON_A]));
@@ -542,7 +521,7 @@ fn r1840004_fill_tray_gains_up_to_the_cap() {
 fn r1840005_credits_are_public_and_absent_until_gained() {
     let s = board("r1840005-credits", "p1", json!({}), json!({}));
     let mut state = s.state().clone();
-    let events = run(
+    let events = run_effect(
         &mut state,
         gain_market_credits(json_as(json!({ "amount": 20 }))),
         P1,
@@ -558,7 +537,7 @@ fn r1840005_credits_are_public_and_absent_until_gained() {
     assert_eq!(view_for(&state, P2).opponent.market_credits, Some(20));
     assert_eq!(view_for(&state, P1).opponent.market_credits, None);
     for amount in [0, -5] {
-        let events = run(
+        let events = run_effect(
             &mut state,
             gain_market_credits(json_as(json!({ "amount": amount, "player": "enemy" }))),
             P1,

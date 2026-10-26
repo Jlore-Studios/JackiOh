@@ -1101,6 +1101,56 @@ describe("a socket refused mid-game", () => {
   });
 });
 
+describe("a match voided mid-game (#1899)", () => {
+  it("#1899 a match voided on a live board says it is gone and offers the lobby, not a reconnect", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    expect(screen.queryByTestId("match-gone")).toBeNull();
+
+    act(() => {
+      live().onclose?.({ code: VOIDED_CLOSE_CODE, reason: "voided", wasClean: true });
+    });
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "closed");
+    expect(screen.getByTestId("match-gone")).toHaveTextContent("This match is no longer available.");
+    // The board stays up behind the notice.
+    expect(screen.getByTestId("hero-you")).toBeInTheDocument();
+    // A voided match has no socket to reopen (R679).
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+    expect(sockets).toHaveLength(1);
+
+    const link = within(screen.getByTestId("match-gone")).getByRole("link", { name: "Back to the lobby" });
+    expect(link).toHaveAttribute("href", "/play");
+    vi.mocked(navigate).mockClear();
+    fireEvent.click(link);
+    expect(vi.mocked(navigate)).toHaveBeenCalledWith("/play");
+  });
+
+  it("#1899 a voided result's view, then the void's close, shows the gone notice", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    // What the server sends a voided match: its last view, then the close (R679).
+    pushView(baseView({ viewer: "p1", active: "p1", phase: "over", result: { winner: "draw", reason: "voided" } }));
+    act(() => {
+      live().onclose?.({ code: VOIDED_CLOSE_CODE, reason: "voided", wasClean: true });
+    });
+    expect(screen.getByTestId("match-gone")).toHaveTextContent("This match is no longer available.");
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "closed");
+  });
+
+  it("#1899 an ordinary drop mid-game still says Reconnecting… with Reconnect now, and no gone notice", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    act(() => {
+      live().onclose?.({ code: 1006, reason: "", wasClean: false });
+    });
+    const status = screen.getByTestId("match-status");
+    expect(status).toHaveAttribute("data-connection", "reconnecting");
+    expect(status).toHaveTextContent("Reconnecting…");
+    expect(screen.getByTestId("match-reconnect")).toHaveTextContent("Reconnect now");
+    expect(screen.queryByTestId("match-gone")).toBeNull();
+  });
+});
+
 describe("Reconnect now", () => {
   /** Drop the live socket the way a dead network does: an unclean close that backs off. */
   function drop(): void {

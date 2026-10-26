@@ -12,16 +12,14 @@ use jackioh_engine::layers::unit_view;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{Effect, EngineSink};
-use jackioh_engine::state::{
-    CardInstance, Exertion, GameState, find_instance, find_instance_mut, new_instance,
-};
+use jackioh_engine::state::{CardInstance, Exertion, GameState, find_instance_mut, new_instance};
 use jackioh_engine::zones::{
     OffFieldZone, PlaceOnFieldOptions, active_units_of, card_at, lock_zone, move_to_zone, place_on_field,
 };
 
 use super::fixtures::catalog::spell_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{events_json, in_hand, new_game, put, slot};
+use super::fixtures::harness::{events_json, in_hand, live, new_game, put, slot};
 
 /// A face-down Trap for R33; #36 radiant steals a backrow card.
 fn trap() -> CardDef {
@@ -62,11 +60,6 @@ fn as_p1() -> HookOptions {
 
 fn controls(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     run(state, steal(json_as(json!({ "instanceId": card.id }))), as_p1())
-}
-
-/// The card under `id` as it stands in the state now (TS read the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
 }
 
 /// `cardAt(state, slot(player, row, lane))?.id`.
@@ -134,7 +127,7 @@ mod r15_steal_s6_3_m3_t1 {
                 ..Default::default()
             }
         );
-        assert_eq!(unit_view(&state, now).attack, 5);
+        assert_eq!(unit_view(&state, &now).attack, 5);
         // R171: but it has entered p1's side on this turn, so it is summoning sick with a fresh exertion.
         assert_eq!(now.summoned_turn, Some(state.turn));
         assert_eq!(

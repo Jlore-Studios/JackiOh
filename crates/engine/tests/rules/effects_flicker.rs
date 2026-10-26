@@ -13,18 +13,16 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
-use crate::rules::fixtures::field::{act, act_result, blink, flush, playing, spatula, tesla, watcher};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, matches_object, put, slot};
+use crate::rules::fixtures::field::{blink, flush, playing, spatula, tesla, watcher};
+use crate::rules::fixtures::harness::{
+    act, act_result, events_of_type, in_hand, live_mut, matches_object, put, slot,
+};
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     match find_instance(state, id) {
         Some(card) => card,
         None => panic!("no card {id}"),
     }
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
 }
 
 /// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's

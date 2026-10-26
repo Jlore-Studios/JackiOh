@@ -52,6 +52,7 @@ import {
   DECK_NEW,
   DECK_SAVE_ERROR,
   DECK_STATUS,
+  DECK_TO_PRACTICE,
   DECK_VERDICT,
   SYNC_STATUS,
   TRIO_CAP_REASON,
@@ -331,6 +332,74 @@ describe("a deck", () => {
     await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
     expect(server.calls.some((call) => call.op === "deleteDeck" && call.id === "a")).toBe(true);
     expect(server.decks.has("a")).toBe(false);
+  });
+});
+
+// Practice with this deck (#1991)
+
+describe("issue #1991 Practice with this deck", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  /** Presses the open deck's "Practice with this deck" and says where it went. */
+  function practiceTarget(): string {
+    fireEvent.click(screen.getByTestId(DECK_TO_PRACTICE));
+    return window.location.pathname + window.location.search;
+  }
+
+  it("issue #1991 a complete, saved third deck links to practice with it picked, by its place in the list", () => {
+    mount({
+      decks: [savedDeck("a", "Aggro", ONE, 1), savedDeck("b", "Brawl", TWO, 2), savedDeck("c", "Control", THREE, 3)],
+      initialOpen: { kind: "deck", id: "c" },
+    });
+    const button = screen.getByTestId(DECK_TO_PRACTICE);
+    expect(button).toHaveTextContent("Practice");
+    expect(button).toHaveAccessibleName("Practice with this deck");
+    expect(practiceTarget()).toBe("/practice?deck=saved:3");
+    fireEvent.click(screen.getByTestId(deckRowId("a")));
+    expect(practiceTarget()).toBe("/practice?deck=saved:1");
+  });
+
+  it("issue #1991 an incomplete deck offers no practice until its last card is saved", async () => {
+    mount({ decks: [savedDeck("a", "Aggro", ONE.slice(0, DECK_SIZE - 1), 1)], initialOpen: { kind: "deck", id: "a" } });
+    expect(screen.queryByTestId(DECK_TO_PRACTICE)).toBeNull();
+    const last = ONE[DECK_SIZE - 1] ?? "";
+    await act(async () => {
+      fireEvent.click(screen.getByTestId(addPoolId(last)));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      for (let turn = 0; turn < 50; turn += 1) await Promise.resolve();
+    });
+    expect(practiceTarget()).toBe("/practice?deck=saved:1");
+  });
+
+  it("issue #1991 no deck offers practice while another deck is not saved yet", async () => {
+    const { tick } = mount({ decks: [savedDeck("a", "Aggro", ONE, 1)], initialOpen: { kind: "deck", id: "a" } });
+    expect(screen.getByTestId(DECK_TO_PRACTICE)).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId(DECK_NEW));
+    fireEvent.click(screen.getByTestId(deckRowId("a")));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "a");
+    expect(screen.getByTestId(deckRowId("new-1"))).toHaveAttribute("data-unsynced", "true");
+    expect(screen.queryByTestId(DECK_TO_PRACTICE)).toBeNull();
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(practiceTarget()).toBe("/practice?deck=saved:1");
+  });
+
+  it("issue #1991 a deletion the server has not had yet hides it, and the place moves up once it has", async () => {
+    const { tick } = mount({
+      decks: [savedDeck("a", "Aggro", ONE, 1), savedDeck("b", "Brawl", TWO, 2)],
+      initialOpen: { kind: "deck", id: "b" },
+    });
+    expect(practiceTarget()).toBe("/practice?deck=saved:2");
+    fireEvent.click(screen.getByTestId(deckRowId("a")));
+    fireEvent.click(screen.getByTestId(DECK_DELETE));
+    fireEvent.click(screen.getByTestId(DECK_DELETE_CONFIRM));
+    expect(screen.getByTestId(DECK_EDITOR)).toHaveAttribute("data-deck", "b");
+    expect(screen.queryByTestId(DECK_TO_PRACTICE)).toBeNull();
+    await tick(DECK_AUTOSAVE_DEBOUNCE_MS);
+    expect(practiceTarget()).toBe("/practice?deck=saved:1");
   });
 });
 

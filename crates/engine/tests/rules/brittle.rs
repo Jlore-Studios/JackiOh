@@ -3,8 +3,6 @@
 //! views show, and a crumble whose Death asks something pausing the settle after the tick (R113), with
 //! the paused game surviving a JSON round trip and resuming identically.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use serde::Serialize;
 
 use jackioh_engine::effects::reveal::reveal;
@@ -13,7 +11,9 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, stacker};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    act, act_with_nonce, events_of_type, in_hand, json_of, live, put, set_library, sink_for, slot,
+};
 use crate::rules::fixtures::instance_data::{asker, brittle_trap, brittle_unit, instance_game};
 
 /// An `ActionInput` from a `json!` object literal (SURFACE §8).
@@ -45,10 +45,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    by_id(state, id).clone()
 }
 
 fn count_of(state: &GameState, id: &str) -> Option<i32> {
@@ -573,18 +569,6 @@ mod r385_b3_3_rule_6_who_sees_the_count {
 
 // A crumble whose Death asks (R113, §9.3)
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: ActionInput, fixed: Option<&str>) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let nonce = fixed.map_or_else(|| format!("br{nonce}"), str::to_string);
-    let result = reduce(state, &body.with_nonce(nonce));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result.state
-}
-
 /// p1's main phase on turn 1, past the mulligans.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&instance_game(seed, None)).state;
@@ -597,7 +581,6 @@ fn playing(seed: &str) -> GameState {
         state = act(
             &state,
             input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
-            None,
         );
     }
     state
@@ -637,8 +620,8 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
             "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "mode", "option": "two" }],
             "playerId": "p1"
         });
-        let live = act(&state, input(answer.clone()), Some("answer"));
-        let replayed = act(&copy, input(answer), Some("answer"));
+        let live = act_with_nonce(&state, input(answer.clone()), "answer");
+        let replayed = act_with_nonce(&copy, input(answer), "answer");
         assert_eq!(replayed, live);
         assert!(live.pending.is_none());
         assert!(live.work.is_empty());

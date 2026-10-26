@@ -10,15 +10,13 @@
 //! public `drawLimited`; the lowest limit holds and "both" binds its own controller; a named draw is a
 //! draw; and both survive a JSON round trip and a replay.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::draw::{DrawOutcome, draw_blocked, draw_limit_of, draw_one, draws_this_turn};
 use jackioh_engine::effects::draw_from_library;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_json, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
+    act, act_ok, events_json, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, anti_greed, cast_spell, cast_unit, draw_two, log_card, notes, palantir, plain,
@@ -30,20 +28,6 @@ fn register() {
     let mut all = registered_scripts().clone();
     all.extend(TURN_SCRIPTS.clone());
     register_scripts(all);
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// TS `act`: `{ state, events }`, and a refusal throws.
-fn act(state: &GameState, body: Value) -> (GameState, Vec<GameEvent>) {
-    let n = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("dl{n}"));
-    let result = reduce(state, &json_as::<Action>(action));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    (result.state, result.events)
 }
 
 /// Past both mulligans, in p1's main phase on turn 1, with the note log in p2's backrow.
@@ -59,8 +43,7 @@ fn playing(seed: &str) -> GameState {
         state = act(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
-        )
-        .0;
+        );
     }
     put(
         &mut state,
@@ -165,7 +148,7 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
     fn r457_r97_a_drawn_events_number_is_public_though_the_card_it_names_is_not() {
         let mut state = playing("public-count");
         set_library(&mut state, PlayerId::P2, &strings(&["fx-25", "fx-26"]));
-        let (after, _) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let after = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         let their_draw = view_events(&after, PlayerId::P1)
             .into_iter()
             .find(|event| event["type"] == "drawn" && event["player"] == "p2")
@@ -191,7 +174,9 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
         set_library(&mut state, PlayerId::P2, &strings(&["fx-25", "fx-26", "fx-27"]));
         draw_one(&mut Bench::new(&state).sink(&mut state), PlayerId::P2, None);
         assert_eq!(draws_this_turn(&state, PlayerId::P2), 1);
-        let (after, events) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(draws_this_turn(&after, PlayerId::P2), 1);
         let theirs: Vec<Value> = events_json(&events, GameEventType::Drawn)
@@ -219,12 +204,14 @@ mod r457_b5_e4_draws_counted_per_player_per_turn {
             &strings(&["fx-25", "fx-26", "fx-27", "fx-28"]),
         );
         // p2's turn: the start-of-turn draw is the 1st, and sets nothing off.
-        let (mut started, _) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let mut started = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(notes(&started), Vec::<String>::new());
         // One effect draws two more: both `drawn` events reach the trigger after the whole effect, when
         // the count already reads 3, and only the one that was the 2nd sets it off.
         let two = first_card(&mut started, PlayerId::P2, &draw_two().id);
-        let (after, events) = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &started,
             json!({ "type": "play", "instanceId": two.id, "playerId": "p2" }),
         );
@@ -333,13 +320,15 @@ mod r457_b5_e3_draw_limits {
             Default::default(),
         );
         set_library(&mut state, PlayerId::P2, &strings(&["fx-25", "fx-26", "fx-27"]));
-        let (mut started, _) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let mut started = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(draws_this_turn(&started, PlayerId::P2), 1);
         let card = started.players.p2.hand.iter().find(|held| held.def_id == "fx-25");
         assert!(card.is_some());
 
         let two = first_card(&mut started, PlayerId::P2, &draw_two().id);
-        let (after, events) = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &started,
             json!({ "type": "play", "instanceId": two.id, "playerId": "p2" }),
         );
@@ -458,9 +447,9 @@ mod r457_b5_e3_draw_limits {
             Default::default(),
         );
         set_library(&mut state, PlayerId::P2, &strings(&["fx-25", "fx-26"]));
-        let (mut started, _) = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let mut started = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         let two = first_card(&mut started, PlayerId::P2, &draw_two().id);
-        let (after, _) = act(
+        let after = act(
             &started,
             json!({ "type": "play", "instanceId": two.id, "playerId": "p2" }),
         );

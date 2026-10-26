@@ -98,6 +98,12 @@ export const DECK_DELETE_CONFIRM = "deck-delete-confirm";
 export const DECK_DELETE_CANCEL = "deck-delete-cancel";
 
 /**
+ * #1991: "Practice with this deck", on a complete deck while the workshop is saved: it opens
+ * `/practice?deck=saved:<n>` (`practiceDeckPath`), the deck picked and no game started.
+ */
+export const DECK_TO_PRACTICE = "deck-to-practice";
+
+/**
  * "Compare with" (R251): a select whose options are `trio:<trioId>` (a trio this deck is in: its
  * other decks), `deck:<deckId>` (another deck, up to two at once) and `none`. Each compared deck is
  * then a chip, `deck-compare-<deckId>`, whose press stops comparing with it.

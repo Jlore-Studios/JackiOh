@@ -5,25 +5,11 @@
 //!
 //! Port of `packages/engine/test/turn-cap.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{new_game, put, slot};
+use crate::rules::fixtures::harness::{act, new_game, put, slot};
 use crate::rules::fixtures::scripts::infinite_reserves;
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    let result = reduce(state, &input.with_nonce(format!("cap{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
 
 /// Past both mulligans, in p1's main phase on turn 1, with nothing ending a turn but End turn.
 fn playing(seed: &str) -> GameState {

@@ -4,7 +4,7 @@
 use jackioh_engine::subsystems::rotation::{RotationResult, rotate_rings};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_json, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_json, live, live_mut, new_game, put, slot};
 
 // Fixture cards.
 
@@ -99,15 +99,6 @@ fn where_is(state: &GameState, card: &CardInstance) -> String {
         Some(Zone::Field { player, row, lane }) => format!("{player} {row} {lane}"),
         Some(zone) => zone.z().to_string(),
     }
-}
-
-/// The card as it stands in the state now.
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).expect("the card is still in the game")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).expect("the card is still in the game")
 }
 
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
@@ -296,7 +287,7 @@ mod r14_rotation_m3_t7 {
         assert_eq!(serde_json::to_value(it.counters).unwrap(), json!({ "plague": 2 }));
         assert_eq!(it.granted_keywords, vec![Keyword::Taunt]);
         // A rotation never takes the card off the field, so R78's reset never runs.
-        let view = unit_view(&state, it);
+        let view = unit_view(&state, &it);
         assert_eq!(view.attack, 5);
         assert_eq!(view.max_health, 6);
         assert_eq!(view.health, 5);

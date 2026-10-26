@@ -6,29 +6,16 @@
 //! resume identically; and whole games dealt the instance-data fixtures fold back from their logs to
 //! the same state (§9.3), with a JSON round trip before every action.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, put, round_trip, set_library, slot};
+use crate::rules::fixtures::harness::{
+    act, act_with_nonce, in_hand, live, put, round_trip, run_effect, set_library, slot,
+};
 use crate::rules::fixtures::instance_data::{
     CONSTANT_STEP, body, constant, instance_deck, instance_game, military, nerfer, numbered, numbered_body,
     register_instance_fixtures,
 };
-
-/// TS's module-level `let nonce`; an atomic so that tests running side by side never share a nonce.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, action: ActionInput, fixed: Option<&str>) -> GameState {
-    let n = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let nonce = fixed.map_or_else(|| format!("id{n}"), str::to_string);
-    let result = reduce(state, &action.with_nonce(nonce));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
 
 fn input(player: PlayerId, action: ActionBody) -> ActionInput {
     ActionInput {
@@ -45,9 +32,9 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&instance_game(seed, None)).state;
     let keep = ids(&state.players.p1.hand);
-    state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }), None);
+    state = act(&state, input(PlayerId::P1, ActionBody::Mulligan { keep }));
     let keep = ids(&state.players.p2.hand);
-    state = act(&state, input(PlayerId::P2, ActionBody::Mulligan { keep }), None);
+    state = act(&state, input(PlayerId::P2, ActionBody::Mulligan { keep }));
     state.players.p1.mana = ManaState {
         current: 4,
         max: 4,
@@ -58,22 +45,7 @@ fn playing(seed: &str) -> GameState {
 
 /// One effect applied by p1 through a context of its own; the rng's cursor is written back, as TS did.
 fn run(state: &mut GameState, effect: &Effect) -> Vec<GameEvent> {
-    let mut events = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = resolve::make_context(
-            &mut sink,
-            None,
-            resolve::HookOptions {
-                controller: Some(PlayerId::P1),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
+    run_effect(state, effect.clone(), PlayerId::P1)
 }
 
 fn play_of(
@@ -111,11 +83,6 @@ fn on_field(state: &GameState, id: &str) -> CardInstance {
         .find(|card| card.id == id)
         .expect("expected the card on the field")
         .clone()
-}
-
-/// The card as the state holds it now (TS read its live object).
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).expect("the card is in the game").clone()
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
@@ -172,7 +139,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         assert_eq!(seen.health, Some(4));
         assert_eq!(seen.keywords, Some(vec![Keyword::Rush]));
         let play = play_of(&state, &live(&state, &card.id), None);
-        state = act(&state, play, None);
+        state = act(&state, play);
         let unit = on_field(&state, &card.id);
         let view = layers::unit_view(&state, &unit);
         assert_eq!((view.attack, view.max_health), (5, 4));
@@ -306,7 +273,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         );
 
         let play = play_of(&state, &card, None);
-        state = act(&state, play, None);
+        state = act(&state, play);
         let unit = on_field(&state, &card.id);
         assert_eq!(query::lucky_on(&state, &unit), 2);
         let keywords = layers::unit_view(&state, &unit).keywords;
@@ -360,7 +327,7 @@ mod b5_e38_buffs_and_keywords_in_a_hand_or_a_deck_ride_onto_the_field {
         let spell = first(in_hand(&mut state, &military.id, PlayerId::P1, 1));
         let before = state.applied.len();
         let play = play_of(&state, &spell, None);
-        state = act(&state, play, None);
+        state = act(&state, play);
         let events = applied_since(&state, before);
         let buffed: Vec<String> = events
             .iter()
@@ -406,7 +373,7 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         let before = state.applied.len();
         let names_target = |action: &ActionBody| targets_name(action, &target.id);
         let play = play_of(&state, &spell, Some(&names_target));
-        state = act(&state, play, None);
+        state = act(&state, play);
         let changed: Vec<GameEvent> = applied_since(&state, before)
             .into_iter()
             .filter(|e| matches!(e, GameEvent::NumberChanged { .. }))
@@ -435,7 +402,7 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         find_instance_mut(&mut state, &spell.id).expect("in hand").radiant = true;
         let names_target = |action: &ActionBody| targets_name(action, &target.id);
         let play = play_of(&state, &live(&state, &spell.id), Some(&names_target));
-        state = act(&state, play, None);
+        state = act(&state, play);
         let pending = state.pending.clone().expect("expected the Discover");
         assert_eq!(pending.kind, PromptKind::Discover);
         assert_eq!(pending.options.len(), 3);
@@ -463,8 +430,8 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
                 selection: vec![option.selection.clone()],
             },
         );
-        let live_state = act(&state, answer.clone(), Some("a"));
-        let resumed = act(&copy, answer, Some("a"));
+        let live_state = act_with_nonce(&state, answer.clone(), "a");
+        let resumed = act_with_nonce(&copy, answer, "a");
         assert_eq!(resumed, live_state);
         let held = live_state.players.p1.hand.iter().find(|c| c.id == target.id);
         assert!(held.is_some());
@@ -486,7 +453,7 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
         let victim = put(&mut state, &body.id, slot(PlayerId::P2, Row::Units, 2), json!({}));
         let spell = first(in_hand(&mut state, &nerfer.id, PlayerId::P1, 1));
         let play = play_of(&state, &spell, None);
-        state = act(&state, play, None);
+        state = act(&state, play);
         let pending = state.pending.clone().expect("expected the target prompt");
         let option = pending
             .options
@@ -503,8 +470,8 @@ mod classic_plus_41_and_a_degrade_after_a_prompt_pauses_and_replays_r113_s9_3_r3
                 selection: vec![option.selection.clone()],
             },
         );
-        let live_state = act(&state, answer.clone(), Some("b"));
-        assert_eq!(act(&copy, answer, Some("b")), live_state);
+        let live_state = act_with_nonce(&state, answer.clone(), "b");
+        assert_eq!(act_with_nonce(&copy, answer, "b"), live_state);
         let degraded: Vec<(String, Option<Vec<PlayerId>>)> = last_applied(&live_state)
             .iter()
             .filter_map(|e| match e {

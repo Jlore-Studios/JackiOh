@@ -306,9 +306,9 @@ economy/                #1651: the economy's shared pieces: `wallet.ts`, the bal
                         landing's, linking /shop (R1651000); `FillBar.tsx`, the bar that fills from before
                         to after, bursts when full and restarts with the overflow; `RewardReveal.tsx`, a
                         filled bar's reward flown out one at a time; `OpeningBars.tsx`, the opening's
-                        token bars pinned at the top of the screen, each spent slot's points (`slotPoints`)
+                        token bars pinned at the top of the screen, each slot's points (`slotPoints`)
                         flying from its card into them and a full bar pulsing before its reward
-                        (R1953000); `XpReveal.tsx` and `xp.ts`, a finished game's tracks,
+                        (R1953000, R1999000); `XpReveal.tsx` and `xp.ts`, a finished game's tracks,
                         level by level with each level's rewards, and its quests, from the server's
                         `economy` answer (the match and Duos results, a paid practice game's); `bars.ts`
                         the pure stages; Reduce motion (the setting or the system's) shows every end state

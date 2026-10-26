@@ -9,13 +9,11 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::damage::hero_hit_amount;
 use jackioh_engine::effects::{discount_random_in_hand, gain_hero_armor};
 use jackioh_engine::mana::effective_cost;
-use jackioh_engine::resolve::{HookOptions, make_context};
-use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{Effect, EngineSink};
-use jackioh_engine::state::{CardInstance, GameState, find_instance};
+use jackioh_engine::script::Effect;
+use jackioh_engine::state::{CardInstance, GameState};
 
 use super::fixtures::catalog::{spell_def, unit_def, vanilla_catalog};
-use super::fixtures::harness::{events_json, in_hand, new_game};
+use super::fixtures::harness::{events_json, in_hand, live, new_game, run_effect};
 
 fn free() -> CardDef {
     unit_def(801, json!({ "cost": 0 }))
@@ -43,27 +41,7 @@ fn game(seed: &str) -> GameState {
 /// One effect applied as p1's, on a sink whose rng starts at the state's cursor (`sinkFor`); the
 /// cursor is written back, and the events it emitted are handed back.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut events = Vec::new();
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(PlayerId::P1),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
-}
-
-/// The card under `id` as it stands in the state now (TS read the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
+    run_effect(state, effect, PlayerId::P1)
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {
@@ -130,7 +108,7 @@ mod discount_random_in_hand_c_plus_c49 {
         );
         assert_eq!(live(&state, &three.id).cost_mod, -20);
         assert_eq!(
-            effective_cost(&state, live(&state, &three.id), Default::default()),
+            effective_cost(&state, &live(&state, &three.id), Default::default()),
             0
         );
     }

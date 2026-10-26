@@ -6,11 +6,9 @@
 //!
 //! Fixtures are prefixed `cw-` and indexed above 1480 so they cannot collide (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act_result, both, in_hand, new_game, put, slot};
 
 /// TS `def(name, type, cost)`, its module `nextIndex` (from 1480) written out per definition.
 fn def(name: &str, type_: &str, cost: i32, index: i32) -> CardDef {
@@ -98,28 +96,21 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let n = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("cw{n}"));
-    reduce(state, &json_as::<Action>(action)).state
-}
-
 /// Past the mulligans, in p1's main phase, each hand holding a (2) and a (1) Spell.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(
+    state = act_result(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
-    );
+    )
+    .state;
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
-    state = act(
+    state = act_result(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
-    );
+    )
+    .state;
     let mut catalog = registered_catalog().clone();
     for card in defs() {
         catalog.insert(card.id.clone(), card);

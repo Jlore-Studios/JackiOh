@@ -7,38 +7,20 @@
 //! taker's is neither stolen nor destroyed. Through fixture scripts (fixtures/jade.rs); Jade Beauty's
 //! own tests cover the same cases again (`crates/cards/src/scripts/meditative/`).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::delay::DELAYED_ALLURE_HOOK;
 use jackioh_engine::effects::destroy::{DestroyArgs, destroy};
 use jackioh_engine::effects::steal::StealOtherwise;
 use jackioh_engine::effects::targets::TargetSpec;
-use jackioh_engine::reduce::{begin_game, reduce};
+use jackioh_engine::reduce::begin_game;
 use jackioh_engine::state_check::state_check;
 use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
+use crate::rules::fixtures::harness::{act_ok, events_of_type, in_hand, json_of, new_game, put, slot};
 use crate::rules::fixtures::jade::{JADE_SCRIPTS, jade_allure, jade_catalog};
 use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
-
-/// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// `reduce` with a fresh nonce; `body` is the TS `ActionInput` literal (its `playerId` included).
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("al{nonce}"));
-    let action: Action = json_as(action);
-    let result = reduce(state, &action);
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
 
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(&format!("allure-{seed}"), None)).state;
@@ -52,7 +34,7 @@ fn playing(seed: &str) -> GameState {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
         )
@@ -75,7 +57,7 @@ fn play(state: &mut GameState, player: PlayerId, def_id: &str, extra: Value) -> 
             body.insert(key.clone(), value.clone());
         }
     }
-    act(state, body)
+    act_ok(state, body)
 }
 
 /// Play the Allure Spell for `player`.
@@ -85,7 +67,7 @@ fn allure(state: &mut GameState, player: PlayerId) -> ReduceResult {
 
 /// End the active player's turn.
 fn pass(state: &GameState) -> ReduceResult {
-    act(state, json!({ "type": "endTurn", "playerId": state.active }))
+    act_ok(state, json!({ "type": "endTurn", "playerId": state.active }))
 }
 
 fn top_id(state: &GameState, player: PlayerId, lane: i32) -> Option<String> {

@@ -9,7 +9,7 @@ use jackioh_engine::{PlayerId::P1, Row::Units};
 use super::fixtures::combat::plain;
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
 use super::fixtures::scripts::x_bolt;
-use crate::rules::fixtures::harness::json_of;
+use crate::rules::fixtures::harness::{json_of, live};
 
 /// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
 /// borrows all three, so they live here and `sink()` lends them out.
@@ -83,11 +83,6 @@ fn on_instance(instance: &CardInstance) -> Vec<Selection> {
     }]
 }
 
-/// The card as it stands in the state now.
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
-}
-
 /// The `cost` of every `costChanged` event, in order.
 fn costs(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CostChanged)
@@ -119,7 +114,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
 
         assert_eq!(live(sink.state, &card).cost_mod, -1);
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             0
         );
         assert_eq!(
@@ -138,7 +133,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         );
         assert_eq!(live(sink.state, &card).cost_mod, 2);
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             3
         );
         assert_eq!(costs(&sink.events), vec![0, 3]);
@@ -191,7 +186,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         );
         assert_eq!(live(sink.state, &card).cost_mod, -2);
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             3
         );
         assert_eq!(
@@ -208,7 +203,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             },
         );
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             0
         );
         assert_eq!(live(sink.state, &card).x, Some(3));
@@ -271,7 +266,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         );
         assert_eq!(live(sink.state, &card).cost_override, Some(1));
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             1
         );
 
@@ -286,7 +281,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         assert_eq!(live(sink.state, &dear).cost_override, Some(0));
         // R65 starts from the override and still adds the instance's costMod.
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &dear), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &dear), CostOptions::default()),
             3
         );
         assert_eq!(
@@ -343,7 +338,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         // 6 (override) − 1 (costMod) − 1 (discount) = 4, which Curvature then takes to 3. The override
         // alone was 6 − 1 = 5, which Curvature already reached (R363: 4 or more), so 4.
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             3
         );
         assert_eq!(costs(&sink.events), vec![4, 3]);
@@ -358,7 +353,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             },
         );
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             1
         );
     }
@@ -380,7 +375,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
 
         assert_eq!(live(sink.state, &card).cost_override, Some(0));
         assert_eq!(
-            effective_cost(sink.state, live(sink.state, &card), CostOptions::default()),
+            effective_cost(sink.state, &live(sink.state, &card), CostOptions::default()),
             0
         );
     }
@@ -423,7 +418,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
         assert_eq!(after.cost_mod, 0);
         assert_eq!(after.cost_override, None);
         assert_eq!(after.buffs, AttackHealth { attack: 0, health: 0 });
-        assert_eq!(effective_cost(sink.state, after, CostOptions::default()), 1);
+        assert_eq!(effective_cost(sink.state, &after, CostOptions::default()), 1);
     }
 }
 

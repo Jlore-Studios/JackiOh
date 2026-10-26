@@ -1445,5 +1445,223 @@
     "pr": 1957,
     "title": "patches ship: v0.4.12c",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ab52f7fb98cead1aa95f16202edef58f36008faf",
+    "pr": 1959,
+    "title": "patches log: b67dead..e1da458",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ee51d4c44395c6266e9d981eb9951c4dc82db23c",
+    "pr": 1944,
+    "title": "the starscape map",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "761dae6c900915ce3bf39dcfc21e1616bbe1f145",
+    "pr": 1961,
+    "title": "combat and replacement verbs for Stinkyscape",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "9500e65e003e0d2f9fb3a008bd94debdc42749cc",
+    "pr": 1964,
+    "title": "a custom card's choose_target_where keeps its where, or is refused",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "0aabe7d5d391797b3032403b45bff4a700422fcb",
+    "pr": 1945,
+    "title": "the AI at the wheel: a bounded autopilot, the Pareto hint and a free helpful action",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "159bdabb0dbf82afe0f52891f10746aaa173cc00",
+    "pr": 1966,
+    "title": "/stats ranks each set's cards in a Sets tab",
+    "kind": "app",
+    "player": "The statistics page has a Sets tab: each set's win rate, its best and worst card, and the strongest and weakest cards of the patch."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "837ebc38d949065577424c2084d5c4ebcea28f23",
+    "pr": 1962,
+    "title": "card-on-card verbs for Stinkyscape",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "764d9104b1fba5af23cb835002dfc1fbf946b182",
+    "pr": 1967,
+    "title": "split rust (test tools, wasm) into three groups",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "44c4d2ccc7ae68b9e2cbd753d79e95849a6bb3c8",
+    "pr": 1970,
+    "title": "a glove cursor and playmat-specific field taps",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ace4c9f9c39d8d339aa075eba2c3f10889676510",
+    "pr": 1968,
+    "title": "equip a newly earned cosmetic straight from the pack-opening reveal",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "f26f6730ebf2f861b8180c7c053527c73a3060fb",
+    "pr": 1972,
+    "title": "the AI prices Trample's excess and Lifesteal's healing when it weighs an attack on a unit",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "a039304ce77e09698fa0eba9c3b77538a9025440",
+    "title": "Create LICENSE",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "7b1304ea922ceb2425823ba1c72f8d50f24950c4",
+    "pr": 1974,
+    "title": "the AI's lethal gap counts only attacks that may hit the hero",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "33c6f2f8b51ff54f4c5bdfdd22a61a75beb90a7d",
+    "pr": 1979,
+    "title": "Add a contributor license agreement and require it in CONTRIBUTING.md",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "a72572a2f5334f1bfe82ff5e0fec4cf9df11e3ed",
+    "pr": 1977,
+    "title": "the status issue shows what every runner is doing, redrawn every two minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "87ad5186df64079968f127ff71517392057023c8",
+    "pr": 1973,
+    "title": "/stats picks patches with games, steps between them, and drops the Daily runs tab",
+    "kind": "app",
+    "player": "The statistics page has a patch picker, steps to the patch before and after, and no longer shows the daily test runs."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "58a515822b678eb0fca5e2a705f6b028ccc36d9e",
+    "pr": 1978,
+    "title": "the tests' unit_at, pick and fixture helpers come from the shared kits, and the check keeps it so",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "458f267701364eaf4252eabd2ae788abb7b66d2d",
+    "pr": 1980,
+    "title": "the co-op AI can pass a card its teammate could only play by a Stack, Flying, Equip or Tribute landing",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "c062c5b4921fbc7cce812e4183eb44998491679d",
+    "pr": 1982,
+    "title": "a development run's file filed as totals only (stats-import --totals-only)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "3fde2eb7212a00e90198fc6d7e4e652bbc4c7f42",
+    "pr": 1984,
+    "title": "what each runner is for moves into one comment on the status issue",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "c9bfbf91e060e2c0dd608d722e322c3900f7bfe6",
+    "pr": 1985,
+    "title": "a failed seat-flag write undoes the rematch or series game it started",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "726affbf3676295248e03ed5995875b7df0b3fff",
+    "pr": 1975,
+    "title": "an attack whose only kill is Cleave's splash counts as a killing trade",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b80c0188aff1e6ae61a29b540e91a50ebeae8f1b",
+    "pr": 1986,
+    "title": "the PC works all day: learn runs back to back and files its games, gather plays each patch",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "60ef0c4cca6db2c627b3e75d54981a6511cfb564",
+    "pr": 1987,
+    "title": "the networked e2e specs take their api, bearer and session helpers from support",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "e3753070d6a7b5ed0623e8ae203e610fb8713d3b",
+    "pr": 1971,
+    "title": "the language button leaves the top bar once a device has settled on its language, and lives on in settings",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "bab4ac25453f2c9d52beae9c0cbb911b2294ff06",
+    "pr": 1983,
+    "title": "rarity-weighted token bars on a gamified top-of-screen HUD, animated chase cosmetics, a 2% global cosmetic roll, cosmetic tokens spent in place",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "9543ef3aafeb14dc07c0b38e021222163475b593",
+    "pr": 1963,
+    "title": "the Marketplace",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "10aa0cb4dd5781b12cbfdd64dd1a1d2a3301d183",
+    "title": "Merge pull request #1960 from Jlore-Studios/bot/issue-1834",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ec855ac8416f87d8caa5ab53bfb8d9d58a064017",
+    "pr": 1981,
+    "title": "Anomalies, the board swap",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "66195725044688044f8f35797076cefe2bb05427",
+    "pr": 2001,
+    "title": "the AI no longer loops on free replays, with five fixes to the client, the server and the fuzz monitor",
+    "kind": "ai",
+    "player": "The practice AI no longer stalls a game by replaying free cards it doesn't need before a winning attack."
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "19555b64d1191c6ace5d95dccfee1ab77847d57d",
+    "pr": 2003,
+    "title": "Remove the CLA and say JackiOh takes no external contributions",
+    "kind": "internal"
   }
 ]

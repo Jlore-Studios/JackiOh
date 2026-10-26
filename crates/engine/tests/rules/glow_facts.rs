@@ -8,7 +8,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::call_to_chaos_plus::immutable;
 use crate::rules::fixtures::combat::{plain, trampler};
-use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, in_hand, live, new_game, put, slot};
 
 /// A Field Spell with no other text, indexed from 1981.
 fn field_spell(name: &str, index: u32) -> CardDef {
@@ -104,11 +104,6 @@ fn add_mod(state: &mut GameState, body: Value) {
         rider[key] = value.clone();
     }
     state.players.p1.mods.push(json_as::<PlayerModifier>(rider));
-}
-
-/// The card as the state holds it now.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).expect("the card is in the game").clone()
 }
 
 fn first_in_hand(state: &mut GameState, def_id: &str) -> CardInstance {

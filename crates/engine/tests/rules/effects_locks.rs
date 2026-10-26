@@ -14,9 +14,9 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{
-    act_result, banner, doom, eater, flush, leak, lockdown, notes_of, playing, unlocker,
+    banner, doom, eater, flush, leak, lockdown, notes_of, playing, unlocker,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{act_result, events_of_type, in_hand, put, slot};
 
 /// What TS's `play` returns: the state after the play, its events, and the played card's id.
 struct Played {

@@ -3,8 +3,6 @@
 //! fusion (R1108) and `manaSpent` (R1109). Each through the part's fixtures; the real cards' tests
 //! cover the same cases again.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::summon::{SummonCopyArgs, clone_of};
 use jackioh_engine::effects::targets::TargetSpec;
 use jackioh_engine::effects::{clear_radiant, grant_ability, steal};
@@ -13,14 +11,11 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::token_def;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{act, act_ok, in_hand, new_game, put, run_effect, sink_for, slot};
 use crate::rules::fixtures::meditative_riders::{
     GRANT_KEY, LOG_LANE, RIDER_SCRIPTS, bearer, book, closed_mic, ear, fuser, granter, log_card, mind, notes,
     open_mic, riders_catalog,
 };
-
-/// TS's module-level `let nonce = 0`: unique across the file's tests, which Rust runs on many threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn register() {
     register_catalog(riders_catalog(registered_catalog().clone()));
@@ -35,19 +30,6 @@ fn game(seed: &str) -> GameState {
     let state = new_game(&format!("riders-{seed}"), None);
     register();
     state
-}
-
-fn act_result(state: &GameState, body: ActionInput) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    reduce(state, &body.with_nonce(format!("rider{nonce}")))
-}
-
-fn act(state: &GameState, body: ActionInput) -> (GameState, Vec<GameEvent>) {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    (result.state, result.events)
 }
 
 fn input(body: Value) -> ActionInput {
@@ -66,8 +48,7 @@ fn playing(seed: &str) -> GameState {
         state = act(
             &state,
             input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
-        )
-        .0;
+        );
     }
     put(
         &mut state,
@@ -95,26 +76,7 @@ fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 
 /// The effect applied on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    run_as(state, effect, P1)
-}
-
-fn run_as(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut events = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..HookOptions::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
+    run_effect(state, effect, P1)
 }
 
 /// The events of one action, as a player's view sends them.
@@ -256,7 +218,7 @@ fn r1105_opponent_activates_paying_own_mana() {
     let mut state = playing("either");
     let mic = put(&mut state, &open_mic.id, slot(P1, Row::Units, 1), json!({}));
     let p1_mana = state.players.p1.mana.current;
-    state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" }))).0;
+    state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
     assert_eq!(state.active, P2);
     // Start of turn refreshes current mana to max, so the price money is set after the pass.
     state.players.p2.mana.max = 5;
@@ -272,7 +234,7 @@ fn r1105_opponent_activates_paying_own_mana() {
         })
         .collect();
     assert_eq!(listed, vec![Some("share".to_string())]);
-    let (after, _) = act(&state, activate(P2, &mic.id));
+    let after = act(&state, activate(P2, &mic.id));
     // Paid 2 from p2's own mana, then the run gained p2 1.
     assert_eq!(after.players.p2.mana.current, 4);
     assert_eq!(after.players.p1.mana.current, p1_mana);
@@ -284,7 +246,7 @@ fn r1105_opponent_activates_paying_own_mana() {
 fn r1105_controller_only_ability_still_not_yours() {
     let mut state = playing("closed");
     let mic = put(&mut state, &closed_mic.id, slot(P1, Row::Units, 1), json!({}));
-    state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" }))).0;
+    state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
     let listed: Vec<ActionBody> = legal_actions(&state, P2)
         .into_iter()
         .filter(|body| matches!(body, ActionBody::Activate { instance_id, .. } if instance_id == &mic.id))
@@ -338,7 +300,7 @@ fn r1107_granted_death_runs_after_own_for_controller_at_death() {
         Some(vec!["Death: notes `granted`.".to_string()])
     );
     // Stolen: p2 holds it at its death, and both Deaths still fire, own first.
-    run_as(&mut state, steal(json_as(json!({ "instanceId": target.id }))), P2);
+    run_effect(&mut state, steal(json_as(json!({ "instanceId": target.id }))), P2);
     assert_eq!(card(&state, &target.id).controller, P2);
     card_mut(&mut state, &target.id).marked_destroyed = Some(true);
     let mut sink = sink_for(&mut state);
@@ -403,7 +365,7 @@ fn r1108_one_pick_per_pool() {
     assert!(find_def(Some(&state), &mind.id).is_some());
     let mut hand = in_hand(&mut state, &fuser.id, P1, 1);
     let spell = hand.remove(0);
-    let (after, _) = act(
+    let after = act(
         &state,
         input(json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })),
     );
@@ -433,7 +395,9 @@ fn r1109_reports_play_and_activate_prices_when_heard() {
     assert!(mana_spent_heard(&state));
     let mic = put(&mut state, &open_mic.id, slot(P1, Row::Units, 1), json!({}));
     state.players.p1.mana.current = 10;
-    let (after, events) = act(&state, activate(P1, &mic.id));
+    let ReduceResult {
+        state: after, events, ..
+    } = act_ok(&state, activate(P1, &mic.id));
     let spent: Vec<(i32, String)> = events
         .iter()
         .filter_map(|event| match event {
@@ -453,12 +417,12 @@ fn r1109_reports_play_and_activate_prices_when_heard() {
     // A play's price is reported too.
     let played = in_hand(&mut state, &closed_mic.id, P1, 1).remove(0);
     state.players.p1.mana.current = 10;
-    let (_, events) = act(
+    let events = act_ok(
         &state,
         input(
             json!({ "type": "play", "instanceId": played.id, "zone": { "row": "units", "lane": 3 }, "playerId": "p1" }),
         ),
-    );
+    ).events;
     let spent: Vec<(i32, String)> = events
         .iter()
         .filter_map(|event| match event {
@@ -483,7 +447,7 @@ fn r1109_silent_without_listener() {
     assert!(!mana_spent_heard(&state));
     let mic = put(&mut state, &open_mic.id, slot(P1, Row::Units, 1), json!({}));
     state.players.p1.mana.current = 10;
-    let (_, events) = act(&state, activate(P1, &mic.id));
+    let events = act_ok(&state, activate(P1, &mic.id)).events;
     assert!(
         !events
             .iter()

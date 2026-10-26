@@ -512,9 +512,9 @@ mod tests {
     /// less their labels, and only a labelled file's header names the key layout.
     #[test]
     fn r1171000_policy_labels_over_a_log_are_deterministic_and_name_no_instance() {
-        // Game 5: since #1837's tags the series' game 4 deals In Too Deep's graveyard reward with two
-        // (0) Cost Spells, which the AI replays from the graveyard without end.
-        let (game, live) = played(5);
+        // Game 4 reaches In Too Deep's graveyard reward with two (0) Cost Spells there that change
+        // nothing, which the AI replayed without end until R1965000.
+        let (game, live) = played(4);
         let build = jackioh_cards::catalog_version();
         let rows = fold_game(&game, Every::Decision, build, true).expect("it replays");
         assert!(rows.len() > 10, "{} rows", rows.len());

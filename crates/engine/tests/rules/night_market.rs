@@ -9,12 +9,12 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{in_hand, setup_catalog};
+use crate::rules::fixtures::harness::{act_logged, in_hand, setup_catalog};
 use crate::rules::fixtures::night_market::{
     ROCK, ai_card, cn_four, market, market_qd, register_night_market_fixtures,
 };
 use crate::rules::fixtures::prompt_harness::{
-    AnswerResult, Replayable, act, answer_keys, board, cast_now, expect_replays, hand_card, must, open_as,
+    AnswerResult, Replayable, answer_keys, board, cast_now, expect_replays, hand_card, must, open_as,
     round_trip,
 };
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
@@ -303,11 +303,12 @@ fn replayable_with_market(seed: &str) -> Replayable {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        state = act(
+        state = act_logged(
             &state,
             json!({ "type": "mulligan", "playerId": player, "keep": keep }),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
     }
     Replayable { state, log, decks }
 }
@@ -319,24 +320,22 @@ fn r1000_a_game_with_a_night_market_replays_from_its_log_to_the_same_hash() {
     let mut log = game.log;
     let mut state = game.state;
     let card = hand_card(&state, P1, &market_qd().id).id.clone();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "play", "playerId": "p1", "instanceId": card }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     let pending = open_as(&state, PromptKind::Market, P1);
     let first = pending.options[0].clone();
-    state = act(
+    state = act_logged(
         &state,
         json!({ "type": "answer", "playerId": "p1", "choiceId": pending.id, "selection": [first.selection] }),
-        Some(&mut log),
-    );
+        &mut log,
+    )
+    .state;
     let pending = open_as(&state, PromptKind::Market, P1);
-    state = act(
-        &state,
-        json!({ "type": "answer", "playerId": "p1", "choiceId": pending.id, "selection": [{ "pick": "none" }] }),
-        Some(&mut log),
-    );
+    state = act_logged(&state, json!({ "type": "answer", "playerId": "p1", "choiceId": pending.id, "selection": [{ "pick": "none" }] }), &mut log).state;
     assert_eq!(state.pending, None);
     expect_replays("nm-replay", &decks, &log, &state);
 }

@@ -3,34 +3,17 @@
 //!
 //! Port of `packages/engine/test/combat-validation.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{
     big_dfender, charger, deft_duelist, pacifist, plain, rusher, stacker, taunter, zero_attack,
 };
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, events_of_type, new_game, next_nonce, put, slot};
 
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-/// TS's module `let nonce`.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn next_nonce() -> String {
-    format!("cv{}", NONCE.fetch_add(1, Ordering::SeqCst) + 1)
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let result = reduce(state, &body.with_nonce(next_nonce()));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// An attack action from p1 (TS `attackVia(state, attackerId, targetId, player = "p1")`; no caller

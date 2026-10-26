@@ -20,8 +20,8 @@ use super::fixtures::datacenter::{
     DYING_FIELD_DAMAGE, GUARD_CAP, animated_field, cast_on_draw, datacenter_catalog, dying_field, field,
     field_trap, free, guard, hard_field, one, runner, scripts as datacenter_scripts, trap, two, x_cost,
 };
-use super::fixtures::field::{act_result, flush, playing, tower};
-use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use super::fixtures::field::{flush, playing, tower};
+use super::fixtures::harness::{act_result, events_of_type, in_hand, new_game, put, set_library, slot};
 use super::fixtures::scripts::{fixture_catalog, scripts as fixture_scripts};
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's

@@ -7,12 +7,10 @@
 //
 // Port of `packages/engine/test/rounds.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{cast_rounds_until_death, damage_all};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act_ok, both, in_hand, new_game, put, slot};
 
 /// TS's module `let nextIndex = 5960`, written out: each def takes the index it had.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
@@ -117,25 +115,12 @@ fn scripts() -> Vec<(String, CardScripts)> {
     ]
 }
 
-/// TS's module `let nonce`.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let n = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let input: ActionInput = json_as(body);
-    let result = reduce(state, &input.with_nonce(format!("pcr{n}")));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
-
 /// p1's main phase, hands empty, this file's cards registered.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [PlayerId::P1, PlayerId::P2] {
         let keep: Vec<String> = state.players[player].hand.iter().map(|c| c.id.clone()).collect();
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
         )
@@ -173,7 +158,7 @@ fn casted(seed: &str, setup: impl FnOnce(&mut GameState), def_id: Option<&str>) 
         .next()
         .expect("the storm");
     in_hand(&mut state, &plain().id, PlayerId::P1, 1);
-    let result = act(
+    let result = act_ok(
         &state,
         json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
     );
