@@ -693,7 +693,7 @@
       "kind": "build",
       "pending_request": false,
       "provider": "claude-2",
-      "run_id": "pending:6bc7b7e4-1793054216",
+      "run_id": "40413860124",
       "started_at": "2026-10-26T22:37:26Z",
       "stop_requested": false,
       "taken_asks": []
