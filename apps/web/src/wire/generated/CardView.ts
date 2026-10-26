@@ -24,6 +24,12 @@ chinese?: true,
  */
 created?: true, 
 /**
+ * R1956001: on the viewer's own Created card, the catalog id of the card that generated it
+ * (`GameState.generators`), whose foil, finish and border the client dresses it in. Never on
+ * another player's card.
+ */
+createdBy?: string, 
+/**
  * Cost as it stands now (§6.3 Cost, R65); "X" cards show 0 until X is chosen.
  */
 cost: number, 

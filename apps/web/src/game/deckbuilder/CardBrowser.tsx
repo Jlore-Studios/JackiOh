@@ -6,7 +6,9 @@
 // filter and the sort it holds, and the card whose detail is open. What only a deck has comes in
 // through props: the "owned only" control, the grid's deck half (the "+", the drag, where each
 // card already is), a status line under the filters, and the detail view's meta and actions.
-// Without the grid's deck half the grid is read-only (PoolGrid.tsx).
+// Without the grid's deck half the grid is read-only (PoolGrid.tsx). R1956000: the cards the
+// screen names as the viewer's own (`own`, the signed-in Almanac's) are drawn as their own copies,
+// in the grid and in the detail view.
 // The "Win %" sort's notice (loading, or failed with a retry) reads the screen's useCardWinRates.
 
 import type { ReactElement, ReactNode } from "react";
@@ -19,7 +21,7 @@ import { t } from "../../i18n/i18n.ts";
 import FilterBar from "./FilterBar.tsx";
 import { CUSTOM_SET } from "./loadout.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
-import PoolGrid, { type PoolGridDeckProps } from "./PoolGrid.tsx";
+import PoolGrid, { AsOwnCopy, type OwnCopies, type PoolGridDeckProps } from "./PoolGrid.tsx";
 import { DB_EMPTY, DB_WINRATE_NOTICE, DB_WINRATE_RETRY } from "./testids.ts";
 import type { CardWinRates } from "./useCardWinRates.ts";
 
@@ -49,6 +51,8 @@ export type CardBrowserProps = {
   setsAfter?: ReactNode;
   /** The grid's deck half; absent, the grid is read-only. */
   deck?: PoolGridDeckProps;
+  /** R1956000: a read-only grid's cards that are the viewer's own copies, and what they own on them. */
+  own?: OwnCopies;
   /** Under the filters, over the pool: the deck editor's status toast. */
   status?: ReactNode;
   /** A click, right-click or long-press on a pool card. */
@@ -65,7 +69,7 @@ export type CardBrowserProps = {
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
   const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, sets, setsAfter, showStats } = props;
-  const { deck, status, onInspect, detail, onCloseDetail, winRates } = props;
+  const { deck, own, status, onInspect, detail, onCloseDetail, winRates } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
   return (
@@ -107,7 +111,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
           height is whatever the filters above leave, and two rows of cards fill it. */}
       <div className="db-pool-frame">
         {deck === undefined ? (
-          <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} />
+          <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} own={own} />
         ) : (
           <PoolGrid ids={pool} catalog={catalog} onInspect={onInspect} {...deck} />
         )}
@@ -119,14 +123,16 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
       </div>
       {/* A dialog in a portal on document.body, so where it sits in this tree changes nothing. */}
       {detail === null || detailDef === undefined ? null : (
-        <CardDetail
-          def={detailDef}
-          onClose={onCloseDetail}
-          meta={detail.meta}
-          actions={detail.actions}
-          // R915005: a custom card is private and plays in no game the statistics count.
-          showStats={showStats === true && detailDef.set !== CUSTOM_SET}
-        />
+        <AsOwnCopy own={own} cardId={detail.cardId}>
+          <CardDetail
+            def={detailDef}
+            onClose={onCloseDetail}
+            meta={detail.meta}
+            actions={detail.actions}
+            // R915005: a custom card is private and plays in no game the statistics count.
+            showStats={showStats === true && detailDef.set !== CUSTOM_SET}
+          />
+        </AsOwnCopy>
       )}
     </section>
   );

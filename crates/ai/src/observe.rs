@@ -557,6 +557,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // read; dropped whole, so the AI simulates a Glitch reset as nothing and its boards as empty fields.
     next.opening = None;
     next.glitch_boards = None;
+    // R1956001: the Created cards' generators dress a card for its owner's client and play no part
+    // in a game; the opponent's hidden ones are no seat's to read, so all go.
+    next.generators.clear();
     // R865: the opponent's unrevealed secret choices are no seat's to read either — the seat's own
     // stay, and a revealed choice is public history both seats watched happen.
     if let Some(secrets) = next.secrets.as_mut() {

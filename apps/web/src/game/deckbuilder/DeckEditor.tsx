@@ -388,6 +388,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           deckName={label}
           cards={deck.cards}
           catalog={catalog}
+          collection={collection}
           conflicts={conflicts}
           issues={cardIssues}
           head={head}

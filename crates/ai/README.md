@@ -39,7 +39,7 @@ pub struct AiOptions<'a> { pub rng: Rng, pub budget: SearchBudget, pub should_st
 and library, the backrow cards it cannot read, an enemy face-down card its own prompt offers among
 them (its option reads the view's `Face-down card`, R177), its own library's order and the cards in
 it that came from the opponent, the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), and the Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set the opponent has not shown (R185, R380), a hidden backrow card from the
 traps alone, minus any whose live aura would change a shown stat (R602), and of the shown cost while

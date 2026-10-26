@@ -288,6 +288,24 @@ mod redact_b9 {
         assert_eq!(serde_json::to_string(&a).expect("serialisable"), before);
     }
 
+    /// R1956001: the Created cards' generators, the opponent's hidden hand card's among them, are no
+    /// seat's to read: redact drops every one, so a state that records them redacts as one that does not
+    #[test]
+    fn r1956001_redact_drops_every_generator() {
+        let (a, _) = pair();
+        let mut dressed = a.clone();
+        let hidden = dressed.players[PlayerId::P2].hand[0].id.clone();
+        let own = dressed.players[PlayerId::P1].hand[0].id.clone();
+        dressed.generators.insert(hidden, "core-011".to_string());
+        dressed.generators.insert(own, "core-019".to_string());
+        let public = redact(&dressed, AI);
+        assert!(public.generators.is_empty());
+        assert_eq!(
+            serde_json::to_value(&public).expect("serialisable"),
+            serde_json::to_value(redact(&a, AI)).expect("serialisable")
+        );
+    }
+
     /// R185 B9: the hidden set is the opponent's hand and library plus the backrow the seat cannot read
     #[test]
     fn r185_b9_the_hidden_set_is_the_opponents_hand_and_library_plus_the_backrow_the_seat_cannot_read() {

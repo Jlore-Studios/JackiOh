@@ -206,4 +206,12 @@ customCards?: { [key in string]: CustomCard },
  * R915000: the definition each of `custom_cards`' frames builds (`custom::custom_def`), which
  * `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
  */
-customDefs?: { [key in string]: CardDef }, };
+customDefs?: { [key in string]: CardDef }, 
+/**
+ * R1956001: each Created card's generator by instance id: the catalog id of the card whose
+ * script minted it, or that card's own generator when it was Created too
+ * (`generators::record_generator`). Presentation only (CLAUDE.md rule 7): no rule reads it,
+ * `replay::hash_state` leaves it out, and only the card's owner is told it (`CardView.createdBy`).
+ * Empty, and absent from the JSON, until a card's script creates a card.
+ */
+generators?: { [key in string]: string }, };

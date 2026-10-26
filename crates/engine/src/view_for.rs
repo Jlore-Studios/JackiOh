@@ -500,6 +500,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         radiant,
         chinese: None,
         created: None,
+        created_by: None,
         cost,
         // filled in by `card_view` from the instance data; bare views carry none.
         tags: None,
@@ -531,7 +532,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
 /// R65: the cost as it stands now. An X card has no chosen X outside a play, so it reads 0. Patch
 /// v0.2.0's instance data rides on every card view (`instanceView.ts`): each is built only for a card
 /// the viewer may read where it is.
-fn card_view(state: &GameState, card: &CardInstance) -> CardView {
+fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
     // B5 E33, R404: a quest line on the field, public as the card is.
     let quest = quest_view_of(state, card);
     let data = instance_data_view(state, card);
@@ -556,6 +557,8 @@ fn card_view(state: &GameState, card: &CardInstance) -> CardView {
     view.chinese = card.chinese;
     // MD-B6, R943: Created is public the same way.
     view.created = card.created;
+    // R1956001: and the card that generated it, to its owner alone.
+    view.created_by = crate::generators::generator_shown_to(state, card, viewer);
     // R1848003: a set X is the card's price, read where the card is.
     view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
     view
@@ -573,8 +576,8 @@ fn with_marks(state: &GameState, instance_id: &str) -> Option<Vec<CardMark>> {
 /// layers 1, 3 and 4: #89 Corpse Eater's meals), since layer 2 and the auras are the field's; attack
 /// floors at 0 as on the field. A #98 Heroic Power names the power it rolled as it arrived (R43,
 /// R151), which its cost alone does not.
-fn hand_card_view(state: &GameState, card: &CardInstance) -> CardView {
-    let mut view = with_copies(card_view(state, card), state, card);
+fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
+    let mut view = with_copies(card_view(state, card, viewer), state, card);
     let stats = if card_type_of(state, card) == CardType::Unit {
         Some(stats_with_buffs(state, card))
     } else {
@@ -762,7 +765,7 @@ fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> 
     with_activations(
         with_preview(
             with_condition(
-                card_view(state, card),
+                card_view(state, card, viewer),
                 condition_active(state, card, viewer, ConditionZone::Field),
             ),
             preview_of(state, card, viewer, ConditionZone::Field),
@@ -859,6 +862,7 @@ fn unit_view_of(
         chinese: card.chinese,
         // MD-B6, R943: Created is public the same way.
         created: card.created,
+        created_by: card.created_by,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
         // R849000: summoning sick with neither Rush nor Charge, from the turn the unit entered and its
@@ -984,6 +988,7 @@ fn backrow_view(
         radiant: view.radiant,
         chinese: view.chinese,
         created: view.created,
+        created_by: view.created_by,
         tags: view.tags,
         cost: view.cost,
         attack: view.attack,
@@ -1378,7 +1383,11 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                                 with_play_reason(
                                     with_counter_warning(
                                         with_condition(
-                                            with_embiggen_cost(hand_card_view(state, card), state, card),
+                                            with_embiggen_cost(
+                                                hand_card_view(state, card, viewer),
+                                                state,
+                                                card,
+                                            ),
                                             condition_active(state, card, viewer, ConditionZone::Hand),
                                         ),
                                         countered.contains(&card.id),
@@ -1399,7 +1408,12 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 .collect(),
         )
     } else if state.result.is_some() {
-        HandView::Cards(side.hand.iter().map(|card| hand_card_view(state, card)).collect())
+        HandView::Cards(
+            side.hand
+                .iter()
+                .map(|card| hand_card_view(state, card, viewer))
+                .collect(),
+        )
     } else {
         HandView::Count {
             count: side.hand.len() as i32,
@@ -1447,13 +1461,17 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             .iter()
             .map(|card| {
                 if player == viewer {
-                    with_play_reason(card_view(state, card), state, card, viewer)
+                    with_play_reason(card_view(state, card, viewer), state, card, viewer)
                 } else {
-                    card_view(state, card)
+                    card_view(state, card, viewer)
                 }
             })
             .collect(),
-        exile: side.exile.iter().map(|card| card_view(state, card)).collect(),
+        exile: side
+            .exile
+            .iter()
+            .map(|card| card_view(state, card, viewer))
+            .collect(),
         // §10.5 step 4, R98: a Spell between its play and its graveyard. Playing it was public. R448: a
         // card announced to be set face-down waits here too, and the other player sees a card back.
         resolving: side
@@ -1463,7 +1481,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 if announced_face_down_to(state, card, viewer) {
                     bare_card_view(HIDDEN_ID.to_string(), HIDDEN_ID.to_string(), false, HIDDEN_COST)
                 } else {
-                    with_copies(card_view(state, card), state, card)
+                    with_copies(card_view(state, card, viewer), state, card)
                 }
             })
             .collect(),
@@ -1496,7 +1514,11 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         // both in full once the game is over (R434); absent with no tray (D14).
         resource_tray: side.resource_tray.as_ref().map(|tray| {
             if player == viewer || state.result.is_some() {
-                HandView::Cards(tray.iter().map(|card| hand_card_view(state, card)).collect())
+                HandView::Cards(
+                    tray.iter()
+                        .map(|card| hand_card_view(state, card, viewer))
+                        .collect(),
+                )
             } else {
                 HandView::Count {
                     count: tray.len() as i32,

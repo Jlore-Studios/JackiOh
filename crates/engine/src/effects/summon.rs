@@ -296,6 +296,7 @@ fn summon_fresh(
     if let Some(x) = at.x {
         card.x = Some(x);
     }
+    crate::generators::record_generator(ctx, &card);
     if summon_onto(ctx, &mut card, &slot, at, None) {
         Some(card)
     } else {
@@ -579,6 +580,7 @@ pub fn clone_of(
     if args.vanilla == Some(true) {
         super::transform::to_printed_stats(&mut copy);
     }
+    crate::generators::record_generator(ctx, &copy);
     copy
 }
 

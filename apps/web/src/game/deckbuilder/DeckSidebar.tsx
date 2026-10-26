@@ -10,13 +10,18 @@
 // On phones the list folds but stays mounted (deckbuilder.css).
 //
 // Tiles support preview, inspect, and keyboard detail view (I, the context-menu key or Shift+F10).
+//
+// R1956000: a tile is the viewer's own copy below the deck builder's `OwnCopy`, unless the collection
+// says the card is unowned, and its art strip wears the foil that copy wears (deckbuilder.css).
 
 import { useId, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 
 import type { CardCost, CardDef } from "@jackioh/shared";
-import type { CatalogSnapshot, LoadoutError } from "@jackioh/validator";
+import type { CatalogSnapshot, Collection, LoadoutError } from "@jackioh/validator";
 
-import { CardArt, faceModel, isInspectKey, useInspectTrigger } from "../../cards/index.ts";
+import { CardArt, faceModel, isInspectKey, useInspectTrigger, type FaceModel } from "../../cards/index.ts";
+import { useCosmeticAttributes } from "../../cards/cosmetics.ts";
+import { useOwnCopy } from "../../cards/fullArt.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
@@ -29,6 +34,8 @@ type DeckSidebarProps = {
   deckName: string;
   cards: readonly string[];
   catalog: CatalogSnapshot;
+  /** R1956000: null when the collection could not be read, and absent where there is none: then no tile is unowned. */
+  collection?: Collection | null;
   conflicts: ReadonlyMap<string, Holder>;
   /** The verdict's first error naming each card (DeckEditor's `cardIssues`), shown on its tile. */
   issues: ReadonlyMap<string, LoadoutError>;
@@ -101,6 +108,8 @@ type DeckTileProps = {
   deckName: string;
   cardId: string;
   def: CardDef | undefined;
+  /** R1956000: false when the collection says the viewer does not own the card. */
+  owned: boolean;
   conflict: Holder | undefined;
   issue: LoadoutError | undefined;
   onRemove: (cardId: string) => void;
@@ -109,8 +118,23 @@ type DeckTileProps = {
 
 export { isInspectKey };
 
-function DeckTile({ deckName, cardId, def, conflict, issue, onRemove, onInspect }: DeckTileProps): ReactElement {
+/**
+ * R1956000: a tile's art strip, carrying the cosmetics the viewer's own copy of the card wears when
+ * `worn`. A strip has no frame and no paper, so only its foil shows (deckbuilder.css), and it never
+ * takes a moving foil's slot.
+ */
+function TileArt({ face, def, worn }: { face: FaceModel; def: CardDef; worn: boolean }): ReactElement {
+  const cosmetics = useCosmeticAttributes(face, worn, false);
+  return (
+    <span className="db-tile-art" {...cosmetics}>
+      <CardArt defId={face.defId} radiant={false} tags={def.tags} type={def.type} shape="strip" />
+    </span>
+  );
+}
+
+function DeckTile({ deckName, cardId, def, owned, conflict, issue, onRemove, onInspect }: DeckTileProps): ReactElement {
   const locale = useLocale();
+  const worn = useOwnCopy() && owned;
   const name = def === undefined ? cardId : readerName(def);
   const face = useMemo(
     () => (def === undefined ? null : faceModel({ defId: cardId, def, radiant: false })),
@@ -165,11 +189,11 @@ function DeckTile({ deckName, cardId, def, conflict, issue, onRemove, onInspect 
           {tileCost(def?.cost)}
         </span>
         <span className="db-tile-name">{name}</span>
-        <span className="db-tile-art">
-          {def === undefined ? null : (
-            <CardArt defId={cardId} radiant={false} tags={def.tags} type={def.type} shape="strip" />
-          )}
-        </span>
+        {def === undefined || face === null ? (
+          <span className="db-tile-art" />
+        ) : (
+          <TileArt face={face} def={def} worn={worn} />
+        )}
         {conflict === undefined && issue === undefined ? null : <span className="db-tile-flag" aria-hidden="true" />}
         <span className="db-tile-pip" data-rarity={def?.rarity} aria-hidden="true" />
       </button>
@@ -180,7 +204,7 @@ function DeckTile({ deckName, cardId, def, conflict, issue, onRemove, onInspect 
 
 export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
   useLocale();
-  const { deckName, cards, catalog, conflicts, issues, head, onDropCard, onRemove, onInspect, children } = props;
+  const { deckName, cards, catalog, collection, conflicts, issues, head, onDropCard, onRemove, onInspect, children } = props;
   const [listOpen, setListOpen] = useState(false);
   const ordered = useMemo(() => deckListOrder(cards, catalog), [cards, catalog]);
   const full = cards.length >= DECK_SIZE;
@@ -240,6 +264,7 @@ export default function DeckSidebar(props: DeckSidebarProps): ReactElement {
               deckName={deckName}
               cardId={cardId}
               def={catalog.cards[cardId]}
+              owned={collection === null || collection === undefined || (collection[cardId] ?? 0) > 0}
               conflict={conflicts.get(cardId)}
               issue={issues.get(cardId)}
               onRemove={onRemove}

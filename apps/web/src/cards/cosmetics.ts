@@ -34,6 +34,13 @@
 // it is given, the wear path and `useCanEquip` apply ownership. The face wearing them is still only
 // the viewer's own copy (`worn`, or below an `OwnCopy`, fullArt.ts).
 //
+// R1956000: from their first read, both stores listen for a window "storage" event on their key,
+// re-read and notify, so a pick another tab makes shows on every face this tab draws at once, and on
+// every face it mounts later, with no reload. R1956001: the
+// viewer's own Created card (`FaceModel.createdBy`) wears the foil, finish and border of the card
+// that generated it, as that card's own copy would, behind ownership on that card; its full art is
+// its own (fullArt.ts), and its own rarity rules hold.
+//
 // An id this client does not know (one a newer client wrote to the account) is kept in the store,
 // so this device never overwrites it, and drawn as its kind's default, never an error. A cosmetic
 // foil moves only while one of COSMETIC_FOIL_ANIMATED_MAX slots is the face's; the others wear its
@@ -136,9 +143,11 @@ function persist(picks: CardCosmetics): void {
 
 let current: CardCosmetics | null = null;
 const listeners = new Set<() => void>();
+let storageListening = false;
 
-/** The in-memory picks, loaded from storage once, on first read. */
+/** The in-memory picks, loaded from storage once, on first read, and kept as storage holds them since. */
 export function readCosmetics(): CardCosmetics {
+  listenToStorage();
   current ??= load();
   return current;
 }
@@ -251,6 +260,7 @@ let cardPicksUnsaved = false;
 const cardPicksListeners = new Set<() => void>();
 
 function cardPicks(): CardPicksState {
+  listenToStorage();
   cardPicksState ??= loadCardPicks();
   return cardPicksState;
 }
@@ -265,6 +275,35 @@ function subscribeCardPicks(listener: () => void): () => void {
   return () => {
     cardPicksListeners.delete(listener);
   };
+}
+
+/**
+ * R1956000: another tab wrote the account's picks or the cards' (a null key is a `localStorage.clear()`
+ * there): re-read what it wrote and notify, so every face here wears it at once. What this page could
+ * not save is dropped for what storage now holds, which is what every other tab draws.
+ */
+function onCosmeticsStorage(event: StorageEvent): void {
+  const key = event.key;
+  if (key === null || key === COSMETICS_SETTINGS_KEY) {
+    current = load();
+    for (const listener of [...listeners]) listener();
+  }
+  if (key === null || key === CARD_PICKS_SETTINGS_KEY) {
+    cardPicksState = loadCardPicks();
+    cardPicksUnsaved = false;
+    for (const listener of [...cardPicksListeners]) listener();
+  }
+}
+
+/**
+ * The first read of either store installs the one window "storage" listener, for the page's life:
+ * the stores keep what storage holds while no face is mounted too, so a face mounted later draws a
+ * pick another tab made meanwhile.
+ */
+function listenToStorage(): void {
+  if (storageListening || typeof window === "undefined") return;
+  window.addEventListener("storage", onCosmeticsStorage);
+  storageListening = true;
 }
 
 export function useCardPicks(defId: string): CardPicks {
@@ -579,15 +618,17 @@ export type CosmeticAttributes = {
 
 /**
  * The cosmetic attributes of a face: the device's picks when `worn`, the defaults otherwise, the
- * card's own picks (R1655000) over the account's where the viewer owns them. `animatedFoil` is the
- * card settings' switch, which stills a cosmetic foil as it does the rarity foil, and a moving finish
- * or border with it (R1833000). Its hooks run on every face, worn or not.
+ * card's own picks (R1655000) over the account's where the viewer owns them. R1956001: a Created
+ * card's are its generator's (`createdBy`), owned on the generator, worn by its own face's rarity
+ * rules. `animatedFoil` is the card settings' switch, which stills a cosmetic foil as it does the
+ * rarity foil, and a moving finish or border with it (R1833000). Its hooks run on every face, worn or not.
  */
 export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
   const picks = useCosmetics();
-  const card = useCardPicks(face.defId);
+  const source = face.createdBy ?? face.defId;
+  const card = useCardPicks(source);
   const owned = useContext(OwnershipContext);
-  const wears = wornCosmetics(face, worn ? picks : null, card, (id) => ownsCosmetic(owned, face.defId, id));
+  const wears = wornCosmetics(face, worn ? picks : null, card, (id) => ownsCosmetic(owned, source, id));
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
   const moves = useFoilSlot(animates && animatedFoil);
@@ -599,13 +640,15 @@ export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFo
   };
 }
 
-/** Test seam: drops the in-memory picks, the cards' among them, the listeners and every foil slot. */
+/** Test seam: drops the in-memory picks, the cards' among them, the listeners, the storage listener and every foil slot. */
 export function resetCosmeticsForTests(): void {
   current = null;
   listeners.clear();
   cardPicksState = null;
   cardPicksUnsaved = false;
   cardPicksListeners.clear();
+  if (storageListening) window.removeEventListener("storage", onCosmeticsStorage);
+  storageListening = false;
   moving.clear();
   queued.length = 0;
   slotListeners.clear();
