@@ -142,6 +142,7 @@ pub mod hand_size;
 pub mod handicap;
 pub mod hero_immune;
 pub mod hero_power;
+pub mod hidden_nerfs_and_trades;
 pub mod hotseat_smoke;
 pub mod immutable;
 pub mod instance_data;

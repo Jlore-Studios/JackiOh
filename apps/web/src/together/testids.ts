@@ -1,5 +1,5 @@
-// Play together's chrome (#936, SPEC S8): the friends page, the chat panel and the in-match chat, the
-// challenge toast, the watch screen, the replay share and the spectators setting. The SPEC fixes the
+// Play together's chrome (#936, SPEC S8): the friends page, the chat panel and the Friends button's
+// panel, the challenge toast, the watch screen, the replay share and the spectators setting. The SPEC fixes the
 // first ids of each group; the rest are this slice's. `e2e/support/testids.ts` mirrors the strings.
 
 export const togetherTestid = {
@@ -75,20 +75,34 @@ export const chatTestid = {
   reportReason: "chat-report-reason",
   reportSend: "chat-report-send",
   reported: "chat-reported",
-  /** The board rail's chat toggle (B58) and its list of online friends. */
-  inMatchToggle: "in-match-chat-toggle",
-  inMatchList: "in-match-chat-list",
-  inMatchFriend: "in-match-chat-friend",
-  inMatchUnread: "in-match-chat-unread",
-  /** #1691: beside the list's failed read, Try again reads the friends again. */
-  inMatchRetry: "in-match-chat-retry",
+} as const;
+
+/** #1831: the Friends button every signed-in screen has at the top right, and its panel. */
+export const friendsTestid = {
+  button: "friends-button",
+  /** What needs the player: incoming requests, incoming challenges and unread chats. */
+  badge: "friends-badge",
+  panel: "friends-panel",
+  close: "friends-close",
+  copy: "friends-copy",
+  /** A refusal of a request answered from the panel. */
+  error: "friends-error",
+  /** #1691: a failed friends list says why, and Try again reads it again. */
+  listError: "friends-list-error",
+  listRetry: "friends-list-retry",
+  /** The link to all of Play together. */
+  all: "friends-all",
 } as const;
 
 export const challengeToastTestid = {
   /** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
   toast: "challenge-toast",
-  accept: "challenge-accept",
+  accept: "challenge-toast-accept",
   decline: "challenge-decline",
+  /** The deck or trio the toast joins with. */
+  deck: "challenge-toast-deck",
+  /** R767's way in: `/play` with the room's code filled in, offered after a refused join. */
+  lobby: "challenge-toast-lobby",
   error: "challenge-toast-error",
 } as const;
 

@@ -185,4 +185,11 @@ grants?: Array<Grant>,
  * a library and a bounce as `costOverride` does and R766 takes it off a card reaching a graveyard
  * or an exile pile; a copy is a new card without it (R57). Absent on every other card.
  */
-fixedX?: number, };
+fixedX?: number, 
+/**
+ * R1845000: Nerfs no seat may read, the owner's included, waiting to land at §10.5 step 3 of the
+ * card's next play or cast (R1845001). Kept in every zone; a copy or a Transform is a new card
+ * without them (R57). Absent on every other card, so a game nothing hides a Nerf in serializes
+ * and hashes as before (D3).
+ */
+hiddenNerfs?: number, };

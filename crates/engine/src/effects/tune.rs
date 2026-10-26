@@ -705,14 +705,25 @@ fn apply_row(
 
 /// B3.4 rules 1–3: the rows that can change the card now, in the menu's order, R1748002's plague row
 /// last.
-/// R1160: `times` scales each row's change, still one row drawn per application.
-fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection, times: i32) -> Vec<MenuRow> {
+/// R1160: `times` scales each row's change, still one row drawn per application. R1845001: without
+/// `with_cost` the cost row is never offered, as a hidden Nerf lands.
+fn menu_of(
+    state: &GameState,
+    card: &CardInstance,
+    direction: TuneDirection,
+    times: i32,
+    with_cost: bool,
+) -> Vec<MenuRow> {
     // Rule 2: an Immutable card is never changed, and nothing is drawn for it.
     if has_keyword(&keywords_now(state, card), KeywordKind::Immutable) {
         return Vec::new();
     }
     [
-        cost_row(state, card, direction, times),
+        if with_cost {
+            cost_row(state, card, direction, times)
+        } else {
+            None
+        },
         stats_row(state, card, direction, times),
         keyword_row(state, card, direction, times),
         x_row(state, card, direction, times),
@@ -727,7 +738,7 @@ fn menu_of(state: &GameState, card: &CardInstance, direction: TuneDirection, tim
 /// B3.4 rule 3: the rows that can change the card now, in the menu's order — a pure read, for a
 /// `conditionMet` or a `targetChecks` predicate (a Degrade with nothing to change) and for the tests.
 pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: TuneDirection) -> Vec<TuneRow> {
-    menu_of(state, card, direction, TUNE_MULTIPLIER_NONE)
+    menu_of(state, card, direction, TUNE_MULTIPLIER_NONE, true)
         .into_iter()
         .map(|row| row.row)
         .collect()
@@ -744,6 +755,23 @@ pub fn applicable_changes(state: &GameState, card: &CardInstance, direction: Tun
 /// TS read the live card on every application; the card is read again by its id here, so a second
 /// application of the same card draws from the menu the first one left.
 pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: TuneDirection, matches: bool) {
+    tune_once_with(ctx, card, direction, matches, true);
+}
+
+/// R1845001: one Nerf as a hidden Nerf lands — `tune_once`'s, drawn from every row but the cost's,
+/// and reported as every Nerf is (R177, R440).
+pub(crate) fn degrade_sparing_cost(ctx: &mut EffectContext<'_>, card: &CardInstance) {
+    tune_once_with(ctx, card, TuneDirection::Degrade, true, false);
+}
+
+/// `tune_once`, with the cost row offered only `with_cost` (R1845001).
+fn tune_once_with(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    direction: TuneDirection,
+    matches: bool,
+    with_cost: bool,
+) {
     let card = find_instance(ctx.state, &card.id)
         .cloned()
         .unwrap_or_else(|| card.clone());
@@ -752,7 +780,7 @@ pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: Tu
     // R1160: the card's own multiplier scales this one application.
     let times = tune_multiplier_of(ctx.state, &card, direction);
     let menu = if matches {
-        menu_of(ctx.state, &card, direction, times)
+        menu_of(ctx.state, &card, direction, times, with_cost)
     } else {
         Vec::new()
     };
@@ -787,7 +815,7 @@ pub fn tune_once(ctx: &mut EffectContext<'_>, card: &CardInstance, direction: Tu
 }
 
 /// The one card a verb names, by id or by spec, in whatever zone it is (B3.4 rule 2).
-fn named_card(
+pub(crate) fn named_card(
     ctx: &EffectContext<'_>,
     target: Option<&TargetSpec>,
     instance_id: Option<&str>,

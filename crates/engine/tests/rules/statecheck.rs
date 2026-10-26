@@ -5,6 +5,7 @@
 //!
 //! Port of `packages/engine/test/statecheck.test.ts`.
 
+use jackioh_engine::effects::health::set_stats_all;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::token_def;
@@ -826,6 +827,58 @@ mod the_state_check_m2_t5 {
             instance_ids(&events, GameEventType::Summoned),
             vec![crier.id.clone()]
         );
+    }
+
+    #[test]
+    fn r175_r1185002_a_set_token_returns_through_reborn_with_its_summoned_face() {
+        let mut state = game("reborn-set-token-face");
+        state.turn = 2;
+        state.active = PlayerId::P1;
+        let token = put(
+            &mut state,
+            &rush_token().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        {
+            let live = card_mut(&mut state, &token.id);
+            live.stats_override = Some(AttackHealth { attack: 5, health: 5 });
+            live.armor_override = Some(2);
+            live.granted_keywords.push(Keyword::Reborn);
+        }
+        let mut sink = sink_for(&state);
+        {
+            let mut engine = sink.on(&mut state);
+            let mut ctx = make_context(
+                &mut engine,
+                None,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    ..HookOptions::default()
+                },
+            );
+            (set_stats_all(json_as(json!({ "side": "any", "attack": 3, "health": 3 }))).apply)(&mut ctx);
+        }
+        assert_eq!(
+            card(&state, &token.id).stats_override,
+            Some(AttackHealth { attack: 3, health: 3 })
+        );
+        lethal_damage(&mut state, &token.id);
+        state_check(&mut sink.on(&mut state));
+
+        let reborn = card(&state, &token.id);
+        assert_eq!(
+            reborn.stats_override,
+            Some(AttackHealth { attack: 5, health: 5 }),
+            "R175: Reborn restores the token's summoned face, not R1185002's temporary set"
+        );
+        assert_eq!(reborn.armor_override, Some(2));
+        assert!(
+            reborn.memory.is_empty(),
+            "R78 resets the saved face with the other memory"
+        );
+        let view = unit_view(&state, reborn);
+        assert_eq!((view.attack, view.max_health, view.health), (5, 5, 1));
     }
 
     #[test]

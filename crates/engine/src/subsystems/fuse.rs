@@ -2019,6 +2019,9 @@ fn keep_instance(
                 );
             }
         }
+        // R77: the transient definition is the card's new printed face. A token face saved before Set
+        // Stats described an ingredient and must not replace the fusion after Flicker or Reborn.
+        crate::zones::forget_summoned_token_face(live);
         live.stats_override = None;
         live.armor_override = None;
     }
