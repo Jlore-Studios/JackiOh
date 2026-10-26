@@ -1420,6 +1420,54 @@ mod r1367000_card_stats_by_window {
         assert_eq!(stat["window"]["counted"][0], json!(micro));
         assert_eq!(stat["games"], json!(PUBLIC_STATS_MIN_LIVE_GAMES));
     }
+
+    #[tokio::test]
+    async fn r1973001_r1973002_the_route_lists_every_patch_newest_first_with_a_gameless_patch_folded_in() {
+        let (x, micro, card) = x_and_micro();
+        let app = test_app().await;
+        let mut records: Vec<Value> = (0..5).map(|n| live(format!("x-{n}"), &x, card)).collect();
+        records.extend((0..3).map(|n| dev(format!("pad-{n}"), &micro, card)));
+        insert_records(&app, records).await;
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        let patches = data["patches"].as_array().expect("the patches are a list");
+        let history = jackioh_cards::patch_history();
+        let newest = &history.last().expect("a version has shipped").version;
+        let versions = |window: &Value| -> Vec<String> {
+            window["versions"]
+                .as_array()
+                .expect("a window lists its versions")
+                .iter()
+                .map(|version| version.as_str().expect("a version").to_string())
+                .collect()
+        };
+        // Newest first: the first window ends at the newest version.
+        assert_eq!(versions(&patches[0]).last(), Some(newest));
+        // X's window holds its five live games and the micro's three development games.
+        let held = patches
+            .iter()
+            .find(|window| versions(window)[0] == x)
+            .expect("X opens a window");
+        assert_eq!((&held["games"], &held["liveGames"]), (&json!(8), &json!(5)));
+        assert!(versions(held).contains(&micro));
+        // R1973001: no other patch had a game, so each folds into the window before it, and only a
+        // major, X or the newest version opens one.
+        for window in patches {
+            let first = &versions(window)[0];
+            let step = history
+                .iter()
+                .find(|step| &step.version == first)
+                .expect("a shipped version");
+            assert!(
+                step.tier == PatchTier::Major || *first == x || first == newest,
+                "{first} opens a window with no game played on it"
+            );
+        }
+        // Every version is listed once, in the history's order.
+        let listed: Vec<String> = patches.iter().rev().flat_map(versions).collect();
+        let shipped: Vec<String> = history.iter().map(|step| step.version.clone()).collect();
+        assert_eq!(listed, shipped);
+    }
 }
 
 mod r377_public_stats_match_type {

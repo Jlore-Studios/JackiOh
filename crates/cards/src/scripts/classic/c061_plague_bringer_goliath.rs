@@ -102,10 +102,6 @@ mod tests {
             .count()
     }
 
-    fn pick(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     /// Goliath in hand with a Vanilla to tribute, and a board to place on. `extra`: `p2Backrow` and
     /// `library` (defaults `[]` and 5).
     fn ready(radiant_face: bool, extra: Value) -> Scenario {
@@ -353,7 +349,7 @@ mod tests {
                     "type": "answer",
                     "playerId": "p1",
                     "choiceId": choice.id,
-                    "selection": pick(&menace),
+                    "selection": pick::instance(&menace),
                     "nonce": "goliath-json-0",
                 }));
                 let result = reduce(&revived, &answer);

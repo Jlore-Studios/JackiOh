@@ -7,7 +7,7 @@ use jackioh_ai::*;
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, clone, every_card, is_legal};
+use super::support::{AI, HUMAN, ai_options, clone, every_card, is_legal};
 
 fn p1_side() -> Value {
     json!({ "hand": ["core-008", "core-035"], "field": ["core-011"], "library": ["core-020", "core-053"] })
@@ -22,15 +22,6 @@ fn base(seed: &str) -> GameState {
     scenario(json!({ "seed": seed, "p1": p1_side(), "p2": p2_side() }))
         .state()
         .clone()
-}
-
-/// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
 }
 
 mod r1845000_the_ai_reads_no_hidden_nerf {
@@ -64,9 +55,13 @@ mod r1845000_the_ai_reads_no_hidden_nerf {
             card.hidden_nerfs = Some(30);
         }
         for seed in ["hidden-nerfs-k1", "hidden-nerfs-k2", "hidden-nerfs-k3"] {
-            let from_base = decide(&base, AI, &mut ai_options(seed));
+            let from_base = decide(&base, AI, &mut ai_options(seed, AI_BUDGET));
             assert!(from_base.is_some(), "{seed}");
-            assert_eq!(decide(&changed, AI, &mut ai_options(seed)), from_base, "{seed}");
+            assert_eq!(
+                decide(&changed, AI, &mut ai_options(seed, AI_BUDGET)),
+                from_base,
+                "{seed}"
+            );
         }
     }
 }
@@ -103,7 +98,7 @@ mod r1845002_the_ai_answers_a_trade_offer {
         for (seat, seed) in [(AI, "hidden-nerfs-give"), (HUMAN, "hidden-nerfs-take")] {
             let pending = s.state().pending.clone().expect("a trade prompt is open");
             assert_eq!(pending.player_id, seat);
-            let action = decide(s.state(), seat, &mut ai_options(seed))
+            let action = decide(s.state(), seat, &mut ai_options(seed, AI_BUDGET))
                 .map(|decision| decision.action)
                 .expect("the AI answers");
             assert!(

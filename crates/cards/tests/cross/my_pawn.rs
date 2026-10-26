@@ -15,6 +15,8 @@
 use jackioh_engine::effects::{choose_mode, destroy};
 use jackioh_engine::testkit::*;
 
+use super::fixture;
+
 const STOCKPILE: &str = "core-005";
 const SEVEN_SEVEN: &str = "core-025";
 const GIGA: &str = "core-029";
@@ -228,47 +230,6 @@ const MR_VANILLA: &str = "core-008";
 const JLOCKEED_SHREDDER: &str = "core-013";
 const UNLICENSED_EXPERIMENTATION: &str = "core-085";
 
-/// The registry as `registerScripts` last set it: this thread's testkit override once a fixture is
-/// in, the production registry before.
-fn registered_scripts_now() -> IndexMap<String, CardScripts> {
-    match scripts_override() {
-        Some(scripts) => scripts.clone(),
-        None => registered_scripts().clone(),
-    }
-}
-
-/// A fixture card: a transient def in the match state and its script in the registry.
-fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script) {
-    let face = if type_ == CardType::Unit {
-        json!({ "attack": 2, "health": 2, "keywords": [], "text": id })
-    } else {
-        json!({ "keywords": [], "text": id })
-    };
-    let def: CardDef = json_as(json!({
-        "id": id,
-        "index": id,
-        "name": id,
-        "set": "Core",
-        "type": type_.as_str(),
-        "tags": [],
-        "rarity": "Common",
-        "token": false,
-        "cost": 0,
-        "base": face.clone(),
-        "radiant": face,
-    }));
-    s.state_mut().transient_defs.insert(id.to_string(), def);
-    let mut scripts = registered_scripts_now();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
-}
-
 fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lane: i32) -> CardInstance {
     let mut card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
     if !place_on_field(
@@ -310,6 +271,7 @@ fn asking_trap(s: &mut Scenario, id: &str, after: Option<Hook>) {
             resume: [("asked", after)].into_iter().collect(),
             ..Script::default()
         },
+        None,
     );
 }
 
@@ -409,6 +371,7 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
                 resume: [("said", hook(|_ctx| vec![]))].into_iter().collect(),
                 ..Script::default()
             },
+            None,
         );
         let dying = place_fixture(&mut s, "edge-r7-last-word", PlayerId::P1, Row::Units, 5);
         let dying_id = dying.id.clone();
@@ -540,6 +503,7 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
                 triggers: vec![fires],
                 ..Script::default()
             },
+            None,
         );
         let sniper = place_fixture(&mut s, "edge-r11-sniper", PlayerId::P2, Row::Backrow, 1);
         find_instance_mut(s.state_mut(), &sniper.id)

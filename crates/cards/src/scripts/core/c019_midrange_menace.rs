@@ -204,10 +204,6 @@ mod tests {
         const DOOM: &str = "destroy a Unit at the start of your next turn";
         const FILLER: &str = "core-010";
 
-        fn at(id: &str) -> Value {
-            json!([{ "pick": "instance", "instanceId": id }])
-        }
-
         fn menace_board(p1: Value) -> Scenario {
             let mut p1 = p1;
             p1["library"] = json!([FILLER, FILLER]);
@@ -224,8 +220,8 @@ mod tests {
             let mut s = menace_board(json!({ "hand": [HIT_JOB, { "def": POSTDOC, "radiant": true }, FILLER] }));
             let menace = s.card("core-019").id.clone();
 
-            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": at(&menace) })));
-            s.play(POSTDOC, json!({ "targets": at(&menace) }));
+            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::id(&menace) })));
+            s.play(POSTDOC, json!({ "targets": pick::id(&menace) }));
 
             let copies = (1..=5)
                 .filter_map(|lane| s.unit(P1, lane))
@@ -243,7 +239,7 @@ mod tests {
                 "p2": { "library": [FILLER] },
             }));
             let menace = s.card("core-019").id.clone();
-            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": at(&menace) })));
+            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": pick::id(&menace) })));
         }
 
         #[test]
@@ -277,8 +273,8 @@ mod tests {
             let menace = s.card("core-019").id.clone();
             let other = s.card("core-012").id.clone();
 
-            s.expect_refused(|s| s.activate(PUNISH, json!({ "modes": [DOOM], "targets": at(&menace) })));
-            s.activate(PUNISH, json!({ "modes": [DOOM], "targets": at(&other) }));
+            s.expect_refused(|s| s.activate(PUNISH, json!({ "modes": [DOOM], "targets": pick::id(&menace) })));
+            s.activate(PUNISH, json!({ "modes": [DOOM], "targets": pick::id(&other) }));
         }
     }
 }

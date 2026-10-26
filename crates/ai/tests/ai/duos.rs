@@ -22,9 +22,10 @@ use jackioh_engine::duos::{
     DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_scenario, duos_view_for,
 };
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, ActionBody, ActionType, COIN_DEF_ID, DECK_SIZE, Difficulty, GameState, MAX_MANA, PlayerId,
-    PlayerState, Row, UNIT_ZONES, Value, Zone, ZoneRef, create_rng, def_of, effective_life, hand_cap_of,
-    legal_actions, lock_zone, new_instance, query_cost,
+    AI_DIFFICULTY, ActionBody, ActionType, COIN_DEF_ID, DECK_SIZE, Difficulty, GameState, Keyword, MAX_MANA,
+    PlaceOnFieldOptions, PlayerId, PlayerState, Position, Row, UNIT_ZONES, Value, Zone, ZoneRef, ZoneSlot,
+    create_rng, def_of, effective_life, find_instance_mut, hand_cap_of, legal_actions, lock_zone,
+    new_instance, place_on_field, query_cost,
 };
 use jackioh_engine::wire::{
     DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosSeat,
@@ -68,6 +69,10 @@ const SMALL_PASS_CAP: i32 = 2;
 const STAB: &str = "core-070";
 /// Midrange Menace, a 3-cost Unit (Taunt): the cheaper card of the free-pass pair.
 const MID: &str = "core-019";
+/// Juhan Biggest Bat, a 3-cost 9/6 Unit with Stack (§6.2): it may be played onto an occupied unit zone.
+const STACK_UNIT: &str = "classicplus-004";
+/// Keymaster Keenus, a 4-cost 1/1 Unit with Equip (R1086): it may be played fused onto a Unit.
+const EQUIP_UNIT: &str = "meditative-065";
 
 // ---------------------------------------------------------------------------------------------
 // Helpers
@@ -271,6 +276,34 @@ fn lock_units(state: &mut DuosState, seat: DuosSeat) {
         };
         lock_zone(&mut state.duels[seat.duel()], slot);
     }
+}
+
+/// Fills every unit zone of `seat`'s with a fresh `def_id` in Attack Position: real units on the
+/// field, where `lock_units` closes the zones empty.
+fn fill_units(state: &mut DuosState, seat: DuosSeat, def_id: &str) {
+    let player = seat.player();
+    let game = &mut state.duels[seat.duel()];
+    for lane in 1..=UNIT_ZONES {
+        let row = Row::Units;
+        let mut unit = new_instance(game, def_id, player, Zone::Field { player, row, lane });
+        let slot = ZoneSlot { player, row, lane };
+        let placed = place_on_field(game, &mut unit, slot, PlaceOnFieldOptions::default());
+        assert!(placed, "{seat}'s unit zone {lane} takes the unit");
+        find_instance_mut(game, &unit.id)
+            .expect("the placed unit")
+            .position = Some(Position::Atk);
+    }
+}
+
+/// Grants Flying to the card `id` in `seat`'s hand: no card prints it (§6.1), so the test grants it as
+/// `ranged_flying.rs` does, and a pass keeps it (`passed_card`).
+fn grant_flying(state: &mut DuosState, seat: DuosSeat, id: &str) {
+    let card = side(state, seat)
+        .hand
+        .iter_mut()
+        .find(|card| card.id == id)
+        .expect("the card is in hand");
+    card.granted_keywords.push(Keyword::Flying);
 }
 
 fn cost(def_id: &str) -> i32 {
@@ -635,6 +668,62 @@ fn b28_nothing_is_passed_to_a_teammate_with_no_zone_for_it() {
     let probe = give(&mut state, A2, ONE_DROP);
     let playable = can_play(&state.duels[1], PlayerId::P1, &probe);
     assert!(!playable, "the locks close every unit zone of A2's");
+    assert!(duos_passes(&state, A1).is_empty());
+}
+
+/// Round 1 with A1 holding only `def_id` at pass mana, so it cannot play it, and A2 at the card's
+/// mana with an empty hand and every unit zone holding a one-drop (`fill_units`). Returns the state,
+/// the card's id, and whether the engine offers A2 a play of a copy of it.
+fn full_row_state(seed: &str, def_id: &str, flying: bool) -> (DuosState, String, bool) {
+    let mut state = round_one(seed, None);
+    let id = set_hand(&mut state, A1, &[def_id]).remove(0);
+    if flying {
+        grant_flying(&mut state, A1, &id);
+    }
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_hand(&mut state, A2, &[]);
+    set_mana(&mut state, A2, cost(def_id));
+    fill_units(&mut state, A2, ONE_DROP);
+    assert!(
+        !can_play(&state.duels[0], PlayerId::P1, &id),
+        "A1 cannot afford it"
+    );
+    let full = state.duels[1].players.p1.units.iter().all(Option::is_some);
+    assert!(full, "every unit zone of A2's holds a unit");
+    let mut probe = state.clone();
+    let copy = give(&mut probe, A2, def_id);
+    if flying {
+        grant_flying(&mut probe, A2, &copy);
+    }
+    let offered = can_play(&probe.duels[1], PlayerId::P1, &copy);
+    (state, id, offered)
+}
+
+#[test]
+fn b28_a_stack_unit_is_passed_onto_a_teammates_full_unit_row() {
+    let (state, id, offered) = full_row_state("duos-ai-pass-stack", STACK_UNIT, false);
+    assert!(offered, "A2 may stack it onto a unit");
+    assert_eq!(duos_passes(&state, A1), vec![id]);
+}
+
+#[test]
+fn b28_a_flying_unit_is_passed_into_a_teammates_backrow_past_its_full_unit_row() {
+    let (state, id, offered) = full_row_state("duos-ai-pass-flying", BIG, true);
+    assert!(offered, "A2 may fly it into its backrow");
+    assert_eq!(duos_passes(&state, A1), vec![id]);
+}
+
+#[test]
+fn b28_an_equip_unit_is_passed_onto_a_host_on_a_teammates_full_unit_row() {
+    let (state, id, offered) = full_row_state("duos-ai-pass-equip", EQUIP_UNIT, false);
+    assert!(offered, "A2 may equip it onto a unit");
+    assert_eq!(duos_passes(&state, A1), vec![id]);
+}
+
+#[test]
+fn b28_a_unit_a_teammates_full_unit_row_has_no_place_for_is_not_passed() {
+    let (state, _, offered) = full_row_state("duos-ai-pass-no-place", BIG, false);
+    assert!(!offered, "A2 has no place for it");
     assert!(duos_passes(&state, A1).is_empty());
 }
 
