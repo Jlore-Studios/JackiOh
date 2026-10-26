@@ -18,18 +18,11 @@ use crate::rules::fixtures::combat::{
     armoured, indestructible, lifestealer, plain, poisonous, shielded, trampler,
 };
 use crate::rules::fixtures::damage_combat::{argus, gambit, playing};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 fn game(seed: &str) -> GameState {
     new_game(seed, None)
-}
-
-/// The card as the state holds it now.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("{id} is in no zone"))
 }
 
 /// A fresh sink over `state`, its rng at the state's cursor as `reduce` builds it.

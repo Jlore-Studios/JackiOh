@@ -11,7 +11,6 @@
 //! it with `instance_in`.
 
 use std::borrow::Borrow;
-use std::cell::Cell;
 use std::collections::BTreeSet;
 
 use jackioh_engine::effects;
@@ -24,7 +23,8 @@ use jackioh_engine::subsystems::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    both, events_json, in_hand, json_of, new_game, play_random_game, put, set_library, sink_for, slot, spread,
+    act, act_result, both, events_json, in_hand, json_of, new_game, play_random_game, put, set_library,
+    sink_for, slot, spread,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -565,30 +565,6 @@ fn game(seed: &str) -> GameState {
     registry.extend(scripts());
     register_scripts(registry);
     state
-}
-
-thread_local! {
-    /// TS's module-level `let nonce = 0`: each action this file sends gets a fresh `rb<n>` nonce.
-    /// Per test thread, since nonces only need to differ within one game.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-/// TS `actResult(state, body)`: the action body (TS `ActionInput`, as its JSON) with a fresh nonce.
-fn act_result(state: &GameState, mut body: Value) -> ReduceResult {
-    let nonce = NONCE.with(|nonce| {
-        nonce.set(nonce.get() + 1);
-        nonce.get()
-    });
-    body["nonce"] = json!(format!("rb{nonce}"));
-    reduce(state, &json_as(body))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// Past the mulligans, in the main phase of turn 1.

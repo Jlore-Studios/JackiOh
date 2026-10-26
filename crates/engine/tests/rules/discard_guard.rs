@@ -13,14 +13,13 @@ use jackioh_engine::draw::discard_guarded;
 use jackioh_engine::effects::{
     discard, discard_from_hand, discard_hand, discard_random, discard_random_cards,
 };
-use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
-use jackioh_engine::script::{Effect, EngineSink};
+use jackioh_engine::script::EngineSink;
 use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog::spell_def;
 use super::fixtures::combat::plain;
-use super::fixtures::harness::{in_hand, new_game, put, slot};
+use super::fixtures::harness::{in_hand, new_game, put, run_effect, slot};
 
 /// A Field Spell whose Aura guards its controller (Meditative #1's, without the Radiant Cry).
 fn guard() -> CardDef {
@@ -52,26 +51,6 @@ fn game() -> GameState {
     state.players.p1.hand.clear();
     state.players.p2.hand.clear();
     state
-}
-
-/// Apply one effect as `controller`'s, the way `resolve.rs` does, and hand back the events it emitted.
-fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    let mut events = Vec::new();
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 /// One engine call on a sink over the state, its rng from the state's cursor, and the events it made.
@@ -116,7 +95,7 @@ fn r800_an_effect_discard_off_turn_moves_nothing_draws_no_rng_and_reports() {
     state.active = PlayerId::P2;
     let cursor = state.rng_cursor;
 
-    let random = run(
+    let random = run_effect(
         &mut state,
         discard_random(json_as(json!({ "count": 2, "player": "enemy" }))),
         PlayerId::P2,
@@ -131,7 +110,7 @@ fn r800_an_effect_discard_off_turn_moves_nothing_draws_no_rng_and_reports() {
     assert_eq!(state.rng_cursor, cursor);
     assert_eq!(ids(&state.players.p1.hand), ids(&hand));
 
-    let whole = run(
+    let whole = run_effect(
         &mut state,
         discard_hand(json_as(json!({ "player": "enemy" }))),
         PlayerId::P2,
@@ -144,7 +123,7 @@ fn r800_an_effect_discard_off_turn_moves_nothing_draws_no_rng_and_reports() {
         }]
     );
 
-    let named = run(
+    let named = run_effect(
         &mut state,
         discard(json_as(
             json!({ "target": { "of": "instance", "instanceId": hand[0].id } }),
@@ -169,7 +148,7 @@ fn r800_a_random_discard_asking_more_than_the_hand_reports_what_it_could_have_ta
     in_hand(&mut state, &plain.id, PlayerId::P1, 1);
     state.active = PlayerId::P2;
 
-    let events = run(
+    let events = run_effect(
         &mut state,
         discard_random(json_as(json!({ "count": 3, "player": "enemy" }))),
         PlayerId::P2,
@@ -184,7 +163,7 @@ fn r800_a_random_discard_asking_more_than_the_hand_reports_what_it_could_have_ta
 
     // An empty hand loses nothing either way, so nothing is reported.
     state.players.p1.hand.clear();
-    let empty = run(
+    let empty = run_effect(
         &mut state,
         discard_random(json_as(json!({ "count": 2, "player": "enemy" }))),
         PlayerId::P2,
@@ -200,7 +179,7 @@ fn r800_on_the_guarded_players_own_turn_the_discard_happens() {
     state.active = PlayerId::P1;
     assert!(!discard_guarded(&state, PlayerId::P1));
 
-    let events = run(
+    let events = run_effect(
         &mut state,
         discard_random(json_as(json!({ "count": 2 }))),
         PlayerId::P1,
@@ -241,7 +220,7 @@ fn r800_a_guard_in_the_hand_does_nothing_and_two_guards_report_once() {
     state.active = PlayerId::P2;
     assert!(!discard_guarded(&state, PlayerId::P1));
 
-    let events = run(
+    let events = run_effect(
         &mut state,
         discard_random(json_as(json!({ "count": 1, "player": "enemy" }))),
         PlayerId::P2,
@@ -251,7 +230,7 @@ fn r800_a_guard_in_the_hand_does_nothing_and_two_guards_report_once() {
 
     guarded_backrow(&mut state, PlayerId::P1, 1);
     guarded_backrow(&mut state, PlayerId::P1, 2);
-    let twice = run(
+    let twice = run_effect(
         &mut state,
         discard_hand(json_as(json!({ "player": "enemy" }))),
         PlayerId::P2,
@@ -274,7 +253,7 @@ fn r800_a_guard_binds_only_the_players_it_names() {
     state.active = PlayerId::P1;
     assert!(!discard_guarded(&state, PlayerId::P2));
 
-    let events = run(
+    let events = run_effect(
         &mut state,
         discard_hand(json_as(json!({ "player": "enemy" }))),
         PlayerId::P1,

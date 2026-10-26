@@ -24,7 +24,9 @@ use crate::rules::fixtures::call_to_chaos_meditative::{
     ACCLAIMED, ACCLAIMED_SPELL, ACCLAIMED_TOKEN, CN, GOLEM, JADE, MED, PRIME, chaos_med_catalog,
 };
 use crate::rules::fixtures::call_to_chaos_plus::{chaos_plus_catalog, core95, immutable, plus, trap};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    act_ok, events_of_type, in_hand, json_of, new_game, put, set_library, slot,
+};
 
 fn scripts(cry: Hook) -> CardScripts {
     CardScripts {
@@ -420,18 +422,6 @@ mod r1241_the_rest_of_game_entry {
         assert!(script_step_for(&Script::default(), &other).is_none());
     }
 
-    /// `reduce` with a fresh nonce.
-    fn act(state: &GameState, body: Value, nonce: &mut u32) -> ReduceResult {
-        *nonce += 1;
-        let mut action = body;
-        action["nonce"] = json!(format!("med{nonce}"));
-        let result = reduce(state, &json_as::<Action>(action));
-        if let Some(error) = &result.error {
-            panic!("{error}");
-        }
-        result
-    }
-
     fn events_of(result: &ReduceResult) -> Vec<GameEvent> {
         result.events.clone()
     }
@@ -443,13 +433,11 @@ mod r1241_the_rest_of_game_entry {
         // Every edition's stand-in recasts, the Meditative one included: it is in the pool since its
         // set shipped in v0.3.5 (R1240).
         register(Some(recast()), Some(recast()));
-        let mut nonce = 0;
         for player in [P1, P2] {
             let keep = ids_of(&state.players[player].hand);
-            state = act(
+            state = act_ok(
                 &state,
                 json!({ "type": "mulligan", "keep": keep, "playerId": player }),
-                &mut nonce,
             )
             .state;
         }
@@ -472,16 +460,11 @@ mod r1241_the_rest_of_game_entry {
         assert!(played(&events).is_empty());
         // The opponent's turn casts nothing; the caster's next start of turn casts one chain, its first
         // cast at depth 1, so the stand-ins' recursion runs it to the cap (R28).
-        let theirs = act(
-            &state,
-            json!({ "type": "endTurn", "playerId": caster }),
-            &mut nonce,
-        );
+        let theirs = act_ok(&state, json!({ "type": "endTurn", "playerId": caster }));
         assert!(played(&events_of(&theirs)).is_empty());
-        let back = act(
+        let back = act_ok(
             &theirs.state,
             json!({ "type": "endTurn", "playerId": theirs.state.active }),
-            &mut nonce,
         );
         assert_eq!(back.state.active, caster);
         let cast = played(&events_of(&back));

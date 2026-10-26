@@ -9,7 +9,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, live, put, set_library, slot};
 use crate::rules::fixtures::instance_data::{body, echo_bolt, instance_game};
 
 const RETURN: Enchantment = Enchantment::ReturnAfterResolve { floor: 2 };
@@ -54,14 +54,9 @@ fn enchant_one(id: &str, enchantment: Enchantment) -> Effect {
     enchant(json_as(json!({ "instanceId": id, "enchantment": enchantment })))
 }
 
-/// The card as it stands in the state now (TS held the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
 /// `enchantmentsOf(card)` for the card under `id` as it stands now.
 fn on(state: &GameState, id: &str) -> Vec<Enchantment> {
-    enchantments_of(live(state, id)).to_vec()
+    enchantments_of(&live(state, id)).to_vec()
 }
 
 /// `state.players.p1.units[lane - 1]?.[0]`.
@@ -107,7 +102,7 @@ mod b5_e39_enchant_r443 {
         );
         assert_eq!(on(&state, &deck_card.id), vec![CAST, ENEMIES]);
         assert!(has_enchantment(
-            live(&state, &deck_card.id),
+            &live(&state, &deck_card.id),
             EnchantmentKind::TargetEnemies
         ));
         // Two of a kind that differ are both kept, for their reader to combine.
@@ -119,7 +114,7 @@ mod b5_e39_enchant_r443 {
         ));
         assert!(!add_enchantment(card, &RETURN));
         assert_eq!(
-            enchantments_of_kind(live(&state, &deck_card.id), EnchantmentKind::ReturnAfterResolve).to_vec(),
+            enchantments_of_kind(&live(&state, &deck_card.id), EnchantmentKind::ReturnAfterResolve).to_vec(),
             vec![RETURN, Enchantment::ReturnAfterResolve { floor: 1 }]
         );
     }
@@ -205,8 +200,10 @@ mod b5_e39_enchant_r443 {
             None,
             HookOptions::default(),
         );
-        let copy = top_unit(&state, 2).unwrap_or_else(|| live(&state, &unit.id));
-        assert_eq!(enchantments_of(copy).to_vec(), vec![ENEMIES]);
+        let copy = top_unit(&state, 2)
+            .cloned()
+            .unwrap_or_else(|| live(&state, &unit.id));
+        assert_eq!(enchantments_of(&copy).to_vec(), vec![ENEMIES]);
 
         let spell = new_instance(
             &mut state,
@@ -295,8 +292,10 @@ mod b5_e39_enchant_r443 {
             None,
             HookOptions::default(),
         );
-        let transformed = top_unit(&state, 1).unwrap_or_else(|| live(&state, &unit.id));
-        assert_eq!(enchantments_of(transformed).to_vec(), Vec::<Enchantment>::new());
+        let transformed = top_unit(&state, 1)
+            .cloned()
+            .unwrap_or_else(|| live(&state, &unit.id));
+        assert_eq!(enchantments_of(&transformed).to_vec(), Vec::<Enchantment>::new());
     }
 
     #[test]

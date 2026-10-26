@@ -12,12 +12,11 @@
 //! Fixtures are prefixed `pc-` and indexed above 1450 so they cannot collide (BUILD §0).
 
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
-use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot, spread};
+use crate::rules::fixtures::harness::{act_result, both, in_hand, new_game, put, slot, spread};
 
 // Fixtures
 
@@ -209,17 +208,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
 }
 
 // Harness
-
-/// Unique across the tests, which run on parallel threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// `body` is the action literal (its `playerId` included); a fresh nonce is added.
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut body = body;
-    body["nonce"] = json!(format!("pc{nonce}"));
-    reduce(state, &json_as::<Action>(body))
-}
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]

@@ -11,11 +11,13 @@ use std::collections::BTreeSet;
 use jackioh_engine::effects::{cast, cast_new, cast_random, damage, heal};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, events_of_type, in_hand, put, round_trip, slot};
+use crate::rules::fixtures::harness::{
+    act, act_result, both, events_of_type, in_hand, put, round_trip, slot,
+};
 use crate::rules::fixtures::play_pipeline_b::{
     DISCOVER_POOL, RANDOM_POOL, ask_target, cast_field, cast_trap, discover_spell, grave_spell, in_graveyard,
-    jogg_box, mode_spell, named_caster, pb_act, pb_playing, pb_reduce, solarius, target_spell, their_choice,
-    tyrant, x_spell, x_target,
+    jogg_box, mode_spell, named_caster, pb_playing, solarius, target_spell, their_choice, tyrant, x_spell,
+    x_target,
 };
 use crate::rules::fixtures::prompts::{BACK_BUDGET, back_from_gy, moder, register_prompt_fixtures, rewind};
 
@@ -202,7 +204,7 @@ fn only<T>(items: impl IntoIterator<Item = T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-/// TS `{ ...action, playerId }`: a legal action body as the literal `pb_act` takes.
+/// TS `{ ...action, playerId }`: a legal action body as the literal `act` takes.
 fn body_of(action: &ActionBody, player: PlayerId) -> Value {
     let mut body = serde_json::to_value(action).unwrap();
     body["playerId"] = json!(player);
@@ -348,7 +350,7 @@ mod e12_casts_from_anywhere_r70_r453 {
         let before = state.players[PlayerId::P2].hero.health;
 
         // The Tyrant's Cry casts the first (no choices), then asks for the Mode Spell's mode (R70).
-        let paused = pb_act(
+        let paused = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 2 }, "playerId": "p1" }),
         );
@@ -370,8 +372,8 @@ mod e12_casts_from_anywhere_r70_r453 {
         // JSON round trip mid-pause: both copies finish the same way.
         let round = round_trip(&paused);
         let pick_b = answer_containing(&paused, PlayerId::P1, "\"b\"");
-        let next = pb_act(&paused, body_of(&pick_b, PlayerId::P1));
-        let next_round = pb_act(&round, body_of(&pick_b, PlayerId::P1));
+        let next = act(&paused, body_of(&pick_b, PlayerId::P1));
+        let next_round = act(&round, body_of(&pick_b, PlayerId::P1));
         assert_eq!(hash_state(&next_round), hash_state(&next));
         // Now the Target Spell asks for its target.
         assert!(
@@ -382,7 +384,7 @@ mod e12_casts_from_anywhere_r70_r453 {
                 .starts_with("Cast: ")
         );
         let enemy_hero = answer_hero(&next, PlayerId::P1, PlayerId::P2);
-        let done = pb_act(&next, body_of(&enemy_hero, PlayerId::P1));
+        let done = act(&next, body_of(&enemy_hero, PlayerId::P1));
         assert!(done.pending.is_none());
         // 1 + 2 + 3 damage to the enemy hero, each cast counted as a play paying 0 (R70).
         assert_eq!(done.players[PlayerId::P2].hero.health, before - 6);
@@ -411,7 +413,7 @@ mod e12_casts_from_anywhere_r70_r453 {
      {
         let mut state = playing("r453-named");
         let card = only(in_hand(&mut state, &named_caster().id, PlayerId::P1, 1));
-        let paused = pb_act(
+        let paused = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
@@ -423,7 +425,7 @@ mod e12_casts_from_anywhere_r70_r453 {
         assert_eq!(cast.def_id, target_spell().id);
         assert_eq!(cast.owner, PlayerId::P1);
         let answer = answer_hero(&paused, PlayerId::P1, PlayerId::P2);
-        let done = pb_act(&paused, body_of(&answer, PlayerId::P1));
+        let done = act(&paused, body_of(&answer, PlayerId::P1));
         assert!(ids(&done.players[PlayerId::P1].graveyard).contains(&cast.id));
         assert_eq!(
             done.players[PlayerId::P2].hero.health,
@@ -463,8 +465,8 @@ mod e12_casts_from_anywhere_r70_r453 {
 
         let round = round_trip(&state);
         let two = answer_containing(&state, PlayerId::P1, "\"2\"");
-        let asked = pb_act(&state, body_of(&two, PlayerId::P1));
-        let asked_round = pb_act(&round, body_of(&two, PlayerId::P1));
+        let asked = act(&state, body_of(&two, PlayerId::P1));
+        let asked_round = act(&round, body_of(&two, PlayerId::P1));
         assert_eq!(hash_state(&asked_round), hash_state(&asked));
         // Then its target, asked of the card as it will resolve (X is on it now).
         assert_eq!(
@@ -473,7 +475,7 @@ mod e12_casts_from_anywhere_r70_r453 {
         );
         assert_eq!(only(asked.players[PlayerId::P1].resolving.clone()).x, Some(2));
         let hero = answer_hero(&asked, PlayerId::P1, PlayerId::P2);
-        let done = pb_act(&asked, body_of(&hero, PlayerId::P1));
+        let done = act(&asked, body_of(&hero, PlayerId::P1));
         assert_eq!(
             done.players[PlayerId::P2].hero.health,
             state.players[PlayerId::P2].hero.health - 2
@@ -650,7 +652,7 @@ mod e12_random_casts_r452 {
         let mut state = playing("r452-random");
         let jogg = only(in_hand(&mut state, &jogg_box().id, PlayerId::P1, 1));
         let hand_before = state.players[PlayerId::P1].hand.len();
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": jogg.id, "playerId": "p1" }),
         );
@@ -691,8 +693,8 @@ mod e12_random_casts_r452 {
         let mut state = playing("r452-determinism");
         let jogg = only(in_hand(&mut state, &jogg_box().id, PlayerId::P1, 1));
         let body = json!({ "type": "play", "instanceId": jogg.id, "playerId": "p1" });
-        let live = pb_act(&state, body.clone());
-        let again = pb_act(&round_trip(&state), body);
+        let live = act(&state, body.clone());
+        let again = act(&round_trip(&state), body);
         assert_eq!(hash_state(&again), hash_state(&live));
     }
 
@@ -709,7 +711,7 @@ mod e12_random_casts_r452 {
             let mine = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 2), json!({}));
             put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 3), json!({}));
             let card = only(in_hand(&mut state, &solarius().id, PlayerId::P1, 1));
-            let result = pb_reduce(
+            let result = act_result(
                 &state,
                 json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
             );
@@ -753,15 +755,15 @@ mod e12_random_casts_r452 {
 
         let round = round_trip(&state);
         let answer = only(answers(&state, PlayerId::P2));
-        let next = pb_act(&state, body_of(&answer, PlayerId::P2));
-        let next_round = pb_act(&round, body_of(&answer, PlayerId::P2));
+        let next = act(&state, body_of(&answer, PlayerId::P2));
+        let next_round = act(&round, body_of(&answer, PlayerId::P2));
         assert_eq!(hash_state(&next_round), hash_state(&next));
         // The second random cast asks p2 again.
         assert_eq!(
             next.pending.as_ref().map(|pending| pending.player_id),
             Some(PlayerId::P2)
         );
-        let last = pb_act(&next, body_of(&only(answers(&next, PlayerId::P2)), PlayerId::P2));
+        let last = act(&next, body_of(&only(answers(&next, PlayerId::P2)), PlayerId::P2));
         assert!(last.pending.is_none());
         // Each cast's answer hurt the one who answered (1) and its tail the enemy hero (1): p2 twice over.
         assert_eq!(last.players[PlayerId::P2].hero.health, before - 4);
@@ -809,7 +811,7 @@ mod e12_random_casts_r452 {
         let mut state = playing("r452-cap");
         state.players[PlayerId::P2].hero.health = 1000;
         let card = only(in_hand(&mut state, PING_A, PlayerId::P1, 1));
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );
@@ -829,7 +831,7 @@ mod e12_random_casts_r452 {
      {
         let mut state = playing("r452-hidden");
         let card = only(in_hand(&mut state, CASTS_DISCOVER, PlayerId::P1, 1));
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         );

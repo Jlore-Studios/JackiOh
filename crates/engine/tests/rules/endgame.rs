@@ -1,27 +1,11 @@
 //! Port of `packages/engine/test/endgame.test.ts`: how a game ends (M1-T8, §2.5).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, events_of_type, new_game, put, slot};
 use crate::rules::fixtures::scripts::{double_edge, infinite_reserves};
-
-/// TS's module `let seq = 0`.
-static SEQ: AtomicU32 = AtomicU32::new(0);
-
-/// TS's `act` answers `{ state, events: [] }`; the empty list is never read, so this answers the state.
-fn act(state: &GameState, body: Value) -> GameState {
-    let seq = SEQ.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    let result = reduce(state, &input.with_nonce(format!("e{seq}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
 
 fn playing(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     let mut state = begin_game(&new_game(seed, decks)).state;

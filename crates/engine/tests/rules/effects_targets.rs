@@ -16,7 +16,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog as catalog_fx;
-use super::fixtures::harness::{json_of, new_game, put, slot};
+use super::fixtures::harness::{json_of, live, new_game, put, slot};
 
 // Fixture cards: two tags and a backrow type, so every filter has something to bite on.
 
@@ -93,12 +93,6 @@ fn instance_spec(instance_id: &str) -> TargetSpec {
 /// A board scope from a JSON literal; `{}` is the default.
 fn scope(literal: Value) -> BoardScope {
     json_as(literal)
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 // `{ of: "instance" }`

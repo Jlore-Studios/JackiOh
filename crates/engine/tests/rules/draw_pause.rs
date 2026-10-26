@@ -13,8 +13,6 @@
 //! Controls: with nothing asking, the chain and "draw N" run in one call and `state.work` stays empty.
 //! Fixtures: defs prefixed `dr-`, indexed from 2700, so they cannot collide with another file (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::draw::{
     DRAW_CHAIN_WORK, DRAW_COUNT_WORK, DrawOutcome, draw, draw_one, owed_draw_chain_of, owed_draw_count_of,
 };
@@ -23,7 +21,9 @@ use jackioh_engine::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use jackioh_engine::testkit::*;
 use jackioh_engine::work::owed_work;
 
-use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, round_trip, set_library, slot};
+use crate::rules::fixtures::harness::{
+    act, act_result, both, events_of_type, new_game, put, round_trip, set_library, slot,
+};
 
 // Fixtures.
 
@@ -188,23 +188,6 @@ fn game(seed: &str) -> GameState {
     all.extend(scripts());
     register_scripts(all);
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let n = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("dr{n}"));
-    reduce(state, &json_as::<Action>(action))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// Past the mulligans, in p1's main phase, with the note log parked in p1's backrow lane 5.

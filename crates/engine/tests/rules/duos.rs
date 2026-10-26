@@ -11,8 +11,6 @@
 //!
 //! A refusal is checked as the engine's contract has it: an error, and a state that hashes as before.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::config::{
     DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD,
     duos_ai_team,
@@ -32,7 +30,9 @@ use jackioh_engine::wire::{
 };
 
 use crate::rules::fixtures::catalog::{vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{both, json_of, play_random_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{
+    both, json_of, next_nonce, play_random_game, put, setup_catalog, slot,
+};
 
 // ---------------------------------------------------------------------------------------------
 // Fixture cards
@@ -334,22 +334,16 @@ fn free_passes() -> DuosTeamRules {
     }
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn nonce() -> String {
-    format!("duos-{}", NONCE.fetch_add(1, Ordering::SeqCst) + 1)
-}
-
 fn label(body: &DuosActionBody) -> String {
     serde_json::to_string(body).unwrap_or_default()
 }
 
-fn act(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosReduceResult {
+fn duos_act(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosReduceResult {
     duos_reduce(
         state,
         &DuosAction {
             seat,
-            nonce: nonce(),
+            nonce: next_nonce(),
             body,
         },
     )
@@ -358,7 +352,7 @@ fn act(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosReduceRes
 /// The action, which must be accepted.
 fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
     let what = label(&body);
-    let result = act(state, seat, body);
+    let result = duos_act(state, seat, body);
     if let Some(error) = &result.error {
         panic!("{seat} {what} was refused: {error}");
     }
@@ -369,7 +363,7 @@ fn ok(state: &DuosState, seat: DuosSeat, body: DuosActionBody) -> DuosState {
 fn refused(state: &DuosState, seat: DuosSeat, body: DuosActionBody) {
     let what = label(&body);
     let before = duos_hash(state);
-    let result = act(state, seat, body);
+    let result = duos_act(state, seat, body);
     assert!(result.error.is_some(), "{seat} {what} was accepted");
     assert_eq!(
         duos_hash(&result.state),
@@ -565,7 +559,7 @@ fn cast(state: DuosState, seat: DuosSeat, def_id: &str) -> DuosReduceResult {
     let mut state = state;
     let id = give(&mut state, seat, def_id);
     let body = legal_play(&state, seat, &id);
-    let result = act(&state, seat, body);
+    let result = duos_act(&state, seat, body);
     if let Some(error) = &result.error {
         panic!("{seat}'s {def_id} was refused: {error}");
     }
@@ -675,7 +669,7 @@ impl Live {
         let what = label(&body);
         let action = DuosAction {
             seat,
-            nonce: nonce(),
+            nonce: next_nonce(),
             body,
         };
         let result = duos_reduce(&self.state, &action);
@@ -905,7 +899,7 @@ mod b2_mulligans {
         for (i, seat) in order.into_iter().enumerate() {
             assert_eq!(state.round, 0, "before {seat}'s mulligan");
             let body = mulligan_keeping_all(&state, seat);
-            let result = act(&state, seat, body);
+            let result = duos_act(&state, seat, body);
             assert!(result.error.is_none(), "{seat}'s mulligan");
             state = result.state;
             let opened = result
@@ -1082,7 +1076,7 @@ mod b5_turn_end_sync {
     fn b5_the_second_end_turn_ends_duel_0_then_duel_1_and_opens_the_next_round() {
         let state = begun("b5-close");
         let state = ok(&state, A1, end_turn());
-        let result = act(&state, A2, end_turn());
+        let result = duos_act(&state, A2, end_turn());
         assert!(result.error.is_none());
         let state = result.state;
 
@@ -1559,7 +1553,7 @@ mod b11_team_concede {
     fn b11_the_teammates_concede_while_the_offer_is_open_ends_the_game_for_the_other_team() {
         let state = begun("b11-end");
         let state = ok(&state, A1, DuosActionBody::Concede);
-        let result = act(&state, A2, DuosActionBody::Concede);
+        let result = duos_act(&state, A2, DuosActionBody::Concede);
         assert!(result.error.is_none());
         assert!(
             result
@@ -1574,7 +1568,7 @@ mod b11_team_concede {
     fn b11_the_same_seat_conceding_again_does_not_end_the_game() {
         let state = begun("b11-again");
         let state = ok(&state, A1, DuosActionBody::Concede);
-        let again = act(&state, A1, DuosActionBody::Concede);
+        let again = duos_act(&state, A1, DuosActionBody::Concede);
         assert!(
             again.state.result.is_none(),
             "only the teammate's concede ends the game"
@@ -1616,7 +1610,7 @@ mod b11_team_concede {
         }
 
         // Team A's offer still stands: A2's concede joins it and the game ends for team B.
-        let result = act(&state, A2, DuosActionBody::Concede);
+        let result = duos_act(&state, A2, DuosActionBody::Concede);
         assert!(result.error.is_none());
         expect_result(&result.state, DuosOutcome::Win, Some(Team::B), Some("concede"));
 
@@ -1999,7 +1993,7 @@ mod b16_game_end {
         let state = ok(&state, A1, end_turn());
         assert!(state.result.is_none());
 
-        let result = act(&state, A2, end_turn());
+        let result = duos_act(&state, A2, end_turn());
 
         assert!(result.error.is_none(), "{:?}", result.error);
         let state = result.state;
@@ -2271,7 +2265,7 @@ mod b20_what_a_pass_does {
         let mana = side(&state, A1).mana.current;
         let teammate_hand = hand_ids(&state, A2);
 
-        let result = act(&state, A1, pass(&card_id));
+        let result = duos_act(&state, A1, pass(&card_id));
         assert!(result.error.is_none());
         let state = result.state;
 
@@ -2356,7 +2350,7 @@ mod b20_what_a_pass_does {
         give(&mut state, A1, NOOP);
         let wire = give(&mut state, A1, TRIPWIRE);
         let draws = json_of(side(&state, A2).draws);
-        let result = act(&state, A1, pass(&wire));
+        let result = duos_act(&state, A1, pass(&wire));
         assert!(result.error.is_none());
         for kind in [
             GameEventType::Drawn,
@@ -2395,7 +2389,7 @@ mod b21_playing_a_passed_card {
         let mut state = begun("b21");
         give(&mut state, A1, NOOP);
         let card = hand_ids(&state, A1)[0].clone();
-        let result = act(&state, A1, pass(&card));
+        let result = duos_act(&state, A1, pass(&card));
         assert!(result.error.is_none());
         let id = new_id(&result.events);
         let state = result.state;
@@ -2411,7 +2405,7 @@ mod b21_playing_a_passed_card {
         give(&mut state, A1, NOOP);
         let state = ok(&state, A2, end_turn());
         let card = hand_ids(&state, A1)[0].clone();
-        let result = act(&state, A1, pass(&card));
+        let result = duos_act(&state, A1, pass(&card));
         assert!(result.error.is_none());
         let id = new_id(&result.events);
         let state = result.state;
@@ -2431,7 +2425,7 @@ mod b21_playing_a_passed_card {
         let state = ok(&state, A2, end_turn());
         assert_eq!(state.round_seats, [A1, B2]);
         let card = hand_ids(&state, A1)[0].clone();
-        let result = act(&state, A1, pass(&card));
+        let result = duos_act(&state, A1, pass(&card));
         assert!(result.error.is_none(), "a pass needs no round seat to receive it");
         let id = new_id(&result.events);
         let state = result.state;
@@ -2730,12 +2724,12 @@ mod b24_fold {
         // Team B is out of its round: refused. A1's end turn after it is never reached.
         log.push(DuosAction {
             seat: B1,
-            nonce: nonce(),
+            nonce: next_nonce(),
             body: end_turn(),
         });
         log.push(DuosAction {
             seat: A1,
-            nonce: nonce(),
+            nonce: next_nonce(),
             body: end_turn(),
         });
         let replayed = duos_fold(&DuosReplayInput {
@@ -2759,7 +2753,7 @@ mod b24_fold {
             options: options("b24-first"),
             log: vec![DuosAction {
                 seat: A1,
-                nonce: nonce(),
+                nonce: next_nonce(),
                 body: duel(ActionBody::OfferDraw),
             }],
         });

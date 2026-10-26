@@ -7,8 +7,6 @@
 //! opened is answered first; Classic+ #26 drawn at the start of its controller's turn ends that turn
 //! before its main phase; "one more action" counts main-phase actions only and not the one that set it.
 
-use std::cell::Cell;
-
 use jackioh_engine::effects::{end_turn, end_turn_after_actions};
 use jackioh_engine::testkit::*;
 
@@ -17,7 +15,7 @@ use super::fixtures::harness::{
     events_of_type, in_hand, json_of, new_game, put, set_library, setup_catalog, slot,
 };
 use super::fixtures::turn as turn_fx;
-use crate::rules::fixtures::harness::{matches_object, round_trip};
+use crate::rules::fixtures::harness::{act, act_ok, live, live_mut, matches_object, round_trip};
 
 fn register() {
     register_catalog(turn_fx::turn_catalog(registered_catalog().clone()));
@@ -32,43 +30,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-thread_local! {
-    /// Every action `act` sends takes the next nonce. Each test runs on its own thread, so the count
-    /// starts at 0 per test; a nonce only has to be unique within its game (§9.3's dedupe).
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-fn next_nonce() -> u32 {
-    NONCE.with(|nonce| {
-        let next = nonce.get() + 1;
-        nonce.set(next);
-        next
-    })
-}
-
-/// The action literal with its nonce, through `reduce`.
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let mut action = body;
-    action["nonce"] = json!(format!("te{}", next_nonce()));
-    reduce(state, &json_as::<Action>(action))
-}
-
-struct Acted {
-    state: GameState,
-    events: Vec<GameEvent>,
-}
-
-fn act(state: &GameState, body: Value) -> Acted {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    Acted {
-        state: result.state,
-        events: result.events,
-    }
-}
-
 /// Past both mulligans, in p1's main phase on turn 1, with the note log in p2's backrow.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&game(seed)).state;
@@ -81,8 +42,7 @@ fn playing(seed: &str) -> GameState {
         state = act(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player }),
-        )
-        .state;
+        );
     }
     put(
         &mut state,
@@ -105,7 +65,9 @@ struct Played {
 /// Put the card in `state`'s hand (the object the caller holds) and play it from there.
 fn play(state: &mut GameState, player: PlayerId, def_id: &str) -> Played {
     let card = in_hand(state, def_id, player, 1).remove(0);
-    let Acted { state: after, events } = act(
+    let ReduceResult {
+        state: after, events, ..
+    } = act_ok(
         state,
         json!({ "type": "play", "instanceId": card.id, "playerId": player }),
     );
@@ -116,9 +78,9 @@ fn play(state: &mut GameState, player: PlayerId, def_id: &str) -> Played {
     }
 }
 
-fn answer(state: &GameState) -> Acted {
+fn answer(state: &GameState) -> ReduceResult {
     let pending = state.pending.as_ref().expect("expected a prompt");
-    act(
+    act_ok(
         state,
         json!({ "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "none" }], "playerId": pending.player_id }),
     )
@@ -183,16 +145,6 @@ fn with_ctx<R>(
 
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn first_cut_in(events: &[GameEvent]) -> Value {
@@ -382,7 +334,9 @@ mod b5_e10_end_your_turn_r456 {
         let tempo_id = turn_fx::tempo().id;
         set_library(&mut state, PlayerId::P2, &owned(&[tempo_id.as_str(), "fx-30"]));
         let drawn = state.players.p2.library.first().cloned();
-        let Acted { state: after, events } = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
 
         assert_eq!(after.turn, state.turn + 2);
         assert_eq!(after.active, PlayerId::P1);
@@ -429,7 +383,7 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         let radiant_tempo_id = state.players.p2.library[0].id.clone();
         state.players.p2.library[0].radiant = true;
 
-        let mut started = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
+        let mut started = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(started.active, PlayerId::P2);
         assert_eq!(started.phase, Phase::Main);
         assert!(matches_object(
@@ -471,11 +425,13 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         assert_eq!(set.active, PlayerId::P1);
         assert_eq!(turn_ends_json(&set, PlayerId::P1)["actionsLeft"], json!(1));
 
-        let offered = act(&set, json!({ "type": "offerDraw", "playerId": "p1" })).state;
+        let offered = act(&set, json!({ "type": "offerDraw", "playerId": "p1" }));
         assert_eq!(offered.active, PlayerId::P1);
         assert_eq!(turn_ends_json(&offered, PlayerId::P1)["actionsLeft"], json!(1));
 
-        let Acted { state: after, events } = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &offered,
             json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" }),
         );
@@ -501,7 +457,9 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
         assert_eq!(asking.active, PlayerId::P1);
         assert_eq!(turn_ends_json(&asking, PlayerId::P1)["actionsLeft"], json!(0));
 
-        let Acted { state: after, events } = answer(&asking);
+        let ReduceResult {
+            state: after, events, ..
+        } = answer(&asking);
         assert_eq!(turn_fx::notes(&after), vec!["marker:p1", "questioner:answered"]);
         assert_eq!(after.active, PlayerId::P2);
         assert_eq!(events_of_type(&events, GameEventType::TurnCutShort).len(), 1);
@@ -511,10 +469,11 @@ mod b5_e10_one_more_action_then_your_turn_ends_r456 {
     fn r456_ending_the_turn_yourself_uses_the_actions_up_no_cut_and_the_rider_ends_with_the_turn() {
         let mut state = playing("self-end");
         let set = play(&mut state, PlayerId::P1, &turn_fx::one_more().id).state;
-        let Acted {
+        let ReduceResult {
             state: mut after,
             events,
-        } = act(&set, json!({ "type": "endTurn", "playerId": "p1" }));
+            ..
+        } = act_ok(&set, json!({ "type": "endTurn", "playerId": "p1" }));
         assert!(events_of_type(&events, GameEventType::TurnCutShort).is_empty());
         assert_eq!(after.active, PlayerId::P2);
         assert!(turn_ends_mods(&after, PlayerId::P1).is_empty());

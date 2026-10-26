@@ -7,7 +7,6 @@
 //! replay.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::effects::DELAYED_DESTROY_HOOK;
 use jackioh_engine::subsystems::activate::{
@@ -27,8 +26,8 @@ use crate::rules::fixtures::activate::{
 };
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip, set_library, setup_catalog,
-    slot,
+    act, act_ok, act_result, events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip,
+    set_library, setup_catalog, slot,
 };
 
 // Harness
@@ -48,22 +47,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// A nonce unique across the file's tests, which Rust runs on many threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_result(state: &GameState, body: ActionInput) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    reduce(state, &body.with_nonce(format!("act{nonce}")))
-}
-
-fn act(state: &GameState, body: ActionInput) -> (GameState, Vec<GameEvent>) {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    (result.state, result.events)
-}
-
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
@@ -80,8 +63,7 @@ fn playing(seed: &str) -> GameState {
         state = act(
             &state,
             input(json!({ "type": "mulligan", "keep": keep, "playerId": player })),
-        )
-        .0;
+        );
     }
     put(
         &mut state,
@@ -109,7 +91,7 @@ fn activate(player: PlayerId, instance_id: &str, extra: Value) -> ActionInput {
 fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
     let pending = state.pending.as_ref().expect("expected a prompt");
     let option = pending.options.first().expect("the prompt offers nothing");
-    act(
+    let result = act_ok(
         state,
         ActionInput {
             body: ActionBody::Answer {
@@ -118,7 +100,8 @@ fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
             },
             player_id: pending.player_id,
         },
-    )
+    );
+    (result.state, result.events)
 }
 
 fn lacks(value: &Value, key: &str) -> bool {
@@ -220,7 +203,9 @@ mod r384_b3_2_activate_using_an_ability {
         let mut state = playing("ping");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
 
-        let (after, events) = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &state,
             activate(
                 P1,
@@ -252,7 +237,7 @@ mod r384_b3_2_activate_using_an_ability {
     fn r384_an_ability_named_by_nothing_is_the_cards_only_one_a_card_with_several_needs_it_named() {
         let mut state = playing("naming");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
-        let (mut after, _) = act(&state, activate(P1, &card.id, hero_target()));
+        let mut after = act(&state, activate(P1, &card.id, hero_target()));
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - 1);
 
         let many = put(&mut after, &chooser.id, slot(P1, Row::Backrow, 2), json!({}));
@@ -276,7 +261,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         let once = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
         let twice = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
 
-        state = act(&state, activate(P1, &once.id, hero_target())).0;
+        state = act(&state, activate(P1, &once.id, hero_target()));
         assert_eq!(
             act_result(&state, activate(P1, &once.id, hero_target()))
                 .error
@@ -284,8 +269,8 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
             Some("that ability has already been used this turn")
         );
 
-        state = act(&state, activate(P1, &twice.id, json!({}))).0;
-        state = act(&state, activate(P1, &twice.id, json!({}))).0;
+        state = act(&state, activate(P1, &twice.id, json!({})));
+        state = act(&state, activate(P1, &twice.id, json!({})));
         assert_eq!(
             act_result(&state, activate(P1, &twice.id, json!({})))
                 .error
@@ -315,7 +300,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         card_mut(&mut state, &card.id)
             .memory
             .insert(PICK_KEY.to_string(), json!("alpha"));
-        let after = act(&state, activate(P1, &card.id, json!({ "ability": "gamma" }))).0;
+        let after = act(&state, activate(P1, &card.id, json!({ "ability": "gamma" })));
         assert_eq!(
             after.players.p1.backrow[0]
                 .as_ref()
@@ -328,7 +313,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         assert_eq!(why_not(&after, P1, &card.id, Some("alpha")).as_deref(), None);
 
         // Activating alpha in the same turn succeeds.
-        let after2 = act(&after, activate(P1, &card.id, json!({ "ability": "alpha" }))).0;
+        let after2 = act(&after, activate(P1, &card.id, json!({ "ability": "alpha" })));
         assert_eq!(
             after2.players.p1.backrow[0]
                 .as_ref()
@@ -351,9 +336,9 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     fn r384_uses_reset_on_the_controllers_next_turn_and_on_the_opponents_turn_nothing_can_be_activated() {
         let mut state = playing("reset");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
-        state = act(&state, activate(P1, &card.id, hero_target())).0;
+        state = act(&state, activate(P1, &card.id, hero_target()));
 
-        state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" }))).0;
+        state = act(&state, input(json!({ "type": "endTurn", "playerId": "p1" })));
         assert_eq!(state.active, P2);
         assert_eq!(
             why_not(&state, P1, &card.id, None).as_deref(),
@@ -366,12 +351,11 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
             Some("it is not your turn")
         );
 
-        state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" }))).0;
+        state = act(&state, input(json!({ "type": "endTurn", "playerId": "p2" })));
         assert_eq!(state.active, P1);
         assert_eq!(why_not(&state, P1, &card.id, None), None);
         assert_eq!(
             act(&state, activate(P1, &card.id, hero_target()))
-                .0
                 .players
                 .p2
                 .hero
@@ -452,8 +436,8 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         );
 
         // The tuned count is the one the refusal reads.
-        let mut next = act(&state, activate(P1, &once.id, hero_target())).0;
-        next = act(&next, activate(P1, &once.id, hero_target())).0;
+        let mut next = act(&state, activate(P1, &once.id, hero_target()));
+        next = act(&next, activate(P1, &once.id, hero_target()));
         assert_eq!(next.players.p2.hero.health, HERO_HEALTH - 2);
         assert_eq!(
             why_not(&next, P1, &once.id, None).as_deref(),
@@ -502,7 +486,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
             "activations".to_string(),
             json!({ "turn": turn, "count": ACTIVATE_UNLIMITED_CAP - 1 }),
         );
-        let next = act(&state, activate(P1, &twice.id, json!({}))).0;
+        let next = act(&state, activate(P1, &twice.id, json!({})));
         assert_eq!(
             why_not(&next, P1, &twice.id, None),
             Some(format!(
@@ -515,7 +499,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     fn r384_r78_leaving_the_field_resets_the_uses_so_a_card_bounced_and_played_again_starts_fresh() {
         let mut state = playing("bounced");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
-        state = act(&state, activate(P1, &card.id, hero_target())).0;
+        state = act(&state, activate(P1, &card.id, hero_target()));
         let mut used = state.players.p1.backrow[0].clone().expect("on the field");
         assert_eq!(
             why_not(&state, P1, &used.id, None).as_deref(),
@@ -625,7 +609,6 @@ mod r384_b3_2_rule_2_who_and_when {
         assert_eq!(why_not(&state, P1, &unit.id, None), None);
         assert_eq!(
             act(&state, activate(P1, &unit.id, json!({})))
-                .0
                 .players
                 .p1
                 .mana
@@ -691,7 +674,7 @@ mod r384_b3_2_rule_2_who_and_when {
         );
         assert_eq!(why_not(&state, P1, &card.id, None), None);
         assert_eq!(
-            notes(&act(&state, activate(P1, &card.id, json!({}))).0),
+            notes(&act(&state, activate(P1, &card.id, json!({})))),
             vec!["cast"]
         );
     }
@@ -715,7 +698,9 @@ mod r384_b3_2_rule_4_costs {
 
         state.players.p1.mana.current = MERCHANT_PRICE + 1;
         let hand = state.players.p1.hand.len();
-        let (after, events) = act(&state, activate(P1, &card.id, json!({})));
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(&state, activate(P1, &card.id, json!({})));
         assert_eq!(after.players.p1.mana.current, 1);
         assert_eq!(after.players.p1.hand.len(), hand + 1);
         assert!(matches_object(
@@ -735,7 +720,9 @@ mod r384_b3_2_rule_4_costs {
         );
 
         let pair = in_hand(&mut state, "fx-3", P1, 2);
-        let (after, events) = act(&state, activate(P1, &card.id, json!({})));
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(&state, activate(P1, &card.id, json!({})));
         assert_eq!(after.players.p1.hand.len(), 1);
         let discarded = instance_ids(&events_of_type(&events, GameEventType::Discarded));
         assert_eq!(discarded.len(), 1);
@@ -748,7 +735,9 @@ mod r384_b3_2_rule_4_costs {
      {
         let mut state = playing("tribute-self");
         let card = put(&mut state, &lockdown.id, slot(P1, Row::Backrow, 1), json!({}));
-        let (after, events) = act(&state, activate(P1, &card.id, json!({})));
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(&state, activate(P1, &card.id, json!({})));
         assert!(after.players.p1.backrow[0].is_none());
         assert!(ids_of(&after.players.p1.graveyard).contains(&card.id));
         assert_eq!(
@@ -766,7 +755,7 @@ mod r384_b3_2_rule_4_costs {
         let to_p2 = |tributes: Value| json!({ "targets": [{ "pick": "hero", "player": "p2" }], "tributes": tributes });
 
         // With no other unit, the card pays with itself: 5 damage, its Attack as it stood.
-        let alone = act(&state, activate(P1, &eater.id, to_p2(json!([eater.id])))).0;
+        let alone = act(&state, activate(P1, &eater.id, to_p2(json!([eater.id]))));
         assert_eq!(alone.players.p2.hero.health, HERO_HEALTH - 5);
         assert!(alone.players.p1.units[0].is_none());
 
@@ -802,7 +791,7 @@ mod r384_b3_2_rule_4_costs {
         let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
         let fed = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
         card_mut(&mut state, &fed.id).buffs = AttackHealth { attack: 3, health: 0 };
-        let (after, _) = act(
+        let after = act(
             &state,
             activate(
                 P1,
@@ -826,7 +815,9 @@ mod r384_b3_2_rule_4_costs {
         let mut state = playing("target-tributed");
         let eater = put(&mut state, &turtle.id, slot(P1, Row::Units, 1), json!({}));
         let fed = put(&mut state, &sentry.id, slot(P1, Row::Units, 2), json!({}));
-        let (after, events) = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &state,
             activate(
                 P1,
@@ -896,14 +887,12 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
                 &card.id,
                 json!({ "modes": ["damage"], "targets": [{ "pick": "hero", "player": "p2" }] }),
             ),
-        )
-        .0;
+        );
         assert_eq!(damaged.players.p2.hero.health, HERO_HEALTH - 2);
 
         let hand = state.players.p2.hand.len();
         assert_eq!(
             act(&state, activate(P1, &card.id, json!({ "modes": ["discard"] })))
-                .0
                 .players
                 .p2
                 .hand
@@ -918,8 +907,7 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
                 &card.id,
                 json!({ "modes": ["doom"], "targets": [{ "pick": "instance", "instanceId": enemy.id }] }),
             ),
-        )
-        .0;
+        );
         assert_eq!(
             doomed
                 .delayed
@@ -1045,7 +1033,9 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
             None
         );
 
-        let (after, events) = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &state,
             activate(P1, &card.id, json!({ "ability": "ping", "targets": [at_ghost] })),
         );
@@ -1104,7 +1094,7 @@ mod r384_r81_r90_b3_2_rules_5_8_choices_and_the_list {
             vec![Some("beta".to_string()), Some("gamma".to_string())]
         );
         assert_eq!(
-            notes(&act(&state, activate(P1, &card.id, json!({ "ability": "beta" }))).0),
+            notes(&act(&state, activate(P1, &card.id, json!({ "ability": "beta" })))),
             vec!["beta"]
         );
     }
@@ -1158,7 +1148,7 @@ mod r384_r113_r117_b3_2_and_s9_3_an_activation_across_a_prompt {
      {
         let mut state = playing("asker");
         let card = put(&mut state, &asker.id, slot(P1, Row::Backrow, 1), json!({}));
-        let paused = act(&state, activate(P1, &card.id, json!({}))).0;
+        let paused = act(&state, activate(P1, &card.id, json!({})));
 
         assert_eq!(notes(&paused), vec!["ask"]);
         assert_eq!(paused.pending.as_ref().map(|pending| pending.player_id), Some(P1));
@@ -1198,8 +1188,7 @@ mod r384_r113_r117_b3_2_and_s9_3_an_activation_across_a_prompt {
                 &eater.id,
                 json!({ "targets": [{ "pick": "hero", "player": "p2" }], "tributes": [fed.id] }),
             ),
-        )
-        .0;
+        );
 
         assert_eq!(notes(&paused), vec!["death"]);
         assert_eq!(paused.players.p2.hero.health, HERO_HEALTH);
@@ -1326,7 +1315,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
             json!([{ "type": "activate", "instanceId": card.id, "ability": "burn" }])
         );
 
-        let via_activate = act(&state, activate(P1, &card.id, json!({}))).0;
+        let via_activate = act(&state, activate(P1, &card.id, json!({})));
         assert_eq!(via_activate.players.p2.hero.health, HERO_HEALTH - 2);
         assert_eq!(
             via_activate.players.p1.mana.current,
@@ -1352,8 +1341,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
         let via_alias = act(
             &state,
             input(json!({ "type": "activatePower", "instanceId": card.id, "playerId": "p1" })),
-        )
-        .0;
+        );
         assert_eq!(hash_state(&via_alias), hash_state(&via_activate));
 
         // This call must return rather than panic.
@@ -1370,7 +1358,9 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
     fn r384_activate_power_on_a_card_with_an_activate_ability_uses_that_ability() {
         let mut state = playing("alias-ability");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
-        let (after, events) = act(
+        let ReduceResult {
+            state: after, events, ..
+        } = act_ok(
             &state,
             input(json!({
                 "type": "activatePower",
@@ -1418,7 +1408,7 @@ mod r384_r97_b3_2_and_s10_8_what_each_player_sees {
         assert!(lacks(&theirs["opponent"]["backrow"][0], "activations"));
         assert!(lacks(&theirs["opponent"]["units"][0], "activations"));
 
-        let used = act(&state, activate(P1, &once.id, hero_target())).0;
+        let used = act(&state, activate(P1, &once.id, hero_target()));
         assert!(matches_object(
             &json_of(view_for(&used, P1))["you"]["backrow"][0],
             &json!({
@@ -1432,7 +1422,7 @@ mod r384_r97_b3_2_and_s10_8_what_each_player_sees {
      {
         let mut state = playing("event");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));
-        let after = act(&state, activate(P1, &card.id, hero_target())).0;
+        let after = act(&state, activate(P1, &card.id, hero_target()));
         let seen = |viewer: PlayerId, at: &GameState| -> Value {
             view_for(at, viewer)
                 .events
@@ -1493,7 +1483,10 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         assert_eq!(ability_ids(&state, &card.id), vec!["again", "recall"]);
         assert_eq!(why_not(&state, P1, &card.id, Some("recall")), None);
         assert_eq!(
-            notes(&act(&state, activate(P1, &card.id, json!({ "ability": "recall" }))).0),
+            notes(&act(
+                &state,
+                activate(P1, &card.id, json!({ "ability": "recall" }))
+            )),
             vec!["recall:spell"]
         );
     }
@@ -1521,7 +1514,10 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
             vec![Some("recall#2".to_string())]
         );
         assert_eq!(
-            notes(&act(&state, activate(P1, &card.id, json!({ "ability": "recall#2" }))).0),
+            notes(&act(
+                &state,
+                activate(P1, &card.id, json!({ "ability": "recall#2" }))
+            )),
             vec!["recall:mine"]
         );
     }
@@ -1540,8 +1536,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
                 &card.id,
                 json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
             ),
-        )
-        .0;
+        );
         assert_eq!(after.players.p2.hero.health, HERO_HEALTH - ZAPPER_DAMAGE);
     }
 
@@ -1556,7 +1551,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         fuse_onto(&mut state, vec![other], &card);
         assert_eq!(ability_ids(&state, &card.id), vec!["again", "beta", "gamma"]);
         assert_eq!(
-            notes(&act(&state, activate(P1, &card.id, json!({ "ability": "beta" }))).0),
+            notes(&act(&state, activate(P1, &card.id, json!({ "ability": "beta" })))),
             vec!["beta"]
         );
     }
@@ -1574,8 +1569,8 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![other], &card);
         let copy = round_trip(&state);
-        let live = act(&state, activate(P1, &card.id, json!({ "ability": "recall" }))).0;
-        let restored = act(&copy, activate(P1, &card.id, json!({ "ability": "recall" }))).0;
+        let live = act(&state, activate(P1, &card.id, json!({ "ability": "recall" })));
+        let restored = act(&copy, activate(P1, &card.id, json!({ "ability": "recall" })));
         assert_eq!(notes(&restored), vec!["recall:spell"]);
         assert_eq!(hash_state(&restored), hash_state(&live));
     }
@@ -1587,7 +1582,7 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         let card = put(&mut state, &asker.id, slot(P1, Row::Backrow, 1), json!({}));
         let other = in_hand(&mut state, &endless.id, P1, 1).remove(0);
         fuse_onto(&mut state, vec![other], &card);
-        let paused = act(&state, activate(P1, &card.id, json!({ "ability": "ask" }))).0;
+        let paused = act(&state, activate(P1, &card.id, json!({ "ability": "ask" })));
 
         assert_eq!(notes(&paused), vec!["ask"]);
         assert_eq!(
@@ -1620,13 +1615,19 @@ mod r102_r384_a_fused_cards_abilities_each_in_its_ingredients_place {
         assert_eq!(ability_ids(&state, &card.id), vec!["tell", "tell#2"]);
         let before = round_trip(&state);
 
-        let paused = act(&state, activate(P1, &card.id, json!({ "ability": "tell#2" }))).0;
+        let paused = act(&state, activate(P1, &card.id, json!({ "ability": "tell#2" })));
         let copy = round_trip(&paused);
         let live = answer(&paused).0;
         assert_eq!(notes(&live), vec![format!("told:{HIGH_TELL}")]);
         assert_eq!(hash_state(&answer(&copy).0), hash_state(&live));
         assert_eq!(
-            notes(&answer(&act(&before, activate(P1, &card.id, json!({ "ability": "tell" }))).0).0),
+            notes(
+                &answer(&act(
+                    &before,
+                    activate(P1, &card.id, json!({ "ability": "tell" }))
+                ))
+                .0
+            ),
             vec![format!("told:{LOW_TELL}")]
         );
     }
@@ -1650,7 +1651,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         assert_eq!(ability_ids(&state, &card.id), vec!["zap", "recall"]);
 
         // Ability 1 ("recall") activated.
-        let state = act(&state, activate(P1, &card.id, json!({ "ability": "recall" }))).0;
+        let state = act(&state, activate(P1, &card.id, json!({ "ability": "recall" })));
         assert_eq!(notes(&state), vec!["recall:spell"]);
 
         // Ability 2 ("zap") is still usable in the same turn!
@@ -1670,8 +1671,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
                 &card.id,
                 json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
             ),
-        )
-        .0;
+        );
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - ZAPPER_DAMAGE);
 
         // Now both abilities have spent their uses for this turn.
@@ -1712,8 +1712,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         let state = act(
             &state,
             activate(P1, &card_inst.id, json!({ "ability": "recall" })),
-        )
-        .0;
+        );
         let live_card = card(&state, &card_inst.id);
         let views =
             jackioh_engine::subsystems::activate::activation_views_for(&state, P1, live_card).unwrap();
@@ -1745,8 +1744,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         let state = act(
             &state,
             activate(P1, &card_inst.id, json!({ "ability": "recall" })),
-        )
-        .0;
+        );
         let state = act(
             &state,
             activate(
@@ -1754,8 +1752,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
                 &card_inst.id,
                 json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
             ),
-        )
-        .0;
+        );
         let record = uses_record_after_refund(&state, card(&state, &card_inst.id), Some("recall"))
             .expect("a use to give back");
         assert_eq!(
@@ -1779,8 +1776,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
         let state = act(
             &state,
             activate(P1, &card_inst.id, json!({ "ability": "recall" })),
-        )
-        .0;
+        );
 
         // Verify recall was marked used on the card.
         assert_eq!(
@@ -1812,8 +1808,7 @@ mod r1751000_fused_activates_have_separate_cooldowns {
                 &card_inst.id,
                 json!({ "ability": "zap", "targets": [{ "pick": "hero", "player": "p2" }] }),
             ),
-        )
-        .0;
+        );
 
         // Both are now spent.
         assert_eq!(

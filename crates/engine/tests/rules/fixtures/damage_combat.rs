@@ -12,7 +12,6 @@
 
 #![allow(non_upper_case_globals)]
 
-use std::cell::Cell;
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
@@ -20,7 +19,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::{both, new_game, put, slot};
+use super::harness::{act, act_result, both, new_game, next_action, put, slot};
 
 /// TS `def(name, type, extra = {})`: a Core Common at cost 0 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
@@ -1016,39 +1015,6 @@ pub fn register() {
     register_scripts(merged);
 }
 
-thread_local! {
-    /// TS's module `let nonce = 0`, shared by `act_result` and every `recorder`.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-fn next_nonce() -> u32 {
-    NONCE.with(|nonce| {
-        let next = nonce.get() + 1;
-        nonce.set(next);
-        next
-    })
-}
-
-fn action_of(body: impl serde::Serialize, nonce: String) -> Action {
-    let input: ActionInput = json_as(serde_json::to_value(&body).expect("an action body is JSON"));
-    input.with_nonce(nonce)
-}
-
-/// `reduce` with the next `dc<n>` nonce. `body` is an `ActionInput` or its JSON.
-pub fn act_result(state: &GameState, body: impl serde::Serialize) -> ReduceResult {
-    let n = next_nonce();
-    reduce(state, &action_of(body, format!("dc{n}")))
-}
-
-/// `act_result`'s state; panics with the refusal's text.
-pub fn act(state: &GameState, body: impl serde::Serialize) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
-
 /// A game past both mulligans, in p1's first main phase, with the note log in p1's backrow lane 5.
 pub fn playing(seed: &str) -> GameState {
     let created = new_game(seed, None);
@@ -1129,10 +1095,9 @@ impl Recorder {
         &self.current
     }
 
-    /// Plays one action with the next `dcr<n>` nonce and records it; panics with a refusal's text.
+    /// Plays one action with the next nonce and records it; panics with a refusal's text.
     pub fn play(&mut self, body: impl serde::Serialize) -> ReduceResult {
-        let n = next_nonce();
-        let action = action_of(body, format!("dcr{n}"));
+        let action = next_action(body);
         let result = reduce(&self.current, &action);
         if let Some(error) = &result.error {
             panic!("{error}");

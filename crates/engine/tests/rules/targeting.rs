@@ -11,16 +11,12 @@
 //!
 //! Port of `packages/engine/test/targeting.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
-    events_json, events_of_type, in_hand, matches_object, new_game, put, sink_for, slot,
+    events_json, events_of_type, in_hand, live_mut, matches_object, new_game, next_nonce, put, sink_for, slot,
 };
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
@@ -41,11 +37,7 @@ fn game(seed: &str) -> GameState {
 }
 
 fn attempt(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    reduce(
-        state,
-        &Action::new(json_as(body), player_id, format!("pa-tg-{nonce}")),
-    )
+    reduce(state, &Action::new(json_as(body), player_id, next_nonce()))
 }
 
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> (GameState, Vec<GameEvent>) {
@@ -92,11 +84,6 @@ fn answer(state: &GameState, player_id: PlayerId, selection: Vec<Selection>) -> 
         player_id,
         json!({ "type": "answer", "choiceId": choice_id, "selection": selection }),
     )
-}
-
-/// The card as it stands in the state now (TS held the live object).
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).expect("the card is in the state")
 }
 
 /// `state.players[p].units[i]?.[0]`: the top card of a unit pile.

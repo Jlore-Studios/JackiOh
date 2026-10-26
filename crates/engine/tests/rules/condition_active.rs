@@ -20,7 +20,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{in_hand, json_of, matches_object, new_game, put, slot, spread};
+use crate::rules::fixtures::harness::{in_hand, json_of, live, matches_object, new_game, put, slot, spread};
 
 // Fixtures
 
@@ -305,11 +305,6 @@ fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("expected a card")
 }
 
-/// The instance as the state holds it now.
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("{id} is in no zone"))
-}
-
 fn own_hand(view: &PlayerView) -> Vec<CardView> {
     match &view.you.hand {
         HandView::Cards(cards) => cards.clone(),
@@ -465,7 +460,7 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
 
         assert!(condition_active(
             &state,
-            live(&state, &spell.id),
+            &live(&state, &spell.id),
             P1,
             ConditionZone::Hand
         ));
@@ -476,7 +471,7 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
             panic!("the hook was not called");
         };
         assert_eq!(ctx.state_addr, &state as *const GameState as usize);
-        assert_eq!(&ctx.self_, live(&state, &spell.id));
+        assert_eq!(&ctx.self_, &live(&state, &spell.id));
         assert_eq!(ctx.controller, P1);
         assert!(!ctx.radiant);
         assert_eq!(ctx.zone, ConditionZone::Hand);
@@ -485,7 +480,7 @@ mod r195_condition_active_in_the_viewer_s_hand_b1 {
         hooks.answer(Which::Base, false);
         assert!(!condition_active(
             &state,
-            live(&state, &spell.id),
+            &live(&state, &spell.id),
             P1,
             ConditionZone::Hand
         ));
@@ -611,7 +606,7 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
         state.active = P2;
         assert!(!condition_active(
             &state,
-            live(&state, &spell.id),
+            &live(&state, &spell.id),
             P1,
             ConditionZone::Hand
         ));
@@ -619,7 +614,7 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
         state.phase = Phase::Mulligan;
         assert!(!condition_active(
             &state,
-            live(&state, &spell.id),
+            &live(&state, &spell.id),
             P1,
             ConditionZone::Hand
         ));
@@ -627,7 +622,7 @@ mod r195_condition_active_stays_off_a_hand_card_outside_its_playable_window_b2 {
         open_mode_prompt(&mut state, P1);
         assert!(!condition_active(
             &state,
-            live(&state, &spell.id),
+            &live(&state, &spell.id),
             P1,
             ConditionZone::Hand
         ));
@@ -860,7 +855,7 @@ mod r195_condition_active_on_the_viewer_s_own_field_b3 {
 
         assert!(condition_active(
             &state,
-            live(&state, &unit.id),
+            &live(&state, &unit.id),
             P1,
             ConditionZone::Field
         ));
@@ -953,7 +948,7 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
 
         assert!(!condition_active(
             &state,
-            live(&state, &theirs.id),
+            &live(&state, &theirs.id),
             P1,
             ConditionZone::Field
         ));
@@ -1005,7 +1000,7 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
         }
         assert!(!condition_active(
             &state,
-            live(&state, &transient.id),
+            &live(&state, &transient.id),
             P1,
             ConditionZone::Field
         ));
@@ -1013,7 +1008,7 @@ mod r195_condition_active_is_the_viewer_s_alone_b4 {
         let transient_in_hand = one(in_hand(&mut state, &transient_unit().id, P1, 1));
         assert!(!condition_active(
             &state,
-            live(&state, &transient_in_hand.id),
+            &live(&state, &transient_in_hand.id),
             P1,
             ConditionZone::Hand
         ));
@@ -1078,7 +1073,7 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
         hooks.answer(Which::B, false);
         assert!(!condition_active(
             &state,
-            live(&state, &fused.id),
+            &live(&state, &fused.id),
             P1,
             ConditionZone::Hand
         ));
@@ -1108,7 +1103,7 @@ mod r196_a_fusion_s_condition_met_is_its_ingredients_hooks_or_ed {
         assert!(!glows(Some(&hand_card(&view_for(&state, P1), &without_hook.id))));
         assert!(!condition_active(
             &state,
-            live(&state, &without_hook.id),
+            &live(&state, &without_hook.id),
             P1,
             ConditionZone::Hand
         ));

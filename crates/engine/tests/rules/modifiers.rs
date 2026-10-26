@@ -13,7 +13,6 @@
 //! Surface contract: docs/v0.3.0/SURFACE.md §7.2 (delayed steps are the script's `delayed` hook).
 
 use std::cell::Cell;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::effects::{damage, draw, next_turn_mana, steal};
 use jackioh_engine::testkit::*;
@@ -21,7 +20,8 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::{indestructible, plain, trampler};
 use crate::rules::fixtures::harness::{
-    both, events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot, spread,
+    act, both, events_of_type, in_hand, json_of, matches_object, new_game, next_nonce, put, sink_for, slot,
+    spread,
 };
 
 // Local defs. Indices start above 1300 so they never collide with a fixture catalog or another test
@@ -190,22 +190,6 @@ fn mod_scripts() -> Vec<(String, CardScripts)> {
             }),
         ),
     ]
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn next_nonce() -> String {
-    format!("md{}", NONCE.fetch_add(1, Ordering::Relaxed) + 1)
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let mut action = body;
-    action["nonce"] = json!(next_nonce());
-    let result = reduce(state, &json_as::<Action>(action));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 fn end_turn(state: &GameState) -> ReduceResult {

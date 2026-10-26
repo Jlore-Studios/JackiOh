@@ -10,7 +10,7 @@ use crate::rules::fixtures::combat::{
     armoured, big_body, big_dfender, cleaver, indestructible, lifestealer, plain, poisonous, shielded,
     trample_lifesteal, trampler,
 };
-use crate::rules::fixtures::harness::{events_of_type, json_of, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, json_of, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 /// TS `newGame()`: the harness's default seed.
@@ -31,13 +31,6 @@ fn on_unit(id: &str) -> Aim<'_> {
 
 fn on_hero(player: PlayerId) -> Aim<'static> {
     Aim::Hero(player)
-}
-
-/// The instance as the state holds it now (TS reads its live object).
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("{id} is in no zone"))
 }
 
 /// One damage instance, returning the amount actually dealt.

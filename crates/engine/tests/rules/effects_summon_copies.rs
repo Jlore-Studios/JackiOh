@@ -8,7 +8,7 @@
 use jackioh_engine::effects::{damage, summon, summon_copy, summon_random};
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{both, events_of_type, new_game, put, slot, spread};
+use super::fixtures::harness::{both, events_of_type, live, live_mut, new_game, put, slot, spread};
 
 // Fixture cards.
 
@@ -157,16 +157,6 @@ fn keyword_kinds_at(state: &GameState, lane: i32) -> Vec<KeywordKind> {
     unit_in(state, lane, PlayerId::P1)
         .map(|card| card.granted_keywords.iter().map(Keyword::kind).collect())
         .unwrap_or_default()
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn summoned_lanes(events: &[GameEvent]) -> Vec<i32> {

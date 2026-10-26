@@ -3,8 +3,6 @@
 //!
 //! Port of nothing shipped: no shipped card loses a refresh or owes a turn.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{gain_mana, lose_refreshes, next_turn_mana, take_extra_turn};
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
@@ -12,23 +10,7 @@ use jackioh_engine::script::{Effect, EngineSink};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::new_game;
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_full(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    reduce(state, &input.with_nonce(format!("extra{nonce}")))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_full(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
+use crate::rules::fixtures::harness::{act, act_result, new_game};
 
 /// Past both mulligans, in p1's main phase on turn 1, with no automatic turn end on either seat
 /// (R82 would otherwise run a zero-mana turn on by itself).
@@ -201,7 +183,7 @@ mod r845_extra_turn_basics {
         let library = state.players.p1.library.len();
         run(&mut state, take_extra_turn(json_as(json!({}))), as_p1());
 
-        let result = act_full(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let result = act_result(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert!(result.error.is_none());
         state = result.state;
         assert_eq!(state.active, PlayerId::P1);

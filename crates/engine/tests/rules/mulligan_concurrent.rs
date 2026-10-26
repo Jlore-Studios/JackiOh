@@ -12,36 +12,20 @@
 //!
 //! Port of `packages/engine/test/mulligan-concurrent.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::effects::{add_to_hand, discard_random};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{new_game, setup_catalog};
+use crate::rules::fixtures::harness::{act, new_game, setup_catalog};
 use crate::rules::fixtures::scripts::{cn_virus, hinder};
 
 const SEATS: [PlayerId; 2] = [P1, P2];
 
-/// TS's module `let counter`.
-static COUNTER: AtomicU32 = AtomicU32::new(0);
-
 /// An `ActionInput` from its TS object literal.
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let counter = COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
-    let action_type = body.body.action_type();
-    let player = body.player_id;
-    let result = reduce(state, &body.with_nonce(format!("mc-{counter}")));
-    if let Some(error) = &result.error {
-        panic!("{action_type} for {player}: {error}");
-    }
-    result.state
 }
 
 /// A random subset of the seat's offered cards, drawn from the test's own stream.

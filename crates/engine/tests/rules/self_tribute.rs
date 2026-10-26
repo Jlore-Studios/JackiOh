@@ -11,7 +11,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::unit_def;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, live, live_mut, new_game, put, slot};
 
 fn def(id: &str, type_: &str, index: u32) -> CardDef {
     json_as(json!({
@@ -130,15 +130,6 @@ impl Bench {
     }
 }
 
-/// The card as it stands in the state now (TS held the live object).
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).expect("the card is still in the game")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).expect("the card is still in the game")
-}
-
 fn zone_of(state: &GameState, card: &CardInstance) -> ZoneName {
     live(state, card).zone.z()
 }
@@ -170,8 +161,8 @@ mod r403_section_10_4_an_aura_that_sets_attack_applies_after_every_other_layer_c
         );
         live_mut(&mut state, &enemy).buffs.attack += 5;
 
-        assert_eq!(unit_view(&state, live(&state, &enemy)).attack, 0);
-        assert_eq!(unclamped_attack(&state, live(&state, &enemy)), 0);
+        assert_eq!(unit_view(&state, &live(&state, &enemy)).attack, 0);
+        assert_eq!(unclamped_attack(&state, &live(&state, &enemy)), 0);
         // Its own side is untouched by it.
         let mine = put(
             &mut state,
@@ -179,7 +170,7 @@ mod r403_section_10_4_an_aura_that_sets_attack_applies_after_every_other_layer_c
             slot(PlayerId::P1, Row::Units, 1),
             Default::default(),
         );
-        assert_eq!(unit_view(&state, live(&state, &mine)).attack, 4);
+        assert_eq!(unit_view(&state, &live(&state, &mine)).attack, 4);
     }
 }
 
@@ -273,10 +264,10 @@ mod r77_r102_r403_a_fusion_keeps_both_additions_of_its_ingredients {
 
         assert_eq!(fused.map(|card| card.id), Some(target.id.clone()));
         // R1487000: face-down, the fused aura sleeps; revealed, it zeroes their Attack.
-        assert_eq!(unit_view(&b.state, live(&b.state, &enemy)).attack, 4);
+        assert_eq!(unit_view(&b.state, &live(&b.state, &enemy)).attack, 4);
         let mut shown = b.state.clone();
         live_mut(&mut shown, &target).revealed = Some(true);
-        assert_eq!(unit_view(&shown, live(&shown, &enemy)).attack, 0);
+        assert_eq!(unit_view(&shown, &live(&shown, &enemy)).attack, 0);
         // R403's self-Tribute is read face-down.
         state_check(&mut b.sink());
         assert_eq!(zone_of(&b.state, &target), ZoneName::Field);

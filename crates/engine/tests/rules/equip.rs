@@ -7,8 +7,8 @@ use jackioh_engine::layers::unit_view;
 use jackioh_engine::play_choices::equip_host_at;
 use jackioh_engine::testkit::*;
 
-use super::fixtures::field::{act, act_result, flush};
-use super::fixtures::harness::{events_of_type, in_hand, put, slot};
+use super::fixtures::field::flush;
+use super::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
 
 // ---------------------------------------------------------------------------
 // Fixture cards.

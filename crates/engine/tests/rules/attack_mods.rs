@@ -17,7 +17,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{big_body, cleaver, plain, trampler};
 use crate::rules::fixtures::combat_judge::{combat_judge_game, herald, herald_poison};
-use crate::rules::fixtures::harness::{put, sink_for, slot};
+use crate::rules::fixtures::harness::{live, put, sink_for, slot};
 
 /// A game at turn 4, P1's main phase, with the combat-judge fixtures registered.
 fn board(seed: &str) -> GameState {
@@ -30,11 +30,6 @@ fn board(seed: &str) -> GameState {
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-/// The card as it stands in `state` now, owned.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    by_id(state, id).clone()
 }
 
 /// TS `sinkFor(state)`: run `f` on a sink over `state` and hand back what it emitted.
