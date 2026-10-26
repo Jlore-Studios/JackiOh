@@ -4,9 +4,10 @@
 Glitch, a hidden token), Classic+ (78 cards and 38 tokens), Meditative (102 cards and 30 tokens,
 spec §8.8) and Meditative+ (26 cards and 6 tokens, spec §8.9, shipped in v0.3.15 by #1187), 396 cards
 and 86 tokens in all. A set the catalog holds before it ships, as Meditative was while issue #496 built
-it and Meditative+ while issue #1173 did (R1178000), is in no pool that names no set, no deck and no
-random deck until the patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
-`preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
+it, Meditative+ while issue #1173 did (R1178000), and Stinkyscape is while issue #1836 builds it (175 cards,
+the Dormant Starship and 52 tokens, spec §8.10, R1857000), is in no pool that names no set, no deck and no
+random deck until the patch that lists it in `SHIPPED_SETS` (R1420), counts toward none of the totals above,
+and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
@@ -33,7 +34,8 @@ crates/cards
 │   ├── classic/        one Classic card per file
 │   ├── classic_plus/   one Classic+ card or token per file
 │   ├── meditative/     one Meditative card or token per file (shipped in v0.3.5, R1420)
-│   └── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
+│   ├── meditative_plus/ one Meditative+ card or token per file (shipped in v0.3.15, R1178000)
+│   └── stinkyscape/    one Stinkyscape card or token per file (held until #1884, R1857000)
 └── tests/cards.rs      the cross-card tests: tests/cross/<x>.rs (catalog, query, references, radiant
                         standard, flavour, condition_active, preview, invariants, …)
 ```
@@ -281,6 +283,7 @@ cargo test -p jackioh-cards --lib -- scripts::classic::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::classic_plus::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::meditative::  # CI shard (#882)
 cargo test -p jackioh-cards --lib -- scripts::meditative_plus::  # the Meditative+ cards (Core's shard runs them too, its skips not naming them)
+cargo test -p jackioh-cards --lib -- scripts::stinkyscape::  # the held Stinkyscape cards (Core's shard runs them too)
 cargo test -p jackioh-cards --test cards        # the cross-card tests only
 cargo clippy -p jackioh-cards --all-targets -- -D warnings
 ```

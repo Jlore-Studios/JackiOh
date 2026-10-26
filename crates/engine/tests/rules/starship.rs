@@ -732,3 +732,39 @@ mod r1852007_a_stack_card_onto_the_dormant_starship {
         assert!(is_dormant_starship(s.card(&ship.id)));
     }
 }
+
+/// R1857001: the Dormant Starship is a card, not a token (R1852000), and still in no pool and no deck,
+/// as R674 keeps Glitch out of every pool: only a Starship Piece's death summons it. A pool that names
+/// it by id reaches it. Proved on this file's fixture hull, a shipped Core card under the engine's id.
+mod r1857001_the_dormant_starship_is_in_no_pool_and_no_deck {
+    use super::*;
+
+    fn pool(args: Value) -> Vec<String> {
+        query(&json_as(args)).iter().map(|def| def.id.clone()).collect()
+    }
+
+    #[test]
+    fn r1857001_the_dormant_starship_is_in_no_pool_and_no_deck() {
+        register_starship_fixtures();
+        assert_eq!(hull.id, DORMANT_STARSHIP_DEF_ID);
+        assert!(!hull.is_token(), "it is no token (R1852000)");
+        for args in [
+            json!({}),
+            json!({ "type": "Unit" }),
+            json!({ "set": "Core", "type": "Unit" }),
+            json!({ "cost": 3 }),
+            json!({ "withTokens": true }),
+            json!({ "everySet": true }),
+            json!({ "excludeDefId": booster.id }),
+        ] {
+            assert!(!pool(args.clone()).contains(&hull.id), "{args}");
+        }
+        // The pieces are cards like any other.
+        assert!(pool(json!({ "type": "Unit" })).contains(&booster.id));
+        assert_eq!(pool(json!({ "defId": [hull.id] })), vec![hull.id.clone()]);
+        assert!(made_by_a_rule(&hull));
+        assert!(!made_by_a_rule(&booster));
+        assert!(!deckable(&hull));
+        assert!(deckable(&booster));
+    }
+}
