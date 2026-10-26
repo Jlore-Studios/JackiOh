@@ -2334,7 +2334,7 @@
       }
     },
     "1971": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "at": "2026-10-26T08:39:32Z",
@@ -2352,16 +2352,16 @@
       "kind": "revise",
       "last_findings": [],
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-10-26T08:40:53Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "40292824086",
+      "run_id": "pending:3dea6844-1793004181",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-26T08:31:10Z",
+      "started_at": "2026-10-26T08:43:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -2630,9 +2630,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T08:42:49Z",
+    "at": "2026-10-26T08:43:52Z",
     "url": "",
-    "what": "revise #1960 on claude-4"
+    "what": "revise #1971 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T08:28:36Z",
