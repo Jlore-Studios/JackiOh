@@ -118,7 +118,8 @@ class LearnLaneTests(unittest.TestCase):
         names = {"fit": "retrain and screen (training/ml/retrain.sh)",
                  "gate": "the gate on main as it is now (training/ml/learn-promote.sh)",
                  "deliver": "deliver (push ai/learn, open its pull request, auto-merge)",
-                 "moving": "main kept moving, so another run on this export"}
+                 "moving": "main kept moving, so another run on this export",
+                 "waits": "a promotion still open, so this one waits"}
         return [{"name": "plan", "conclusion": "success"},
                 {"name": "export / plan the shards", "conclusion": "success"},
                 {"name": "retrain, screen, gate", "conclusion": "success",
@@ -144,6 +145,12 @@ class LearnLaneTests(unittest.TestCase):
         self.assertEqual(outcome(self.retrain(fit="success", gate="success", deliver="skipped",
                                               moving="success")),
                          "🔁 main kept moving: another run on the export")
+        # A pass while the lane's last promotion is still open waits behind it, as its artifact.
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", waits="success",
+                                              deliver="skipped", moving="skipped")),
+                         "⏸️ passed, behind a promotion still open: kept as its artifact")
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", waits="skipped",
+                                              deliver="success")), "🎉 promoted")
         # A run from before the lane gated on the newest main ("the gate, once") reads the same.
         old = self.retrain(fit="success")
         old[2]["steps"].append({"name": "the gate, once (promote --lane learn)", "conclusion": "skipped"})
@@ -176,13 +183,14 @@ class LearnLaneTests(unittest.TestCase):
                                                  "conclusion": "skipped"}], "cancelled"),
                          "⏹️ cancelled")
 
-    def test_the_next_run_is_the_next_monday_at_0623_utc(self):
-        wednesday = NIGHT  # 2026-09-30 03:00 UTC
-        self.assertEqual(dashboard.next_learn_run(wednesday).isoformat(), "2026-10-05T06:23:00+00:00")
-        monday_after = NIGHT.replace(day=28, hour=7)
-        self.assertEqual(dashboard.next_learn_run(monday_after).isoformat(), "2026-10-05T06:23:00+00:00")
-        monday_before = NIGHT.replace(day=28, hour=5)
-        self.assertEqual(dashboard.next_learn_run(monday_before).isoformat(), "2026-09-28T06:23:00+00:00")
+    def test_the_next_scheduled_run_is_the_next_0623_utc(self):
+        """Each run starts the next as it ends (#1976); the daily schedule starts the lane again."""
+        before = NIGHT  # 2026-09-30 03:00 UTC
+        self.assertEqual(dashboard.next_learn_run(before).isoformat(), "2026-09-30T06:23:00+00:00")
+        after = NIGHT.replace(hour=7)
+        self.assertEqual(dashboard.next_learn_run(after).isoformat(), "2026-10-01T06:23:00+00:00")
+        at = NIGHT.replace(hour=6, minute=23)
+        self.assertEqual(dashboard.next_learn_run(at).isoformat(), "2026-10-01T06:23:00+00:00")
 
     def test_the_section_says_what_is_on_main_its_pull_request_and_its_runs(self):
         gh = FakeGitHub()
@@ -200,7 +208,7 @@ class LearnLaneTests(unittest.TestCase):
                       "parent.", body)
         self.assertIn("▶️ [#1477](https://github.com/x/y/pull/1477) open since", body)
         self.assertIn("CI decides, and auto-merge lands it.", body)
-        self.assertIn("- **Next scheduled run:** Mon Oct 05 01:23 (Central).", body)
+        self.assertIn("- **Next scheduled run:** Wed Sep 30 01:23 (Central).", body)
         self.assertIn("| 🎉 promoted | [20](https://github.com/x/y/actions/runs/31) |", body)
         self.assertIn("| 🔄 running | [22]", body)
         # A watch run (CI on the lane's pull request) is not one of the lane's runs.

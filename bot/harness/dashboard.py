@@ -675,8 +675,9 @@ def _took(ctx: Context, run: dict[str, Any], created: datetime) -> str:
 #: the lane's pull request and its runs.
 LEARN_WORKFLOW = "learn.yml"
 LEARN_BRANCH = "ai/learn"
-#: learn.yml's schedule, "23 6 * * 1": Mondays (weekday 0) at 06:23 UTC.
-LEARN_SCHEDULE = (0, 6, 23)
+#: learn.yml's schedule, "23 6 * * *": every day at 06:23 UTC. Each run starts the next as it ends
+#: (its `next` job), so the schedule only starts the lane again when that chain stops.
+LEARN_SCHEDULE = (6, 23)
 #: learn.yml's LEARN_PR_STALE_HOURS: a lane pull request open this long is closed by the next run.
 LEARN_PR_STALE = timedelta(hours=48)
 LEARN_ROWS = 5
@@ -684,10 +685,9 @@ LEARN_ROWS = 5
 
 def next_learn_run(now: datetime) -> datetime:
     """When learn.yml's schedule next fires (GitHub fires schedules late; never early)."""
-    weekday, hour, minute = LEARN_SCHEDULE
+    hour, minute = LEARN_SCHEDULE
     at = now.astimezone(timezone.utc).replace(hour=hour, minute=minute, second=0, microsecond=0)
-    at += timedelta(days=(weekday - at.weekday()) % 7)
-    return at if at > now else at + timedelta(days=7)
+    return at if at > now else at + timedelta(days=1)
 
 
 #: A job that ended this way with no runner was never taken: the PC was off, asleep or busy for the
@@ -725,6 +725,7 @@ def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
         return export_failed if lost else "❌ the export failed"
     fit, gate = named(steps, "retrain and screen"), named(steps, "the gate")
     deliver, moving = named(steps, "deliver"), named(steps, "main kept moving")
+    waits = named(steps, "a promotion still open")
     if fit is not None and fit.get("conclusion") == "failure":
         return "❌ the retrain broke"
     if gate is None or gate.get("conclusion") == "skipped":
@@ -735,6 +736,8 @@ def learn_outcome(run: dict[str, Any], jobs: list[dict[str, Any]]) -> str:
         return "🎉 promoted"
     if deliver is not None and deliver.get("conclusion") == "failure":
         return "❌ passed, but could not open its pull request (LEARN_LANE_TOKEN?)"
+    if waits is not None and waits.get("conclusion") == "success":
+        return "⏸️ passed, behind a promotion still open: kept as its artifact"
     if moving is not None and moving.get("conclusion") == "success":
         return "🔁 main kept moving: another run on the export"
     return "gated out"
@@ -744,10 +747,11 @@ def learn_lane(ctx: Context) -> list[str]:
     """The learn lane's section: the AI on main, the lane's pull request, the next scheduled run,
     and its last runs with how each ended. Each part says so when GitHub cannot be read."""
     lines = ["## 🧠 The learn lane", "",
-             "<sub>`learn.yml` retrains the learned evaluation on fresh self-play every week on "
-             "the owner's PC (the local runner, only while the PC is idle: a run takes about 40 "
-             "hours of it) and promotes it through the gate, with no model in the loop. It closes "
-             "a stuck promotion, and gates again when main moves (training/learn.md, Running "
+             "<sub>`learn.yml` retrains the learned evaluation on fresh self-play on the owner's "
+             "PC, one run after another (the local runner, only while the PC is idle: a run takes "
+             "about 40 hours of it), files each export's games into the card statistics, and "
+             "promotes the network through the gate, with no model in the loop. It closes a stuck "
+             "promotion, and gates again when main moves (training/learn.md, Running "
              "unattended).</sub>", ""]
     try:
         text, _ = ctx.gh.get_file("crates/ai/generation.json", "main")
@@ -831,9 +835,10 @@ WORKFLOWS = {
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
     "claude-wake.yml": "starts each Claude account's 5-hour session at 06:00 Central",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
+    "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
     "hygiene-delete.yml": "deletes the branches a person ticked in the hygiene issue",
     "hygiene.yml": "weekly: the hygiene issues for Squishy",
-    "learn.yml": "the learn lane: weekly self-play, retrain and gate of the learned evaluation",
+    "learn.yml": "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
     "lock-conversations.yml": "locks every conversation to collaborators",
     "patches-ship.yml": "ships the pending card-patch fragments after a merge",
     "pr-title.yml": "holds a pull request's title to the convention",
@@ -860,7 +865,8 @@ HOSTED_ROLES = (
     ("windows-2022", "GitHub's Windows", "`voice`'s Windows SAPI lines"),
 )
 LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<time>`, only while "
-              "the PC is otherwise idle", "`learn`, every job of it, and `selfplay` exports")
+              "the PC is otherwise idle", "`learn`, every job of it, back to back, `selfplay` "
+              "exports and `gather`")
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
               "machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
