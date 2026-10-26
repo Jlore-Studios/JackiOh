@@ -4,6 +4,7 @@
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{spell_def, token_def, unit_def, vanilla_catalog, vanilla_deck};
+use crate::rules::fixtures::harness::live;
 
 fn rush_token() -> CardDef {
     token_def("rush", [Tag::Token])
@@ -41,11 +42,6 @@ fn game() -> GameState {
         catalog: Some(catalog()),
         ..Default::default()
     })
-}
-
-/// The card under this id as it stands in the state (TS held the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn put(state: &mut GameState, def_id: &str, at: ZoneSlot, stack: bool) -> CardInstance {

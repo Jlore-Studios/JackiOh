@@ -4,39 +4,16 @@
 //! and, Animated, animates; it turns face-up at its first fuse (R33). Through fixture scripts; the
 //! real card's test covers the same cases again.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::subsystems::twice_forward::{TWICE_FORWARD_PLAYS_KEY, twice_forward_plays};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, round_trip, slot};
+use crate::rules::fixtures::harness::{
+    act, act_ok, events_of_type, in_hand, new_game, put, round_trip, slot,
+};
 use crate::rules::fixtures::twice_forward::{
     CRIER_DAMAGE, TURNER_DAMAGE, TWICE_FORWARD_SCRIPTS, caster, crier, forward, self_exiler, spell, trap,
     turner, twice_forward_catalog,
 };
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// What `act` hands back: the state and the events of the action.
-struct Acted {
-    state: GameState,
-    events: Vec<GameEvent>,
-}
-
-/// `body` is the action literal; the nonce is added here.
-fn act(state: &GameState, body: Value) -> Acted {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("tf{nonce}"));
-    let result = reduce(state, &json_as::<Action>(action));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    Acted {
-        state: result.state,
-        events: result.events,
-    }
-}
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
@@ -64,8 +41,7 @@ fn opponents_turn(seed: &str, radiant: bool) -> OpponentsTurn {
         state = act(
             &state,
             json!({ "type": "mulligan", "keep": hand_ids(&state, player), "playerId": player }),
-        )
-        .state;
+        );
     }
     state.players.p1.auto_end_turn = Some(false);
     state.players.p2.auto_end_turn = Some(false);
@@ -83,14 +59,13 @@ fn opponents_turn(seed: &str, radiant: bool) -> OpponentsTurn {
             "zone": { "row": "backrow", "lane": 2 },
             "playerId": "p1",
         }),
-    )
-    .state;
+    );
     // R227: a card set face-down takes a fresh id.
     let trap_id = state.players.p1.backrow[1]
         .as_ref()
         .map(|card| card.id.clone())
         .unwrap_or_default();
-    state = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
+    state = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
     state.players.p2.mana.current = 10;
     OpponentsTurn { state, trap_id }
 }
@@ -112,7 +87,7 @@ fn play(mut state: GameState, player: PlayerId, def_id: &str, zone: Option<(Row,
     if let Some((row, lane)) = zone {
         body["zone"] = json!({ "row": row, "lane": lane });
     }
-    let acted = act(&state, body);
+    let acted = act_ok(&state, body);
     Played {
         state: acted.state,
         events: acted.events,
@@ -354,7 +329,7 @@ mod c_plus_c74s_field_trap_r425 {
     #[test]
     fn r425_its_own_controllers_plays_never_count() {
         let OpponentsTurn { state, trap_id } = opponents_turn("own", false);
-        let mut next = act(&state, json!({ "type": "endTurn", "playerId": "p2" })).state;
+        let mut next = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
         next.players.p1.mana.current = 10;
         next = play(next, PlayerId::P1, &spell().id, None).state;
         next = play(next, PlayerId::P1, &spell().id, None).state;
@@ -371,10 +346,10 @@ mod c_plus_c74s_field_trap_r425 {
         assert_ne!(trap_of(&next, &trap_id).def_id, forward().id);
         let p2_before = next.players.p2.hero.health;
         let p1_before = next.players.p1.hero.health;
-        next = act(&next, json!({ "type": "endTurn", "playerId": "p2" })).state;
+        next = act(&next, json!({ "type": "endTurn", "playerId": "p2" }));
         // p2's own two Turners hit p1 at p2's end of turn; the fused one waits for p1's end of turn.
         assert_eq!(next.players.p1.hero.health, p1_before - 2 * TURNER_DAMAGE);
-        next = act(&next, json!({ "type": "endTurn", "playerId": "p1" })).state;
+        next = act(&next, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(next.players.p2.hero.health, p2_before - TURNER_DAMAGE);
 
         let cry = opponents_turn("cry", false);
@@ -463,8 +438,7 @@ mod c_plus_c74s_field_trap_r425 {
                 "instanceId": a.map(|card| card.id).unwrap_or_default(),
                 "playerId": "p2",
             }),
-        )
-        .state;
+        );
         let again = act(
             &round,
             json!({
@@ -472,8 +446,7 @@ mod c_plus_c74s_field_trap_r425 {
                 "instanceId": b.map(|card| card.id).unwrap_or_default(),
                 "playerId": "p2",
             }),
-        )
-        .state;
+        );
         assert_eq!(hash_state(&again), hash_state(&live));
         assert_eq!(twice_forward_plays(trap_of(&again, &trap_id)), 3);
     }

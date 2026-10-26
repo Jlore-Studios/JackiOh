@@ -6,7 +6,6 @@
 
 #![allow(non_upper_case_globals)]
 
-use std::cell::Cell;
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
@@ -15,7 +14,7 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-use super::harness::{both, new_game};
+use super::harness::{act, both, new_game};
 
 /// A Core Common at cost 1 whose faces print `name`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
@@ -494,34 +493,6 @@ pub fn field_game(seed: &str) -> GameState {
     merged.extend(FIELD_SCRIPTS.clone());
     register_scripts(merged);
     state
-}
-
-thread_local! {
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-fn next_nonce() -> u32 {
-    NONCE.with(|nonce| {
-        let next = nonce.get() + 1;
-        nonce.set(next);
-        next
-    })
-}
-
-/// `reduce` with the next `fd<n>` nonce. `body` is an `ActionInput` or its JSON.
-pub fn act_result(state: &GameState, body: impl serde::Serialize) -> ReduceResult {
-    let n = next_nonce();
-    let input: ActionInput = json_as(serde_json::to_value(&body).expect("an action body is JSON"));
-    reduce(state, &input.with_nonce(format!("fd{n}")))
-}
-
-/// `act_result`'s state; panics with the refusal's text.
-pub fn act(state: &GameState, body: impl serde::Serialize) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// Past both mulligans, in p1's main phase of turn 1, with every card of the opening hands kept.

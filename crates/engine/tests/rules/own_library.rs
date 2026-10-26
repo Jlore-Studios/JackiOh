@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::{radiant_chance, set_radiant, shuffle_into, swap_library, transform};
 
 use crate::rules::fixtures::catalog::{spell_def, unit_def, vanilla_deck};
-use crate::rules::fixtures::harness::{new_game, set_library};
+use crate::rules::fixtures::harness::{new_game, run_effect, set_library};
 
 // Three cards that sort by cost, then name, then id, whatever order they lie in (R310).
 fn cheap() -> CardDef {
@@ -81,26 +81,6 @@ fn game(seed: &str) -> GameState {
     state.active = P1;
     state.phase = Phase::Main;
     state
-}
-
-/// Apply one effect the way `resolve.ts` does, for `controller`, and hand back its events.
-fn run(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(controller),
-                ..HookOptions::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 fn list_of(state: &GameState, viewer: PlayerId) -> LibraryView {
@@ -353,7 +333,7 @@ mod r311_what_the_owner_was_shown_going_in {
         let mut state = game("own-library-shuffle");
         set_library(&mut state, P1, &[alpha().id, beta().id]);
         // p2 resolves #90's effect: a Radiant virus into p1's library (the Radiant face of the Injection).
-        let events = run(
+        let events = run_effect(
             &mut state,
             shuffle_into(json_as(
                 json!({ "defId": virus().id, "count": 1, "player": "enemy", "radiant": true }),
@@ -408,12 +388,12 @@ mod r311_what_the_owner_was_shown_going_in {
         let before = list_of(&state, P1);
 
         // #28's pick and #42's roll, as the verbs the cards use.
-        run(
+        run_effect(
             &mut state,
             set_radiant(json_as(json!({ "instanceId": first.id }))),
             P1,
         );
-        run(
+        run_effect(
             &mut state,
             radiant_chance(json_as(json!({ "zone": "library", "chance": 1 }))),
             P1,
@@ -435,7 +415,7 @@ mod r312_cards_the_owner_was_never_shown {
         let mut state = game("own-library-swap");
         set_library(&mut state, P1, &[alpha().id, beta().id, cheap().id]);
         set_library(&mut state, P2, &[legendary().id, virus().id]);
-        run(&mut state, swap_library(), P1);
+        run_effect(&mut state, swap_library(), P1);
 
         assert_eq!(
             list_of(&state, P1),
@@ -461,7 +441,7 @@ mod r312_cards_the_owner_was_never_shown {
         }
 
         // A card that goes in openly afterwards is known again; the swapped ones stay unknown.
-        run(
+        run_effect(
             &mut state,
             shuffle_into(json_as(json!({ "defId": alpha().id, "count": 1 }))),
             P1,
@@ -474,7 +454,7 @@ mod r312_cards_the_owner_was_never_shown {
             }
         );
         // Swapped back, a library is not known again: what its first owner was shown went with it.
-        run(&mut state, swap_library(), P1);
+        run_effect(&mut state, swap_library(), P1);
         assert_eq!(
             list_of(&state, P1),
             LibraryView {
@@ -491,7 +471,7 @@ mod r312_cards_the_owner_was_never_shown {
             .into_iter()
             .next()
             .expect("library");
-        run(
+        run_effect(
             &mut state,
             transform(json_as(
                 json!({ "instanceId": first.id, "defId": legendary().id, "radiant": true }),
@@ -556,7 +536,7 @@ mod r1106_a_card_shuffled_in_unseen_is_unknown_to_its_owner {
     fn r1106_an_unseen_shuffle_in_counts_as_unknown_and_an_open_one_beside_it_is_listed() {
         let mut state = game("own-library-unseen");
         set_library(&mut state, P1, &[alpha().id, beta().id]);
-        let events = run(
+        let events = run_effect(
             &mut state,
             shuffle_into(json_as(
                 json!({ "defId": virus().id, "count": 1, "radiant": true, "unseen": true }),
@@ -588,7 +568,7 @@ mod r1106_a_card_shuffled_in_unseen_is_unknown_to_its_owner {
         }
 
         // An open shuffle-in beside it is listed as ever (R311).
-        run(
+        run_effect(
             &mut state,
             shuffle_into(json_as(json!({ "defId": virus().id, "count": 1 }))),
             P1,
@@ -611,7 +591,7 @@ mod r1106_a_card_shuffled_in_unseen_is_unknown_to_its_owner {
         let mut state = game("own-library-unseen-full");
         let full: Vec<String> = (0..LIBRARY_CAP).map(|_| alpha().id).collect();
         set_library(&mut state, P1, &full);
-        let events = run(
+        let events = run_effect(
             &mut state,
             shuffle_into(json_as(
                 json!({ "defId": virus().id, "count": 1, "unseen": true }),

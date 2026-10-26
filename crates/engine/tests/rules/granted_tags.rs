@@ -18,7 +18,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, json_of, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, live, put, run_effect, set_library, slot};
 use crate::rules::fixtures::instance_data::{body, brittle_trap, instance_game};
 
 const P1: PlayerId = PlayerId::P1;
@@ -34,32 +34,11 @@ fn game(seed: &str) -> GameState {
 
 /// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    let mut events = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(P1),
-                ..HookOptions::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
+    run_effect(state, effect, P1)
 }
 
 fn grant_id(id: &str) -> Effect {
     grant_tag(json_as(json!({ "instanceId": id, "tag": "CN" })))
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {

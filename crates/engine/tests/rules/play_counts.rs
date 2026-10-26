@@ -7,15 +7,10 @@
 //! card each player played (AI Autocomplete: Traps are set face-down and never count, AI generated cards
 //! are passed over). Casts count (R70); countered plays never (R448).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{in_hand, new_game, next_nonce, put, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
-
-/// TS's module `let nonce`: unique across the tests, which run on parallel threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn game(seed: &str) -> GameState {
     let mut ready = begin_game(&with_play_a(new_game(seed, None))).state;
@@ -36,10 +31,9 @@ fn game(seed: &str) -> GameState {
 
 /// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
     body["playerId"] = json!(player_id);
-    body["nonce"] = json!(format!("pa-pc-{nonce}"));
+    body["nonce"] = json!(next_nonce());
     let result = reduce(state, &json_as::<Action>(body));
     if let Some(error) = &result.error {
         panic!("{error}");

@@ -13,7 +13,7 @@ use crate::rules::fixtures::damage_combat::{
     answer, ask_controller, bolt, charger, fighter, grunt, note, notes, playing, recorder, replays_to,
     round_trip, statue, storm, top_loser, wall, warded,
 };
-use crate::rules::fixtures::harness::{events_json, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, live, live_mut, put, slot};
 
 fn unit_of(instance: &CardInstance) -> AttackTarget {
     AttackTarget::Unit {
@@ -109,15 +109,6 @@ impl Bench {
     }
 }
 
-/// The card as it stands in the state now.
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).expect("the card is still in the game")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).expect("the card is still in the game")
-}
-
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
@@ -196,7 +187,7 @@ mod e35_attack_restrictions_section_4_2_step_2 {
         live_mut(&mut b.state, &jet).granted_keywords = vec![Keyword::Taunt];
         assert!(can_attack(
             &b.state,
-            live(&b.state, &attacker),
+            &live(&b.state, &attacker),
             &hero_of(PlayerId::P2)
         ));
     }
@@ -381,7 +372,7 @@ mod e35_a_keyword_that_holds_only_while_a_condition_does {
     use super::*;
 
     fn keywords(state: &GameState, card: &CardInstance) -> Vec<KeywordKind> {
-        unit_view(state, live(state, card))
+        unit_view(state, &live(state, card))
             .keywords
             .iter()
             .map(|keyword| keyword.kind())
@@ -462,7 +453,7 @@ mod e35_forced_attacks_on_a_random_enemy_and_on_the_units_own_hero {
         let ids = |state: &GameState, among: &str| -> Vec<String> {
             target_ids(&random_attack_targets(
                 state,
-                live(state, &attacker),
+                &live(state, &attacker),
                 json_as(json!(among)),
             ))
         };

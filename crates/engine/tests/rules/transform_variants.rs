@@ -8,10 +8,12 @@ use jackioh_engine::effects::{transform_beneath, transform_random};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::generation::{
-    act, body, classic_plus_unit, classic_spell, classic_unit, frozen, fuse_a, fuse_b, hand_card, immutable,
-    juhan, playing, replayed,
+    advance, body, classic_plus_unit, classic_spell, classic_unit, frozen, fuse_a, fuse_b, hand_card,
+    immutable, juhan, playing, replayed,
 };
-use crate::rules::fixtures::harness::{events_json, events_of_type, matches_object, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_json, events_of_type, live, matches_object, put, sink_for, slot,
+};
 
 fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>) {
     let mut ctx = make_context(
@@ -27,11 +29,6 @@ fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>) 
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
-/// The card as it stands in the state now (TS held the live object).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    must(find_instance(state, &card.id).cloned(), "the card in the state")
 }
 
 /// p1's lane 1 holding `below` bottom to top — the last one is the top of the pile.
@@ -87,7 +84,7 @@ mod e24_the_cards_beneath_a_stack_become_copies_of_its_top_classic_plus_4 {
             card.buffs = AttackHealth { attack: 1, health: 1 };
         }
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             json!({ "type": "play", "instanceId": top.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );

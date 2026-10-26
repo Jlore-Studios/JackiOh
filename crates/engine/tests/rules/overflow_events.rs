@@ -4,24 +4,18 @@
 //! each one on both seats (R318), so the proofs here are about the stream: the event exists, it
 //! comes in the order the board plays it, and `viewFor` gives each seat exactly what R97 allows.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, new_game, next_nonce, put, set_library, slot};
 use crate::rules::fixtures::scripts::{cn_virus, infinite_reserves};
 
 const TOKEN: &str = "fx-token-rush";
 
-/// Unique across the tests, which run on parallel threads.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
 /// One action (`body` carries its `playerId`), refused loudly.
 fn step(state: &GameState, body: Value) -> (GameState, Vec<GameEvent>) {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
     let kind = body["type"].clone();
-    body["nonce"] = json!(format!("ov{nonce}"));
+    body["nonce"] = json!(next_nonce());
     let result = reduce(state, &json_as::<Action>(body));
     if let Some(error) = &result.error {
         panic!("{kind} refused: {error}");

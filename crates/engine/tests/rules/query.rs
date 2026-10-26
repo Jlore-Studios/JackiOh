@@ -12,13 +12,11 @@
 //! `CardOrId::Card(&card)` / `CardOrId::Id(id)`, and `null` `CardOrId::Nothing`. TS held the live card
 //! `put` and `inHand` returned; here a card is re-read from the state (`live`).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{act, in_hand, live, new_game, put, set_library, sink_for, slot};
 use crate::rules::fixtures::scripts::stockpile;
 
 /// A state in the main phase with nothing dealt, so every pile below is exactly what a test built.
@@ -30,20 +28,8 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-/// TS's module `let nonce`.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let result = reduce(state, &body.with_nonce(format!("q{nonce}")));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// Past the mulligans, in the main phase of turn 1, so `play` is a legal action.
@@ -67,13 +53,6 @@ fn playing(seed: &str) -> GameState {
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
-}
-
-/// The card as it stands in `state` now (TS held the live object).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {}", card.id))
 }
 
 fn play_into(state: &GameState, card: &CardInstance, lane: i32) -> GameState {

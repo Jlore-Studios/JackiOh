@@ -10,7 +10,7 @@ use jackioh_engine::effects::{
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{
-    both, events_of_type, in_hand, json_of, new_game, put, set_library, slot, spread,
+    both, events_of_type, in_hand, json_of, live, new_game, put, set_library, slot, spread,
 };
 
 // ---------------------------------------------------------------------------
@@ -172,13 +172,6 @@ fn in_graveyard(state: &mut GameState, def_id: &str, player: PlayerId) -> CardIn
 /// TS `string[]` for the harness's `setLibrary`, from the ids as written.
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
-}
-
-/// TS held the live instance and read it after an effect; Rust reads the card again by id.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn summoned_lanes(events: &[GameEvent]) -> Vec<i32> {

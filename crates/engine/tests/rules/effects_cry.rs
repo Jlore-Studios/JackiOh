@@ -17,13 +17,13 @@ use jackioh_engine::{
 use super::fixtures::combat::plain;
 use super::fixtures::harness::{events_of_type, put, slot};
 use super::fixtures::prompt_harness::{
-    act, answer_keys, board, cast_now, event_types, expect_replays, hand_card, must, open_as, replayable,
+    answer_keys, board, cast_now, event_types, expect_replays, hand_card, must, open_as, replayable,
     resolving_card, round_trip,
 };
 use super::fixtures::prompts::{
     aimer, asker, crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
 };
-use crate::rules::fixtures::harness::json_of;
+use crate::rules::fixtures::harness::{act_logged, json_of, live};
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -73,11 +73,6 @@ fn grave_unit(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInst
     let card = new_instance(state, def_id, player, Zone::Graveyard { player });
     state.players[player].graveyard.push(card.clone());
     card
-}
-
-/// The card as it stands in the state now (TS held the live object).
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
 fn has_type(types: &[String], wanted: &str) -> bool {
@@ -296,10 +291,10 @@ mod e13_trigger_a_cry {
         let plain_unit = put(&mut state, &plain.id, slot(P1, Units, 2), json!({}));
         let spell = grave_unit(&mut state, P1, &spark().id);
         let dead = grave_unit(&mut state, P1, &crier().id);
-        assert!(!has_triggerable_cry(&state, live(&state, &buried)));
-        assert!(!has_triggerable_cry(&state, live(&state, &plain_unit)));
-        assert!(!has_triggerable_cry(&state, live(&state, &spell)));
-        assert!(has_triggerable_cry(&state, live(&state, &dead)));
+        assert!(!has_triggerable_cry(&state, &live(&state, &buried)));
+        assert!(!has_triggerable_cry(&state, &live(&state, &plain_unit)));
+        assert!(!has_triggerable_cry(&state, &live(&state, &spell)));
+        assert!(has_triggerable_cry(&state, &live(&state, &dead)));
         for card in [&buried, &plain_unit, &spell] {
             let mut sink = sink_for(&mut state);
             {
@@ -329,33 +324,36 @@ mod e13_trigger_a_cry {
         let decks = replay.decks;
         let mut state = replay.state;
         let unit = hand_card(&state, P1, &aim);
-        state = act(
+        state = act_logged(
             &state,
             json!({
                 "type": "play", "playerId": "p1", "instanceId": unit.id,
                 "targets": [{ "pick": "hero", "player": "p2" }],
             }),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 3);
         let rewinding = hand_card(&state, P1, &back);
-        state = act(
+        state = act_logged(
             &state,
             json!({
                 "type": "play", "playerId": "p1", "instanceId": rewinding.id,
                 "targets": [{ "pick": "instance", "instanceId": unit.id }],
             }),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         let pending = open_as(&state, PromptKind::Target, P1);
-        state = act(
+        state = act_logged(
             &state,
             json!({
                 "type": "answer", "playerId": "p1", "choiceId": pending.id,
                 "selection": [{ "pick": "hero", "player": "p2" }],
             }),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert_eq!(state.players.p2.hero.health, HERO_HEALTH - 6);
         let last_events = state
             .applied

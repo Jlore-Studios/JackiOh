@@ -2,8 +2,6 @@
 //!
 //! Port of `packages/engine/test/combat-positions.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use serde::Serialize;
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -14,7 +12,7 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::field::{flush, playing as field_playing, tower};
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot,
+    act, act_result, events_of_type, in_hand, json_of, live, matches_object, new_game, put, sink_for, slot,
 };
 
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
@@ -48,30 +46,9 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The card as it stands in `state` now, owned (TS held the live object).
-fn live(state: &GameState, id: &str) -> CardInstance {
-    by_id(state, id).clone()
-}
-
 /// The layered view of the card `id` names, as it stands now.
 fn view_of(state: &GameState, id: &str) -> UnitView {
     unit_view(state, by_id(state, id))
-}
-
-/// TS's module `let nonce`.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn attempt(state: &GameState, body: ActionInput) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    reduce(state, &body.with_nonce(format!("cp{nonce}")))
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let result = attempt(state, body);
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// Past the mulligans, in the main phase of turn 1.
@@ -146,7 +123,7 @@ fn has_switch_for(state: &GameState, player: PlayerId, id: Option<&str>) -> bool
 /// #1192: the list offers a switch exactly when `reduce` accepts it.
 fn switch_agrees(state: &GameState, id: &str) -> bool {
     let listed = has_switch_for(state, P1, Some(id));
-    let accepted = attempt(
+    let accepted = act_result(
         state,
         input(json!({ "type": "switchPosition", "instanceId": id, "playerId": "p1" })),
     )
@@ -200,7 +177,7 @@ mod positions_and_exertion_m2_t1 {
         assert!(!has_exertion(&state, &unit, ExertionKind::Attack));
         assert!(attack_targets(&state, &unit).is_empty());
         assert!(
-            attempt(
+            act_result(
                 &state,
                 input(json!({ "type": "attack", "attackerId": unit.id, "targetId": "hero-p2", "playerId": "p1" }))
             )
@@ -223,7 +200,7 @@ mod positions_and_exertion_m2_t1 {
         assert!(!has_exertion(&state, &unit, ExertionKind::Attack));
         assert!(attack_targets(&state, &unit).is_empty());
         assert!(
-            attempt(
+            act_result(
                 &state,
                 input(json!({ "type": "attack", "attackerId": unit.id, "targetId": "hero-p2", "playerId": "p1" }))
             )
@@ -253,7 +230,7 @@ mod positions_and_exertion_m2_t1 {
         assert!(!has_exertion(&state, &unit, ExertionKind::Switch));
         assert!(!has_switch_for(&state, P1, None));
         assert!(
-            attempt(
+            act_result(
                 &state,
                 input(json!({ "type": "switchPosition", "instanceId": unit.id, "playerId": "p1" }))
             )
@@ -357,7 +334,7 @@ mod positions_and_exertion_m2_t1 {
         // Two of the same kind is still refused: one attack and one switch, not two switches.
         assert!(!has_exertion(&state, &duelist, ExertionKind::Switch));
         assert!(
-            attempt(
+            act_result(
                 &state,
                 input(json!({ "type": "switchPosition", "instanceId": duelist.id, "playerId": "p1" }))
             )
@@ -366,7 +343,7 @@ mod positions_and_exertion_m2_t1 {
             .contains("already acted")
         );
         assert!(
-            attempt(
+            act_result(
                 &state,
                 input(json!({ "type": "attack", "attackerId": duelist.id, "targetId": "hero-p2", "playerId": "p1" }))
             )
@@ -569,7 +546,7 @@ mod positions_and_exertion_m2_t1 {
         assert!(!has_switch_for(&state, P1, Some(&pillow.id)));
         assert!(has_switch_for(&state, P1, None)); // the other unit may
 
-        let refused = attempt(
+        let refused = act_result(
             &state,
             input(json!({ "type": "switchPosition", "instanceId": pillow.id, "playerId": "p1" })),
         );
@@ -622,7 +599,7 @@ mod positions_and_exertion_m2_t1 {
         assert_eq!(unit.summoned_turn, Some(state.turn));
         assert!(attack_targets(&state, &unit).is_empty());
         assert!(
-            attempt(
+            act_result(
                 &state,
                 input(json!({ "type": "attack", "attackerId": unit.id, "targetId": "hero-p2", "playerId": "p1" }))
             )

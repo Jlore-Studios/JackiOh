@@ -12,9 +12,11 @@ use jackioh_engine::effects::{draw_from_opponent, give_from_hand, take_from_libr
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    act, act_logged, events_of_type, in_hand, live, live_mut, put, set_library, slot,
+};
 use crate::rules::fixtures::prompt_harness::{
-    act, answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
+    answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
 };
 use crate::rules::fixtures::prompts::{
     cast_on_draw_marker, common_resources, fluffy_grip, glitch, grunt, income_tax, quickdraw_of,
@@ -88,14 +90,6 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
-}
-
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialise") {
         Value::Array(items) => items
@@ -140,7 +134,7 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
         assert_eq!(live(&state, &taken.id).owner, PlayerId::P1);
         assert_eq!(live(&state, &taken.id).controller, PlayerId::P1);
         assert_eq!(
-            effective_cost(&state, live(&state, &taken.id), Default::default()),
+            effective_cost(&state, &live(&state, &taken.id), Default::default()),
             0
         );
         assert_eq!(live(&state, &taken.id).known_as, None);
@@ -253,11 +247,12 @@ mod e16_e2_a_card_out_of_the_other_player_s_deck_classic_plus_12_3 {
         let decks = dealt.decks;
         let mut state = dealt.state;
         let played = hand_card(&state, PlayerId::P1, &qd).id.clone();
-        state = act(
+        state = act_logged(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": played }),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         assert!(
             state.players[PlayerId::P1]
                 .hand
@@ -544,7 +539,7 @@ mod e16_a_draw_from_the_other_player_s_deck_classic_58 {
             &[plain.id.clone(), grunt().id, glitch().id],
         );
         state.active = PlayerId::P2;
-        state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }), None);
+        state = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
         assert_eq!(state.active, PlayerId::P1);
         // Their bottom card, and p1's own draw of the turn.
         assert!(ids(&state.players[PlayerId::P1].hand).contains(&theirs[2].id));

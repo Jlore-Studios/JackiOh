@@ -5,15 +5,13 @@
 //! and a card resolving with the number as it stands.
 //! Surface contract: docs/v0.3.0/SURFACE.md §4.4.9.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::effects::tune::TuneDirection;
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 
-use crate::rules::fixtures::harness::{in_hand, put, sink_for, slot};
+use crate::rules::fixtures::harness::{act, in_hand, live, live_mut, put, sink_for, slot};
 use crate::rules::fixtures::instance_data::{
     base_number, body, instance_game, nerfer, numbered, radiant_number,
 };
@@ -27,17 +25,6 @@ fn game() -> GameState {
 
 fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("no card")
-}
-
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {}", card.id))
-}
-
-/// The card in `state`, to write through.
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("no card {}", card.id))
 }
 
 fn value(state: &GameState, card: &CardInstance, key: &str) -> i32 {
@@ -389,17 +376,6 @@ mod r386_b3_4_rule_5_declared_numbers {
             Some(expected)
         );
     }
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, action: ActionInput) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let result = reduce(state, &action.with_nonce(format!("pm{nonce}")));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {

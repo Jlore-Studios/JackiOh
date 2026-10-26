@@ -11,9 +11,9 @@ use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::copied_text::{CT, register_copied_text};
-use super::fixtures::harness::{in_hand, put, slot};
+use super::fixtures::harness::{act, in_hand, put, slot};
 use super::fixtures::play_gate::{dummy, gated, gated_cloaked, gated_echo, plain_spell, register_play_gate};
-use super::fixtures::prompt_harness::{act, board, must};
+use super::fixtures::prompt_harness::{board, must};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -151,7 +151,6 @@ fn r1851001_r783006_a_set_spells_reveal_waits_for_its_gate() {
             "faceDown": "cloaked",
             "playerId": "p1",
         }),
-        None,
     );
     let set = must(state.players.p1.backrow[0].clone(), "the set card");
     let reveal_offered = |state: &GameState| {
@@ -169,7 +168,6 @@ fn r1851001_r783006_a_set_spells_reveal_waits_for_its_gate() {
     state = act(
         &state,
         json!({ "type": "activate", "instanceId": set.id, "ability": "reveal", "playerId": "p1" }),
-        None,
     );
     assert_eq!(hero_health(&state, P2), before - 1);
 }

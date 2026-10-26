@@ -89,6 +89,7 @@ fn replace_on_field(
     // R659: a new body enters the field this turn, so it is summoning sick like a summoned card (§4.1);
     // only text that says otherwise lifts it (R424).
     replacement.summoned_turn = Some(turn);
+    crate::generators::record_generator(ctx, &replacement);
     let replacement_id = replacement.id.clone();
 
     if !replace_in_zone(&mut *ctx.state, old, &mut replacement) {
@@ -160,6 +161,7 @@ fn replace_off_field(
     };
     let mut replacement = new_instance(&mut *ctx.state, &def.id, owner, zone);
     replacement.radiant = radiant;
+    crate::generators::record_generator(ctx, &replacement);
     let replacement_id = replacement.id.clone();
     let made = replacement.clone();
     let _ = move_to_zone(

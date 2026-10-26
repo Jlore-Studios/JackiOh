@@ -99,21 +99,45 @@ pub fn seed_number(seed: &str) -> Option<u32> {
     seed.rsplit('-').next().and_then(|tail| tail.parse::<u32>().ok())
 }
 
-/// §5.2 step 1: the state's canonical text as `hash_state` hashes it, without `applied` and `opening`.
+/// §5.2 step 1: the state's canonical text as `hash_state` hashes it, without `applied`, `opening`
+/// and `generators`.
 pub fn hashed_state_text(state: &GameState) -> String {
     let mut value = serde_json::to_value(state).expect("a GameState serialises");
     if let Some(object) = value.as_object_mut() {
         object.remove("applied");
         object.remove("opening");
+        object.remove("generators");
     }
     canonical(&value)
 }
 
-/// The canonical text of both seats' views, p1 first.
+/// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
+/// (R1956001): it dresses the card and plays no part in the game, as `hash_state` leaves its
+/// `generators` out, so a trace recorded before it was sent replays as it did.
 pub fn view_texts(state: &GameState) -> [String; 2] {
     [PlayerId::P1, PlayerId::P2].map(|player| {
-        canonical(&serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises"))
+        let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serialises");
+        strip_key(&mut value, "createdBy");
+        canonical(&value)
     })
+}
+
+/// `value` with `key` taken out of every object in it, at any depth.
+fn strip_key(value: &mut Value, key: &str) {
+    match value {
+        Value::Object(object) => {
+            object.remove(key);
+            for child in object.values_mut() {
+                strip_key(child, key);
+            }
+        }
+        Value::Array(items) => {
+            for item in items {
+                strip_key(item, key);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// The canonical text of a step's events.

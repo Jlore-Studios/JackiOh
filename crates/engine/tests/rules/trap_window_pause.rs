@@ -13,11 +13,11 @@
 //!
 //! Fixtures are this file's own: `tw-` defs indexed from 2200 (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, events_of_type, new_game, put, round_trip, slot};
+use crate::rules::fixtures::harness::{
+    act, act_result, both, events_of_type, new_game, put, round_trip, slot,
+};
 
 // The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
 // so the event list and the rng live here and each call borrows the state again.
@@ -237,24 +237,6 @@ fn game(seed: &str) -> GameState {
     }
     register_scripts(registry);
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// The nonce is added here.
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("tw{nonce}"));
-    reduce(state, &json_as::<Action>(action))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {

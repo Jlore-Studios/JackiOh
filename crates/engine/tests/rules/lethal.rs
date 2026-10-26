@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::subsystems::lethal::{defending_hero, is_lethal, projected_damage};
 
 use crate::rules::fixtures::combat::{armoured, big_body, indestructible, plain, shielded, trampler};
-use crate::rules::fixtures::harness::{new_game, put, slot};
+use crate::rules::fixtures::harness::{live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 /// p1's main phase on turn 4, so nothing placed with `put` is summoning sick (§4.1).
@@ -32,13 +32,6 @@ fn on_unit(instance: &CardInstance) -> AttackTarget {
 
 fn on_hero() -> AttackTarget {
     AttackTarget::Hero { player: P2 }
-}
-
-/// The card as it stands in `state` now (TS held the live object).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {}", card.id))
 }
 
 /// Writes through to the card in `state` (TS wrote to the live object).

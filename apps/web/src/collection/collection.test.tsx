@@ -2,7 +2,7 @@
 // and locked cards of the owned-cards panel, the wallet, and the tracks' levels, XP bars, rewards
 // and locks. The server's answers are the fixtures; nothing here asks it anything.
 // R1655000: a card in context (the card view's strip, its previews, its equips and its locks) and the
-// account's cosmetics as tiles.
+// account's cosmetics as tiles. R1956000: the owned cards' grid wears their picks.
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -28,9 +28,11 @@ import {
 import { FullArtOwned } from "../cards/fullArt.ts";
 import {
   CARD_SETTINGS_DEFAULTS,
+  CardFace,
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   closeInspect,
+  faceModel,
   writeCardSettings,
 } from "../cards/index.ts";
 import { packsInfo } from "../packs/fixtures.ts";
@@ -614,6 +616,72 @@ describe("R1655000 a card in context", () => {
     ]);
     // A card's own full art is its own: Big D-fender's is not on another card.
     expect(cardStrip(PLAIN, () => true).map((group) => group.kind)).toEqual(["foil", "finish", "border"]);
+  });
+});
+
+describe("R1956000 the owned cards' grid wears their picks", () => {
+  const PLAIN = "core-002";
+  const MYTHIC = "core-096";
+  const LOCKED = "core-005";
+  const DEFS_HERE = [PLAIN, MYTHIC, LOCKED].map(defOf);
+  const ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
+
+  const tile = (id: string): Element => {
+    const face = screen.getByTestId(T.card(id)).querySelector(".cf");
+    if (face === null) throw new Error(`${id}'s tile draws no face`);
+    return face;
+  };
+
+  it("R1956000 an owned grid tile wears its card's picks, never the account's; a locked tile, a Mythic tile's foil and a Radiant face do not", () => {
+    writeCosmetics({ finish: "finish-linen" });
+    writeCardPick(PLAIN, "border", "border-bone");
+    writeCardPick(PLAIN, "foil", "foil-rainbow");
+    writeCardPick(MYTHIC, "border", "border-bone");
+    writeCardPick(MYTHIC, "foil", "foil-rainbow");
+    writeCardPick(LOCKED, "border", "border-bone");
+    render(<OwnedCards collection={collectionOwning([PLAIN, MYTHIC])} defs={DEFS_HERE} />);
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+
+    const plain = tile(PLAIN);
+    expect(plain.getAttribute("data-frame")).toBe("border-bone");
+    // R1953001: a kind the card has no pick of wears its default, not the account's pick.
+    expect(plain.getAttribute("data-finish")).toBeNull();
+    expect(plain.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
+    // A grid's foil holds still: the moving slots stay with the card a player opens.
+    expect(plain.getAttribute("data-cosmetic-motion")).toBe("static");
+    // A Mythic face wears no cosmetic foil, and its other picks.
+    expect(tile(MYTHIC).getAttribute("data-cosmetic-foil")).toBeNull();
+    expect(tile(MYTHIC).getAttribute("data-frame")).toBe("border-bone");
+    // A locked silhouette is no copy of the viewer's.
+    for (const attribute of ATTRIBUTES) expect(tile(LOCKED).getAttribute(attribute), attribute).toBeNull();
+
+    // A pick made in this tab reaches the same tile on the same render.
+    act(() => {
+      writeCardPick(PLAIN, "border", "border-wood");
+    });
+    expect(tile(PLAIN)).toBe(plain);
+    expect(plain.getAttribute("data-frame")).toBe("border-wood");
+
+    // The grid draws base faces; a Radiant face of the same card wears nothing.
+    cleanup();
+    const { container } = render(<CardFace face={faceModel({ defId: PLAIN, def: defOf(PLAIN), radiant: true })} worn />);
+    const radiant = container.querySelector(".cf");
+    for (const attribute of ATTRIBUTES) expect(radiant?.getAttribute(attribute), attribute).toBeNull();
+  });
+
+  it("R1956000 a grid tile wears only what the ledger owns on its card", () => {
+    // A starter every account owns on every card, and a pick the ledger does not list on this one.
+    writeCardPick(PLAIN, "border", "border-bone");
+    writeCardPick(PLAIN, "finish", "finish-parchment");
+    render(
+      <FullArtOwned owned={new Map()}>
+        <OwnedCards collection={collectionOwning([PLAIN])} defs={DEFS_HERE} />
+      </FullArtOwned>,
+    );
+    fireEvent.click(screen.getByTestId(T.setToggle("Core")));
+    expect(tile(PLAIN).getAttribute("data-frame")).toBe("border-bone");
+    // The unowned pick wears its kind's default (R1953001).
+    expect(tile(PLAIN).getAttribute("data-finish")).toBeNull();
   });
 });
 

@@ -9,8 +9,6 @@
 //!
 //! Port of `packages/engine/test/effects-after-check.test.ts`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{
     ForEachCardArgs, after_state_check, destroy_all, for_each_card, gain_mana, summon,
 };
@@ -18,7 +16,7 @@ use std::sync::Arc;
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act_result, both, events_of_type, in_hand, new_game, put, slot};
 
 const LOG_CARD: &str = "ac-log";
 const ASKER: &str = "ac-asker";
@@ -232,16 +230,6 @@ fn game(seed: &str) -> GameState {
     registry.extend(scripts());
     register_scripts(registry);
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-/// `reduce` with a fresh nonce; `body` is the TS `ActionInput` literal.
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("ac{nonce}"));
-    reduce(state, &json_as::<Action>(action))
 }
 
 fn playing(seed: &str) -> GameState {

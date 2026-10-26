@@ -10,12 +10,10 @@
 //! `Handicap`'s `i32`s cannot hold is built as JSON and counts as refused when it does not deserialise
 //! (`handicap_refused`).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::{both, round_trip, setup_catalog};
+use crate::rules::fixtures::harness::{act, both, next_nonce, round_trip, setup_catalog};
 use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 
 type Handicaps = PerPlayerOpt<Handicap>;
@@ -160,9 +158,6 @@ fn game(seed: &str, handicaps: Option<Handicaps>, decks: Option<(Vec<String>, Ve
     })
 }
 
-/// An atomic, so tests running side by side never share a nonce.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
 struct Stepped {
     state: GameState,
     events: Vec<GameEvent>,
@@ -176,8 +171,7 @@ fn input(player: PlayerId, body: ActionBody) -> ActionInput {
 }
 
 fn step(state: &GameState, body: ActionInput) -> Stepped {
-    let n = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let action = body.with_nonce(format!("hc{n}"));
+    let action = body.with_nonce(next_nonce());
     let result = reduce(state, &action);
     if let Some(error) = &result.error {
         panic!("{} refused: {error}", action.action_type());
@@ -186,10 +180,6 @@ fn step(state: &GameState, body: ActionInput) -> Stepped {
         state: result.state,
         events: result.events,
     }
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    step(state, body).state
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {

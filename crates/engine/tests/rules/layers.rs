@@ -12,7 +12,7 @@ use crate::rules::fixtures::combat::{
     armoured, big_body, big_dfender, indestructible, plain, poisonous, shielded, spikey_pillow, stacker,
     taunter, zero_attack,
 };
-use crate::rules::fixtures::harness::{both, new_game, put, slot};
+use crate::rules::fixtures::harness::{both, live, new_game, put, slot};
 
 // Local defs for the three §10.4 cards ./fixtures/combat lacks. Indices start above 1200 so they
 // never collide with a fixture catalog or another test file's local defs.
@@ -346,10 +346,6 @@ fn stack_on(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     );
     assert!(placed, "could not stack {def_id} on {} {}", at.row, at.lane);
     live(state, &card.id)
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id).expect("the card is in the game").clone()
 }
 
 fn edit(state: &mut GameState, id: &str, change: impl FnOnce(&mut CardInstance)) {

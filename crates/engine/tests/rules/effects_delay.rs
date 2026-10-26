@@ -20,8 +20,6 @@
 //!
 //! Port of `packages/engine/test/effects-delay.test.ts`.
 
-use std::cell::Cell;
-
 use jackioh_engine::effects::{
     DELAYED_HOOK, HAND_WATCH_KEY, THIS_TURN, add_player_modifier, damage, delay, due_resume, give_from_hand,
 };
@@ -33,7 +31,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::indestructible;
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
-use crate::rules::fixtures::harness::{json_of, matches_object};
+use crate::rules::fixtures::harness::{act, json_of, matches_object};
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -162,28 +160,11 @@ fn dl_scripts() -> IndexMap<String, CardScripts> {
 // Harness.
 // ---------------------------------------------------------------------------
 
-thread_local! {
-    /// TS's module `let nonce = 0`: one counter per test thread.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let nonce = NONCE.with(|n| {
-        n.set(n.get() + 1);
-        n.get()
-    });
-    let result = reduce(state, &body.with_nonce(format!("dl{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
-
 fn end_turns(state: &GameState, count: usize) -> GameState {
     let mut next = state.clone();
     for _ in 0..count {
         let active = next.active;
-        next = act(&next, json_as(json!({ "type": "endTurn", "playerId": active })));
+        next = act(&next, json!({ "type": "endTurn", "playerId": active }));
     }
     next
 }
@@ -203,12 +184,12 @@ fn playing(seed: &str) -> GameState {
     let keep: Vec<String> = state.players.p1.hand.iter().map(|c| c.id.clone()).collect();
     state = act(
         &state,
-        json_as(json!({ "type": "mulligan", "keep": keep, "playerId": "p1" })),
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
     );
     let keep: Vec<String> = state.players.p2.hand.iter().map(|c| c.id.clone()).collect();
     state = act(
         &state,
-        json_as(json!({ "type": "mulligan", "keep": keep, "playerId": "p2" })),
+        json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
     );
     state
 }

@@ -12,7 +12,6 @@
 //! which is also how an effect on the opponent's turn is written (behaviour 12).
 
 use std::collections::BTreeSet;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::effects::{steal, steal_all, summon, swap_board};
 use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
@@ -21,7 +20,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::{spell_def, token_def};
 use crate::rules::fixtures::combat::{charger, plain, rusher, stacker};
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, events_of_type, live, new_game, put, run_effect, slot};
 
 // Fixtures
 
@@ -62,19 +61,6 @@ fn reborner_script() -> Script {
     }
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    let kind = input.body.action_type();
-    let result = reduce(state, &input.with_nonce(format!("cc{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{kind} refused: {error}");
-    }
-    result.state
-}
-
 /// Past both mulligans, in p1's main phase, with an empty board and this file's fixtures.
 fn playing(seed: &str) -> GameState {
     let fresh = new_game(seed, None);
@@ -106,26 +92,6 @@ fn playing(seed: &str) -> GameState {
     assert_eq!(state.active, P1);
     assert_eq!(state.pending, None);
     state
-}
-
-/// Apply one effect for `actor`, in place, and hand back what it emitted.
-fn run(state: &mut GameState, effect: Effect, actor: PlayerId) -> Vec<GameEvent> {
-    let mut events: Vec<GameEvent> = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(actor),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
 }
 
 fn rotate(state: &mut GameState, direction: RotationDirection, radiant: bool) -> Vec<GameEvent> {
@@ -218,13 +184,6 @@ fn offers_switch(state: &GameState, card: &CardInstance) -> bool {
         .any(|action| matches!(action, ActionBody::SwitchPosition { instance_id } if *instance_id == card.id))
 }
 
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    match find_instance(state, &card.id) {
-        Some(found) => found.clone(),
-        None => panic!("{} is gone", card.id),
-    }
-}
-
 fn control_changed(events: &[GameEvent]) -> Vec<String> {
     events_of_type(events, GameEventType::ControlChanged)
         .iter()
@@ -252,7 +211,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let bystander = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         let bystander = ready(&mut state, bystander, turn - 1);
 
-        let events = run(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
+        let events = run_effect(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
 
         assert_eq!(control_changed(&events), vec![victim.id.clone()]);
         let victim = live(&state, &victim);
@@ -289,8 +248,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let bystander = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         let bystander = ready(&mut state, bystander, turn - 1);
 
-        run(&mut state, steal(json_as(json!({ "instanceId": rush.id }))), P1);
-        run(&mut state, steal(json_as(json!({ "instanceId": charge.id }))), P1);
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": rush.id }))), P1);
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": charge.id }))), P1);
 
         let rush = live(&state, &rush);
         let charge = live(&state, &charge);
@@ -318,8 +277,8 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let switcher = put(&mut state, &plain.id, slot(P2, Row::Units, 2), json!({}));
         let switcher = exhausted(&mut state, switcher, turn - 1);
 
-        run(&mut state, steal(json_as(json!({ "instanceId": charge.id }))), P1);
-        run(
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": charge.id }))), P1);
+        run_effect(
             &mut state,
             steal(json_as(json!({ "instanceId": switcher.id }))),
             P1,
@@ -352,7 +311,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             left_behind.push(exhausted(&mut state, card, turn - 1));
         }
 
-        let events = run(&mut state, steal_all(Default::default()), P1);
+        let events = run_effect(&mut state, steal_all(Default::default()), P1);
 
         assert_eq!(
             control_changed(&events),
@@ -403,7 +362,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             .expect("in the backrow")
             .summoned_turn = Some(turn - 1);
 
-        let events = run(&mut state, swap_board(), P1);
+        let events = run_effect(&mut state, swap_board(), P1);
 
         let moved = [&mine, &top, &beneath, &my_trap, &theirs, &their_trap];
         assert_eq!(
@@ -434,7 +393,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let their_rush = put(&mut state, &rusher.id, slot(P2, Row::Units, 5), json!({}));
         let their_rush = ready(&mut state, their_rush, turn - 1);
 
-        run(&mut state, swap_board(), P1);
+        run_effect(&mut state, swap_board(), P1);
 
         // What p1 received entered this turn: sick, with Rush and Charge applying as usual.
         assert!(attack_targets(&state, &live(&state, &their_plain)).is_empty());
@@ -617,11 +576,11 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
 
         // R76: already yours. R15: no free zone on the thief's side.
         assert_eq!(
-            run(&mut state, steal(json_as(json!({ "instanceId": mine.id }))), P1),
+            run_effect(&mut state, steal(json_as(json!({ "instanceId": mine.id }))), P1),
             vec![]
         );
         assert_eq!(
-            run(&mut state, steal(json_as(json!({ "instanceId": theirs.id }))), P1),
+            run_effect(&mut state, steal(json_as(json!({ "instanceId": theirs.id }))), P1),
             vec![]
         );
 
@@ -646,7 +605,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         ready(&mut state, other, turn - 1);
 
         // p1 is active, so this is the inactive player stealing: the unit enters p2's side on turn T.
-        run(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P2);
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P2);
         let now = live(&state, &victim);
         assert_eq!(now.controller, P2);
         assert_eq!(now.summoned_turn, Some(turn));
@@ -680,7 +639,7 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             attack: 0,
             health: 10,
         };
-        run(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": victim.id }))), P1);
         assert!(is_sick(&state, &live(&state, &victim)));
 
         let mut events: Vec<GameEvent> = Vec::new();
@@ -723,7 +682,7 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         let body = ready(&mut state, body, turn - 1);
         let other = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         ready(&mut state, other, turn - 1);
-        run(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
         assert_eq!(card_id_at(&state, slot(P1, Row::Units, 3)), Some(body.id.clone()));
 
         let max_health = unit_view(&state, &live(&state, &body)).max_health;
@@ -764,7 +723,7 @@ mod r172_a_stolen_unit_dies_as_its_controller_s {
         let body = ready(&mut state, body, turn - 1);
         let other = put(&mut state, &plain.id, slot(P2, Row::Units, 5), json!({}));
         ready(&mut state, other, turn - 1);
-        run(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
+        run_effect(&mut state, steal(json_as(json!({ "instanceId": body.id }))), P1);
 
         let max_health = unit_view(&state, &live(&state, &body)).max_health;
         find_instance_mut(&mut state, &body.id)

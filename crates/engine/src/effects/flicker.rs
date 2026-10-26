@@ -27,6 +27,7 @@ fn fresh_face_down_id_in_place(state: &mut GameState, instance_id: &str) -> Opti
     state.next_id += 1;
     // R419: C+ #35's history names the card by the id it has now.
     rename_in_board_history(state, &former, &fresh);
+    crate::generators::rename_generator(state, &former, &fresh);
     Some((former, fresh))
 }
 

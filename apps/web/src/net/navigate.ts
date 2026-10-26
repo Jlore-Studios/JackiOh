@@ -261,6 +261,15 @@ export function tryPath(customId: string): string {
   return `${paths.practice}?try=${encodeURIComponent(customId)}`;
 }
 
+/**
+ * #1991: the deck editor's "Practice with this deck": `/practice?deck=saved:<place>` opens practice's setup
+ * with the saved deck at that 1-based place in `GET /api/decks`'s list picked (`practice/decks.ts`); a saved
+ * deck never starts a game by itself.
+ */
+export function practiceDeckPath(place: number): string {
+  return `${paths.practice}?deck=saved:${String(place)}`;
+}
+
 function queryValue(search: string, key: string): string | null {
   return new URLSearchParams(search).get(key);
 }

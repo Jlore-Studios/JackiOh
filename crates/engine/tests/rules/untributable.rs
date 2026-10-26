@@ -7,10 +7,8 @@ use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes};
 use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::credit::{
-    act, body, in_hand, live, playing, put, safe, safe_field, slot, tribute_one,
-};
-use crate::rules::fixtures::harness::sink_for;
+use crate::rules::fixtures::credit::{body, in_hand, playing, put, safe, safe_field, slot, tribute_one};
+use crate::rules::fixtures::harness::{act, live, sink_for};
 
 mod r1220_untributable {
     use super::*;
@@ -31,7 +29,7 @@ mod r1220_untributable {
             Value::Null,
         );
         let dealt = in_hand(&mut state, &tribute_one().id, PlayerId::P1, 1);
-        let card = live(&state, &only(&dealt));
+        let card = live(&state, only(&dealt));
 
         // The Untributable unit is never one of the Tribute's legal units, so no offered set holds it.
         let units = legal_tribute_units(&state, PlayerId::P1, &card);

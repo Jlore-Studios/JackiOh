@@ -5,11 +5,9 @@
 //! `startOfTurn` hooks — R68's order, the active player's cards and then the opponent's — and never on its
 //! controller's own turn. Proved through fixture scripts that note what fired, in order, on the watcher.
 
-use std::cell::Cell;
-
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{new_game, put as put_with, slot};
+use super::fixtures::harness::{act, new_game, put as put_with, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -102,21 +100,15 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-thread_local! {
-    /// TS's module-level `let nonce`.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-fn act(state: &GameState, player: PlayerId, body: ActionBody) -> GameState {
-    let nonce = NONCE.with(|counter| {
-        counter.set(counter.get() + 1);
-        counter.get()
-    });
-    let result = reduce::reduce(state, &Action::new(body, player, format!("sot{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
+/// `act` with the player apart from the body.
+fn act_as(state: &GameState, player: PlayerId, body: ActionBody) -> GameState {
+    act(
+        state,
+        ActionInput {
+            body,
+            player_id: player,
+        },
+    )
 }
 
 fn steps(state: &GameState) -> Vec<String> {
@@ -154,16 +146,16 @@ mod at_the_start_of_your_opponents_turn_c_62_r400_r68 {
                 .iter()
                 .map(|card| card.id.clone())
                 .collect();
-            state = act(&state, player_id, ActionBody::Mulligan { keep });
+            state = act_as(&state, player_id, ActionBody::Mulligan { keep });
         }
         put(&mut state, WATCHER, slot(P1, Row::Backrow, 1));
         put(&mut state, HOLDER, slot(P2, Row::Units, 1));
 
-        state = act(&state, P1, ActionBody::EndTurn);
+        state = act_as(&state, P1, ActionBody::EndTurn);
         assert_eq!(state.active, P2);
         assert_eq!(steps(&state), vec!["holder:own", "watcher:opponent's"]);
 
-        state = act(&state, P2, ActionBody::EndTurn);
+        state = act_as(&state, P2, ActionBody::EndTurn);
         assert_eq!(state.active, P1);
         assert_eq!(
             steps(&state),

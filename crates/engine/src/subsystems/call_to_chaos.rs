@@ -260,6 +260,7 @@ pub fn cast_random_call_to_chaos() -> Effect {
             Zone::Resolving { player: controller },
         );
         card.memory.insert(CHAOS_CHAIN_KEY.to_string(), json!(depth + 1));
+        crate::generators::record_generator(ctx, &card);
         crate::resolve::cast_card(&mut sink_of(ctx), &card, crate::resolve::CastOptions::default());
     })
 }

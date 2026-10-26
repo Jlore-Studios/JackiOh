@@ -6,14 +6,14 @@
 
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{put, slot};
+use super::fixtures::harness::{act, act_result, put, slot};
 use super::fixtures::keywords_783::{
     cloak_spells, cloak_units, cloaked_bolt, cloaked_field, cloaked_field_trap, cloaked_mourner,
     cloaked_trap, cloaked_unit, grunt, plain_spell, plain_unit, register_keywords_783, second_wind,
     toe_cracker, trap_discount,
 };
-use super::fixtures::play_pipeline_b::{pb_reduce, plays_of};
-use super::fixtures::prompt_harness::{act, answer_keys, board, cast_now, must, open_as, round_trip};
+use super::fixtures::play_pipeline_b::plays_of;
+use super::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -61,7 +61,6 @@ fn cloak(state: &mut GameState, id: &str, lane: i32) -> CardInstance {
             "faceDown": "cloaked",
             "playerId": "p1",
         }),
-        None,
     );
     must(
         state.players.p1.backrow[(lane - 1) as usize].clone(),
@@ -111,7 +110,7 @@ fn attacks_of(state: &GameState, id: &str) -> usize {
 }
 
 fn end_turn(state: &GameState, player: &str) -> GameState {
-    act(state, json!({ "type": "endTurn", "playerId": player }), None)
+    act(state, json!({ "type": "endTurn", "playerId": player }))
 }
 
 fn remove(state: &mut GameState, id: &str) {
@@ -157,7 +156,7 @@ mod r783004_cloaked_set {
         assert_eq!(face_down_offered(&state, &plain.id, P1), Vec::<Value>::new());
         // A Unit set by its Cloaked has its own timing only.
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({
                     "type": "play",
@@ -181,7 +180,7 @@ mod r783004_cloaked_set {
             assert!(!plays_of(&state, &card.id, P1).is_empty());
             assert_eq!(face_down_offered(&state, &card.id, P1), Vec::<Value>::new());
             assert!(
-                refusal(&pb_reduce(
+                refusal(&act_result(
                     &state,
                     json!({
                         "type": "play",
@@ -203,7 +202,7 @@ mod r783004_cloaked_set {
         assert!(!plays_of(&state, &buried.id, P1).is_empty());
         assert_eq!(face_down_offered(&state, &buried.id, P1), Vec::<Value>::new());
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({
                     "type": "play",
@@ -317,7 +316,7 @@ mod r783006_cloaked_reveal {
         assert_eq!(still.face_up, None);
 
         // Its Reveal: it takes its own lane's unit zone and its Cry asks for its target.
-        state = act(&state, reveal_body(&set.id, "p1"), None);
+        state = act(&state, reveal_body(&set.id, "p1"));
         let pending = open_as(&state, PromptKind::Target, P1);
         assert!(pending.prompt.contains("Cry"));
         let before = hero_health(&state, P2);
@@ -345,7 +344,7 @@ mod r783006_cloaked_reveal {
         let mut state = playing("r783006-sick");
         let unit = in_hand(&mut state, &cloaked_unit().id, P1);
         let set = cloak(&mut state, &unit.id, 1);
-        state = act(&state, reveal_body(&set.id, "p1"), None);
+        state = act(&state, reveal_body(&set.id, "p1"));
         assert_eq!(answer_keys(&mut state, &["hero:p2"]).error, None);
         let revealed = must(
             state.players.p1.units[0]
@@ -385,12 +384,12 @@ mod r783006_cloaked_reveal {
             "the Reveal on its controller's view",
         );
         assert_eq!(reveal["usable"], json!(false));
-        assert!(refusal(&pb_reduce(&state, reveal_body(&set.id, "p1"))).contains("can't be activated"));
+        assert!(refusal(&act_result(&state, reveal_body(&set.id, "p1"))).contains("can't be activated"));
 
         // A zone opens — not its own lane's — and the Unit comes out into the leftmost open one (R64).
         remove(&mut state, &fillers[0].id);
         assert!(reveal_offered(&state, &set.id, P1));
-        state = act(&state, reveal_body(&set.id, "p1"), None);
+        state = act(&state, reveal_body(&set.id, "p1"));
         assert_eq!(answer_keys(&mut state, &["hero:p2"]).error, None);
         let revealed = must(
             state.players.p1.units[0]
@@ -410,7 +409,7 @@ mod r783006_cloaked_reveal {
         let set = cloak(&mut state, &spell.id, 2);
         assert_eq!(jackioh_engine::faces::card_type_of(&state, &set), CardType::Trap);
 
-        state = act(&state, reveal_body(&set.id, "p1"), None);
+        state = act(&state, reveal_body(&set.id, "p1"));
         open_as(&state, PromptKind::Target, P1);
         // A paused reveal survives JSON and finishes the same (§9.3).
         let mut copy = round_trip(&state);
@@ -441,7 +440,7 @@ mod r783006_cloaked_reveal {
         // With no unit anywhere it may still be set: a set card declares nothing.
         let set = cloak(&mut state, &spell.id, 1);
         assert!(!reveal_offered(&state, &set.id, P1));
-        assert!(refusal(&pb_reduce(&state, reveal_body(&set.id, "p1"))).contains("can't be activated"));
+        assert!(refusal(&act_result(&state, reveal_body(&set.id, "p1"))).contains("can't be activated"));
 
         // A unit arrives: the Reveal is offered.
         put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
@@ -459,7 +458,7 @@ mod r783006_cloaked_reveal {
         assert!(reveal_offered(&state, &set.id, P1));
 
         let before = hero_health(&state, P2);
-        state = act(&state, reveal_body(&set.id, "p1"), None);
+        state = act(&state, reveal_body(&set.id, "p1"));
         assert!(state.pending.is_none());
         // Its Cry runs as it reveals.
         assert_eq!(hero_health(&state, P2), before - 1);
@@ -501,7 +500,7 @@ mod r783006_cloaked_reveal {
         assert!(refused.is_err());
         state = end_turn(&state, "p1");
         assert!(!reveal_offered(&state, &set.id, P2));
-        assert!(refusal(&pb_reduce(&state, reveal_body(&set.id, "p2"))).contains("not yours"));
+        assert!(refusal(&act_result(&state, reveal_body(&set.id, "p2"))).contains("not yours"));
         // Nor on its controller's view during the opponent's turn: offered only on p1's own turn.
         assert!(!reveal_offered(&state, &set.id, P1));
     }
@@ -565,7 +564,7 @@ mod r783007_hand_auras {
         assert!(!face_down_offered(&spells, &spell.id, P1).is_empty());
         let set = cloak(&mut spells, &spell.id, 3);
         let before = hero_health(&spells, P2);
-        spells = act(&spells, reveal_body(&set.id, "p1"), None);
+        spells = act(&spells, reveal_body(&set.id, "p1"));
         assert_eq!(hero_health(&spells, P2), before - 1);
         assert!(spells.players.p1.graveyard.iter().any(|card| card.id == set.id));
     }
@@ -665,7 +664,7 @@ mod zz_scratch_probe {
         let offered = reveal_offered(&state, &set.id, P1);
         eprintln!("ZZ all unit zones empty+locked: reveal offered = {offered}");
         if offered {
-            state = act(&state, reveal_body(&set.id, "p1"), None);
+            state = act(&state, reveal_body(&set.id, "p1"));
             let _ = answer_keys(&mut state, &["hero:p2"]);
             eprintln!(
                 "ZZ units after reveal: {:?} locks {:?} pending {:?}",
