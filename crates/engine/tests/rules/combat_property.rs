@@ -19,7 +19,7 @@ use crate::rules::fixtures::combat::{
     lifestealer, moths, pacifist, plain, poisonous, rusher, shielded, spikey_pillow, stacker, taunter,
     trample_lifesteal, trampler, zero_attack,
 };
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, live, new_game, put, slot};
 
 /// The gate's number.
 const COMBATS: i32 = 1000;
@@ -109,13 +109,6 @@ fn grants_for(rng: &mut Rng) -> Vec<Keyword> {
         }
     }
     picked
-}
-
-/// The instance as the state holds it now.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("{id} is in no zone"))
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {

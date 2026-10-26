@@ -12,8 +12,8 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::effects::{forced_attacks, recruit, recruit_all};
 
 use crate::rules::fixtures::generation::{
-    Run, act, answer, asker, asker_answers, body, cheap_unit, clear_asker_answers, deck_spell, field_trap,
-    frozen, hand_card, pile_on, plain_trap, playing, pricy_unit, replayed, x_unit,
+    Run, advance, answer, asker, asker_answers, body, cheap_unit, clear_asker_answers, deck_spell,
+    field_trap, frozen, hand_card, pile_on, plain_trap, playing, pricy_unit, replayed, x_unit,
 };
 use crate::rules::fixtures::harness::{events_of_type, matches_object, put, set_library, sink_for, slot};
 
@@ -248,7 +248,7 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         let spell = hand_card(state, &pile_on.id, P1);
         state.players.p1.mana.current = 5;
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );
@@ -309,7 +309,7 @@ mod e25_recruit_your_entire_deck_classic_c60 {
         state.players.p1.mana.current = 5;
         clear_asker_answers();
         let mut run1 = frozen(&start);
-        run1 = act(
+        run1 = advance(
             &run1,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );

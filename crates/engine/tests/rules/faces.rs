@@ -5,21 +5,12 @@
 //! Billy's "[3X/3X]"). Every rule that asks what an instance *is* reads the running face's type
 //! (`faces.cardTypeOf`); a definition read on its own — a pool, a catalog filter — reads `def.type`.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{cards_in_card_scope, summon};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{in_hand, json_of, matches_object, put, slot};
+use crate::rules::fixtures::harness::{act, in_hand, json_of, live, matches_object, put, slot};
 use crate::rules::fixtures::instance_data::{billy, blood_moon, instance_game};
-
-/// The instance as the state holds it now (TS reads its live object).
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("{id} is in no zone"))
-}
 
 fn game() -> GameState {
     let mut state = instance_game("faces", None);
@@ -189,18 +180,6 @@ mod b2_7_a_face_with_its_own_type {
             json!([{ "faceDown": true, "cost": 1 }, { "faceDown": true, "cost": 1 }])
         );
     }
-}
-
-/// TS's module `let nonce = 0`.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let result = reduce(state, &body.with_nonce(format!("fc{nonce}")));
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 /// `describe("B2.7 X in the stats (Buff Billy)")`.

@@ -9,7 +9,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::field::{banner, cover, golem, playing, springer, tower};
-use crate::rules::fixtures::harness::{events_of_type, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, live, put, slot};
 
 /// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. Every context
 /// `f` builds on it shares its events, which come back.
@@ -26,11 +26,6 @@ fn as_player(player: PlayerId) -> HookOptions {
         controller: Some(player),
         ..Default::default()
     }
-}
-
-/// The card as it stands in the state now (TS held the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
 }
 
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {

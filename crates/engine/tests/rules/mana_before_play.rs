@@ -8,8 +8,8 @@
 use jackioh_engine::effects::{choose_mode, damage};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::in_hand;
-use crate::rules::fixtures::play_pipeline_b::{only, pb_act, pb_playing, round_trip};
+use crate::rules::fixtures::harness::{act, in_hand};
+use crate::rules::fixtures::play_pipeline_b::{only, pb_playing, round_trip};
 
 fn unit(name: &str, index: i32) -> CardDef {
     json_as(json!({
@@ -128,7 +128,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
     fn reads_the_mana_before_step_2_paid_not_after() {
         let mut rich = playing("mana-before-4", 4);
         let card = only(&in_hand(&mut rich, &runner().id, PlayerId::P1, 1));
-        let after = pb_act(
+        let after = act(
             &rich,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
@@ -137,7 +137,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
 
         let mut poor = playing("mana-before-3", 3);
         let other = only(&in_hand(&mut poor, &runner().id, PlayerId::P1, 1));
-        let then = pb_act(
+        let then = act(
             &poor,
             json!({ "type": "play", "instanceId": other.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
@@ -148,7 +148,7 @@ mod the_players_mana_as_the_play_began_classic_22 {
     fn is_carried_into_the_step_a_prompt_re_enters_across_a_json_round_trip() {
         let mut state = playing("mana-before-pause", 4);
         let card = only(&in_hand(&mut state, &asking_runner().id, PlayerId::P1, 1));
-        let paused = pb_act(
+        let paused = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 1 }, "playerId": "p1" }),
         );
@@ -162,8 +162,8 @@ mod the_players_mana_as_the_play_began_classic_22 {
             .filter(|action| action.action_type() == ActionType::Answer)
             .collect();
         let answer = only(&answers);
-        let live = pb_act(&paused, with_player(&answer, PlayerId::P1));
-        let again = pb_act(&round, with_player(&answer, PlayerId::P1));
+        let live = act(&paused, with_player(&answer, PlayerId::P1));
+        let again = act(&round, with_player(&answer, PlayerId::P1));
         assert_eq!(hash_state(&again), hash_state(&live));
         assert_eq!(live.players.p2.hero.health, state.players.p2.hero.health - 4);
     }

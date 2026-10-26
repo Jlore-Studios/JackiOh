@@ -8,10 +8,9 @@
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog, summon};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{act, act_result, events_of_type, in_hand, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
-    DISCOVER_POOL, grave_trap, pb_act, pb_playing, pb_reduce, plays_of, reborn_body, stack_body, titan,
-    titan_two, tribute_field,
+    DISCOVER_POOL, grave_trap, pb_playing, plays_of, reborn_body, stack_body, titan, titan_two, tribute_field,
 };
 
 fn unit_def(name: &str, index: i32) -> CardDef {
@@ -181,7 +180,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         assert!(says(&refused_at(&state, &card, 2, &[&row[2].id]), "not open"));
 
         let before = state.players.p2.hero.health;
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 2 }, "tributes": [row[1].id], "playerId": "p1" }),
         );
@@ -200,7 +199,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         let mut state = playing("r391-default");
         let row = fill_row(&mut state, &[]);
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
-        let after = pb_act(
+        let after = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "tributes": [row[3].id], "playerId": "p1" }),
         );
@@ -319,7 +318,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         let mut state = playing("r391-held");
         let row = fill_row(&mut state, &[(3, summoner().id)]);
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 3 }, "tributes": [row[2].id], "playerId": "p1" }),
         );
@@ -339,7 +338,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         let mut state = playing("r391-pause");
         let row = fill_row(&mut state, &[(5, asker().id)]);
         let card = only(&in_hand(&mut state, &titan().id, PlayerId::P1, 1));
-        let paused = pb_act(
+        let paused = act(
             &state,
             json!({ "type": "play", "instanceId": card.id, "zone": { "row": "units", "lane": 5 }, "tributes": [row[4].id], "playerId": "p1" }),
         );
@@ -356,14 +355,14 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
             .take(1)
             .collect();
         let answer = only(&answers);
-        let live = pb_act(
+        let live = act(
             &paused,
             ActionInput {
                 body: answer.clone(),
                 player_id: PlayerId::P1,
             },
         );
-        let again = pb_act(
+        let again = act(
             &round,
             ActionInput {
                 body: answer,
@@ -392,7 +391,7 @@ mod r391_b4_5_a_tribute_can_pay_for_its_own_zone {
         assert!(plays(&state, &card).is_empty());
         let first_unit = top_id(&state, 0).expect("a unit");
         assert!(says(
-            &pb_reduce(
+            &act_result(
                 &state,
                 json!({ "type": "play", "instanceId": card.id, "playerId": "p1", "tributes": [first_unit] }),
             )

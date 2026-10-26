@@ -292,7 +292,7 @@ fn hit(sink: &mut EngineSink<'_>, amount: i32) {
 
 /// One action's worth of work, with its own event list, as `reduce` gives each action (§9.3): run
 /// `body`, then drain whatever a pause owed.
-fn act(state: &mut GameState, body: impl FnOnce(&mut EngineSink<'_>)) -> Vec<GameEvent> {
+fn on_sink(state: &mut GameState, body: impl FnOnce(&mut EngineSink<'_>)) -> Vec<GameEvent> {
     let mut sink = sink_for(state);
     body(&mut sink);
     drain_work(&mut sink);
@@ -307,7 +307,7 @@ fn answer(state: &mut GameState, option: &str) -> Vec<GameEvent> {
     let selection = vec![Selection::Mode {
         option: option.to_string(),
     }];
-    act(state, |sink| {
+    on_sink(state, |sink| {
         close_prompt(sink);
         run_resume(
             sink,
@@ -372,7 +372,7 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
         let mut state = game("list-pause");
         let card = resolving(&mut state, &middle_asker().id);
 
-        let played = act(&mut state, |sink| {
+        let played = on_sink(&mut state, |sink| {
             run_hook_resumable(sink, &card, "cry", HookResumableOptions::default());
         });
 
@@ -408,7 +408,7 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
         let mut state = game("list-chain");
         let card = resolving(&mut state, &chain_asker().id);
 
-        let played = act(&mut state, |sink| {
+        let played = on_sink(&mut state, |sink| {
             run_hook_resumable(sink, &card, "cry", HookResumableOptions::default());
         });
         assert_eq!(amounts(&played), vec![1]);
@@ -446,7 +446,7 @@ mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
     fn s9_3_resumes_a_three_step_sequence_at_the_step_after_the_one_that_asked() {
         let mut state = game("sequence-pause");
 
-        let started = act(&mut state, |sink| {
+        let started = on_sink(&mut state, |sink| {
             drive_sequence(sink, SequenceRun { at: 0, owner: P1 });
         });
 
@@ -472,14 +472,14 @@ mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
         let unit = put(&mut state, &crier().id, slot(P1, Row::Units, 1), json!({}));
 
         // The sequence pauses first, so its tail is owed while the board does something else.
-        act(&mut state, |sink| {
+        on_sink(&mut state, |sink| {
             drive_sequence(sink, SequenceRun { at: 0, owner: P1 });
         });
         assert_eq!(state.work.len(), 1);
 
         // A trigger fires inside the open prompt's answer (§10.3) and its Cry asks mid-list, so its tail
         // parks while the sequence's is still owed. Closing the prompt is the whole answer (§10.6).
-        let answered = act(&mut state, |sink| {
+        let answered = on_sink(&mut state, |sink| {
             close_prompt(sink);
             run_hook_resumable(sink, &unit, "cry", HookResumableOptions::default());
         });
@@ -506,7 +506,7 @@ mod a_paused_state_is_plain_data_9_3_10_1 {
     fn s9_3_survives_json_parse_json_stringify_state_with_work_owed_and_answers_the_same_way() {
         let mut state = game("round-trip");
         let card = resolving(&mut state, &middle_asker().id);
-        act(&mut state, |sink| {
+        on_sink(&mut state, |sink| {
             run_hook_resumable(sink, &card, "cry", HookResumableOptions::default());
         });
         assert!(has_work(&state));
@@ -537,7 +537,7 @@ mod a_paused_state_is_plain_data_9_3_10_1 {
         fn run(seed: &str) -> Run {
             let mut state = game(seed);
             let card = resolving(&mut state, &chain_asker().id);
-            act(&mut state, |sink| {
+            on_sink(&mut state, |sink| {
                 run_hook_resumable(sink, &card, "cry", HookResumableOptions::default());
             });
             answer(&mut state, "a");

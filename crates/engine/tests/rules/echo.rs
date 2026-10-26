@@ -23,14 +23,12 @@
 //!
 //! Fixtures are prefixed `ec-` and indexed above 1500 so they cannot collide (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::add_to_hand as add_to_hand_effect;
 use jackioh_engine::effects::{chosen_options, damage, discover_from_catalog};
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{both, events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{act, act_result, both, events_of_type, in_hand, new_game, put, slot};
 
 // ---------------------------------------------------------------------------
 // Fixtures.
@@ -257,23 +255,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
 // ---------------------------------------------------------------------------
 // Harness.
 // ---------------------------------------------------------------------------
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let n = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("ec{n}"));
-    reduce(state, &json_as::<Action>(action))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
 
 fn four_mana() -> ManaState {
     ManaState {

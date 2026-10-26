@@ -8,7 +8,7 @@ use jackioh_engine::effects::{guess_secret, keep_secret, resolve_secret};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::json_of;
+use crate::rules::fixtures::harness::{json_of, run_effect};
 use crate::rules::fixtures::instance_data::instance_game;
 
 const P1: PlayerId = PlayerId::P1;
@@ -24,22 +24,7 @@ fn game(seed: &str) -> GameState {
 
 /// The effect applied for p1 on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
-    let mut events = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(P1),
-                ..HookOptions::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
+    run_effect(state, effect, P1)
 }
 
 fn keep(choice: &str) -> Effect {

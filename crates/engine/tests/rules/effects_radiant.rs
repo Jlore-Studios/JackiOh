@@ -16,12 +16,12 @@ use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{CardScripts, Effect, EngineSink, Script, hook};
 use jackioh_engine::scripts::registered_scripts;
-use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use jackioh_engine::state::{CardInstance, GameState, find_instance_mut, new_instance};
 use jackioh_engine::zones::{PlaceOnFieldOptions, place_on_field};
 
 use super::fixtures::catalog::unit_def;
 use super::fixtures::combat::{plain, stacker};
-use super::fixtures::harness::{events_json, in_hand, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_json, in_hand, live, new_game, put, set_library, slot};
 
 /// A Cry that would be loud if making a card Radiant ever re-fired one (R22).
 fn crier() -> CardDef {
@@ -127,11 +127,6 @@ fn radiant_ids(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// The card under `id` as it stands in the state now (TS read the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
 fn named(id: &str) -> Effect {
     set_radiant(json_as(json!({ "instanceId": id })))
 }
@@ -158,14 +153,14 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
             card.damage = 1;
             card.buffs = AttackHealth { attack: 1, health: 1 };
         }
-        assert_eq!(unit_view(&state, live(&state, &unit.id)).attack, 3);
-        assert_eq!(unit_view(&state, live(&state, &unit.id)).health, 2);
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).attack, 3);
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).health, 2);
 
         let events = run(&mut state, named(&unit.id), None, as_p1());
 
         let now = live(&state, &unit.id);
         assert!(now.radiant);
-        let view = unit_view(&state, now);
+        let view = unit_view(&state, &now);
         // Printed 2/2 becomes 4/4 and the layer-4 buff is still on top of it.
         assert_eq!(view.attack, 5);
         assert_eq!(view.max_health, 5);
@@ -199,12 +194,12 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        assert!(!unit_has(&state, live(&state, &unit.id), KeywordKind::Taunt));
+        assert!(!unit_has(&state, &live(&state, &unit.id), KeywordKind::Taunt));
 
         run(&mut state, named(&unit.id), None, as_p1());
 
-        assert!(unit_has(&state, live(&state, &unit.id), KeywordKind::Taunt));
-        assert_eq!(unit_view(&state, live(&state, &unit.id)).attack, 4);
+        assert!(unit_has(&state, &live(&state, &unit.id), KeywordKind::Taunt));
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).attack, 4);
     }
 
     #[test]
@@ -226,7 +221,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
 
         assert!(live(&state, &saintess.id).radiant);
         assert_eq!(radiant_ids(&events), vec![saintess.id.clone()]);
-        assert_eq!(unit_view(&state, live(&state, &saintess.id)).attack, 6);
+        assert_eq!(unit_view(&state, &live(&state, &saintess.id)).attack, 6);
     }
 
     #[test]
@@ -261,8 +256,8 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
         // The flag still sets, so counting effects behave, and the stats are unchanged.
         assert!(live(&state, &unit.id).radiant);
         assert_eq!(radiant_ids(&events), vec![unit.id.clone()]);
-        assert_eq!(unit_view(&state, live(&state, &unit.id)).attack, 3);
-        assert_eq!(unit_view(&state, live(&state, &unit.id)).max_health, 3);
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).attack, 3);
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).max_health, 3);
     }
 
     #[test]
@@ -278,7 +273,7 @@ mod r22_r74_make_radiant_on_a_named_card_s6_3_s5_2_m3_t1 {
         let now = live(&state, &held.id);
         assert!(now.radiant);
         assert_eq!(now.zone, Zone::Hand { player: PlayerId::P1 });
-        assert_eq!(unit_view(&state, now).attack, 6);
+        assert_eq!(unit_view(&state, &now).attack, 6);
         assert_eq!(
             events_json(&events, "radiantSet")[0]["zone"],
             json!({ "z": "hand", "player": "p1" })

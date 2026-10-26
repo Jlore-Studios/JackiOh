@@ -12,13 +12,13 @@ use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
 
 use super::fixtures::combat::cleaver;
 use super::fixtures::field::{banner, fuser};
-use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
+use super::fixtures::harness::{act, events_of_type, live, new_game, put, run_effect, sink_for, slot};
 use super::fixtures::keywords_783::{
     cloaked_bolt, cloaked_field, crater_trap, crater_unit, first_striker, flyer, flying_reborner,
     flying_stacker, flying_taunter, grunt, plague_field, quake, ranged, ranged_cleaver, ranged_striker,
     ranged_trampler, register_keywords_783, sniper,
 };
-use super::fixtures::prompt_harness::{act, cast_now};
+use super::fixtures::prompt_harness::cast_now;
 
 /// p1's main phase on turn 4 with #783's cards registered, so nothing `put` places is sick (§4.1).
 fn board(seed: &str) -> GameState {
@@ -28,12 +28,6 @@ fn board(seed: &str) -> GameState {
     state.active = P1;
     state.phase = Phase::Main;
     state
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id}"))
 }
 
 fn on_unit(state: &GameState, id: &str) -> AttackTarget {
@@ -306,7 +300,6 @@ mod r783002_flying {
                 "targets": [{ "pick": "instance", "instanceId": bird.id }],
                 "playerId": "p1",
             }),
-            None,
         );
         assert!(in_graveyard(&state, P2, &bird.id), "the Spell's 2 finished it");
 
@@ -325,7 +318,6 @@ mod r783002_flying {
                 "targets": [{ "pick": "instance", "instanceId": bird.id }],
                 "playerId": "p1",
             }),
-            None,
         );
         assert_eq!(damage_on(&cried, &bird.id), 2);
 
@@ -481,7 +473,6 @@ mod r1081000_flying_backrow {
                 "zone": { "row": "backrow", "lane": 2 },
                 "playerId": "p1",
             }),
-            None,
         );
         let stood = live(&next, &bird.id);
         assert!(
@@ -554,7 +545,6 @@ mod r1081000_flying_backrow {
                 "zone": { "row": "backrow", "lane": 1 },
                 "playerId": "p1",
             }),
-            None,
         );
         assert_eq!(
             card_at(&next, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
@@ -680,14 +670,12 @@ mod r1081000_flying_backrow {
         let attacked = act(
             &state,
             json!({ "type": "attack", "attackerId": wing.id, "targetId": "hero-p2", "playerId": "p1" }),
-            None,
         );
         assert!(live(&attacked, &wing.id).exertion.attacked);
         assert!(attacked.players.p2.hero.health < state.players.p2.hero.health);
         let switched = act(
             &state,
             json!({ "type": "switchPosition", "instanceId": wing.id, "playerId": "p1" }),
-            None,
         );
         assert_eq!(live(&switched, &wing.id).position, Some(Position::Def));
     }
@@ -699,7 +687,6 @@ mod r1081000_flying_backrow {
         state = act(
             &state,
             json!({ "type": "switchPosition", "instanceId": wing.id, "playerId": "p1" }),
-            None,
         );
         assert!(live(&state, &wing.id).exertion.switched);
         // Turns pass (R82 may pass p1's own) until p1's next one begins.
@@ -709,7 +696,6 @@ mod r1081000_flying_backrow {
             state = act(
                 &state,
                 json!({ "type": "endTurn", "playerId": format!("{seat}") }),
-                None,
             );
         }
         assert!(
@@ -740,20 +726,6 @@ mod r1081000_flying_backrow {
         }
         assert!(in_graveyard(&doomed, P1, &wing.id), "a flyer at 0 health dies");
         assert!(card_at(&doomed, slot(P1, Row::Backrow, 1)).is_none());
-    }
-
-    /// `effect` as `actor` casts it, straight through its `apply`.
-    fn run_effect(state: &mut GameState, effect: Effect, actor: PlayerId) {
-        let mut sink = sink_for(state);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(actor),
-                ..Default::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
     }
 
     /// Strip the text off `id`, Flying with it.
@@ -1010,7 +982,6 @@ mod r1081000_flying_backrow {
                 "zone": { "row": "backrow", "lane": 2 },
                 "playerId": "p1",
             }),
-            None,
         );
         assert_eq!(
             carried_at(&state, slot(P1, Row::Backrow, 2)).map(|unit| unit.id.clone()),
@@ -1047,7 +1018,6 @@ mod r1081000_flying_backrow {
                 "zone": { "row": "backrow", "lane": 2 },
                 "playerId": "p1",
             }),
-            None,
         );
         assert_pile(state, slot(P1, Row::Backrow, 2), &top.id, &under.id);
         (top, under)
@@ -1228,7 +1198,6 @@ mod r1081000_flying_backrow {
                 "zone": { "row": "backrow", "lane": 3 },
                 "playerId": "p1",
             }),
-            None,
         );
         assert!(stands(&next, P1, &quaking.id));
         assert!(

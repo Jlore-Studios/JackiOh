@@ -14,6 +14,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::spell_def;
+use crate::rules::fixtures::harness::run_effect;
 use crate::rules::fixtures::outside_data::register_outside_data;
 
 const SNARE: &str = "cc-snare";
@@ -147,22 +148,7 @@ fn choice_of(state: &GameState, id: &str) -> Option<SecretChoice> {
 
 /// The effect applied for `player` on a sink over `state`, the rng cursor written back; its events.
 fn run(state: &mut GameState, player: PlayerId, effect: Effect) -> Vec<GameEvent> {
-    let mut events = Vec::new();
-    let mut rng = Rng::new(&state.seed, state.rng_cursor);
-    {
-        let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        let mut ctx = make_context(
-            &mut sink,
-            None,
-            HookOptions {
-                controller: Some(player),
-                ..HookOptions::default()
-            },
-        );
-        (effect.apply)(&mut ctx);
-    }
-    state.rng_cursor = rng.cursor();
-    events
+    run_effect(state, effect, player)
 }
 
 mod r1714000_a_dry_runs_concealed_copy {

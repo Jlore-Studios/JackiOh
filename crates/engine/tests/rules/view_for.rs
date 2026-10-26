@@ -15,7 +15,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    in_hand, json_of, matches_object, new_game, put, set_library, slot, spread,
+    in_hand, json_of, live, live_mut, matches_object, new_game, put, set_library, slot, spread,
 };
 
 // Fixtures
@@ -163,14 +163,6 @@ fn run(state: &mut GameState, effect: &Effect, options: HookOptions) {
         (effect.apply)(&mut ctx);
     }
     state.rng_cursor = rng.cursor();
-}
-
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn serialized(view: &PlayerView) -> String {
@@ -549,7 +541,7 @@ mod view_for_10_8_m3_t6 {
         let mine = json_of(view_for(&state, PlayerId::P1));
         let theirs = json_of(view_for(&state, PlayerId::P2));
         // The opponent reads the cost and nothing else; the controller reads the same number.
-        let cost = effective_cost(&state, live(&state, &trap.id), Default::default());
+        let cost = effective_cost(&state, &live(&state, &trap.id), Default::default());
         assert_eq!(
             mine["opponent"]["backrow"][0],
             json!({ "faceDown": true, "cost": cost })
@@ -560,7 +552,7 @@ mod view_for_10_8_m3_t6 {
         );
         // The number is the card's own, as it stands: a costMod moves it for both (R65).
         live_mut(&mut state, &trap.id).cost_mod = 2;
-        let cost = effective_cost(&state, live(&state, &trap.id), Default::default());
+        let cost = effective_cost(&state, &live(&state, &trap.id), Default::default());
         assert_eq!(
             json_of(view_for(&state, PlayerId::P1))["opponent"]["backrow"][0],
             json!({ "faceDown": true, "cost": cost })

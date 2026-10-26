@@ -9,7 +9,7 @@ use jackioh_engine::testkit::*;
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::combat as combat_fx;
 use super::fixtures::harness::{events_of_type, json_of, new_game, put, set_library, slot};
-use crate::rules::fixtures::harness::matches_object;
+use crate::rules::fixtures::harness::{live, live_mut, matches_object};
 
 /// A face-down Trap for R33; #87's board swap moves the backrow too.
 fn trap() -> CardDef {
@@ -74,16 +74,6 @@ fn where_is(state: &GameState, card: &CardInstance) -> String {
 
 fn owned(ids: &[&str]) -> Vec<String> {
     ids.iter().map(|id| id.to_string()).collect()
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id} in the state"))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
 fn ids_of(cards: &[CardInstance]) -> Vec<String> {

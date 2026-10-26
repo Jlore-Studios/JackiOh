@@ -5,10 +5,8 @@
 use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::credit::{
-    act, act_result, body, in_hand, lender, lender_open, live, playing, put, slot, tapper,
-};
-use crate::rules::fixtures::harness::sink_for;
+use crate::rules::fixtures::credit::{body, in_hand, lender, lender_open, playing, put, slot, tapper};
+use crate::rules::fixtures::harness::{act, act_result, live, sink_for};
 
 mod r1223_borrowing {
     use super::*;
@@ -25,7 +23,7 @@ mod r1223_borrowing {
         // 2 current, a (3) body: the 2 go first and 1 is borrowed over four instalments.
         state.players.p1.mana.current = 2;
         let dealt = in_hand(&mut state, &body().id, PlayerId::P1, 1);
-        let card = live(&state, &only(&dealt));
+        let card = live(&state, only(&dealt));
         assert_eq!(spendable_mana(&state, PlayerId::P1), 6);
         let after = act(
             &state,

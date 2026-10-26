@@ -2,20 +2,11 @@
 //! mulligans (R265), nonce dedupe, the game's end, bad plays, and every action `legalActions` lists
 //! applying cleanly.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::new_game;
-
-static SEQ: AtomicU32 = AtomicU32::new(0);
-
-fn nonce() -> String {
-    let seq = SEQ.fetch_add(1, Ordering::SeqCst) + 1;
-    format!("r{seq}")
-}
+use crate::rules::fixtures::harness::{new_game, next_nonce};
 
 fn action(body: Value) -> Action {
     json_as(body)
@@ -34,7 +25,7 @@ fn playing(seed: &str) -> GameState {
                 keep: hand_ids(&state, P1),
             },
             P1,
-            nonce(),
+            next_nonce(),
         ),
     )
     .state;
@@ -45,7 +36,7 @@ fn playing(seed: &str) -> GameState {
                 keep: hand_ids(&state, P2),
             },
             P2,
-            nonce(),
+            next_nonce(),
         ),
     )
     .state;
@@ -68,7 +59,7 @@ mod reduce_m1_t3 {
         let state = playing("reduce");
         let before = clone_state(&state);
 
-        let result = reduce(&state, &Action::new(ActionBody::EndTurn, P2, nonce()));
+        let result = reduce(&state, &Action::new(ActionBody::EndTurn, P2, next_nonce()));
         assert_error(&result.error, "not your turn");
         assert_eq!(result.events, Vec::<GameEvent>::new());
         assert_eq!(result.state, before);
@@ -78,14 +69,14 @@ mod reduce_m1_t3 {
     fn lets_the_non_active_player_concede_and_answer_a_draw_offer() {
         let state = playing("non-active");
         assert_eq!(
-            reduce(&state, &Action::new(ActionBody::Concede, P2, nonce())).error,
+            reduce(&state, &Action::new(ActionBody::Concede, P2, next_nonce())).error,
             None
         );
 
-        let offered = reduce(&state, &Action::new(ActionBody::OfferDraw, P1, nonce())).state;
+        let offered = reduce(&state, &Action::new(ActionBody::OfferDraw, P1, next_nonce())).state;
         let answered = reduce(
             &offered,
-            &Action::new(ActionBody::AnswerDraw { accept: false }, P2, nonce()),
+            &Action::new(ActionBody::AnswerDraw { accept: false }, P2, next_nonce()),
         );
         assert_eq!(answered.error, None);
     }
@@ -105,28 +96,30 @@ mod reduce_m1_t3 {
             .unwrap_or_default();
         let played = reduce(
             &state,
-            &action(json!({ "type": "play", "instanceId": first_card, "playerId": "p1", "nonce": nonce() })),
+            &action(
+                json!({ "type": "play", "instanceId": first_card, "playerId": "p1", "nonce": next_nonce() }),
+            ),
         );
         assert_error(&played.error, "the mulligan is open");
         assert_error(
-            &reduce(&state, &Action::new(ActionBody::EndTurn, P1, nonce())).error,
+            &reduce(&state, &Action::new(ActionBody::EndTurn, P1, next_nonce())).error,
             "the mulligan is open",
         );
         assert_error(
-            &reduce(&state, &Action::new(ActionBody::OfferDraw, P2, nonce())).error,
+            &reduce(&state, &Action::new(ActionBody::OfferDraw, P2, next_nonce())).error,
             "the mulligan is open",
         );
 
         // Either seat answers its own first; a second answer from the same seat is refused.
         let p2_first = reduce(
             &state,
-            &Action::new(ActionBody::Mulligan { keep: vec![] }, P2, nonce()),
+            &Action::new(ActionBody::Mulligan { keep: vec![] }, P2, next_nonce()),
         );
         assert_eq!(p2_first.error, None);
         assert_eq!(mulligan_owed(&p2_first.state), vec![P1]);
         let again = reduce(
             &p2_first.state,
-            &Action::new(ActionBody::Mulligan { keep: vec![] }, P2, nonce()),
+            &Action::new(ActionBody::Mulligan { keep: vec![] }, P2, next_nonce()),
         );
         assert_error(&again.error, "already answered");
         let stranger = reduce(
@@ -136,7 +129,7 @@ mod reduce_m1_t3 {
                     keep: vec!["nope".to_string()],
                 },
                 P1,
-                nonce(),
+                next_nonce(),
             ),
         );
         assert_error(&stranger.error, "not in your hand");
@@ -145,7 +138,7 @@ mod reduce_m1_t3 {
     #[test]
     fn dedupes_a_repeated_nonce_same_state_no_duplicate_events() {
         let state = playing("dedupe");
-        let id = nonce();
+        let id = next_nonce();
         let first = reduce(&state, &Action::new(ActionBody::EndTurn, P1, id.clone()));
         let second = reduce(&first.state, &Action::new(ActionBody::EndTurn, P1, id));
 
@@ -157,7 +150,7 @@ mod reduce_m1_t3 {
     #[test]
     fn a_reused_nonce_neither_applies_nor_replaces_a_different_action_from_either_seat() {
         let state = playing("reused-nonce");
-        let id = nonce();
+        let id = next_nonce();
         let first = reduce(&state, &Action::new(ActionBody::EndTurn, P1, id.clone()));
         assert_eq!(first.error, None);
 
@@ -177,7 +170,7 @@ mod reduce_m1_t3 {
     #[test]
     fn a_refused_action_leaves_its_nonce_free_for_the_seat_that_may_act() {
         let state = playing("refused-nonce");
-        let id = nonce();
+        let id = next_nonce();
         let refused = reduce(&state, &Action::new(ActionBody::EndTurn, P2, id.clone()));
         assert_error(&refused.error, "not your turn");
         assert_eq!(refused.state, state);
@@ -189,9 +182,13 @@ mod reduce_m1_t3 {
 
     #[test]
     fn refuses_an_action_once_the_game_is_over() {
-        let over = reduce(&playing("over"), &Action::new(ActionBody::Concede, P1, nonce())).state;
+        let over = reduce(
+            &playing("over"),
+            &Action::new(ActionBody::Concede, P1, next_nonce()),
+        )
+        .state;
         assert_error(
-            &reduce(&over, &Action::new(ActionBody::EndTurn, P2, nonce())).error,
+            &reduce(&over, &Action::new(ActionBody::EndTurn, P2, next_nonce())).error,
             "game is over",
         );
     }
@@ -204,7 +201,7 @@ mod reduce_m1_t3 {
             &reduce(
                 &state,
                 &action(
-                    json!({ "type": "play", "instanceId": ghost.id, "playerId": "p1", "nonce": nonce() }),
+                    json!({ "type": "play", "instanceId": ghost.id, "playerId": "p1", "nonce": next_nonce() }),
                 ),
             )
             .error,
@@ -225,7 +222,7 @@ mod reduce_m1_t3 {
                 "instanceId": card,
                 "zone": { "row": "units", "lane": 1 },
                 "playerId": "p1",
-                "nonce": nonce(),
+                "nonce": next_nonce(),
             })),
         );
         assert_eq!(played.error, None);
@@ -246,7 +243,7 @@ mod reduce_m1_t3 {
                 "instanceId": second,
                 "zone": { "row": "units", "lane": 1 },
                 "playerId": "p1",
-                "nonce": nonce(),
+                "nonce": next_nonce(),
             })),
         );
         assert_error(&blocked.error, "not open");
@@ -270,7 +267,7 @@ mod reduce_m1_t3 {
 
                 // Every listed action must apply cleanly from this state, concedes and offers included.
                 for listed in &actions {
-                    let probe = reduce(&state, &Action::new(listed.clone(), player, nonce()));
+                    let probe = reduce(&state, &Action::new(listed.clone(), player, next_nonce()));
                     assert!(
                         probe.error.is_none(),
                         "{} should be legal: {}",
@@ -294,7 +291,7 @@ mod reduce_m1_t3 {
                     .or_else(|| walkable.first())
                     .map(|body| (*body).clone());
                 let chosen = chosen.expect("a walkable action");
-                state = reduce(&state, &Action::new(chosen, player, nonce())).state;
+                state = reduce(&state, &Action::new(chosen, player, next_nonce())).state;
             }
             game += 1;
         }

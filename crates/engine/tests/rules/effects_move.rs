@@ -13,13 +13,11 @@ use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{CardScripts, Effect, EngineSink, Script, hook};
 use jackioh_engine::scripts::registered_scripts;
-use jackioh_engine::state::{
-    AnnounceRecord, CardInstance, GameState, find_instance, find_instance_mut, new_instance,
-};
+use jackioh_engine::state::{AnnounceRecord, CardInstance, GameState, new_instance};
 use jackioh_engine::zones::{PlaceOnFieldOptions, card_at, place_on_field};
 
 use super::fixtures::catalog::token_def;
-use super::fixtures::harness::{both, events_json, in_hand, new_game, put, slot};
+use super::fixtures::harness::{both, events_json, in_hand, live, live_mut, new_game, put, slot};
 
 // Fixture cards.
 
@@ -179,15 +177,6 @@ fn types(events: &[GameEvent]) -> Vec<String> {
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
-}
-
-/// The card under `id` as it stands in the state now.
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).expect("the card is in the state")
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {

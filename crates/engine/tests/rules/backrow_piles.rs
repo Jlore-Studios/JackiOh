@@ -19,10 +19,10 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, taunter};
 use crate::rules::fixtures::field::{
-    act, act_result, banner, cover, flush, fuser, golem, mourner, notes_of, playing, tower, watcher, wrecker,
+    banner, cover, flush, fuser, golem, mourner, notes_of, playing, tower, watcher, wrecker,
 };
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, put, sink_for, slot,
+    act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
 };
 use crate::rules::fixtures::scripts::heroic_power;
 
@@ -102,10 +102,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn live(state: &GameState, id: &str) -> CardInstance {
-    by_id(state, id).clone()
 }
 
 /// Stack a new card of `top_def` onto the zone `under` stands in, as a Stack play or summon would (B5 E21).

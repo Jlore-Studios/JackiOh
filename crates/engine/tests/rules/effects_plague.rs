@@ -20,18 +20,18 @@ use jackioh_engine::replay::hash_state;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{Effect, EngineSink};
-use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
+use jackioh_engine::state::{CardInstance, GameState, find_instance_mut, new_instance};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::triggers::settle;
 use jackioh_engine::view_for::{HIDDEN_ID, HIDDEN_OPTION_LABEL, view_for};
 use jackioh_engine::zones::{PlaceOnFieldOptions, place_on_field};
 
 use super::fixtures::generation::{
-    Run, act, answer, big_body, body, charger, crawler, dusting, frozen, hand_card, outbreak, plague_book,
-    playing, quiet_trap, refusal, replayed, scatter, slime, toxins,
+    Run, advance, answer, big_body, body, charger, crawler, dusting, frozen, hand_card, outbreak,
+    plague_book, playing, quiet_trap, refusal, replayed, scatter, slime, toxins,
 };
 use super::fixtures::harness::{events_json, put, slot};
-use crate::rules::fixtures::harness::matches_object;
+use crate::rules::fixtures::harness::{live, matches_object};
 
 fn pick(card: &CardInstance) -> Selection {
     Selection::Instance {
@@ -131,10 +131,6 @@ fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInsta
         .and_then(|pile| pile.first())
 }
 
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
 fn play(card: &CardInstance) -> Value {
     json!({ "type": "play", "instanceId": card.id, "playerId": "p1" })
 }
@@ -177,7 +173,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let mut run = frozen(&start);
         let enemy_before = hero_health(&run.state, PlayerId::P2);
 
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
         let first = run.state.pending.clone();
         assert_eq!(first.as_ref().map(|p| p.player_id), Some(PlayerId::P1));
         assert_eq!(first.as_ref().map(|p| p.kind), Some(PromptKind::Target));
@@ -221,7 +217,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
             .expect("the book")
             .radiant = true;
         let mut run = frozen(&start);
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
 
         // Paused on the one prompt, the Spell's damage parked behind it (R113).
         let paused = run.state.clone();
@@ -259,7 +255,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let mut run = frozen(&start);
         let before = hero_health(&run.state, PlayerId::P2);
         let cursor = run.state.rng_cursor;
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
         assert!(run.state.pending.is_none());
         assert_eq!(hero_health(&run.state, PlayerId::P2), before - 1);
         // R129: a placement with nowhere to go draws nothing.
@@ -274,7 +270,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let in_hand = hand_card(&mut start.state, &body.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
         let pending = run.state.pending.clone().expect("expected a prompt");
         let refused = run.state.clone();
         let named = refusal(
@@ -298,7 +294,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         } = board("plague-view");
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
 
         assert_eq!(
             view_json(&run.state, PlayerId::P2)["pending"],
@@ -381,7 +377,7 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         } = board("plague-zone");
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
 
         let mine = view_json(&run.state, PlayerId::P1)["pending"].clone();
         let option_of = |id: &str| -> Value {
@@ -472,8 +468,8 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
             .expect("the radiant spell")
             .radiant = true;
         let mut run = frozen(&start);
-        run = act(&run, play_on(&spell, &theirs));
-        run = act(&run, play_on(&radiant, &theirs));
+        run = advance(&run, play_on(&spell, &theirs));
+        run = advance(&run, play_on(&radiant, &theirs));
         assert!(run.state.pending.is_none());
         let events = last_events(&run.state, 2);
         assert_eq!(
@@ -498,11 +494,11 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         );
         sink_for!(sink, *state);
         assert_eq!(
-            plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)),
+            plague_multiplier_of(&*sink.state, &live(&*sink.state, &base.id)),
             2
         );
         assert_eq!(
-            plague_multiplier_of(&*sink.state, live(&*sink.state, &radiant.id)),
+            plague_multiplier_of(&*sink.state, &live(&*sink.state, &radiant.id)),
             3
         );
 
@@ -518,8 +514,8 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
             Some(&radiant),
             &[],
         );
-        assert_eq!(plague_on(live(&*sink.state, &base.id)), 2);
-        assert_eq!(plague_on(live(&*sink.state, &radiant.id)), 6);
+        assert_eq!(plague_on(&live(&*sink.state, &base.id)), 2);
+        assert_eq!(plague_on(&live(&*sink.state, &radiant.id)), 6);
         assert_eq!(
             placements(&*sink.events),
             vec![
@@ -533,7 +529,7 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
             .expect("the slime")
             .vanilla = true;
         assert_eq!(
-            plague_multiplier_of(&*sink.state, live(&*sink.state, &base.id)),
+            plague_multiplier_of(&*sink.state, &live(&*sink.state, &base.id)),
             1
         );
     }
@@ -577,12 +573,12 @@ mod r471_e19_one_placement_multipliers_and_the_placed_trigger {
         let before = hero_health(&run.state, PlayerId::P2);
 
         // One placement of 2: one answer.
-        run = act(&run, play_on(&spell, &worm));
+        run = advance(&run, play_on(&spell, &worm));
         assert_eq!(hero_health(&run.state, PlayerId::P2), before - 1);
 
         // Two placements on it: one answer (R689); all three triggers still wait for the whole effect and
         // the Spell (R59, R68), so the health lands where two answers put it.
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
         run = answer(&run, pick(&worm), None);
         assert!(run.state.pending.is_none());
         assert_eq!(hero_health(&run.state, PlayerId::P2), before - 1 - 1 - 2);
@@ -677,7 +673,7 @@ mod e19_placements_over_a_scope_at_random_and_removals {
         } = board("plague-each");
         let spell = hand_card(&mut start.state, &dusting.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, play(&spell));
+        run = advance(&run, play(&spell));
         let events = last_events(&run.state, 1);
         assert_eq!(
             placements(&events),
@@ -771,7 +767,7 @@ mod e19_placements_over_a_scope_at_random_and_removals {
         );
         let spell = hand_card(&mut start.state, &scatter.id, PlayerId::P1);
         let mut run = frozen(&start);
-        run = act(&run, play(&spell));
+        run = advance(&run, play(&spell));
         assert_eq!(hash_state(&replayed(&run)), hash_state(&run.state));
     }
 
@@ -791,7 +787,7 @@ mod e19_placements_over_a_scope_at_random_and_removals {
             None,
             &[&theirs],
         );
-        assert_eq!(plague_on(live(&*sink.state, &theirs.id)), 2);
+        assert_eq!(plague_on(&live(&*sink.state, &theirs.id)), 2);
         let now = live(&*sink.state, &theirs.id).clone();
         assert_eq!(remove_plague(&mut sink, &now, 5), 2);
         assert_eq!(live(&*sink.state, &theirs.id).counters.plague, None);
@@ -835,7 +831,7 @@ mod e19_stats_per_token_auras_and_self_layers {
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
 
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
         run = answer(&run, pick(&mine), None);
         assert!(run.state.pending.is_none());
         let ally = top_of(&run.state, PlayerId::P1, 1).expect("the ally");
@@ -865,7 +861,7 @@ mod e19_stats_per_token_auras_and_self_layers {
         let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
         let mut run = frozen(&start);
 
-        run = act(&run, play(&book));
+        run = advance(&run, play(&book));
         run = answer(&run, pick(&frail), None);
         // Both placements landed before any state check, so the 1/1 is gone only now that the effect ended.
         assert!(run.state.pending.is_none());
@@ -888,12 +884,12 @@ mod e19_stats_per_token_auras_and_self_layers {
             slot(PlayerId::P1, Row::Units, 3),
             json!({}),
         );
-        assert_eq!(unit_view(&start.state, live(&start.state, &unit.id)).attack, 4);
+        assert_eq!(unit_view(&start.state, &live(&start.state, &unit.id)).attack, 4);
         {
             sink_for!(sink, start.state);
             place_plague_on(&mut sink, &unit, 2);
         }
-        assert_eq!(unit_view(&start.state, live(&start.state, &unit.id)).attack, 8);
+        assert_eq!(unit_view(&start.state, &live(&start.state, &unit.id)).attack, 8);
     }
 }
 
@@ -918,10 +914,10 @@ mod e19_tokens_spent_as_mana_the_removal_the_play_pipeline_pays_with {
             None,
             &[],
         );
-        assert_eq!(plague_on(live(&*sink.state, &field.id)), 4);
+        assert_eq!(plague_on(&live(&*sink.state, &field.id)), 4);
         let now = live(&*sink.state, &field.id).clone();
         assert_eq!(remove_plague(&mut sink, &now, 3), 3);
-        assert_eq!(plague_on(live(&*sink.state, &field.id)), 1);
+        assert_eq!(plague_on(&live(&*sink.state, &field.id)), 1);
     }
 
     #[test]

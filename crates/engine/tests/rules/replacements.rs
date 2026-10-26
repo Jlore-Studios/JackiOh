@@ -12,7 +12,7 @@ use crate::rules::fixtures::damage_combat::{
     grunt, in_pile, joro, leech, mend, notes, phoenix, pile_on, playing, rattle, recorder, replays_to,
     round_trip, second_wind, shadowstep, storm, vital_kill, voidwalker, wall, watcher,
 };
-use crate::rules::fixtures::harness::{events_json, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, live, live_mut, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
 
 const P1: PlayerId = PlayerId::P1;
@@ -81,15 +81,6 @@ impl Bench {
             },
         )
     }
-}
-
-/// The card as it stands in the state now.
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).expect("the card is still in the game")
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).expect("the card is still in the game")
 }
 
 fn hero_target(player: PlayerId) -> DamageTarget {

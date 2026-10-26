@@ -2,12 +2,10 @@
 //! several declarations reading the flat `targets` list in order, the `type`, `tags` and `notTags`
 //! filters, the backrow, hero and zone kinds, `excludeSelf`, an ally-only side, two mode declarations.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{both, in_hand, new_game, put, slot, spread};
+use crate::rules::fixtures::harness::{act_result, both, in_hand, new_game, put, slot, spread};
 
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let mut card = json!({
@@ -298,17 +296,6 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// Unique across the tests, which run on parallel threads.
-static SEQ: AtomicU32 = AtomicU32::new(0);
-
-/// `body` is the action literal (its `playerId` included); a fresh nonce is added.
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let seq = SEQ.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut body = body;
-    body["nonce"] = json!(format!("pf{seq}"));
-    reduce(state, &json_as::<Action>(body))
-}
-
 fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
     state.players[player]
         .hand
@@ -321,13 +308,13 @@ fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     let keep = hand_ids(&state, PlayerId::P1);
-    state = act(
+    state = act_result(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p1" }),
     )
     .state;
     let keep = hand_ids(&state, PlayerId::P2);
-    state = act(
+    state = act_result(
         &state,
         json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
     )
@@ -407,7 +394,7 @@ fn combo_action(instance_id: &str, combo: &PlayChoices) -> PlayAction {
     play_action(instance_id, combo.targets.as_deref(), combo.modes.as_deref())
 }
 
-/// `{ type: "play", instanceId, playerId: "p1", ...combo }`, an action body for `act`.
+/// `{ type: "play", instanceId, playerId: "p1", ...combo }`, an action body for `act_result`.
 fn combo_body(instance_id: &str, combo: &PlayChoices) -> Value {
     let mut body = json!({ "type": "play", "instanceId": instance_id, "playerId": "p1" });
     if let Some(targets) = &combo.targets {
@@ -476,7 +463,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         );
         let card = first(in_hand(&mut state, &two_step().id, PlayerId::P1, 1));
 
-        let played = act(
+        let played = act_result(
             &state,
             targeting(&card.id, vec![on_instance(&theirs.id), on_instance(&mine.id)]),
         );
@@ -485,7 +472,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(top_damage(&played.state, PlayerId::P1, 0), Some(1));
 
         // The same two selections in the other order are refused: each declaration reads its own slot.
-        let swapped = act(
+        let swapped = act_result(
             &state,
             targeting(&card.id, vec![on_instance(&mine.id), on_instance(&theirs.id)]),
         );
@@ -497,7 +484,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(swapped.state, state);
 
         // One selection does not feed two declarations: the second one is still owed its minimum.
-        let short = act(&state, targeting(&card.id, vec![on_instance(&theirs.id)]));
+        let short = act_result(&state, targeting(&card.id, vec![on_instance(&theirs.id)]));
         assert!(error_of(&short).contains("needs 1 target"), "{:?}", short.error);
     }
 
@@ -633,7 +620,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         let card = first(in_hand(&mut state, &remainder().id, PlayerId::P1, 1));
 
         // 1 for the fixed declaration, then 3 for the "up to 3": four selections in one flat list.
-        let played = act(
+        let played = act_result(
             &state,
             targeting(
                 &card.id,
@@ -648,7 +635,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(played.error, None);
 
         // A fifth selection lands on the last declaration too, which takes at most three.
-        let too_many = act(
+        let too_many = act_result(
             &state,
             targeting(
                 &card.id,
@@ -664,7 +651,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert!(error_of(&too_many).contains("at most 3"), "{:?}", too_many.error);
 
         // The first declaration still reads the first selection only: an ally there is not enemy-side.
-        let wrong_first = act(
+        let wrong_first = act_result(
             &state,
             targeting(&card.id, vec![on_instance(&ally_a.id), on_instance(&enemy_a.id)]),
         );
@@ -700,12 +687,15 @@ mod r81_r90_play_choice_declarations_and_filters {
         }
 
         assert_eq!(
-            act(&state, targeting(&card.id, vec![on_instance(&a_spell.id)])).error,
+            act_result(&state, targeting(&card.id, vec![on_instance(&a_spell.id)])).error,
             None
         );
         assert!(
-            error_of(&act(&state, targeting(&card.id, vec![on_instance(&a_unit.id)])))
-                .contains("not a legal target")
+            error_of(&act_result(
+                &state,
+                targeting(&card.id, vec![on_instance(&a_unit.id)])
+            ))
+            .contains("not a legal target")
         );
     }
 
@@ -741,11 +731,11 @@ mod r81_r90_play_choice_declarations_and_filters {
         );
 
         assert_eq!(
-            act(&state, targeting(&card.id, vec![on_instance(&their_trap.id)])).error,
+            act_result(&state, targeting(&card.id, vec![on_instance(&their_trap.id)])).error,
             None
         );
         assert!(
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 targeting(&card.id, vec![on_instance(&not_a_trap.id)])
             ))
@@ -767,12 +757,12 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(offered, vec![wanted.id.clone()]); // every tag matches, and the excluded tag is absent
 
         assert_eq!(
-            act(&state, targeting(&card.id, vec![on_instance(&wanted.id)])).error,
+            act_result(&state, targeting(&card.id, vec![on_instance(&wanted.id)])).error,
             None
         );
         // "Felinor" alone does not satisfy ["Felinor", "KY"]: every tag must match.
         assert!(
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 targeting(&card.id, vec![on_instance(&half_match.id)])
             ))
@@ -780,8 +770,11 @@ mod r81_r90_play_choice_declarations_and_filters {
         );
         // And one excluded tag is enough to drop a card that matches both wanted tags.
         assert!(
-            error_of(&act(&state, targeting(&card.id, vec![on_instance(&excluded.id)])))
-                .contains("not a legal target")
+            error_of(&act_result(
+                &state,
+                targeting(&card.id, vec![on_instance(&excluded.id)])
+            ))
+            .contains("not a legal target")
         );
     }
 
@@ -803,7 +796,7 @@ mod r81_r90_play_choice_declarations_and_filters {
             vec![Selection::Hero { player: PlayerId::P2 }]
         );
 
-        let played = act(
+        let played = act_result(
             &state,
             targeting(&card.id, vec![Selection::Hero { player: PlayerId::P2 }]),
         );
@@ -811,7 +804,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(played.state.players.p2.hero.health, 27);
 
         // Your own hero is a hero, but not the hero this declaration allows.
-        let own_hero = act(
+        let own_hero = act_result(
             &state,
             targeting(&card.id, vec![Selection::Hero { player: PlayerId::P1 }]),
         );
@@ -823,8 +816,11 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert_eq!(own_hero.state, state);
         // A unit is not a hero either, even an enemy one.
         assert!(
-            error_of(&act(&state, targeting(&card.id, vec![on_instance(&theirs.id)])))
-                .contains("not a legal target")
+            error_of(&act_result(
+                &state,
+                targeting(&card.id, vec![on_instance(&theirs.id)])
+            ))
+            .contains("not a legal target")
         );
     }
 
@@ -863,7 +859,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         assert!(!offered.contains(&on_zone(PlayerId::P2, Row::Units, 2)));
 
         assert_eq!(
-            act(
+            act_result(
                 &state,
                 targeting(&card.id, vec![on_zone(PlayerId::P1, Row::Backrow, 2)])
             )
@@ -876,7 +872,7 @@ mod r81_r90_play_choice_declarations_and_filters {
             on_zone(PlayerId::P2, Row::Backrow, 2),
             on_zone(PlayerId::P1, Row::Units, 9),
         ] {
-            let refused = act(&state, targeting(&card.id, vec![zone.clone()]));
+            let refused = act_result(&state, targeting(&card.id, vec![zone.clone()]));
             assert!(
                 error_of(&refused).contains("not a legal target"),
                 "{zone:?}: {:?}",
@@ -963,7 +959,7 @@ mod r81_r90_play_choice_declarations_and_filters {
 
         // Every combination really is playable, and `legalActions` offers exactly those four plays.
         for combo in &combos {
-            assert_eq!(act(&state, combo_body(&card.id, combo)).error, None);
+            assert_eq!(act_result(&state, combo_body(&card.id, combo)).error, None);
         }
         let plays: Vec<Option<Vec<String>>> = legal_actions(&state, PlayerId::P1)
             .into_iter()
@@ -979,7 +975,7 @@ mod r81_r90_play_choice_declarations_and_filters {
         // One answer for two declarations, three answers for two, and an option the second one
         // does not have are all refused.
         let with_modes = |modes: &[&str]| -> String {
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": card.id, "playerId": "p1", "modes": modes }),
             ))
@@ -1007,12 +1003,15 @@ mod r81_r90_play_choice_declarations_and_filters {
         }
 
         assert_eq!(
-            act(&state, targeting(&card.id, vec![on_instance(&mine.id)])).error,
+            act_result(&state, targeting(&card.id, vec![on_instance(&mine.id)])).error,
             None
         );
         assert!(
-            error_of(&act(&state, targeting(&card.id, vec![on_instance(&theirs.id)])))
-                .contains("not a legal target")
+            error_of(&act_result(
+                &state,
+                targeting(&card.id, vec![on_instance(&theirs.id)])
+            ))
+            .contains("not a legal target")
         );
     }
 
@@ -1037,24 +1036,24 @@ mod r81_r90_play_choice_declarations_and_filters {
             Selection::None,
         ] {
             assert!(
-                error_of(&act(&state, targeting(&hitter.id, vec![pick.clone()])))
+                error_of(&act_result(&state, targeting(&hitter.id, vec![pick.clone()])))
                     .contains("not a legal target")
             );
             assert!(
-                error_of(&act(&state, targeting(&zoner.id, vec![pick.clone()])))
+                error_of(&act_result(&state, targeting(&zoner.id, vec![pick.clone()])))
                     .contains("not a legal target")
             );
         }
         // A zone where a hero is declared, and a hero where a zone is declared, are refused too.
         assert!(
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 targeting(&hitter.id, vec![on_zone(PlayerId::P1, Row::Units, 1)])
             ))
             .contains("not a legal target")
         );
         assert!(
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 targeting(&zoner.id, vec![Selection::Hero { player: PlayerId::P1 }])
             ))
@@ -1098,19 +1097,22 @@ mod r81_r90_play_choice_declarations_and_filters {
             vec![felinor.id.clone()]
         );
 
-        let played = act(&state, targeting(&bare.id, vec![on_instance(&theirs.id)]));
+        let played = act_result(&state, targeting(&bare.id, vec![on_instance(&theirs.id)]));
         assert_eq!(played.error, None);
         assert_eq!(top_damage(&played.state, PlayerId::P2, 0), Some(1));
         assert!(
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 targeting(&bare.id, vec![Selection::Hero { player: PlayerId::P2 }])
             ))
             .contains("not a legal target")
         );
         assert!(
-            error_of(&act(&state, targeting(&tribal.id, vec![on_instance(&mine.id)])))
-                .contains("not a legal target")
+            error_of(&act_result(
+                &state,
+                targeting(&tribal.id, vec![on_instance(&mine.id)])
+            ))
+            .contains("not a legal target")
         );
     }
 
@@ -1168,7 +1170,7 @@ mod r81_r90_play_choice_declarations_and_filters {
             .collect();
         let first_unit = units.first().cloned().expect("a unit on p1's side");
         assert!(
-            error_of(&act(
+            error_of(&act_result(
                 &state,
                 targeting(&card.id, vec![on_instance(&first_unit.id)])
             ))

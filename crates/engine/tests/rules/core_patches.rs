@@ -12,8 +12,6 @@
 //! the real cards prove it again in `crates/cards`. Pauses are JSON round-tripped mid-way, and the
 //! games that can be folded from `(seed, decks, log)` are folded and compared (§9.3).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::damage;
 use jackioh_engine::marks::marks_on;
 use jackioh_engine::own_library::own_library_view;
@@ -36,11 +34,8 @@ use crate::rules::fixtures::core_patches::{
     quiet_trap, uncounted,
 };
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip, slot,
+    act_ok, events_of_type, in_hand, json_of, matches_object, new_game, next_nonce, put, round_trip, slot,
 };
-
-/// Every action this file sends gets a fresh nonce.
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 /// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state.
 struct Sink {
@@ -82,19 +77,6 @@ fn board(seed: &str) -> GameState {
     state.active = P1;
     state.phase = Phase::Main;
     state
-}
-
-/// `reduce` with a fresh nonce; `body` carries its `playerId`.
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("core-patches-{nonce}"));
-    let action: Action = json_as(action);
-    let result = reduce(state, &action);
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
 }
 
 fn first_in_hand(state: &mut GameState, def_id: &str, player: PlayerId, what: &str) -> CardInstance {
@@ -146,7 +128,7 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let card = first_in_hand(&mut state, &counted.id, P1, "the counted Spell");
         state.players.p1.mana.current = 4;
 
-        let played = act(
+        let played = act_ok(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         )
@@ -165,7 +147,7 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let mut back = again.players.p1.graveyard.pop().expect("expected the Spell");
         back.zone = Zone::Hand { player: P1 };
         again.players.p1.hand.push(back.clone());
-        let twice = act(
+        let twice = act_ok(
             &again,
             json!({ "type": "play", "instanceId": back.id, "playerId": "p1" }),
         )
@@ -191,7 +173,7 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         let card = first_in_hand(&mut state, &uncounted.id, P1, "the plain Spell");
         state.players.p1.mana.current = 4;
 
-        let played = act(
+        let played = act_ok(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         )
@@ -254,7 +236,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
         held.cost_mod = cost_mod;
         add_return_price(held, climb);
         state.players.p1.mana.current = 10;
-        let played = act(
+        let played = act_ok(
             &state,
             json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
         )
@@ -331,7 +313,7 @@ mod r429_r766_step_7_notes_the_price_a_return_that_keeps_it_was_played_at {
         // Left lying there to the end of the turn (this fixture's return does nothing): cleanup ends
         // the return, and the note with it.
         let (state, id) = play_at("r766-cleanup", &priced_return, 2, 2);
-        let ended = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
+        let ended = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         let card = lying(&ended, &id);
         assert_ne!(card.return_to_hand_at_end_of_turn, Some(true));
         assert!(card.memory.get(RETURN_PRICE_KEY).is_none());
@@ -407,13 +389,12 @@ mod r427_r174_a_resolved_plays_card_that_something_answering_the_play_has_since_
 fn keep_all(state: GameState, log: &mut Vec<Action>) -> GameState {
     let mut next = state;
     for player in [P1, P2] {
-        let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
         let action = Action::new(
             ActionBody::Mulligan {
                 keep: ids(&next.players[player].hand),
             },
             player,
-            format!("r433-{nonce}"),
+            next_nonce(),
         );
         let result = reduce(&next, &action);
         if let Some(error) = &result.error {
@@ -473,13 +454,13 @@ mod r433_a_dealt_deck_lists_only_the_cards_its_owner_has_been_shown {
         let mut state = begin_game(&create("r433-mulligan", Some(vec![P1]))).state;
         let hand = ids(&state.players.p1.hand);
         let returned = hand.first().cloned().expect("expected a card to return");
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": hand[1..], "playerId": "p1" }),
         )
         .state;
         let keep = ids(&state.players.p2.hand);
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": "p2" }),
         )
@@ -559,7 +540,7 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
         );
 
         // p2 concedes: the game is decided (§2.5).
-        let over = act(&state, json!({ "type": "concede", "playerId": "p2" })).state;
+        let over = act_ok(&state, json!({ "type": "concede", "playerId": "p2" })).state;
         assert!(over.result.is_some());
 
         let p1_view = json_of(view_for(&over, P1));
@@ -598,14 +579,14 @@ mod r434_once_the_game_is_over_each_view_carries_the_other_players_hand {
         put(&mut state, &plain.id, slot(P2, Row::Units, 1), json!({}));
         in_hand(&mut state, &uncounted.id, P1, 1);
         // p1 ends the turn; p2's draw names a card p1 may not read.
-        let turned = act(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
+        let turned = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" })).state;
         let draw_event = view_events_of(&json_of(view_for(&turned, P1)), "drawn")
             .into_iter()
             .find(|event| event["player"] == json!("p2"))
             .expect("expected p2's draw");
         assert!(matches_object(&draw_event, &json!({ "instanceId": HIDDEN_ID })));
 
-        let over = act(&turned, json!({ "type": "concede", "playerId": "p1" })).state;
+        let over = act_ok(&turned, json!({ "type": "concede", "playerId": "p1" })).state;
         let after = json_of(view_for(&over, P1));
         assert!(after["opponent"]["hand"].is_array());
         let still_hidden: Vec<Value> = view_events_of(&after, "drawn")
@@ -645,7 +626,7 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         let card = first_in_hand(&mut state, &marker.id, P1, "the marker");
         in_hand(&mut state, &uncounted.id, P1, 1);
         state.players.p1.mana.current = 4;
-        let played = act(
+        let played = act_ok(
             &state,
             json!({
                 "type": "play",
@@ -707,11 +688,11 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         let thawed = round_trip(&first.state);
         assert_eq!(thawed, first.state);
 
-        let mut state = act(&thawed, json!({ "type": "endTurn", "playerId": "p1" })).state;
+        let mut state = act_ok(&thawed, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert_eq!(unit_view_of(&state, P1, "opponent", 1)["marks"], json!([mark()]));
         let ReduceResult {
             state: back, events, ..
-        } = act(&state, json!({ "type": "endTurn", "playerId": "p2" }));
+        } = act_ok(&state, json!({ "type": "endTurn", "playerId": "p2" }));
         state = back;
 
         // The hit landed at p1's start of turn, and the mark is gone from both views.
@@ -752,7 +733,7 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         }
         state_check(&mut sink.on(&mut state));
         // The next time the loop collects events, the removal is said.
-        let after = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let after = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         assert_eq!(
             json_of(events_of_type(&after.events, GameEventType::Marked)),
             json!([marked_event(&target.id, false)])
@@ -775,7 +756,7 @@ mod r437_a_delayed_effect_aimed_at_a_card_marks_it_in_both_views_while_it_waits 
         in_hand(&mut state, &uncounted.id, P1, 1);
         state.players.p1.mana.current = 4;
 
-        let played = act(
+        let played = act_ok(
             &state,
             json!({
                 "type": "play",
