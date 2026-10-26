@@ -2580,11 +2580,13 @@
     "what": "build #1895 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-26T08:06:57Z",
+    "at": "2026-10-26T08:15:32Z",
     "notes": [
-      "delivered build #1826 on claude-1 (run 40276792620): approved",
-      "started revise #1975 on claude-1 (run 40290270133)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 50m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 109h 50m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-26T10:10:00Z; it can start a build or a plan again in 2h 00m; `devin` is idle, but nothing queued is for it"
+      "delivered build #1822 on muse (run 40286508752): approved",
+      "delivered build #1855 on claude-4 (run 40272424272): approved",
+      "started review #1980 on claude-4 (run 40291302624)",
+      "started build #1895 on muse (run 40291397170)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 40m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 109h 40m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-26T10:10:00Z; it can start a build or a plan again in 1h 50m; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -3290,7 +3292,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T08:06:57Z",
+  "loop_tick": "2026-10-26T08:15:32Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T08:11:17Z",
