@@ -701,7 +701,7 @@ The Stinkyscape set's 175 cards, its Dormant Starship and its 52 tokens (SPEC §
 | 10.2 | Divine Spirit | Spell | Double a Unit's Health. | Triple a Unit's Health. | Meets | The gain doubles: +its Health → +twice its Health. |
 | 10.3 | Power Word Shield | Spell | Give a Unit +{health} Health. Draw {draw|card|cards}. | Give a Unit +{health} Health. Draw {draw|card|cards}. | Meets | +2 → +4 Health and 1 → 2 cards (2×). |
 | 11 | Otherworldly Magic | Spell | Add a Frostbolt, an Arcane Missiles and a Flame Strike to your hand. | Add a Radiant Frostbolt, a Radiant Arcane Missiles and a Radiant Flame Strike to your hand. | Meets | All three added Radiant. |
-| 11.1 | Frostbolt | Spell | Deal {damage} damage to a target and Freeze it. | Deal {damage} damage to a target and the Units adjacent to it. Freeze the target. | Meets | 3 → 5 (1.67×) and its neighbours hit too. |
+| 11.1 | Frostbolt | Spell | Deal {damage} damage and Freeze it. | Deal {damage} damage and Freeze it. Deal {damage} damage to the Units adjacent to it. | Meets | 3 → 5 (1.67×) and its neighbours hit too. |
 | 11.2 | Arcane Missiles | Spell | Echo 2 / Deal {damage} damage to a random enemy. | Echo 5 / Deal {damage} damage to a random enemy. | Meets | Echo 2 → 5: three hits → six (2×). |
 | 11.3 | Flame Strike | Spell | Deal {damage} damage to all enemy Units. | Deal {damage} damage to all enemy Units. | Meets | 5 → 10 (2×). |
 | 12 | Otherworldly Nightmare | Spell | Add a Shadow Word Death, a Shadow Word Pain and a Psychic Scream to your hand. | Add a Radiant Shadow Word Death, a Radiant Shadow Word Pain and a Radiant Psychic Scream to your hand. | Meets | All three added Radiant (ST8's fix). |

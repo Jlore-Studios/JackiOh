@@ -977,12 +977,12 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (1) Frostbolt, Stinkyscape, Spell, Token, Other-Origins, Epic, #11.1 · Deal 3 damage to a target; Freeze it ~~~ Deal 5 damage to a target; Freeze it; Cleave
 
-- **Text:** Deal {damage} damage to a target and Freeze it.
-- **Radiant:** Deal {damage} damage to a target and the Units adjacent to it. Freeze the target.
+- **Text:** Deal {damage} damage and Freeze it.
+- **Radiant:** Deal {damage} damage and Freeze it. Deal {damage} damage to the Units adjacent to it.
 - **Engine:** A declared target, a Unit or a hero ([[R81]]); `damage { to, amount }`, then `freeze` on it, a hero passed by (heroes are never Frozen, [[§6.1]] Frozen) and so is a Unit the hit destroyed. Radiant: one hit on the target and one on each Unit beside it in its row on its side ([[§3.1]]; none beside a hero), all before one state check ([[R59]]), then the Freeze on the target alone. Spell Damage raises each hit ([[§4.4]] step 0).
 - **Rulings:** ST-S13-5: "a target" is any Unit or hero; the Radiant face's "Cleave" is the Spell's hit on the target's neighbours, Cleave's adjacency ([[§3.1]]), not the keyword (a Unit's, in combat alone, [[§6.1]]); "Freeze it" Freezes the target alone.
 - **Numbers:** damage 3 ↑ (Radiant 5).
-- **Check:** Hearthstone's Frostbolt. R275: 5 against 3 (1.67×) and its neighbours hit too.
+- **Check:** Hearthstone's Frostbolt, its target unnamed as [[R751]] writes a face. R275: 5 against 3 (1.67×) and its neighbours hit too.
 - **Class:** B.
 
 #### Stinkyscape #11.2 · Arcane Missiles

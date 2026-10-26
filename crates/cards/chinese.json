@@ -2591,8 +2591,8 @@
   },
   "stinkyscape-011-1": {
     "name": "寒冰箭",
-    "base": "对一个目标造成{damage}点伤害并将其冻结。",
-    "radiant": "对一个目标及其相邻的单位造成{damage}点伤害。冻结该目标。"
+    "base": "造成{damage}点伤害并将其冻结。",
+    "radiant": "造成{damage}点伤害并将其冻结。对其相邻的单位造成{damage}点伤害。"
   },
   "stinkyscape-011-2": {
     "name": "奥术飞弹",

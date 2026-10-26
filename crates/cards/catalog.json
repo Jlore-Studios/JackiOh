@@ -18491,11 +18491,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Deal {damage} damage to a target and Freeze it."
+      "text": "Deal {damage} damage and Freeze it."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {damage} damage to a target and the Units adjacent to it. Freeze the target."
+      "text": "Deal {damage} damage and Freeze it. Deal {damage} damage to the Units adjacent to it."
     }
   },
   "stinkyscape-011-2": {
