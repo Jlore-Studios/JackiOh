@@ -1890,6 +1890,11 @@
     "1985": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-26T09:25:03Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "8968c81a5d89ddb9cad85d1cb9130969b6c8aadb"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
