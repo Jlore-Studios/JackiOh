@@ -3311,6 +3311,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "2025": {
+      "suggestion": true
+    },
     "2026": {
       "action": "review",
       "asks": [],
