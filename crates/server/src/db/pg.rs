@@ -2169,10 +2169,10 @@ pub async fn profiles_set_glicko(
     Ok(())
 }
 
-/// §9.5: set when a match starts and cleared by every ending. Setting `Some` is a
-/// compare-and-set (R890000): one statement seats only a free profile, so a queue pair, room join,
-/// rematch or series game racing for one seat leaves exactly one winner. `true` seated, `false`
-/// seat taken, `Err` only when the profile is missing; clearing with `None` is unconditional.
+/// §9.5: set when a match starts. Setting `Some` is a compare-and-set (R890000): one statement
+/// seats only a free profile, so a queue pair, room join, rematch or series game racing for one
+/// seat leaves exactly one winner. `true` seated, `false` seat taken, `Err` only when the profile
+/// is missing; clearing with `None` is unconditional.
 pub async fn profiles_set_in_match(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -2205,8 +2205,8 @@ pub async fn profiles_set_in_match(
     Ok(false)
 }
 
-/// R890000: clears the seat only while it points at `match_id`, so a start-failure cleanup never
-/// wipes a rival match's flag. Always `Ok`.
+/// R890000, R1896000: clears the seat only while it points at `match_id`, so neither a start-failure
+/// cleanup nor an ending (§9.5) ever wipes a rival match's flag. Always `Ok`.
 pub async fn profiles_clear_in_match(
     t: &mut PgTx<'_>,
     profile_id: &str,
@@ -3346,7 +3346,7 @@ pub async fn matches_set_clocks(
 /// Not `app.end_match`. That function ends a match AND writes the results row AND moves both
 /// ratings AND clears both `current_match_id`s AND cancels stray tickets — every one of which
 /// `src/api/results.rs` already does through `results_insert`, `profiles_set_glicko`,
-/// `profiles_set_in_match` and `tickets_cancel`, inside the one transaction this call runs in. So
+/// `profiles_clear_in_match` and `tickets_cancel`, inside the one transaction this call runs in. So
 /// the ending is still one transaction with the same five writes; calling `app.end_match` here
 /// would do the other four a second time.
 pub async fn matches_finish(t: &mut PgTx<'_>, match_id: &str, at: i64) -> Result<(), StoreError> {

@@ -1070,7 +1070,7 @@ pub fn profiles_answer_username_prompt(f: &mut FakeTx<'_>, profile_id: &str) -> 
     Ok(())
 }
 
-/// §9.5: every terminal reason clears both players'. Setting `Some` is the same
+/// Clearing with `None` is unconditional. Setting `Some` is the same
 /// compare-and-set as Postgres's (R890000): only a free seat is written, and a taken one answers
 /// `Ok(false)` without writing. Goes through `call_cas` like `series.update`, so a race hook
 /// answering `CallOutcome::Lose` loses, as the store's other compare-and-sets do.
@@ -1092,7 +1092,7 @@ pub fn profiles_set_in_match(
     Ok(true)
 }
 
-/// R890000: clears the seat only while it points at `match_id`. Always `Ok`.
+/// R890000, R1896000: clears the seat only while it points at `match_id`, as every ending does. Always `Ok`.
 pub fn profiles_clear_in_match(
     f: &mut FakeTx<'_>,
     profile_id: &str,

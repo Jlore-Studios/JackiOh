@@ -4371,8 +4371,8 @@ async fn live_fixture_match(app: &Arc<App>, match_id: &str) -> (String, String) 
     .expect("a StartMatchInput");
     app.matches.start(app, input).await.expect("registry.start");
     // A test may have staged a seat elsewhere first (R148 refuses a socket not in its match,
-    // then seats it here): an ending clears the flag unconditionally and a start sets it, so
-    // the fixture clears before it seats, which the compare-and-set would refuse.
+    // then seats it here), and a start's compare-and-set would refuse that seat, so the fixture
+    // clears the flag, whatever match it names, before it seats.
     for profile_id in [&first, &second] {
         set_in_match(app, profile_id, None).await;
         set_in_match(app, profile_id, Some(match_id)).await;

@@ -248,7 +248,7 @@ async fn write_once(
     };
 
     // A ranked series reaches its rating move — and so open_season_in_tx's `lock_seasons` — inside
-    // `advance_series_in_tx` below, AFTER `results_insert`, `set_in_match` and the rest have already
+    // `advance_series_in_tx` below, AFTER `results_insert`, `clear_in_match` and the rest have already
     // taken row locks. Take the season lock first: a tx that waits on it while holding profile
     // locks deadlocks with the season opener holding it, whose `reset_ratings` update wants those
     // very rows. Every other path to `lock_seasons` already takes it before writing, and the
@@ -420,7 +420,9 @@ async fn write_once(
         // rated path above made the only one there is.
         // §9.5: "Every ending records a result and clears both players' in-match state." Both, for
         // every reason — M7-T1's "past grace they have lost and both can queue again".
-        tx.profiles_set_in_match(&seat.profile_id, None)
+        // R1896000: only a flag that still names this match is this match's state, so a late result
+        // leaves a newer match's flag alone, and a seat whose profile row is gone has none to clear.
+        tx.profiles_clear_in_match(&seat.profile_id, &input.match_id)
             .await
             .map_err(failed)?;
         // A profile can be queued *and* in a match (it accepted a room challenge while waiting), and
