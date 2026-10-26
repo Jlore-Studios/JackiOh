@@ -4405,14 +4405,18 @@
         {
           "at": "2026-10-26T09:08:08Z",
           "minutes": 32.3
+        },
+        {
+          "at": "2026-10-26T09:38:21Z",
+          "minutes": 45.2
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-26T09:28:00Z",
-          "utilization": 0.01
+          "resets_at": "2026-10-26T14:29:00Z",
+          "utilization": 0.0
         },
-        "observed_at": "2026-10-26T09:08:08Z",
+        "observed_at": "2026-10-26T09:38:21Z",
         "seven_day": {
           "resets_at": "2026-11-02T00:00:00Z",
           "utilization": 0.0
