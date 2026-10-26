@@ -2,10 +2,14 @@
 // because storage can be missing, full, or throw on access (private mode, sandboxed frames). When
 // storage refuses a write the value lives on in memory, so the toggle still works for this page.
 // Task 7's settings panel mounts CARD_SETTINGS_FIELDS at integration.
+//
+// R1834004: `opponentCosmetics` is the viewer's own say over what the other seat wears: on, an
+// opponent's cards and side wear the loadout their seat froze when the match began (game/wearer.ts);
+// off, they draw the defaults, on a live, a watched and a replayed board alike.
 
 import { useSyncExternalStore } from "react";
 
-export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean };
+export type CardSettings = { hoverPreviews: boolean; animatedFoil: boolean; fullArt: boolean; opponentCosmetics: boolean };
 
 export const CARD_SETTINGS_KEY = "jackioh.cards.settings.v1";
 
@@ -13,6 +17,7 @@ export const CARD_SETTINGS_DEFAULTS: Readonly<CardSettings> = Object.freeze({
   hoverPreviews: true,
   animatedFoil: true,
   fullArt: true,
+  opponentCosmetics: true,
 });
 
 type CardSettingsField = {
@@ -41,9 +46,15 @@ export const CARD_SETTINGS_FIELDS: readonly CardSettingsField[] = [
     label: "Full-art cards",
     description: "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.",
   },
+  {
+    key: "opponentCosmetics",
+    section: "visuals",
+    label: "Show opponents' cosmetics",
+    description: "Your opponents' cards and side wear what they equipped. Off shows them plain.",
+  },
 ];
 
-const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt"];
+const SETTING_KEYS: readonly (keyof CardSettings)[] = ["hoverPreviews", "animatedFoil", "fullArt", "opponentCosmetics"];
 
 /**
  * The value of a write that storage refused, and what storage held at that moment (`undefined`

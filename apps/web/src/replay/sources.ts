@@ -1,12 +1,14 @@
 // The replay player's two sources (#511): a practice game kept on this device, read through the
 // practice worker's `replay` request (#509), and an online match, read through `GET /api/replays/:id`
 // (#510). Each hands the player steps and nothing else, and turns what went wrong into a
-// `ReplayFailure` the player words (CLAUDE.md rule 7: no log, seed or state crosses).
+// `ReplayFailure` the player words (CLAUDE.md rule 7: no log, seed or state crosses). R1834003: an
+// online match's pages also carry both seats' frozen loadouts, which the source merges page by page.
 
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplaySummary } from "../practice/protocol.ts";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 
+import { createLoadoutsHolder, type LoadoutsHolder } from "../cards/loadouts.ts";
 import { ApiRequestError, getReplaySteps } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS } from "./config.ts";
@@ -65,15 +67,24 @@ export function onlineFailure(cause: unknown): ReplayFailure {
 
 /** An online match the account played, by its listing: its pages are the server's, fetched with the account's token. */
 export function onlineReplaySource(token: string, listing: Pick<OnlineReplayListing, "matchId" | "steps">): ReplaySource {
+  return onlinePages(token, listing, createLoadoutsHolder());
+}
+
+/** `onlineReplaySource` merging each page's loadouts into `held` (R1834003). */
+function onlinePages(token: string, listing: Pick<OnlineReplayListing, "matchId" | "steps">, held: LoadoutsHolder): ReplaySource {
   return {
     total: listing.steps,
     async page(from, count) {
+      let answer: Awaited<ReturnType<typeof getReplaySteps>>;
       try {
-        return (await getReplaySteps(token, listing.matchId, from, count)).steps;
+        answer = await getReplaySteps(token, listing.matchId, from, count);
       } catch (cause) {
         throw onlineFailure(cause);
       }
+      held.page(answer);
+      return answer.steps;
     },
+    loadouts: held.current,
   };
 }
 
@@ -99,9 +110,12 @@ export async function openOnlineMatchReplay(
       await wait(REPLAY_OPEN_RETRY_MS);
     }
   }
-  const later = onlineReplaySource(token, { matchId, steps: first.total });
+  const held = createLoadoutsHolder();
+  held.page(first);
+  const later = onlinePages(token, { matchId, steps: first.total }, held);
   return {
     total: first.total,
     page: (from, count) => (from === 0 ? Promise.resolve(first.steps.slice(0, count)) : later.page(from, count)),
+    loadouts: held.current,
   };
 }

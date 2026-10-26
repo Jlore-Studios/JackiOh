@@ -33,7 +33,7 @@
 //! here too, on the caller's thread, under the actor's lock — which is never held across an
 //! `.await` and never while a socket is closed (a close calls back into the actor).
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
@@ -57,8 +57,9 @@ use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned}
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
     ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
-    ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
-    parse_client_message, portraits_message, prompt_for_opponent, prompt_for_you, view_message,
+    ack_message, aim_relay_message, card_loadouts_message, clock_message, emote_relay_message, encode,
+    error_message, loadouts_message, parse_client_message, portraits_message, prompt_for_opponent,
+    prompt_for_you, view_message,
 };
 use crate::actor::registry::panic_text;
 use crate::actor::telemetry::{self, Recorder};
@@ -79,6 +80,7 @@ use crate::db::store::{
     BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, PlayTelemetry, StoreError,
 };
 use crate::economy::rewards::GameEconomy;
+use crate::loadout::{Loadout, cards_due, shown_defs};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -123,6 +125,9 @@ pub struct MatchActorInput {
     pub series_game: bool,
     /// R388, R767000: the catalog the match is played under (`registry`'s `pinned_for`).
     pub pinned: Pinned,
+    /// R1834003: every card the decks dealt, by instance id (`engine::dealt_cards` of the opening),
+    /// which says whose deck a card a view shows came from; empty when no loadout names a card.
+    pub dealt_cards: BTreeMap<String, (PlayerId, String)>,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -375,6 +380,10 @@ struct Core {
     bot_rematch_replying: PerPlayer<bool>,
     /// Social (#939): B50's watchers and the delayed views they are sent (`Spectate`).
     spectate: Spectate,
+    /// R1834003: the `(seat, card)` pairs whose card picks each socket has been sent, keyed by
+    /// home like `sockets`; emptied by every hello and attach, so a page that lost them gets them
+    /// again with its next view.
+    card_picks_sent: PerPlayer<BTreeSet<(PlayerId, String)>>,
 }
 
 struct Shared {
@@ -384,6 +393,11 @@ struct Shared {
     seats: (MatchSeat, MatchSeat),
     /// R642: the pair the `portraits` frame carries, `vanilla` for a match that predates them.
     portraits: (PortraitId, PortraitId),
+    /// R1834002: both seats' loadouts, by engine seat as the row froze them, every default for a
+    /// match that predates them.
+    loadouts: (Loadout, Loadout),
+    /// R1834003: `MatchActorInput::dealt_cards`.
+    dealt_cards: BTreeMap<String, (PlayerId, String)>,
     /// R1341, R1342: each account's emote hand, keyed by the seat it began in (`home`) like the
     /// sockets, dealt once from the match seed when the actor is built — the same eight after a
     /// restart, a reconnect or a Glitch's swap (R677), since a hand belongs to the player.
@@ -493,6 +507,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         bot_moved_turn,
         series_game,
         pinned,
+        dealt_cards,
     } = input;
     let seats = (
         MatchSeat {
@@ -500,12 +515,14 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
             player: PlayerId::P1,
             deck: match_row.decks.0.clone(),
             portrait: None,
+            deck_slots: None,
         },
         MatchSeat {
             profile_id: match_row.players.1.clone(),
             player: PlayerId::P2,
             deck: match_row.decks.1.clone(),
             portrait: None,
+            deck_slots: None,
         },
     );
 
@@ -522,6 +539,10 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         deal_emote_hand(&match_row.seed, PlayerId::P1),
         deal_emote_hand(&match_row.seed, PlayerId::P2),
     );
+    let loadouts = match_row
+        .loadouts
+        .clone()
+        .unwrap_or_else(|| (Loadout::defaults(), Loadout::defaults()));
     let opening = engine::snapshot(&state);
     let telemetry =
         telemetry.unwrap_or_else(|| Recorder::new(pinned, &match_row.id, match_row.created_at, &opening));
@@ -592,6 +613,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         bot_rematch_answered: PerPlayer::new(false, false),
         bot_rematch_replying: PerPlayer::new(false, false),
         spectate: Spectate::new(),
+        card_picks_sent: PerPlayer::new(BTreeSet::new(), BTreeSet::new()),
     };
 
     let (inbox, inbox_rx) = mpsc::unbounded_channel();
@@ -611,6 +633,8 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         match_row,
         seats,
         portraits,
+        loadouts,
+        dealt_cards,
         emote_hands,
         clock,
         inbox,
@@ -709,9 +733,13 @@ impl MatchActor {
                         core.hello_pending[home] = None;
                     }
                 }
-                let core = self.lock();
+                let mut core = self.lock();
                 let player = playing(&core, home);
-                self.push_view(&core, player);
+                // R1834003: the seats' loadouts ride before the view, and the cards' picks after it
+                // anew: the page may have lost what it was sent.
+                core.card_picks_sent[home].clear();
+                self.send_to_home(&core, home, &loadouts_message(&self.shared.loadouts));
+                self.push_view(&mut core, player);
                 self.push_clock(&core, player);
                 // R642: portraits ride again on a reconnect, as on join, with the account's hand (R1342).
                 self.send_to_home(&core, home, &self.portraits_for(home));
@@ -774,9 +802,12 @@ impl MatchActor {
                 };
                 self.persist_clocks().await;
                 // §9.5: a fresh full view, never a log replay. R642: the portraits ride with it, and
-                // R1342 the account's own emote hand with them.
-                let core = self.lock();
-                self.push_view(&core, player);
+                // R1342 the account's own emote hand with them. R1834003: the seats' loadouts before
+                // the view, the cards' picks after it.
+                let mut core = self.lock();
+                core.card_picks_sent[home].clear();
+                self.send_to_home(&core, home, &loadouts_message(&self.shared.loadouts));
+                self.push_view(&mut core, player);
                 self.push_clock(&core, player);
                 self.send_to_home(&core, home, &self.portraits_for(home));
                 self.push_clock(&core, player.opponent());
@@ -849,15 +880,26 @@ impl MatchActor {
     ///
     /// Both are read off the same `state` under the same lock, so the array is always true of the
     /// view it travels with — the actor's queue means no `reduce` can land between them.
-    fn push_view(&self, core: &Core, player: PlayerId) {
+    ///
+    /// R1834003: after the view, the own picks of each card it newly shows (`cards_due`), to an open
+    /// socket only, so a pair is marked sent only once it is.
+    fn push_view(&self, core: &mut Core, player: PlayerId) {
         let home = playing(core, player);
+        let view = self.view_of(core, player);
+        let shown = shown_defs(&view, &self.shared.dealt_cards);
         let message = view_message(
-            self.view_of(core, player),
+            view,
             &engine::legal_actions(self.shared.pinned, &core.state, player),
             core.jlore_capped[home],
             core.economy[home].clone(),
         );
         self.send(core, player, &message);
+        if !core.sockets[home].as_ref().is_some_and(Socket::is_open) {
+            return;
+        }
+        for cards in cards_due(&shown, &self.shared.loadouts, &mut core.card_picks_sent[home]) {
+            self.send_to_home(core, home, &card_loadouts_message(cards));
+        }
     }
 
     fn push_clock(&self, core: &Core, player: PlayerId) {
@@ -1019,7 +1061,7 @@ impl MatchActor {
         {
             let mut core = self.lock();
             for player in PLAYERS {
-                self.push_view(&core, player);
+                self.push_view(&mut core, player);
             }
             self.push_prompts(&mut core, &snapshot);
             for player in PLAYERS {
@@ -1125,12 +1167,14 @@ impl MatchActor {
                 player: PlayerId::P1,
                 deck: first_deck.clone(),
                 portrait: None,
+                deck_slots: None,
             },
             MatchSeat {
                 profile_id: if swapped { first } else { second }.clone(),
                 player: PlayerId::P2,
                 deck: second_deck.clone(),
                 portrait: None,
+                deck_slots: None,
             },
         )
     }
@@ -1279,7 +1323,8 @@ impl MatchActor {
         }
         for home in PLAYERS {
             if announce && (core.jlore_capped[home] || core.economy[home].is_some()) {
-                self.push_view(&core, playing(&core, home));
+                let player = playing(&core, home);
+                self.push_view(&mut core, player);
             }
         }
     }
@@ -2523,21 +2568,36 @@ const CLOSE_GOING_AWAY: u16 = 1001;
 const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 
 /// One recorded view of a seat: its encoded `view` frame (`legal: []`, B50), when the state it shows
-/// was reached, and its place in the record.
+/// was reached, and its place in the record. R1834003: and the `(seat, card)` pairs it shows
+/// (`shown_defs`), whose card picks follow it to a watcher that has not had them.
 struct SpectateFrame {
     seq: u64,
     shown_at: i64,
     frame: String,
+    shown: BTreeSet<(PlayerId, String)>,
 }
 
-/// One watching socket: the account behind it, the seat its friend began the match in, and the
-/// last recorded view it was sent.
+/// One watching socket: the account behind it, the seat its friend began the match in, the last
+/// recorded view it was sent, and (R1834003) the pairs whose card picks it has been sent.
 struct Watcher {
     id: u64,
     profile_id: String,
     home: PlayerId,
     socket: Socket,
     sent: Option<u64>,
+    card_picks_sent: BTreeSet<(PlayerId, String)>,
+}
+
+/// R1834003: sends `socket` the card picks `shown` makes due, marking them in `sent`.
+fn send_cards_due(
+    socket: &Socket,
+    shown: &BTreeSet<(PlayerId, String)>,
+    loadouts: &(Loadout, Loadout),
+    sent: &mut BTreeSet<(PlayerId, String)>,
+) {
+    for cards in cards_due(shown, loadouts, sent) {
+        socket.send(encode(&card_loadouts_message(cards)));
+    }
 }
 
 /// B50, B51: what the actor keeps for its watchers, for any live 1v1 match, ranked or unranked.
@@ -2636,6 +2696,7 @@ impl MatchActor {
                 home,
                 socket: socket.clone(),
                 sent: None,
+                card_picks_sent: BTreeSet::new(),
             });
             (id, replaced, done)
         };
@@ -2675,6 +2736,8 @@ impl MatchActor {
         }
 
         let mut core = self.lock();
+        // R1834002: the seats' loadouts before any view, as a seat's socket has them.
+        socket.send(encode(&loadouts_message(&self.shared.loadouts)));
         // The newcomer's first view, when one is already SPECTATE_DELAY_MS old.
         self.spectate_flush(&mut core, now_ms());
         if !replacing {
@@ -2740,6 +2803,8 @@ impl MatchActor {
     /// R1103000: a watcher's later hello is answered with the view it was last sent, again, so its
     /// page hears that the socket is alive (R1441's probe). It is never a view sooner than
     /// SPECTATE_DELAY_MS after the state it shows, and a watcher sent no view yet is sent nothing.
+    /// R1834003: nothing else rides with it: the socket already holds the loadouts it was sent as it
+    /// attached, and a page that lost them comes back on a new socket, which is sent them again.
     fn answer_watcher_hello(&self, id: u64) {
         let core = self.lock();
         if core.stopped || core.spectate.closed {
@@ -2807,18 +2872,16 @@ impl MatchActor {
         }
         let now = now_ms();
         for home in PLAYERS {
-            let frame = encode(&view_message(
-                self.view_of(core, playing(core, home)),
-                &[],
-                false,
-                None,
-            ));
+            let view = self.view_of(core, playing(core, home));
+            let shown = shown_defs(&view, &self.shared.dealt_cards);
+            let frame = encode(&view_message(view, &[], false, None));
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[home].push_back(SpectateFrame {
                 seq,
                 shown_at: now,
                 frame,
+                shown,
             });
         }
         self.spectate_flush(core, now);
@@ -2848,6 +2911,13 @@ impl MatchActor {
                 }
                 watcher.socket.send(record.frame.as_str());
                 watcher.sent = Some(record.seq);
+                // R1834003: the card picks of what this view newly shows, after it.
+                send_cards_due(
+                    &watcher.socket,
+                    &record.shown,
+                    &self.shared.loadouts,
+                    &mut watcher.card_picks_sent,
+                );
             }
         }
         for home in PLAYERS {

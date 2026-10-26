@@ -14,6 +14,9 @@
 // it "Share with a friend" (`actions`), drawn under the toolbar. #1568: Try again appears only for
 // `error`, since a refusal or an expiry cannot change, and it repeats the failed move. Failed pages
 // are not cached (`steps.ts`, the `finally` that runs `flying.delete`).
+//
+// R1834004: an online match's board wears both seats' frozen loadouts, as its pages have sent them
+// (`ReplaySource.loadouts`); each step drawn reads them afresh, its own page's cards among them.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
@@ -394,6 +397,7 @@ export default function ReplayPlayer({
         onAction={IGNORE}
         replay
         resultForm="chip"
+        loadouts={source.loadouts?.() ?? null}
         boardRail={
           <>
             {back}

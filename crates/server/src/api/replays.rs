@@ -13,8 +13,11 @@
 //! `n` at most `count` and `REPLAY_PAGE_STEPS`, and fewer where a Glitch's swap moves the caller to
 //! the other seat or where the engine's page ends early (R768); the next page starts at
 //! `from + steps.len()`. A step is `view_for` of the seat the caller played at that step (R677) and
-//! its turn, which is exactly what that seat's live view showed (R97, CLAUDE.md rule 7). Nothing else
-//! leaves: no seed, no log, no state, no deck. An account that held no seat gets the same 404 as a
+//! its turn, which is exactly what that seat's live view showed (R97, CLAUDE.md rule 7). R1834002,
+//! R1834003: beside the steps, both seats' loadouts as the match froze them (every default for a
+//! match from before them), and the card picks of the cards the page's steps show, by the rule the
+//! live sockets keep (`loadout::shown_defs`). Nothing else leaves: no seed, no log, no state, no
+//! deck. An account that held no seat gets the same 404 as a
 //! match that does not exist, so a match id's existence never leaks, unless a seat holder still its
 //! friend shared the replay with it (B52, `replay_reader`), when it reads the sharer's seat's steps
 //! as the sharer would. A match still open or live is 409; one whose log is purged 410 `gone`; one
@@ -32,6 +35,7 @@
 //! first; a list opens none; and both routes together are held to
 //! `REPLAY_REQUESTS_PER_MINUTE` an account, a second limiter of the kind R109's is.
 
+use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use indexmap::IndexMap;
@@ -56,6 +60,7 @@ use crate::config::{
     REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
 };
 use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
+use crate::loadout::{Loadout, SeatCards, SeatLoadout, cards_due, shown_defs};
 
 /// Unit conversions, not configuration.
 const MS_PER_SECOND: i64 = 1000;
@@ -180,6 +185,11 @@ pub struct ReplaySteps {
     pub from: usize,
     pub steps: Vec<ReplayStep>,
     pub total: usize,
+    /// R1834002: both seats' seat-level loadouts, as the `loadouts` frame carries them.
+    pub loadouts: PerPlayer<SeatLoadout>,
+    /// R1834003: the card picks of the cards the page's steps show, by seat, as the `cardLoadouts`
+    /// frames carry them; a card none of its steps shows is not here.
+    pub card_loadouts: Vec<SeatCards>,
 }
 
 /// Both routes' own allowance, counted per account like R109's.
@@ -551,11 +561,30 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         count.min(REPLAY_PAGE_STEPS),
     );
     let page = engine::replay_page(checkpoints, seat, from, run);
+    // R1834003: what the page's views show, read against the cards the opening dealt (step 0's state).
+    let loadouts = replay
+        .row
+        .loadouts
+        .clone()
+        .unwrap_or_else(|| (Loadout::defaults(), Loadout::defaults()));
+    let dealt = checkpoints
+        .states
+        .first()
+        .map(engine::dealt_cards)
+        .unwrap_or_default();
+    let shown: BTreeSet<(PlayerId, String)> = page
+        .steps
+        .iter()
+        .flat_map(|step| shown_defs(&step.view, &dealt))
+        .collect();
+    let card_loadouts = cards_due(&shown, &loadouts, &mut BTreeSet::new());
     ok_of(&ReplaySteps {
         match_id: replay.row.id.clone(),
         from: page.from,
         steps: page.steps,
         total,
+        loadouts: PerPlayer::new(loadouts.0.seat, loadouts.1.seat),
+        card_loadouts,
     })
 }
 

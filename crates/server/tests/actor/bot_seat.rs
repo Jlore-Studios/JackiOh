@@ -21,17 +21,23 @@ use serde_json::{Value, json};
 
 use jackioh_engine::wire::{EmoteId, Phase, PlayerId};
 use jackioh_engine::{ActionBody, ActionType, Rng, deal_emote_hand};
-use jackioh_server::actor::engine::{Pinned, fold, fold_args, hash_state, legal_actions};
+use jackioh_server::actor::engine::{
+    Pinned, begin_game, create_game, create_game_args, dealt_cards, fold, fold_args, hash_state,
+    legal_actions,
+};
 use jackioh_server::actor::match_actor::{MatchActor, bot_moved_turns};
 use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::app::{App, now_ms};
+use jackioh_server::bots::cosmetics::BotCosmetics;
 use jackioh_server::bots::seat::{THINK_MODEL, ThinkFor, think_ms};
 use jackioh_server::bots::signals::{accepts_draw, idles_turn, standing};
 use jackioh_server::config::{
     AI_PERSONAS, BOT_DRAW_ANSWER_FIT, BOT_STRENGTHS, BOT_THINK_MAX_MS, BOT_THINK_MIN_MS, BOT_TIMEOUT_FIT,
-    EmoteTrigger, MULLIGAN_CLOCK_MS, PersonaName, TURN_CLOCK_MS,
+    EmoteTrigger, MULLIGAN_CLOCK_MS, PLAYER_SETTINGS_BYTES_MAX, PLAYER_SETTINGS_GROUPS_MAX, PersonaName,
+    TURN_CLOCK_MS,
 };
-use jackioh_server::db::store::{NewBot, StoreError};
+use jackioh_server::db::store::{NewBot, PlayerSettingsLimits, PlayerSettingsMergeInput, StoreError};
+use jackioh_server::economy::store::CardPicks;
 
 use crate::support::deps::{TestAppOptions, test_app_with};
 use crate::support::engine::{TEST_HEARS_EMOTES, install_test_cards};
@@ -114,6 +120,20 @@ async fn unopened_bot_match(
     ranked: bool,
     extra: &[&str],
 ) -> (Arc<App>, MatchActor) {
+    started_bot_match(seed, person, persona, ranked, extra, false).await
+}
+
+/// `unopened_bot_match`, both seats dressed first when `dressed` says so (R1834005): the bot's
+/// cosmetics as the pool draws them onto its row, the person's on their account, each seat's deck
+/// carrying a card back.
+async fn started_bot_match(
+    seed: &str,
+    person: PlayerId,
+    persona: PersonaName,
+    ranked: bool,
+    extra: &[&str],
+    dressed: bool,
+) -> (Arc<App>, MatchActor) {
     let app = test_app_with(TestAppOptions {
         skip_fixtures: true,
         ..TestAppOptions::default()
@@ -143,7 +163,21 @@ async fn unopened_bot_match(
     for (at, id) in extra.iter().enumerate() {
         person_deck[at] = (*id).to_string();
     }
-    let seat = |profile: &str, player: PlayerId, deck: &[String]| json!({ "profileId": profile, "player": player.as_str(), "deck": deck });
+    if dressed {
+        dress(&app, &person_deck, &bot_deck).await;
+    }
+    let seat = |profile: &str, player: PlayerId, deck: &[String]| {
+        let mut seat = json!({ "profileId": profile, "player": player.as_str(), "deck": deck });
+        if dressed {
+            let back = if profile == BOT {
+                "card-back-lacquer"
+            } else {
+                "card-back-starfield"
+            };
+            seat["deckSlots"] = json!({ "cardBack": back });
+        }
+        seat
+    };
     let seats = if person == PlayerId::P1 {
         [
             seat(PERSON, PlayerId::P1, &person_deck),
@@ -174,6 +208,49 @@ async fn unopened_bot_match(
         .await
         .expect("the match's actor");
     (app, actor)
+}
+
+/// R1834005: the bot's cosmetics on its row, as the pool draws them (a wardrobe of the starters
+/// alone, its account picks and a border of its own on every card of its deck), and the person's
+/// on their account (their `cosmetics` settings group and a border of their own on every card of
+/// theirs).
+async fn dress(app: &App, person_deck: &[String], bot_deck: &[String]) {
+    let entries = |deck: &[String], border: &str| -> Value {
+        let cards: std::collections::BTreeSet<&String> = deck.iter().collect();
+        json!(
+            cards
+                .into_iter()
+                .map(|card| json!({ "cardId": card, "border": border }))
+                .collect::<Vec<Value>>()
+        )
+    };
+    let cosmetics: BotCosmetics = from(json!({
+        "wardrobe": { "cards": [], "account": [] },
+        "account": { "picks": { "table": "table-felt", "foil": "foil-rainbow" }, "fullArt": true },
+        "cards": entries(bot_deck, "border-bone"),
+        "drawnAt": now_ms(),
+    }));
+    let mut tx = app.db.begin(None).await.expect("a store transaction");
+    tx.bots_set_cosmetics(BOT, &cosmetics)
+        .await
+        .expect("bots.setCosmetics");
+    let settings: PlayerSettingsMergeInput = from(json!({
+        "profileId": PERSON,
+        "groups": { "cosmetics": { "at": 1, "values": { "table": "table-wood", "foil": "foil-holo-sweep" } } },
+        "at": 1,
+    }));
+    let limits = PlayerSettingsLimits {
+        max_groups: i64::try_from(PLAYER_SETTINGS_GROUPS_MAX).expect("a cap"),
+        max_bytes: i64::try_from(PLAYER_SETTINGS_BYTES_MAX).expect("a cap"),
+    };
+    tx.player_settings_merge(&settings, &limits)
+        .await
+        .expect("playerSettings.merge");
+    let picks: Vec<CardPicks> = from(entries(person_deck, "border-circuit"));
+    tx.economy_card_picks_upload(PERSON, &picks, 1)
+        .await
+        .expect("economy.cardPicks.upload");
+    tx.commit().await.expect("commit");
 }
 
 /// Lets time pass, a quarter second at a time, until `done` holds.
@@ -1101,4 +1178,206 @@ async fn r639000_a_restart_mid_turn_does_not_begin_the_bots_turn_again() {
     let first = drawn_think_ms(&m.seed, bot, 0, kind, true, legal, None);
     assert_ne!(later, first, "PREMISE: the two priors draw apart");
     assert_eq!(at - rebuilt_at, later, "{action}");
+}
+
+/// Every `(instanceId, defId)` a view JSON names, wherever it names one.
+fn named_cards(view: &Value) -> Vec<(String, String)> {
+    let mut named = Vec::new();
+    let mut stack = vec![view];
+    while let Some(value) = stack.pop() {
+        match value {
+            Value::Object(fields) => {
+                if let (Some(Value::String(instance)), Some(Value::String(def))) =
+                    (fields.get("instanceId"), fields.get("defId"))
+                {
+                    named.push((instance.clone(), def.clone()));
+                }
+                stack.extend(fields.values());
+            }
+            Value::Array(entries) => stack.extend(entries),
+            _ => {}
+        }
+    }
+    named
+}
+
+/// How many of the person's turns the game below runs, at most, for the bot to show its cards.
+const DRESSED_TURNS: usize = 6;
+
+/// R1834005, R1452: a bot's seat freezes its loadout through the same path a person's does (its
+/// wardrobe as what it owns, its drawn picks as its account's), and its frames have the same shape
+/// and the same sending rule: the seat-level half on attach before the view, and a card's own picks
+/// only after a view that shows that card of its deck, once. Nothing the person reads tells the two
+/// seats apart.
+#[tokio::test(start_paused = true)]
+async fn r1834005_a_bot_seats_frames_look_like_a_persons() {
+    let (app, actor) = started_bot_match(
+        "seed-bot-dressed",
+        PlayerId::P1,
+        PersonaName::Silent,
+        false,
+        &[],
+        true,
+    )
+    .await;
+    let socket = create_fake_socket();
+    actor.attach(PlayerId::P1, socket.socket());
+    actor.idle().await;
+    let m = BotMatch {
+        app,
+        actor,
+        socket,
+        person: PlayerId::P1,
+        seed: "seed-bot-dressed".to_string(),
+    };
+    // Both accounts' foils are left at the default: a card with no pick of its own wears its
+    // kind's default, never the account's (R1953001), for a bot as for a person.
+    let seat = |table: &str, card_back: &str| {
+        json!({
+            "table": table,
+            "field": "field-none",
+            "cardBack": card_back,
+            "foil": "foil-none",
+            "finish": "finish-plain",
+            "border": "border-standard",
+        })
+    };
+    let frame = json!({
+        "type": "loadouts",
+        "p1": seat("table-wood", "card-back-starfield"),
+        "p2": seat("table-felt", "card-back-lacquer"),
+    });
+    assert_eq!(m.socket.of_type("loadouts"), vec![frame]);
+    let types: Vec<String> = m
+        .socket
+        .sent()
+        .iter()
+        .map(|text| {
+            let message: Value = serde_json::from_str(text).expect("every frame is JSON");
+            message["type"].as_str().unwrap_or_default().to_string()
+        })
+        .collect();
+    let at = |kind: &str| {
+        types
+            .iter()
+            .position(|sent| sent == kind)
+            .unwrap_or_else(|| panic!("no {kind} frame: {types:?}"))
+    };
+    assert!(at("loadouts") < at("view"), "{types:?}");
+    // The row froze the bot's cards as a person's: every card of its deck, its own border.
+    let row = to_json(&q!(m.app, matches_get(MATCH_ID)));
+    let both = decks();
+    let bot_deck = &both.1;
+    let bot_cards: std::collections::BTreeSet<&String> = bot_deck.iter().collect();
+    assert_eq!(
+        row["loadouts"][1]["cards"],
+        json!(
+            bot_cards
+                .iter()
+                .map(|card| json!({ "cardId": card, "border": "border-bone" }))
+                .collect::<Vec<Value>>()
+        )
+    );
+
+    // Play on, the person ending each turn, until the bot has shown cards of its deck.
+    to_the_persons_turn(&m).await;
+    let person = m.person;
+    let shown_bot_cards = |socket: &FakeSocket| {
+        socket
+            .of_type("cardLoadouts")
+            .iter()
+            .filter(|frame| frame["seat"] == "p2")
+            .count()
+    };
+    for turn in 0..DRESSED_TURNS {
+        if shown_bot_cards(&m.socket) > 0 || m.actor.snapshot().result.is_some() {
+            break;
+        }
+        let at = m.actor.snapshot().turn;
+        submit(&m, &format!("person-end-{turn}"), json!({ "type": "endTurn" })).await;
+        wait_until(&m.actor, "the bot's turn to end", |actor| {
+            let snapshot = actor.snapshot();
+            snapshot.result.is_some() || (snapshot.active == person && snapshot.turn > at + 1)
+        })
+        .await;
+    }
+
+    // Every card's picks followed a view that showed that card of that seat's deck, exactly as
+    // frozen, once; the bot's frames are shaped as the person's.
+    let opening = create_game(
+        Pinned::default(),
+        &create_game_args(&m.seed, &both, None, None, None),
+    );
+    let dealt = dealt_cards(&begin_game(Pinned::default(), &opening).state);
+    let mut view: Option<Value> = None;
+    let mut sent: Vec<(String, String)> = Vec::new();
+    let mut shapes: Vec<(String, Vec<String>)> = Vec::new();
+    for text in m.socket.sent() {
+        let message: Value = serde_json::from_str(&text).expect("every frame is JSON");
+        match message["type"].as_str() {
+            Some("view") => view = Some(message["view"].clone()),
+            Some("cardLoadouts") => {
+                let shown = named_cards(view.as_ref().expect("a view before any card's picks"));
+                let from = message["seat"].as_str().unwrap_or_default().to_string();
+                let index = usize::from(from == "p2");
+                for entry in message["cards"].as_array().into_iter().flatten() {
+                    let card = entry["cardId"].as_str().unwrap_or_default().to_string();
+                    assert!(
+                        shown.iter().any(|(instance, def)| {
+                            *def == card
+                                && dealt.get(instance).is_some_and(|(owner, dealt_as)| {
+                                    owner.as_str() == from && *dealt_as == card
+                                })
+                        }),
+                        "{from}'s {card} was sent before a view showed it"
+                    );
+                    let frozen = row["loadouts"][index]["cards"]
+                        .as_array()
+                        .and_then(|cards| cards.iter().find(|entry| entry["cardId"] == card))
+                        .cloned()
+                        .unwrap_or(Value::Null);
+                    assert_eq!(*entry, frozen);
+                    assert!(
+                        !sent.contains(&(from.clone(), card.clone())),
+                        "{from}'s {card} twice"
+                    );
+                    sent.push((from.clone(), card));
+                    let mut keys: Vec<String> = entry
+                        .as_object()
+                        .into_iter()
+                        .flatten()
+                        .map(|(key, _)| key.clone())
+                        .collect();
+                    keys.sort();
+                    shapes.push((from.clone(), keys));
+                }
+                let mut keys: Vec<&String> = message
+                    .as_object()
+                    .into_iter()
+                    .flatten()
+                    .map(|(key, _)| key)
+                    .collect();
+                keys.sort();
+                assert_eq!(keys, vec!["cards", "seat", "type"]);
+            }
+            _ => {}
+        }
+    }
+    assert!(
+        sent.iter().any(|(seat, _)| seat == "p1"),
+        "the person's own cards' picks"
+    );
+    assert!(
+        sent.iter().any(|(seat, _)| seat == "p2"),
+        "the bot showed no card in {DRESSED_TURNS} turns"
+    );
+    let person_shape = shapes
+        .iter()
+        .find(|(seat, _)| seat == "p1")
+        .map(|(_, keys)| keys.clone());
+    let bot_shape = shapes
+        .iter()
+        .find(|(seat, _)| seat == "p2")
+        .map(|(_, keys)| keys.clone());
+    assert_eq!(person_shape, bot_shape);
 }

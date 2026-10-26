@@ -4,6 +4,7 @@
 pub mod balance_watch;
 pub mod card_stats;
 pub mod contract;
+pub mod cosmetics_fit;
 pub mod invite_clusters;
 pub mod migrations_pinned;
 pub mod mint_code;

@@ -99,12 +99,13 @@ function toggle(testId: string): HTMLInputElement {
 const MYTHIC = Object.values(CATALOG).find((def) => def.rarity === "Mythic");
 
 describe("SETTINGS_SLOTS mounts every task's controls in its own section", () => {
-  it("lists the vibration under gameplay (R669), task 1's effects, task 6's foil and the full-art switch (R1017001) under visuals, and task 2's audio under audio, each with a reset", () => {
+  it("lists the vibration under gameplay (R669), task 1's effects, task 6's foil, the full-art switch (R1017001) and Show opponents' cosmetics under visuals, and task 2's audio under audio, each with a reset", () => {
     expect(SETTINGS_SLOTS.map((slot) => [slot.section, slot.id])).toEqual([
       ["gameplay", "haptics"],
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["visuals", "card-full-art"],
+      ["visuals", "card-opponent-cosmetics"],
       ["audio", "audio"],
       ["gameplay", "language"],
     ]);
@@ -265,6 +266,24 @@ describe("every setting persists and applies live, on a board already on screen"
 
     fireEvent.click(toggle("setting-fullArt"));
     expect(face()).toHaveAttribute("data-full-art", "true");
+  });
+
+  it("R1834004 Show opponents' cosmetics is a switch on the visuals tab, on by default, that writes task 6's store; its reset turns it back on", () => {
+    render(<SettingsPanel onClose={noop} />);
+    fireEvent.click(screen.getByTestId("settings-tab-visuals"));
+    const toggled = toggle("setting-opponentCosmetics");
+    expect(screen.getByRole("switch", { name: "Show opponents' cosmetics" })).toBe(toggled);
+    expect(toggled.checked).toBe(true);
+
+    fireEvent.click(toggled);
+    expect(readCardSettings().opponentCosmetics).toBe(false);
+    expect(stored(CARD_SETTINGS_KEY)).toMatchObject({ opponentCosmetics: false });
+
+    act(() => {
+      SETTINGS_SLOTS.find((slot) => slot.id === "card-opponent-cosmetics")?.reset?.();
+    });
+    expect(readCardSettings().opponentCosmetics).toBe(true);
+    expect(toggle("setting-opponentCosmetics").checked).toBe(true);
   });
 
   it("audio: a volume, mute and voice lines write task 2's store, which the engine hears", () => {

@@ -416,6 +416,25 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::cosmetics::get_owned_cosmetics),
     ),
+    // api/card_picks.rs (R1834000, R1834001)
+    (
+        "GET",
+        "/api/card-picks",
+        AuthLevel::Active,
+        h!(api::card_picks::get_card_picks),
+    ),
+    (
+        "PUT",
+        "/api/card-picks",
+        AuthLevel::Active,
+        h!(api::card_picks::put_card_pick),
+    ),
+    (
+        "POST",
+        "/api/card-picks/upload",
+        AuthLevel::Active,
+        h!(api::card_picks::upload_card_picks),
+    ),
     // api/decks.rs
     ("GET", "/api/decks", AuthLevel::Active, h!(api::decks::list_decks)),
     (
