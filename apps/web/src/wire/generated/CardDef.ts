@@ -8,6 +8,7 @@ import type { FusedIngredient } from "./FusedIngredient";
 import type { Param } from "./Param";
 import type { PrintedRarity } from "./PrintedRarity";
 import type { Rarity } from "./Rarity";
+import type { ResourceDef } from "./ResourceDef";
 import type { SetName } from "./SetName";
 import type { Tag } from "./Tag";
 
@@ -54,6 +55,13 @@ dealsDamage?: boolean,
  * crafted definition included. Only ever `Some(true)`.
  */
 usesPlague?: boolean, 
+/**
+ * R1840000: this card is a Resource, a (0) Spell token gained into its player's Resource tray
+ * and never a hand, with its rarity and its prices. The roll (R1840002) reads `resource.rarity`;
+ * `printedRarity` stays the card frame's alone. Absent on every other card, a fused or crafted
+ * definition included, so a catalog without Resources serialises as before.
+ */
+resource?: ResourceDef, 
 /**
  * E36: the non-blank, non-comment lines of this card's script file, imports excluded. Frozen
  * gameplay data since v0.3.0 (SURFACE §7.5): C+ #44, C+ #45 and Classic #48 read it. Public (the

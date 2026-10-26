@@ -212,8 +212,9 @@ fn no_such_replay() -> ApiError {
 }
 
 /// §2.5: the endings that always name a winner, as `DECISIVE_REASONS` in `db/pg.rs` lists them: a
-/// hero's death, a concede, a disconnect and an effect's win (R1412). `alt-win` is a draw when both
-/// players held a win (R850); every other ending is a draw.
+/// hero's death, a concede, a disconnect, an effect's win (R1412), a player voted out (R1843000) and
+/// a flight that chose a loss for the other player (R1843002). `alt-win` is a draw when both players
+/// held a win (R850), and `fled` when both fled (R1843002); every other ending is a draw.
 fn names_a_winner(reason: GameOverReason) -> bool {
     matches!(
         reason,
@@ -221,13 +222,15 @@ fn names_a_winner(reason: GameOverReason) -> bool {
             | GameOverReason::Concede
             | GameOverReason::Disconnect
             | GameOverReason::WonByEffect
+            | GameOverReason::VotedOut
+            | GameOverReason::FledDecisive
     )
 }
 
 /// Whether the results row records an ending `winner` won (R677: its players are the seats as the
 /// game ended). A winnerless row whose reason names a winner is one whose winner has deleted their
 /// account since, which empties both the winner and that seat (migration 0012), so the emptied
-/// seat won; a winnerless `alt-win` is a draw or that.
+/// seat won; a winnerless `alt-win` or `fled` is a draw or that.
 fn records_winner(result: &ResultRow, winner: Winner) -> bool {
     let seat_of = |profile_id: &str| {
         if profile_id == result.players.0 {
@@ -241,7 +244,7 @@ fn records_winner(result: &ResultRow, winner: Winner) -> bool {
     match result.winner_profile_id.as_deref() {
         Some(won) => seat_of(won) == Some(winner),
         None if names_a_winner(result.reason) => seat_of("") == Some(winner),
-        None if result.reason == GameOverReason::AltWin => {
+        None if matches!(result.reason, GameOverReason::AltWin | GameOverReason::Fled) => {
             winner == Winner::Draw || seat_of("") == Some(winner)
         }
         None => winner == Winner::Draw,
@@ -249,10 +252,12 @@ fn records_winner(result: &ResultRow, winner: Winner) -> bool {
 }
 
 /// The caller's result, as their record counts it (`results_record_for`): a winnerless row is a
-/// loss when its reason names a winner, and a draw otherwise.
+/// loss when its reason names a winner, and a draw otherwise; R1843004: the other player's `fled` is
+/// a draw for the caller.
 fn result_for(result: &ResultRow, profile_id: &str) -> ReplayResult {
     match result.winner_profile_id.as_deref() {
         Some(winner) if winner == profile_id => ReplayResult::Win,
+        Some(_) if jackioh_engine::config::LOSER_DRAWS_REASONS.contains(&result.reason) => ReplayResult::Draw,
         Some(_) => ReplayResult::Loss,
         None if names_a_winner(result.reason) => ReplayResult::Loss,
         None => ReplayResult::Draw,

@@ -861,6 +861,20 @@ status and a ladder bot's passed over (R1454), the five that are not starters: a
 alone, a starter with no row, and a deck's save refuses a portrait its account does not own
 (`api/decks.rs`).
 
+Migration 0058 only widens the `cards` tag check again, as 0043 did with Potion: it admits the five
+tags #1837 puts on shipped cards, Terminus, Quest, Otherworldly, Other-Origins and Jelly Bean
+(R1837000), so `seed-catalog` can write Core #26 to #29, #100, Classic #90 and Classic+ #32 and its
+tokens with them. No row is rewritten; the seed writes each card's tags as the catalog holds them.
+
+Migration 0059 records issue #1843's two endings (R1843005): `results_reason_check` and
+`rated_games_reason_check` admit `voted-out`, `both-voted-out`, `fled` and `fled-decisive`, as 0031
+admitted the Meditative set's two, and no row changes. `voted-out` and `fled-decisive` join
+`DECISIVE_REASONS` (`db/pg.rs`); `fled` is the engine's `LOSER_DRAWS_REASONS`, a win for its winner
+and a draw for the other player, which `results_record_for` (both stores), the replays list, the
+reward hook and the ladder read: the ranked plan rates each side by its own score
+(`ranked::glicko2::rate_game_scored`, 1 and 0.5) and moves each season row by its own result
+(R1843004).
+
 ## Tests
 
 ```

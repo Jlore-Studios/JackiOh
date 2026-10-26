@@ -1,14 +1,14 @@
 // A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8). A hover
 // preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
 // read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
-// quest line (B5 E33, R404), what a copier copies (B5 E14, R511), why the viewer's own unit cannot
+// quest line (B5 E33, R404) and a staged quest's stages (R1854000), what a copier copies (B5 E14, R511), why the viewer's own unit cannot
 // attack now (R849000) and why a card in hand cannot be played now (R979000). `LocLine` is E36's
 // meta line.
 
 import type { ReactElement } from "react";
 
 import { t, useLocale } from "../../i18n/i18n.ts";
-import { questProgress, stateBadges } from "../cardState.ts";
+import { questProgress, stageWords, stateBadges } from "../cardState.ts";
 import { MARK_GLYPH, markWords } from "../marks.ts";
 import { Icon } from "../icons.tsx";
 import { locWords, type FaceModel } from "../model.ts";
@@ -18,6 +18,14 @@ import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
 /** R404: the glyphs of a quest and of an aura its line holds; R511: of a copier's note. */
 const QUEST_GLYPH = "⚑";
+/** R1854000: a stage's mark by its state — done, open now, still to come. */
+const STAGE_GLYPH: Readonly<Record<"done" | "current" | "upcoming", string>> = { done: "✓", current: "▸", upcoming: "·" };
+/** R1854000: a stage's state in words, beside its glyph for a reader that has no sight of it. */
+const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string>> = {
+  done: "done",
+  current: "now",
+  upcoming: "to come",
+};
 const AURA_GLYPH = "✦";
 const COPY_GLYPH = "“";
 /** R849000: the glyph of a unit's reason for not attacking. */
@@ -33,6 +41,7 @@ export function copyingWords(copying: { name: string; radiant: boolean }): strin
 export function hasStateNotes(face: FaceModel): boolean {
   return (
     stateBadges(face).length > 0 ||
+    (face.quest?.stages ?? []).length > 0 ||
     (face.marks ?? []).length > 0 ||
     (face.quest?.auras ?? []).length > 0 ||
     (face.copying ?? null) !== null ||
@@ -73,17 +82,19 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
 
 export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
   useLocale();
-  const others = stateBadges(face).filter((badge) => badge.kind !== "tuned" && badge.kind !== "quest");
+  const others = stateBadges(face).filter((badge) => badge.kind !== "tuned" && badge.kind !== "quest" && badge.kind !== "questStage");
   const tuned = face.tuning !== undefined && face.tuning !== null;
   // R437: a mark's words, which on the board live only in its badge's tooltip (no hover on touch).
   const marks = face.marks ?? [];
   const quests = face.quest?.open ?? [];
   const auras = face.quest?.auras ?? [];
+  const stages = face.quest?.stages ?? [];
   const copying = face.copying ?? null;
   const lines =
     others.length +
     marks.length +
     quests.length +
+    (stages.length === 0 ? 0 : 1) +
     auras.length +
     (copying === null ? 0 : 1) +
     (face.attackReason === undefined ? 0 : 1) +
@@ -144,6 +155,38 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
               </span>
             </li>
           ))}
+          {stages.length === 0 ? null : (
+            <li className="inspect-state inspect-quest-stages" data-state="questStages">
+              <span className="inspect-state-glyph" aria-hidden="true">
+                {QUEST_GLYPH}
+              </span>
+              <span className="inspect-state-words">
+                {stageWords(stages)}
+                <ol className="inspect-quest-stage-list">
+                  {stages.map((stage, index) => (
+                    <li
+                      key={`stage:${String(index)}`}
+                      data-stage={index + 1}
+                      data-stage-state={stage.state}
+                      data-hear-back={stage.hearBack}
+                    >
+                      <span aria-hidden="true">{STAGE_GLYPH[stage.state]} </span>
+                      <span className="inspect-quest-stage-name">{t(stage.name)}</span>
+                      <span className="inspect-sr">{` (${t(STAGE_STATE_WORDS[stage.state])})`}</span>
+                      <ul className="inspect-quest-stage-goals">
+                        {stage.goals.map((goal) => (
+                          <li key={goal}>
+                            <RulesText text={goal} />
+                          </li>
+                        ))}
+                      </ul>
+                      <span className="inspect-quest-label">{t("Reward")}</span> <RulesText text={stage.reward} />
+                    </li>
+                  ))}
+                </ol>
+              </span>
+            </li>
+          )}
           {auras.map((aura) => (
             <li key={`aura:${aura.id}`} className="inspect-state" data-state="questAura" data-aura={aura.id}>
               <span className="inspect-state-glyph" aria-hidden="true">

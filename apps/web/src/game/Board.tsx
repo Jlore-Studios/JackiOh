@@ -46,6 +46,7 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
+import ResourceTray from "./ResourceTray.tsx";
 import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
@@ -526,6 +527,17 @@ function Seat({
           ))}
         </span>
       )}
+      {/* R1840000, R1840005: the Resource tray beside the hand and the Credits, each absent until
+          the view carries it. */}
+      <ResourceTray
+        side={side}
+        tray={seat.resourceTray}
+        credits={seat.marketCredits}
+        touchHold={touchHold}
+        highlight={highlight}
+        animating={animating}
+        onClick={onClick}
+      />
     </div>
   );
 }

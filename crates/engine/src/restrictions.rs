@@ -81,8 +81,14 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
 
 /// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names —
 /// a Spell's effects pass an immune unit on the field by. A card in a hand or a deck is no unit, and
-/// its printed keyword protects nothing there.
+/// its printed keyword protects nothing there. R1839000: every effect, whatever its source, passes a
+/// Dormant card by — a chosen one, one named by id, "this" and every scope and neighbour walk — so
+/// each verb written in that vocabulary (destroy, exile, damage, bounce, transform, steal, Allure,
+/// Freeze, Buff, …) leaves it be; only `effects::awaken` names it.
 pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
+    if crate::slumber::is_slumbering(card) {
+        return true;
+    }
     matches!(card.zone, Zone::Field { .. })
         && effect_is_from_spell(ctx)
         && immune_to_spells(ctx.sink.state, card)
@@ -152,6 +158,10 @@ pub fn tribal_hate_cannot_reach(
 // The attack restrictions
 // ---------------------------------------------------------------------------
 
+/// R1839000: why a Dormant card may neither attack, be attacked, switch its position nor be picked —
+/// the one reason `legal_actions`, the reducer and the view all give.
+pub const SLUMBER_REFUSAL: &str = "that card is Dormant";
+
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
     crate::scripts::flags_of(state, unit).cant_attack_or_be_attacked == Some(true)
@@ -187,6 +197,10 @@ pub fn attack_restriction_in(
     target: &DamageTarget,
 ) -> Result<(), EngineError> {
     let state = auras.state();
+    // R1839000: a Dormant card neither attacks nor is attacked, declared or forced.
+    if crate::slumber::is_slumbering(attacker) {
+        return Err(EngineError::new(SLUMBER_REFUSAL));
+    }
     if cannot_attack(state, attacker) {
         return Err(EngineError::new("that unit cannot attack"));
     }
@@ -194,6 +208,9 @@ pub fn attack_restriction_in(
         DamageTarget::Hero { .. } => return Ok(()),
         DamageTarget::Unit { instance } => instance,
     };
+    if crate::slumber::is_slumbering(defender) {
+        return Err(EngineError::new(SLUMBER_REFUSAL));
+    }
     if cannot_be_attacked(state, defender) {
         return Err(EngineError::new("that unit cannot be attacked"));
     }

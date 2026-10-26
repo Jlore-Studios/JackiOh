@@ -15,7 +15,8 @@
 // beside the board and hold no rule either: the Concede control asks "Concede this game?" before it
 // sends anything (ConfirmConcede.tsx; `concedeFor` is the seat that asked), and the draw offer's
 // notices, with the answering seat's Accept and Decline, come from the view (DrawOffer.tsx). So does
-// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx).
+// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx), and R1838000's Trade
+// control over a Tradable hand card, live exactly when `legal` lists its `trade` (TradeControl.tsx).
 //
 // `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
 // While the runner holds it back (the AI's last attack still playing out, say), the board draws the
@@ -44,6 +45,7 @@ import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
 import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
+import { TradeBar } from "./TradeControl.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
@@ -168,6 +170,11 @@ export type GameProps = {
    * Absent, off.
    */
   lesson?: boolean;
+  /**
+   * R1838000: the board's own Trade bar over a Tradable hand card. The Duos board turns it off and
+   * puts the Trade button in its card bar beside the pass control instead. Absent, on.
+   */
+  tradeBar?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -211,10 +218,17 @@ export default function Game({
   aim,
   replay = false,
   lesson = false,
+  tradeBar = true,
 }: GameProps): ReactElement {
   useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
+  // The same element as state, for the Trade bar, which measures inside it (TradeControl.tsx).
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  const attach = useCallback((element: HTMLDivElement | null) => {
+    root.current = element;
+    setHost(element);
+  }, []);
   /**
    * The seat whose Concede control asked "Concede this game?". The question is that seat's alone: a
    * hotseat hand-over, or a game that ends while it is open, closes it without a word.
@@ -616,7 +630,7 @@ export default function Game({
   return (
     <div
       className="game"
-      ref={root}
+      ref={attach}
       data-testid="game"
       data-replay={replay ? "true" : undefined}
       data-viewer={shown.viewer}
@@ -725,6 +739,8 @@ export default function Game({
           onLift={onLift}
         />
       )}
+
+      {replay || !tradeBar ? null : <TradeBar container={host} view={shown} legal={legal} onTrade={dispatch} />}
 
       {shown.result !== null ? (
         <GameResult

@@ -883,6 +883,20 @@
   height: calc(var(--card-h) * 0.62);
 }
 
+/* R1840000, R1840005: the Resource tray and the Credits count, drawn as the resolving strip is. */
+.resource-tray,
+.market-credits {
+  display: inline-flex;
+  gap: var(--gap);
+  padding: 2px;
+  border: 1px dashed var(--selected);
+  border-radius: var(--radius);
+}
+
+.card-tray {
+  height: calc(var(--card-h) * 0.62);
+}
+
 /* ---------------------------------------------------------------------------------- cards --- */
 
 .card {

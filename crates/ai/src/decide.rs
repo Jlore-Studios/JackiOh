@@ -686,6 +686,8 @@ fn holds_placeholder(state: &GameState) -> bool {
                 .flatten()
                 .flatten()
                 .any(|card| card.def_id == HIDDEN_DEF_ID)
+            // R1840000: and a Resource tray, the opponent's hidden as a hand is.
+            || player.resource_tray.as_deref().is_some_and(any)
     })
 }
 

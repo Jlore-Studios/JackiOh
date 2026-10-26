@@ -78,14 +78,21 @@ export const FILTER_TAGS: readonly Tag[] = [
   // The Meditative+ set's (R1178000), shipped in v0.3.15: M+ #11, #12 and #13, the Living Potions,
   // and the potions M+ #16 Jazakus and #16.1 Jazakus Prime craft.
   "Potion",
+  // R1837000, ahead of the Stinkyscape set: Core #100 Ceaseless Void, Classic #90 In Too Deep,
+  // Classic+ #32 Otherworldly Removal and Core #26 to #29, the Glowy Jelly Beans. "Other-Origins" is
+  // left out with "Prime": only Otherworldly Removal's three tokens carry it.
+  "Terminus",
+  "Quest",
+  "Otherworldly",
+  "Jelly Bean",
 ];
 
 /**
- * The almanac's tag chips (R630): the deck builder's, then the three only tokens carry, "Prime" (the
- * Prime tokens, R1421), "AI" (the ten AI tokens) and "Token", since the almanac shows tokens. Every tag
- * a catalog card carries.
+ * The almanac's tag chips (R630): the deck builder's, then the four only tokens carry, "Prime" (the
+ * Prime tokens, R1421), "AI" (the ten AI tokens), "Other-Origins" (Classic+ #32.1 to #32.3, R1837000)
+ * and "Token", since the almanac shows tokens. Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {

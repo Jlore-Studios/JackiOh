@@ -68,6 +68,13 @@
 //
 // Issue #1174 (R1174000) adds §6.1's Frozen, a status that is no keyword kind, and §6.3's Freeze,
 // with "freeze" and "freezes" as its aliases. No card prints either yet (M+ #24 Bob, #1185, will).
+//
+// Issue #1839 (R1839000–R1839002) adds §6.1's Dormant, a status that is no keyword kind, §6.2's "When
+// this awakens" and §6.3's Awaken. No card prints them yet (Stinkyscape's cards will); a card under a
+// Stack pile's top is "buried" to a player, never Dormant (§3.2).
+//
+// Issue #1852 (R1852000–R1852007) adds §6.1's Starship Piece and Starship, keyword kinds, §6.2's "When
+// launched" and §6.3's Launch. No card prints them yet (Stinkyscape's cards will).
 
 import type { KeywordKind } from "@jackioh/shared";
 
@@ -84,7 +91,9 @@ export type TriggerTermId =
   | "Cast on draw"
   | "Quickdraw"
   | "Float"
-  | "Activate";
+  | "Activate"
+  | "When this awakens"
+  | "When launched";
 export type VerbTermId =
   | "Discover"
   | "Tribute"
@@ -111,6 +120,8 @@ export type VerbTermId =
   | "Look at a hand"
   | "Allure"
   | "Freeze"
+  | "Awaken"
+  | "Launch"
   | "Jade Counter"
   | "Exile"
   | "Hand size"
@@ -122,6 +133,7 @@ export type StatusTermId =
   | "Only Units in this lane can attack this"
   | "Berserk"
   | "Frozen"
+  | "Dormant"
   | "Combat keyword";
 export type GlossaryTermId = KeywordKind | StatusTermId | TriggerTermId | VerbTermId;
 export type GlossaryEntry = {
@@ -229,6 +241,17 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Cloaked: keyword("Cloaked", "Can be played face-down as a Trap. Activate: Reveal"),
   Crater: keyword("Crater", "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap"),
   Flashback: keyword("Flashback", "Can be played from your graveyard once, at its cost"),
+  // Issue #1838 (R1838000): Tradable, Meditative #53 and #98's keyword, Stinkyscape's too.
+  Tradable: keyword(
+    "Tradable",
+    "In your main phase, put it from your hand into your deck at a random position and draw a card, at no mana. One Trade per turn",
+  ),
+  // Issue #1852 (R1852000–R1852003): Stinkyscape's two, which no card prints yet.
+  "Starship Piece": keyword(
+    "Starship Piece",
+    "When it dies, a copy of it fuses into your Dormant Starship, which is summoned first if you have none",
+  ),
+  Starship: keyword("Starship", "A launched Starship, built from the Starship Pieces fused into it"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -243,6 +266,11 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Frozen: status(
     "Frozen",
     "Can't attack or switch position until it thaws: it loses its next chance to do either, and thaws at the end of the turn it could have done it",
+  ),
+  // R1839000: Stinkyscape's status, which no effect reaches until it awakens.
+  Dormant: status(
+    "Dormant",
+    "On the field and filling its zone, but out of play until it awakens: it can't attack, be attacked or be targeted, no effect reaches it, and its auras and triggers are off",
   ),
   // Patch v0.3.7 (R781005): the pool's name, printed lower-case ("random combat keywords"); patch
   // v0.3.Y (R1025000) took Armor 1 and Spell Damage +1 out of it, and issue #1615 (R1615000) Charge
@@ -285,6 +313,10 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',
     { row: "Activate / Activate X / Activate ♾️" },
   ),
+  // R1839002: a Dormant card's own trigger.
+  "When this awakens": trigger("When this awakens", "When this Dormant card awakens"),
+  // R1852003: a Starship Piece's trigger, which runs once it is part of a Starship that launches.
+  "When launched": trigger("When launched", "When the Starship this is fused into launches, after its Cries"),
 
   // §6.3 Actions and verbs
   Discover: verb("Discover", "Choose 1 of 3 options"),
@@ -332,6 +364,10 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Freeze: verb("Freeze", "The Unit loses its next attack or position switch, and thaws at the end of the turn it could have made one", {
     aliases: ["freeze", "freezes"],
   }),
+  // R1839002: the one verb that reaches a Dormant card.
+  Awaken: verb("Awaken", "A Dormant card awakens now"),
+  // R1852003: a Dormant Starship's awakening, which fires every Cry fused into it.
+  Launch: verb("Launch", "Your Dormant Starship awakens: every Cry fused into it fires, then every When launched"),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
   Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death", {
@@ -403,4 +439,7 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Cloaked: "CK",
   Crater: "CR",
   Flashback: "FB",
+  Tradable: "TD",
+  "Starship Piece": "SP",
+  Starship: "SS",
 };

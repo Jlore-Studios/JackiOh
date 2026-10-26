@@ -12,6 +12,8 @@ import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
+import type { Slumber } from "./Slumber";
+import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
 import type { Tuning } from "./Tuning";
 
@@ -52,6 +54,24 @@ berserk?: true,
  * attack nor switch its own position until it thaws. Absent otherwise. Only ever `Some(true)`.
  */
 frozen?: true, 
+/**
+ * R1839000, R1839001: the card is Dormant (a status, public on the field on both seats): it can
+ * neither attack, be attacked, be targeted nor be reached by an effect until it awakens, and
+ * `turns` is how many more of its controller's turns start before it does (absent: until an effect
+ * awakens it). What the board's Dormant badge and its countdown read. Absent otherwise.
+ */
+slumber?: Slumber, 
+/**
+ * R1848000: the unit is Frozen forever (Stinkyscape #2 Absolute Zero), so it never thaws; public
+ * as `frozen` is. Absent otherwise. Only ever `Some(true)`.
+ */
+frozenForever?: true, 
+/**
+ * R1852000, R1852005: the card is a Starship (public on the field on both seats): `pieces` the
+ * Starship Pieces fused into it, oldest first, and, once it has launched, `name`, the name it took.
+ * What the board's Starship badge and its list of pieces read. Absent otherwise.
+ */
+starship?: StarshipMemory, 
 /**
  * ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
  * may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.

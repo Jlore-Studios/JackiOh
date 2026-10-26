@@ -189,7 +189,7 @@ describe("the result overlay", () => {
   });
 
   it("has a sentence for every reason, from either side", () => {
-    const reasons = ["hero-death", "both-heroes-dead", "concede", "draw-accepted", "turn-cap", "disconnect", "match-ceiling", "alt-win", "won-by-effect"] as const;
+    const reasons = ["hero-death", "both-heroes-dead", "concede", "draw-accepted", "turn-cap", "disconnect", "match-ceiling", "alt-win", "won-by-effect", "voted-out", "both-voted-out", "fled", "fled-decisive"] as const;
     for (const reason of reasons) {
       for (const outcome of ["win", "loss", "draw"] as const) {
         const text = resultReason(outcome, reason);
@@ -200,6 +200,26 @@ describe("the result overlay", () => {
     }
     expect(resultReason("win", "concede")).toBe("Your opponent conceded.");
     expect(resultReason("loss", "concede")).toBe("You conceded.");
+  });
+
+  it("R1843004 the other player's flight reads as a draw for the viewer, from viewFor alone", () => {
+    // The view's p1 is the viewer: p2 fled, which is p2's win and the viewer's draw.
+    render(<Game view={finished({ result: { winner: "p2", reason: "fled" } })} legal={[]} onAction={vi.fn()} />);
+    const overlay = screen.getByTestId("result-overlay");
+    expect(overlay).toHaveAttribute("data-outcome", "draw");
+    expect(overlay).toHaveAttribute("data-reason", "fled");
+    expect(overlay).toHaveTextContent("Draw");
+    expect(overlay).toHaveTextContent("Your opponent escaped the universe. You draw.");
+    cleanup();
+    // A decisive flight is a loss, a removal by vote the removed player's loss, and two fleers a draw.
+    render(<Game view={finished({ result: { winner: "p2", reason: "fled-decisive" } })} legal={[]} onAction={vi.fn()} />);
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-outcome", "loss");
+    cleanup();
+    render(<Game view={finished({ result: { winner: "p2", reason: "voted-out" } })} legal={[]} onAction={vi.fn()} />);
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-outcome", "loss");
+    expect(screen.getByTestId("result-overlay")).toHaveTextContent("You were voted out of the game.");
+    expect(resultReason("draw", "fled", "draw")).toBe("Both players escaped the universe.");
+    expect(resultReason("win", "fled", "p1")).toBe("You escaped the universe. Your opponent draws.");
   });
 
   it("offers the route's actions in a panel over a dimmed board, and folds to a chip to view the board", () => {
