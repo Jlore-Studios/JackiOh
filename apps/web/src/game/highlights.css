@@ -18,13 +18,15 @@
  * which stays on top of both glows.
  *
  * A third mark, the counted ring (`data-counted="true"`, #991), is an outline, so it never touches the
- * box-shadow contract above.
+ * box-shadow contract above. So is a fourth, the Pareto hint's dashed ring on a hand card the engine
+ * flags (`data-pareto-optimal="true"`, R1844001).
  */
 
 :root {
   --glow-ready: #4ade80;
   --glow-condition: #facc15;
   --glow-counted: #c084fc;
+  --glow-pareto: #22d3ee;
 }
 
 /* Green: anything the board marks ready. The element-specific selectors outrank a board.css rule
@@ -134,5 +136,12 @@
    ring sits outside them and replaces neither. It never moves, so reduced motion needs nothing. */
 .card[data-counted="true"] {
   outline: 3px solid var(--glow-counted);
+  outline-offset: 2px;
+}
+
+/* R1844001: the Pareto hint, a hand card the engine's judge calls optimal to play now. An outline, as
+   the counted ring is, so neither glow's box-shadow moves; dashed, so it reads apart from that ring. */
+.card-hand[data-pareto-optimal="true"] {
+  outline: 3px dashed var(--glow-pareto);
   outline-offset: 2px;
 }
