@@ -14,13 +14,13 @@ use indexmap::IndexSet;
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus,
     MatchHooks, Matchup, NextSwing, NodeCounter, action_key, candidate_actions, create_node_counter,
-    damage_past_taunts, determinize, evaluate, find_lethal, find_lethal_with_quick_nodes, game_config,
-    line_status, play_match, ready_gap, redact, search_signature, simulate,
+    damage_past_taunts, determinize, evaluate, face_threat, find_lethal, find_lethal_with_quick_nodes,
+    game_config, line_status, play_match, ready_gap, redact, search_signature, simulate,
 };
 use jackioh_engine::testkit::{
-    ActionBody, ActionType, CardInstance, DuosLife, GameState, IndexMap, PLAYER_IDS, PlayerId, Row, Value,
-    Winner, ZoneChoice, attacks_per_turn, create_rng, find_instance, json, json_as, legal_actions,
-    opponent_of, seat_to_act, unit_view,
+    ActionBody, ActionType, AttackTarget, CardInstance, DuosLife, GameState, IndexMap, PLAYER_IDS, PlayerId,
+    Row, Value, Winner, ZoneChoice, attacks_per_turn, create_rng, find_instance, find_instance_mut, json,
+    json_as, legal_actions, opponent_of, seat_to_act, unit_view, why_cannot_attack,
 };
 
 use super::support::{
@@ -69,9 +69,15 @@ fn worlds(state: &GameState, seed: &str, count: usize) -> Vec<GameState> {
         .collect()
 }
 
+/// The engine's refusal of an attack that only its Taunt wall stops (§4.2 step 3, the last test
+/// `why_cannot_attack` makes).
+const TAUNT_WALL: &str = "a Taunt unit must be attacked first";
+
 /// ready_gap as it was first written: the attackers are the units `legal_actions` lists an attack for.
 /// lethal.rs now asks the engine unit by unit instead, which is cheaper on a wide hand; this is the
-/// reference it must agree with.
+/// reference it must agree with. Whether an attack may hit the hero is asked of the engine's whole
+/// test, since `legal_actions` lists no hero attack behind a Taunt: the hero is refused for nothing but
+/// the Taunt wall. `hero_ineligible_attacks` pins the numbers by hand (#1823).
 fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
     if let Some(result) = state.result {
         return if result.winner == Winner::from(seat) {
@@ -86,21 +92,26 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
             ready.insert(attacker_id);
         }
     }
-    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
+    let opp = opponent_of(seat);
+    let hero = AttackTarget::Hero { player: opp };
+    let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
     for id in &ready {
         let Some(unit) = find_instance(state, id) else {
             continue;
         };
         let attack = unit_view(state, unit).attack;
         if attack > 0 {
+            let may_hit_hero = match why_cannot_attack(state, unit, &hero) {
+                Ok(()) => true,
+                Err(refused) => refused.message == TAUNT_WALL,
+            };
             // R636: once per attack the unit has left this turn.
             let spent = unit.exertion.attacks.unwrap_or(i32::from(unit.exertion.attacked));
             for _ in spent..attacks_per_turn(state, unit) {
-                attacks.push((unit, attack));
+                attacks.push((unit, attack, may_hit_hero));
             }
         }
     }
-    let opp = opponent_of(seat);
     f64::from(state.players[opp].hero.health - damage_past_taunts(state, opp, &attacks))
 }
 
@@ -557,5 +568,75 @@ mod duos_life_r964000 {
         );
         // Spent: the hero's health is the pool.
         assert_eq!(ready_gap(&with_pool(&state, true), AI), 6.0);
+    }
+}
+
+mod hero_ineligible_attacks {
+    use super::*;
+
+    /// p1 (the AI) on turn 9 with `field` ready on the field, p2 at 10 health with `enemy` on its field.
+    /// Both sides hold a library.
+    fn board(seed: &str, field: Value, enemy: Value) -> GameState {
+        register_cards();
+        scenario(json!({
+            "seed": seed,
+            "active": AI,
+            "turn": 9,
+            "p1": { "field": field, "library": ["core-008", "core-011"] },
+            "p2": { "field": enemy, "health": 10, "library": ["core-008", "core-011"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// `state` with the AI's `def_id` summoned this turn: `scenario` places no unit summoning sick.
+    fn fresh(state: &GameState, def_id: &str) -> GameState {
+        let mut out = state.clone();
+        let id = mine(&out, AI, def_id).id;
+        let turn = out.turn;
+        find_instance_mut(&mut out, &id).expect("the unit").summoned_turn = Some(turn);
+        out
+    }
+
+    #[test]
+    fn a_fresh_rush_unit_with_a_unit_to_attack_leaves_the_gap_at_the_heros_health() {
+        // Plague Bringer, 4/4 Rush, and Mr. Vanilla across, a 4/4 without Taunt for it to attack: 4 off
+        // 10 once it has been on the field a turn.
+        let ready = board("lethal-fresh-rush", json!(["classic-076"]), json!(["core-008"]));
+        assert_eq!(ready_gap(&ready, AI), 6.0);
+        // §6.1: on its summon turn Rush lets it attack units only, so nothing reaches the hero.
+        let sick = fresh(&ready, "classic-076");
+        assert_eq!(ready_gap(&sick, AI), 10.0);
+        assert_eq!(ready_gap_by_legal_actions(&sick, AI), 10.0);
+        // face_threat reads the next turn, when the unit is no longer sick.
+        assert_eq!(face_threat(&sick, AI), 4);
+    }
+
+    #[test]
+    fn a_fresh_charge_unit_still_counts_at_the_hero() {
+        // Deft Duelist, 4/3 Charge: Charge lifts summoning sickness for the hero too.
+        let state = fresh(
+            &board("lethal-fresh-charge", json!(["core-045"]), json!(["core-008"])),
+            "core-045",
+        );
+        assert_eq!(ready_gap(&state, AI), 6.0);
+    }
+
+    #[test]
+    fn a_fresh_rush_unit_still_binds_a_taunt_and_frees_a_ready_attacker_for_the_face() {
+        // Prem Panther 5/4 Rush, fresh, and Tempo Timmy 3/3, ready, into Tommy Tempo, a 5/5 Taunt.
+        let ready = board(
+            "lethal-fresh-taunt",
+            json!(["core-032", "core-011"]),
+            json!(["classicplus-026"]),
+        );
+        let sick = fresh(&ready, "core-032");
+        // The Panther, which cannot reach the hero, takes the Taunt first and destroys it, so Timmy's 3
+        // reach the hero past it: 7.
+        assert_eq!(ready_gap(&sick, AI), 7.0);
+        assert_eq!(ready_gap_by_legal_actions(&sick, AI), 7.0);
+        // face_threat is unchanged: every attack may hit the hero, the smallest bound first, so Timmy's
+        // 3 only hurt the Taunt and the Panther's 5 finish it.
+        assert_eq!(face_threat(&sick, AI), 0);
     }
 }
