@@ -2050,13 +2050,21 @@
       }
     },
     "1964": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T04:24:46Z",
       "issue": 1904,
-      "kind": "revise",
+      "kind": "review",
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-10-26T05:03:09Z",
+      "run_id": "pending:3035d300-1792991032",
       "self_check_findings": [],
+      "started_at": "2026-10-26T05:04:44Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "muse"
@@ -2079,9 +2087,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T04:43:05Z",
+    "at": "2026-10-26T05:04:44Z",
     "url": "",
-    "what": "revise #1960 on claude-3"
+    "what": "review #1964 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T04:54:36Z",
