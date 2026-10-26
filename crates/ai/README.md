@@ -68,11 +68,10 @@ it can see on the field, then its attacks, a kill priced at what it removes (a u
 less the body it comes back as, #1796; plus a Trample attacker's excess on the hero and a Lifesteal
 attacker's heal, #1820), and once none is worth making the switches to Defense Position its own
 evaluation prefers) on every determinization, and plays the first action of the best mean. It
-re-plans after every action. Neither walk of the lethal solver goes on from a replay for nothing, a play
-of a card already played this turn that leaves the seat's mana and `ready_gap` as they were (a (0) Spell
-back from the graveyard under In Too Deep's reward L, R454): it could be made again without end, and since
-only a line's first action is played, a lethal opening with one would be played one replay at a time, for
-ever (R1965000). Each line tries its moves in move order (`candidates.rs`): attacks on the
+re-plans after every action, so a lethal the solver proves is played trimmed to the actions it needs
+(`trim_lethal`: its shortest suffix that still wins on every determinization, then less each other action it
+still wins without, R1965000). A free play that changes nothing (a (0) Spell back from the graveyard under
+In Too Deep's reward L, R454, or The Coin) could otherwise open the same lethal at every decision. Each line tries its moves in move order (`candidates.rs`): attacks on the
 enemy hero, kills the attacker survives, each attacker's best kill at an even trade or better by the
 opponent model's own read (`reply.rs`'s `trade_value`, #1779), the plays round-robin, answers, the Trades
 of Tradable hand cards (R1838003: on a determinized copy, so the card one would draw never steers it), the

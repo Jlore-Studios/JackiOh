@@ -18,9 +18,9 @@
 //!      `ready_gap`, so such a card is found when it is among those moves. A move past the first
 //!      lethalWidth of its position is never tried by either walk.
 //!
-//! A line counts only when it wins on every determinization. Neither walk goes on from a free replay
-//! that leaves `ready_gap` where it was (`replays_for_nothing`, R1965000): it could be made again
-//! without end, and a lethal opening with one would be played one replay at a time, for ever.
+//! A line counts only when it wins on every determinization. `decide` plays a proved line trimmed to
+//! the actions it needs (`trim_lethal`, R1965000), since a walk may prove a lethal behind steps it does
+//! not need, and only a line's first action is played.
 //!
 //! Port of `packages/ai/src/lethal.ts`. TS's frames shared one state object between the moves pushed
 //! from it; here they share it through an `Rc`.
@@ -102,16 +102,17 @@ fn push_moves(stack: &mut Vec<Frame>, state: Rc<GameState>, line: Rc<Vec<ActionB
     }
 }
 
-/// Replays a lethal line on every determinization but the first: each action must be legal there
-/// (equality with legal_actions, ActionBody being plain data) and the line must end with `seat` the
-/// winner. `None` when the counter ran out.
-fn holds_everywhere(
-    dets: &[GameState],
+/// Replays a lethal line on each of `worlds`: each action must be legal there (equality with
+/// legal_actions, ActionBody being plain data) and the line must end with `seat` the winner. `None`
+/// when the counter ran out. The walks prove a line on the determinizations but the first, where
+/// they found it.
+fn wins_on(
+    worlds: &[GameState],
     seat: PlayerId,
     line: &[ActionBody],
     counter: &dyn NodeCounter,
 ) -> Option<bool> {
-    for det in dets.iter().skip(1) {
+    for det in worlds {
         let mut state = det.clone();
         for action in line {
             if state.result.is_some() {
@@ -221,33 +222,13 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     f64::from(life - damage_past_taunts(state, opp, &attacks))
 }
 
-/// R1965000: whether `action`, taken in `state` to reach `next`, replays for nothing a card the seat
-/// has already played this turn: a play of an instance in its turn's `played_ids` that leaves its
-/// mana and `ready_gap` where they were. Such a play spends nothing and is offered again, as a (0)
-/// Spell played from the graveyard under C #90 In Too Deep's reward L lands back there (R454), and
-/// each reads as a new position, the turn's play record being part of `search_signature`; the
-/// best-first walk, taking the longer line on a tied gap, would follow such replays down to
-/// `lethal_max_depth` and return a lethal that opens with one, which `decide` plays and then finds
-/// again, without end.
-fn replays_for_nothing(state: &GameState, next: &GameState, seat: PlayerId, action: &ActionBody) -> bool {
-    let ActionBody::Play { instance_id, .. } = action else {
-        return false;
-    };
-    let before = &state.players[seat];
-    before.turn_log.played_ids.contains(instance_id)
-        && next.players[seat].mana.current == before.mana.current
-        && ready_gap(next, seat) == ready_gap(state, seat)
-}
-
 /// What a new position means for the walk: a proved lethal, a position to search on from, or neither.
-/// `line`'s last action took `parent` to `next`. `None` when the counter ran out while proving a win
-/// on the other determinizations.
+/// `None` when the counter ran out while proving a win on the other determinizations.
 #[allow(clippy::too_many_arguments)]
 fn judge(
     dets: &[GameState],
     seat: PlayerId,
     line: &[ActionBody],
-    parent: &GameState,
     next: &GameState,
     root_turn: i32,
     visited: &mut IndexSet<String>,
@@ -257,20 +238,13 @@ fn judge(
         if result.winner.player() != Some(seat) {
             return Some(Verdict::Dead);
         }
-        let verdict = holds_everywhere(dets, seat, line, counter)?;
+        let verdict = wins_on(dets.get(1..).unwrap_or_default(), seat, line, counter)?;
         return Some(if verdict { Verdict::Lethal } else { Verdict::Dead });
     }
     if line.len() as i32 >= AI_SEARCH.lethal_max_depth {
         return Some(Verdict::Dead);
     }
     if line_status(next, seat, root_turn) != LineStatus::Open {
-        return Some(Verdict::Dead);
-    }
-    // R1965000: a replay for nothing leads nowhere a walk has not been.
-    if line
-        .last()
-        .is_some_and(|action| replays_for_nothing(parent, next, seat, action))
-    {
         return Some(Verdict::Dead);
     }
     let signature = search_signature(next, seat);
@@ -299,16 +273,7 @@ fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) ->
         };
         let mut line: Vec<ActionBody> = frame.line.as_ref().clone();
         line.push(frame.action.clone());
-        let Some(verdict) = judge(
-            dets,
-            seat,
-            &line,
-            &frame.state,
-            &next,
-            root.turn,
-            &mut visited,
-            counter,
-        ) else {
+        let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
             return Walk::Cut;
         };
         match verdict {
@@ -363,16 +328,7 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
             };
             let mut line = node.line.clone();
             line.push(action);
-            let Some(verdict) = judge(
-                dets,
-                seat,
-                &line,
-                &node.state,
-                &next,
-                root.turn,
-                &mut visited,
-                counter,
-            ) else {
+            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter) else {
                 return Walk::Cut;
             };
             match verdict {
@@ -454,4 +410,48 @@ pub fn find_lethal_with_quick_nodes(
         Walk::Line(line) => Some(line),
         Walk::Exhausted | Walk::Cut => None,
     }
+}
+
+/// R1965000: `line`, a lethal `find_lethal` proved on `dets`, cut down to the actions it needs, for
+/// `decide`, which plays only a line's first action and then plans again. A walk may prove a lethal
+/// behind steps it does not need: the best-first walk takes the longer line on a tied `ready_gap`, and
+/// a free play that leaves the gap where it was (a (0) Spell that does nothing, or The Coin, played
+/// again from the graveyard under C #90 In Too Deep's reward L, R454) can stand in front of the same
+/// lethal at every decision, so playing the untrimmed line's first action could repeat it without
+/// end. First the shortest suffix that still wins on every world of `dets` (`wins_on`), so the action
+/// played is one the rest of the line cannot win without; then, one at a time from the front, each
+/// action the line still wins without, starting over after each, until it needs every action left.
+/// Each try costs a node a step, at most `lethal_max_depth` tries a pass and one pass for each action
+/// it drops; when the counter runs out, the line is kept as far as it was cut.
+pub fn trim_lethal(
+    dets: &[GameState],
+    seat: PlayerId,
+    mut line: Vec<ActionBody>,
+    counter: &dyn NodeCounter,
+) -> Vec<ActionBody> {
+    for start in (1..line.len()).rev() {
+        match wins_on(dets, seat, &line[start..], counter) {
+            None => return line,
+            Some(true) => {
+                line.drain(..start);
+                break;
+            }
+            Some(false) => {}
+        }
+    }
+    // The line less its first action does not win: the suffixes above included it.
+    let mut at = 1;
+    while at < line.len() {
+        let mut without = line.clone();
+        without.remove(at);
+        match wins_on(dets, seat, &without, counter) {
+            None => break,
+            Some(true) => {
+                line = without;
+                at = 0;
+            }
+            Some(false) => at += 1,
+        }
+    }
+    line
 }
