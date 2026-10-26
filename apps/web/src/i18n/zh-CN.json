@@ -3428,5 +3428,14 @@
   "Next patch →": "下一个版本 →",
   "{patch} · {games} games": "{patch} · {games} 局",
   "Patches:": "版本：",
-  "A card's figures start again at each patch. A micro patch starts again only the cards it changed, and every other card keeps all its games; a patch nobody played before the next one shipped counts as a micro.": "卡牌的数据在每个版本重新开始统计。小版本只重新统计它改动的卡牌，其他卡牌保留全部对局；在下一个版本发布前无人游玩的版本按小版本计算。"
+  "A card's figures start again at each patch. A micro patch starts again only the cards it changed, and every other card keeps all its games; a patch nobody played before the next one shipped counts as a micro.": "卡牌的数据在每个版本重新开始统计。小版本只重新统计它改动的卡牌，其他卡牌保留全部对局；在下一个版本发布前无人游玩的版本按小版本计算。",
+  "Game figures": "对局数据",
+  "Loading game figures…": "正在加载对局数据…",
+  "Game figures unavailable": "对局数据暂不可用",
+  "Not enough games on this patch yet.": "本版本的对局数还不足。",
+  "First player wins {share}% (±{margin})": "先手胜率 {share}%（±{margin}）",
+  "Median {turns} turns": "回合数中位数 {turns}",
+  "{share}% of games reach fatigue": "{share}% 的对局进入疲劳",
+  "{fired} of {set} set traps fired": "设置的 {set} 张陷阱中有 {fired} 张触发",
+  "Counted over {games} of the patch's {total} games: games recorded before these figures were kept are not in them.": "统计了本版本 {total} 局中的 {games} 局：开始记录这些数据之前的对局不计在内。"
 }

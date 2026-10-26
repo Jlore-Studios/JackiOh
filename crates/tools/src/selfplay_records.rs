@@ -202,10 +202,10 @@ mod tests {
     use super::*;
     use jackioh_engine::{
         CardStatsFilter, DEV_RECORD_ID_PREFIX, PLAYER_IDS, PilotFilter, SourceFilter, Tally, Winner,
-        card_stats, forced_series,
+        card_stats, forced_series, game_report,
     };
 
-    use crate::stats::{ReportArgs, game_report, read_records, report};
+    use crate::stats::{ReportArgs, read_records, report};
 
     /// The real exporter's lines for games `1..=games` of the base `records-test`, on commit `abc123`.
     fn exported(games: i32) -> Vec<SelfplayGame> {
@@ -410,7 +410,7 @@ mod tests {
         assert_eq!(group.patch, build);
         assert_eq!(group.mode, GameMode::Random);
         assert_eq!(group.source, GameSource::Dev);
-        assert_eq!(group.games, 2);
+        assert_eq!(group.figures.games, 2);
 
         // The file is byte-identical whatever the thread count.
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();

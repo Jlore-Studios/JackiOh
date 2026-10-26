@@ -70,6 +70,8 @@ struct RecordOptions {
     p1_played_radiant: Option<Vec<bool>>,
     p2_played_radiant: Option<Vec<bool>>,
     turns: Option<i32>,
+    /// p1's pilot and p2's: by default a live game is two people's, a development one two AIs'.
+    pilots: Option<[&'static str; 2]>,
 }
 
 /// One seat's summary: the first three cards are the opening hand, the rest drawn.
@@ -115,13 +117,14 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
         .p2_played
         .unwrap_or_else(|| p2_deck.iter().take(2).copied().collect());
     let pilot = if source == "dev" { "ai" } else { "human" };
+    let [p1_pilot, p2_pilot] = options.pilots.unwrap_or([pilot, pilot]);
 
     json!({
         "id": record_id,
         "source": source,
         "mode": options.mode.unwrap_or("bo1"),
         "patch": patch,
-        "pilots": { "p1": pilot, "p2": pilot },
+        "pilots": { "p1": p1_pilot, "p2": p2_pilot },
         "game": {
             "first": "p1",
             "winner": options.winner.unwrap_or("p1"),
@@ -1795,5 +1798,116 @@ mod r1583000_play_rates {
         tokio::time::advance(Duration::from_millis(1)).await;
         let (_, _, after) = get_public(&app, PATH).await;
         assert_eq!(after["decks"], json!(2 * n + 2));
+    }
+}
+
+mod r1994000_game_figures {
+    use super::*;
+
+    /// `count` records of `source`, piloted `pilots`, p1 winning those `p1_wins` picks.
+    fn games(
+        prefix: &str,
+        count: usize,
+        source: &'static str,
+        pilots: [&'static str; 2],
+        p1_wins: impl Fn(usize) -> bool,
+    ) -> Vec<Value> {
+        (1..=count)
+            .map(|i| {
+                make_game_record(
+                    &format!("{prefix}-{i}"),
+                    RecordOptions {
+                        source: Some(source),
+                        winner: Some(if p1_wins(i) { "p1" } else { "p2" }),
+                        pilots: Some(pilots),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r1994000_get_api_stats_games_is_provisional_below_1000_live_games_and_live_at_1000() {
+        let short = count(PUBLIC_STATS_MIN_LIVE_GAMES) - 1;
+        let app = test_app().await;
+        let mut records = games("live", short, "live", ["human", "human"], |i| i % 2 == 0);
+        records.extend(games("dev", 50, "dev", ["ai", "ai"], |_| true));
+        insert_records(&app, records).await;
+
+        let (status, headers, data) = get_public(&app, "/api/stats/games").await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            cache_control(&headers),
+            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+        );
+        assert_eq!(data["patch"], json!(current_patch()));
+        assert_eq!(data["source"], "provisional");
+        assert_eq!(data["sourceLabel"], "AI games + live games (provisional)");
+        assert_eq!(data["minSample"], json!(CARD_STATS_MIN_SAMPLE));
+        // The AI games pad the window below the gate, as they pad the cards' (1049 games).
+        assert_eq!(data["totalGames"], json!(short + 50));
+        assert_eq!(data["figures"]["games"], json!(short + 50));
+        assert_eq!(data["figures"]["firstWins"], json!(short / 2 + 50));
+        assert_eq!(data["figures"]["turnQuartiles"], json!([5, 5, 5]));
+        assert_eq!(data["figures"]["reasons"]["hero-death"], json!(short + 50));
+        // These records carry none of R1256000's counts: unknown, not zero.
+        assert_eq!(data["figures"]["counted"], json!(0));
+        assert_eq!(data["figures"]["fatigueShare"], Value::Null);
+
+        let app = test_app().await;
+        let gate = count(PUBLIC_STATS_MIN_LIVE_GAMES);
+        let mut records = games("live", gate, "live", ["human", "human"], |i| i % 2 == 0);
+        records.extend(games("dev", 100, "dev", ["ai", "ai"], |_| true));
+        insert_records(&app, records).await;
+        let (_, _, data) = get_public(&app, "/api/stats/games").await;
+        assert_eq!(data["source"], "live");
+        assert_eq!(data["sourceLabel"], "Live games");
+        assert_eq!(data["totalGames"], json!(gate));
+        assert_eq!(data["figures"]["games"], json!(gate));
+        assert_eq!(data["figures"]["firstWins"], json!(gate / 2));
+    }
+
+    #[tokio::test]
+    async fn r1994000_get_api_stats_games_splits_games_against_a_ladder_bot_by_pilot_pair() {
+        let app = test_app().await;
+        let mut records = games("people", 30, "live", ["human", "human"], |i| i % 3 == 0);
+        records.extend(games("bot-second", 20, "live", ["human", "ai"], |_| false));
+        records.extend(games("bot-first", 10, "live", ["ai", "human"], |_| true));
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/games").await;
+        assert_eq!(status, 200);
+        // A game is read whole, whoever piloted it: all sixty count.
+        assert_eq!(data["totalGames"], json!(60));
+        assert_eq!(data["figures"]["games"], json!(60));
+        assert_eq!(data["figures"]["firstWins"], json!(20));
+        let pairs: Vec<(Value, Value, Value)> = data["pairs"]
+            .as_array()
+            .expect("pairs is a list")
+            .iter()
+            .map(|pair| {
+                (
+                    pair["pilots"].clone(),
+                    pair["figures"]["games"].clone(),
+                    pair["figures"]["firstWins"].clone(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            pairs,
+            [
+                (json!(["human", "human"]), json!(30), json!(10)),
+                (json!(["human", "ai"]), json!(20), json!(0)),
+                (json!(["ai", "human"]), json!(10), json!(10)),
+            ]
+        );
+
+        // A mode nobody played has no figures.
+        let (_, _, conquest) = get_public(&app, "/api/stats/games?mode=bo3").await;
+        assert_eq!(conquest["mode"], "bo3");
+        assert_eq!(conquest["figures"], Value::Null);
+        assert_eq!(conquest["pairs"], json!([]));
+        assert_eq!(conquest["totalGames"], json!(0));
     }
 }

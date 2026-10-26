@@ -26,8 +26,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, GameMode, GameSource, PilotFilter, SourceFilter, StatsTotals, add_stats,
-    card_stats_of,
+    CardStats, CardStatsFilter, GameFigures, GameMode, GameSource, GameTotal, PILOTS, Pilot, PilotFilter,
+    RecordsKey, SourceFilter, StatsTotals, add_stats, card_stats_of, game_figures,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
@@ -444,6 +444,77 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
     }
 }
 
+/// R1994000: one pair of seat pilots' games over a window.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PilotPairFigures {
+    /// p1's pilot, then p2's.
+    pub pilots: (Pilot, Pilot),
+    pub figures: GameFigures,
+}
+
+/// R1994000: the game figures at a version, over the window every card shares.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowedGames {
+    /// The window every card shares at the version: `windowed_card_stats`' `patch`.
+    pub window: CardWindow,
+    /// The records of its counted versions and sources, their whole games kept or not.
+    pub records: i64,
+    /// The figures of the counted records whose whole games are kept, or `None` when none is.
+    pub figures: Option<GameFigures>,
+    /// The same split by the seats' pilots, each pair with games, in `PILOTS` × `PILOTS` order.
+    pub pairs: Vec<PilotPairFigures>,
+}
+
+/// R1994000: the game figures at `at` over the window every card shares, under R654's gate as
+/// R1367000 amends it (`windowed_card_stats` reads the same window): the counted versions' records of
+/// the sources the window counts, in `mode` or every mode. The gate counts every mode's live games.
+pub fn windowed_game_figures(
+    totals: &StatsTotals,
+    history: &[PatchStep],
+    at: &str,
+    mode: Option<GameMode>,
+    request: WindowRequest,
+) -> WindowedGames {
+    let collapsed = collapse_gameless(history, |version| totals.games(version));
+    let (history, at) = resolve(&collapsed, at);
+    let window = window_in(&history, at, None, request, &|version| totals.live_games(version));
+    let counts = |key: &RecordsKey| {
+        window.counted.contains(&key.patch)
+            && window.sources().contains(&key.source)
+            && mode.is_none_or(|mode| key.mode == mode)
+    };
+    let records = totals
+        .records
+        .iter()
+        .filter(|(key, _)| counts(key))
+        .map(|(_, records)| records)
+        .sum();
+    let mut all = GameTotal::default();
+    let mut by_pair: IndexMap<(Pilot, Pilot), GameTotal> = IndexMap::new();
+    for (key, total) in totals.game_totals.iter().filter(|(key, _)| counts(key)) {
+        all.add(total);
+        by_pair.entry(key.pilots).or_default().add(total);
+    }
+    let pairs = PILOTS
+        .iter()
+        .flat_map(|p1| PILOTS.iter().map(move |p2| (*p1, *p2)))
+        .filter_map(|pilots| {
+            Some(PilotPairFigures {
+                pilots,
+                figures: game_figures(by_pair.get(&pilots)?)?,
+            })
+        })
+        .collect();
+    WindowedGames {
+        figures: game_figures(&all),
+        window,
+        records,
+        pairs,
+    }
+}
+
 // R1367000: windows over a history written by hand, and figures over totals folded from records
 // written by hand, so each count can be read off the test.
 #[cfg(test)]
@@ -779,5 +850,73 @@ mod tests {
             [(vec!["v3", "v3b"], 8, 1), (vec!["v1", "v1b", "v2"], 15, 0)]
         );
         assert!(patch_windows(&[], none, none).is_empty());
+    }
+
+    #[test]
+    fn r1994000_game_figures_at_a_version_count_the_window_every_card_shares() {
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Patch, &[]),
+            step("v3", PatchTier::Micro, &[A]),
+        ];
+        let piloted = |record: GameRecord, p1: Pilot, p2: Pilot| GameRecord {
+            pilots: PerPlayer::new(p1, p2),
+            ..record
+        };
+        let mut totals = StatsTotals::default();
+        for record in [
+            game("m1", GameSource::Live, "v2", &[A]),
+            piloted(game("m2", GameSource::Live, "v3", &[A]), Pilot::Human, Pilot::Ai),
+            piloted(
+                game("dev:v3:s:1", GameSource::Dev, "v3", &[B]),
+                Pilot::Ai,
+                Pilot::Ai,
+            ),
+        ] {
+            totals.fold(&record, false);
+        }
+        let at = |totals: &StatsTotals, mode| {
+            windowed_game_figures(totals, &history, "v3", mode, WindowRequest::Gated)
+        };
+
+        // Two live games in v2's window and none before it: provisional, the AI game padding it.
+        let games = at(&totals, None);
+        assert_eq!(
+            games.window,
+            windowed_card_stats(&totals, &query(&history, "v3")).patch
+        );
+        assert_eq!(versions(&games.window), ["v2", "v3"]);
+        assert_eq!(games.window.source, WindowSource::Provisional);
+        let figures = games.figures.as_ref().expect("the window has games");
+        assert_eq!((games.records, figures.games, figures.first_wins), (3, 3, 3));
+        let pairs: Vec<((Pilot, Pilot), i64)> = games
+            .pairs
+            .iter()
+            .map(|pair| (pair.pilots, pair.figures.games))
+            .collect();
+        assert_eq!(
+            pairs,
+            [
+                ((Pilot::Human, Pilot::Human), 1),
+                ((Pilot::Human, Pilot::Ai), 1),
+                ((Pilot::Ai, Pilot::Ai), 1)
+            ]
+        );
+
+        // At the gate the live games alone count: the records added without their games count in
+        // `records` and not in the figures, as a record folded before the figures were kept.
+        add_live(&mut totals, "v2", PUBLIC_STATS_MIN_LIVE_GAMES);
+        let games = at(&totals, None);
+        assert_eq!(games.window.source, WindowSource::Live);
+        assert_eq!(games.records, PUBLIC_STATS_MIN_LIVE_GAMES + 2);
+        assert_eq!(games.figures.map(|figures| figures.games), Some(2));
+        assert_eq!(games.pairs.len(), 2);
+
+        // A mode no record was played in has no figures.
+        let conquest = at(&totals, Some(GameMode::Bo3));
+        assert_eq!(
+            (conquest.records, conquest.figures, conquest.pairs),
+            (0, None, Vec::new())
+        );
     }
 }

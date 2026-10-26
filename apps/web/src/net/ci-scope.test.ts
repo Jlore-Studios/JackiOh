@@ -195,6 +195,8 @@ describe("scripts/ci-scope.sh", () => {
     "training/history/improve.jsonl",
     // The tools' test of shadow_ban.rs reads the sweep reports of record.
     "training/history/sweep-2026-10-12.md",
+    // R1994000: the tools' test holds `stats report --games` to the notebooks' fixtures.
+    "analysis/fixtures/games.report.json",
     "training/loop.sh.bak",
     "training/lanes/x.ts",
     "SPEC.md",
@@ -550,6 +552,9 @@ describe("scripts/ci-scope.sh", () => {
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
     ["ladder/x.ts", ["rust_tools_wasm"]],
     ["training/history/sweep-2026-10-12.md", ["rust_tools_wasm"]],
+    // R1994000: the tools' test of `stats report --games` reads the notebooks' record files and reports.
+    ["analysis/fixtures/games.report.json", ["rust_tools_wasm"]],
+    ["analysis/fixtures/dev-40.jsonl", ["rust_tools_wasm"]],
     // crates/wasm/tests/export_parity.rs holds the Luau module's factory types the script writes.
     ["scripts/build-wasm.sh", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
