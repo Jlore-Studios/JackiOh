@@ -5193,6 +5193,12 @@
         "number": 1992,
         "title": "Patch: the result screen names your card of the game, with what it did",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-26T13:05:54Z",
+        "number": 1998,
+        "title": "Patch: practice puzzles, hand-built boards to win in one turn",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
