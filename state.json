@@ -2979,6 +2979,8 @@
       "taken_asks": []
     },
     "2016": {
+      "action": "revise",
+      "asks": [],
       "ci_fixes": 1,
       "ci_reruns": {
         "eab88c9126a7ac46b789546d68012dcbbee62604": 1
@@ -2998,11 +3000,15 @@
       "issue": 2013,
       "kind": "revise",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-10-26T19:25:31Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:33c41ef0-1793043153",
       "self_check_findings": [],
       "source": "ci",
+      "started_at": "2026-10-26T19:33:30Z",
       "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [
           "claude"
@@ -3025,9 +3031,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T19:32:20Z",
+    "at": "2026-10-26T19:33:30Z",
     "url": "",
-    "what": "revise #2012 on claude-6"
+    "what": "revise #2016 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T19:17:37Z",
