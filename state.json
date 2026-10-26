@@ -792,9 +792,11 @@
     "1867": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
+      "queued_at": "2026-10-26T23:07:39Z",
       "run_id": "40414043669",
       "started_at": "2026-10-26T22:38:53Z",
       "stop_requested": false,
