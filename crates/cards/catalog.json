@@ -18736,12 +18736,20 @@
     "dealsDamage": true,
     "loc": 6,
     "base": {
-      "keywords": [],
-      "text": "This and your next Spell this turn have Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
+      "keywords": [
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Poisonous\nYour next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Echo 1\nThis and your next Spell this turn have Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
+      "keywords": [
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Echo 1, Poisonous\nYour next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}."
     }
   },
   "stinkyscape-014": {

@@ -1068,12 +1068,12 @@ build decides otherwise, and says so. Where a decision in ST5 differs from an en
 
 > **Designer:** (2) Asphyxiants Cloud, Stinkyscape, Spell, Rare, #13 · Deal 1 damage to all enemies, draw 1, your next spell you play this turn gains poisonous ~~~ Deal 1 damage to all enemies, draw 1, your next spell you play this turn gains poisonous / Echo 1 / *{should deal 1 poisonous damage to all enemies, if it doesn't please reword so it does}*
 
-- **Text:** This and your next Spell this turn have Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}.
-- **Radiant:** Echo 1 / This and your next Spell this turn have Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}.
-- **Engine:** `give_next_spell_keyword { keyword: Poisonous }` ([[R1848002]]): a `keywordNextSpell` modifier on its caster, expiry this turn, which the next Spell they play face-up takes at [[§10.5]] step 4 for that resolution alone. The Cloud itself has Poisonous as its hits land: the keyword on its face, as [[R1848002]] writes it, or `grant_keyword` on the resolving card while the face prints none. Then `damage_all` of 1 on every enemy, the hero and each Unit, before one state check ([[R59]]): Poisonous destroys each Unit it deals 1 or more to, a Divine Shield stopping it. Then `draw`. Radiant: Echo 1 ([[§6.2]]): the whole resolves twice, the second modifier spent by the same next Spell, which has the keyword once.
+- **Text:** Poisonous / Your next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}.
+- **Radiant:** Echo 1, Poisonous / Your next Spell this turn has Poisonous. Deal {damage} damage to all enemies. Draw {draw|card|cards}.
+- **Engine:** `give_next_spell_keyword { keyword: Poisonous }` ([[R1848002]]): a `keywordNextSpell` modifier on its caster, expiry this turn, which the next Spell they play face-up takes at [[§10.5]] step 4 for that resolution alone. The Cloud itself has Poisonous as its hits land: the keyword on its face, as [[R1848002]] writes it, read off it while it resolves ([[R346]]). Then `damage_all` of 1 on every enemy, the hero and each Unit, before one state check ([[R59]]): Poisonous destroys each Unit it deals 1 or more to, a Divine Shield stopping it. Then `draw`. Radiant: Echo 1 ([[§6.2]]): the whole resolves twice, the second modifier spent by the same next Spell, which has the keyword once.
 - **Rulings:** ST-S14-3: ST8's text (the 1 damage is Poisonous, the designer's request); "all enemies" is the enemy hero and every enemy Unit; the modifier waits through a Unit, a Field Spell or a Trap played meanwhile, and ends with the turn ([[R1848002]]).
 - **Numbers:** damage 1 ↑; draw 1 ↑; the Radiant face's Echo 1 is a numbered keyword's ([[R482]]).
-- **Check:** ST8's fix (Poisonous on this Spell's own hit). R275: Echo 1, the whole twice (2×). ⚠ The face prints no Poisonous keyword, while [[R1848002]] puts the Cloud's on its face: S14 settles which (a correction is proposed with the foundation).
+- **Check:** ST8's fix (Poisonous on this Spell's own hit). R275: Echo 1, the whole twice (2×). The foundation puts Poisonous on both faces' keyword line, where [[R1848002]] puts the Cloud's.
 - **Class:** C (M14's Poisonous for a Spell).
 
 #### Stinkyscape #14 · Arm of the Jempire
