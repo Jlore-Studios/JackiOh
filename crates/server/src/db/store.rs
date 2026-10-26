@@ -877,6 +877,15 @@ pub struct UnreadableGameRecord {
     pub message: String,
 }
 
+/// R1976000: what `game_record_batch_fold` did with a file whose batch it claimed: how many of its
+/// records it folded into the totals, and how many it left out (an id `game_records` holds, or one
+/// the file names again).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct BatchFolded {
+    pub folded: usize,
+    pub left_out: usize,
+}
+
 // The Conquest series (SPEC §9.5, R330–R338, R262–R264). One row per series, persisted so a series
 // survives a server restart; every transition is a pure function in `api/series_rules.rs` written
 // back with `series_update`, which is compare-and-set on `version`.
@@ -2536,6 +2545,19 @@ impl Tx<'_> {
     /// unread (R1715000). A record is folded once: one written since is folded as it is written.
     pub async fn game_records_fold_pending(&mut self, limit: usize) -> StoreResult<FoldedRecords> {
         dispatch!(self, game_records_fold_pending(limit))
+    }
+
+    /// R1976000: a development run's file folded into the totals with no row per record. `batch`
+    /// (the SHA-256 of the file's contents, lowercase hex) is claimed in `game_record_batches`
+    /// first: `None`, and nothing folded, when it is held already. Otherwise every record whose id
+    /// `game_records` holds, and every repeat of an id the file named before, is left out, and the
+    /// rest are folded, in this transaction.
+    pub async fn game_record_batch_fold(
+        &mut self,
+        batch: &str,
+        records: &[GameRecord],
+    ) -> StoreResult<Option<BatchFolded>> {
+        dispatch!(self, game_record_batch_fold(batch, records))
     }
 
     /// R1596000: the finished matches that ended in `[ended_after, ended_before)` (epoch ms) with a
