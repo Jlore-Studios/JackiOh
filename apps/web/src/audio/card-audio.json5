@@ -1968,6 +1968,904 @@
     "meditativeplus-026": { // Scratch Pad
       cast: { voice: "sapi-synth", text: "Blank file. No hints. Good luck." },
     },
+    "stinkyscape-001": { // Freeze Ray
+      cast: { voice: "robot", text: "Target acquired. Initiating deep chill." },
+    },
+    "stinkyscape-002": { // Absolute Zero
+      cast: { voice: "sapi-ghost", text: "Cold. Still. Forever." },
+    },
+    "stinkyscape-003": { // Meteor
+      cast: { voice: "announcer", text: "Incoming! Look up, look way up!" },
+    },
+    "stinkyscape-004": { // Olivian Expanse
+      cast: { voice: "alien-void", text: "At the end of everything, choose." },
+    },
+    "stinkyscape-004-1": { // Farewell
+      cast: { voice: "storyteller", text: "And so, the story ends." },
+    },
+    "stinkyscape-004-2": { // KY's Last Exam
+      cast: { voice: "prof", text: "Pencils down. Nobody has ever passed." },
+    },
+    "stinkyscape-004-3": { // Event Horizon
+      cast: { voice: "whisper", text: "Time bends. Go again." },
+    },
+    "stinkyscape-004-4": { // Last Word
+      cast: { voice: "hero", text: "Not yet. One last stand!" },
+    },
+    "stinkyscape-004-5": { // 1v1 Final Destination
+      cast: { voice: "announcer", text: "No items. Final destination. Go!" },
+    },
+    "stinkyscape-004-6": { // The Big Crunch
+      cast: { voice: "announcer", text: "Everything, all at once. Collapse!" },
+    },
+    "stinkyscape-005": { // Masochism Unmasked
+      cast: { voice: "sapi-villain", text: "Ow! Lovely. Now it's your turn to hurt." },
+    },
+    "stinkyscape-006": { // Tylannt
+      play: { voice: "hustler", text: "The job's already done. You're just late." },
+      attack: { voice: "hustler", text: "Next stage." },
+      death: { voice: "hustler", text: "Someone talked." },
+    },
+    "stinkyscape-007": { // The Greatest Heist
+      cast: { voice: "hustler", text: "Masks on. We hit the vault at dawn." },
+    },
+    "stinkyscape-008": { // Conjure Rosemary Triscuit
+      cast: { voice: "sapi-cook", text: "Fresh from the oven, with a drumroll!" },
+    },
+    "stinkyscape-008-1": { // Rosemary Triscuit
+      cast: { voice: "sapi-cook", text: "Crunchy, herby, and oddly energizing." },
+    },
+    "stinkyscape-009": { // Ticketed
+      cast: { voice: "sapi-bureaucrat", text: "You're parked illegally. Ticket issued." },
+    },
+    "stinkyscape-010": { // Otherworldly Endurance
+      cast: { voice: "sapi-mystic", text: "Borrowed blessings from somewhere far away." },
+    },
+    "stinkyscape-010-1": { // Inner Fire
+      cast: { voice: "sapi-mystic", text: "Let your spirit burn within." },
+    },
+    "stinkyscape-010-2": { // Divine Spirit
+      cast: { voice: "sapi-mystic", text: "Be made whole, and then some." },
+    },
+    "stinkyscape-010-3": { // Power Word Shield
+      cast: { voice: "sapi-mystic", text: "One word, and you are shielded." },
+    },
+    "stinkyscape-011": { // Otherworldly Magic
+      cast: { voice: "sapi-wizard", text: "Frost, missiles, and flame. A sampler!" },
+    },
+    "stinkyscape-011-1": { // Frostbolt
+      cast: { voice: "sapi-wizard", text: "Ice to meet you!" },
+    },
+    "stinkyscape-011-2": { // Arcane Missiles
+      cast: { voice: "sapi-wizard", text: "Pew pew pew!" },
+    },
+    "stinkyscape-011-3": { // Flame Strike
+      cast: { voice: "sapi-wizard", text: "Burn, all of you!" },
+    },
+    "stinkyscape-012": { // Otherworldly Nightmare
+      cast: { voice: "sapi-ghost", text: "Sweet dreams. Not for you." },
+    },
+    "stinkyscape-012-1": { // Shadow Word Death
+      cast: { voice: "sapi-villain", text: "Too strong to live." },
+    },
+    "stinkyscape-012-2": { // Shadow Word Pain
+      cast: { voice: "sapi-villain", text: "Weaklings first." },
+    },
+    "stinkyscape-012-3": { // Psychic Scream
+      cast: { voice: "sapi-ghost", text: "Scream, and scatter!" },
+    },
+    "stinkyscape-013": { // Asphyxiants Cloud
+      cast: { voice: "sapi-rasp", text: "Hold your breath. Forever." },
+    },
+    "stinkyscape-014": { // Arm of the Jempire
+      play: { voice: "guard", text: "Hold the line. The Jempire is watching." },
+      attack: { voice: "guard", text: "For the Jempire!" },
+      death: { voice: "guard", text: "The Jempire will remember." },
+    },
+    "stinkyscape-015": { // Arg Arg Defender
+      play: { voice: "brute", text: "Arg arg!" },
+      attack: { voice: "brute", text: "Arg!" },
+      death: { voice: "brute", text: "Arg... arg." },
+    },
+    "stinkyscape-016": { // Rod of Ages
+      cast: { voice: "sapi-wizard", text: "The ages remember every hand that held it." },
+    },
+    "stinkyscape-017": { // Imprisoned Ship Smith
+      play: { voice: "sapi-rasp", text: "They can not stop my work." },
+      attack: { voice: "sapi-rasp", text: "Hammer down." },
+      death: { voice: "sapi-rasp", text: "My work outlives me." },
+    },
+    "stinkyscape-018": { // Imitated Instrumentality
+      cast: { voice: "robot", text: "Three brains online. Please behave." },
+    },
+    "stinkyscape-018-1": { // MELCHIOR
+      cast: { voice: "robot", text: "Melchior. Analysis complete." },
+    },
+    "stinkyscape-018-2": { // BALTHASAR
+      cast: { voice: "robot", text: "Balthasar. Concern noted." },
+    },
+    "stinkyscape-018-3": { // CASPER
+      cast: { voice: "robot", text: "Casper. Motion to remove." },
+    },
+    "stinkyscape-019": { // Imprisoned Cosmality
+      play: { voice: "sapi-villain", text: "Count the turns, little ones." },
+      attack: { voice: "sapi-villain", text: "Unbound." },
+      death: { voice: "sapi-villain", text: "The stars dim." },
+    },
+    "stinkyscape-020": { // Tnack Trav
+      play: { voice: "zoomer", text: "Nice move. Mine now." },
+      attack: { voice: "zoomer", text: "Copy that." },
+      death: { voice: "zoomer", text: "Original content, finally." },
+    },
+    "stinkyscape-021": { // Moonberry
+      cast: { voice: "sapi-fruit", text: "Moon-ripe and a little strange!" },
+    },
+    "stinkyscape-022": { // Gatinsir
+      cast: { voice: "robot", text: "Ambush protocol engaged." },
+    },
+    "stinkyscape-023": { // Warp Disruptor
+      cast: { voice: "sapi-synth", text: "Warp field unstable. Engage!" },
+    },
+    "stinkyscape-024": { // Warp Disruptor II
+      cast: { voice: "sapi-synth-deep", text: "Version two. No mercy setting." },
+    },
+    "stinkyscape-025": { // KY's Tricknology
+      cast: { voice: "prof", text: "Compute the determinant. Then duck." },
+    },
+    "stinkyscape-026": { // ZolarKeth
+      play: { voice: "posh", text: "Class is in session. Mind the rockets." },
+      attack: { voice: "posh", text: "A lesson." },
+      death: { voice: "posh", text: "Office hours are over." },
+    },
+    "stinkyscape-027": { // Drone Core I
+      cast: { voice: "robot", text: "Core online. Drone away." },
+    },
+    "stinkyscape-028": { // Drone Core II
+      cast: { voice: "robot", text: "Interceptor away. Weapons free." },
+    },
+    "stinkyscape-029": { // Drone Core III
+      cast: { voice: "robot", text: "Two interceptors, wings level." },
+    },
+    "stinkyscape-030": { // Drone Core IV
+      cast: { voice: "robot", text: "Three bogeys inbound. Ours, thankfully." },
+    },
+    "stinkyscape-031": { // Drone Core V
+      cast: { voice: "sapi-synth", text: "Corvette spinning up. Stand clear." },
+    },
+    "stinkyscape-032": { // Drone Core VI
+      cast: { voice: "robot", text: "Five drones. The sky is ours." },
+    },
+    "stinkyscape-033": { // Drone Core VII
+      cast: { voice: "sapi-synth", text: "Corvette and escorts, forming up." },
+    },
+    "stinkyscape-034": { // Drone Core VIII
+      cast: { voice: "sapi-synth", text: "Every hangar empty. Every lane full." },
+    },
+    "stinkyscape-035": { // Drone Core IX
+      cast: { voice: "sapi-synth-deep", text: "Three corvettes. Overkill is underrated." },
+    },
+    "stinkyscape-036": { // Drone Core X
+      cast: { voice: "sapi-synth-deep", text: "Battleship protocol engaged. Brace yourselves." },
+    },
+    "stinkyscape-037": { // Kwzka
+      play: { voice: "diva", text: "Darling, you're all mine now." },
+      attack: { voice: "diva", text: "Kiss kiss." },
+      death: { voice: "diva", text: "Fine. Keep your hearts." },
+    },
+    "stinkyscape-038": { // Shield Amplifier
+      play: { voice: "robot", text: "Shield harmonics online." },
+      attack: { voice: "robot", text: "Pushing forward." },
+      death: { voice: "robot", text: "Field collapsed." },
+    },
+    "stinkyscape-039": { // The Narcor Project
+      cast: { voice: "hustler", text: "Strictly research. Ignore the vault." },
+    },
+    "stinkyscape-040": { // Poison Capsule
+      play: { voice: "sapi-synth", text: "Hazard seals engaged." },
+      attack: { voice: "sapi-synth", text: "Venting toxins." },
+      death: { voice: "sapi-synth", text: "Containment breach!" },
+    },
+    "stinkyscape-041": { // Drone Sympathizer
+      cast: { voice: "zoomer", text: "Drones are people too, honestly." },
+    },
+    "stinkyscape-042": { // Core Researcher
+      play: { voice: "prof", text: "Fascinating. The core hums in tune." },
+      attack: { voice: "prof", text: "For science!" },
+      death: { voice: "prof", text: "My notes, save my notes." },
+    },
+    "stinkyscape-043": { // Healing Capsule
+      play: { voice: "sapi-heroine", text: "Medical bay is open." },
+      attack: { voice: "sapi-heroine", text: "Gentle nudge." },
+      death: { voice: "sapi-heroine", text: "Out of bandages." },
+    },
+    "stinkyscape-044": { // Great Replacement Theory
+      cast: { voice: "sapi-bureaucrat", text: "One core makes way for the next." },
+    },
+    "stinkyscape-045": { // Drone Commander
+      play: { voice: "guard", text: "All drones, form up on me!" },
+      attack: { voice: "guard", text: "Swarm them!" },
+      death: { voice: "guard", text: "Drones, avenge me." },
+    },
+    "stinkyscape-046": { // Circadian Halfcycler
+      cast: { voice: "sapi-synth", text: "Morning routine engaged. Please stand by." },
+    },
+    "stinkyscape-047": { // Circadian Fullcycler
+      cast: { voice: "sapi-synth", text: "Full cycle engaged. Go back to sleep." },
+    },
+    "stinkyscape-048": { // Ultralight Chassis
+      play: { voice: "robot", text: "Frame is light. Engines hot." },
+      attack: { voice: "robot", text: "Zoom." },
+      death: { voice: "robot", text: "Too flimsy." },
+    },
+    "stinkyscape-049": { // Spacemine
+      play: { voice: "robot", text: "Mine deployed. Do not touch." },
+      attack: { voice: "robot", text: "Tick, tick." },
+      death: { voice: "robot", text: "Boom!" },
+    },
+    "stinkyscape-050": { // Beam v3
+      play: { voice: "robot", text: "Beam emitter calibrated." },
+      attack: { voice: "robot", text: "Sweeping fire." },
+      death: { voice: "robot", text: "Emitter cracked." },
+    },
+    "stinkyscape-051": { // Repeater v3
+      play: { voice: "robot", text: "Repeater loaded and ready." },
+      attack: { voice: "robot", text: "Rat-a-tat!" },
+      death: { voice: "robot", text: "Jammed again." },
+    },
+    "stinkyscape-052": { // Cannon v3
+      play: { voice: "robot", text: "Cannon in position." },
+      attack: { voice: "robot", text: "Fire one!" },
+      death: { voice: "robot", text: "Barrel split." },
+    },
+    "stinkyscape-053": { // Flak v3
+      play: { voice: "robot", text: "Flak battery armed." },
+      attack: { voice: "robot", text: "Fill the sky!" },
+      death: { voice: "robot", text: "Battery silent." },
+    },
+    "stinkyscape-054": { // Beam v4
+      play: { voice: "robot", text: "Beam array upgraded." },
+      attack: { voice: "robot", text: "Wide sweep." },
+      death: { voice: "robot", text: "Array offline." },
+    },
+    "stinkyscape-055": { // Repeater v4
+      play: { voice: "robot", text: "Repeater spun up." },
+      attack: { voice: "robot", text: "Rapid fire!" },
+      death: { voice: "robot", text: "Out of belts." },
+    },
+    "stinkyscape-056": { // Cannon v4
+      play: { voice: "robot", text: "Heavy cannon locked in." },
+      attack: { voice: "robot", text: "Fire for effect!" },
+      death: { voice: "robot", text: "Breech failure." },
+    },
+    "stinkyscape-057": { // Flak v4
+      play: { voice: "robot", text: "Double flak online." },
+      attack: { voice: "robot", text: "Second volley!" },
+      death: { voice: "robot", text: "Guns cold." },
+    },
+    "stinkyscape-058": { // Beam v5
+      play: { voice: "robot", text: "Capital beam ready." },
+      attack: { voice: "robot", text: "Burn them all." },
+      death: { voice: "robot", text: "Core meltdown." },
+    },
+    "stinkyscape-059": { // Repeater v5
+      play: { voice: "robot", text: "Heavy repeater online." },
+      attack: { voice: "robot", text: "Hose them down!" },
+      death: { voice: "robot", text: "Barrels melted." },
+    },
+    "stinkyscape-060": { // Cannon v5
+      play: { voice: "robot", text: "Siege cannon primed." },
+      attack: { voice: "robot", text: "Shell away!" },
+      death: { voice: "robot", text: "Recoil was too much." },
+    },
+    "stinkyscape-061": { // Flak v5
+      play: { voice: "robot", text: "Triple flak, all barrels." },
+      attack: { voice: "robot", text: "Clear the sky!" },
+      death: { voice: "robot", text: "Last volley spent." },
+    },
+    "stinkyscape-062": { // Miner v1
+      play: { voice: "digger", text: "Tiny drill, big dreams." },
+      attack: { voice: "digger", text: "Poke!" },
+      death: { voice: "digger", text: "Drill bit snapped." },
+    },
+    "stinkyscape-063": { // Miner v2
+      play: { voice: "digger", text: "Headlamp on. Let's dig." },
+      attack: { voice: "digger", text: "Chip away!" },
+      death: { voice: "digger", text: "Cave-in!" },
+    },
+    "stinkyscape-064": { // Miner v3
+      play: { voice: "digger", text: "Twin drills, spinning up." },
+      attack: { voice: "digger", text: "Drill through!" },
+      death: { voice: "digger", text: "Both drills down." },
+    },
+    "stinkyscape-065": { // Miner v4
+      play: { voice: "digger", text: "Strip mining, full speed." },
+      attack: { voice: "digger", text: "Break it open!" },
+      death: { voice: "digger", text: "Claim abandoned." },
+    },
+    "stinkyscape-066": { // Miner v5
+      play: { voice: "digger", text: "Industrial rig, online and hungry." },
+      attack: { voice: "digger", text: "Grind it down!" },
+      death: { voice: "digger", text: "The rig is scrap." },
+    },
+    "stinkyscape-067": { // Tractor Beam
+      play: { voice: "robot", text: "Beam locked. Reeling in cargo." },
+      attack: { voice: "robot", text: "Pulling!" },
+      death: { voice: "robot", text: "Beam collapsing." },
+    },
+    "stinkyscape-068": { // Startos
+      play: { voice: "robot", text: "Startos reporting for duty." },
+      attack: { voice: "robot", text: "Strafing run." },
+      death: { voice: "robot", text: "Hull lost." },
+    },
+    "stinkyscape-069": { // Falcon
+      play: { voice: "sapi-hero", text: "Falcon, cleared for launch." },
+      attack: { voice: "sapi-hero", text: "Going in hot!" },
+      death: { voice: "sapi-hero", text: "Falcon down!" },
+    },
+    "stinkyscape-070": { // Z'Zoth
+      play: { voice: "sapi-villain", text: "The dead keep their promises." },
+      attack: { voice: "sapi-villain", text: "Return." },
+      death: { voice: "sapi-villain", text: "I will be back." },
+    },
+    "stinkyscape-071": { // A'Zoth
+      play: { voice: "sapi-villain", text: "Speak again, my children." },
+      attack: { voice: "sapi-villain", text: "Again." },
+      death: { voice: "sapi-villain", text: "Silence, at last." },
+    },
+    "stinkyscape-072": { // Paragon Mk1
+      play: { voice: "sapi-hero", text: "Paragon on station." },
+      attack: { voice: "sapi-hero", text: "Clean shot." },
+      death: { voice: "sapi-hero", text: "Lost the Paragon!" },
+    },
+    "stinkyscape-073": { // Paragon Mk2
+      play: { voice: "sapi-hero", text: "Paragon Mark Two, weapons free." },
+      attack: { voice: "sapi-hero", text: "Precision strike." },
+      death: { voice: "sapi-hero", text: "Shield's gone. Mayday!" },
+    },
+    "stinkyscape-074": { // Paragon-X
+      play: { voice: "sapi-hero", text: "Paragon-X, cleared for launch." },
+      attack: { voice: "sapi-hero", text: "Weapons free." },
+      death: { voice: "sapi-hero", text: "Mission... incomplete." },
+    },
+    "stinkyscape-075": { // Badger
+      play: { voice: "sapi-critter", text: "Shiny rocks? Mine now." },
+      attack: { voice: "sapi-critter", text: "Dig, dig!" },
+      death: { voice: "sapi-critter", text: "Burrow closed." },
+    },
+    "stinkyscape-076": { // Honey Badger
+      play: { voice: "sapi-critter", text: "Honey Badger takes what it wants." },
+      attack: { voice: "sapi-critter", text: "Don't care!" },
+      death: { voice: "sapi-critter", text: "Okay, that one stung." },
+    },
+    "stinkyscape-077": { // Yuma
+      play: { voice: "hustler", text: "Let's make a deal." },
+      attack: { voice: "hustler", text: "No refunds." },
+      death: { voice: "hustler", text: "Deal's off." },
+    },
+    "stinkyscape-078": { // Ozark
+      play: { voice: "sapi-synth-deep", text: "Ozark on site. Drills attached." },
+      attack: { voice: "sapi-synth-deep", text: "Ramming speed." },
+      death: { voice: "sapi-synth-deep", text: "Barge scuttled." },
+    },
+    "stinkyscape-079": { // Orca
+      play: { voice: "sapi-synth-deep", text: "Orca surfacing. Choose your crew." },
+      attack: { voice: "sapi-synth-deep", text: "Breach!" },
+      death: { voice: "sapi-synth-deep", text: "Orca is going under." },
+    },
+    "stinkyscape-080": { // Galaxy
+      play: { voice: "sapi-synth-deep", text: "Galaxy class, fully staffed." },
+      attack: { voice: "sapi-synth-deep", text: "All batteries." },
+      death: { voice: "sapi-synth-deep", text: "Abandon the Galaxy." },
+    },
+    "stinkyscape-081": { // Radix
+      play: { voice: "robot", text: "Radix frame, hardpoints open." },
+      attack: { voice: "robot", text: "Engaging." },
+      death: { voice: "robot", text: "Frame buckled." },
+    },
+    "stinkyscape-082": { // Phalanx
+      play: { voice: "guard", text: "Phalanx formed. Shields up." },
+      attack: { voice: "guard", text: "Advance!" },
+      death: { voice: "guard", text: "The line is broken." },
+    },
+    "stinkyscape-083": { // Halo
+      play: { voice: "robot", text: "Halo ring, three hardpoints." },
+      attack: { voice: "robot", text: "Ring of fire." },
+      death: { voice: "robot", text: "Ring shattered." },
+    },
+    "stinkyscape-084": { // Power Cell
+      cast: { voice: "robot", text: "Cells full. Scrap everywhere." },
+    },
+    "stinkyscape-084-1": { // Metal Scraps
+      cast: { voice: "robot", text: "Clank! Something valuable in here." },
+    },
+    "stinkyscape-085": { // Prototype-X1
+      play: { voice: "sapi-synth", text: "Prototype online. Results pending." },
+      attack: { voice: "sapi-synth", text: "Field test!" },
+      death: { voice: "sapi-synth", text: "Back to the lab." },
+    },
+    "stinkyscape-086": { // Prototype-X2
+      play: { voice: "sapi-synth", text: "Second prototype. Do not panic." },
+      attack: { voice: "sapi-synth", text: "Live fire test!" },
+      death: { voice: "sapi-synth", text: "Catastrophic failure." },
+    },
+    "stinkyscape-087": { // Siva 1
+      play: { voice: "cat", text: "Purr. You're mine now, superstar." },
+      attack: { voice: "cat", text: "Hiss!" },
+      death: { voice: "cat", text: "Fame fades. Fur stays." },
+    },
+    "stinkyscape-088": { // Siva 2
+      play: { voice: "snob", text: "Humans first. Always." },
+      attack: { voice: "snob", text: "Venom." },
+      death: { voice: "snob", text: "There will be a third." },
+    },
+    "stinkyscape-089": { // Spice
+      cast: { voice: "hustler", text: "The spice must flow. For a price." },
+    },
+    "stinkyscape-090": { // After Burner
+      play: { voice: "robot", text: "Afterburner fitted." },
+      attack: { voice: "robot", text: "Full throttle!" },
+      death: { voice: "robot", text: "Flameout." },
+    },
+    "stinkyscape-091": { // The Propagation's Wasp
+      play: { voice: "sapi-critter", text: "Bzzz!" },
+      attack: { voice: "sapi-critter", text: "Bzz!" },
+      death: { voice: "sapi-critter", text: "Bzz..." },
+    },
+    "stinkyscape-092": { // The Propagation's Hornet
+      play: { voice: "sapi-critter", text: "BZZZT!" },
+      attack: { voice: "sapi-critter", text: "Bzzt!" },
+      death: { voice: "sapi-critter", text: "Bzzt..." },
+    },
+    "stinkyscape-093": { // Patcher Nanobots
+      play: { voice: "sapi-synth", text: "Nanobots deployed. Repairs underway." },
+      attack: { voice: "sapi-synth", text: "Swarm and patch." },
+      death: { voice: "sapi-synth", text: "Patching you up." },
+    },
+    "stinkyscape-094": { // Tmack Trav
+      play: { voice: "hero", text: "Line them up." },
+      attack: { voice: "hero", text: "Next!" },
+      death: { voice: "hero", text: "One more round..." },
+    },
+    "stinkyscape-095": { // Vanguard Coalition
+      cast: { voice: "hero", text: "The vanguard answers the call!" },
+    },
+    "stinkyscape-096": { // Ocean Tsunami
+      play: { voice: "sapi-giant", text: "Here comes the wave. Drop everything!" },
+      attack: { voice: "sapi-giant", text: "Crashing in!" },
+      death: { voice: "sapi-giant", text: "Low tide, at last." },
+    },
+    "stinkyscape-097": { // Asteroid Field
+      cast: { voice: "announcer", text: "Incoming rocks! Everybody duck!" },
+    },
+    "stinkyscape-098": { // Hull Booster
+      play: { voice: "guard", text: "Hull plating secured." },
+      attack: { voice: "guard", text: "Brace and push." },
+      death: { voice: "guard", text: "Plating stripped." },
+    },
+    "stinkyscape-099": { // No-No Words
+      cast: { voice: "sapi-teacher", text: "Language! Out of my classroom!" },
+    },
+    "stinkyscape-100": { // AP Rounds
+      play: { voice: "guard", text: "Loading piercing rounds." },
+      attack: { voice: "guard", text: "Punch through." },
+      death: { voice: "guard", text: "Magazine empty." },
+    },
+    "stinkyscape-101": { // Overdrive Module
+      play: { voice: "robot", text: "Overdrive engaged. Limits off." },
+      attack: { voice: "robot", text: "Redline!" },
+      death: { voice: "robot", text: "Rebooting." },
+    },
+    "stinkyscape-102": { // Book of Nono-Words
+      cast: { voice: "sapi-librarian", text: "Chapter one. Words we do not say." },
+    },
+    "stinkyscape-103": { // Vxyl
+      play: { voice: "whisper", text: "You never saw me. Remember that." },
+      attack: { voice: "whisper", text: "Shh. Quietly now." },
+      death: { voice: "whisper", text: "Spoken out of turn." },
+    },
+    "stinkyscape-104": { // Reflective Plating
+      play: { voice: "robot", text: "Plating online." },
+      attack: { voice: "robot", text: "Reflect." },
+      death: { voice: "robot", text: "Shattered." },
+    },
+    "stinkyscape-105": { // Disintegrex
+      play: { voice: "robot", text: "Disintegration protocol armed." },
+      attack: { voice: "robot", text: "Erase." },
+      death: { voice: "robot", text: "Nothing remains." },
+    },
+    "stinkyscape-106": { // Warpfield Amplifier
+      play: { voice: "robot", text: "Warpfield coils primed." },
+      attack: { voice: "robot", text: "Folding space." },
+      death: { voice: "robot", text: "Field decayed." },
+    },
+    "stinkyscape-107": { // RR-5000
+      play: { voice: "robot", text: "Railgun spin cycle complete." },
+      attack: { voice: "robot", text: "Rail shot." },
+      death: { voice: "robot", text: "Rails warped." },
+    },
+    "stinkyscape-108": { // Trila 3
+      play: { voice: "sapi-hero", text: "Trila three, guns twin-linked." },
+      attack: { voice: "sapi-hero", text: "Double tap." },
+      death: { voice: "sapi-hero", text: "Trila is hit!" },
+    },
+    "stinkyscape-109": { // xxFreshJack
+      play: { voice: "zoomer", text: "Yo, chat, watch this." },
+      attack: { voice: "zoomer", text: "Busted!" },
+      death: { voice: "zoomer", text: "GG, chat." },
+    },
+    "stinkyscape-110": { // iKwzki
+      play: { voice: "zoomer", text: "Duo up, bestie!" },
+      attack: { voice: "zoomer", text: "Let's go!" },
+      death: { voice: "zoomer", text: "Solo queue again..." },
+    },
+    "stinkyscape-111": { // Shockwave447
+      play: { voice: "prof", text: "Okay, so this is simple." },
+      attack: { voice: "prof", text: "Watch closely." },
+      death: { voice: "prof", text: "Any questions?" },
+    },
+    "stinkyscape-112": { // Job Application
+      cast: { voice: "sapi-bureaucrat", text: "Thank you for applying. We'll be in touch." },
+    },
+    "stinkyscape-112-1": { // Paycheck
+      cast: { voice: "hustler", text: "Payday! Red, or play it safe?" },
+    },
+    "stinkyscape-113": { // A Very Dandy Lad
+      play: { voice: "posh", text: "Charmed, I'm sure. Not you, though." },
+      attack: { voice: "posh", text: "Pardon me." },
+      death: { voice: "posh", text: "How dreadfully common." },
+    },
+    "stinkyscape-114": { // Arctic Citadel
+      play: { voice: "guard", text: "The gates are open. Come home." },
+      attack: { voice: "guard", text: "Hold fast." },
+      death: { voice: "guard", text: "The ice gives way." },
+    },
+    "stinkyscape-115": { // Scornboi
+      play: { voice: "snob", text: "Ugh. Who let you in?" },
+      attack: { voice: "snob", text: "Begone." },
+      death: { voice: "snob", text: "Typical." },
+    },
+    "stinkyscape-116": { // Megabase
+      cast: { voice: "sapi-announcer", text: "Megabase online. Credits for everyone!" },
+    },
+    "stinkyscape-117": { // Core System
+      cast: { voice: "robot", text: "Rebooting all systems." },
+    },
+    "stinkyscape-118": { // Secure System
+      cast: { voice: "robot", text: "Firewall up. Weapons down." },
+    },
+    "stinkyscape-119": { // Unsecure System
+      cast: { voice: "robot", text: "Security disabled. Have fun." },
+    },
+    "stinkyscape-120": { // Wild System
+      cast: { voice: "robot", text: "Protocols off. Fight it out." },
+    },
+    "stinkyscape-121": { // System Schematic
+      cast: { voice: "sapi-synth", text: "Select your system. Choose wisely." },
+    },
+    "stinkyscape-122": { // Vamp Rounds
+      play: { voice: "sapi-villain", text: "Hungry rounds, chambered." },
+      attack: { voice: "sapi-villain", text: "Drink deep." },
+      death: { voice: "sapi-villain", text: "Bled dry." },
+    },
+    "stinkyscape-123": { // Gokugains
+      play: { voice: "whisper", text: "Shh. You saw nothing." },
+      attack: { voice: "whisper", text: "Sneaky." },
+      death: { voice: "whisper", text: "Gains... lost." },
+    },
+    "stinkyscape-124": { // Jlockeed's Shipbuilding Grant
+      cast: { voice: "sapi-bureaucrat", text: "Grant approved. Spend it on spaceships." },
+    },
+    "stinkyscape-125": { // Jlockeed's Spacerace Propaganda
+      cast: { voice: "sapi-announcer", text: "Reach for the stars, citizen!" },
+    },
+    "stinkyscape-126": { // Jlockeed's Permanent Procurement Lobbying
+      cast: { voice: "sapi-bureaucrat", text: "Renewed every quarter, at taxpayer expense." },
+    },
+    "stinkyscape-127": { // Jlockeed's Siege Tank
+      play: { voice: "sapi-hero", text: "Siege mode engaged." },
+      attack: { voice: "sapi-hero", text: "Firing for effect!" },
+      death: { voice: "sapi-hero", text: "Tread's thrown!" },
+    },
+    "stinkyscape-128": { // Jlockeed's Yamato Cannon
+      play: { voice: "sapi-hero", text: "Main gun is ready." },
+      attack: { voice: "sapi-hero", text: "Fire!" },
+      death: { voice: "sapi-hero", text: "Barrel cracked." },
+    },
+    "stinkyscape-129": { // Jlockeed's Missile Pod
+      play: { voice: "sapi-hero", text: "Missile pod armed." },
+      attack: { voice: "sapi-hero", text: "Missiles away!" },
+      death: { voice: "sapi-hero", text: "Pod's empty." },
+    },
+    "stinkyscape-130": { // Jlockeed's Starship Retrofitting Program
+      cast: { voice: "sapi-bureaucrat", text: "Retrofit approved. Change orders pending." },
+    },
+    "stinkyscape-131": { // Spacerace Stimulus
+      cast: { voice: "announcer", text: "And they're off! Liftoff money unlocked!" },
+    },
+    "stinkyscape-132": { // Defensive Crystal
+      play: { voice: "sapi-mystic", text: "Facets aligned." },
+      attack: { voice: "sapi-mystic", text: "Shard strike." },
+      death: { voice: "sapi-mystic", text: "Shattered, but not wasted." },
+    },
+    "stinkyscape-133": { // Ultra Capacitor
+      play: { voice: "robot", text: "Storing power. Please wait." },
+      attack: { voice: "robot", text: "Zap!" },
+      death: { voice: "robot", text: "Fully drained." },
+    },
+    "stinkyscape-134": { // Felinor Containment Chamber
+      play: { voice: "sapi-cat", text: "Something is scratching inside." },
+      attack: { voice: "sapi-cat", text: "Hiss and spit!" },
+      death: { voice: "sapi-cat", text: "The cat is out!" },
+    },
+    "stinkyscape-135": { // Sacked
+      cast: { voice: "sapi-trickster", text: "Gotcha! In the sack you go!" },
+    },
+    "stinkyscape-135-1": { // Sack
+      play: { voice: "sapi-critter", text: "Mmmph! Mmmph mmph!" },
+      attack: { voice: "sapi-critter", text: "Mmph!" },
+      death: { voice: "sapi-critter", text: "Free at last!" },
+    },
+    "stinkyscape-136": { // Magic Module
+      play: { voice: "sapi-wizard", text: "Arcane circuits humming." },
+      attack: { voice: "sapi-wizard", text: "Spellfire!" },
+      death: { voice: "sapi-wizard", text: "The magic fizzles." },
+    },
+    "stinkyscape-137": { // Firststrike Capability
+      play: { voice: "sapi-hero", text: "Strike package authorized." },
+      attack: { voice: "sapi-hero", text: "Hit them first!" },
+      death: { voice: "sapi-hero", text: "We were too slow." },
+    },
+    "stinkyscape-137-1": { // Land Doctrine
+      cast: { voice: "sapi-hero", text: "Tanks forward! Flatten their line!" },
+    },
+    "stinkyscape-137-2": { // Sea Doctrine
+      cast: { voice: "sapi-hero", text: "Steady as she goes. Hold the line." },
+    },
+    "stinkyscape-137-3": { // Air Doctrine
+      cast: { voice: "sapi-hero", text: "Air superiority achieved. Begin the run." },
+    },
+    "stinkyscape-137-4": { // Space Doctrine
+      cast: { voice: "sapi-hero", text: "Spread out and take the high orbit." },
+    },
+    "stinkyscape-138": { // Pocket Peptides
+      cast: { voice: "sapi-cook", text: "Quick, take your vitamins!" },
+    },
+    "stinkyscape-139": { // Wormhole
+      cast: { voice: "sapi-mystic", text: "Thank you. I'll take that." },
+    },
+    "stinkyscape-140": { // Rush Token Launcher
+      play: { voice: "robot", text: "Soldier cartridge loaded." },
+      attack: { voice: "robot", text: "Deploying!" },
+      death: { voice: "robot", text: "Out of soldiers." },
+    },
+    "stinkyscape-141": { // Fruit Launcher
+      play: { voice: "sapi-fruit", text: "Fresh produce, high velocity!" },
+      attack: { voice: "sapi-fruit", text: "Catch!" },
+      death: { voice: "sapi-fruit", text: "Bruised and battered." },
+    },
+    "stinkyscape-142": { // Jade Launcher
+      play: { voice: "sapi-trickster", text: "Lucky stones, loaded and ready!" },
+      attack: { voice: "sapi-trickster", text: "Fortune incoming!" },
+      death: { voice: "sapi-trickster", text: "Bad luck, after all." },
+    },
+    "stinkyscape-143": { // Book Launcher
+      play: { voice: "sapi-librarian", text: "Overdue books, returning at speed." },
+      attack: { voice: "sapi-librarian", text: "Read this!" },
+      death: { voice: "sapi-librarian", text: "Out of print." },
+    },
+    "stinkyscape-144": { // Prepare For Liftoff
+      cast: { voice: "announcer", text: "T minus zero. This one is free!" },
+    },
+    "stinkyscape-145": { // Fortify Flesh
+      cast: { voice: "sapi-giant", text: "Hard as stone. Harder." },
+    },
+    "stinkyscape-146": { // Flash Freeze
+      cast: { voice: "sapi-announcer", text: "Everybody freeze! Nobody move!" },
+    },
+    "stinkyscape-147": { // IN33DH3
+      play: { voice: "zoomer", text: "Hold on, let me ask the AI." },
+      attack: { voice: "zoomer", text: "Optimal." },
+      death: { voice: "zoomer", text: "Ctrl Z, please." },
+    },
+    "stinkyscape-147-1": { // IN33DH3 Prime
+      play: { voice: "zoomer", text: "Prime time. Drums, please." },
+      attack: { voice: "zoomer", text: "Optimal violence." },
+      death: { voice: "zoomer", text: "Rebooting..." },
+    },
+    "stinkyscape-147-2": { // Wardrum Blob
+      cast: { voice: "wobble", text: "Boom, boom. Helpful noises." },
+    },
+    "stinkyscape-148": { // Alteran Reach
+      cast: { voice: "narrator", text: "The stars stretch on forever." },
+    },
+    "stinkyscape-148-1": { // Edge of the Universe
+      cast: { voice: "whisper", text: "Beyond this, nothing. Goodbye." },
+    },
+    "stinkyscape-149": { // Wildar
+      cast: { voice: "sapi-trickster", text: "One for you, a better one for me." },
+    },
+    "stinkyscape-150": { // Call to Chaos (Stinky Edition)
+      cast: { voice: "announcer", text: "Hold your nose and roll the dice!" },
+    },
+    "stinkyscape-150-1": { // Stinkyscape Golem
+      play: { voice: "brute-golem", text: "Stinkyscape golem! Smash the stars!" },
+      attack: { voice: "brute-golem", text: "Golem smash!" },
+      death: { voice: "brute-golem", text: "Back to stardust." },
+    },
+    "stinkyscape-151": { // Call to Chaos (Scape Edition)
+      cast: { voice: "announcer", text: "Strap in. The cosmos rolls the dice!" },
+    },
+    "stinkyscape-152": { // Sanctum
+      cast: { voice: "sapi-mystic", text: "Rest here, and rise again." },
+    },
+    "stinkyscape-153": { // Stimmycheck
+      cast: { voice: "hustler", text: "Free money! Read the fine print later." },
+    },
+    "stinkyscape-154": { // Dice of Doom
+      cast: { voice: "sapi-trickster", text: "Come on, sixty-seven!" },
+    },
+    "stinkyscape-155": { // Comet Crash
+      cast: { voice: "announcer", text: "Brace for impact! Mind the crater." },
+    },
+    "stinkyscape-156": { // Catalyst Comet
+      cast: { voice: "sapi-wizard", text: "Catch it on the way back!" },
+    },
+    "stinkyscape-157": { // The Gauntlet
+      cast: { voice: "announcer", text: "Welcome to the Gauntlet! Nobody leaves." },
+    },
+    "stinkyscape-158": { // Stratos Swarm
+      cast: { voice: "robot", text: "Squadron launch. All wings, go!" },
+    },
+    "stinkyscape-159": { // ETHICS
+      cast: { voice: "sapi-bureaucrat", text: "The committee will see you now." },
+    },
+    "stinkyscape-160": { // Golden Accord
+      cast: { voice: "posh", text: "Signed, sealed and golden." },
+    },
+    "stinkyscape-161": { // Pegasus
+      cast: { voice: "diva", text: "Spread your wings, darlings!" },
+    },
+    "stinkyscape-162": { // Star-jumper Core
+      cast: { voice: "robot", text: "Core online. Prepare to jump." },
+    },
+    "stinkyscape-163": { // Swear Loyalities
+      cast: { voice: "guard", text: "Choose your side. Forever." },
+    },
+    "stinkyscape-164": { // The Syndicate
+      cast: { voice: "hustler-hitman", text: "Nice card. Shame if it went missing." },
+    },
+    "stinkyscape-165": { // The Trade Union
+      cast: { voice: "sapi-bureaucrat", text: "Solidarity! Every card gets a fair trade." },
+    },
+    "stinkyscape-166": { // Scanning Probe Mk1
+      cast: { voice: "robot", text: "Scanning. Something is out there." },
+    },
+    "stinkyscape-167": { // Scanning Probe Mk2
+      cast: { voice: "sapi-synth-deep", text: "Deep scan engaged. Listening." },
+    },
+    "stinkyscape-168": { // Drone Hanger
+      cast: { voice: "robot", text: "Hangar doors open. Interceptor away." },
+    },
+    "stinkyscape-169": { // Tiny Asteroid
+      play: { voice: "goof", text: "Pebble reporting for mining duty." },
+      attack: { voice: "goof", text: "Rumble." },
+      death: { voice: "goof", text: "Crumbled into loot." },
+    },
+    "stinkyscape-170": { // Medium Asteroid
+      play: { voice: "brute", text: "Solid rock. Rich veins inside." },
+      attack: { voice: "brute", text: "Grind!" },
+      death: { voice: "brute", text: "Cracked open. Take it." },
+    },
+    "stinkyscape-171": { // Large Asteroid
+      play: { voice: "sapi-giant", text: "Big rock. Bigger payout." },
+      attack: { voice: "sapi-giant", text: "Rumble!" },
+      death: { voice: "sapi-giant", text: "Split wide open." },
+    },
+    "stinkyscape-172": { // Huge Asteroid
+      play: { voice: "sapi-giant", text: "I am the motherlode. Dig deep." },
+      attack: { voice: "sapi-giant", text: "Tremble!" },
+      death: { voice: "sapi-giant", text: "Shattered into a fortune." },
+    },
+    "stinkyscape-173": { // Abandoned Spice Tower
+      play: { voice: "sapi-ghost", text: "Still standing. Still full of spice." },
+      attack: { voice: "sapi-ghost", text: "Creak." },
+      death: { voice: "sapi-ghost", text: "The last spice spills out." },
+    },
+    "stinkyscape-174": { // Aerelret
+      cast: { voice: "robot", text: "Fleet decloaking. Engage." },
+    },
+    "stinkyscape-175": { // Frost Module
+      play: { voice: "robot", text: "Cryo module online." },
+      attack: { voice: "robot", text: "Chill out." },
+      death: { voice: "robot", text: "Thawed for good." },
+    },
+    "stinkyscape-t-dormant-starship": { // Dormant Starship
+      play: { voice: "sapi-synth-deep", text: "Hull assembled. Awaiting parts." },
+      attack: { voice: "sapi-synth-deep", text: "Full burn." },
+      death: { voice: "sapi-synth-deep", text: "The ship is lost." },
+    },
+    "stinkyscape-t-drone-interceptor": { // Drone Interceptor
+      play: { voice: "robot", text: "Interceptor online." },
+      attack: { voice: "robot", text: "Engaging." },
+      death: { voice: "robot", text: "Signal lost." },
+    },
+    "stinkyscape-t-drone-corvette": { // Drone Corvette
+      play: { voice: "sapi-synth", text: "Corvette on station. Guns warm." },
+      attack: { voice: "sapi-synth", text: "Firing solution!" },
+      death: { voice: "sapi-synth", text: "Hull breach. Going down." },
+    },
+    "stinkyscape-t-shield-layer": { // Drone Battleship (Shield Layer)
+      play: { voice: "sapi-synth-deep", text: "Shield layer up. Hide behind me." },
+      attack: { voice: "sapi-synth-deep", text: "Holding the line!" },
+      death: { voice: "sapi-synth-deep", text: "Shields down. Next layer exposed." },
+    },
+    "stinkyscape-t-propagation-layer": { // Drone Battleship (Propagation Layer)
+      play: { voice: "sapi-synth-deep", text: "Propagation bay open. Printing escorts." },
+      attack: { voice: "sapi-synth-deep", text: "Deploying!" },
+      death: { voice: "sapi-synth-deep", text: "Bay destroyed. Core exposed." },
+    },
+    "stinkyscape-t-meltdown-layer": { // Drone Battleship (Meltdown Layer)
+      play: { voice: "sapi-synth-deep", text: "Reactor critical. Going out loud." },
+      attack: { voice: "sapi-synth-deep", text: "Overload!" },
+      death: { voice: "sapi-synth-deep", text: "Meltdown complete." },
+    },
+    "stinkyscape-t-reknite": { // Reknite
+      cast: { voice: "digger", text: "Reknite plating. Feel that shell." },
+    },
+    "stinkyscape-t-korrelite": { // Korrelite
+      cast: { voice: "digger", text: "Korrelite spark. Zap!" },
+    },
+    "stinkyscape-t-gellium": { // Gellium
+      cast: { voice: "digger", text: "Cool gel. All better." },
+    },
+    "stinkyscape-t-axnit": { // Axnit
+      cast: { voice: "digger", text: "Axnit drinks deep." },
+    },
+    "stinkyscape-t-narcor": { // Narcor
+      cast: { voice: "digger", text: "Narcor dust. Something rare inside." },
+    },
+    "stinkyscape-t-red-narcor": { // Red Narcor
+      cast: { voice: "digger", text: "Red Narcor! Legends in the dust." },
+    },
+    "stinkyscape-t-anomaly-found": { // Anomaly Found!
+      cast: { voice: "alien", text: "Anomaly detected. Reality rewritten." },
+    },
+    "stinkyscape-t-ai-01": { // Escort Protocol
+      play: { voice: "sapi-synth", text: "Escort protocol engaged. Stay close." },
+      attack: { voice: "sapi-synth", text: "Covering you." },
+      death: { voice: "sapi-synth", text: "Escort terminated." },
+    },
+    "stinkyscape-t-ai-02": { // Mining Subroutine
+      cast: { voice: "sapi-synth", text: "Mining subroutine running. Please wait." },
+    },
+    "stinkyscape-t-ai-03": { // Route Optimizer
+      cast: { voice: "sapi-synth", text: "Recalculating the optimal route." },
+    },
+    "stinkyscape-t-ai-04": { // Predictive Shield
+      cast: { voice: "sapi-synth", text: "I predicted that." },
+    },
+    "stinkyscape-t-ai-05": { // Launch Sequencer
+      cast: { voice: "sapi-synth", text: "Launch sequence ready. Counting down." },
+    },
+    "stinkyscape-t-ai-06": { // Probe Relay
+      cast: { voice: "sapi-synth", text: "Relaying probes. Signal is strong." },
+    },
+    "stinkyscape-t-ai-07": { // Combat Subroutine
+      play: { voice: "sapi-synth", text: "Combat subroutine loaded." },
+      attack: { voice: "sapi-synth", text: "Executing." },
+      death: { voice: "sapi-synth", text: "Process killed." },
+    },
+    "stinkyscape-t-ai-08": { // Drone Uplink
+      cast: { voice: "sapi-synth", text: "Uplink established. Drones incoming." },
+    },
+    "stinkyscape-t-ai-09": { // Honeypot
+      cast: { voice: "sapi-synth", text: "Gotcha. That was a decoy." },
+    },
+    "stinkyscape-t-ai-10": { // Salvage Protocol
+      play: { voice: "sapi-synth", text: "Salvage protocol online." },
+      attack: { voice: "sapi-synth", text: "Stripping parts." },
+      death: { voice: "sapi-synth", text: "Salvage what remains." },
+    },
   },
   emotes: {
     vanilla: {

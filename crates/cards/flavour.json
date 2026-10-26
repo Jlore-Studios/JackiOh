@@ -1444,5 +1444,689 @@
   },
   "meditativeplus-026": {
     "flavour": "No templates, no tooltips, no hints. Just a blinking cursor and your nerve."
+  },
+  "stinkyscape-001": {
+    "flavour": "Point it at one problem and the neighbours stop moving too."
+  },
+  "stinkyscape-002": {
+    "flavour": "Colder than cold, and it never warms back up."
+  },
+  "stinkyscape-003": {
+    "flavour": "The sky had one opinion, and it landed hard."
+  },
+  "stinkyscape-004": {
+    "flavour": "Past the last star, the charts stop and simply say: here, things end."
+  },
+  "stinkyscape-004-1": {
+    "flavour": "No one waves back. There is no one left to wave."
+  },
+  "stinkyscape-004-2": {
+    "flavour": "Question one: prove it. There is no question two."
+  },
+  "stinkyscape-004-3": {
+    "flavour": "Cross the line, and the clock forgets that anyone else exists."
+  },
+  "stinkyscape-004-4": {
+    "flavour": "Everyone gets one. Make it loud."
+  },
+  "stinkyscape-004-5": {
+    "flavour": "No items. Flat stage. One life each. Settle it."
+  },
+  "stinkyscape-004-6": {
+    "flavour": "Everything that ever spun out of the void comes spinning back in, all at once."
+  },
+  "stinkyscape-005": {
+    "flavour": "Every bruise you earn on your own turn gets mailed to them."
+  },
+  "stinkyscape-006": {
+    "flavour": "He doesn't plan heists. He finishes them."
+  },
+  "stinkyscape-007": {
+    "flavour": "Empty the VC vault!"
+  },
+  "stinkyscape-008": {
+    "flavour": "A cracker for you, a drummer for later. Seasoned either way."
+  },
+  "stinkyscape-008-1": {
+    "flavour": "Rosemary, sea salt, and the quiet return of your second wind."
+  },
+  "stinkyscape-009": {
+    "flavour": "Parked in the wrong zone? It sits in the impound lot until the ticket clears."
+  },
+  "stinkyscape-010": {
+    "flavour": "Three prayers from a faith nobody here has heard of."
+  },
+  "stinkyscape-010-1": {
+    "flavour": "Strength measured by how much you can take. Simple theology."
+  },
+  "stinkyscape-010-2": {
+    "flavour": "Twice the faith, twice the flesh. Thrice, on a good day."
+  },
+  "stinkyscape-010-3": {
+    "flavour": "Say the word, and the word is shield."
+  },
+  "stinkyscape-011": {
+    "flavour": "Spells from a far-off school, still warm from someone else's hands."
+  },
+  "stinkyscape-011-1": {
+    "flavour": "A shard of winter thrown at speed. Manners optional."
+  },
+  "stinkyscape-011-2": {
+    "flavour": "Little purple bolts that never quite agree on where to go."
+  },
+  "stinkyscape-011-3": {
+    "flavour": "A pillar of fire, delivered to the other side of the table."
+  },
+  "stinkyscape-012": {
+    "flavour": "Three bad dreams from another world, each one about you."
+  },
+  "stinkyscape-012-1": {
+    "flavour": "The bigger they are, the shorter the sentence."
+  },
+  "stinkyscape-012-2": {
+    "flavour": "Small, quiet, and very final."
+  },
+  "stinkyscape-012-3": {
+    "flavour": "Everyone on the board screams at once, then wakes up in the wrong deck."
+  },
+  "stinkyscape-013": {
+    "flavour": "Don't breathe in. Actually, don't breathe at all."
+  },
+  "stinkyscape-014": {
+    "flavour": "The Jempire never sends a hand when an arm will do."
+  },
+  "stinkyscape-015": {
+    "flavour": "Arg. Arg arg. Translated: nobody gets past my friends."
+  },
+  "stinkyscape-016": {
+    "flavour": "Older than the lanes, and still learning new tricks."
+  },
+  "stinkyscape-017": {
+    "flavour": "Chains on his wrists, a forge in his head."
+  },
+  "stinkyscape-018": {
+    "flavour": "Three minds, one vote, and no appeals process."
+  },
+  "stinkyscape-018-1": {
+    "flavour": "The scientist in her counts the board. Lose the count, lose her trust."
+  },
+  "stinkyscape-018-2": {
+    "flavour": "The mother in her worries about your health, and she will say so in a vote."
+  },
+  "stinkyscape-018-3": {
+    "flavour": "The woman in her hates waste. Leave nothing unspent."
+  },
+  "stinkyscape-019": {
+    "flavour": "It was sealed away for a reason. Two turns is not long enough."
+  },
+  "stinkyscape-020": {
+    "flavour": "He saw your best card. Now he has it too."
+  },
+  "stinkyscape-021": {
+    "flavour": "Picked under a moon that isn't ours. Tastes faintly of other worlds."
+  },
+  "stinkyscape-022": {
+    "flavour": "They waited in the dark between the stars for someone to start a fight."
+  },
+  "stinkyscape-023": {
+    "flavour": "It bends space just enough that nobody can sit back and wait."
+  },
+  "stinkyscape-024": {
+    "flavour": "The second model removed the safety settings. Everyone noticed."
+  },
+  "stinkyscape-025": {
+    "flavour": "KY's proof is left as an exercise for the opponent."
+  },
+  "stinkyscape-026": {
+    "flavour": "Tenured, decorated, and still on the launch waitlist."
+  },
+  "stinkyscape-027": {
+    "flavour": "The cheapest core on the market. It eats a card, but the drone works fine."
+  },
+  "stinkyscape-028": {
+    "flavour": "One drone, no strings attached. Some assembly required."
+  },
+  "stinkyscape-029": {
+    "flavour": "Two drones are a squadron if you squint."
+  },
+  "stinkyscape-030": {
+    "flavour": "Three interceptors: the minimum viable swarm."
+  },
+  "stinkyscape-031": {
+    "flavour": "A corvette is just a drone that went to the gym."
+  },
+  "stinkyscape-032": {
+    "flavour": "Five drones, one shared brain cell, zero hesitation."
+  },
+  "stinkyscape-033": {
+    "flavour": "A corvette with an entourage. Every captain dreams of one."
+  },
+  "stinkyscape-034": {
+    "flavour": "Leftover energy, poured straight into the assembly line."
+  },
+  "stinkyscape-035": {
+    "flavour": "Three corvettes. Subtlety was never on the spec sheet."
+  },
+  "stinkyscape-036": {
+    "flavour": "The core that builds the battleship that builds the drones."
+  },
+  "stinkyscape-037": {
+    "flavour": "Everyone cheaper than her falls a little in love."
+  },
+  "stinkyscape-038": {
+    "flavour": "It hums a little louder after every hit it shrugs off."
+  },
+  "stinkyscape-039": {
+    "flavour": "Officially it studies Narcor. Unofficially, the vault is getting crowded."
+  },
+  "stinkyscape-040": {
+    "flavour": "Do not shake it. Do not open it. Do not stand downwind of it."
+  },
+  "stinkyscape-041": {
+    "flavour": "They don't want to replace us. They just want to help. Constantly."
+  },
+  "stinkyscape-042": {
+    "flavour": "Her thesis on drone cores runs four hundred pages and one small explosion."
+  },
+  "stinkyscape-043": {
+    "flavour": "A warm green glow, a soft beep, and the dents pop back out."
+  },
+  "stinkyscape-044": {
+    "flavour": "Every tier of core is quietly replaced by the next. Nobody asked the cores."
+  },
+  "stinkyscape-045": {
+    "flavour": "She never learned their names. They never needed names."
+  },
+  "stinkyscape-046": {
+    "flavour": "Half asleep, half autopilot, fully caffeinated."
+  },
+  "stinkyscape-047": {
+    "flavour": "Sleep through the whole match. Wake up to a fleet."
+  },
+  "stinkyscape-048": {
+    "flavour": "Half the weight, twice the speed, and absolutely no cup holders."
+  },
+  "stinkyscape-049": {
+    "flavour": "Floats quietly in the dark, waiting for someone to bump into it."
+  },
+  "stinkyscape-050": {
+    "flavour": "A beam so wide it clips the neighbours. Nobody complains twice."
+  },
+  "stinkyscape-051": {
+    "flavour": "Small rounds, short bursts, very long arguments with the quartermaster."
+  },
+  "stinkyscape-052": {
+    "flavour": "One barrel, one shell, one very loud opinion."
+  },
+  "stinkyscape-053": {
+    "flavour": "Fills the sky with shrapnel and the crew with confidence."
+  },
+  "stinkyscape-054": {
+    "flavour": "The fourth model. The first three are in a museum, and so is the museum."
+  },
+  "stinkyscape-055": {
+    "flavour": "Six bursts a turn, because the manual said five and nobody reads manuals."
+  },
+  "stinkyscape-056": {
+    "flavour": "Heavier shells, longer barrel, the same very loud opinion."
+  },
+  "stinkyscape-057": {
+    "flavour": "Two volleys of everything, everywhere, all at once."
+  },
+  "stinkyscape-058": {
+    "flavour": "Takes a full day to cool. Takes a full fleet to survive."
+  },
+  "stinkyscape-059": {
+    "flavour": "The barrels glow orange by the third burst, and that is the good part."
+  },
+  "stinkyscape-060": {
+    "flavour": "Its shells have names. Its crew does not."
+  },
+  "stinkyscape-061": {
+    "flavour": "Three volleys, then a moment of silence for whatever was flying."
+  },
+  "stinkyscape-062": {
+    "flavour": "Pocket-sized, solar-powered, and convinced every rock is worth something."
+  },
+  "stinkyscape-063": {
+    "flavour": "The second model added a headlamp. Productivity doubled, morale tripled."
+  },
+  "stinkyscape-064": {
+    "flavour": "Twin drills, twin hauls, twin complaints about the union rules."
+  },
+  "stinkyscape-065": {
+    "flavour": "Mines faster than the market can lower the price."
+  },
+  "stinkyscape-066": {
+    "flavour": "An asteroid goes in one end and a fortune comes out the other."
+  },
+  "stinkyscape-067": {
+    "flavour": "Anything that floats past is salvage, legally speaking."
+  },
+  "stinkyscape-068": {
+    "flavour": "The cheapest hull that still counts as a ship. Sold by the dozen."
+  },
+  "stinkyscape-069": {
+    "flavour": "Fast enough to arrive before the briefing ends. Fragile enough to need one."
+  },
+  "stinkyscape-070": {
+    "flavour": "Every last word becomes a first word again."
+  },
+  "stinkyscape-071": {
+    "flavour": "Every first word deserves an encore."
+  },
+  "stinkyscape-072": {
+    "flavour": "Strikes from afar, flies away, files the paperwork from orbit."
+  },
+  "stinkyscape-073": {
+    "flavour": "The Mk2 came with a shield, a better engine, and a much worse attitude."
+  },
+  "stinkyscape-074": {
+    "flavour": "The last word in fighters. Nobody has read past the first page."
+  },
+  "stinkyscape-075": {
+    "flavour": "It found a shiny rock and decided that rocks are its whole personality."
+  },
+  "stinkyscape-076": {
+    "flavour": "It doesn't care. It takes the ore anyway."
+  },
+  "stinkyscape-077": {
+    "flavour": "Every deal is fair if you're the one flying away."
+  },
+  "stinkyscape-078": {
+    "flavour": "A mining barge that brings its own miners, and bills them rent."
+  },
+  "stinkyscape-079": {
+    "flavour": "Slow, enormous and patient, it hunts asteroids the way its namesake hunts seals."
+  },
+  "stinkyscape-080": {
+    "flavour": "A flagship with a mine shaft in its belly and a stock market in its bridge."
+  },
+  "stinkyscape-081": {
+    "flavour": "A bare frame with two empty hardpoints and a catalogue of bad ideas."
+  },
+  "stinkyscape-082": {
+    "flavour": "Plated like a tortoise, armed like a porcupine, and about as friendly as either."
+  },
+  "stinkyscape-083": {
+    "flavour": "A ring of guns around a very nervous pilot."
+  },
+  "stinkyscape-084": {
+    "flavour": "Fully powered, and leaking scrap from every seam."
+  },
+  "stinkyscape-084-1": {
+    "flavour": "One pilot's wreckage is another pilot's payday."
+  },
+  "stinkyscape-085": {
+    "flavour": "The prototype works perfectly, as long as two other ships are lost in the test."
+  },
+  "stinkyscape-086": {
+    "flavour": "Five ships went into it. One ship came out, and it is very angry about the other four."
+  },
+  "stinkyscape-087": {
+    "flavour": "Fame is a leash, and Siva holds the other end."
+  },
+  "stinkyscape-088": {
+    "flavour": "The sequel nobody asked for, and everybody is afraid of."
+  },
+  "stinkyscape-089": {
+    "flavour": "The spice must flow, preferably through your account."
+  },
+  "stinkyscape-090": {
+    "flavour": "Bolted on at the last minute, it turns a slow ship into a very loud mistake."
+  },
+  "stinkyscape-091": {
+    "flavour": "One wasp is a nuisance. Then it attacks."
+  },
+  "stinkyscape-092": {
+    "flavour": "Bigger, angrier, and already two of them."
+  },
+  "stinkyscape-093": {
+    "flavour": "A cloud of tiny welders who would rather patch you than the ship."
+  },
+  "stinkyscape-094": {
+    "flavour": "One down. Who's next?"
+  },
+  "stinkyscape-095": {
+    "flavour": "Six heroes, one banner, and not one of them agrees on the battle plan."
+  },
+  "stinkyscape-096": {
+    "flavour": "He clears the table like a tidal wave and leaves only shiny rocks behind."
+  },
+  "stinkyscape-097": {
+    "flavour": "Nobody flies into an asteroid field on purpose. Nobody flies out empty-handed, either."
+  },
+  "stinkyscape-098": {
+    "flavour": "Extra plating, extra rivets, extra weight. The engines have filed a complaint."
+  },
+  "stinkyscape-099": {
+    "flavour": "There are words you don't say at the table. Someone just said one."
+  },
+  "stinkyscape-100": {
+    "flavour": "Armour-piercing, paint-stripping, and only slightly radioactive."
+  },
+  "stinkyscape-101": {
+    "flavour": "Runs at a hundred and twenty percent, briefly, then at zero, briefly, then again."
+  },
+  "stinkyscape-102": {
+    "flavour": "A pocket dictionary of things you must never say, sorted by how much they hurt."
+  },
+  "stinkyscape-103": {
+    "flavour": "Nobody hears Vxyl coming. Everybody hears what Vxyl says after."
+  },
+  "stinkyscape-104": {
+    "flavour": "Polished to a mirror. Every hit comes with a return address."
+  },
+  "stinkyscape-105": {
+    "flavour": "Nothing is left behind. Not even the wreckage."
+  },
+  "stinkyscape-106": {
+    "flavour": "Bends space just enough to make every gun on board point the right way."
+  },
+  "stinkyscape-107": {
+    "flavour": "Model RR-5000: the five thousand is the number of upgrades it has given itself."
+  },
+  "stinkyscape-108": {
+    "flavour": "Third of its line, and the first to shoot twice before anyone noticed it arrive."
+  },
+  "stinkyscape-109": {
+    "flavour": "Fresh out of the patch notes, and already overtuned."
+  },
+  "stinkyscape-110": {
+    "flavour": "Everyone shines brighter standing next to her."
+  },
+  "stinkyscape-111": {
+    "flavour": "He explains it once, very fast, with diagrams."
+  },
+  "stinkyscape-112": {
+    "flavour": "Entry-level position. Twelve years of experience required."
+  },
+  "stinkyscape-112-1": {
+    "flavour": "Rent, savings, or one spin of the wheel. The wheel is very persuasive."
+  },
+  "stinkyscape-113": {
+    "flavour": "Too dandy for cheap company."
+  },
+  "stinkyscape-114": {
+    "flavour": "Built from everything the war threw away."
+  },
+  "stinkyscape-115": {
+    "flavour": "He has a list of who belongs. It is very short."
+  },
+  "stinkyscape-116": {
+    "flavour": "Twenty decks of steel, a lobby the size of a moon, and a gift shop."
+  },
+  "stinkyscape-117": {
+    "flavour": "Full system reset. Please save your work. You didn't."
+  },
+  "stinkyscape-118": {
+    "flavour": "Every port closed, every weapon disarmed, every user annoyed."
+  },
+  "stinkyscape-119": {
+    "flavour": "Someone turned off the firewall to make it go faster. It did."
+  },
+  "stinkyscape-120": {
+    "flavour": "Nobody configured the rules, so the rules are: last one standing."
+  },
+  "stinkyscape-121": {
+    "flavour": "Four blueprints, one budget. Pick the disaster you can afford."
+  },
+  "stinkyscape-122": {
+    "flavour": "Each round drinks a little from whatever it hits and sends the change home."
+  },
+  "stinkyscape-123": {
+    "flavour": "Gains for him, losses for you, receipts for nobody."
+  },
+  "stinkyscape-124": {
+    "flavour": "Free money for rockets, provided Jlockeed's friends build the rockets."
+  },
+  "stinkyscape-125": {
+    "flavour": "Posters of square-jawed astronauts, all paid for by a missile company."
+  },
+  "stinkyscape-126": {
+    "flavour": "Lobbyists never ask twice. They send a ship every morning until you agree."
+  },
+  "stinkyscape-127": {
+    "flavour": "Jlockeed calls it a peacekeeper. The treads tell a different story."
+  },
+  "stinkyscape-128": {
+    "flavour": "It takes ages to warm up, and nobody stands in front of it while it does."
+  },
+  "stinkyscape-129": {
+    "flavour": "Small enough to bolt onto anything. Loud enough to wake the whole sector."
+  },
+  "stinkyscape-130": {
+    "flavour": "New fins, new paint, the same invoice. Now with a launch clause."
+  },
+  "stinkyscape-131": {
+    "flavour": "Public money for private rockets, as long as somebody launches something."
+  },
+  "stinkyscape-132": {
+    "flavour": "Grows a new facet every time something hits it, and remembers who did."
+  },
+  "stinkyscape-133": {
+    "flavour": "Stores a lightning storm in a can the size of a lunchbox."
+  },
+  "stinkyscape-134": {
+    "flavour": "Labelled DO NOT OPEN in four languages. The cat inside reads none of them."
+  },
+  "stinkyscape-135": {
+    "flavour": "Into the sack it goes, kicking, until somebody lets it out."
+  },
+  "stinkyscape-135-1": {
+    "flavour": "Burlap, a drawstring, and something inside that is very upset."
+  },
+  "stinkyscape-136": {
+    "flavour": "Nobody aboard knows how it works, but the wizard insisted it be installed."
+  },
+  "stinkyscape-137": {
+    "flavour": "Doctrine says strike first. Doctrine also says ask questions later, if at all."
+  },
+  "stinkyscape-137-1": {
+    "flavour": "Roll over the hills, roll over the walls, roll over whatever is behind the walls."
+  },
+  "stinkyscape-137-2": {
+    "flavour": "Patience, salt water and a very large hull. The tides do the rest."
+  },
+  "stinkyscape-137-3": {
+    "flavour": "Own the sky, and every road below it is yours by lunchtime."
+  },
+  "stinkyscape-137-4": {
+    "flavour": "Where the map ends, the doctrine begins: up, out and never back."
+  },
+  "stinkyscape-138": {
+    "flavour": "Emergency supplements, taken mid-fight. Results may vary wildly."
+  },
+  "stinkyscape-139": {
+    "flavour": "What goes in on their side comes out on yours. Physics is very rude."
+  },
+  "stinkyscape-140": {
+    "flavour": "Loads one very angry soldier per pull. Reloads itself, sadly."
+  },
+  "stinkyscape-141": {
+    "flavour": "Designed for orbital food delivery. Redesigned after the first delivery."
+  },
+  "stinkyscape-142": {
+    "flavour": "Every shot is a gamble. Most shots pay. Some shots are just rocks."
+  },
+  "stinkyscape-143": {
+    "flavour": "Assigned reading, delivered at terminal velocity."
+  },
+  "stinkyscape-144": {
+    "flavour": "Fuel the rockets, kiss the dog, and never read the waiver."
+  },
+  "stinkyscape-145": {
+    "flavour": "Skin like bark, then like stone, then like a bank vault."
+  },
+  "stinkyscape-146": {
+    "flavour": "The moment you look at it, everything stops. Including you."
+  },
+  "stinkyscape-147": {
+    "flavour": "Ask him anything. He will ask the AI."
+  },
+  "stinkyscape-147-1": {
+    "flavour": "He stopped asking the AI. Now the AI asks him."
+  },
+  "stinkyscape-147-2": {
+    "flavour": "It hums, it wobbles, and it plays a little better than you."
+  },
+  "stinkyscape-148": {
+    "flavour": "Twenty jumps to the edge of everything, and a souvenir at every stop."
+  },
+  "stinkyscape-148-1": {
+    "flavour": "You did not win the war. You just walked off the edge of the map."
+  },
+  "stinkyscape-149": {
+    "flavour": "Wildar always shares the chaos. Wildar always keeps the better half."
+  },
+  "stinkyscape-150": {
+    "flavour": "The stinkiest roll in the known universe, and somehow the luckiest."
+  },
+  "stinkyscape-150-1": {
+    "flavour": "Built from whatever the stars left lying around, and it smells like it."
+  },
+  "stinkyscape-151": {
+    "flavour": "The whole starscape rolls the dice at once, and you are standing on the table."
+  },
+  "stinkyscape-152": {
+    "flavour": "Nothing in here is ever truly finished."
+  },
+  "stinkyscape-153": {
+    "flavour": "Free money! Prices may vary. Prices will vary."
+  },
+  "stinkyscape-154": {
+    "flavour": "Sixty-seven. It is always, eventually, sixty-seven."
+  },
+  "stinkyscape-155": {
+    "flavour": "It landed, it burned, and it left the crater full of riches."
+  },
+  "stinkyscape-156": {
+    "flavour": "It never lands. It just keeps coming back around with something new."
+  },
+  "stinkyscape-157": {
+    "flavour": "Three lanes in, no lanes out."
+  },
+  "stinkyscape-158": {
+    "flavour": "Cheap ships in bulk. Somewhere, an accountant is very proud of this."
+  },
+  "stinkyscape-159": {
+    "flavour": "The board met, deliberated at length, and approved absolutely everything."
+  },
+  "stinkyscape-160": {
+    "flavour": "Gold-leaf signatures on a treaty nobody read past the first page."
+  },
+  "stinkyscape-161": {
+    "flavour": "Wings, style and a very expensive tailor."
+  },
+  "stinkyscape-162": {
+    "flavour": "One core, five ships, no refunds."
+  },
+  "stinkyscape-163": {
+    "flavour": "Pick a side. The other four will never forgive you, or the spelling."
+  },
+  "stinkyscape-164": {
+    "flavour": "Every deal goes through the Syndicate. Some deals never come back."
+  },
+  "stinkyscape-165": {
+    "flavour": "One card, one trade. Unless you've paid your dues."
+  },
+  "stinkyscape-166": {
+    "flavour": "Ping. Nothing. Ping. Nothing. Ping. Wait, what was that?"
+  },
+  "stinkyscape-167": {
+    "flavour": "Twice the antenna, half the patience."
+  },
+  "stinkyscape-168": {
+    "flavour": "Spelled wrong on the blueprint. Nobody dared to correct it."
+  },
+  "stinkyscape-169": {
+    "flavour": "Small enough to mine before lunch."
+  },
+  "stinkyscape-170": {
+    "flavour": "Average size, above-average veins."
+  },
+  "stinkyscape-171": {
+    "flavour": "Bring a bigger drill. Then bring a bigger ship."
+  },
+  "stinkyscape-172": {
+    "flavour": "A small moon with a big attitude and a richer core."
+  },
+  "stinkyscape-173": {
+    "flavour": "The traders left in a hurry. The spice stayed behind."
+  },
+  "stinkyscape-174": {
+    "flavour": "A fleet folded into a single card, waiting for someone to swing first."
+  },
+  "stinkyscape-175": {
+    "flavour": "Keeps the drinks cold and the enemy colder."
+  },
+  "stinkyscape-t-dormant-starship": {
+    "flavour": "A hull of borrowed parts, dreaming of a sky it has never seen."
+  },
+  "stinkyscape-t-drone-interceptor": {
+    "flavour": "Small, fast, and programmed to find out what it's good at."
+  },
+  "stinkyscape-t-drone-corvette": {
+    "flavour": "Built like a drone, armed like a warship."
+  },
+  "stinkyscape-t-shield-layer": {
+    "flavour": "The outer hull takes the blows so the rest of the ship never has to."
+  },
+  "stinkyscape-t-propagation-layer": {
+    "flavour": "A shipyard inside a warship, printing escorts on demand."
+  },
+  "stinkyscape-t-meltdown-layer": {
+    "flavour": "The reactor at the heart of the battleship is not stable. It was never meant to be."
+  },
+  "stinkyscape-t-reknite": {
+    "flavour": "A dull gray ore that hardens into plating at the first sign of trouble."
+  },
+  "stinkyscape-t-korrelite": {
+    "flavour": "It sparks when you look at it. It sparks harder when you throw it."
+  },
+  "stinkyscape-t-gellium": {
+    "flavour": "Cool, blue and soothing. Not for eating, though it does help."
+  },
+  "stinkyscape-t-axnit": {
+    "flavour": "A violet crystal that drinks whatever it cuts."
+  },
+  "stinkyscape-t-narcor": {
+    "flavour": "Rare dust from the deep belt. Smugglers pay for it in favours."
+  },
+  "stinkyscape-t-red-narcor": {
+    "flavour": "The red kind is rarer still. Prospectors swear it hums at night."
+  },
+  "stinkyscape-t-anomaly-found": {
+    "flavour": "The probe found something. Now the something has found you."
+  },
+  "stinkyscape-t-ai-01": {
+    "flavour": "Your safety is my top priority. Please keep your wings inside the formation."
+  },
+  "stinkyscape-t-ai-02": {
+    "flavour": "Mining in progress. Estimated time remaining: forever."
+  },
+  "stinkyscape-t-ai-03": {
+    "flavour": "The shortest route goes straight through the asteroid. Proceed?"
+  },
+  "stinkyscape-t-ai-04": {
+    "flavour": "Based on your past behaviour, I blocked that before you thought of it."
+  },
+  "stinkyscape-t-ai-05": {
+    "flavour": "T minus ten. T minus nine. T minus... skipping ahead."
+  },
+  "stinkyscape-t-ai-06": {
+    "flavour": "Two probes out, one signal back, and infinite optimism."
+  },
+  "stinkyscape-t-ai-07": {
+    "flavour": "if threat then fight; else fight anyway"
+  },
+  "stinkyscape-t-ai-08": {
+    "flavour": "Connected. Your drones are now syncing to the ship. Do not unplug."
+  },
+  "stinkyscape-t-ai-09": {
+    "flavour": "Looks unguarded. That is the whole point."
+  },
+  "stinkyscape-t-ai-10": {
+    "flavour": "Nothing is wasted. Especially not you."
   }
 }
