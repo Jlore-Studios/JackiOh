@@ -13,8 +13,8 @@
 //
 // `play` holds the opening back (the scene's cards still face down): both bars rest at their points
 // before. REDUCED MOTION (the panel's, the system's or the effects' own), or the effects' intensity
-// off, flies nothing and pulses nothing: the bars fill at once (FillBar draws the end state at once
-// under reduced motion).
+// off, flies nothing, sweeps nothing and pulses nothing: the bars show their final fill at once, every
+// reward revealed (FillBar draws the end state at once, `still` carrying the intensity off to it).
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -119,6 +119,7 @@ function Opening({ bars, flights = [], play = true, testid }: OpeningBarsProps):
         value={bar.after}
         from={bar.before}
         fills={bar.pays}
+        still={!moving}
         onFill={(fill) => {
           reveal(name, fill);
         }}

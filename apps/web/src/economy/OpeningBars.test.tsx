@@ -379,17 +379,26 @@ describe("#1953 the opening's HUD", () => {
     cleanup();
     writeSettings({ reduceMotion: false });
 
-    // The effects off: nothing flies and nothing pulses; the bars fill at once.
+    // The effects off: nothing flies, sweeps or pulses; the bars show their final fill at once.
     setFxSettings({ intensity: "off" });
     render(<OpeningBars bars={paid()} flights={flightsFor(paid())} testid={ID} />);
     const hud = screen.getByTestId(ID);
     expect(hud).toHaveAttribute("data-motion", "still");
     expect(hud).toHaveAttribute("data-phase", "fill");
     expect(hud.querySelector(".bar-flight")).toBeNull();
-    expect(screen.getByTestId(`${ID}-card`)).toHaveAttribute("data-state", "filling");
+    for (const bar of ["card", "cosmetic"]) {
+      expect(screen.getByTestId(`${ID}-${bar}`)).toHaveAttribute("data-state", "resting");
+      expect(screen.getByTestId(`${ID}-${bar}`).querySelector(".fill-bar__burst")).toBeNull();
+    }
+    expect(progress("card")).toBe(13);
+    expect(progress("cosmetic")).toBe(10);
     advance(segmentMs({ from: 145, to: 150, burst: true }, 150));
-    expect(screen.getByTestId(`${ID}-cosmetic`)).toHaveAttribute("data-state", "bursting");
-    expect(hud, "a bursting bar under a still HUD does not pulse").toHaveAttribute("data-motion", "still");
+    expect(screen.getByTestId(`${ID}-cosmetic`)).toHaveAttribute("data-state", "resting");
+    expect(screen.getByTestId(`${ID}-cosmetic`).querySelector(".fill-bar__burst")).toBeNull();
+    // Every fill is reported at once; the reveal then shows its rewards in its own time.
+    advance(REVEAL_STAGGER_MS);
+    advance(REVEAL_STAGGER_MS);
+    expect(kinds().sort()).toEqual(["cardToken", "cosmeticToken"]);
   });
 });
 
