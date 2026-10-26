@@ -10,8 +10,8 @@
 // The pack is a `PackObject` (#1663): the sealed button around it takes the tap and the swipe, and the
 // object draws the press and the tear. Once the server has answered, the opening's two token bars
 // (`OpeningBars`, SPEC §14.5) sit pinned at the top of the viewport at their points before, and once
-// every card shows they play: each spent duplicate's points fly from its card into them, then they
-// fill (R1953000).
+// every card shows they play: each slot's points fly from its card into them, then they fill
+// (R1953000, R1999000).
 //
 // REDUCED MOTION (the panel's setting or the system's) shows the results at once: no tear, no flip,
 // no hold and no effects. A skip-all shows the same, with the best card's sting played once.

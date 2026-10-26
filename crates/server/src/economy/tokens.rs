@@ -2,8 +2,8 @@
 //! buys and what both read back.
 //!
 //! - [`settle_bar`]: the pure split of a bar's points into payouts and overflow (R1305000).
-//! - [`card_bar_points`] and [`cosmetic_bar_points`]: the points a spent slot adds to each bar, by
-//!   the card or cosmetic rarity it rolled (R1953000).
+//! - [`card_bar_points`] and [`cosmetic_bar_points`]: the points each opened slot adds to each
+//!   bar, whatever it grants, by the card or cosmetic rarity it rolled (R1953000, R1999000).
 //! - [`redeem_card_token`]: a card token unlocks one chosen new card of a set that ships, in one
 //!   transaction (R1305002).
 //! - [`redeem_cosmetic_token`]: a Rare or Epic cosmetic token buys one cosmetic at its tier or
@@ -61,8 +61,9 @@ pub fn settle_bar(start: i64, gained: i64, size: i64) -> (i64, i64) {
     (total / size, total % size)
 }
 
-/// The points a card pack's spent duplicate adds to each token bar: its slot's card rarity's, pity's
-/// force included, in `TOKEN_BAR_POINTS_BY_CARD_RARITY` (R1953000).
+/// The points each opened slot of a card pack adds to each token bar, whatever it grants: its
+/// slot's card rarity's, pity's force included, in `TOKEN_BAR_POINTS_BY_CARD_RARITY` (R1953000,
+/// R1999000).
 pub fn card_bar_points(rarity: PrintedRarity) -> i64 {
     let points = TOKEN_BAR_POINTS_BY_CARD_RARITY;
     match rarity {
@@ -74,9 +75,10 @@ pub fn card_bar_points(rarity: PrintedRarity) -> i64 {
     }
 }
 
-/// The points a cosmetic pack's spent slot adds to each token bar: its rolled cosmetic rarity's, in
-/// `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY` (R1306001, R1953000). A cosmetic rarity is never read as a
-/// card's (R1333000), so it has a table of its own.
+/// The points each opened slot of a cosmetic pack adds to each token bar, whatever it grants: its
+/// rolled cosmetic rarity's, not the one it fell to, in `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY`
+/// (R1306001, R1953000, R1999000). A cosmetic rarity is never read as a card's (R1333000), so it
+/// has a table of its own.
 pub fn cosmetic_bar_points(rarity: CosmeticRarity) -> i64 {
     let points = TOKEN_BAR_POINTS_BY_COSMETIC_RARITY;
     match rarity {

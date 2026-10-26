@@ -576,15 +576,15 @@ export type PackSlot = { rarity: PrintedRarity; cardId: string; grant: PackSlotG
 
 /**
  * One token bar across an opening: its points before it and after it (the overflow a pay leaves
- * kept), its size and how many times it paid in this opening. A bar no spent duplicate moved
- * answers `before` equal to `after` and `pays` 0.
+ * kept), its size and how many times it paid in this opening. Every opening moves both bars, since
+ * every slot adds points (R1999000).
  */
 export type BarSettle = { before: number; after: number; size: number; pays: number };
 
 /**
  * What an opening did to both token bars (R1305000, R1305001): `cosmeticPaid` is the cycle's steps
  * the cosmetic bar paid, in order, so its length is `cosmetic.pays`, and `slotPoints` the points
- * each slot added to each bar, in slot order, 0 for a slot that was not spent (R1953000).
+ * each slot added to each bar, in slot order, every slot's its rolled rarity's (R1953000, R1999000).
  */
 export type OpeningBarsAnswer = {
   card: BarSettle;

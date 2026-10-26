@@ -1,6 +1,6 @@
 // The pure parts of the bar that fills and the reward reveal (#1658, part of #1651, SPEC §14.5):
-// the segments one `FillBar` plays, the points each spent slot sends flying into an opening's bars
-// (R1953000), the reward a bar's fill reveals in an opening, and the sting a reward plays. Nothing
+// the segments one `FillBar` plays, the points each slot sends flying into an opening's bars
+// (R1953000, R1999000), the reward a bar's fill reveals in an opening, and the sting a reward plays. Nothing
 // here reads the DOM or a clock; the components keep the timers.
 //
 // THE SERVER DECIDES (CLAUDE.md rule 7). A bar's points, its size, each slot's points and what a fill
@@ -26,7 +26,7 @@ export const REVEAL_STAGGER_MS = 350;
 /** How long one reward takes to fly out. */
 export const REVEAL_FLY_MS = 450;
 
-/** How long a spent slot's points take to fly from the slot into the bars. */
+/** How long a slot's points take to fly from the slot into the bars. */
 export const BAR_FLIGHT_MS = 650;
 
 /** The pause between one slot's points taking off and the next's. */
@@ -44,7 +44,7 @@ export type Segment = {
 export type OpeningBar = OpeningBarsAnswer["card"];
 
 /**
- * One spent slot's points on their way to the bars (R1953000): the server's points, the slot's
+ * One slot's points on their way to the bars (R1953000, R1999000): the server's points, the slot's
  * rarity (a card pack's card rarity, a cosmetic pack's cosmetic rarity), which tints the flight and
  * sizes its burst, and the testid of the slot it takes off from.
  */
@@ -109,7 +109,8 @@ export function segmentMs(segment: Segment, size: number): number {
 
 /**
  * The flights of an opening (R1953000): one for each slot the answer's `slotPoints` gives points,
- * in slot order, with slot `index`'s rarity in `rarities` and its testid from `sourceOf`.
+ * which since R1999000 is every slot, in slot order, with slot `index`'s rarity in `rarities` and
+ * its testid from `sourceOf`.
  */
 export function flightsOf(
   bars: OpeningBarsAnswer,
