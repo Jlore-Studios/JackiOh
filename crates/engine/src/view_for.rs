@@ -2452,17 +2452,33 @@ fn redact_event(
         | GameEventType::MarketCreditsChanged
         // R1853003: so did a Resource sold at the Marketplace.
         | GameEventType::MarketSold => event.clone(),
-        // R1852000, R1852003: a piece's fusion names the dead card in its graveyard and the Dormant
-        // Starship on the field, and a launch names the Starship and the pieces it holds: all public, as
-        // the Starship's memory is on both seats' views.
-        | GameEventType::StarshipFused
-        | GameEventType::StarshipLaunched
         // R1843002: a flight names a player and what it leaves the other.
         | GameEventType::Fled
         // R1847001: a starscape travel names a player, a node and its reward, all public.
         | GameEventType::StarscapeTravelled
         // R1855000: a board replacement names its player alone.
         | GameEventType::BoardReplaced => event.clone(),
+
+        // R1852000, R97: a fusion names the dead piece with its definition and the Dormant Starship it
+        // fused into, each judged by where it is now: a piece since returned to a hand, or a Starship
+        // since bounced into one, reads to that hand's player alone. The count is the Starship's.
+        GameEventType::StarshipFused => {
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId"]);
+            }
+            if hidden(&text_at(&shown, "pieceId")) {
+                hide(&mut shown, &["pieceId", "defId"]);
+            }
+            rebuild(shown)
+        }
+        // R1852003, R97: a launch names the Starship, judged as the card itself is; its name and the
+        // pieces it held are the public memory of a public launch (R1852005).
+        GameEventType::StarshipLaunched => {
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+            }
+            rebuild(shown)
+        }
 
         // R1850003: only a face-up card is held, beneath a card on the board, so both read as the
         // event happens. Judged by where each is now (R97), like `exiled`: a held card released keeps

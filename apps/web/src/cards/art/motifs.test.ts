@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import type { CardDef, CardType } from "@jackioh/shared";
+import { setShips, type CardDef, type CardType } from "@jackioh/shared";
 
 import CORE_V01 from "./fixtures/core-art-v0.1.json";
 import { EMBLEMS } from "./emblems.ts";
@@ -81,8 +81,9 @@ describe("R503 the Book, Pancake and AI families", () => {
       }
     }
     // T-AI-1 to 10, and Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale and #1.4 Leg Day,
-    // the plans Bob's Plan offers (R1563003).
-    expect(DEFS.filter((card) => themeFor(card.tags, card.type) === "ai")).toHaveLength(14);
+    // the plans Bob's Plan offers (R1563003). R1857000: the held Stinkyscape set's ten AI cards join them
+    // when it ships.
+    expect(DEFS.filter((card) => setShips(card.set) && themeFor(card.tags, card.type) === "ai")).toHaveLength(14);
   });
 
   it("R503 each family has its palette, its own emblem first in its pool, a hue drift and its motes", () => {
@@ -390,6 +391,9 @@ describe("R503 one distinct picture per catalog entry", () => {
     expect(varietySalt("meditative-097")).not.toBe(varietySalt("classic-043"));
     expect(varietySalt("meditative-097")).not.toBe(varietySalt("classicplus-043"));
     expect(varietySalt("meditative-097-4")).toBe(varietySalt("meditative-097"));
+    // R1857000: the held Stinkyscape set draws from its own, so none of its cards repeats a shipped one.
+    expect(varietySalt("stinkyscape-071")).not.toBe(varietySalt("meditativeplus-001"));
+    expect(varietySalt("stinkyscape-t-ai-01")).toBe(varietySalt("stinkyscape-071"));
   });
 });
 

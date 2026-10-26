@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
-import { KEYWORD_KINDS, fillParams, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, fillParams, setShips, type KeywordKind } from "@jackioh/shared";
 
 import {
   GLOSSARY,
@@ -701,7 +701,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       "Combat keyword": ["combat keywords", "combat keyword"],
       // R910000: the lower-case and inflected spellings the cards print mid-sentence.
       Tribute: ["Tributes"],
-      Fuse: ["fuse", "fused"],
+      Fuse: ["fuse", "fused", "fuses"],
       Transform: ["transform", "transforms"],
       Lock: ["Locked"],
       Steal: ["steal"],
@@ -712,7 +712,12 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R1174000: Freeze's spellings; Frozen is its own §6.1 status.
       Freeze: ["freeze", "freezes"],
       // R1563000: Bread and Butter prints "Reveals when any player Floats".
-      Float: ["Floats"],
+      Float: ["Floats", "Floated"],
+      // R1857000: the held Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated"
+      // above.
+      "End the turn": ["end the turn"],
+      Allure: ["Allured"],
+      Launch: ["launch", "launches"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -822,6 +827,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     // R1174000: Frozen is a §6.1 status no card prints: M+ #24 Bob (#1185) prints the verb, Freeze
     // ("Freeze all enemy Units"), and never the status, so it stays on this list until a card does.
     // R1839000: and Dormant is a §6.1 status no card prints until Stinkyscape's cards ship.
+    // R1857000: the held Stinkyscape set's faces print both, so the list reads the sets that ship.
     const unprinted: readonly GlossaryTermId[] = ["Frozen", "Dormant"];
     const fresh: readonly GlossaryTermId[] = [
       ...STATUSES.filter((id) => !unprinted.includes(id)),
@@ -841,7 +847,12 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     ];
     const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
     for (const term of fresh) expect(found.has(term), term).toBe(true);
-    for (const term of unprinted) expect(found.has(term), `${term} is printed now: take it off the list`).toBe(false);
+    const shipped = new Set(
+      Object.values(CATALOG)
+        .filter((card) => setShips(card.set))
+        .flatMap((card) => [fillParams(card, "base"), fillParams(card, "radiant")].flatMap((text) => termsIn(text))),
+    );
+    for (const term of unprinted) expect(shipped.has(term), `${term} is printed now: take it off the list`).toBe(false);
   });
 
   it("R512 tokens stay lossless over every text a player reads, numbers filled in", () => {
