@@ -2255,9 +2255,7 @@
     },
     "1996": {
       "action": "plan",
-      "asks": [
-        "c:6416699448"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -2272,14 +2270,16 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-5",
+      "provider": "muse",
       "queued_at": "2026-10-26T13:05:08Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40328388872",
-      "started_at": "2026-10-26T13:10:59Z",
+      "run_id": "pending:4cc08fee-1793021288",
+      "started_at": "2026-10-26T13:28:54Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6416699448"
+      ]
     },
     "1997": {
       "action": "plan",
@@ -2361,9 +2361,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T13:27:55Z",
+    "at": "2026-10-26T13:28:54Z",
     "url": "",
-    "what": "plan #1994 on muse"
+    "what": "plan #1996 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T13:04:25Z",
