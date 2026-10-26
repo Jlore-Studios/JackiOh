@@ -3486,19 +3486,15 @@
     "what": "plan #1861 on claude-2"
   },
   "last_sweep": {
-    "at": "2026-10-26T22:56:38Z",
+    "at": "2026-10-26T23:06:46Z",
     "notes": [
-      "#2021 needs a plan",
-      "#2022 needs a plan",
-      "#2023 needs a plan",
-      "#2024 needs a plan",
-      "#2025 needs a plan",
-      "delivered plan #1863 on claude-7 (run 40413773431): planned",
-      "delivered plan #1859 on claude-4 (run 40413509725): failed",
-      "delivered plan #1858 on claude-1 (run 40413432807): interrupted",
-      "started plan #2025 on claude-7 (run 40416512334)",
-      "started plan #1858 on claude-4 (run 40416585725)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-27T00:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-27T03:20:00Z; it can start a build or a plan again in 2h 59m; `claude-4` is busy; `claude-6` is busy; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-10-27T03:30:00Z; it can start a build or a plan again in 4h 29m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 94h 59m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
+      "delivered plan #2025 on claude-7 (run 40416512334): planned",
+      "delivered build #1867 on muse (run 40414043669): infra (its model job left no upload)",
+      "delivered plan #1864 on claude-2 (run 40413860124): failed",
+      "delivered plan #1861 on claude-6 (run 40413599462): failed",
+      "started plan #1859 on claude-7 (run 40417776514)",
+      "started plan #1861 on claude-2 (run 40417841840)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-10-27T00:50:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-10-27T03:20:00Z; it can start a build or a plan again in 2h 49m; `claude-4` is busy; `claude-6` 5-hour usage is 46%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-10-27T01:00:00Z; it takes reviews only; it can start a build or a plan again in 1h 49m; `claude-5` 5-hour usage is 40%, too close to its 40% cap to start a long run (it starts under 35%); it resets at 2026-10-27T03:30:00Z; it can start a build or a plan again in 4h 19m; `muse` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-10-26T23:57:39Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 94h 49m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -4204,7 +4200,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T22:56:38Z",
+  "loop_tick": "2026-10-26T23:06:46Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T21:35:26Z",
