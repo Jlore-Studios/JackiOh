@@ -11,8 +11,8 @@
 #   clippy             `rust (fmt, clippy)`
 #   rust_engine_rules  `rust (test engine rules)`, and so on: each `rust_<group>` is one entry of
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
-#   rust_cards_lib     `rust_tools_wasm`; `rust_engine` also runs `engine golden`)
-#   rust_cards
+#   rust_cards_lib     `rust_tools_wasm`, which also runs `tools fuzz` and `tools duos, selfplay`;
+#   rust_cards         `rust_engine` also runs `engine golden`)
 #   rust_server
 #   rust_ai
 #   rust_ai_slow
