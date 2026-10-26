@@ -1614,25 +1614,15 @@
           "claude"
         ],
         "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/rules.test.ts",
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
-          ],
-          "from": "0f428a9ef6b10100e253ff5aa48736e7e93eef0e",
-          "main": "c3af6db76704f90784f799cb58f4cf8fb79f9da8"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40253573386",
+            "run": "40262760633",
             "tier": "strong"
           }
         ],
-        "sha": "d7d43bd2946b79d328834dbf7dc46b77423b6284",
+        "sha": "0e41ceba968ed2248d7e0ff187e3d0327e4c8ad2",
         "tiers": {
           "claude": "strong"
         }
