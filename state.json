@@ -1602,7 +1602,7 @@
       "queued_at": "2026-10-26T03:51:36Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:59c90ab8-1792989615",
+      "run_id": "40270327481",
       "self_check_findings": [],
       "source": "conflict",
       "started_at": "2026-10-26T04:41:03Z",
