@@ -89,6 +89,32 @@ function useSavedDecks(): { decks: readonly SavedDeck[]; loadError: string | nul
   return { decks, loadError, retry };
 }
 
+/** B42: the co-op game the account is already in (null when none), and why it could not be read. */
+function useLiveCoop(): { live: string | null; liveError: string | null; retryLive: () => void } {
+  const [live, setLive] = useState<string | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    getDuosLive().then(
+      (answer) => {
+        if (!cancelled) setLive(answer.matchId);
+      },
+      (cause: unknown) => {
+        if (!cancelled) setLiveError(messageOf(cause));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt]);
+  const retryLive = (): void => {
+    setLiveError(null);
+    setAttempt((before) => before + 1);
+  };
+  return { live, liveError, retryLive };
+}
+
 export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactElement {
   useLocale();
   const headingId = useId();
@@ -105,21 +131,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [live, setLive] = useState<string | null>(null);
-
-  // B42: a co-op game the account is already in is offered first.
-  useEffect(() => {
-    let cancelled = false;
-    getDuosLive().then(
-      (answer) => {
-        if (!cancelled) setLive(answer.matchId);
-      },
-      () => undefined,
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { live, liveError, retryLive } = useLiveCoop();
 
   // The host's wait: the room names its match once the guest joins (B33), or is gone (B34).
   useEffect(() => {
@@ -230,6 +242,18 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
         <a className="button-primary" data-testid={duosTestid.coopRejoin} href={paths.duos(live)} onClick={followInApp(paths.duos(live))}>
           {t("Back to your co-op game")}
         </a>
+      )}
+      {liveError === null ? null : (
+        <>
+          <p className="coop-panel__error" role="alert">
+            {t("Your live co-op game could not be checked: {message}", { message: t(liveError) })}
+          </p>
+          <div className="coop-panel__row">
+            <button type="button" data-testid={duosTestid.coopLiveRetry} onClick={retryLive}>
+              {t("Try again")}
+            </button>
+          </div>
+        </>
       )}
 
       <div className="coop-panel__row">

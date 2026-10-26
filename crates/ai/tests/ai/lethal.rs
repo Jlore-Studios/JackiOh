@@ -571,6 +571,269 @@ mod duos_life_r964000 {
     }
 }
 
+/// R1965000 (issue #1965): C #90 In Too Deep's reward L lets the AI play cards from its graveyard
+/// (R454), so a (0) Spell there can be played again and again: C #37 Last Hurrah and M #62 Small Time
+/// Recruits, which do nothing with the deck empty, and The Coin, whose mana this turn has no cap. The
+/// board needs a lethal the depth-first walk does not find first: p2 stands at 6 behind a Felinor
+/// Token in Defense Position (Taunt, Armor 1), and p1's 4-mana 7/7 (Armor 7) would kill it and
+/// survive, the first attack in move order, but would leave Bigot's 4 short of the face. The lethal is
+/// Bigot into the Token, a trade down that comes after the plays in move order, then the 7/7 at the
+/// face. The best-first walk proved it behind replays of the Spells, and `decide`, playing a line's
+/// first action and planning again, replayed them without end; it now plays the line trimmed to the
+/// actions it needs (`trim_lethal`).
+mod free_replays_r1965000 {
+    use super::*;
+    use std::cell::Cell;
+
+    use jackioh_ai::{AiOptions, AiTurnResult, decide, play_ai_turn, trim_lethal};
+    use jackioh_engine::testkit::{Action, Scenario, reduce, subsystems};
+
+    const IN_TOO_DEEP: &str = "classic-090";
+    const LAST_HURRAH: &str = "classic-037";
+    const SMALL_TIME_RECRUITS: &str = "meditative-062";
+    const COIN: &str = "core-t-coin";
+    /// Meditative+ #1.1 Base Camp, a (0) Spell token: two Coins to its player's hand.
+    const BASE_CAMP: &str = "meditativeplus-001-1";
+    /// Meditative+ #17 Dogpile, (1): 2 damage to an enemy, and casts another Dogpile in hand at it.
+    const DOGPILE: &str = "meditativeplus-017";
+    const BIGOT: &str = "core-002";
+    const SEVEN_SEVEN: &str = "core-025";
+    const FELINOR_TOKEN: &str = "core-t-felinor";
+    const STOCKPILE: &str = "core-005";
+
+    /// In Too Deep's line as quest 9 leaves it, with reward L held.
+    fn hold_reward_l(s: &mut Scenario) {
+        let itd = s.card(IN_TOO_DEEP).id.clone();
+        find_instance_mut(s.state_mut(), &itd)
+            .expect("In Too Deep in the backrow")
+            .memory
+            .insert(
+                subsystems::QUEST_MEMORY_KEY.to_string(),
+                json!({ "active": [], "progress": {}, "done": ["9"], "auras": ["L"], "waiting": [] }),
+            );
+    }
+
+    /// The board above, with `graveyard` in p1's graveyard.
+    fn board(graveyard: &[&str]) -> GameState {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "r1965000",
+            "active": AI,
+            "turn": 9,
+            "p1": {
+                "field": [SEVEN_SEVEN, BIGOT],
+                "backrow": [IN_TOO_DEEP],
+                "graveyard": graveyard,
+                "hand": [],
+                "library": [],
+            },
+            "p2": {
+                "health": 6,
+                "field": [{ "def": FELINOR_TOKEN, "position": "DEF" }],
+                "hand": [STOCKPILE],
+                "library": [STOCKPILE, STOCKPILE, STOCKPILE, STOCKPILE],
+            },
+        }));
+        hold_reward_l(&mut s);
+        s.state().clone()
+    }
+
+    /// The AI's turn from `start`.
+    fn ai_turn(start: &GameState) -> AiTurnResult {
+        let mut ai = AiOptions::with_budget(create_rng("r1965000", 0), AI_BUDGET);
+        play_ai_turn(start, AI, &mut ai)
+    }
+
+    /// How many of the turn's actions play `id`.
+    fn plays_of(turn: &AiTurnResult, id: &str) -> usize {
+        turn.actions
+            .iter()
+            .filter(
+                |action| matches!(&action.body, ActionBody::Play { instance_id, .. } if instance_id == id),
+            )
+            .count()
+    }
+
+    /// Who won when the turn stopped, if anyone did.
+    fn winner(turn: &AiTurnResult) -> Option<PlayerId> {
+        turn.state
+            .result
+            .as_ref()
+            .and_then(|result| result.winner.player())
+    }
+
+    /// Three worlds of `state` for the solver, as `decide` makes them.
+    fn worlds(state: &GameState, seed: &str) -> Vec<GameState> {
+        let public = redact(state, AI);
+        let mut rng = create_rng(seed, 0);
+        (0..AI_BUDGET.determinizations)
+            .map(|_| determinize(&public, AI, &mut rng, DeterminizeOptions::default()))
+            .collect()
+    }
+
+    /// The AI's turn on `board(graveyard)`: it wins this turn, inside play_ai_turn's ceiling, and plays
+    /// none of the graveyard's cards, which the lethal does not need, though each is offered.
+    fn wins_without_replaying(graveyard: &[&str]) {
+        let start = board(graveyard);
+        let turn = ai_turn(&start);
+        assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));
+        for def in graveyard {
+            let id = mine(&start, AI, def).id;
+            assert!(
+                legal_actions(&start, AI).iter().any(
+                    |action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id)
+                ),
+                "{def} is offered from the graveyard"
+            );
+            assert_eq!(plays_of(&turn, &id), 0, "{def}: {}", trace(&turn));
+        }
+    }
+
+    #[test]
+    fn r1965000_free_spells_that_change_nothing_are_not_played_before_the_lethal() {
+        wins_without_replaying(&[LAST_HURRAH, SMALL_TIME_RECRUITS]);
+    }
+
+    #[test]
+    fn r1965000_a_coin_the_lethal_does_not_need_is_not_played_before_it() {
+        wins_without_replaying(&[COIN]);
+    }
+
+    #[test]
+    fn r1965000_a_coin_and_the_two_spells_are_not_played_before_the_lethal() {
+        wins_without_replaying(&[COIN, LAST_HURRAH, SMALL_TIME_RECRUITS]);
+    }
+
+    #[test]
+    fn r1965000_trim_lethal_cuts_the_replays_the_walk_proved_the_lethal_behind() {
+        let start = board(&[COIN]);
+        let dets = worlds(&start, "r1965000-trim");
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let found = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes).expect("a lethal");
+        let coin = mine(&start, AI, COIN).id;
+        assert!(
+            matches!(found.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == coin),
+            "the walk opens with the Coin: {found:?}"
+        );
+        let trimmed = trim_lethal(&dets, AI, found, &counter).expect("the trim fits the budget");
+        let bigot = mine(&start, AI, BIGOT).id;
+        let seven = mine(&start, AI, SEVEN_SEVEN).id;
+        let token = mine(&start, HUMAN, FELINOR_TOKEN).id;
+        assert_eq!(
+            trimmed,
+            vec![
+                ActionBody::Attack {
+                    attacker_id: bigot,
+                    target_id: token
+                },
+                ActionBody::Attack {
+                    attacker_id: seven,
+                    target_id: format!("hero-{HUMAN}")
+                },
+            ]
+        );
+        assert!(counter.used() <= AI_BUDGET.nodes, "{} nodes", counter.used());
+    }
+
+    /// The decisions a clock-stopped turn below may take before it must have ended.
+    const CLOCKED_DECISIONS: usize = 30;
+
+    /// A clock that stops a decision inside the trim (a slow device under the practice clock, a ladder
+    /// bot's acting clock) leaves no proved lethal to play: the decision ends the turn, as one the clock
+    /// stops inside the solver does. It never plays the untrimmed line's Coin, which a clock stopping
+    /// each decision at the same point would have played at every one. Every stop from the first node
+    /// to the last of the unhurried decision is tried, so the trim's window is among them.
+    #[test]
+    fn r1965000_a_clock_that_stops_the_trim_plays_no_coin_and_the_turn_ends() {
+        let start = board(&[COIN]);
+        let coin = mine(&start, AI, COIN).id;
+        let unhurried = decide(
+            &start,
+            AI,
+            &mut AiOptions::with_budget(create_rng("r1965000", 0), AI_BUDGET),
+        )
+        .expect("the AI acts")
+        .stats
+        .nodes;
+        for stop_after in 0..=unhurried {
+            let mut state = start.clone();
+            let mut rng = create_rng("r1965000", 0);
+            for n in 0..CLOCKED_DECISIONS {
+                let polls = Cell::new(0usize);
+                let stop = || {
+                    polls.set(polls.get() + 1);
+                    polls.get() > stop_after
+                };
+                let mut ai = AiOptions {
+                    rng,
+                    budget: AI_BUDGET,
+                    should_stop: Some(&stop),
+                };
+                let decision = decide(&state, AI, &mut ai).expect("the AI acts");
+                rng = ai.rng;
+                assert!(
+                    !matches!(&decision.action, ActionBody::Play { instance_id, .. } if *instance_id == coin),
+                    "stopped after {stop_after} polls, decision {n} plays the Coin"
+                );
+                let next = reduce(&state, &Action::new(decision.action, AI, format!("t{n}")));
+                assert_eq!(next.error, None, "stopped after {stop_after} polls, decision {n}");
+                state = next.state;
+                if state.result.is_some() || state.active != AI {
+                    break;
+                }
+            }
+            assert!(
+                state.result.is_some() || state.active != AI,
+                "stopped after {stop_after} polls, the turn did not end"
+            );
+        }
+    }
+
+    /// A replay the lethal does need is kept: Base Camp, already played this turn and back in the
+    /// graveyard, adds two Coins at no cost and moves no attack, and a Coin's mana pays for a Dogpile,
+    /// which casts the other at the enemy hero for 4. Every step is needed, so the trim keeps them all.
+    #[test]
+    fn r1965000_a_replay_the_lethal_needs_is_found_and_kept() {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "r1965000-base-camp",
+            "active": AI,
+            "turn": 9,
+            "p1": {
+                "mana": 0,
+                "backrow": [IN_TOO_DEEP],
+                "graveyard": [BASE_CAMP],
+                "hand": [DOGPILE, DOGPILE],
+                "library": [],
+            },
+            "p2": {
+                "health": 4,
+                "hand": [STOCKPILE],
+                "library": [STOCKPILE, STOCKPILE, STOCKPILE, STOCKPILE],
+            },
+        }));
+        hold_reward_l(&mut s);
+        let camp = s.card(BASE_CAMP).id.clone();
+        let log = &mut s.state_mut().players[AI].turn_log;
+        log.played_ids.push(camp.clone());
+        log.cards_played += 1;
+        let start = s.state().clone();
+
+        let dets = worlds(&start, "r1965000-base-camp");
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let found = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes).expect("a lethal");
+        assert!(
+            matches!(found.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == camp),
+            "{found:?}"
+        );
+        assert_eq!(trim_lethal(&dets, AI, found.clone(), &counter), Some(found));
+
+        let turn = ai_turn(&start);
+        assert_eq!(winner(&turn), Some(AI), "{}", trace(&turn));
+        assert_eq!(plays_of(&turn, &camp), 1, "{}", trace(&turn));
+    }
+}
+
 mod hero_ineligible_attacks {
     use super::*;
 

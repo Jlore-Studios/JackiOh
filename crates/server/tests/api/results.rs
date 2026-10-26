@@ -914,6 +914,25 @@ mod results_m7_t2 {
         assert!(store!(&app, |t| t.tickets_open_for_profile(A)).is_none());
     }
 
+    /// R1896000: a result clears a seat's in-match flag only while it names the result's match, so
+    /// a late result never takes a player out of the match they are in now.
+    #[tokio::test]
+    async fn r1896000_a_result_clears_only_the_in_match_flag_that_names_its_match() {
+        install_test_cards();
+        let app = scenario(ScenarioOptions::default()).await;
+        // B was seated in a newer match before this one's result landed.
+        store!(&app, |t| t.profiles_clear_in_match(B, MATCH_ID));
+        assert!(store!(&app, |t| t.profiles_set_in_match(B, Some("match-2"))));
+        record(&app, &[json!({ "type": "concede", "playerId": "p2" })]).await;
+        assert!(profile(&app, A).await["inMatchId"].is_null());
+        assert_eq!(profile(&app, B).await["inMatchId"], "match-2");
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(1)
+        );
+        assert_eq!(match_row(&app, MATCH_ID).await["status"], "finished");
+    }
+
     mod ranked_and_unranked_r604_r611 {
         use super::*;
 
