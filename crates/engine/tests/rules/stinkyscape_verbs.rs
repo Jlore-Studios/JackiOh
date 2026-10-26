@@ -651,6 +651,21 @@ mod r1849006_units_cannot_be_in_defense {
         s.switch_position(grunt.as_str());
         assert_eq!(s.card(grunt.as_str()).position, Some(Position::Def));
     }
+
+    #[test]
+    fn r1849006_a_dormant_aura_bars_nothing() {
+        // A Dormant card's text is off until it awakens (R1839000), its aura among it.
+        let mut s = board(
+            "r1849006-dormant",
+            json!({ "field": [{ "def": WARDEN, "slumber": { "turns": 2 } }, GRUNT] }),
+            json!({ "field": [{ "def": GRUNT, "position": "DEF" }] }),
+        );
+        let (grunt, theirs) = (id_at(&s, P1, 2), id_at(&s, P2, 1));
+        assert!(offers_switch(&s, &grunt));
+        s.switch_position(grunt.as_str());
+        assert_eq!(s.card(grunt.as_str()).position, Some(Position::Def));
+        assert_eq!(s.card(theirs.as_str()).position, Some(Position::Def));
+    }
 }
 
 mod r1849007_random_attacker {

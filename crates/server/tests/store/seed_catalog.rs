@@ -7,8 +7,9 @@
 //! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real
 //! catalog into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002)
 //! admits 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake and AI (B2.4) from 0015, Plague
-//! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030
-//! and the Meditative+ set's Potion (R1178000) from 0043. The seed runs in one transaction, so one
+//! from 0020, Catalyst, Prime and Acclaimed from 0026, the Meditative set's Wincon (R1411) from 0030,
+//! the Meditative+ set's Potion (R1178000) from 0043, and #1837's Terminus, Quest, Otherworldly,
+//! Other-Origins and Jelly Bean (R1837000) from 0058. The seed runs in one transaction, so one
 //! such row fails the whole catalog. The first half compares the tags with the migrations' text; the
 //! second checks that the database really accepts them. Both count the catalog of the sets that ship
 //! (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative set and the
@@ -283,8 +284,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0043_meditative_plus_set.sql",
-            "0043 re-adds the check with Potion (R1178000)"
+            file, "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql",
+            "0058 re-adds the check with #1837's five tags (R1837000)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -313,6 +314,13 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             carried.iter().any(|carried| carried == "Potion"),
             set_ships(SetName::MeditativePlus)
         );
+        // R1837000: and the five tags #1837 puts on shipped cards.
+        for tag in ["Terminus", "Quest", "Otherworldly", "Other-Origins", "Jelly Bean"] {
+            assert!(
+                carried.iter().any(|carried| carried == tag),
+                "the catalog carries {tag}"
+            );
+        }
         let refused: Vec<&String> = carried.iter().filter(|tag| !tags.contains(tag)).collect();
         assert!(refused.is_empty(), "tags the schema would refuse: {refused:?}");
         // No stale name either: every tag the check admits is one the engine's `Tag` union names
@@ -324,17 +332,30 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
         );
     }
 
-    /// R1411: the migration that ships the Meditative set, and 0043 after it, which ships the
-    /// Meditative+ set (R1178000). The check admits exactly the tags the engine names, in its order,
-    /// Wincon and Potion among them, so every entry of every set the catalog holds seeds the day its
-    /// set ships, the Meditative and Meditative+ sets' included.
+    /// R1411: the migration that ships the Meditative set, 0043 after it, which ships the
+    /// Meditative+ set (R1178000), and 0058, which admits #1837's five tags (R1837000). The check
+    /// admits exactly the tags the engine names, in its order, Wincon, Potion and the five among
+    /// them, so every entry of every set the catalog holds seeds the day its set ships, the
+    /// Meditative and Meditative+ sets' included.
     #[tokio::test]
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0043_meditative_plus_set.sql");
-        assert!(tags.iter().any(|tag| tag == "Wincon"), "{tags:?}");
-        assert!(tags.iter().any(|tag| tag == "Potion"), "{tags:?}");
+        assert_eq!(
+            file,
+            "0058_terminus_quest_otherworldly_other_origins_jelly_bean_tags.sql"
+        );
+        for tag in [
+            "Wincon",
+            "Potion",
+            "Terminus",
+            "Quest",
+            "Otherworldly",
+            "Other-Origins",
+            "Jelly Bean",
+        ] {
+            assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
+        }
         // R1178000: but for a tag that waits for its held set's release. Potion waited for 0043,
         // which lands with the gate that ships Meditative+, so none waits once the set ships.
         assert_eq!(
@@ -548,6 +569,19 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // R882, and no catalog entry).
         assert_eq!(rows_tagged("Potion"), tagged("Potion"));
         assert_eq!(tagged("Potion"), meditative_plus(3));
+        // R1837000: the five tags 0058 admits, on Core #100 (Terminus), Classic #90 (Quest),
+        // Classic+ #32 (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly
+        // Bean).
+        for (tag, count) in [
+            ("Terminus", 1),
+            ("Quest", 1),
+            ("Otherworldly", 1),
+            ("Other-Origins", 3),
+            ("Jelly Bean", 4),
+        ] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert_eq!(tagged(tag), count, "{tag}");
+        }
         // Each row's tags are the catalog's, so the check admitted them and nothing rewrote them.
         let by_id: IndexMap<&str, &Vec<String>> = entries
             .iter()

@@ -11,6 +11,7 @@ import type { PlayerId, PlayerView, PortraitId, Row } from "@jackioh/shared";
 
 import { HIDDEN_ID, newEventsSince, planEntries } from "../../game/animations.ts";
 import { laneIndex, LANES, testid } from "../../game/contract.ts";
+import { seatOutcome } from "../../game/outcome.ts";
 import type { Side } from "../../game/contract.ts";
 import { REPLAY_GIF_ENTRY_HOLD_MS, REPLAY_GIF_MAX_SECONDS, REPLAY_GIF_MAX_STEPS, REPLAY_GIF_STEP_HOLD_MS } from "../config.ts";
 
@@ -103,8 +104,10 @@ function handCount(hand: PlayerView["you"]["hand"]): number {
 
 function bannerText(view: PlayerView): string | null {
   if (view.result === null) return null;
-  if (view.result.winner === "draw") return "Draw";
-  return view.result.winner === view.viewer ? "You win" : "You lose";
+  // R1843004: the other player's `fled` is this seat's draw.
+  const outcome = seatOutcome(view.result.winner, view.result.reason, view.viewer);
+  if (outcome === "draw") return "Draw";
+  return outcome === "win" ? "You win" : "You lose";
 }
 
 /** One step's board as a display list, and where each element a ring may mark stands (by the board's own test ids). */

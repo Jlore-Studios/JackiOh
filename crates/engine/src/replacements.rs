@@ -167,7 +167,10 @@ fn candidates(state: &GameState, about: Option<&CardInstance>) -> Vec<Candidate>
             add_candidate(&mut out, &mut seen, card, player, CandidateZone::Field);
         }
         for slot in crate::zones::slots_of(player, Row::Backrow) {
-            if let Some(card) = crate::zones::card_at(state, slot) {
+            // R1839000: a Dormant Unit standing there replaces nothing until it awakens.
+            if let Some(card) = crate::zones::card_at(state, slot)
+                && !crate::slumber::is_slumbering(card)
+            {
                 add_candidate(&mut out, &mut seen, card, player, CandidateZone::Backrow);
             }
         }

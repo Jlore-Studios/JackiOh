@@ -1,5 +1,5 @@
 /* A Stack pile opened as a wheel (issue #124): the dialog around CardWheel. The pile's top card
-   stands forward with its face, the dormant cards under it as backs, so what is above and below
+   stands forward with its face, the cards beneath it as backs, so what is above and below
    what is obvious. transform and opacity carry every move; reduced motion holds them still. */
 
 .card-wheel {

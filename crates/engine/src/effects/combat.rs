@@ -518,3 +518,27 @@ pub fn forced_attack_own_hero(args: ForcedAttackOwnHeroArgs) -> Effect {
         force_attack_own_hero(ctx, &attacker);
     })
 }
+
+/// `melee`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct MeleeArgs {
+    /// The most attacks the melee makes. Absent: `MELEE_MAX_ATTACKS` (Wild System's 20).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_attacks: Option<i32>,
+}
+
+/// R1848005 (Stinkyscape #120 Wild System): "All units attack each other until only one survives" —
+/// forced attacks between pairs of Units drawn at random, allies included, each its own combat and
+/// state check, until one Unit or none is left, none may attack another, or `max_attacks` have been
+/// made (`combat::run_melee`).
+pub fn melee(args: MeleeArgs) -> Effect {
+    Effect::new("melee", move |ctx| {
+        let attacks = args
+            .max_attacks
+            .unwrap_or(crate::config::MELEE_MAX_ATTACKS)
+            .max(0);
+        crate::combat::run_melee(ctx, attacks);
+    })
+}

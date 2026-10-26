@@ -90,6 +90,8 @@ pub const SHOVE: &str = "sv-shove";
 pub const WARP: &str = "sv-warp";
 /// A Field Spell: the same, "all Units from your side attack it".
 pub const WARP_II: &str = "sv-warp-ii";
+/// A 2/2 Unit: "Aura: Units cannot be in Defense Position."
+pub const WARDEN: &str = "sv-warden";
 /// A 4/5 Unit: "When one of your Taunt Units is attacked, give it +2 attack."
 pub const JEMPIRE: &str = "sv-jempire";
 /// A 1/5 Unit: "When one of your Units is attacked, choose left or right, then give it +3 attack."
@@ -441,6 +443,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
             }),
         ),
         (WARP.to_string(), both(warp(true))),
+        (
+            WARDEN.to_string(),
+            both(Script {
+                static_flags: flags(json!({ "unitsNeverDefense": true })),
+                ..Script::default()
+            }),
+        ),
         (WARP_II.to_string(), both(warp(false))),
         (
             JEMPIRE.to_string(),
@@ -563,6 +572,7 @@ fn defs() -> Vec<CardDef> {
         card(18523, TAUNTER, "Unit", Some((2, 4)), json!([{ "kind": "Taunt" }])),
         card(18524, FLYER, "Unit", Some((2, 3)), json!([{ "kind": "Flying" }])),
         card(18525, PLAIN, "Unit", Some((1, 1)), json!([])),
+        card(18526, WARDEN, "Unit", Some((2, 2)), json!([])),
     ]
 }
 

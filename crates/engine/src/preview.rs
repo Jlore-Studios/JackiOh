@@ -52,6 +52,14 @@ pub fn lasting_text_dormant(state: &GameState, card: &CardInstance) -> bool {
         && !crate::scripts::script_of(state, card).live_face_down
 }
 
+/// R1487000, R1839000: whether a card's lasting text is off — its auras, static flags, hero Armor,
+/// draw limits, discard guards, cost rules, permissions, every text a reader takes off the board —
+/// because it is face-down (`lasting_text_dormant`) or Dormant (`slumber.rs`): a Dormant card's text
+/// wakes only when the card awakens. What each board walk that reads lasting text asks.
+pub fn lasting_text_off(state: &GameState, card: &CardInstance) -> bool {
+    crate::slumber::is_slumbering(card) || lasting_text_dormant(state, card)
+}
+
 /// R1447, §10.8: the ids among `ids` that `viewer` may read where the card lies (R466's readers): a
 /// face-down card only for its controller, a hand only for its holder, a library for nobody, and a
 /// card that has ceased to exist never.

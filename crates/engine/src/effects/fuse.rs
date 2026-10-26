@@ -804,6 +804,8 @@ fn fuse_candidates(
         card.id != ingredient.id
             && same_fuse_type(card_type_of(state, card), kind)
             && !unit_has(state, card, KeywordKind::Immutable)
+            // R1839000: nothing fuses onto a Dormant card.
+            && !crate::slumber::is_slumbering(card)
     };
     let mut out: Vec<CardInstance> = Vec::new();
     if piles.contains(&FuseOntoPile::Field) {

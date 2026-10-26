@@ -34,7 +34,9 @@
 //!    `both-heroes-dead` (§2.5's second row — the one ending no other scripted
 //!    card can reach, and the seventh of the reasons `api/results.rs` writes);
 //!  - `test-glitch-swap`   a Glitch's swap (R677): `seat_swaps` goes up by one, `glitched` announces it;
-//!  - `test-glitch-void`   a Glitch's void (R679): the game ends, no winner, reason `voided`.
+//!  - `test-glitch-void`   a Glitch's void (R679): the game ends, no winner, reason `voided`;
+//!  - `test-flee`          the player who played it flees (R1843002): they win by `fled`, and the
+//!    other player draws on the ladder (R1843004).
 //!
 //! Their prompts are the engine's own (`choose_mode`): kind `mode`, where TS's fake opened kind
 //! `target`. The filler `test-card-<n>` cards are 0-cost Spells that do nothing.
@@ -52,7 +54,7 @@ use std::time::Duration;
 
 use indexmap::IndexMap;
 use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH};
-use jackioh_engine::effects::{add_to_hand, choose_mode, lose_health};
+use jackioh_engine::effects::{add_to_hand, choose_mode, flee, lose_health};
 use jackioh_engine::game_over::end_game;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::script::Effect;
@@ -81,6 +83,8 @@ pub const TEST_MUTUAL_LETHAL: &str = "test-mutual-lethal";
 pub const TEST_GLITCH_SWAP: &str = "test-glitch-swap";
 /// A Glitch's void (R679): the game ends with no winner, reason `voided`.
 pub const TEST_GLITCH_VOID: &str = "test-glitch-void";
+/// R1843002: the player who played it flees, a win by `fled` and a draw for the other player.
+pub const TEST_FLEE: &str = "test-flee";
 
 /// R1253000: a 0-cost Quickdraw Spell whose play panics, as a settle cap's `panic!` does. It is not in
 /// `install_test_cards`'s catalog: `install_panicking_test_cards` adds it.
@@ -179,6 +183,12 @@ pub fn test_card_defs() -> Vec<CardDef> {
         TEST_GLITCH_VOID,
         glitches + 1,
         "Quickdraw. Glitch: void.",
+    ));
+    // After the Glitches, so every index above stays where it was.
+    defs.push(test_def(
+        TEST_FLEE,
+        glitches + 2,
+        "Quickdraw. Escape the universe and win the game; your opponent draws.",
     ));
     defs
 }
@@ -287,6 +297,14 @@ fn test_card_scripts() -> Vec<(String, Script)> {
     }
     scripts.push((TEST_GLITCH_SWAP.to_string(), glitch_script(GlitchOutcome::Swap)));
     scripts.push((TEST_GLITCH_VOID.to_string(), glitch_script(GlitchOutcome::Void)));
+    scripts.push((
+        TEST_FLEE.to_string(),
+        Script {
+            static_flags: quickdraw(),
+            cry: Some(hook(|_ctx| vec![flee(Default::default())])),
+            ..Script::default()
+        },
+    ));
     scripts
 }
 

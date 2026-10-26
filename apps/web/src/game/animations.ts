@@ -842,6 +842,92 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "banner" },
     target: () => testid.banner,
   },
+  // R1839002: a Dormant card awakens where it lies; its Dormant badge falls away with the next view.
+  awakened: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R1838001: a Trade. The trader's deck pulses as a card back goes from their hand into it; the
+  // `shuffledIn` and `drawn` after it move the cards, backs for a seat that may not read them.
+  traded: {
+    animation: "jk-shuffle-in",
+    durationMs: 300,
+    testid: "library-<side>",
+    fx: { recipe: "shuffle" },
+    target: (e, view) => animTestid.library(sideOf(view, e.player)),
+  },
+  // R1840000: a Resource reaches its player's tray, beside the hand: the hand's edge glints as for
+  // `addedToHand`, with no effect (FX "—"); the other seat's view names no card.
+  resourceGained: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1840001: a Resource gained past the tray's cap is sold at once, as a full hand burns a card.
+  resourceSold: {
+    animation: "jk-hand-full",
+    durationMs: 700,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1840004: a Resource discarded from the tray ceases to exist.
+  resourceDiscarded: {
+    animation: "jk-hand-edge",
+    durationMs: 250,
+    testid: "hand-<side>",
+    target: (e, view) => animTestid.hand(sideOf(view, e.player)),
+  },
+  // R1840005: the Credits count ticks by the hero, as the Jade Counter's does.
+  marketCreditsChanged: {
+    animation: "jk-badge-tick",
+    durationMs: 200,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
+  // R1852000: a dead piece's copy merges into its owner's Dormant Starship, which the `fused` before it
+  // drew; the Starship's piece count rises with the next view.
+  starshipFused: {
+    animation: "jk-fuse-merge",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // R1852003: the Starship launches where it stands, its Dormant badge gone and its name on its face.
+  starshipLaunched: {
+    animation: "jk-radiant-pulse",
+    durationMs: 600,
+    testid: "card-<instanceId>",
+    fx: { recipe: "brand" },
+    target: (e, view) => locateInstance(view, e.instanceId),
+  },
+  // Issue #1843 (R1843000): a card votes to remove a player; it flares where it stands, or the voted
+  // player's backrow when the viewer cannot see it, and the log counts the tally.
+  voteCast: {
+    animation: "jk-radiant-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId> | backrow-<side>",
+    target: (e, view) => instanceOrPile(view, e.instanceId, animTestid.backrow(sideOf(view, e.player))),
+  },
+  // R1843000: the cards agree, and the banner says the player is voted out before the result.
+  votedOut: {
+    animation: "jk-banner",
+    durationMs: 1200,
+    testid: "turn-banner",
+    fx: { recipe: "banner" },
+    target: () => testid.banner,
+  },
+  // R1843002: the fleer's hero fades out of the universe under a banner, before the result.
+  fled: {
+    animation: "jk-exile-fade",
+    durationMs: 900,
+    testid: "hero-<side>",
+    fx: { recipe: "banner" },
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
 };
 
 /**

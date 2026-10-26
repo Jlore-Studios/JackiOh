@@ -263,6 +263,11 @@ pub enum ActionBody {
     },
     Concede,
     EndTurn,
+    /// R1838000: Trade a Tradable card from the sender's hand: it goes into their deck at a random
+    /// position and they draw a card, at `TRADE_COST`, within their Trades this turn (`trade.rs`).
+    Trade {
+        instance_id: String,
+    },
     /// R345: the sender's own preference for R82's automatic turn end. A setting, not a move: it is
     /// accepted from either seat at any moment of a live game, changes nothing on the board, and is
     /// never offered by `legalActions`, so no policy ever sends it.
@@ -296,6 +301,7 @@ string_union! {
         Emote = "emote",
         Concede = "concede",
         EndTurn = "endTurn",
+        Trade = "trade",
         SetAutoEndTurn = "setAutoEndTurn",
         Sandbox = "sandbox",
         Timeout = "timeout",
@@ -320,6 +326,7 @@ impl ActionBody {
             ActionBody::Emote { .. } => ActionType::Emote,
             ActionBody::Concede => ActionType::Concede,
             ActionBody::EndTurn => ActionType::EndTurn,
+            ActionBody::Trade { .. } => ActionType::Trade,
             ActionBody::SetAutoEndTurn { .. } => ActionType::SetAutoEndTurn,
             ActionBody::Sandbox { .. } => ActionType::Sandbox,
             ActionBody::Timeout => ActionType::Timeout,
