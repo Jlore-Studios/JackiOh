@@ -1778,18 +1778,18 @@
           "conflicts": [
             "spec/11-rulings.md"
           ],
-          "from": "bf1700d65de4e7b3661ed491d883d216452cb6cd",
-          "main": "6a3406b24328165950e60748e0d915c0d7019d29"
+          "from": "1a284786dedab4bb1bb68b20ab2e2b27c620442b",
+          "main": "c3af6db76704f90784f799cb58f4cf8fb79f9da8"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40247270662",
+            "run": "40253751528",
             "tier": "strong"
           }
         ],
-        "sha": "1a284786dedab4bb1bb68b20ab2e2b27c620442b",
+        "sha": "7ff2aaa56a95ffc5e56be99eac410daacee54a8f",
         "tiers": {
           "claude": "strong"
         }
