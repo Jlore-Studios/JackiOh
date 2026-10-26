@@ -1918,12 +1918,8 @@
     "what": "build #1853 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-26T01:35:04Z",
-    "notes": [
-      "delivered revise #1908 on claude-4 (run 40247364422): approved",
-      "started build #1853 on claude-4 (run 40255146937)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 7h 21m; `muse` its last run could not work, 6 times in a row (the muse CLI failed at once: muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-1908 (explicit)); it is left alone until 2026-10-26T04:14:47Z; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 116h 21m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` is busy; `devin` is idle, but nothing queued is for it"
-    ],
+    "at": "2026-10-26T01:40:52Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
