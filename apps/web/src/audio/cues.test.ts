@@ -255,6 +255,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
   // #1850 (R1850003).
   held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
+  // Issue #1855 (R1855000).
+  boardReplaced: { type: "boardReplaced", player: "p1" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -359,6 +361,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   fled: "whoosh",
   starscapeTravelled: "whoosh",
   held: "poof",
+  boardReplaced: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -403,6 +406,8 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "votedOut",
   "fled",
   "held",
+  // R1855000: a board replacement's whoosh, whatever the seat.
+  "boardReplaced",
   "countered",
   "stolen",
   "unlocked",

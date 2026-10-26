@@ -1094,6 +1094,13 @@ pub fn run_resumable_list(
 /// steps runs the text that started it. An instance that has ceased to exist resumes with
 /// `ctx.self === null`, which is why a step carries what it needs in `data`.
 pub fn run_resume(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOptions) -> bool {
+    // R1855001: a run whose caster's choices are random is random in every continuation of it too.
+    let mode = crate::random_cast::random_choices_of(resume);
+    crate::random_cast::with_cast_mode(sink, mode, |sink| run_resume_now(sink, resume, options))
+}
+
+/// `run_resume`, under whatever mode is in force.
+fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOptions) -> bool {
     let paused = paused_of(&resume.data);
     // R113: an answered step (`resumeSelf`) and a parked tail (`PausedStep`) are the run continued.
     let run = run_marks_of(&resume.data);
