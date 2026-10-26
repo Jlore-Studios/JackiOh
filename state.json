@@ -2772,10 +2772,10 @@
       },
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-7",
       "round_tier": "",
-      "run_id": "40364924188",
-      "started_at": "2026-10-26T17:02:46Z",
+      "run_id": "pending:be6cd6cf-1793036734",
+      "started_at": "2026-10-26T17:46:28Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -2910,9 +2910,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T17:35:16Z",
+    "at": "2026-10-26T17:46:28Z",
     "url": "",
-    "what": "revise #2008 on muse"
+    "what": "plan #2010 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-26T17:32:31Z",
