@@ -2117,8 +2117,12 @@
     "what": "plan #1999 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-26T12:48:27Z",
-    "notes": [],
+    "at": "2026-10-26T12:55:30Z",
+    "notes": [
+      "#1999 needs a plan",
+      "started plan #1999 on claude-4 (run 40326544638)",
+      "nothing more to start: nothing is queued"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -2823,7 +2827,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T12:48:27Z",
+  "loop_tick": "2026-10-26T12:55:30Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T09:30:02Z",
