@@ -2685,11 +2685,12 @@
     "what": "revise #2009 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-10-26T15:40:27Z",
+    "at": "2026-10-26T15:51:28Z",
     "notes": [
-      "delivered review #2007 on claude-3 (run 40350158730): reviewed",
-      "delivered plan #1995 on claude-6 (run 40338762790): planned",
-      "started build #1995 on claude-6 (run 40352160629)",
+      "delivered revise #2004 on muse (run 40344496768): approved",
+      "delivered build #1996 on claude-3 (run 40342519626): approved",
+      "started revise #2004 on muse (its run is not listed yet)",
+      "started revise #2009 on claude-8 (run 40354295547)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -3396,7 +3397,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T15:40:27Z",
+  "loop_tick": "2026-10-26T15:51:28Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T15:46:02Z",
