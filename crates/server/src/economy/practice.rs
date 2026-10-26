@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 use jackioh_ai::{AiOptions, ai_to_act, decide};
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, GameOverReason, GameState, LastBoardEntry, PerPlayerOpt, PlayerId,
-    Rng, SeatSummary, Winner,
+    Rng, SeatSummary,
 };
 
 use crate::actor::engine::{self, CreateGameArgs, FoldArgs, Pinned};
@@ -245,9 +245,11 @@ pub fn verify(
         return Err(ClaimRefusal::Voided);
     }
     let player = engine::seat_played_by(&state, human_home);
-    let won = match result.winner {
-        Winner::Draw => None,
-        winner => Some(winner == Winner::from(player)),
+    // R1843004: the AI's `fled` is a draw for the human, not a loss.
+    let won = match jackioh_engine::outcome_for(&result, player) {
+        jackioh_engine::SeatOutcome::Win => Some(true),
+        jackioh_engine::SeatOutcome::Loss => Some(false),
+        jackioh_engine::SeatOutcome::Draw => None,
     };
     if won != claimed.won() {
         return Err(ClaimRefusal::ResultMismatch);

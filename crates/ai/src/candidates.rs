@@ -776,12 +776,16 @@ pub fn root_candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBo
 }
 
 /// The candidates `actions` in move order: hero attacks, winning trades, even trades (each attacker's
-/// best, #1779), plays round-robin, answers, other attacks, position switches, endTurn.
+/// best, #1779), plays round-robin, answers, Trades of Tradable hand cards (R1838000), other attacks,
+/// position switches, endTurn.
 fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) -> Vec<ActionBody> {
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();
     let mut plays: Vec<ActionBody> = Vec::new();
     let mut answers: Vec<ActionBody> = Vec::new();
+    // R1838000: a hand card into the deck for a draw. The search tries it on its determinized worlds,
+    // whose libraries are resampled (R185), so the card it would draw never steers it.
+    let mut hand_trades: Vec<ActionBody> = Vec::new();
     // Tier 4, each with `even_trade`'s value.
     let mut late_attacks: Vec<(ActionBody, Option<f64>)> = Vec::new();
     let mut switches: Vec<ActionBody> = Vec::new();
@@ -807,6 +811,7 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
                 plays.push(action)
             }
             ActionBody::Answer { .. } => answers.push(action),
+            ActionBody::Trade { .. } => hand_trades.push(action),
             ActionBody::EndTurn => ends.push(action),
             _ => switches.push(action),
         }
@@ -834,6 +839,7 @@ fn in_move_order(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>) ->
     out.extend(even_trades.into_iter().map(|(_, action)| action));
     out.extend(round_robin(state, seat, &plays));
     out.extend(answers);
+    out.extend(hand_trades);
     out.extend(other_attacks.into_iter().map(|(_, action)| action));
     out.extend(switches);
     out.extend(ends);

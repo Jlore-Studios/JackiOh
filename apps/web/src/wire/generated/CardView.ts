@@ -76,6 +76,13 @@ paretoOptimal?: true,
  */
 playReason?: string, 
 /**
+ * R1838000, §10.8: why the viewer's own Tradable hand card cannot be Traded now
+ * (`trade::why_trade_refused`), as `play_reason` is for a play. Set only on those cards while the
+ * viewer may act (their turn, the main phase, no prompt open) and `legal_actions` lists no `trade`
+ * of the card. Absent otherwise, never empty, so a view with no Tradable card is what it was.
+ */
+tradeReason?: string, 
+/**
  * #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
  * dropped some of the choice combinations they are built from, so the list is a slice whose first
  * plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on
@@ -148,4 +155,10 @@ quest?: QuestView,
  * on its owner's view of it in hand, and on both views while it resolves (its play is public). The
  * card keeps its own name, cost and type; absent when it copies nothing.
  */
-copies?: CopiedTextView, };
+copies?: CopiedTextView, 
+/**
+ * R1848003: the X an X-cost card is set at (`CardInstance.fixed_x`), which is its price (`cost`)
+ * and the X it is played for, so the face prints the number where it would print X. Only on a
+ * card the viewer may read; absent on every other card.
+ */
+fixedX?: number, };

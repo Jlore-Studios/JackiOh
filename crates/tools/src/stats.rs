@@ -1279,7 +1279,8 @@ mod tests {
         let reasons = |counts: &[(&str, i32)]| {
             let mut all = serde_json::json!({
                 "hero-death": 0, "both-heroes-dead": 0, "concede": 0, "draw-accepted": 0, "turn-cap": 0,
-                "disconnect": 0, "match-ceiling": 0, "voided": 0, "alt-win": 0, "won-by-effect": 0
+                "disconnect": 0, "match-ceiling": 0, "voided": 0, "alt-win": 0, "won-by-effect": 0,
+                "voted-out": 0, "both-voted-out": 0, "fled": 0, "fled-decisive": 0
             });
             for (reason, count) in counts {
                 all[reason] = (*count).into();

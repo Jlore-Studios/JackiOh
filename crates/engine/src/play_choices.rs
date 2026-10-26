@@ -18,7 +18,8 @@
 //! in order, each taking its own minimum and the last one the remainder; one declaration may not
 //! name the same card twice while two declarations may both name the same card; a declaration the
 //! board cannot satisfy does not refuse the play, it fizzles on resolution — unless the play needs it
-//! (`required`, R703), and then the play is neither offered nor accepted. §9.1 is why a `hand` pick
+//! (`required`, R703), and then the play is neither offered nor accepted, as it is while a card's
+//! own play gate does not hold (`play_allowed`, R1851000). §9.1 is why a `hand` pick
 //! only ever offers the chooser's own hand, and R13 is why a unit pick only offers the top of a
 //! Stack pile.
 //!
@@ -204,6 +205,18 @@ pub fn mode_option_allowed(state: &GameState, player: PlayerId, card: &CardInsta
         .is_none_or(|allowed| allowed(state, player, option))
 }
 
+/// R1851000: whether this player may play this card now (`Script.play_allowed`; Meditative #53
+/// Prestige's Radiant face: a Radiant enemy card on the field). `card` is the face the play resolves
+/// (`resolving_face`), so a copier answers with its copied face's gate (R399, R1851002). The one check
+/// `listed_play_choices` offers by and `why_choices_refused` refuses by; a cast never asks it (R70,
+/// R1851001). A card with no gate allows it.
+pub fn play_allowed(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    crate::scripts::script_of(state, card)
+        .play_allowed
+        .as_ref()
+        .is_none_or(|allowed| allowed(state, player))
+}
+
 /// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that
 /// belongs to some modes only (`forModes`, #24's damage and heal target) asks for nothing when none
 /// of them was chosen, so it takes no slot of the flat `targets` list — and one that does belong to
@@ -237,7 +250,7 @@ fn permanents_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
         for slot in crate::zones::slots_of(player, row) {
             // R1487000: a face-down card's text sleeps until it is revealed or face-up.
             if let Some(held) = crate::zones::card_at(state, slot)
-                && !crate::preview::lasting_text_dormant(state, held)
+                && !crate::preview::lasting_text_off(state, held)
             {
                 out.push(held);
             }
@@ -685,7 +698,10 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
     if crate::subsystems::copied_text::copies_text(instance) {
         return crate::subsystems::copied_text::copied_chooses_x(state, instance);
     }
-    crate::mana::is_x_cost(state, instance) && crate::scripts::script_of(state, instance).cost.is_none()
+    // R1848003: nor one whose X is set (`fixed_x`): it is played for that X.
+    crate::mana::is_x_cost(state, instance)
+        && instance.fixed_x.is_none()
+        && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
 /// §2.3, R348: why this X is not one the player may choose for this card, or `Ok` when it is —
@@ -1127,6 +1143,10 @@ fn reachable(
     decl: &TargetDecl,
     candidate: &CardInstance,
 ) -> bool {
+    // R1839000: a Dormant card is never picked, for a target, a Tribute or anything else.
+    if crate::slumber::is_slumbering(candidate) {
+        return false;
+    }
     if decl.kind == PromptKind::Tribute {
         // R1220: a declared Tribute never offers an Untributable card.
         return !crate::query::is_untributable(state, candidate);
@@ -1766,6 +1786,13 @@ pub fn listed_play_choices(
         Some(declared) => declared.modes.clone(),
         None => declared_modes(state, card),
     };
+    // R1851000: a play gate that does not hold leaves no combination, so the card is not offered.
+    if declared.is_none() && !play_allowed(state, player, card) {
+        return ListedChoices {
+            combos: Vec::new(),
+            truncated: false,
+        };
+    }
     if target_decls.is_empty() && mode_decls.is_empty() {
         return ListedChoices {
             combos: vec![PlayChoices::default()],
@@ -2213,9 +2240,9 @@ fn why_unplayable(
             .map(|error| error.message);
     }
     // (e) Choices: the resolving face at the cheapest price declares something the board cannot
-    // answer — a needed pick (R703) or a mode with no allowed option (R831008). The probe is the
-    // listing's default (this price, its zone, its first Tribute set, no picks), so the refusal is
-    // the one §10.5 step 1 gives that play.
+    // answer — a needed pick (R703), a mode with no allowed option (R831008) or a play gate that does
+    // not hold (R1851000). The probe is the listing's default (this price, its zone, its first
+    // Tribute set, no picks), so the refusal is the one §10.5 step 1 gives that play.
     let face = resolving_face(
         state,
         player,
@@ -2659,6 +2686,13 @@ fn refuse_x(
             Some(_) => refuse(format!("{name} does not cost X")),
         };
     }
+    // R1848003: a set X is the play's; the action may name it or leave it out, and names no other.
+    if let Some(fixed) = card.fixed_x {
+        return match x {
+            Some(other) if other != fixed => refuse(format!("{name}'s X is set at {fixed}")),
+            _ => Ok(()),
+        };
+    }
     // R43: an X the card's own cost hook fixes (#98) is not the player's to choose, so whatever the
     // action names is ignored — never recorded on the card, never read by the cost (`play_steps`).
     if !chooses_x(state, card) {
@@ -2969,6 +3003,14 @@ pub fn why_choices_refused(
         &stamped,
         cost_with(state, card, action.x, action.embiggen),
     );
+    // R1851000: a play gate that does not hold refuses the play whatever it carried, as the listing
+    // offers none of it.
+    if !play_allowed(state, player, &face) {
+        return refuse(format!(
+            "{} cannot be played without something to act on",
+            name_of(state, &face.def_id)
+        ));
+    }
     let targets: &[Selection] = action.targets.as_deref().unwrap_or(&[]);
     let modes: &[String] = action.modes.as_deref().unwrap_or(&[]);
     refuse_targets(state, player, &face, targets, modes, None)?;

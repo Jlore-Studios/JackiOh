@@ -8,7 +8,9 @@
 //! (`animated::animate_at_turn_start`, B3.1) — the rest-of-game start-of-turn effects among the delayed
 //! ones (B5 E28, R458), and those cards going back home as cleanup's last step, after every
 //! end-of-turn step (`animated::return_at_cleanup`). The start of a turn is therefore: refresh → Brittle
-//! tick → animate → delayed effects → start-of-turn triggers → draw (R62).
+//! tick → animate → delayed effects → start-of-turn triggers → draw (R62). The Brittle stage also counts
+//! the Dormant cards' countdowns down, after the tick (`slumber::awaken_at_turn_start`, R1839001), and
+//! then the staged quests' waits to hear back (`subsystems::quests::hear_back_at_turn_start`, R1854004).
 //!
 //! Every one of those parts can pause, because a trigger, a trap or a delayed effect may ask its
 //! controller something (§9.3, §10.6). So BOTH turn boundaries are resumable sequences like any
@@ -463,6 +465,13 @@ fn start_of_turn_brittle(sink: &mut EngineSink, player: PlayerId, due_before: u3
         Some(double) => double(sink, player),
         None => crate::brittle::brittle_tick(sink, player),
     }
+    // R1839001: then `player`'s Dormant cards count one of their turns down, and one whose countdown
+    // ends awakens, in the same stage, so its events settle with the tick's (nothing on a side
+    // without a Dormant card).
+    crate::slumber::awaken_at_turn_start(sink, player);
+    // R1854004: then `player`'s staged quests that wait to hear back count the turn, and one whose wait
+    // ends opens its stage, in the same stage (nothing on a side without such a quest).
+    crate::subsystems::quests::hear_back_at_turn_start(sink, player);
     after_start_stage(sink, player, START_BRITTLE_STEP, due_before);
 }
 

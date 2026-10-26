@@ -2,11 +2,16 @@
 //! persist through a hand, a library and leaving the field (R78), and both go as the card reaches a
 //! graveyard or an exile pile (R766), so a card discounted in hand costs its printed cost there.
 //! The order the two combine is `effectiveCost`'s (§6.3 Cost, R65); nothing here recomputes it.
+//!
+//! R1848006 adds Inflation (Stinkyscape #153 Stimmycheck): a chance roll per card in a hand and a deck
+//! that raises a card's `costMod` (`inflate`), the chance carried on the copy a Stimmycheck makes.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
+use crate::config::{INFLATION_CHANCE, INFLATION_CHANCE_STEP, INFLATION_COST, INFLATION_ROLL_SIDES};
 use crate::damage::DamageTarget;
-use crate::effects::targets::{TargetSpec, resolve_target};
+use crate::effects::targets::{PlayerSpec, TargetSpec, player_of, resolve_target};
 use crate::mana::effective_cost;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
@@ -129,5 +134,85 @@ pub fn set_cost_override(args: SetCostOverrideArgs) -> Effect {
         }
         let card = as_it_stands(ctx, card);
         emit_cost(ctx, &card);
+    })
+}
+
+/// R1848006: where a card carries the Inflation chance it rolls at (its `memory`), in percent — the
+/// copy a Stimmycheck adds to its hand carries its grown chance there (`add_to_hand`'s `memory`).
+pub const INFLATION_CHANCE_KEY: &str = "inflationChance";
+
+/// R1848006: the chance, in percent, a card's Inflation rolls at — the one it carries
+/// (`INFLATION_CHANCE_KEY`), else `printed` — held to 0..=`INFLATION_ROLL_SIDES`.
+pub fn inflation_chance_of(card: Option<&CardInstance>, printed: i32) -> i32 {
+    card.and_then(|card| card.memory.get(INFLATION_CHANCE_KEY))
+        .and_then(Value::as_i64)
+        .map_or(printed, |carried| carried as i32)
+        .clamp(0, INFLATION_ROLL_SIDES)
+}
+
+/// R1848006: the chance the copy a Stimmycheck makes carries ("+10% chance at Inflation"), never past
+/// a certain hit.
+pub fn next_inflation_chance(chance: i32) -> i32 {
+    chance
+        .saturating_add(INFLATION_CHANCE_STEP)
+        .clamp(0, INFLATION_ROLL_SIDES)
+}
+
+/// `inflate`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct InflateArgs {
+    /// The printed chance, in percent. Absent: `INFLATION_CHANCE` (Stimmycheck's 15). A card that
+    /// carries its own chance (`INFLATION_CHANCE_KEY`) rolls at that instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chance: Option<i32>,
+    /// Whose hand and deck, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R1848006 (Stinkyscape #153 Stimmycheck): "cards in your hand and deck have a 15% chance for
+/// Inflation to hit, which causes them to cost (1) more". One roll per card, from the match rng, in
+/// the hand's order and then the deck's from the top; a card it hits gains `INFLATION_COST` on its
+/// `costMod`, which rides it through the hand and the deck as any price change does and R766 takes
+/// off in a graveyard or an exile pile. An X-cost card, whose price no change reaches (R65), is passed
+/// by without a roll. The roll is luck-based (§6.1): Lucky X on the running card and its controller's
+/// Luck roll it again and keep the better, which is a miss on the controller's own cards and a hit on
+/// the opponent's. A chance of 0 rolls nothing and one of 100 hits every card with no roll. The cards
+/// are ones no two players both read, so, as R440 has a change over a hidden scope, nothing announces
+/// them: their owner reads the new prices off the view.
+pub fn inflate(args: InflateArgs) -> Effect {
+    Effect::new("inflate", move |ctx| {
+        let chance = inflation_chance_of(ctx.self_.as_ref(), args.chance.unwrap_or(INFLATION_CHANCE));
+        if chance <= 0 {
+            return;
+        }
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let own = player == ctx.controller;
+        let lucky = ctx
+            .self_
+            .as_ref()
+            .map_or(0, |card| crate::query::lucky_on(ctx.sink.state, card))
+            + crate::query::luck_of(ctx.sink.state, ctx.controller);
+        let side = &ctx.sink.state.players[player];
+        let rolled: Vec<String> = side
+            .hand
+            .iter()
+            .chain(side.library.iter())
+            .filter(|card| !crate::mana::is_x_cost(ctx.sink.state, card))
+            .map(|card| card.id.clone())
+            .collect();
+        for id in rolled {
+            let hit = chance >= INFLATION_ROLL_SIDES
+                || ctx.sink.rng.lucky(
+                    lucky,
+                    |rng| rng.int(INFLATION_ROLL_SIDES) < chance,
+                    |kept, next| if own { kept && next } else { kept || next },
+                );
+            if hit && let Some(card) = find_instance_mut(ctx.sink.state, &id) {
+                card.cost_mod += INFLATION_COST;
+            }
+        }
     })
 }

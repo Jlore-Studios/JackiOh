@@ -1,5 +1,5 @@
 // A Stack pile opened as a wheel (issue #124, §3.2): the pile's top card with its face, every
-// dormant card under it as a back (the view names their number only, never which they are), so
+// card beneath it as a back (the view names their number only, never which they are), so
 // what is above and below what is obvious. The dialog borrows the inspect layer's scrim and modal
 // behaviour (focus trap, scrim and Escape dismiss, focus restore).
 
@@ -41,7 +41,7 @@ export type StackSheetProps = {
   top: FaceModel | null;
   /** What a screen reader calls the top card. */
   topName: string;
-  /** How many dormant cards lie under it. */
+  /** How many cards lie beneath it. */
   buried: number;
   onClose: () => void;
 };

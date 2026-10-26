@@ -232,6 +232,22 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   autopilotEngaged: { type: "autopilotEngaged", player: "p1", turn: 9 },
+  // Stinkyscape's Dormant (R1839002).
+  awakened: { type: "awakened", player: "p1", instanceId: "u1", defId: "core-008" },
+  // Issue #1838 (Tradable, R1838001).
+  traded: { type: "traded", player: "p1" },
+  // Issue #1840 (Resources and Credits, R1840000, R1840001, R1840004, R1840005).
+  resourceGained: { type: "resourceGained", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  resourceSold: { type: "resourceSold", player: "p1", instanceId: "r9", defId: "fx-res-rare", credits: 2 },
+  resourceDiscarded: { type: "resourceDiscarded", player: "p1", instanceId: "r1", defId: "fx-res-common-a" },
+  marketCreditsChanged: { type: "marketCreditsChanged", player: "p1", value: 2 },
+  // Stinkyscape's Starship (R1852000, R1852003).
+  starshipFused: { type: "starshipFused", player: "p1", instanceId: "u1", pieceId: "u2", defId: "core-008", pieces: 2 },
+  starshipLaunched: { type: "starshipLaunched", player: "p1", instanceId: "u1", defId: "core-008", name: "Ember of Departure", pieces: ["core-008", "core-011"] },
+  // Issue #1843 (R1843000, R1843002).
+  voteCast: { type: "voteCast", player: "p2", instanceId: "u1", defId: "core-073", votes: 1, needed: 3 },
+  votedOut: { type: "votedOut", player: "p2", ballots: [{ instanceId: "u1", defId: "core-073" }] },
+  fled: { type: "fled", player: "p1", opponent: "draw" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -321,6 +337,17 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   scriptFailed: "notify",
   curveDrawn: "whoosh",
   autopilotEngaged: "notify",
+  awakened: "radiant",
+  traded: "whoosh",
+  resourceGained: "draw",
+  resourceSold: "burn",
+  resourceDiscarded: "draw",
+  marketCreditsChanged: "uiClick",
+  starshipFused: "buff",
+  starshipLaunched: "entrance",
+  voteCast: "uiClick",
+  votedOut: "trapSting",
+  fled: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -348,6 +375,19 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "attackCancelled",
   "turnAutoEnded",
   "autopilotEngaged",
+  "awakened",
+  // R1838001: a Trade's whoosh, whatever the seat.
+  "traded",
+  // R1840000–R1840005: the tray's and the Credits' sounds, whatever the seat.
+  "resourceGained",
+  "resourceSold",
+  "resourceDiscarded",
+  "marketCreditsChanged",
+  "starshipFused",
+  "starshipLaunched",
+  "voteCast",
+  "votedOut",
+  "fled",
   "countered",
   "stolen",
   "unlocked",
@@ -819,6 +859,13 @@ describe("B23 seat-relative rows", () => {
   it("B23 gameOver on a draw plays notify on both seats", () => {
     expect(shape({ type: "gameOver", winner: "draw", reason: "draw-accepted" })).toEqual([sfx("notify")]);
     expect(shape({ type: "gameOver", winner: "draw", reason: "both-heroes-dead" }, p2Seat())).toEqual([sfx("notify")]);
+  });
+
+  it("R1843004 the other player's flight sounds the draw it is, and the fleer's own the win", () => {
+    expect(shape({ type: "gameOver", winner: "p2", reason: "fled" })).toEqual([sfx("notify")]);
+    expect(shape({ type: "gameOver", winner: "p2", reason: "fled" }, p2Seat())).toEqual([sfx("victory")]);
+    expect(shape({ type: "gameOver", winner: "p2", reason: "fled-decisive" })).toEqual([sfx("defeat")]);
+    expect(shape({ type: "gameOver", winner: "p2", reason: "voted-out" })).toEqual([sfx("defeat")]);
   });
 
   it("B23 promptOpened sounds only for the player holding the prompt", () => {

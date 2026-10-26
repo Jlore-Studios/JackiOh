@@ -12,7 +12,8 @@
 //!   play             → `playSteps.runPlaySteps` (§10.5's eight steps), listed by
 //!                      `playChoices.playActionsFor` (R81, R90) for a hand card and by
 //!                      `playChoices.graveyardPlayActionsFor` for a graveyard card a permission
-//!                      lets its player play (E11, R454). Step 1's validation is
+//!                      lets its player play (E11, R454), and by `playActionsFor` again for a
+//!                      Resource in its player's tray (R1840003). Step 1's validation is
 //!                      `playSteps.validatePlay`, which asks `playChoices.whyChoicesRefused` for
 //!                      the zone, X, embiggen, Tribute, target and mode refusals (R90) before it
 //!                      reads the cost, so the refusal a client's greyed-out button comes from and
@@ -30,6 +31,7 @@
 //!                      to that pipeline's answerer (R122)
 //!   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
 //!   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
+//!   trade            → `trade.apply_trade`, listed and refused by `trade.why_trade_refused` (R1838000)
 //!   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
 //!   sandbox          → `sandbox.apply_sandbox`, refused by `sandbox.why_sandbox_refused`; accepted
 //!                      only by a sandbox game and never listed (R923000–R923003)
@@ -167,13 +169,15 @@ fn attacker_of(state: &GameState, player: PlayerId, instance_id: &str) -> Option
 }
 
 /// The target an `attack` action names, looked up among the enemy's active units and the enemy hero
-/// and nothing else, so a friendly target never reaches the validator (§4.2 step 2).
+/// and nothing else, so a friendly target never reaches the validator (§4.2 step 2). A Dormant enemy
+/// card is looked up too (`units_on_field_of`), so that "that card is Dormant" is `combat`'s refusal
+/// to give rather than a lookup failure here (R1839000).
 fn attack_target_of(state: &GameState, player: PlayerId, target_id: &str) -> Option<AttackTarget> {
     let enemy = opponent_of(player);
     if target_id == format!("hero-{enemy}") {
         return Some(AttackTarget::Hero { player: enemy });
     }
-    let unit = active_units_of(state, enemy)
+    let unit = crate::zones::units_on_field_of(state, enemy)
         .into_iter()
         .find(|card| card.id == target_id)
         .cloned()?;
@@ -366,6 +370,8 @@ pub(crate) fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result
             end_turn(sink);
             Ok(())
         }
+        // R1838000: `trade.rs` owns the rule; its refusal is the one `legal_actions` and the view read.
+        ActionBody::Trade { instance_id } => crate::trade::apply_trade(sink, action.player_id, instance_id),
         ActionBody::SetAutoEndTurn { enabled } => {
             // R345: a preference, not a move. It emits nothing, and `maybeAutoEndTurn` reads it after
             // this reduction as after every other, so turning it back on with nothing left to do ends the
@@ -937,6 +943,13 @@ pub(crate) fn each_legal_action(
             visit(ActionBody::from(play))?;
         }
     }
+    // R1840003: a Resource in the player's tray, played as from hand — the same `play` action, naming
+    // a tray card.
+    for card in side.resource_tray.iter().flatten() {
+        for play in play_actions_for(state, player, card) {
+            visit(ActionBody::from(play))?;
+        }
+    }
 
     // R1200: while a Mayor acts each attack is listed once per attacker with no target — the
     // reducer draws it — so the client asks for none.
@@ -995,6 +1008,16 @@ pub(crate) fn each_legal_action(
             for activation in activation_actions(state, player, card) {
                 visit(activation)?;
             }
+        }
+    }
+
+    // R1838000: a Trade of each Tradable hand card, in hand order, while `trade.why_trade_refused`
+    // passes it — the refusal the reducer gives and the view's `tradeReason` reads.
+    for card in &side.hand {
+        if crate::trade::why_trade_refused(state, player, &card.id).is_ok() {
+            visit(ActionBody::Trade {
+                instance_id: card.id.clone(),
+            })?;
         }
     }
 

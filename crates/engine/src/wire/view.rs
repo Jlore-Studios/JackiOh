@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::state::DuosLife;
+use crate::state::{DuosLife, Slumber, StarshipMemory};
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
     CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
@@ -106,6 +106,13 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub play_reason: Option<String>,
+    /// R1838000, §10.8: why the viewer's own Tradable hand card cannot be Traded now
+    /// (`trade::why_trade_refused`), as `play_reason` is for a play. Set only on those cards while the
+    /// viewer may act (their turn, the main phase, no prompt open) and `legal_actions` lists no `trade`
+    /// of the card. Absent otherwise, never empty, so a view with no Tradable card is what it was.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trade_reason: Option<String>,
     /// #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
     /// dropped some of the choice combinations they are built from, so the list is a slice whose first
     /// plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on
@@ -181,6 +188,12 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub copies: Option<CopiedTextView>,
+    /// R1848003: the X an X-cost card is set at (`CardInstance.fixed_x`), which is its price (`cost`)
+    /// and the X it is played for, so the face prints the number where it would print X. Only on a
+    /// card the viewer may read; absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub fixed_x: Option<i32>,
 }
 
 /// One reward on offer, or one aura held, as `QuestView` lists it: `{ id, text }`.
@@ -210,11 +223,46 @@ pub struct QuestOpenView {
     pub progress: i32,
     pub goal: i32,
     pub rewards: Vec<QuestItemView>,
+    /// R1854002: the cost a play must have paid to meet a "play a card that costs …" goal, the number
+    /// the quest card remembers when it holds one. Absent for every other goal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub cost: Option<i32>,
+}
+
+string_union! {
+    /// R1854000: where a staged quest's line stands with one of its stages.
+    pub enum QuestStageState {
+        Done = "done",
+        Current = "current",
+        Upcoming = "upcoming",
+    }
+}
+
+/// R1854000, §10.8: one stage of a staged quest as the board shows it, to both players: its name, its
+/// state, its goals (the one drawn once it has opened, every one it may draw before), its reward's text,
+/// and, while the line waits to hear back with it, the turns left (R1854004).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct QuestStageView {
+    pub name: String,
+    pub state: QuestStageState,
+    pub goals: Vec<String>,
+    pub reward: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub hear_back: Option<i32>,
 }
 
 /// B5 E33, R404, §10.8: a quest line as the board shows it. Each open quest carries its text, its
 /// progress against its goal ("1/2") and the rewards it offers; `auras` are the rewards held while the
-/// card stays on the field (In Too Deep's L and M).
+/// card stays on the field (In Too Deep's L and M). R1854000: a staged quest's line adds its stages,
+/// in order; absent on a tree's line.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -225,6 +273,9 @@ pub struct QuestOpenView {
 pub struct QuestView {
     pub open: Vec<QuestOpenView>,
     pub auras: Vec<QuestItemView>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub stages: Option<Vec<QuestStageView>>,
 }
 
 /// B5 E14, R399: what a copier's text is now (`CardView.copies`).
@@ -494,6 +545,24 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub frozen: Option<bool>,
+    /// R1839000, R1839001: the card is Dormant (a status, public on the field on both seats): it can
+    /// neither attack, be attacked, be targeted nor be reached by an effect until it awakens, and
+    /// `turns` is how many more of its controller's turns start before it does (absent: until an effect
+    /// awakens it). What the board's Dormant badge and its countdown read. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub slumber: Option<Slumber>,
+    /// R1848000: the unit is Frozen forever (Stinkyscape #2 Absolute Zero), so it never thaws; public
+    /// as `frozen` is. Absent otherwise. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub frozen_forever: Option<bool>,
+    /// R1852000, R1852005: the card is a Starship (public on the field on both seats): `pieces` the
+    /// Starship Pieces fused into it, oldest first, and, once it has launched, `name`, the name it took.
+    /// What the board's Starship badge and its list of pieces read. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub starship: Option<StarshipMemory>,
     /// ME-CN, R1301: the card is shown in Chinese (`CardInstance.chinese`). Only on a card the viewer
     /// may read, so never on the sentinel, a face-down card someone else controls or an opponent's hand.
     /// Only ever `Some(true)`.
@@ -1011,6 +1080,17 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
+    /// R1840000: this seat's Resource tray beside its hand — the viewer's own in full, the
+    /// opponent's as a count, both in full once the game is over (R434), as `hand` is. Absent while
+    /// the tray holds none, so a game without a Resource sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub resource_tray: Option<HandView>,
+    /// R1840005: this seat's Credits, shown to both seats. Absent until first gained (D14); named
+    /// apart from the credit line's `credit` (R1223).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub market_credits: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player. Absent while none is owed, so a
     /// game without one serialises as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1206,6 +1286,21 @@ pub struct DrawOfferView {
     pub by: PlayerId,
 }
 
+/// R1838000, §10.8: the viewer's own Trades — what one costs and how many they have left this turn.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TradesView {
+    /// `TRADE_COST`, in mana.
+    pub cost: i32,
+    /// The Trades a turn less those made this turn (`trade::trades_left`).
+    pub left: i32,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -1271,6 +1366,12 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub emotes_heard: Option<bool>,
+    /// R1838000: the viewer's own Trades, while their hand holds a Tradable card, so the Trade control
+    /// can say its price and how many are left; which Trades are offered stays `legal_actions`' answer.
+    /// Only ever the viewer's own (CLAUDE.md rule 7). Absent while their hand holds no Tradable card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub trades: Option<TradesView>,
 }
 
 #[cfg(test)]

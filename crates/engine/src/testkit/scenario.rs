@@ -35,14 +35,18 @@
 //! SIDE SETUP  (what `p1`/`p2` accept)
 //! ---------------------------------------------------------------------------------------------
 //!   hand, library, graveyard, exile   (string | { def?, defId?, radiant?, costMod?, costOverride? })[]
+//!   tray                              (string | { def?, defId?, radiant? })[] — R1840000's Resources
 //!   field, backrow                    (string | { def?, defId?, radiant?, row?, lane?, stack?,
 //!                                                 position?, damage?, counters?, faceUp?,
-//!                                                 statsOverride?, costMod?, costOverride? })[]
+//!                                                 statsOverride?, costMod?, costOverride?,
+//!                                                 slumber? })[]
 //!   health, mana, armor               number
 //! `def` and `defId` are aliases: exactly one is required, and both with different values throws
 //! naming both. A bare string is `{ def: <string> }`. `radiant: true` sets the instance's Radiant
 //! flag in whatever zone the entry names, a library or a hand included (#21, #23 need a Radiant
-//! card sitting on top of a library). `statsOverride` is §10.4 layer 1 / R41's X/X token.
+//! card sitting on top of a library). `statsOverride` is §10.4 layer 1 / R41's X/X token. `slumber`
+//! lays a field card down Dormant with that countdown (R1839000); the setup is no arrival, so a
+//! card's printed Dormant starts only when it is played or summoned in the test.
 //! `counters` seeds §10.1's instance counters — #91's `plague`, #93's `grade`. `costMod` and
 //! `costOverride` seed §2.3's cost layers, which R78 keeps in every zone, so a ruling about the cost
 //! at resolution rather than the printed cost (R65, R66) can be set up in a hand or a library.
@@ -78,7 +82,7 @@
 //!      the ACTIVE player first, then the opponent, and within a side:
 //!      hand → unit zones (lane 1..5, top of a Stack pile before the cards dormant under it) →
 //!      backrow (lane 1..5, then the cards dormant under its tops) → graveyard → exile → library →
-//!      resolving.
+//!      resolving → Resource tray (R1840000).
 //!      A method that needs the card somewhere particular narrows the search to that place first:
 //!      `play` looks in hands only, `attack`/`switch_position` on the field only. Nothing matching panics
 //!      naming the string and listing what was there instead. Holding several copies of one def?
@@ -182,6 +186,7 @@ thread_local! {
         const { Cell::new(None) };
     static CODE_BLOCKS_OVERRIDE: Cell<Option<crate::catalog::CodeBlocks>> = const { Cell::new(None) };
     static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
+    static CARD_METRICS_OVERRIDE: Cell<Option<crate::catalog::CardMetrics>> = const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -266,6 +271,38 @@ pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
     SHIPPED_OVERRIDE.with(Cell::get)
 }
 
+/// R1846000: card metrics for this thread, in place of the compiled ones (`catalog::card_metrics`),
+/// until the thread ends or `clear_overrides()` runs: each fixture card's code lines, by catalog id,
+/// and the BUSTED and complicated lists `crates/cards/build.rs` would compile from them (more than
+/// `BUSTED_CODE_LINES`, more than `COMPLICATED_CODE_LINES`). Leaked, like the catalog, and sorted
+/// by id as the compiled tables are.
+pub fn register_code_lines(lines: Vec<(&str, usize)>) {
+    let mut owned: Vec<(&'static str, usize)> = lines
+        .into_iter()
+        .map(|(id, count)| (&*Box::leak(id.to_string().into_boxed_str()), count))
+        .collect();
+    owned.sort_by(|a, b| a.0.cmp(b.0));
+    let over = |threshold: usize| -> &'static [&'static str] {
+        let ids: Vec<&'static str> = owned
+            .iter()
+            .filter(|(_, count)| *count > threshold)
+            .map(|(id, _)| *id)
+            .collect();
+        Box::leak(ids.into_boxed_slice())
+    };
+    let metrics = crate::catalog::CardMetrics {
+        busted: over(crate::config::BUSTED_CODE_LINES),
+        complicated: over(crate::config::COMPLICATED_CODE_LINES),
+        code_lines: Box::leak(owned.into_boxed_slice()),
+    };
+    CARD_METRICS_OVERRIDE.with(|cell| cell.set(Some(metrics)));
+}
+
+/// The card metrics this thread registered, if any.
+pub fn card_metrics_override() -> Option<crate::catalog::CardMetrics> {
+    CARD_METRICS_OVERRIDE.with(Cell::get)
+}
+
 /// #1035: one thread's registry overrides (`thread_overrides`), for another thread to take
 /// (`install`), so work a test hands to a blocking pool reads the test's own cards. Each is the
 /// leaked `&'static` the override already holds: nothing is copied.
@@ -277,6 +314,7 @@ pub struct ThreadOverrides {
     win_rates: Option<&'static crate::win_rates::WinRateTable>,
     code_blocks: Option<crate::catalog::CodeBlocks>,
     shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
+    card_metrics: Option<crate::catalog::CardMetrics>,
 }
 
 impl ThreadOverrides {
@@ -289,6 +327,7 @@ impl ThreadOverrides {
         WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
         CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(self.code_blocks));
         SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
+        CARD_METRICS_OVERRIDE.with(|cell| cell.set(self.card_metrics));
     }
 }
 
@@ -301,6 +340,7 @@ pub fn thread_overrides() -> ThreadOverrides {
         win_rates: win_rates_override(),
         code_blocks: code_blocks_override(),
         shipped: shipped_override(),
+        card_metrics: card_metrics_override(),
     }
 }
 
@@ -313,6 +353,7 @@ pub fn clear_overrides() {
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
     CODE_BLOCKS_OVERRIDE.with(|cell| cell.set(None));
     SHIPPED_OVERRIDE.with(|cell| cell.set(None));
+    CARD_METRICS_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -485,6 +526,11 @@ pub struct FieldEntry {
     /// MD-B6, R943: opt a setup card into Created (as on `PileEntry`).
     #[serde(default)]
     pub created: Option<bool>,
+    /// R1839000: the card lies on the field Dormant, with this countdown (`{ "turns": 2 }`, or `{}` for
+    /// none). A setup card is already on the field rather than arriving, so its text starts nothing; a
+    /// card played or summoned in the test enters Dormant by its text.
+    #[serde(default)]
+    pub slumber: Option<crate::state::Slumber>,
 }
 
 /// TS `FieldSetup = string | FieldEntry`.
@@ -513,6 +559,9 @@ pub struct SideSetup {
     pub graveyard: Option<Vec<PileSetup>>,
     #[serde(default)]
     pub exile: Option<Vec<PileSetup>>,
+    /// R1840000: the Resources in the side's Resource tray, oldest first.
+    #[serde(default)]
+    pub tray: Option<Vec<PileSetup>>,
     #[serde(default)]
     pub health: Option<i32>,
     #[serde(default)]
@@ -688,6 +737,7 @@ fn side_order(state: &GameState, player: PlayerId, scope: Where) -> Vec<&CardIns
             .chain(side.exile.iter())
             .chain(side.library.iter())
             .chain(side.resolving.iter())
+            .chain(side.resource_tray.iter().flatten())
             .collect(),
     }
 }
@@ -1017,6 +1067,9 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
         {
             card.face_up = Some(face_up);
         }
+        if let Some(slumber) = entry.entry.slumber {
+            card.slumber = Some(slumber);
+        }
     }
     Ok(())
 }
@@ -1163,6 +1216,16 @@ fn place_side(sink: &mut EngineSink<'_>, player: PlayerId, setup: &SideSetup) ->
         setup.exile.as_deref().unwrap_or(&[]),
         &format!("{seat}.exile"),
     )?;
+    // R1840000: the tray's Resources, placed as the engine's own gain places one (no sale: the setup
+    // holds what it lists).
+    for (at, entry) in setup.tray.iter().flatten().enumerate() {
+        let at_ = format!("{seat}.tray[{at}]");
+        let def_id = setup_def_id(sink.state, &ref_of(pile_ref(entry), &at_)?, &at_)?;
+        let radiant = matches!(entry, PileSetup::Entry(fields) if fields.radiant == Some(true));
+        let mut card = new_instance(&mut *sink.state, &def_id, player, Zone::Tray { player });
+        card.radiant = radiant;
+        crate::resources::put_in_tray(&mut *sink.state, &mut card);
+    }
     Ok(())
 }
 
@@ -1415,7 +1478,8 @@ impl Scenario {
         ))
     }
 
-    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone".
+    /// TS `Located`: "hand" | "library" | "graveyard" | "exile" | "resolving" | "field" | "gone", and
+    /// "tray" for a Resource in a Resource tray (R1840000).
     fn locate(&self, id: &str) -> &'static str {
         for player in PLAYER_IDS {
             let side = &self.current.players[player];
@@ -1433,6 +1497,9 @@ impl Scenario {
             }
             if side.resolving.iter().any(|card| card.id == id) {
                 return "resolving";
+            }
+            if side.resource_tray.iter().flatten().any(|card| card.id == id) {
+                return "tray";
             }
             if side.units.iter().flatten().flatten().any(|card| card.id == id) {
                 return "field";
@@ -1709,6 +1776,22 @@ impl Scenario {
         self
     }
 
+    /// R1838000: Trade a Tradable card from its owner's hand — into their deck at a random position, a
+    /// card drawn — as the `trade` action. Panics when `reduce` refuses it, like every other step.
+    pub fn trade(&mut self, card: impl Into<CardRef>) -> &mut Scenario {
+        let id = or_fail(self.resolve(&card.into(), Where::Hand, "trade"));
+        let traded = self.live(&id).clone();
+        let what = format!("trade {}", describe_instance(&self.current, &traded));
+        self.action(
+            ActionBody::Trade {
+                instance_id: traded.id.clone(),
+            },
+            traded.owner,
+            &what,
+        );
+        self
+    }
+
     /// `opts`: `json!({ "targets"?, "ability"?, "modes"?, "tributes"? })`.
     pub fn activate(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: ActivateOptions = options_of(opts, "activate");
@@ -1794,7 +1877,7 @@ impl Scenario {
             .clone()
     }
 
-    /// `zone`: "hand", "library", "graveyard" or "exile" (TS `PileName`).
+    /// `zone`: "hand", "library", "graveyard", "exile" (TS `PileName`) or "tray" (R1840000).
     pub fn pile(&self, player: impl SeatRef, zone: &str) -> Vec<CardInstance> {
         let side = &self.current.players[player.seat_or(self.current.active)];
         match zone {
@@ -1802,8 +1885,11 @@ impl Scenario {
             "library" => side.library.clone(),
             "graveyard" => side.graveyard.clone(),
             "exile" => side.exile.clone(),
+            "tray" => side.resource_tray.clone().unwrap_or_default(),
             other => {
-                panic!("pile(): \"{other}\" is not a pile; piles are hand, library, graveyard and exile")
+                panic!(
+                    "pile(): \"{other}\" is not a pile; piles are hand, library, graveyard, exile and tray"
+                )
             }
         }
     }
@@ -1820,7 +1906,7 @@ impl Scenario {
 
     // --- assertions -----------------------------------------------------------------------------
 
-    /// `zone`: "hand", "library", "graveyard", "exile", "field" or "gone" (TS `ZoneName`).
+    /// `zone`: "hand", "library", "graveyard", "exile", "field", "gone" (TS `ZoneName`) or "tray".
     pub fn expect_in_zone(&mut self, card: impl Into<CardRef>, zone: &str) -> &mut Scenario {
         let id = or_fail(self.ref_id(&card.into(), zone));
         let actual = self.locate(&id);

@@ -1382,5 +1382,33 @@
     "pr": 1940,
     "title": "patches ship: v0.4.11",
     "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "1d390096040bc8335c9fe29c5c3cf31e194512b1",
+    "pr": 1942,
+    "title": "patches log: a128d13..4bcae59",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "ddb25072b9cbd4bd531279d2590e25cf3babce13",
+    "pr": 1937,
+    "title": "double the cosmetics: six new of each pickable kind, the first earnable chases and Mythics",
+    "kind": "app"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b6d3572a4455a5545bd54742466a23ac11eca97b",
+    "pr": 1924,
+    "title": "layered summons and the lethal guard for Units",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.4.12",
+    "commit": "b67dead679a27d36384b81c81877f67b2c8261d3",
+    "pr": 1948,
+    "title": "patches ship: v0.4.11b, v0.4.12, v0.4.12b",
+    "kind": "app"
   }
 ]

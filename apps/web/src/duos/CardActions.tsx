@@ -2,9 +2,10 @@
 //
 // THE BAR. Pointing at a hero, a zone or a hand card (a mouse over it, a tap on it, the keyboard's
 // focus on it) puts a small bar on it: the ping wheel (`duos-ping-wheel`, the five pings) and, on a
-// card of the seat's own hand, the pass control (`duos-pass`) with its cost and the passes left. The
-// pass is live exactly when `legal` lists that card's `pass` (B19, rule 7); otherwise it is greyed and
-// sends nothing. The bar stays DUOS_HOVER_GRACE_MS after the pointer leaves its card, so the pointer
+// card of the seat's own hand, the pass control (`duos-pass`) with its cost and the passes left, and
+// on a Tradable one the Trade control (`TradeControl.tsx`, R1838000), which a 1v1 board shows in a bar
+// of its own. Each is live exactly when `legal` lists that card's `pass` (B19) or `trade` (rule 7);
+// otherwise it is greyed and sends nothing. The bar stays DUOS_HOVER_GRACE_MS after the pointer leaves its card, so the pointer
 // can reach it, and goes on Escape, on a press elsewhere, after a pick, and while a card is dragged.
 //
 // THE MARKERS. A ping marks its place (`duos-ping-marker`) on this board when it names this board's
@@ -12,19 +13,22 @@
 //
 // Game.tsx stays the one board: nothing here is inside it. The bar and the markers are laid over the
 // board in its container, at the box of the element the board draws for the spot (`spots.ts`),
-// re-measured every frame while any is up, since cards move as the board animates.
+// re-measured every frame while any is up, since cards move as the board animates (`game/cardBar.ts`,
+// which the Trade control's bar shares).
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { PING_KINDS, type PingKind, type PingTarget } from "../net/duos.ts";
+import { useBoxes, useCardBarFocus } from "../game/cardBar.ts";
+import { TradeButton, offersTrade, type TradeOffer } from "../game/TradeControl.tsx";
 import { DUOS_HOVER_GRACE_MS } from "./config.ts";
 import { PING_GLYPH, PING_LABEL } from "./pings.ts";
 import { seatLabel } from "./seats.ts";
-import { sameSpot, spotOfElement, spotTestid, targetOfSpot, type BoardSpot } from "./spots.ts";
+import { spotTestid, targetOfSpot, type BoardSpot } from "./spots.ts";
 import { duosTestid } from "./testids.ts";
 
 /** What the pass control shows on the seat's own hand cards (B62). */
@@ -56,78 +60,14 @@ export type CardActionsProps = {
   /** The pass control, on the seat's own board; null on the teammate's. */
   pass: PassOffer | null;
   onPass: (instanceId: string) => void;
+  /** R1838000: the Trade control on the seat's own Tradable hand cards; null on the teammate's board. */
+  trade?: TradeOffer | null;
+  onTrade?: (instanceId: string) => void;
   onPing: (ping: PingKind, target: PingTarget) => void;
   markers: readonly PingMarker[];
 };
 
-type Box = { left: number; top: number; width: number; height: number };
-
 const BAR_CLASS = "duos-card-actions";
-const NO_BOXES: ReadonlyMap<string, Box> = new Map();
-
-function onBar(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(`.${BAR_CLASS}`) !== null;
-}
-
-function elementOf(target: EventTarget | null): Element | null {
-  return target instanceof Element ? target : null;
-}
-
-function sameBoxes(a: ReadonlyMap<string, Box>, b: ReadonlyMap<string, Box>): boolean {
-  if (a.size !== b.size) return false;
-  for (const [id, box] of a) {
-    const other = b.get(id);
-    if (other === undefined) return false;
-    if (other.left !== box.left || other.top !== box.top || other.width !== box.width || other.height !== box.height) {
-      return false;
-    }
-  }
-  return true;
-}
-
-/** `[data-testid="…"]` for an id read off the board, quoted as DragLayer quotes it. */
-function byTestid(id: string): string {
-  return `[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`;
-}
-
-/**
- * The boxes of the elements `idsKey` names ("|"-joined testids), relative to `container`, kept
- * current every animation frame while there are any.
- */
-function useBoxes(host: HTMLDivElement | null, idsKey: string): ReadonlyMap<string, Box> {
-  const [boxes, setBoxes] = useState<ReadonlyMap<string, Box>>(NO_BOXES);
-  useLayoutEffect(() => {
-    if (idsKey === "") {
-      setBoxes(NO_BOXES);
-      return undefined;
-    }
-    const ids = idsKey.split("|");
-    let live = true;
-    let frame: number | null = null;
-    const measure = (): void => {
-      if (!live) return;
-      if (host !== null) {
-        const origin = host.getBoundingClientRect();
-        const next = new Map<string, Box>();
-        for (const id of ids) {
-          const element = host.querySelector(byTestid(id));
-          if (element === null) continue;
-          const rect = element.getBoundingClientRect();
-          next.set(id, { left: rect.left - origin.left, top: rect.top - origin.top, width: rect.width, height: rect.height });
-        }
-        setBoxes((previous) => (sameBoxes(previous, next) ? previous : next));
-      }
-      // As the tutorial's coach measures (Coach.tsx): every frame where there are frames.
-      frame = typeof requestAnimationFrame === "function" ? requestAnimationFrame(measure) : null;
-    };
-    measure();
-    return () => {
-      live = false;
-      if (frame !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(frame);
-    };
-  }, [host, idsKey]);
-  return boxes;
-}
 
 export function CardActions({
   container,
@@ -136,90 +76,13 @@ export function CardActions({
   enabled,
   pass,
   onPass,
+  trade = null,
+  onTrade,
   onPing,
   markers,
 }: CardActionsProps): ReactElement {
   useLocale();
-  const [focus, setFocus] = useState<BoardSpot | null>(null);
-  const clearTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    const host = container;
-    if (host === null) return undefined;
-    const cancelClear = (): void => {
-      if (clearTimer.current === null) return;
-      window.clearTimeout(clearTimer.current);
-      clearTimer.current = null;
-    };
-    const clearSoon = (): void => {
-      if (clearTimer.current !== null) return;
-      clearTimer.current = window.setTimeout(() => {
-        clearTimer.current = null;
-        setFocus(null);
-      }, DUOS_HOVER_GRACE_MS);
-    };
-    const point = (spot: BoardSpot): void => {
-      cancelClear();
-      setFocus((current) => (sameSpot(current, spot) ? current : spot));
-    };
-    // Whether the last pointer was a finger. Nothing hovers on a phone, so a tap's bar stays until
-    // the next press: the leave that ends every touch, and the mouse events a browser fires after a
-    // tap (which carry no pointer type), close nothing.
-    let touch = false;
-    const noteKind = (event: Event): void => {
-      const kind = (event as { pointerType?: unknown }).pointerType;
-      if (typeof kind === "string" && kind !== "") touch = kind === "touch";
-    };
-    // A pointer or the focus arriving: the bar follows it onto a spot, and waits while it is on the bar.
-    const over = (event: Event): void => {
-      noteKind(event);
-      if (onBar(event.target)) {
-        cancelClear();
-        return;
-      }
-      const spot = spotOfElement(elementOf(event.target));
-      if (spot !== null) point(spot);
-      else if (!touch) clearSoon();
-    };
-    // A press (a tap on a phone, where nothing hovers) moves the bar to its spot, or closes it.
-    const down = (event: Event): void => {
-      noteKind(event);
-      if (onBar(event.target)) return;
-      const spot = spotOfElement(elementOf(event.target));
-      if (spot !== null) {
-        point(spot);
-        return;
-      }
-      cancelClear();
-      setFocus(null);
-    };
-    const leave = (event: Event): void => {
-      noteKind(event);
-      if (!touch) clearSoon();
-    };
-    const key = (event: KeyboardEvent): void => {
-      if (event.key !== "Escape") return;
-      cancelClear();
-      setFocus(null);
-    };
-    host.addEventListener("pointerover", over);
-    host.addEventListener("mouseover", over);
-    host.addEventListener("focusin", over);
-    host.addEventListener("pointerdown", down);
-    host.addEventListener("pointerleave", leave);
-    host.addEventListener("mouseleave", leave);
-    window.addEventListener("keydown", key);
-    return () => {
-      host.removeEventListener("pointerover", over);
-      host.removeEventListener("mouseover", over);
-      host.removeEventListener("focusin", over);
-      host.removeEventListener("pointerdown", down);
-      host.removeEventListener("pointerleave", leave);
-      host.removeEventListener("mouseleave", leave);
-      window.removeEventListener("keydown", key);
-      cancelClear();
-    };
-  }, [container]);
+  const { focus, close } = useCardBarFocus(container, BAR_CLASS, DUOS_HOVER_GRACE_MS);
 
   const shownFocus = enabled ? focus : null;
   const idsKey = useMemo(() => {
@@ -230,18 +93,12 @@ export function CardActions({
   }, [shownFocus, markers]);
   const boxes = useBoxes(container, idsKey);
 
-  const close = (): void => {
-    if (clearTimer.current !== null) {
-      window.clearTimeout(clearTimer.current);
-      clearTimer.current = null;
-    }
-    setFocus(null);
-  };
-
   const box = shownFocus === null ? undefined : boxes.get(spotTestid(shownFocus));
   const handCard = shownFocus?.at === "hand" ? shownFocus.instanceId : null;
   const ownHand = Array.isArray(view.you.hand) ? view.you.hand : [];
-  const passCard = pass !== null && handCard !== null && ownHand.some((card) => card.instanceId === handCard) ? handCard : null;
+  const ownCard = handCard !== null && ownHand.some((card) => card.instanceId === handCard) ? handCard : null;
+  const passCard = pass !== null ? ownCard : null;
+  const tradeCard = trade !== null && ownCard !== null && offersTrade(trade, ownCard) ? ownCard : null;
 
   return (
     <>
@@ -310,6 +167,16 @@ export function CardActions({
               <span className="duos-pass__label">{t("Pass to teammate")}</span>
               <span className="duos-pass__meta">{t("{cost} mana · {left} left", { cost: pass.cost, left: pass.left })}</span>
             </button>
+          )}
+          {trade === null || tradeCard === null ? null : (
+            <TradeButton
+              offer={trade}
+              instanceId={tradeCard}
+              onTrade={(instanceId) => {
+                onTrade?.(instanceId);
+                close();
+              }}
+            />
           )}
         </div>
       )}

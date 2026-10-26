@@ -206,6 +206,18 @@ export type FaceModel = {
   berserk?: boolean;
   /** R1174000: in play, the unit is Frozen (`UnitView.frozen`). */
   frozen?: boolean;
+  /**
+   * R1839000, R1839001: in play, the card is Dormant (`UnitView.slumber`): `turns` is how many of its
+   * controller's turns must start before it awakens, null when an effect must awaken it; null when awake.
+   */
+  dormant?: { turns: number | null } | null;
+  /** R1848000: in play, the unit is Frozen forever, so it never thaws (`UnitView.frozenForever`). */
+  frozenForever?: boolean;
+  /**
+   * R1852000, R1852005: in play, the card is a Starship (`UnitView.starship`): `pieces` how many
+   * Starship Pieces are fused into it, `launched` whether it has launched; null on every other card.
+   */
+  starship?: { pieces: number; launched: boolean } | null;
   /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
   created?: boolean;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
@@ -266,6 +278,15 @@ export type InPlay = {
   berserk?: true;
   /** R1174000: the unit is Frozen (`UnitView.frozen`). */
   frozen?: true;
+  /** R1839000, R1839001: the card is Dormant (`UnitView.slumber`), `turns` its countdown or null for none. */
+  dormant?: { turns: number | null };
+  /** R1848000: the unit is Frozen forever (`UnitView.frozenForever`). */
+  frozenForever?: true;
+  /**
+   * R1852000, R1852004: the card is a Starship (`UnitView.starship`): the pieces fused into it, and the
+   * name it took as it launched (null while it is Dormant), which its face prints in place of its own.
+   */
+  starship?: { pieces: number; name: string | null };
   /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
   created?: true;
   /** R437: the marks on the card (`CardView.marks`). */
@@ -292,6 +313,8 @@ export type FaceSource = {
   liveCost?: number;
   /** R1181003: CardView.embiggenCost, what a play of the Embiggened version costs now. */
   liveEmbiggenCost?: number;
+  /** R1848003: CardView.fixedX, the X an X-cost card is set at, which the gem prints in place of X. */
+  fixedX?: number;
   /** UnitView's current numbers. */
   live?: { attack: number; health: number; maxHealth: number; keywords: readonly Keyword[] };
   /** Set on every face drawn in a game, absent in the collection (see the header). */
@@ -359,7 +382,8 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   return {
     defId: source.defId,
     known: def !== undefined,
-    name: def?.name ?? source.name ?? source.defId,
+    // R1852004: a launched Starship prints the name it took.
+    name: inPlay?.starship?.name ?? def?.name ?? source.name ?? source.defId,
     type,
     // MD-B15, R923: in play a face lists the view's tags; outside play the definition's.
     tags: source.inPlay !== undefined && source.tags !== undefined ? source.tags : (def?.tags ?? []),
@@ -370,7 +394,9 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     set: def?.set ?? null,
     radiant: source.radiant,
     // Glitch's gem shows glyphs, never a number (glitch.ts); `data-cost` still carries the view's.
-    cost: isGlitch(source.defId) ? { ...costOf(def, source.liveCost, source.liveEmbiggenCost), text: GLITCH_WORDS.cost, tone: "base", alt: null } : costOf(def, source.liveCost, source.liveEmbiggenCost),
+    cost: isGlitch(source.defId)
+      ? { ...costOf(def, source.liveCost, source.liveEmbiggenCost, source.fixedX), text: GLITCH_WORDS.cost, tone: "base", alt: null }
+      : costOf(def, source.liveCost, source.liveEmbiggenCost, source.fixedX),
     stats: statsOf(type, def !== undefined, printed, source.live ?? handLive(inPlay?.handStats, printed), grewOf(def, source)),
     text,
     // The renderer links only the names that stand in the text, so play's own words link what they name.
@@ -394,6 +420,9 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     animated: inPlay?.animated ?? null,
     berserk: inPlay?.berserk === true,
     frozen: inPlay?.frozen === true,
+    dormant: inPlay?.dormant ?? null,
+    frozenForever: inPlay?.frozenForever === true,
+    starship: inPlay?.starship === undefined ? null : { pieces: inPlay.starship.pieces, launched: inPlay.starship.name !== null },
     created: inPlay?.created === true,
     loc: def?.loc ?? null,
     marks: inPlay?.marks ?? [],
@@ -577,7 +606,7 @@ function costTone(live: number | undefined, printed: number): FaceCost["tone"] {
   return "base";
 }
 
-function costOf(def: CardDef | undefined, liveCost: number | undefined, liveEmbiggenCost: number | undefined): FaceCost {
+function costOf(def: CardDef | undefined, liveCost: number | undefined, liveEmbiggenCost: number | undefined, fixedX?: number): FaceCost {
   const live = liveCost === undefined ? undefined : String(liveCost);
 
   if (def === undefined) {
@@ -587,6 +616,8 @@ function costOf(def: CardDef | undefined, liveCost: number | undefined, liveEmbi
 
   const printed = def.cost;
   if (printed === "X") {
+    // R1848003: an X card whose X is set costs that X, and the gem prints it.
+    if (fixedX !== undefined) return { text: String(fixedX), value: live ?? String(fixedX), tone: "base", alt: null };
     // An X card costs exactly X (R65): the gem says X, and `data-cost` carries whatever the view says.
     return { text: "X", value: live ?? "X", tone: "base", alt: null };
   }

@@ -4,4 +4,9 @@ import type { QuestItemView } from "./QuestItemView";
 /**
  * One open quest as `QuestView.open` lists it.
  */
-export type QuestOpenView = { id: string, text: string, progress: number, goal: number, rewards: Array<QuestItemView>, };
+export type QuestOpenView = { id: string, text: string, progress: number, goal: number, rewards: Array<QuestItemView>, 
+/**
+ * R1854002: the cost a play must have paid to meet a "play a card that costs …" goal, the number
+ * the quest card remembers when it holds one. Absent for every other goal.
+ */
+cost?: number, };

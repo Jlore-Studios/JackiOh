@@ -568,7 +568,7 @@ export default function Card(props: CardProps): ReactElement {
         </span>
       )}
 
-      {/* §3.2: the cards under a Stack pile are face-down and dormant. The view gives their
+      {/* §3.2: the cards beneath a Stack pile are face-down and out of play. The view gives their
           number only, so the pile shows a depth badge and no second card; a press opens the pile
           as a wheel, the top with its face and every buried card as a back. */}
       {buried > 0 && <PileDepth buried={buried} top={face} className="buried-badge" />}
