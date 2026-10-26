@@ -4932,7 +4932,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-10-26T10:39:37Z",
     "last_run": null,
     "provider": null,
     "requested": false,
