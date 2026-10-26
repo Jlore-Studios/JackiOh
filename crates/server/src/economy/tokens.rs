@@ -2,6 +2,8 @@
 //! buys and what both read back.
 //!
 //! - [`settle_bar`]: the pure split of a bar's points into payouts and overflow (R1305000).
+//! - [`card_bar_points`] and [`cosmetic_bar_points`]: the points a spent slot adds to each bar, by
+//!   the card or cosmetic rarity it rolled (R1953000).
 //! - [`redeem_card_token`]: a card token unlocks one chosen new card of a set that ships, in one
 //!   transaction (R1305002).
 //! - [`redeem_cosmetic_token`]: a Rare or Epic cosmetic token buys one cosmetic at its tier or
@@ -22,12 +24,16 @@ use std::sync::Arc;
 use indexmap::IndexMap;
 use jackioh_engine::config::MAX_COPIES;
 use jackioh_engine::set_ships;
+use jackioh_engine::wire::PrintedRarity;
 use serde::{Deserialize, Serialize};
 
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, ok_of, optional_str, str};
 use crate::app::App;
-use crate::config::{CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep};
+use crate::config::{
+    CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
+    TOKEN_BAR_POINTS_BY_CARD_RARITY, TOKEN_BAR_POINTS_BY_COSMETIC_RARITY,
+};
 use crate::cosmetics::{Cosmetic, CosmeticRarity};
 use crate::db::store::{CollectionEntry, CollectionGrant};
 use crate::economy::store::{
@@ -53,6 +59,33 @@ pub(crate) fn conflict(message: impl Into<String>) -> ApiError {
 pub fn settle_bar(start: i64, gained: i64, size: i64) -> (i64, i64) {
     let total = start + gained;
     (total / size, total % size)
+}
+
+/// The points a card pack's spent duplicate adds to each token bar: its slot's card rarity's, pity's
+/// force included, in `TOKEN_BAR_POINTS_BY_CARD_RARITY` (R1953000).
+pub fn card_bar_points(rarity: PrintedRarity) -> i64 {
+    let points = TOKEN_BAR_POINTS_BY_CARD_RARITY;
+    match rarity {
+        PrintedRarity::Common => points.common,
+        PrintedRarity::Rare => points.rare,
+        PrintedRarity::Epic => points.epic,
+        PrintedRarity::Legendary => points.legendary,
+        PrintedRarity::Mythic => points.mythic,
+    }
+}
+
+/// The points a cosmetic pack's spent slot adds to each token bar: its rolled cosmetic rarity's, in
+/// `TOKEN_BAR_POINTS_BY_COSMETIC_RARITY` (R1306001, R1953000). A cosmetic rarity is never read as a
+/// card's (R1333000), so it has a table of its own.
+pub fn cosmetic_bar_points(rarity: CosmeticRarity) -> i64 {
+    let points = TOKEN_BAR_POINTS_BY_COSMETIC_RARITY;
+    match rarity {
+        CosmeticRarity::Common => points.common,
+        CosmeticRarity::Rare => points.rare,
+        CosmeticRarity::Epic => points.epic,
+        CosmeticRarity::Legendary => points.legendary,
+        CosmeticRarity::Mythic => points.mythic,
+    }
 }
 
 /// The inventory key a cosmetic token of `token` is counted under: its rarity's name
@@ -401,6 +434,28 @@ mod tests {
             (2, 1)
         );
         assert_eq!(settle_bar(7, 0, CARD_TOKEN_BAR_SIZE), (0, 7));
+    }
+
+    #[test]
+    fn r1953000_points_follow_the_rarity_and_a_bar_at_195_gaining_10_pays_once_keeping_5() {
+        // Common, Rare, Epic, Legendary, Mythic: 1, 2, 3, 5 and 10, a card's and a cosmetic's alike.
+        let cards = [
+            PrintedRarity::Common,
+            PrintedRarity::Rare,
+            PrintedRarity::Epic,
+            PrintedRarity::Legendary,
+            PrintedRarity::Mythic,
+        ]
+        .map(card_bar_points);
+        let cosmetics = CosmeticRarity::ALL.map(cosmetic_bar_points);
+        assert_eq!(cards, [1, 2, 3, 5, 10]);
+        assert_eq!(cosmetics, [1, 2, 3, 5, 10]);
+        assert_eq!(cards.iter().sum::<i64>(), 21);
+        // A Mythic's 10 on a bar of 200 at 195 pays once and keeps the 5 over.
+        assert_eq!(CARD_TOKEN_BAR_SIZE, 200);
+        assert_eq!(COSMETIC_TOKEN_BAR_SIZE, 200);
+        assert_eq!(settle_bar(195, 10, CARD_TOKEN_BAR_SIZE), (1, 5));
+        assert_eq!(settle_bar(195, 10, COSMETIC_TOKEN_BAR_SIZE), (1, 5));
     }
 
     #[test]

@@ -1,14 +1,17 @@
 // The bar's pure parts (#1658): the sweeps a bar plays from its points before to its points after,
-// each sweep's share of the time, which bars an opening moved, the reward each fill reveals and the
-// sting a reward plays.
+// each sweep's share of the time, the flights a spent slot's points take into the bars and their time
+// (R1953000), the reward each fill reveals and the sting a reward plays.
 
 import { describe, expect, it } from "vitest";
 
 import type { OpeningBarsAnswer } from "../net/api.ts";
 import {
+  BAR_FLIGHT_MS,
+  BAR_FLIGHT_STAGGER_MS,
   FILL_MS,
-  barMoved,
   fillReward,
+  flightsMs,
+  flightsOf,
   fraction,
   segmentMs,
   segments,
@@ -17,12 +20,16 @@ import {
   type RevealItem,
 } from "./bars.ts";
 
-/** An opening where the card bar paid once and the cosmetic bar paid an Epic token and then a pack. */
+/**
+ * An opening whose spent slots gave 20 and 200 points to each bar: the card bar paid once and the
+ * cosmetic bar paid an Epic token and then a pack.
+ */
 function answer(over: Partial<OpeningBarsAnswer> = {}): OpeningBarsAnswer {
   return {
-    card: { before: 18, after: 3, size: 20, pays: 1 },
+    card: { before: 18, after: 38, size: 200, pays: 1 },
     cosmetic: { before: 100, after: 20, size: 150, pays: 2 },
     cosmeticPaid: ["epic", "cosmeticPack"],
+    slotPoints: [0, 20, 0, 200],
     ...over,
   };
 }
@@ -76,14 +83,31 @@ describe("#1658 the sweeps a bar plays", () => {
   });
 });
 
-describe("#1658 an opening's bars and rewards", () => {
-  it("a bar moved when it paid or its points changed", () => {
-    expect(barMoved({ before: 5, after: 5, size: 20, pays: 0 })).toBe(false);
-    expect(barMoved({ before: 5, after: 9, size: 20, pays: 0 })).toBe(true);
-    // A bar that paid and kept the same remainder moved all the same (R1305000).
-    expect(barMoved({ before: 5, after: 5, size: 20, pays: 1 })).toBe(true);
+describe("#1953 the flights of an opening", () => {
+  const source = (index: number): string => `slot-${String(index)}`;
+
+  it("R1953000 one flight for each slot the server gave points, in slot order, with its points, rarity and slot", () => {
+    expect(flightsOf(answer(), ["Common", "Legendary", "Rare", "Mythic"], source)).toEqual([
+      { key: "flight-1", points: 20, rarity: "Legendary", source: "slot-1" },
+      { key: "flight-3", points: 200, rarity: "Mythic", source: "slot-3" },
+    ]);
+    const unspent = answer({
+      card: { before: 18, after: 18, size: 200, pays: 0 },
+      cosmetic: { before: 100, after: 100, size: 150, pays: 0 },
+      cosmeticPaid: [],
+      slotPoints: [0, 0, 0, 0],
+    });
+    expect(flightsOf(unspent, ["Common", "Legendary", "Rare", "Mythic"], source), "no spent slot, no flight").toEqual([]);
   });
 
+  it("R1953000 the flights take one stagger each after the first, then the last one's flight, and none take nothing", () => {
+    expect(flightsMs(0)).toBe(0);
+    expect(flightsMs(1)).toBe(BAR_FLIGHT_MS);
+    expect(flightsMs(3)).toBe(2 * BAR_FLIGHT_STAGGER_MS + BAR_FLIGHT_MS);
+  });
+});
+
+describe("#1658 an opening's bars and rewards", () => {
   it("the card bar's every fill reveals a card token", () => {
     const bars = answer({ card: { before: 1, after: 2, size: 20, pays: 2 } });
     expect(fillReward(bars, "card", 1)).toEqual({ key: "card-1", kind: "cardToken", label: "Card token" });

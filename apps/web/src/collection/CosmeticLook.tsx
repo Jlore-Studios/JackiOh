@@ -1,9 +1,11 @@
 // R1833000: a cosmetic's look, drawn where a surface names one it grants or sells: the card-pack and
 // cosmetic-pack reveals, the token redeem choice and the Chase Shard purchase. A foil, finish or
-// border is its card's face wearing it, drawn unworn and still (`SampleFace`, as the Collection's
-// card view draws one); a playmat or a backdrop is the Collection's mini board; a card back is the
-// back a game draws; a hero portrait is its art. A full art, or a per-card cosmetic with no card to
-// draw it on, has no look here (`hasLook`), and the surface draws its card as before.
+// border is its card's face wearing it, drawn unworn (`SampleFace`, as the Collection's card view
+// draws one); a playmat or a backdrop is the Collection's mini board; a card back is the back a game
+// draws; a hero portrait is its art. A full art, or a per-card cosmetic with no card to draw it on,
+// has no look here (`hasLook`), and the surface draws its card as before. R1953001: a Legendary or
+// Mythic one moves wherever it is drawn: a sample as a face in a game does, the mini board's pads as
+// a game's (collection.css), a backdrop and a card back by their own sheets.
 //
 // `SampleFace` gives a face the four attributes `useCosmeticAttributes` would (cards/cosmetics.ts);
 // the Collection's card view (CardCosmeticsView.tsx) draws its previews with it too, and the account
@@ -14,10 +16,11 @@ import { useLayoutEffect, useRef, type ReactElement } from "react";
 
 import { CATALOG } from "@jackioh/cards";
 
-import { CardBack, CardFace, faceModel } from "../cards/index.ts";
+import { CardBack, CardFace, faceModel, useCardSettings } from "../cards/index.ts";
 import {
   DEFAULT_CARD_COSMETICS,
   MOVING_FINISHES_AND_BORDERS,
+  isChaseCosmetic,
   normalizeCosmetics,
   wornCosmetics,
   type CardSlotKind,
@@ -38,22 +41,30 @@ import "./cosmeticLook.css";
 export const COSMETIC_ATTRIBUTES = ["data-cosmetic-foil", "data-cosmetic-motion", "data-finish", "data-frame"] as const;
 
 /**
- * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default. A sample's foil,
- * and its moving finish or border, holds still, as the cap on moving cosmetics
- * (COSMETIC_FOIL_ANIMATED_MAX) belongs to the faces of a game.
+ * What `useCosmeticAttributes` gives a face wearing `wears`: nothing for a default. Its foil, and its
+ * moving finish or border, moves where `moving` says so and holds still otherwise. R1953001: a
+ * sample takes none of the COSMETIC_FOIL_ANIMATED_MAX slots of a game's faces, since the samples a
+ * screen draws are bounded by the registry, and `SampleFace` moves only a chase.
  */
-export function attributesOf(wears: Record<CardSlotKind, CosmeticId>): Record<(typeof COSMETIC_ATTRIBUTES)[number], string | undefined> {
+export function attributesOf(
+  wears: Record<CardSlotKind, CosmeticId>,
+  moving: boolean,
+): Record<(typeof COSMETIC_ATTRIBUTES)[number], string | undefined> {
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
   return {
     "data-cosmetic-foil": foiled ? wears.foil : undefined,
-    "data-cosmetic-motion": animates ? "static" : undefined,
+    "data-cosmetic-motion": animates ? (moving ? "animated" : "static") : undefined,
     "data-finish": wears.finish === DEFAULT_CARD_COSMETICS.finish ? undefined : wears.finish,
     "data-frame": wears.border === DEFAULT_CARD_COSMETICS.border ? undefined : wears.border,
   };
 }
 
-/** `face` drawn unworn, wearing `wears` by the attributes its stylesheet (cards/cosmetics.css) keys on. */
+/**
+ * `face` drawn unworn, wearing `wears` by the attributes its stylesheet (cards/cosmetics.css) keys on.
+ * R1953001: it moves while it wears a chase and the Animated foil setting is on, as a face in a game
+ * would; anything else it wears holds still.
+ */
 export function SampleFace({
   face,
   layout,
@@ -64,7 +75,8 @@ export function SampleFace({
   wears: Record<CardSlotKind, CosmeticId>;
 }): ReactElement {
   const host = useRef<HTMLSpanElement>(null);
-  const attributes = attributesOf(wears);
+  const { animatedFoil } = useCardSettings();
+  const attributes = attributesOf(wears, animatedFoil && [wears.foil, wears.finish, wears.border].some(isChaseCosmetic));
   useLayoutEffect(() => {
     const root = host.current?.firstElementChild;
     if (root === null || root === undefined) return;

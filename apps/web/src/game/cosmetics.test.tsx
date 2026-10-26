@@ -1,7 +1,8 @@
 // R1295000: on the board, only the viewer's own cards wear the device's card cosmetics — the hand,
 // the units and face-up backrow cards it owns, a unit the opponent has taken included — and only on
 // a board that wears them (`wearCosmetics`). The opponent's cards, and every card on a board that
-// wears none, draw the defaults whatever the device picked.
+// wears none, draw the defaults whatever the device picked. R1953001: what a card wears is its own
+// picks, never the account's synced foil, finish and border, which every test here holds non-default.
 //
 // R1297000: the same holds for the deck slots: the playmat under the viewer's half of the field, the
 // backdrop behind it, and the back of the viewer's face-down cards and deck pile. A saved deck's
@@ -15,6 +16,7 @@ import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import {
+  CARD_SLOT_KINDS,
   DEFAULT_CARD_COSMETICS,
   cosmeticsOf,
   deckCosmeticsOf,
@@ -80,6 +82,13 @@ afterEach(() => {
 });
 
 describe("R1295000 the board's cards and the device's cosmetics", () => {
+  beforeEach(() => {
+    // The view's cards (core-004 in hand and as units, core-020 in the backrow) each pick their own.
+    for (const defId of ["core-004", "core-020"]) {
+      for (const kind of CARD_SLOT_KINDS) writeCardPick(defId, kind, item(kind));
+    }
+  });
+
   it("R1295000 the opponent's cards draw the defaults whatever the device picked; the viewer's own wear them", () => {
     render(<Board view={view()} wearCosmetics />);
 
@@ -242,13 +251,14 @@ describe("R1655000 the board's cards and the picks of each card", () => {
     vi.useRealTimers();
   });
 
-  it("R1655000 the viewer's copy wears its card's picks, another card keeps the account's, the opponent's copy the defaults", () => {
+  it("R1655000 the viewer's copy wears its card's picks, another card and the opponent's copy the defaults", () => {
     writeCardPick(OWN, "border", CARD_BORDER);
     render(<Board view={picksView()} wearCosmetics />);
 
     const hand = screen.getByTestId("hand-you");
     expect(frameOf(hand, OWN)).toBe(CARD_BORDER);
-    expect(frameOf(hand, OTHER)).toBe(BORDER);
+    // R1953001: a card with no pick of its own draws the default, not the account's border.
+    expect(frameOf(hand, OTHER)).toBeNull();
     // The viewer's unit of the same card wears them too; the opponent's copy draws the defaults.
     const yours = facesOwnedBy("p1");
     expect(yours).toHaveLength(1);
