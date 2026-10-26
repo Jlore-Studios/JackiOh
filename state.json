@@ -1883,15 +1883,31 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/README.md",
+            "apps/web/src/cards/ownedFullArt.ts",
+            "apps/web/src/packs/PackOpening.test.tsx",
+            "apps/web/src/packs/PackOpening.tsx",
+            "apps/web/src/shop/CosmeticPacks.tsx",
+            "apps/web/src/shop/Shop.test.tsx",
+            "spec/11-rulings.md",
+            "spec/INDEX.md",
+            "spec/rulings/R1655000.md"
+          ],
+          "from": "4a373869b89b546fcbff2a410da5c4b0cb5b1b75",
+          "main": "c062c5b4921fbc7cce812e4183eb44998491679d"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40286427296",
+            "run": "40296059044",
             "tier": "strong"
           }
         ],
-        "sha": "4a373869b89b546fcbff2a410da5c4b0cb5b1b75",
+        "sha": "bf37d9d895e3573c4aff9d46f1e17888675e58ad",
         "tiers": {
           "claude": "strong"
         }
