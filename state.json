@@ -2877,7 +2877,7 @@
       }
     },
     "2013": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-10-26T17:43:43Z",
@@ -2902,17 +2902,17 @@
       "planned_by_id": "claude-1",
       "planned_tier": "strong",
       "provider": "claude-1",
-      "run_id": "40365099265",
-      "started_at": "2026-10-26T17:03:54Z",
+      "run_id": "pending:52c3a563-1793036866",
+      "started_at": "2026-10-26T17:48:38Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T17:47:33Z",
+    "at": "2026-10-26T17:48:38Z",
     "url": "",
-    "what": "revise #2012 on claude-8"
+    "what": "build #2013 on claude-1"
   },
   "last_sweep": {
     "at": "2026-10-26T17:32:31Z",
