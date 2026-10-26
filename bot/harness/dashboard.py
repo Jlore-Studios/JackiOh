@@ -833,7 +833,8 @@ WORKFLOWS = {
                       "delivers them",
     "ci-duration.yml": "after CI, an issue for any job over seven minutes",
     "ci.yml": "CI: the five required checks on a pull request; everything on a push to main",
-    "claude-wake.yml": "starts each Claude account's 5-hour session at 06:00 Central",
+    "claude-wake.yml": "starts each Claude account's 5-hour session every 4 hours from 06:00 "
+                       "Central",
     "deploy-watch.yml": "asks Render to deploy each push to main; an issue if it never arrives",
     "gather.yml": "each new patch's dev games on the owner's PC, filed as totals (GATHER_ON_PATCH)",
     "hygiene-delete.yml": "deletes the branches a person ticked in the hygiene issue",

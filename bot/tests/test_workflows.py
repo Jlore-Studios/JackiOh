@@ -83,7 +83,7 @@ class NightWorkflowTests(unittest.TestCase):
     def test_every_provider_secret_is_known_to_every_list(self):
         """providers.SECRETS is the list the workflows hand over; each `HARNESS_SECRETS_SET`
         names every one, or a subscription would look unconfigured."""
-        for name in ("bot-night.yml", "bot-commands.yml"):
+        for name in ("bot-night.yml", "bot-commands.yml", "claude-wake.yml"):
             text = read(name)
             lists = re.findall(r"HARNESS_SECRETS_SET: >-\n((?:\s+\$\{\{.*\}\}\n)+)", text)
             self.assertTrue(lists, name)
