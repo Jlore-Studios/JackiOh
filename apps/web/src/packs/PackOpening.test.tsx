@@ -1,7 +1,7 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), from fixture responses:
 // each slot's outcome, the packs held on the panel before and after an opening, skip-all, reduced
 // motion, the pack object, the token bars pinned at the top from the answer and played once every card
-// shows (#1663, R1953000), batch opening, a refused open, and the page told of an opening and asking
+// shows (#1663, R1953000, R1999000), batch opening, a refused open, and the page told of an opening and asking
 // for a fresh read (#1309). Nothing here rolls a pack: the fixtures are what `GET /api/packs` and
 // `POST /api/packs/open` answer, and the audio engine is the recording fake the audio suite's own
 // wiring test uses.
@@ -561,8 +561,43 @@ describe("#1308 the pack-opening scene", () => {
     expect(within(bars).getByTestId(`${T.bars}-card`).querySelector("progress")).toHaveProperty("value", 7);
   });
 
+  it("R1999000 an opening of all-new cards flies a flight from every slot and fills both bars", () => {
+    // Every slot a new card, and the server's points for each, its card rarity's: since R1999000 a
+    // new card adds them as a spent duplicate does.
+    const fixture = openedPack();
+    const slotPoints = [10, 3, 1, 2, 1];
+    const opened: OpenedPackResponse = {
+      ...fixture,
+      slots: fixture.slots.map((slot) => ({ ...slot, grant: { kind: "card" as const } })),
+      bars: {
+        card: { before: 3, after: 20, size: 40, pays: 0 },
+        cosmetic: { before: 5, after: 22, size: 40, pays: 0 },
+        cosmeticPaid: [],
+        slotPoints,
+      },
+    };
+    render(<PackScene {...props({ opened })} />);
+    fireEvent.click(screen.getByTestId(T.skipAll));
+    for (let index = 0; index < 5; index += 1) {
+      expect(screen.getByTestId(T.outcome(index))).toHaveTextContent("New card");
+    }
+    const bars = screen.getByTestId(T.bars);
+    expect(bars).toHaveAttribute("data-phase", "flights");
+    expect(bars.querySelectorAll(".bar-flight")).toHaveLength(5);
+    opened.slots.forEach((slot, index) => {
+      const flight = within(bars).getByTestId(`${T.bars}-flight-${String(index)}`);
+      expect(flight, `slot ${String(index)}`).toHaveTextContent(`+${String(slotPoints[index])}`);
+      expect(flight, `slot ${String(index)}`).toHaveAttribute("data-rarity", slot.rarity);
+    });
+    advance(flightsMs(5));
+    expect(bars).toHaveAttribute("data-phase", "fill");
+    expect(within(bars).getByTestId(`${T.bars}-card`)).toHaveTextContent("20 / 40");
+    expect(within(bars).getByTestId(`${T.bars}-cosmetic`)).toHaveTextContent("22 / 40");
+  });
+
   it("R1953000 an opening that moved neither bar still shows both, with nothing to fly", () => {
-    // No slot was a spent duplicate: the fixture's is a new card here.
+    // No slot gave the bars a point: since R1999000 the server answers none such, but the HUD draws
+    // whatever it is told. The fixture's spent duplicate is a new card here.
     const still = { before: 4, after: 4, size: 12, pays: 0 };
     const fixture = openedPack();
     const opened: OpenedPackResponse = {

@@ -105,6 +105,12 @@
   width: min(100%, 24rem);
 }
 
+/* #1999: the room the pack scene (packs.css) and the Shop (shop.css) leave at the top for the pinned
+   HUD below; a phone's compact HUD takes less (the query at the end). */
+:root {
+  --opening-hud-clearance: 10rem;
+}
+
 /* R1953000: the opening's bars pinned across the top of the viewport while it is on screen. z-index 38
    keeps it under every modal dialog, the pack scene's 39 among them, so a cosmetic opening's HUD left
    on the shop never covers a card pack's scene; inside that scene, a stacking context of its own, it
@@ -132,7 +138,7 @@
   box-shadow: 0 0 14px 2px var(--tavern-flame, #ffb347);
 }
 
-/* One spent slot's points, from its slot's centre (`--flight-x`, `--flight-y`) to the HUD's
+/* One slot's points, from its slot's centre (`--flight-x`, `--flight-y`) to the HUD's
    (`--flight-dx`, `--flight-dy` further on), in its rarity's colour; a bigger rarity lands in a
    bigger burst (`--flight-land`). It is drawn only while motion is on, and holds no pointer. */
 .bar-flight {
@@ -301,5 +307,48 @@
   :root:not([data-reduce-motion="true"]) .opening-hud[data-motion="full"] .fill-bar[data-state="bursting"] .fill-bar__track {
     will-change: transform, opacity;
     animation: opening-hud-pulse var(--pulse-ms) ease-out both;
+  }
+}
+
+/* #1999: on a phone the HUD is compact, each bar one line, its label, its track and its caption side
+   by side, so the pack scene and the Shop start only `--opening-hud-clearance` down, clear of it and
+   of a row of rewards a fill reveals in it. Layout only: nothing here moves. */
+@media (max-width: 600px) {
+  :root {
+    --opening-hud-clearance: 5rem;
+  }
+
+  .opening-hud {
+    width: calc(100% - 1rem);
+    gap: 4px;
+    padding: 6px 10px 8px;
+  }
+
+  .opening-hud .fill-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 8px;
+  }
+
+  .opening-hud .fill-bar__label {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .opening-hud .fill-bar__track {
+    grid-row: 1;
+    grid-column: 2;
+    height: 8px;
+  }
+
+  .opening-hud .fill-bar__caption {
+    grid-column: 3;
+    font-size: 11px;
+    line-height: 16px;
+  }
+
+  .opening-hud .reward-reveal__item {
+    padding: 2px 8px;
+    font-size: 12px;
   }
 }

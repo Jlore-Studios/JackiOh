@@ -252,7 +252,7 @@ fn spent(slots: &[Slot]) -> i64 {
         .count() as i64
 }
 
-/// The points an opening's spent duplicates add to each bar, each its slot's rarity's (R1953000).
+/// The points an opening's slots add to each bar, each its slot's rarity's (R1953000, R1999000).
 fn points(slots: &[Slot]) -> i64 {
     slot_bar_points(slots).iter().sum()
 }
@@ -561,7 +561,7 @@ async fn r1301002_an_opening_on_a_full_collection_grants_cosmetics_or_bar_points
     }
     assert_eq!(owned.len(), cosmetics);
     let bars = points(&slots);
-    assert!(cosmetics > 0 && bars > 0, "{slots:?}");
+    assert!(cosmetics > 0 && spent(&slots) > 0, "{slots:?}");
     assert_eq!(counter(&app, Counter::CardTokenBar).await, bars);
     assert_eq!(counter(&app, Counter::CosmeticTokenBar).await, bars);
 }
@@ -615,8 +615,10 @@ async fn an_opening_answers_the_bars_it_left() {
     );
 }
 
+/// R1999000: a slot that unlocks a new card still adds its rolled rarity's points to both bars, so
+/// an opening of new cards alone moves both, and the answer carries every slot's points.
 #[tokio::test]
-async fn an_opening_with_no_spent_duplicate_answers_both_bars_unmoved() {
+async fn r1999000_an_opening_of_new_cards_adds_every_slot_s_points_to_both_bars() {
     let (app, token) = setup().await;
     set_counter(&app, Counter::CardTokenBar, 7).await;
     set_counter(&app, Counter::CosmeticTokenBar, 11).await;
@@ -625,28 +627,113 @@ async fn an_opening_with_no_spent_duplicate_answers_both_bars_unmoved() {
     let opened = open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &[], "bars-unspent")
         .await
         .expect("the opening");
-    assert_eq!(spent(&opened.slots), 0, "{:?}", opened.slots);
+    assert!(
+        opened.slots.iter().all(|slot| slot.grant == SlotGrant::Card),
+        "{:?}",
+        opened.slots
+    );
+    let expected: Vec<i64> = opened
+        .slots
+        .iter()
+        .map(|slot| card_bar_points(slot.rarity))
+        .collect();
+    assert!(expected.iter().all(|points| *points > 0), "{expected:?}");
+    let gained: i64 = expected.iter().sum();
     assert_eq!(
         opened.bars,
         BarsSettled {
             card: BarSettle {
                 before: 7,
-                after: 7,
+                after: 7 + gained,
                 size: CARD_TOKEN_BAR_SIZE,
                 pays: 0,
             },
             cosmetic: BarSettle {
                 before: 11,
-                after: 11,
+                after: 11 + gained,
                 size: COSMETIC_TOKEN_BAR_SIZE,
                 pays: 0,
             },
             cosmetic_paid: Vec::new(),
-            slot_points: vec![0; PACK_SLOTS],
+            slot_points: expected,
         }
     );
-    assert_eq!(counter(&app, Counter::CardTokenBar).await, 7);
-    assert_eq!(counter(&app, Counter::CosmeticTokenBar).await, 11);
+    assert_eq!(counter(&app, Counter::CardTokenBar).await, 7 + gained);
+    assert_eq!(counter(&app, Counter::CosmeticTokenBar).await, 11 + gained);
+
+    // On the wire, through the route, every slot's points are `bars.slotPoints`.
+    buy(&app, &token, "Core").await;
+    let (status, _, body) = call(
+        &app,
+        "POST",
+        "/api/packs/open",
+        Some(&token),
+        json!({ "pack": "Core" }),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let slots = serde_json::from_value::<OpenedPack>(body.clone())
+        .expect("an opened pack")
+        .slots;
+    let points: Vec<i64> = slots.iter().map(|slot| card_bar_points(slot.rarity)).collect();
+    assert_eq!(body["bars"]["slotPoints"], json!(points));
+}
+
+/// R1999000: a duplicate that becomes a new per-card cosmetic, and one whose global roll drops an
+/// account cosmetic (R1661001), each still add their slot's card rarity's points to both bars.
+#[tokio::test]
+async fn r1999000_a_duplicate_s_cosmetic_and_a_global_roll_s_account_cosmetic_add_their_slot_s_points() {
+    let (app, token) = setup().await;
+    grant_entire_catalog(&app, PROFILE, None)
+        .await
+        .expect("R111's grant");
+    // A foil at every tier, so every duplicate that misses the global roll drops one, and one
+    // account cosmetic the global roll may drop.
+    let playmat = Cosmetic {
+        kind: CosmeticKind::Table,
+        ..foil("table-fixture-epic", GLOBAL_COSMETIC_FLOOR_RARITY)
+    };
+    let mut registry: Vec<Cosmetic> = CosmeticRarity::ALL
+        .into_iter()
+        .map(|rarity| foil(&format!("foil-fixture-{rarity}"), rarity))
+        .collect();
+    registry.push(playmat.clone());
+    // The roll is pure, so a seed whose pack holds both is found before the opening, over the
+    // holdings it will read.
+    let pool = pack_pool(defs(&app), PackKind::Set(SetName::Core));
+    let before = holdings(&app).await;
+    let is_playmat = |slot: &Slot| matches!(&slot.grant, SlotGrant::Cosmetic { cosmetic_id, .. } if *cosmetic_id == playmat.id);
+    let is_foil = |slot: &Slot| matches!(&slot.grant, SlotGrant::Cosmetic { cosmetic_id, .. } if *cosmetic_id != playmat.id);
+    let seed = (0..10_000)
+        .map(|n| format!("r1999000-dupes-{n}"))
+        .find(|seed| {
+            let slots = roll_opening(&pool, &before, &registry, seed)
+                .expect("the roll")
+                .slots;
+            slots.iter().any(is_playmat) && slots.iter().any(is_foil)
+        })
+        .expect("a seed dropping the playmat and a foil");
+    buy(&app, &token, "Core").await;
+    let opened = open_pack(&app, PROFILE, PackKind::Set(SetName::Core), &registry, &seed)
+        .await
+        .expect("the opening");
+    assert!(opened.slots.iter().any(is_playmat), "{:?}", opened.slots);
+    assert!(opened.slots.iter().any(is_foil), "{:?}", opened.slots);
+    let expected: Vec<i64> = opened
+        .slots
+        .iter()
+        .map(|slot| card_bar_points(slot.rarity))
+        .collect();
+    assert!(expected.iter().all(|points| *points > 0), "{expected:?}");
+    assert_eq!(opened.bars.slot_points, expected);
+    let gained: i64 = expected.iter().sum();
+    assert_eq!((opened.bars.card.before, opened.bars.card.after), (0, gained));
+    assert_eq!(
+        (opened.bars.cosmetic.before, opened.bars.cosmetic.after),
+        (0, gained)
+    );
+    assert_eq!(counter(&app, Counter::CardTokenBar).await, gained);
+    assert_eq!(counter(&app, Counter::CosmeticTokenBar).await, gained);
 }
 
 #[tokio::test]
