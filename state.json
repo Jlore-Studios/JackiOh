@@ -2193,7 +2193,9 @@
     },
     "1994": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6416673283"
+      ],
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -2215,9 +2217,7 @@
       "started_at": "2026-10-26T13:09:56Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6416673283"
-      ]
+      "taken_asks": []
     },
     "1995": {
       "asks": [
