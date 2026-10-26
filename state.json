@@ -3104,6 +3104,7 @@
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-10-26T21:39:37Z",
+      "rebuilt": true,
       "review_floor": "",
       "review_notes": "",
       "run_id": "40406406197",
