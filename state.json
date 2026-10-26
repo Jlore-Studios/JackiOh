@@ -2676,9 +2676,12 @@
         "resolved_by": "`claude` (strong)",
         "sha": "edc1e52eb357ea56b5cf33aa009a7fc8f6a99b32"
       },
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-26T15:56:40Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1996,
       "kind": "revise",
       "last_findings": [],
