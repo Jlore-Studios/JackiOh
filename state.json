@@ -2213,7 +2213,9 @@
     },
     "1994": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6416673283"
+      ],
       "difficulty_by": {
         "at": "2026-10-26T13:41:01Z",
         "difficulty": "hard",
@@ -2246,9 +2248,7 @@
       "started_at": "2026-10-26T13:27:55Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6416673283"
-      ]
+      "taken_asks": []
     },
     "1995": {
       "asks": [
