@@ -604,6 +604,16 @@
       "taken_asks": [],
       "verdict_rounds": 2
     },
+    "1857": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-26T14:57:32Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
+    },
     "1889": {
       "action": "build",
       "died": 0,
