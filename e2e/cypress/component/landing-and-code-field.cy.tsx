@@ -158,8 +158,8 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
       });
     });
 
-    // R1584000: with stats to show, the floor below the hero is one screen: the showcase, the Clear
-    // control and the footer are inside it, and nothing in it scrolls. R1743000: the showcase is the one
+    // R1584000: with stats to show, the floor below the hero is one screen: the showcase and the
+    // footer are inside it, and nothing in it scrolls. R1743000: the showcase is the one
     // control, with no arrow or dot (and so no row of them to fit) inside it.
     it(`B39 R1584000 R1743000 the stats floor fits one screen below the hero at ${where(viewport)}`, () => {
       cy.viewport(viewport.width, viewport.height);
@@ -197,7 +197,7 @@ describe("B39 the landing page fits 360, 390, 768 and 1280 px", () => {
         if (footer !== null) {
           expect(footer.getBoundingClientRect().bottom, `the footer ends in the floor at ${where(viewport)}`).to.be.at.most(box.bottom + 1);
         }
-        for (const testid of [landingTestid.showcase, landingTestid.statsClear]) {
+        for (const testid of [landingTestid.showcase]) {
           const inside = floor.querySelector(byTestid(testid));
           expect(inside, `${testid} is in the floor`).to.not.eq(null);
           if (inside === null) continue;

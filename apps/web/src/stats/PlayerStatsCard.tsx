@@ -13,7 +13,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import type { RandomSource } from "../routes/landingFan.ts";
 import { loadPocketPick, type PocketPick } from "./pocketPick.ts";
 import { pocketStat, recordLine, showcaseStats } from "./showcase.ts";
-import { resetPlayerStats, usePlayerStats } from "./store.ts";
+import { usePlayerStats } from "./store.ts";
 import type { PlayerStats } from "./model.ts";
 
 /** R1584000: the showcase and its stage (the board's animations and effects), loaded when a stat is first shown. */
@@ -66,12 +66,6 @@ export function PlayerStatsCard({ reduced, random }: PlayerStatsCardProps): Reac
           <StatShowcase stats={showcase} reduced={reduced} random={random} />
         </Suspense>
       )}
-      <p className="landing-stats-note">
-        {t("Kept on this device only, from what you were shown.")}{" "}
-        <button type="button" className="link-button" data-testid={landingTestid.statsClear} onClick={resetPlayerStats}>
-          {t("Clear")}
-        </button>
-      </p>
     </section>
   );
 }

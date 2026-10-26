@@ -107,14 +107,6 @@
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.8);
 }
 
-.app-shell .practice-intro {
-  max-width: 56ch;
-  margin: 0 auto;
-  color: var(--tavern-text-dim);
-  font-size: 16px;
-  text-align: center;
-}
-
 /* "Choose your opponent" and "Your deck": the setup's two headings, in the same serif. */
 .app-shell .practice-setup__heading {
   margin: 0;
@@ -1392,8 +1384,8 @@
   }
 }
 
-/* Landscape phones: the header gives up its flavour lines and the tiers tighten, so the tiers,
-   the deck and Start all fit on one screen with nothing floating over them. */
+/* Landscape phones: the tiers tighten, so they, the deck and Start all fit on one screen
+   with nothing floating over them. */
 @media (max-height: 520px) and (min-width: 721px) {
   .app-shell.practice--lobby {
     gap: 10px;
@@ -1402,10 +1394,6 @@
 
   .practice-lobby__header {
     margin-top: -34px;
-  }
-
-  .app-shell .practice-intro {
-    display: none;
   }
 
   .app-shell .practice-lobby__title {

@@ -1,12 +1,11 @@
 // Player statistics sync with the account (SPEC §9.11, R654, R1142000).
 //
 // When an active session is present, syncs the device's tracked player statistics
-// and privacy preference to PUT /api/stats/player. Pruned to the summary's inputs
+// to PUT /api/stats/player, with no privacy flag (R2000000). Pruned to the summary's inputs
 // (R1142000) and bounded by PLAYER_STATS_BYTES_MAX.
 
 import { putPlayerStats } from "../net/api.ts";
 import { readSession } from "../net/session.ts";
-import { readSettings } from "../settings/store.ts";
 import { PLAYER_STATS_BYTES_MAX } from "../wire/serverConfig.ts";
 import type { PlayerStats } from "./model.ts";
 import { readPlayerStats } from "./store.ts";
@@ -86,7 +85,6 @@ export function syncPayload(
         draws: stats.draws,
         cards: map,
       },
-      isPrivate: false,
     };
     return JSON.stringify(body).length <= maxBytes;
   };
@@ -109,7 +107,7 @@ export function syncPayload(
 }
 
 /**
- * Sends the device's player stats and privacy preference to the server.
+ * Sends the device's player stats to the server, never `isPrivate` (R2000000).
  * Safe to call frequently: if not signed in or network is unreachable, it silently completes.
  */
 export async function syncPlayerStats(tokenOverride?: string): Promise<void> {
@@ -117,13 +115,10 @@ export async function syncPlayerStats(tokenOverride?: string): Promise<void> {
   if (!token) return;
 
   const stats = readPlayerStats();
-  const settings = readSettings();
-  const isPrivate = !settings.publicStats;
 
   try {
     await putPlayerStats(token, {
       stats: syncPayload(stats) as unknown as Record<string, unknown>,
-      isPrivate,
     });
   } catch {
     // Network or server unreachable: device retains authoritative local stats
