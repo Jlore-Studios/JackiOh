@@ -1829,7 +1829,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your session limit \u00b7 resets 2:40pm (UTC)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "issue": 1855,
       "kind": "revise",
       "last_findings": [],
