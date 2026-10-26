@@ -1633,6 +1633,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "b2a27007df254debc47744834f20afd18a759107"
       },
+      "closed_at": "2026-10-26T09:51:33Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -1643,6 +1644,7 @@
       "issue": 1916,
       "kind": "revise",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "",
