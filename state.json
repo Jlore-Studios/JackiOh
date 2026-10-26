@@ -2195,6 +2195,13 @@
     "1991": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T13:41:35Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "lines 7-8 fail: the label is a layout decision (the full words wrap the phone action row, measured +52 px) checked by a Cypress component spec, not a unit test"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
