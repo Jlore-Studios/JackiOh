@@ -2748,7 +2748,7 @@
       }
     },
     "2010": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -2785,8 +2785,8 @@
       "question": "",
       "queued_at": "2026-10-26T21:49:12Z",
       "round_tier": "",
-      "run_id": "40407744067",
-      "started_at": "2026-10-26T21:50:43Z",
+      "run_id": "pending:22a5d811-1793053065",
+      "started_at": "2026-10-26T22:18:36Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
@@ -3155,9 +3155,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T21:50:43Z",
+    "at": "2026-10-26T22:18:36Z",
     "url": "",
-    "what": "plan #2010 on claude-8"
+    "what": "build #2010 on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-26T22:04:57Z",
