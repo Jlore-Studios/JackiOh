@@ -320,5 +320,11 @@
     "commit": "b53c6f6ac86cbcc258bbac64ff8a98f714b0a392",
     "blob": "693d7f46e429b702f420f8caa29a765ecebc715f",
     "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
+  },
+  {
+    "version": "v0.4.12c",
+    "commit": "4ed4e9f77ce9785586c67b64ffcc02395e5725f9",
+    "blob": "693d7f46e429b702f420f8caa29a765ecebc715f",
+    "winRatesBlob": "f3c43d3a320c7ad04c39e45a8988b0a903a53c86"
   }
 ]
