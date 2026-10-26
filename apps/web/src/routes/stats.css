@@ -759,3 +759,64 @@
     align-items: center;
   }
 }
+
+/* R1966000: the Sets tab's three leaders sit in one row, at a phone's width too. */
+.stats-sets-leaders {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 600px) {
+  .stats-sets-leaders .stats-summary-tile {
+    padding: 8px 10px;
+  }
+
+  .stats-sets-leaders .stats-summary-label {
+    font-size: 10px;
+  }
+
+  .stats-sets-leaders .stats-summary-value {
+    font-size: 16px;
+  }
+}
+
+/* R1966000: the Sets tab: the highest set's star, each set's change since the previous patch, and the strongest and weakest cards. */
+.stats-sets-leader {
+  color: #facc15;
+}
+
+.stats-sets-change {
+  font-weight: 600;
+}
+
+.stats-sets-change--up {
+  color: #4ade80;
+}
+
+.stats-sets-change--down {
+  color: #f87171;
+}
+
+.stats-sets-outliers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.stats-sets-outlier-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.stats-sets-outlier-cards {
+  margin: 0;
+  padding-left: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-sets-note {
+  margin-top: 16px;
+}
