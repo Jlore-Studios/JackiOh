@@ -1429,20 +1429,22 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "apps/web/src/game/Board.tsx"
+            "spec/11-rulings.md",
+            "spec/INDEX.md",
+            "spec/rulings/R1655000.md"
           ],
-          "from": "fa24a2c8c352ac74762499ceae590dc21318c461",
-          "main": "44c4d2ccc7ae68b9e2cbd753d79e95849a6bb3c8"
+          "from": "afd5285ebc74e30ee4c80579d24f0449e6968380",
+          "main": "458f267701364eaf4252eabd2ae788abb7b66d2d"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "40286356428",
+            "run": "40294182943",
             "tier": "strong"
           }
         ],
-        "sha": "afd5285ebc74e30ee4c80579d24f0449e6968380",
+        "sha": "b75ed467de788c5264d7a1996eabee0164b89088",
         "tiers": {
           "claude": "strong"
         }
