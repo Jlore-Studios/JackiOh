@@ -2638,13 +2638,11 @@
     "what": "build #1995 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-26T15:26:30Z",
+    "at": "2026-10-26T15:40:27Z",
     "notes": [
-      "delivered revise #2002 on claude-3 (run 40342328181): approved",
-      "delivered build #1991 on muse (run 40333244244): approved",
-      "delivered build #2000 on claude-8 (run 40331403229): approved",
-      "started review #2007 on claude-3 (run 40350158730)",
-      "started revise #2008 on muse (run 40350366137)",
+      "delivered review #2007 on claude-3 (run 40350158730): reviewed",
+      "delivered plan #1995 on claude-6 (run 40338762790): planned",
+      "started build #1995 on claude-6 (run 40352160629)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -3351,7 +3349,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T15:26:30Z",
+  "loop_tick": "2026-10-26T15:40:27Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T15:24:33Z",
