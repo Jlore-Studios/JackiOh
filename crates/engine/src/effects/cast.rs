@@ -286,6 +286,7 @@ pub fn cast_new(args: CastNewArgs) -> Effect {
             Zone::Resolving { player: controller },
         );
         card.radiant = def.radiant.or(args.radiant).unwrap_or(false);
+        crate::generators::record_generator(ctx, &card);
         let options = options_of(&args.how);
         cast_card(&mut sink_of(ctx), &card, options);
     })
@@ -357,6 +358,7 @@ fn cast_one_random(asked: CatalogQueryArgs, radiant: bool, how: CastHow) -> Effe
             Zone::Resolving { player: controller },
         );
         card.radiant = radiant;
+        crate::generators::record_generator(ctx, &card);
         // R28: a Call to Chaos a random cast makes is a cast of the chain (Classic+ #47 Jogg's Box), one
         // deeper than the card casting it, so it counts against CALL_TO_CHAOS_CHAIN_CAP.
         if chaos {

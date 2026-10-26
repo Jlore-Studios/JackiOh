@@ -4,7 +4,8 @@
 // /api/collection` says which are owned (CLAUDE.md rule 7); this counts the rows and draws them.
 // R1655000: a card opens in its own view (CardCosmeticsView), large, wearing its own picks, with
 // a strip of what it may wear; the card's text is one click from there. R1953001: `token` lets that
-// view offer a held cosmetic token on a locked cosmetic.
+// view offer a held cosmetic token on a locked cosmetic. R1956000: an owned card's tile in the grid
+// is the viewer's own copy too, and wears the same picks; a locked one draws the defaults.
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -71,7 +72,7 @@ export default function OwnedCards({
                       }}
                     >
                       <span className="collection-card__face">
-                        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt />
+                        <CardFace face={faceModel({ defId: def.id, def, radiant: false })} layout="full" lazyArt worn={held} />
                       </span>
                       {held ? null : (
                         <span className="collection-card__lock" aria-hidden="true">

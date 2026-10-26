@@ -220,6 +220,11 @@ export type FaceModel = {
   starship?: { pieces: number; launched: boolean } | null;
   /** MD-B6, R943: in play, the card was minted after the decks were built (`CardView.created`). */
   created?: boolean;
+  /**
+   * R1956001: in play, the catalog id of the card that generated the viewer's own Created card
+   * (`CardView.createdBy`), whose foil, finish and border it wears (cosmetics.ts). Absent otherwise.
+   */
+  createdBy?: string;
   /** E36: the lines of code of the card's script (`CardDef.loc`); a fused card's definition carries its ingredients' sum. */
   loc?: number | null;
   /** R437: in play, the marks on the card (`CardView.marks`), which the inspect overlays spell out. */
@@ -289,6 +294,8 @@ export type InPlay = {
   starship?: { pieces: number; name: string | null };
   /** MD-B6, R943: the card was minted after the decks were built (`CardView.created`). */
   created?: true;
+  /** R1956001: the card that generated the viewer's own Created card (`CardView.createdBy`). */
+  createdBy?: string;
   /** R437: the marks on the card (`CardView.marks`). */
   marks?: readonly CardMark[];
   /** B5 E33, R404: the card's quest line (`CardView.quest`). */
@@ -428,6 +435,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
+    ...(inPlay?.createdBy === undefined ? {} : { createdBy: inPlay.createdBy }),
     ...(inPlay?.attackReason === undefined ? {} : { attackReason: inPlay.attackReason }),
     ...(inPlay?.playReason === undefined ? {} : { playReason: inPlay.playReason }),
     ...(english === null ? {} : { chinese: true, englishName: english.name, englishText: english.text.full }),

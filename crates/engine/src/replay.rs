@@ -116,13 +116,15 @@ pub fn fnv1a32_utf16(text: &str) -> String {
     format!("{hash:08x}")
 }
 
-/// FNV-1a over the canonical state, minus the nonce log, which is bookkeeping, and the opening a Glitch
-/// reset deals again (R676), which is a copy of the fold's own input, so no hash moved when it came.
+/// FNV-1a over the canonical state, minus the nonce log, which is bookkeeping, the opening a Glitch
+/// reset deals again (R676), which is a copy of the fold's own input, so no hash moved when it came,
+/// and the Created cards' generators (R1956001), which dress a card and play no part in a game, so a
+/// game recorded before they were kept hashes as it did.
 /// The text is written straight from `Serialize` (`direct::canonical_text`), byte for byte what
 /// `canonical(&to_value(state))` writes; a shape that writer leaves alone takes the `Value` path
 /// below, so the hash never depends on which path ran.
 pub fn hash_state(state: &GameState) -> String {
-    if let Some(text) = direct::canonical_text(state, &["applied", "opening"]) {
+    if let Some(text) = direct::canonical_text(state, &["applied", "opening", "generators"]) {
         return fnv1a32_utf16(&text);
     }
     let mut value = match serde_json::to_value(state) {
@@ -132,6 +134,7 @@ pub fn hash_state(state: &GameState) -> String {
     if let Value::Object(map) = &mut value {
         map.remove("applied");
         map.remove("opening");
+        map.remove("generators");
     }
     fnv1a32_utf16(&canonical(&value))
 }

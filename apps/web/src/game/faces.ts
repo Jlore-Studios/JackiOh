@@ -97,6 +97,8 @@ export function liveFace(info: CardInfo, card: CardView, facts: LiveFacts = {}):
   if (unit?.starship !== undefined) inPlay.starship = { pieces: unit.starship.pieces.length, name: unit.starship.name ?? null };
   // MD-B6, R943: a Created card, wherever the view carries the mark.
   if (card.created === true) inPlay.created = true;
+  // R1956001: and the card that generated it, on the viewer's own Created card alone.
+  if (card.createdBy !== undefined) inPlay.createdBy = card.createdBy;
   // ME-GRANT, R1107: the Death abilities other cards granted the unit, as its lines read them.
   if (unit?.grants !== undefined && unit.grants.length > 0) inPlay.grants = unit.grants;
   // R849000: the inspect notes spell it out.

@@ -87,6 +87,7 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             if let Some(memory) = &args.memory {
                 card.memory.extend(memory.clone());
             }
+            crate::generators::record_generator(ctx, &card);
             let outcome = match args.position {
                 None => shuffle_into_library(ctx, &mut card, false, args.copy_of.as_deref()),
                 Some(end) => {
@@ -126,6 +127,7 @@ pub fn shuffle_copies_of_self(args: ShuffleCopiesOfSelfArgs) -> Effect {
             let mut card = new_instance(&mut *ctx.state, &this.def_id, player, Zone::Library { player });
             card.radiant = this.radiant;
             carry_from(&mut card, Some(&this));
+            crate::generators::record_generator(ctx, &card);
             shuffle_into_library(ctx, &mut card, false, Some(this.id.as_str()));
         }
     })
