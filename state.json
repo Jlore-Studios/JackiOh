@@ -2514,10 +2514,10 @@
       "question": "",
       "queued_at": "2026-10-26T15:54:27Z",
       "round_tier": "medium",
-      "run_id": "40344496768",
+      "run_id": "pending:cb6ba306-1793030057",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-10-26T14:57:04Z",
+      "started_at": "2026-10-26T15:55:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -2673,9 +2673,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T15:43:38Z",
+    "at": "2026-10-26T15:55:21Z",
     "url": "",
-    "what": "build #1995 on claude-6"
+    "what": "revise #2004 on muse"
   },
   "last_sweep": {
     "at": "2026-10-26T15:40:27Z",
