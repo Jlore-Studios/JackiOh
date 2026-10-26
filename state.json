@@ -1896,9 +1896,12 @@
         "sha": "8968c81a5d89ddb9cad85d1cb9130969b6c8aadb"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-26T08:18:51Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1895,
       "kind": "review",
       "pending_request": false,
