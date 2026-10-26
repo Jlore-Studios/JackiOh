@@ -2972,6 +2972,7 @@
     "2016": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "f6f5ed7f9a17a83f065507f7b82f5fafaeeb768a",
       "ci_fixes": 1,
       "ci_reruns": {
         "eab88c9126a7ac46b789546d68012dcbbee62604": 1
@@ -2985,21 +2986,25 @@
       },
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-26T17:48:38Z",
+      "feedback_since": "2026-10-26T19:33:30Z",
       "forced": false,
       "interruptions": 0,
       "issue": 2013,
       "kind": "revise",
+      "last_findings": [],
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-26T19:25:31Z",
       "requested_by": "jgoetzmann-bot",
+      "round_tier": "medium",
       "run_id": "40387801306",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-26T19:33:30Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
