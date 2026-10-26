@@ -26,12 +26,6 @@
   font-weight: 700;
 }
 
-.tavern.together-screen .together-hero__lead {
-  margin: 0;
-  color: var(--text-dim);
-  max-width: 60ch;
-}
-
 .tavern.together-screen .together-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);

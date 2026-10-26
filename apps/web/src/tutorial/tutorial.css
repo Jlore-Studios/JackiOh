@@ -72,10 +72,6 @@
   font-weight: 750;
 }
 
-.app-shell .tutorial-path__intro {
-  font-size: 14px;
-}
-
 .tutorial-path__summary {
   display: flex;
   flex-wrap: wrap;
@@ -1105,10 +1101,6 @@
   .tutorial-path {
     gap: 10px;
     padding: 10px 12px 12px;
-  }
-
-  .app-shell .tutorial-path__intro {
-    display: none;
   }
 
   .app-shell .tutorial-lesson__summary {

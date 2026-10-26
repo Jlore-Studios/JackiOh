@@ -8,15 +8,12 @@
 // It draws nothing until the account's value is in: signed out, a pending account and a server from
 // before #936 have no such setting. Who may actually watch is still the server's (CLAUDE.md rule 7).
 
-import { useEffect, useId, useState, type ReactElement } from "react";
-
-import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
+import { useEffect, useState, type ReactElement } from "react";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { apiRequest, getPlayerSettings, type PlayerSettingsAccountCopy } from "../net/api.ts";
 import { withSession } from "../net/gate.ts";
 import { readSession } from "../net/session.ts";
-import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { messageOf } from "./session.ts";
 import { SPECTATORS_SETTING_TESTID } from "./testids.ts";
 
@@ -36,7 +33,6 @@ function putAllowSpectators(token: string, allow: boolean): Promise<{ settings: 
 
 export function SpectatorSwitch(): ReactElement | null {
   useLocale();
-  const hintId = useId();
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,17 +83,11 @@ export function SpectatorSwitch(): ReactElement | null {
           data-testid={SPECTATORS_SETTING_TESTID}
           checked={allowed}
           disabled={busy}
-          aria-describedby={hintId}
           onChange={(event) => {
             change(event.currentTarget.checked);
           }}
         />
       </label>
-      <p className="settings-hint" id={hintId}>
-        {t("Friends can watch your online games from your seat, {seconds} seconds behind.", {
-          seconds: String(Math.round(SPECTATE_DELAY_MS / MS_PER_SECOND)),
-        })}
-      </p>
       {error === null ? null : (
         <p className="notice" role="alert">
           {t(error)}

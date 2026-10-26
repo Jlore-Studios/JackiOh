@@ -203,7 +203,7 @@ none, its address hash (R157); a refusal is 429 `rate_limited` with its wait (R1
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
 | `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000); a pair's start fails, through its failed-start cleanup, for a seat the ledger finds taken, and a sweep on an older epoch claims no pair, leaving both tickets open (R1523000) |
-| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
+| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002), counted at most once per `QUEUE_READOUT_CACHE_TTL_SECONDS` and kept for every caller (R1996000) |
 | `GET`, `POST`, `DELETE` | `/api/rooms`, `/api/rooms/:code`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000), the ledger's answer to a join racing another door (R1523000); 503 `unavailable` while a newer server holds the seats (R1523000); the caller's open rooms, newest first, never a challenge's; the host's cancel of a room nobody has joined, `200 {cancelled}`, idempotent, 404 for another's room and 409 for a challenge's (R1075000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
@@ -913,6 +913,13 @@ each deck of `frozen_trio` freeze a deck's three slots with it, as the portrait 
 every reader takes as all defaults (R1834002); and `bots.cosmetics` a ladder bot's wardrobe and
 picks, never in the ledger (R1834005). Its checks pin a slug of at most 40 characters and the jsonb
 shapes; what an id names is the server's to check, against `cosmetics.json` (R1834001).
+
+Migration 0062 indexes the three reads of a recent window of a table nothing purges (#1996), and
+only adds indexes: `tickets (claimed_at) where status = 'claimed'` for `tickets_recent_waits` and
+`results (ended_at)` for `results_count_since`, the queue readout's two counts (R640002), and
+`matches (ended_at) where status = 'over'` for `game_records_unfiled`, the refile sweep's
+(R1596000). `tests/sql/01_schema_invariants.sql` CHECK 20 plans each query with sequential scans
+off, and fails when one reads its table whole or does not use its index.
 
 ## Tests
 

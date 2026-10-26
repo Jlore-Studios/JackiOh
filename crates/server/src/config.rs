@@ -412,6 +412,10 @@ pub const QUEUE_WAIT_QUANTILE: f64 = 0.75;
 pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
 /// R640002: the expected wait is rounded up to the next multiple of this many seconds.
 pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
+/// SPEC §11 R1996000: how long the server keeps the queue readout it counted, in seconds, so the
+/// `SERIES_POLL_SECONDS` polls of every waiting client inside it share one count. Short beside the
+/// `QUEUE_READOUT_WINDOW_SECONDS` it counts over, so a kept answer is never visibly late.
+pub const QUEUE_READOUT_CACHE_TTL_SECONDS: i64 = 5;
 
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.

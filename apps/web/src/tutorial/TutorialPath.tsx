@@ -196,11 +196,6 @@ export function TutorialPath({ onStart }: TutorialPathProps): ReactElement {
           <h2 className="tutorial-path__title" id={headingId}>
             {t("Learn to play")}
           </h2>
-          <p className="tutorial-path__intro">
-            {allDone
-              ? t("Every lesson is done. Replay any of them whenever you like.")
-              : t("Short guided games against a gentle AI. Finish one to open the next.")}
-          </p>
         </div>
         <div className="tutorial-path__summary">
           <p className="tutorial-path__progress">

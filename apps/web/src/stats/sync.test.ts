@@ -1,11 +1,11 @@
-// Player statistics sync tests (SPEC §9.11, R654, R1142000).
+// Player statistics sync tests (SPEC §9.11, R654, R1142000, R2000000).
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { putPlayerStats } from "../net/api.ts";
 import { clearSession, writeSession } from "../net/session.ts";
-import { resetSettings, writeSettings } from "../settings/store.ts";
+import { SETTINGS_STORAGE_KEY, __resetSettingsForTests, resetSettings } from "../settings/store.ts";
 import { PLAYER_STATS_BYTES_MAX } from "../wire/serverConfig.ts";
 import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION } from "./config.ts";
 import { EMPTY_STATS, NO_COUNTS, type CardCounters, type PlayerStats } from "./model.ts";
@@ -92,7 +92,7 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     };
 
     const payload = syncPayload(fullStats);
-    const putBody = { stats: payload, isPrivate: false };
+    const putBody = { stats: payload };
     const stringifiedLength = JSON.stringify(putBody).length;
 
     // Must fit under PLAYER_STATS_BYTES_MAX
@@ -137,11 +137,11 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     };
 
     // Full device stats with 250 cards and all 5 counters exceeds the old 16384 cap
-    const deviceBodyLength = JSON.stringify({ stats, isPrivate: false }).length;
+    const deviceBodyLength = JSON.stringify({ stats }).length;
     expect(deviceBodyLength).toBeGreaterThan(16384);
 
     const payload = syncPayload(stats);
-    const putBody = { stats: payload, isPrivate: false };
+    const putBody = { stats: payload };
     expect(JSON.stringify(putBody).length).toBeLessThanOrEqual(PLAYER_STATS_BYTES_MAX);
 
     // Summary computed over payload is identical to summary computed over full stats
@@ -181,12 +181,11 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
           "card-b": { played: 50 },
         },
       },
-      isPrivate: false,
     };
     const tightCap = JSON.stringify(twoCardsBody).length;
 
     const payload = syncPayload(stats, tightCap);
-    const putBody = { stats: payload, isPrivate: false };
+    const putBody = { stats: payload };
     expect(JSON.stringify(putBody).length).toBeLessThanOrEqual(tightCap);
 
     // card-d (count 1) and card-c (count 10) were dropped first; card-a (100) and card-b (50) remain
@@ -223,14 +222,12 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
     });
   });
 
-  it("R1142000 syncPlayerStats calls putPlayerStats with pruned payload and privacy preference", async () => {
+  it("R1142000 R2000000 syncPlayerStats calls putPlayerStats with the pruned payload and no isPrivate", async () => {
     writeSession({
       accessToken: "test-token-123",
       refreshToken: "refresh-123",
       expiresAt: Date.now() + 60000,
     });
-
-    writeSettings({ publicStats: true });
 
     setStoredStats({
       ...EMPTY_STATS,
@@ -256,18 +253,19 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
           "core-001": { played: 2, destroyed: 1 },
         },
       },
-      isPrivate: false,
     });
+    expect(vi.mocked(putPlayerStats).mock.calls[0]?.[1]).not.toHaveProperty("isPrivate");
   });
 
-  it("R1142000 syncPlayerStats respects publicStats false as isPrivate true and swallows errors", async () => {
+  it("R2000000 a publicStats false an older device stored sends no isPrivate, and a failed request is swallowed", async () => {
     writeSession({
       accessToken: "token-private",
       refreshToken: "refresh-123",
       expiresAt: Date.now() + 60000,
     });
 
-    writeSettings({ publicStats: false });
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ publicStats: false }));
+    __resetSettingsForTests();
 
     setStoredStats({
       ...EMPTY_STATS,
@@ -291,8 +289,8 @@ describe("R1142000 syncPlayerStats and syncPayload", () => {
         draws: 0,
         cards: {},
       },
-      isPrivate: true,
     });
+    expect(vi.mocked(putPlayerStats).mock.calls[0]?.[1]).not.toHaveProperty("isPrivate");
   });
 
   it("R1142000 syncPlayerStats does nothing when not signed in", async () => {
