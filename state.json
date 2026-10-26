@@ -2025,9 +2025,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T03:22:09Z",
+    "at": "2026-10-26T04:08:40Z",
     "url": "",
-    "what": "build #1953 on claude-3"
+    "what": "suggestions on claude-8"
   },
   "last_sweep": {
     "at": "2026-10-26T03:58:26Z",
@@ -4160,6 +4160,7 @@
     "at": "2026-10-26T03:37:18Z"
   },
   "suggest": {
+    "asks": [],
     "declined": [
       {
         "at": "2026-10-25T13:04:17Z",
@@ -4172,11 +4173,284 @@
         "number": 1901,
         "title": "Patch: the in-memory store refuses the deletes postgres refuses",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-25T03:34:29Z",
+        "number": 1819,
+        "title": "Patch: the inline confirms on the series, friends and creator screens take focus and answer Escape",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-24T06:50:31Z",
+        "number": 1773,
+        "title": "Patch: at the 1v1, practice and lesson tables the focus lands on the result's reopen button and stays inside the Leave dialog, as the co-op table's already does",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-24T06:51:16Z",
+        "number": 1772,
+        "title": "Patch: turning public player statistics off reaches the account or says it didn't, with Try again, and a settings reset reaches it too",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-24T03:23:44Z",
+        "number": 1762,
+        "title": "Patch: the Luau lint refuses what makes a custom script's answer run-dependent",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-24T03:21:50Z",
+        "number": 1761,
+        "title": "Patch: an e2e spec drives the together safety flows \u2014 report, block, unblock, remove",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-24T03:05:52Z",
+        "number": 1753,
+        "title": "Patch: a finished co-op match refuses a seat's attach past its window, in-memory actor or not",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-23T13:02:03Z",
+        "number": 1716,
+        "title": "Patch: a failed clock persist is retried, not marked written",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-23T02:42:21Z",
+        "number": 1693,
+        "title": "Patch: the fuzz starts games with dealt seats, last boards and Glitch boards in combination, as a live match does",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-23T02:44:16Z",
+        "number": 1692,
+        "title": "Patch: the phone's game-log toggle shows when new lines landed while it was closed",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-23T02:41:27Z",
+        "number": 1690,
+        "title": "Patch: a block landing while a friend request is accepted can't resurrect the friendship",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-22T14:59:52Z",
+        "number": 1637,
+        "title": "Patch: My Pawn's lethal check counts a Lifesteal strike back as the combat really heals it",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-22T01:39:03Z",
+        "number": 1601,
+        "title": "Patch: the Duos fuzz refuses the actions its legal list never offered",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-22T01:36:38Z",
+        "number": 1597,
+        "title": "Patch: one profile can't land in two live series",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-21T12:30:48Z",
+        "number": 1498,
+        "title": "Patch: one account can't hold a live co-op match and a live 1v1 match at once",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-21T05:03:22Z",
+        "number": 1488,
+        "title": "Patch: the fuzz gate checks that a seat's view stays the same when only what that seat cannot see changes",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-20T11:36:53Z",
+        "number": 1397,
+        "title": "Patch: a 1v1 room code is no way past a block, as a co-op room's already is",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-20T11:50:01Z",
+        "number": 1396,
+        "title": "Patch: the AI's hidden cards keep only where they sit, so a raised Ascent level no longer gives away a hidden Reach the Summit",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-20T01:10:14Z",
+        "number": 1363,
+        "title": "Patch: pin past Duos fuzz failures in a checked-in regression corpus",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-19T12:21:52Z",
+        "number": 1289,
+        "title": "Patch: the practice AI's pauses shorten with the effects-speed setting",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-19T12:22:42Z",
+        "number": 1288,
+        "title": "Patch: a player with no decks can start one from a practice starter deck",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-19T18:00:21Z",
+        "number": 1286,
+        "title": "Patch: the AI prices a curse in a deck as harm to whoever draws it",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-19T12:18:28Z",
+        "number": 1283,
+        "title": "Patch: the AI's lethal holds against every trap a face-down card could be, not three guesses",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-19T05:36:39Z",
+        "number": 1268,
+        "title": "Patch: a friend's challenge shows its time left, and the challenger is told when it was declined or lapsed",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-19T18:00:17Z",
+        "number": 1265,
+        "title": "Patch: the AI prices a hand card at the cost it was set to, so an \"It costs (0)\" card counts",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-18T21:57:41Z",
+        "number": 1241,
+        "title": "Patch: Duos replays load a page at a time",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-18T16:16:57Z",
+        "number": 1196,
+        "title": "Patch: solo Duos practice against the AI team in the browser",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-18T04:18:03Z",
+        "number": 1193,
+        "title": "Patch: a random deck dealt to a player holds at least two Traps or Field Traps",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-18T01:48:53Z",
+        "number": 1170,
+        "title": "Patch: require a local test module for every card script",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-17T23:17:41Z",
+        "number": 1158,
+        "title": "Patch: live games and replays render their pinned catalog",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-17T20:03:26Z",
+        "number": 1128,
+        "title": "Patch: record Duos matches in player and card statistics",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-16T18:58:13Z",
+        "number": 1077,
+        "title": "Patch: the AI's redacted worlds keep a Rollback's history and a Glitch's boards",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-16T04:41:00Z",
+        "number": 1040,
+        "title": "Patch: the game log stays where its reader scrolled, and every line that names a card opens it",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-16T04:43:18Z",
+        "number": 1000,
+        "title": "Patch: the fuzz gate plays custom-card games",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-14T22:14:06Z",
+        "number": 899,
+        "title": "Patch: spec check reads the card scripts' .luau citations and refuses proofs that cannot run",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-14T16:13:54Z",
+        "number": 886,
+        "title": "Patch: record the AI's decisions and the positions they were made in, not only its results",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-14T19:36:02Z",
+        "number": 885,
+        "title": "Patch: close the Luau API's open gaps and port the cards they keep in Rust",
+        "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-14T13:59:46Z",
+        "number": 863,
+        "title": "Patch: a fifth tutorial lesson \u2014 heroic powers, activates and secrets",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-14T03:07:27Z",
+        "number": 844,
+        "title": "Patch: `catalog check` diffs SPEC \u00a78's card tables against catalog.json",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-14T01:03:25Z",
+        "number": 836,
+        "title": "Patch: a deck shares as a link that opens its import preview",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-13T11:28:01Z",
+        "number": 777,
+        "title": "Patch: the fuzz monitor checks that every card sits in exactly one pile and that a settled board holds nothing half-done (I8, I9)",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-08T02:29:57Z",
+        "number": 439,
+        "title": "Patch: Say who goes first and who gets The Coin during the mulligan",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-08T02:30:43Z",
+        "number": 431,
+        "title": "Patch: Make the board usable with a screen reader and without colour vision",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-07T01:47:02Z",
+        "number": 429,
+        "title": "Patch: Keep each device's player statistics on the account instead of overwriting them",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-06T05:42:27Z",
+        "number": 350,
+        "title": "Patch: Keep the whole game in the log, not just the view's last 32 events",
+        "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-06T05:06:43Z",
+        "number": 347,
+        "title": "Patch: Start disconnect grace for an absent seat after a restart or no-show",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-26T03:31:15Z",
-    "last_run": null,
-    "requested": false
+    "idle_since": "2026-10-26T04:08:40Z",
+    "last_run": "2026-10-26T04:08:40Z",
+    "provider": "claude-8",
+    "requested": false,
+    "run_id": "pending:2fb2048c-1792987669",
+    "taken_asks": []
   },
   "usage": null,
   "version": 1
