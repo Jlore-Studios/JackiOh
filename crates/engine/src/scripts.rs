@@ -378,11 +378,14 @@ fn shared_empty_script() -> &'static Script {
 ///
 /// Borrowed from the registry: nothing is copied for a registered card (a fused card's script is shared
 /// with the state's, or composed for the lookup).
+///
+/// R1850000: a copier runs the text it copied (`unit_text::text_def_of`).
 fn instance_script(state: &GameState, instance: &CardInstance) -> ScriptRef {
     if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return ScriptRef::Static(shared_empty_script());
     }
-    face_ref(state, &instance.def_id, instance.radiant)
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(instance);
+    face_ref(state, def_id, radiant)
 }
 
 /// What `script_of` may be asked about: a definition id (the card's two scripts, SURFACE §6.6) or an
@@ -432,12 +435,10 @@ pub fn flags_of(state: &GameState, instance: &CardInstance) -> StaticFlags {
     if instance.vanilla || crate::alt_play::is_dormant(instance) {
         return StaticFlags::default();
     }
-    if let Some(entry) = registered_entry(&instance.def_id) {
-        let face = if instance.radiant {
-            &entry.radiant
-        } else {
-            &entry.base
-        };
+    // R1850000: a copier's flags are the copied text's.
+    let (def_id, radiant) = crate::subsystems::unit_text::text_def_of(instance);
+    if let Some(entry) = registered_entry(def_id) {
+        let face = if radiant { &entry.radiant } else { &entry.base };
         return face.flags();
     }
     instance_script(state, instance).flags()

@@ -148,12 +148,7 @@ mod tests {
         }))
     }
 
-    /// `at(card)` as the play's literal.
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
-    /// `at(card)` as the selections a prompt carries.
+    /// `pick::instance(card)` as the selections a prompt carries.
     fn at_selection(card: &CardInstance) -> Vec<Selection> {
         vec![Selection::Instance {
             instance_id: card.id.clone(),
@@ -216,7 +211,7 @@ mod tests {
                 );
                 let vanilla = must_unit(&s, P2, 2);
 
-                s.play(FEELINGS, json!({ "targets": at(&vanilla) }));
+                s.play(FEELINGS, json!({ "targets": pick::instance(&vanilla) }));
 
                 assert_eq!(s.card(&vanilla).controller, P1);
                 assert!(s.unit(P2, 2).is_none());
@@ -233,7 +228,7 @@ mod tests {
                 );
                 let vanilla = must_unit(&s, P2, 2);
 
-                s.play(FEELINGS, json!({ "targets": at(&vanilla) }));
+                s.play(FEELINGS, json!({ "targets": pick::instance(&vanilla) }));
 
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.id), Some(vanilla.id.clone()));
             }
@@ -251,7 +246,7 @@ mod tests {
 
                 assert!(offered(&s).contains(&vanilla.id));
                 assert!(!offered(&s).contains(&menace.id));
-                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": at(&menace) })));
+                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": pick::instance(&menace) })));
             }
 
             #[test]
@@ -264,7 +259,7 @@ mod tests {
                 );
                 let menace = must_unit(&s, P2, 3);
 
-                s.play(FEELINGS, json!({ "targets": at(&menace) }));
+                s.play(FEELINGS, json!({ "targets": pick::instance(&menace) }));
 
                 assert_eq!(s.card(&menace).controller, P1);
             }
@@ -295,7 +290,7 @@ mod tests {
                     false,
                 );
                 let vanilla = must_unit(&s, P2, 2);
-                crate::expect_costs(&mut s, FEELINGS, 2, json!({ "targets": at(&vanilla) }));
+                crate::expect_costs(&mut s, FEELINGS, 2, json!({ "targets": pick::instance(&vanilla) }));
             }
 
             #[test]
@@ -309,7 +304,7 @@ mod tests {
                 let bear = s.card(BEAR).clone();
 
                 assert!(offered(&s).is_empty());
-                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": at(&bear) })));
+                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": pick::instance(&bear) })));
                 assert_eq!(s.backrow(P2, 4).map(|card| card.id), Some(bear.id.clone()));
             }
 
@@ -325,7 +320,7 @@ mod tests {
                 crate::stand_in_backrow(&mut s, &vanilla.id, 3);
 
                 assert_eq!(offered(&s), vec![vanilla.id.clone()]);
-                s.play(FEELINGS, json!({ "targets": at(&vanilla) }));
+                s.play(FEELINGS, json!({ "targets": pick::instance(&vanilla) }));
 
                 assert_eq!(s.card(&vanilla).controller, P1);
             }
@@ -341,7 +336,7 @@ mod tests {
 
                 assert!(offered(&s).is_empty());
                 let menace = must_unit(&s, P2, 2);
-                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": at(&menace) })));
+                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": pick::instance(&menace) })));
             }
 
             #[test]
@@ -356,7 +351,7 @@ mod tests {
                 let top = must_unit(&s, P2, 2);
 
                 assert_eq!(offered(&s), vec![top.id.clone()]);
-                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": at(&dormant) })));
+                s.expect_refused(|s| s.play(FEELINGS, json!({ "targets": pick::instance(&dormant) })));
             }
 
             #[test]
@@ -384,7 +379,7 @@ mod tests {
                 );
                 let menace = must_unit(&s, P2, 1);
 
-                s.play(FEELINGS, json!({ "targets": at(&menace) }));
+                s.play(FEELINGS, json!({ "targets": pick::instance(&menace) }));
 
                 assert_eq!(s.card(&menace).controller, P2);
                 assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(menace.id.clone()));
@@ -400,7 +395,7 @@ mod tests {
                 );
                 let point = must_unit(&s, P2, 2);
 
-                s.play(FEELINGS, json!({ "targets": at(&point) }));
+                s.play(FEELINGS, json!({ "targets": pick::instance(&point) }));
 
                 s.expect_refused(|s| s.attack(&point, "hero"));
             }
@@ -420,7 +415,7 @@ mod tests {
                 assert_eq!(s.unit(P1, 1).map(|unit| unit.def_id), Some(TOKEN.to_string()));
                 assert_eq!(s.state().pending.as_ref().map(|pending| pending.player_id), Some(P1));
                 assert_eq!(pending_selections(&s), Some(at_selection(&menace)));
-                s.answer(at(&menace));
+                s.answer(pick::instance(&menace));
 
                 assert_eq!(s.card(&menace).controller, P1);
                 assert_eq!(s.unit(P1, 2).map(|unit| unit.id), Some(menace.id.clone()));
@@ -485,7 +480,7 @@ mod tests {
                 assert!(!s.events().iter().any(|event| matches!(event, GameEvent::Summoned { .. })));
                 assert_eq!(pending_selections(&s), Some(at_selection(&must_unit(&s, P2, 3))));
                 let menace = must_unit(&s, P2, 3);
-                s.answer(at(&menace));
+                s.answer(pick::instance(&menace));
                 // No free zone: it stays with its owner (R15).
                 assert_eq!(must_unit(&s, P2, 3).controller, P2);
             }
@@ -541,7 +536,7 @@ mod tests {
                     let bear = s.card(BEAR).clone();
                     assert_eq!(offered(&s), vec![bear.id.clone()]);
 
-                    s.play(FEELINGS, json!({ "targets": at(&bear) }));
+                    s.play(FEELINGS, json!({ "targets": pick::instance(&bear) }));
 
                     assert_eq!(s.backrow(P1, 4).map(|card| card.id), Some(bear.id.clone()));
                     assert_eq!(s.card(&bear).controller, P1);
@@ -560,7 +555,7 @@ mod tests {
                     let before = serde_json::to_string(&s.view(P1).opponent.backrow).expect("views serialise");
                     assert!(!before.contains(BEAR));
 
-                    s.play(FEELINGS, json!({ "targets": at(&bear) }));
+                    s.play(FEELINGS, json!({ "targets": pick::instance(&bear) }));
 
                     let mine = serde_json::to_string(&s.view(P1).you.backrow).expect("views serialise");
                     assert!(mine.contains(BEAR));
@@ -581,7 +576,7 @@ mod tests {
                     assert!(pending.contains(&format!("\"{}\"", s.card(BEAR).id)));
                     assert!(!serde_json::to_string(&s.view(P1)).expect("views serialise").contains(BEAR));
                     let bear = s.card(BEAR).clone();
-                    s.answer(at(&bear));
+                    s.answer(pick::instance(&bear));
                     assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(BEAR.to_string()));
                 });
             }

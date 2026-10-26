@@ -45,11 +45,6 @@ fn badges(s: &Scenario, viewer: PlayerId, side: PlayerId) -> Vec<String> {
     seat.modifiers.into_iter().map(|badge| badge.label).collect()
 }
 
-/// An answer picking the card `id`.
-fn pick(id: &str) -> Value {
-    json!([{ "pick": "instance", "instanceId": id }])
-}
-
 /// `player`'s first hand card of `def_id`, by instance id.
 fn held(s: &Scenario, player: PlayerId, def_id: &str) -> String {
     s.hand(player)
@@ -338,8 +333,8 @@ mod r1845001_hidden_nerfs_land_as_the_card_is_played {
         s.card_mut(body.as_str()).hidden_nerfs = Some(HEAVY_NERFS);
         offer_and_pass(&mut s);
         let given = held(&s, P1, &plain.id);
-        s.answer(pick(&given));
-        s.answer(pick(&body));
+        s.answer(pick::id(&given));
+        s.answer(pick::id(&body));
 
         let card = s.card(body.as_str());
         assert_eq!(card.zone, Zone::Hand { player: P1 });
@@ -411,7 +406,7 @@ mod r1845002_a_trade_offer {
         assert_eq!(pending.kind, PromptKind::Hand);
         assert_eq!(offered(&s), hand_ids(&s, P1));
         let body = held(&s, P1, &big_body.id);
-        s.answer(pick(&body));
+        s.answer(pick::id(&body));
         let given = s.card(body.as_str());
         assert_eq!(given.zone, Zone::Hand { player: P2 });
         assert_eq!((given.owner, given.controller), (P2, P2));
@@ -425,7 +420,7 @@ mod r1845002_a_trade_offer {
             "their own cards, the given one aside"
         );
         let stoic = held(&s, P2, &STOIC.id);
-        s.answer(pick(&stoic));
+        s.answer(pick::id(&stoic));
         let taken = s.card(stoic.as_str());
         assert_eq!(taken.zone, Zone::Hand { player: P1 });
         assert_eq!((taken.owner, taken.controller), (P1, P1));
@@ -480,7 +475,7 @@ mod r1845002_a_trade_offer {
         );
         offer_and_pass(&mut s);
         let body = held(&s, P1, &big_body.id);
-        s.answer(pick(&body));
+        s.answer(pick::id(&body));
         let burned = s.card(body.as_str());
         assert_eq!(
             burned.zone,
@@ -497,7 +492,7 @@ mod r1845002_a_trade_offer {
         assert_eq!(pending.kind, PromptKind::Discover);
         assert_eq!(offered(&s).len(), DISCOVER_OPTIONS as usize);
         let back = offered(&s)[0].clone();
-        s.answer(pick(&back));
+        s.answer(pick::id(&back));
         assert_eq!(s.card(back.as_str()).zone, Zone::Hand { player: P1 });
     }
 
@@ -566,7 +561,7 @@ mod r1845002_a_trade_offer {
                     "not offered",
                 )
             });
-            s.answer(pick(&answer));
+            s.answer(pick::id(&answer));
         }
         assert!(s.state().pending.is_none());
         assert_eq!(stolen(s.events()).len(), 2);

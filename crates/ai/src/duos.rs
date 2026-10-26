@@ -202,8 +202,10 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 
 /// The cards `seat` should pass now (at the end of its own turn), best first: ids of its hand cards
 /// (B28). A card qualifies when the seat cannot play it this turn and its teammate can: the teammate
-/// is a round seat that has not ended, can afford the card and has a zone for it. With the team's
-/// `pass_cost` 0 a card also qualifies when the teammate can afford it next turn and the seat cannot.
+/// is a round seat that has not ended, can afford the card and has a place for it, an open zone of its
+/// row (`has_zone_for`) or, failing that, a play of it the engine lists on the teammate's probe
+/// (`mate_can_play`). With the team's `pass_cost` 0 a card also qualifies when the teammate can afford
+/// it next turn and the seat cannot.
 /// The cards the teammate can play now come first, ranked by the teammate's best bounded follow-up
 /// with each (R1127000), ties by costliest first and then in hand order; of those, only the ones whose
 /// pass is worth making (R1723000, `pass_gain`) are named; the cards it can only pay for next turn
@@ -213,8 +215,9 @@ fn duel_fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 ///
 /// B29: the seat's own hand, its plays and its next refresh are read off the redacted probe `decide`
 /// lists its own actions on; of the teammate only its own side (hand size, mana, open zones), plus
-/// the determinized probe R1127000's follow-up scoring replays each candidate card into. A
-/// card's price is its own (`own_cost`), the part of it a pass keeps (B20).
+/// the determinized probe R1127000's follow-up scoring replays each candidate card into and
+/// `mate_can_play` lists the teammate's plays on. A card's price is its own (`own_cost`), the part of
+/// it a pass keeps (B20).
 pub fn duos_passes(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     // `redact` and `determinize` run on the true duel, as in `decide`; a failure there is no pass.
     catch_unwind(AssertUnwindSafe(|| passes_of(state, seat))).unwrap_or_default()
@@ -274,7 +277,8 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
         if mate_acts
             && !playable.contains(&card.id)
             && mate_cost <= mate_now
-            && has_zone_for(&probe, card, mate_duel, mate.player())
+            && (has_zone_for(&probe, card, mate_duel, mate.player())
+                || mate_can_play(&receiving, &given, mate.player()))
         {
             now.push((mate_cost, index, card.id.clone()));
         } else if rules.pass_cost == 0 && mate_cost <= mate_next && cost > own_next {
@@ -328,13 +332,24 @@ fn own_cost(duel: &GameState, card: &CardInstance) -> i32 {
 }
 
 /// B28: the teammate has a zone for the card: a Spell needs none, any other card an open zone of its
-/// row on the teammate's own side.
+/// row on the teammate's own side. The cheap check: a card it refuses may still land another way
+/// (`mate_can_play`).
 fn has_zone_for(card_state: &GameState, card: &CardInstance, mate_duel: &GameState, mate: PlayerId) -> bool {
     if !needs_zone(card_state, card) {
         return true;
     }
     let row = row_for_card(card_state, card);
     !open_zones(mate_duel, mate, row).is_empty()
+}
+
+/// B28: the teammate has a legal play of the passed card, read off the probe that holds it
+/// (`received`): the landings an open zone of its row misses, onto an occupied zone with Stack (§6.2),
+/// into the backrow with Flying (R1081000), onto a host with Equip (R1086), onto a stack base (R1281)
+/// or into the zone its own Tribute frees (R391), each as the engine lists it.
+fn mate_can_play(receiving: &GameState, given: &CardInstance, mate: PlayerId) -> bool {
+    legal_actions(receiving, mate)
+        .iter()
+        .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == given.id))
 }
 
 /// What this side's next refresh gives (§2.3, R181): the turn's start counts the turn, then refreshes

@@ -90,11 +90,6 @@ mod tests {
 
     use crate::matches_object;
 
-    /// A target answer naming p1's card of `def`.
-    fn at(s: &Scenario, def: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": s.card(def).id }])
-    }
-
     mod meditative_006 {
         use super::*;
 
@@ -107,7 +102,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             let moved = s.card(&menace).clone();
             assert_eq!(moved.controller, P2);
@@ -126,7 +121,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             assert_eq!(s.card(&menace).controller, P1);
             s.expect_mana(P1, 9);
@@ -142,7 +137,7 @@ mod tests {
             s.play(BILLY, json!({ "x": 3 }));
             let billy = s.card(BILLY).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, BILLY) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, BILLY) }));
 
             assert_eq!(s.card(&billy).controller, P2);
             // 9 − 3 for Billy, nothing for the (0), plus its X of 3.
@@ -158,7 +153,7 @@ mod tests {
                 "p2": { "hand": [FILLER] },
             }));
             let gift = s.card(FODDER).id.clone();
-            let targets = at(&s, FODDER);
+            let targets = pick::card(&s, FODDER);
             s.play(LIKELY, json!({ "targets": targets }));
             assert_eq!(s.card(&gift).controller, P2);
 
@@ -196,7 +191,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             assert_eq!(s.card(&menace).controller, P2);
             // Twice the Menace's 3.
@@ -212,7 +207,7 @@ mod tests {
             }));
             step_param(s.card_mut(LIKELY), "multiple", 1);
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             // Three times the Menace's 3.
             s.expect_mana(P1, 18);
@@ -235,7 +230,7 @@ mod tests {
                 s.play(LIKELY, json!({ "targets": [{ "pick": "instance", "instanceId": dormant }] }))
             });
             // The top of the pile is the gift.
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
             assert_eq!(s.card(MENACE).controller, P2);
         }
 
@@ -248,7 +243,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             assert_eq!(s.unit(P2, 3).map(|unit| unit.id), Some(menace));
         }
@@ -262,7 +257,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             // Lane 1 is taken on their side, so the leftmost free one, lane 3.
             assert_eq!(s.unit(P2, 3).map(|unit| unit.id), Some(menace));
@@ -277,7 +272,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             let gift = s.card(&menace).clone();
             assert_eq!(gift.summoned_turn, Some(s.state().turn));
@@ -293,7 +288,7 @@ mod tests {
             }));
             let menace = s.card(MENACE).id.clone();
 
-            s.play(LIKELY, json!({ "targets": at(&s, MENACE) }));
+            s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
             let changed: Vec<Value> = s
                 .last_events()

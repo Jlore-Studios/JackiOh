@@ -36,7 +36,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .lean-newest__input option {

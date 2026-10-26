@@ -98,10 +98,6 @@ mod tests {
         s.view(Some(player)).you.hero.armor
     }
 
-    fn targeting(instance_id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": instance_id }])
-    }
-
     #[test]
     fn r386_an_upgrade_gives_armor_3_or_paid_5_and_a_degrade_armor_1_or_paid_3() {
         for (upgrade, embiggen, armor) in [(true, false, 3), (false, false, 1), (true, true, 5), (false, true, 3)] {
@@ -269,7 +265,7 @@ mod tests {
             let second = s.unit(P2, 2).expect("the second Bigot");
 
             s.attack(&first, "hero"); // 6 − 2 = 4
-            s.play(MAGIC_JAMMED, json!({ "targets": targeting(&going_long.id) }));
+            s.play(MAGIC_JAMMED, json!({ "targets": pick::id(&going_long.id) }));
             s.expect_in_zone(&going_long, "graveyard");
             s.attack(&second, "hero"); // no Armor left: the whole 6
 

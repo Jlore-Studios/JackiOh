@@ -93,7 +93,7 @@
   border: 1px solid #8c2a1e;
   background: rgba(40, 18, 14, 0.85);
   color: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .market-deal {
@@ -159,7 +159,7 @@
   background: rgba(10, 20, 38, 0.92);
   color: #cfe6ff;
   font-weight: 700;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .marketplace-toggle[aria-expanded="true"] {
@@ -226,7 +226,7 @@
   background: #1b3a5e;
   color: inherit;
   font-weight: 700;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .marketplace-deal:disabled {

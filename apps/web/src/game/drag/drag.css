@@ -57,7 +57,7 @@
 
 :root[data-dragging],
 :root[data-dragging] * {
-  cursor: grabbing !important;
+  cursor: var(--cursor-glove-grab, grabbing) !important;
 }
 
 /* The card in flight stays in its place in the hand, faded, so the ghost reads as the thing being

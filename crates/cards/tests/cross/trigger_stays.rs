@@ -38,19 +38,7 @@ const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
 
-use super::scenario;
-
-/// `[{ pick: "instance", instanceId: card.id }]`.
-fn at(card: &CardInstance) -> Value {
-    json!([{ "pick": "instance", "instanceId": card.id }])
-}
-
-fn unit_at(g: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
-    match g.unit(player, lane) {
-        Some(card) => card.clone(),
-        None => panic!("setup: {player} should hold a unit in lane {lane}"),
-    }
-}
+use super::{in_hand, register_fixture_script, scenario};
 
 /// Grant Reborn to a unit on the field directly (R21).
 fn grant_reborn(g: &mut Scenario, card: &CardInstance) {
@@ -93,12 +81,12 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
             "p1": { "hand": [STOCKPILE], "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }], "library": LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
         }));
-        let fauci = unit_at(&g, PlayerId::P1, 1);
+        let fauci = g.unit_at(PlayerId::P1, 1);
         grant_reborn(&mut g, &fauci);
 
         // A 1/6 with 5 damage attacks a 3/3: the strike back is lethal, and Reborn brings the same
         // instance straight back (§4.5 step 4) before the combat's damage events are dispatched.
-        let prey = unit_at(&g, PlayerId::P2, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
         g.attack(&fauci.id, &prey.id);
 
         assert!(died(&g, &fauci));
@@ -114,7 +102,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
             "p1": { "hand": [STOCKPILE], "field": [{ "def": MOTHS, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }], "library": LIBRARY },
         }));
-        let fauci = unit_at(&g, PlayerId::P2, 1);
+        let fauci = g.unit_at(PlayerId::P2, 1);
         grant_reborn(&mut g, &fauci);
 
         // p1's start of turn: Moths makes Fauci attack it, and the strike back (1) is lethal.
@@ -136,13 +124,13 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
             },
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
-        let fauci = unit_at(&g, PlayerId::P1, 1);
+        let fauci = g.unit_at(PlayerId::P1, 1);
         grant_reborn(&mut g, &fauci);
 
         g.play(TWINSPELL, json!({}));
         // The check between the resolutions (§4.5) kills Fauci and Reborn returns it; the repeat then
         // asks for a fresh target, and the first hit's damage event is dispatched after all of that.
-        g.play(TRUE_STRIKE, json!({ "targets": at(&fauci) }));
+        g.play(TRUE_STRIKE, json!({ "targets": pick::instance(&fauci) }));
         answer_repeat_with_hero(&mut g);
 
         assert!(died(&g, &fauci));
@@ -156,11 +144,11 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
             "p1": { "hand": [VANILLA], "field": [{ "def": PANTHER, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [VANILLA], "field": [{ "def": SORCERER, "lane": 1 }], "library": LIBRARY },
         }));
-        let panther = unit_at(&g, PlayerId::P1, 1);
+        let panther = g.unit_at(PlayerId::P1, 1);
         if reborn {
             grant_reborn(&mut g, &panther);
         }
-        let prey = unit_at(&g, PlayerId::P2, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
         // A 5/4 Panther into a 5/5 Twisted Sorcerer: both die.
         g.attack(&panther.id, &prey.id);
         assert!(died(&g, &panther));
@@ -180,7 +168,7 @@ mod r212_a_reborn_body_does_not_answer_for_the_stay_that_died {
         // With Reborn the same trade happens, and the body back in lane 1 is a new arrival (R83) that
         // destroyed nothing — which draws the same 2 through the dead stay's owed hook.
         let mut back = trade(true);
-        let body = unit_at(&back, PlayerId::P1, 1);
+        let body = back.unit_at(PlayerId::P1, 1);
         back.expect_in_zone(&body.id, "field");
         assert_eq!(back.hand(PlayerId::P1).len(), plain.hand(PlayerId::P1).len());
     }
@@ -197,12 +185,12 @@ mod r212_a_card_that_arrived_after_a_death_does_not_answer_it {
             "p1": { "hand": [TWINSPELL, ADAPTIVE_UI], "library": library },
             "p2": { "hand": [VANILLA], "field": [{ "def": GARY, "lane": 1 }], "library": LIBRARY },
         }));
-        let gary = unit_at(&g, PlayerId::P2, 1);
+        let gary = g.unit_at(PlayerId::P2, 1);
 
         g.play(TWINSPELL, json!({}));
         // Resolution 1 (X = 1): 1 damage kills the 1/1 Gary and draws Mr. Vanilla, and the check before
         // the repeat collects Gary. Resolution 2 draws Corpse Eater — after Gary died.
-        g.play(ADAPTIVE_UI, json!({ "x": 1, "targets": at(&gary) }));
+        g.play(ADAPTIVE_UI, json!({ "x": 1, "targets": pick::instance(&gary) }));
         answer_repeat_with_hero(&mut g);
 
         assert!(died(&g, &gary));
@@ -232,8 +220,8 @@ mod r212_a_card_answers_for_the_player_who_controlled_it_when_the_event_happened
             "p1": { "hand": [RENO], "field": [{ "def": PANTHER, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [RENO], "field": [{ "def": MROW, "lane": 1 }], "library": LIBRARY },
         }));
-        let panther = unit_at(&g, PlayerId::P1, 1);
-        let mrow = unit_at(&g, PlayerId::P2, 1);
+        let panther = g.unit_at(PlayerId::P1, 1);
+        let mrow = g.unit_at(PlayerId::P2, 1);
         let p1_hand = g.hand(PlayerId::P1).len();
         let p2_hand = g.hand(PlayerId::P2).len();
 
@@ -259,18 +247,6 @@ fn units_of(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
     (1..=5).filter_map(|lane| s.unit(player, lane)).collect()
 }
 
-fn register_fixture_script(id: &str, script: Script) {
-    let mut scripts = registered_scripts().clone();
-    scripts.insert(
-        id.to_string(),
-        CardScripts {
-            base: script.clone(),
-            radiant: script,
-        },
-    );
-    register_scripts(scripts);
-}
-
 fn fixture_def(id: &str, type_: CardType, cost: i32, face: Value) -> CardDef {
     json_as(json!({
         "id": id,
@@ -288,17 +264,11 @@ fn fixture_def(id: &str, type_: CardType, cost: i32, face: Value) -> CardDef {
 }
 
 /// A fixture card: a transient def in the match state and its script in the registry (`cost = 0`).
-fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, cost: Option<i32>) {
+fn costed_fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, cost: Option<i32>) {
     let face = json!({ "keywords": [], "text": id });
     let def = fixture_def(id, type_, cost.unwrap_or(0), face);
     s.state_mut().transient_defs.insert(id.to_string(), def);
     register_fixture_script(id, script);
-}
-
-fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
-    let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
-    s.state_mut().players[player].hand.push(card.clone());
-    card
 }
 
 /// A face-down trap of `player`'s in a backrow lane (R33).
@@ -366,7 +336,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         let trap = must(s.backrow(PlayerId::P2, 2), "p2's Bear Honeypot");
         // A 2-cost Spell (so its own play is no "card costing 1 or less"): "Draw a card, then take
         // control of the enemy's backrow card in lane 2."
-        fixture(
+        costed_fixture(
             &mut s,
             "edge-r8-draw-then-lift",
             CardType::Spell,
@@ -448,7 +418,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
         }));
         let bread = must(s.backrow(PlayerId::P2, 2), "p2's Bread and Butter");
         // A Trap: "At the end of any turn: take control of the enemy's backrow card in lane 2."
-        fixture(
+        costed_fixture(
             &mut s,
             "edge-r8-window-lifter",
             CardType::Trap,
@@ -503,7 +473,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
             "p2": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
         }));
         // A 2-cost Spell: "Draw a card, then summon a Bear Honeypot face-down for the opponent."
-        fixture(
+        costed_fixture(
             &mut s,
             "edge-r8-draw-then-gift-trap",
             CardType::Spell,
@@ -634,7 +604,7 @@ mod r174_r212_a_late_dispatched_card_resolved_meets_the_played_card_s_stay {
                 ..Default::default()
             },
         );
-        fixture(
+        costed_fixture(
             &mut s,
             "edge-r10-draw-then-sweep",
             CardType::Spell,
@@ -901,7 +871,7 @@ mod r174_only_the_card_a_queued_trigger_s_event_names_is_judged_from_when_the_ev
         }));
         let Board { reborn, victim } = board(&mut s, per_unit);
 
-        s.play(HIT_JOB, json!({ "targets": at(&victim) }));
+        s.play(HIT_JOB, json!({ "targets": pick::instance(&victim) }));
 
         // The striker answered the death first (lane 1, R68) and killed the 1/1; the check after it
         // brought a Reborn body back (§4.5 step 4, R59). The rally, queued on the same death, reads

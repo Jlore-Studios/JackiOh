@@ -253,6 +253,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   fled: { type: "fled", player: "p1", opponent: "draw" },
   // #1847 (R1847001).
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+  // #1850 (R1850003).
+  held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -356,6 +358,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   votedOut: "trapSting",
   fled: "whoosh",
   starscapeTravelled: "whoosh",
+  held: "poof",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */
@@ -399,6 +402,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "voteCast",
   "votedOut",
   "fled",
+  "held",
   "countered",
   "stolen",
   "unlocked",

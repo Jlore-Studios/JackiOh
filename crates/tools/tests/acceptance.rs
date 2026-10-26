@@ -40,11 +40,16 @@
 //!    off each command's `-h` page: every subcommand, flag and listed value a row names is the
 //!    CLI's, and every command, flag and possible value of the CLI is in some row.
 //!
-//! And one for the engine's rules tests (#1777):
+//! And one for the tests' shared helpers (#1777, #1826):
 //!
-//!  - Helpers: no file under `crates/engine/tests/rules/` but `fixtures/harness.rs` defines its own
-//!    `both` or `spread`; each takes the harness's, so a test file copied from an old one brings no
-//!    copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
+//!  - Helpers: each family of shared test helpers is defined once, in its home, and no other file
+//!    under the trees it covers defines its own: `both` and `spread` under `crates/engine/tests/rules/`
+//!    (`fixtures/harness.rs`); the testkit's `Scenario::unit_at` and one-instance pick builders
+//!    (`crates/engine/src/testkit/pick.rs`) under `crates/engine/tests/`, `crates/cards/`,
+//!    `crates/luau/tests/` and `crates/ai/tests/`; `register_fixture_script`, `fixture`, `in_hand`,
+//!    `targets_of` and `tributes_of` under `crates/cards/tests/cross/` (its `mod.rs`); and `det`,
+//!    `ai_options` and `js` under `crates/ai/tests/` (`ai/support.rs`). A test file copied from an
+//!    old one brings no copy back (docs/ADDING_CARDS.md §2 asks the card tests the same).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -950,19 +955,77 @@ mod tests {
     );
 }
 
-/// The helpers every engine rules test takes from `crates/engine/tests/rules/fixtures/harness.rs`.
-const SHARED_RULES_HELPERS: &[&str] = &["both", "spread"];
+/// One family of test helpers defined once, in its home, which every test under its trees takes
+/// rather than copying (#1777, #1826).
+struct SharedHelpers {
+    /// The file that defines them, from the repository's root.
+    home: &'static str,
+    /// The helpers' names, each defined once in `home`.
+    names: &'static [&'static str],
+    /// The trees, from the repository's root, where no file but `home` may define one.
+    dirs: &'static [&'static str],
+    /// Fewer Rust files than this under `dirs` means the scan lost them.
+    more_than: usize,
+}
 
-/// The 1-based lines of `text` that define one of SHARED_RULES_HELPERS (`fn both(`, `pub fn
-/// spread<`, at any indent), a `//` comment aside.
-fn shared_helper_definitions(text: &str) -> Vec<usize> {
+/// The test trees that read the engine testkit, where neither `unit_at` nor a one-instance pick
+/// builder may be copied.
+const KIT_READERS: &[&str] = &[
+    "crates/engine/tests",
+    "crates/cards",
+    "crates/luau/tests",
+    "crates/ai/tests",
+];
+
+const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
+    SharedHelpers {
+        home: "crates/engine/tests/rules/fixtures/harness.rs",
+        names: &["both", "spread"],
+        dirs: &["crates/engine/tests/rules"],
+        more_than: 200,
+    },
+    SharedHelpers {
+        home: "crates/engine/src/testkit/scenario.rs",
+        names: &["unit_at"],
+        dirs: KIT_READERS,
+        more_than: 800,
+    },
+    SharedHelpers {
+        home: "crates/cards/tests/cross/mod.rs",
+        names: &[
+            "register_fixture_script",
+            "fixture",
+            "in_hand",
+            "targets_of",
+            "tributes_of",
+        ],
+        dirs: &["crates/cards/tests/cross"],
+        more_than: 40,
+    },
+    SharedHelpers {
+        home: "crates/ai/tests/ai/support.rs",
+        names: &["det", "ai_options", "js"],
+        dirs: &["crates/ai/tests"],
+        more_than: 40,
+    },
+];
+
+/// The engine testkit's one-instance pick builders, the only home of one (#1826).
+const PICK_HOME: &str = "crates/engine/src/testkit/pick.rs";
+
+/// How a one-instance pick builder's body starts.
+const PICK_LITERAL: &str = r#"json!([{ "pick": "instance", "instanceId":"#;
+
+/// The 1-based lines of `text` that define one of `names` (`fn both(`, `pub fn spread<`, at any
+/// indent), a `//` comment aside.
+fn shared_helper_definitions(text: &str, names: &[&str]) -> Vec<usize> {
     text.lines()
         .enumerate()
         .filter(|(_, line)| {
             let code: Vec<&str> = line.split("//").next().unwrap_or("").split_whitespace().collect();
             code.windows(2).any(|pair| {
                 pair[0] == "fn"
-                    && SHARED_RULES_HELPERS.iter().any(|name| {
+                    && names.iter().any(|name| {
                         pair[1]
                             .strip_prefix(name)
                             .is_some_and(|rest| rest.starts_with(['(', '<']))
@@ -973,45 +1036,194 @@ fn shared_helper_definitions(text: &str) -> Vec<usize> {
         .collect()
 }
 
-#[test]
-fn helpers_the_rules_tests_take_both_and_spread_from_the_harness() {
-    let root = repo();
-    let mut files = Vec::new();
-    rust_sources(&root.join("crates/engine/tests/rules"), &mut files);
-    assert!(
-        files.len() > 200,
-        "only {} files found under crates/engine/tests/rules/",
-        files.len()
-    );
-    let mut copies = Vec::new();
-    for file in &files {
-        let text = fs::read_to_string(file).unwrap_or_default();
-        let lines = shared_helper_definitions(&text);
-        if file.ends_with("fixtures/harness.rs") {
-            assert_eq!(
-                lines.len(),
-                SHARED_RULES_HELPERS.len(),
-                "crates/engine/tests/rules/fixtures/harness.rs defines each of {SHARED_RULES_HELPERS:?} once"
-            );
-            continue;
+/// The 1-based header lines of `text`'s one-instance pick builders: a function whose signature
+/// returns a `Value` and whose body, `//` comments aside, holds PICK_LITERAL closed by `}])` with no
+/// second `"pick"`.
+fn pick_builder_definitions(text: &str) -> Vec<usize> {
+    let code: Vec<&str> = text
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect();
+    let mut found = Vec::new();
+    let mut open: Option<usize> = None;
+    let mut index = 0;
+    while index < code.len() {
+        if code[index].split_whitespace().any(|word| word == "fn") {
+            let header = index;
+            let mut signature = String::new();
+            while index < code.len() {
+                signature.push_str(code[index]);
+                if code[index].contains(['{', ';']) {
+                    break;
+                }
+                index += 1;
+            }
+            open = signature
+                .split_once("->")
+                .is_some_and(|(_, returns)| returns.contains("Value"))
+                .then_some(header);
         }
-        for line in lines {
-            copies.push(format!(
-                "{}:{line}",
-                file.strip_prefix(&root).unwrap_or(file).display()
-            ));
+        let builds_one = code
+            .get(index)
+            .and_then(|line| line.split_once(PICK_LITERAL))
+            .is_some_and(|(_, rest)| rest.contains("}])") && !rest.contains("\"pick\""));
+        if let Some(header) = open.filter(|_| builds_one) {
+            found.push(header + 1);
+            open = None;
+        }
+        index += 1;
+    }
+    found
+}
+
+/// Every copy of a shared test helper under `root`, as `<path from root>:<line>`: a definition of
+/// one of a SHARED_TEST_HELPERS row's names under its trees outside its home, and a one-instance
+/// pick builder under KIT_READERS.
+fn shared_helper_copies(root: &Path) -> Vec<String> {
+    let at =
+        |file: &Path, line: usize| format!("{}:{line}", file.strip_prefix(root).unwrap_or(file).display());
+    let mut copies = Vec::new();
+    for row in SHARED_TEST_HELPERS {
+        for dir in row.dirs {
+            let mut files = Vec::new();
+            rust_sources(&root.join(dir), &mut files);
+            for file in files.iter().filter(|file| !file.ends_with(row.home)) {
+                let text = fs::read_to_string(file).unwrap_or_default();
+                copies.extend(
+                    shared_helper_definitions(&text, row.names)
+                        .into_iter()
+                        .map(|line| at(file, line)),
+                );
+            }
         }
     }
+    for dir in KIT_READERS {
+        let mut files = Vec::new();
+        rust_sources(&root.join(dir), &mut files);
+        for file in &files {
+            let text = fs::read_to_string(file).unwrap_or_default();
+            copies.extend(
+                pick_builder_definitions(&text)
+                    .into_iter()
+                    .map(|line| at(file, line)),
+            );
+        }
+    }
+    copies
+}
+
+#[test]
+fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
+    let root = repo();
+    for row in SHARED_TEST_HELPERS {
+        let mut files = Vec::new();
+        for dir in row.dirs {
+            rust_sources(&root.join(dir), &mut files);
+        }
+        assert!(
+            files.len() > row.more_than,
+            "only {} files found under {:?}",
+            files.len(),
+            row.dirs
+        );
+        let home = fs::read_to_string(root.join(row.home)).unwrap_or_default();
+        for name in row.names {
+            assert_eq!(
+                shared_helper_definitions(&home, &[name]).len(),
+                1,
+                "{} defines `{name}` once",
+                row.home
+            );
+        }
+    }
+    let picks = fs::read_to_string(root.join(PICK_HOME)).unwrap_or_default();
+    assert_eq!(
+        pick_builder_definitions(&picks).len(),
+        1,
+        "{PICK_HOME} builds the one-instance pick once"
+    );
+    let copies = shared_helper_copies(&root);
+    let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a rules test defines its own {SHARED_RULES_HELPERS:?} (#1777): import the one in crates/engine/tests/rules/fixtures/harness.rs, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper (#1777, #1826): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
 #[test]
 fn helpers_the_scan_finds_each_local_copy() {
     let text = "fn both(script: Script) -> CardScripts {\n}\n    pub fn spread(mut base: Value, extra: Value) -> Value {\n}\npub(crate) fn both<T>(script: T) {}\nfn both_faces() {}\nfn spreads(x: i32) {}\n// fn both(script)\nlet scripts = both(script);\n";
-    assert_eq!(shared_helper_definitions(text), [1, 3, 5]);
+    assert_eq!(shared_helper_definitions(text, &["both", "spread"]), [1, 3, 5]);
+}
+
+#[test]
+fn helpers_the_pick_scan_finds_each_one_instance_builder() {
+    let text = [
+        r#"fn at(card: &CardInstance) -> Value {"#,
+        r#"    json!([{ "pick": "instance", "instanceId": card.id }])"#,
+        r#"}"#,
+        r#"fn unit_pick(s: &Scenario, lane: i32) -> Value {"#,
+        r#"    let Some(unit) = s.unit("p2", lane) else {"#,
+        r#"        panic!("p2 should hold a unit in lane {lane}");"#,
+        r#"    };"#,
+        r#"    json!([{ "pick": "instance", "instanceId": unit.id }])"#,
+        r#"}"#,
+        r#"#[test]"#,
+        r#"fn answers_with_one_pick() {"#,
+        r#"    s.answer(json!([{ "pick": "instance", "instanceId": id }]));"#,
+        r#"}"#,
+        r#"fn both_picks(a: &str, b: &str) -> Value {"#,
+        r#"    json!([{ "pick": "instance", "instanceId": a }, { "pick": "instance", "instanceId": b }])"#,
+        r#"}"#,
+        r#"fn targets(id: &str) -> Value {"#,
+        r#"    json!({ "targets": [{ "pick": "instance", "instanceId": id }] })"#,
+        r#"}"#,
+        r#"// fn at(id: &str) -> Value {"#,
+        r#"//     json!([{ "pick": "instance", "instanceId": id }])"#,
+        r#"// }"#,
+    ]
+    .join("\n");
+    assert_eq!(pick_builder_definitions(&text), [1, 4]);
+}
+
+#[test]
+fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-helpers-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let write = |path: &str, text: &str| {
+        let path = root.join(path);
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(path, text).expect("the file");
+    };
+    let mut expected = Vec::new();
+    for (i, row) in SHARED_TEST_HELPERS.iter().enumerate() {
+        let defs: String = row
+            .names
+            .iter()
+            .map(|name| format!("pub fn {name}() {{}}\n"))
+            .collect();
+        write(row.home, &defs);
+        for dir in row.dirs {
+            write(&format!("{dir}/copy_{i}.rs"), &defs);
+            expected.extend((1..=row.names.len()).map(|line| format!("{dir}/copy_{i}.rs:{line}")));
+        }
+    }
+    let builder = r#"fn at(id: &str) -> Value { json!([{ "pick": "instance", "instanceId": id }]) }"#;
+    write(PICK_HOME, builder);
+    for dir in KIT_READERS {
+        write(&format!("{dir}/pick_copy.rs"), builder);
+        expected.push(format!("{dir}/pick_copy.rs:1"));
+    }
+    let mut copies = shared_helper_copies(root);
+    drop(scratch);
+    copies.sort();
+    expected.sort();
+    assert_eq!(copies, expected);
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).

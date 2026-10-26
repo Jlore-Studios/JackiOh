@@ -7,21 +7,12 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, is_legal, register_cards};
+use super::support::{AI, ai_options, is_legal, register_cards};
 
 const SHOWDOWN: &str = "meditative-098";
 const LIBRARY: &[&str] = &[
     "core-008", "core-005", "core-011", "core-019", "core-025", "core-020",
 ];
-
-/// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
-}
 
 /// The AI's turn with no mana, holding Showdown and a Stockpile over `LIBRARY`; the human's Mr.
 /// Vanilla on the field, so the turn has a board to weigh.
@@ -67,7 +58,7 @@ fn r1838003_a_trade_is_a_candidate_after_the_plays_and_before_end_turn() {
 fn r1838003_the_ai_answers_a_turn_with_a_trade_on_offer_with_a_legal_action() {
     let state = board("ai-trade-decide");
     for k in ["ai-trade-k1", "ai-trade-k2"] {
-        let decision = decide(&state, AI, &mut ai_options(k)).expect("a decision");
+        let decision = decide(&state, AI, &mut ai_options(k, AI_BUDGET)).expect("a decision");
         assert!(
             is_legal(&state, AI, &decision.action),
             "{k}: {:?}",
@@ -91,8 +82,8 @@ fn r1838003_the_card_a_trade_would_draw_never_changes_the_decision() {
     );
     for k in ["ai-trade-k1", "ai-trade-k2", "ai-trade-k3"] {
         assert_eq!(
-            decide(&a, AI, &mut ai_options(k)),
-            decide(&b, AI, &mut ai_options(k)),
+            decide(&a, AI, &mut ai_options(k, AI_BUDGET)),
+            decide(&b, AI, &mut ai_options(k, AI_BUDGET)),
             "{k}"
         );
     }

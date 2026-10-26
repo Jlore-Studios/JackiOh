@@ -4,7 +4,7 @@
 
 .pile--browsable {
   position: relative;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: border-color 120ms ease-out, background-color 120ms ease-out;
 }
 

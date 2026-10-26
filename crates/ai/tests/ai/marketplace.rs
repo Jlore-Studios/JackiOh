@@ -7,22 +7,13 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, is_legal, register_cards};
+use super::support::{AI, HUMAN, ai_options, is_legal, register_cards};
 
 const VANILLA: &str = "core-008";
 const PRICE: i32 = 40;
 const LIBRARY: &[&str] = &[
     "core-008", "core-005", "core-011", "core-019", "core-025", "core-020",
 ];
-
-/// TS's `{ rng: createRng(seed) }`: AI_BUDGET, no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
-}
 
 /// The AI's turn holding a Stockpile, with 100 Credits and a Marketplace offering one Mr. Vanilla at
 /// `PRICE`; the human's Mr. Vanilla on the field, so the turn has a board to weigh. `bought` is what
@@ -76,7 +67,7 @@ fn r1853004_a_market_buy_is_a_candidate_before_end_turn() {
 fn r1853004_the_ai_answers_with_a_legal_action() {
     let state = board("ai-market-decide", 0);
     for k in ["ai-market-k1", "ai-market-k2"] {
-        let decision = decide(&state, AI, &mut ai_options(k)).expect("a decision");
+        let decision = decide(&state, AI, &mut ai_options(k, AI_BUDGET)).expect("a decision");
         assert!(
             is_legal(&state, AI, &decision.action),
             "{k}: {:?}",
@@ -95,8 +86,8 @@ fn r1853004_what_the_opponent_bought_never_changes_the_decision() {
     assert_ne!(a.marketplace, b.marketplace);
     for k in ["ai-market-k1", "ai-market-k2", "ai-market-k3"] {
         assert_eq!(
-            decide(&a, AI, &mut ai_options(k)),
-            decide(&b, AI, &mut ai_options(k)),
+            decide(&a, AI, &mut ai_options(k, AI_BUDGET)),
+            decide(&b, AI, &mut ai_options(k, AI_BUDGET)),
             "{k}"
         );
     }

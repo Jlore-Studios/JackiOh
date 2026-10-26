@@ -36,19 +36,6 @@ fn event(literal: Value) -> GameEvent {
     json_as(literal)
 }
 
-/// `g.unit(player, lane)`: the top of the unit pile in that lane, which the setup must have put there.
-fn unit_at(g: &Scenario, player: PlayerId, lane: usize, what: &str) -> CardInstance {
-    match g.state().players[player]
-        .units
-        .get(lane - 1)
-        .and_then(|pile| pile.as_ref())
-        .and_then(|pile| pile.first())
-    {
-        Some(card) => card.clone(),
-        None => panic!("setup: {what}"),
-    }
-}
-
 /// `g.backrow(player, lane)`: the card in that backrow zone, which the setup must have put there.
 fn backrow_at(g: &Scenario, player: PlayerId, lane: usize, what: &str) -> CardInstance {
     match g.state().players[player]
@@ -74,8 +61,8 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
-        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
-        let prey = unit_at(&g, PlayerId::P2, 1, "p2 should hold a unit in lane 1");
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
         // The end state holds Windfury, as if the grant below resolved mid-action.
         find_instance_mut(g.state_mut(), &unit.id)
             .expect("the unit")
@@ -102,8 +89,8 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
-        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
-        let prey = unit_at(&g, PlayerId::P2, 1, "p2 should hold a unit in lane 1");
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
 
         let mut monitor = create_invariant_monitor(g.state());
         let events = vec![
@@ -126,8 +113,8 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
-        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
-        let prey = unit_at(&g, PlayerId::P2, 1, "p2 should hold a unit in lane 1");
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
         let add_keywords: Vec<Value> = gained.iter().map(|kind| json!({ "kind": kind })).collect();
         find_instance_mut(g.state_mut(), &unit.id)
             .expect("the unit")
@@ -240,7 +227,7 @@ mod i2_a_windfury_unit_that_enters_inside_one_action {
         // action leaves it on the field with its printed Windfury.
         let _open = preview_sets(&[SetName::Meditative]);
         let mut g = scenario(json!({ "p1": { "field": [{ "def": RHINO, "lane": 1 }] } }));
-        let rhino = unit_at(&g, PlayerId::P1, 1, "p1 should hold the Rhino in lane 1");
+        let rhino = g.unit_at(PlayerId::P1, 1);
         let turn = g.state().turn;
         find_instance_mut(g.state_mut(), &rhino.id)
             .expect("the Rhino")
@@ -280,7 +267,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "hand": [BIGOT], "library": [HIT_JOB], "backrow": [{ "def": MY_PAWN, "lane": 1 }] },
         }));
-        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
+        let unit = g.unit_at(PlayerId::P1, 1);
         let secret = match g.state().players.p2.hand.first() {
             Some(card) => card.clone(),
             None => panic!("setup: p2 should hold a card in hand"),
@@ -1033,8 +1020,8 @@ mod i8_an_attack_or_a_switch_reduce_accepts_that_the_list_leaves_out {
             "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
             "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
         }));
-        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
-        let prey = unit_at(&g, PlayerId::P2, 1, "p2 should hold a unit in lane 1");
+        let unit = g.unit_at(PlayerId::P1, 1);
+        let prey = g.unit_at(PlayerId::P2, 1);
         (g, unit, prey)
     }
 
@@ -1459,10 +1446,10 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
         let played_on = g.state().turn;
         g.play(VANILLA, json!({ "zone": 1 }));
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
-        let vanilla = unit_at(&g, PlayerId::P1, 1, "p1's Vanilla should hold lane 1");
+        let vanilla = g.unit_at(PlayerId::P1, 1);
         g.play(FIENDER, json!({ "zone": 1 }));
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
-        let fiender = unit_at(&g, PlayerId::P1, 1, "the Fiender should top lane 1");
+        let fiender = g.unit_at(PlayerId::P1, 1);
         assert_eq!(fiender.def_id, FIENDER);
         for _ in 0..2 {
             g.end_turn();
@@ -1487,7 +1474,7 @@ mod r1829000_a_card_uncovered_beneath_a_stack {
             json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
         );
 
-        assert_eq!(unit_at(&g, PlayerId::P1, 1, "the Vanilla resumed").id, vanilla.id);
+        assert_eq!(g.unit_at(PlayerId::P1, 1).id, vanilla.id);
         assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
     }
 

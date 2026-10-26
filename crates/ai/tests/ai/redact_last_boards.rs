@@ -6,7 +6,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN};
+use super::support::{AI, HUMAN, js};
 
 fn mine() -> Value {
     json!([{ "defId": "core-012", "radiant": true }])
@@ -14,11 +14,6 @@ fn mine() -> Value {
 
 fn theirs() -> Value {
     json!([{ "defId": "core-025", "radiant": false }])
-}
-
-/// A value as its JSON, for comparisons that pin the wire shape rather than a Rust type's name.
-fn js<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
 }
 
 fn with_last_boards(boards: Value) -> GameState {

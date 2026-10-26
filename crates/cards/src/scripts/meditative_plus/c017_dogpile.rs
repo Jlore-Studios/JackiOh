@@ -118,10 +118,6 @@ mod tests {
         json!([{ "pick": "hero", "player": player.as_str() }])
     }
 
-    fn instance(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
-
     fn health(s: &Scenario, player: PlayerId) -> i32 {
         s.state().players[player].hero.health
     }
@@ -147,7 +143,7 @@ mod tests {
     fn played_it_deals_2_to_a_declared_enemy_unit() {
         let mut s = game("m+017-unit", json!({ "hand": [ID] }), json!({ "field": [MENACE] }));
         let menace = s.unit(P2, 1).expect("the menace");
-        s.play(ID, json!({ "targets": instance(&menace) }));
+        s.play(ID, json!({ "targets": pick::instance(&menace) }));
         assert_eq!(s.card(&menace.id).damage, 2);
     }
 
@@ -182,7 +178,7 @@ mod tests {
         s.play(TWINSPELL, json!({}));
         let menace = s.unit(P1, 1).expect("the menace");
         // Declared at your own Unit; the Echo repeat's prompt picks the enemy hero.
-        s.play(TRUE_STRIKE, json!({ "targets": instance(&menace) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&menace) }));
         s.answer(hero(P2));
         assert_eq!(hits_on(&s, "hero-p2"), vec![4, 2]);
         assert_eq!(dogpiles_in(&s, P1, "graveyard"), 1);
@@ -260,7 +256,7 @@ mod tests {
             json!({}),
         );
         let menace = s.unit(P1, 1).expect("the menace");
-        s.play(BOOK_OF_HEAL, json!({ "targets": instance(&menace) }));
+        s.play(BOOK_OF_HEAL, json!({ "targets": pick::instance(&menace) }));
         assert_eq!(dogpiles_in(&s, P1, "hand"), 1);
     }
 
@@ -285,7 +281,7 @@ mod tests {
             json!({ "field": [TOKEN_MAN] }),
         );
         let victim = s.unit(P2, 1).expect("the 1/1");
-        s.play(TRUE_STRIKE, json!({ "targets": instance(&victim) }));
+        s.play(TRUE_STRIKE, json!({ "targets": pick::instance(&victim) }));
         s.expect_in_zone(victim.id.as_str(), "graveyard");
         assert_eq!(dogpiles_in(&s, P1, "hand"), 1);
     }

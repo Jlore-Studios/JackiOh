@@ -383,7 +383,11 @@ class StatusLoopWorkflowTests(unittest.TestCase):
         self.assertIn('EVERY_SECONDS: "300"', self.text)
         self.assertEqual(dashboard.EVERY_MINUTES * 60, 300)  # what the issue says it does
         self.assertIn('python -m harness dashboard --sweep --stats --companions --controller \\\n'
-                      '            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"', refresh)
+                      '            --every "${EVERY_SECONDS}" --runners-every '
+                      '"${RUNNERS_EVERY_SECONDS}" \\\n            --for "${LOOP_SECONDS}"', refresh)
+        # Its runners section is redrawn alone between the rewrites, as often as the issue says.
+        self.assertIn('RUNNERS_EVERY_SECONDS: "120"', self.text)
+        self.assertEqual(dashboard.RUNNERS_MINUTES * 60, 120)
         # The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
         loop = int(re.search(r'LOOP_SECONDS: "(\d+)"', self.text).group(1))
         timeout = int(re.search(r"timeout-minutes: (\d+)", refresh).group(1))

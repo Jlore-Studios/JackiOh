@@ -106,19 +106,19 @@ use crate::config::{
     TERMS_VERSION, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
-    EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPhase,
-    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
-    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
-    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
-    SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow, StatsTotalsQuery, StoreError,
-    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult,
+    CollectionEntry, CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome,
+    CustomCardWrite, Db, EmoteEventRow, FavouriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery,
+    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchCheckpointRow,
+    MatchClocks, MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
+    TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -257,6 +257,9 @@ pub struct FakeTables {
     pub unreadable_game_records: IndexMap<String, String>,
     // R1044000 (migration 0041's three totals tables, in one): the records folded.
     pub stats_totals: StatsTotals,
+    // R1976000 (`public.game_record_batches`, migration 0060): each file folded as totals only, by the
+    // SHA-256 of its contents, with how many of its records it folded.
+    pub game_record_batches: IndexMap<String, usize>,
     // RankedTables
     pub seasons: Vec<Season>,
     pub season_ranks: Vec<SeasonRank>,
@@ -2717,6 +2720,46 @@ pub fn game_records_insert_batch(
         written.push(true);
     }
     Ok(written)
+}
+
+/// R1976000: a batch held already folds nothing; otherwise each record whose id the ledger holds
+/// (every id `game_records` ever wrote, its detail emptied or not), and each repeat of an id the
+/// file named before, is left out, and the rest are folded. The fold reads no detail, so nothing here
+/// can fail half-way: the claim and the counts land together, as Postgres's one transaction lands them.
+pub fn game_record_batch_fold(
+    f: &mut FakeTx<'_>,
+    batch: &str,
+    records: &[GameRecord],
+) -> Result<Option<BatchFolded>, StoreError> {
+    call(f, "gameRecordBatches.fold")?;
+    // `game_record_batches_batch_check` (0060).
+    if batch.len() != 64
+        || !batch
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return Err(StoreError::from(format!(
+            "game_record_batches_batch_check: {batch} is not a SHA-256 in lowercase hex"
+        )));
+    }
+    let tables = f.tables();
+    if tables.game_record_batches.contains_key(batch) {
+        return Ok(None);
+    }
+    let mut seen: IndexSet<&str> = IndexSet::new();
+    let mut folded = 0;
+    for record in records {
+        if tables.game_record_ledger.contains_key(&record.id) || !seen.insert(record.id.as_str()) {
+            continue;
+        }
+        tables.stats_totals.fold(record, true);
+        folded += 1;
+    }
+    tables.game_record_batches.insert(batch.to_string(), folded);
+    Ok(Some(BatchFolded {
+        folded,
+        left_out: records.len() - folded,
+    }))
 }
 
 /// The records of the query's sources, mode and patch whose detail is still held (R1044001), in id

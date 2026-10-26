@@ -69,11 +69,6 @@ mod tests {
         );
     }
 
-    fn unit_at(s: &Scenario, lane: i32) -> CardInstance {
-        s.unit(P1, lane)
-            .unwrap_or_else(|| panic!("expected a p1 unit in lane {lane}"))
-    }
-
     fn row_defs(s: &Scenario) -> Vec<Option<String>> {
         (1..=5)
             .map(|lane| s.unit(P1, lane).map(|unit| unit.def_id))
@@ -110,12 +105,12 @@ mod tests {
             #[test]
             fn s4_1_it_can_never_switch_to_defense_position() {
                 let mut s = game(json!([ID, VANILLA]), 0);
-                let card = unit_at(&s, 1);
+                let card = s.unit_at(P1, 1);
                 s.expect_stats(&card, json!({ "attack": 1, "maxHealth": 1 }));
                 s.expect_refused_with(|s| s.switch_position(&card), "Defense Position");
                 assert_eq!(s.card(&card).position.unwrap_or(Position::Atk), Position::Atk);
                 // The flag is the card's alone: the Vanilla beside it still switches.
-                let vanilla = unit_at(&s, 2);
+                let vanilla = s.unit_at(P1, 2);
                 s.switch_position(&vanilla);
                 assert_eq!(s.card(&vanilla).position, Some(Position::Def));
             }
@@ -123,10 +118,10 @@ mod tests {
             #[test]
             fn r1180_r64_its_death_summons_a_base_sr_into_the_leftmost_open_zone() {
                 let mut s = game(json!([{ "def": ID, "lane": 3 }]), 1);
-                let dying = unit_at(&s, 3);
+                let dying = s.unit_at(P1, 3);
                 hit(&mut s, &dying.id);
                 s.expect_in_zone(&dying.id, "graveyard");
-                let next = unit_at(&s, 1);
+                let next = s.unit_at(P1, 1);
                 assert_eq!(next.def_id, NEXT);
                 assert!(!next.radiant);
                 s.expect_stats(&next, json!({ "attack": 2, "maxHealth": 2 }));
@@ -141,12 +136,12 @@ mod tests {
                     json!([VANILLA, { "def": ID, "stack": true }, VANILLA, VANILLA, VANILLA, VANILLA]),
                     1,
                 );
-                let dying = unit_at(&s, 1);
+                let dying = s.unit_at(P1, 1);
                 assert_eq!(dying.def_id, ID);
                 hit(&mut s, &dying.id);
                 s.expect_in_zone(&dying.id, "graveyard");
                 assert!(!row_defs(&s).contains(&Some(NEXT.to_string())));
-                assert_eq!(unit_at(&s, 1).def_id, VANILLA);
+                assert_eq!(s.unit_at(P1, 1).def_id, VANILLA);
             }
         }
 
@@ -156,7 +151,7 @@ mod tests {
             #[test]
             fn s4_1_the_radiant_face_cannot_switch_to_defense_either() {
                 let mut s = game(json!([{ "def": ID, "radiant": true }]), 0);
-                let card = unit_at(&s, 1);
+                let card = s.unit_at(P1, 1);
                 s.expect_stats(&card, json!({ "attack": 2, "maxHealth": 2 }));
                 s.expect_refused_with(|s| s.switch_position(&card), "Defense Position");
             }
@@ -164,9 +159,9 @@ mod tests {
             #[test]
             fn r1180_radiant_its_death_summons_a_radiant_sr_with_divine_shield_and_rush() {
                 let mut s = game(json!([{ "def": ID, "radiant": true, "lane": 3 }]), 1);
-                let dying = unit_at(&s, 3);
+                let dying = s.unit_at(P1, 3);
                 hit(&mut s, &dying.id);
-                let next = unit_at(&s, 1);
+                let next = s.unit_at(P1, 1);
                 assert_eq!(next.def_id, NEXT);
                 assert!(next.radiant);
                 s.expect_stats(&next, json!({ "attack": 4, "maxHealth": 4 }));
@@ -174,7 +169,7 @@ mod tests {
                     keywords_of(s.state(), &next),
                     vec![Keyword::DivineShield, Keyword::Rush]
                 );
-                assert_eq!(unit_at(&s, 1).id, next.id);
+                assert_eq!(s.unit_at(P1, 1).id, next.id);
                 assert!(s.unit(P1, 3).is_none());
             }
         }
@@ -183,7 +178,7 @@ mod tests {
 
             /// Hits the card in lane 1 and returns what stands there after.
             fn grow(s: &mut Scenario) -> Option<CardInstance> {
-                let id = unit_at(s, 1).id;
+                let id = s.unit_at(P1, 1).id;
                 hit(s, &id);
                 s.unit(P1, 1)
             }

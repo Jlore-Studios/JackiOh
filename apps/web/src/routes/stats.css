@@ -78,7 +78,7 @@
   align-self: flex-start;
   font-size: 13px;
   color: var(--accent, #60a5fa);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 /* Info accordion */
@@ -92,7 +92,7 @@
 .stats-info-summary {
   font-size: 13.5px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -127,7 +127,7 @@
   font-size: 15px;
   font-weight: 600;
   padding: 8px 16px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: all 120ms ease;
 }
 
@@ -191,7 +191,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .stats-sort,
@@ -216,7 +216,7 @@
   background: rgba(18, 22, 34, 0.8);
   color: var(--text, #fff);
   font-size: 13px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .app-shell.stats-page .stats-view-btn[aria-pressed="true"],
@@ -250,7 +250,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: transform 0.15s ease;
 }
 
@@ -318,7 +318,7 @@
 }
 
 .stats-th--sortable {
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   user-select: none;
 }
 
@@ -331,7 +331,7 @@
 
 .stats-tr {
   border-bottom: 1px solid rgba(44, 50, 69, 0.5);
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   transition: background 100ms ease;
 }
 
@@ -490,32 +490,6 @@
   color: #f87171;
 }
 
-/* R1935000: a daily run's result, and the jobs of one that failed. */
-.stats-ci-result {
-  font-weight: 600;
-}
-
-.stats-ci-result--passed {
-  color: #4ade80;
-}
-
-.stats-ci-result--failed {
-  color: #f87171;
-}
-
-.stats-ci-result--running {
-  color: var(--accent, #60a5fa);
-}
-
-.stats-ci-summary {
-  margin: 12px 0;
-}
-
-.stats-ci-jobs {
-  margin: 0;
-  padding-left: 16px;
-}
-
 .stats-retry-btn {
   margin-top: 8px;
   padding: 6px 14px;
@@ -523,7 +497,7 @@
   border: 1px solid #f87171;
   background: rgba(248, 113, 113, 0.15);
   color: #fff;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .stats-pager {
@@ -541,7 +515,7 @@
   background: rgba(18, 22, 34, 0.8);
   color: var(--text, #fff);
   font-size: 13px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .stats-pager-btn:disabled {
@@ -599,7 +573,7 @@
   border: none;
   color: var(--text-dim, #9aa1b8);
   font-size: 18px;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
   padding: 4px 8px;
 }
 
@@ -819,4 +793,17 @@
 
 .stats-sets-note {
   margin-top: 16px;
+}
+
+/* R1973002: the patch bar: the patch before, the picker and the patch after. */
+.stats-patch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-patch-bar .stats-select {
+  flex: 1 1 180px;
+  max-width: 320px;
 }

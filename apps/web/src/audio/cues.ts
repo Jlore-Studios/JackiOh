@@ -710,6 +710,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
 
   // R1847001: a starscape travel sweeps one node on.
   starscapeTravelled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+  // R1850003: a permanent held beneath a card leaves the board as an exiled card does.
+  held: { sfx: "poof", cues: () => [sfx("poof")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

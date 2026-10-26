@@ -22,6 +22,7 @@ export const SFX_IDS: readonly SfxId[] = [
   "degrade", "upgrade",
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
+  "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
@@ -791,6 +792,89 @@ const sand: SfxRecipe = (ctx, out, at, params) => {
   const filter = biquad(k, "bandpass", baseHz * pitch, 1.1);
   chain(noise, filter, envelope(k, 0, 0.008, 0.58 + build * 0.08, len), out);
   run(k, noise, 0, len);
+  return len;
+};
+
+/** #1954: a tap's variety, read as `sand` reads it: a variant of four, a ±8% pitch and the build. */
+function tapFeel(params: SfxParams): { variant: number; pitch: number; build: number } {
+  return {
+    variant: Math.abs(Math.trunc(params.sandVariant ?? 0)) % 4,
+    pitch: 0.92 + Math.min(1, Math.max(0, params.variation ?? 0.5)) * 0.16,
+    build: Math.max(1, Math.min(6, params.sandBuild ?? 1)),
+  };
+}
+
+/** #1954: a hollow wood knock: a short pitched body thump plus a click transient. */
+const tapWood: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.16;
+  const k = kit(ctx, out, at, len);
+  const { variant, pitch, build } = tapFeel(params);
+  const hz = ([190, 215, 240, 265][variant] ?? 190) * pitch;
+  const body = tone(k, out, "triangle", hz, 0, 0.002, 0.4 + build * 0.03, len);
+  glide(k, body.frequency, hz * 0.82, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "bandpass", 2600 * pitch, 2.2), envelope(k, 0, 0.0008, 0.32, 0.018), out);
+  run(k, noise, 0, 0.018);
+  return len;
+};
+
+/** #1954: a muffled felt press: a soft low thud under low-passed noise. */
+const tapFelt: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.14;
+  const k = kit(ctx, out, at, len);
+  const { variant, pitch, build } = tapFeel(params);
+  tone(k, out, "sine", ([92, 104, 116, 128][variant] ?? 92) * pitch, 0, 0.006, 0.38 + build * 0.03, len);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "lowpass", 380 * pitch, 0.7), envelope(k, 0, 0.005, 0.3, 0.09), out);
+  run(k, noise, 0, 0.09);
+  return len;
+};
+
+/** #1954: a hard rock tap: a short click under a high resonant ping. */
+const tapStone: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.18;
+  const k = kit(ctx, out, at, len);
+  const { variant, pitch, build } = tapFeel(params);
+  const noise = noiseSource(k);
+  chain(noise, biquad(k, "highpass", 3200 * pitch, 0.7), envelope(k, 0, 0.0005, 0.36 + build * 0.03, 0.012), out);
+  run(k, noise, 0, 0.012);
+  tone(k, out, "sine", ([2960, 3320, 3730, 4180][variant] ?? 2960) * pitch, 0, 0.001, 0.2, len);
+  return len;
+};
+
+/** #1954: an electronic blip: a short square blip with a pitched zap falling under it. */
+const tapNeon: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.15;
+  const k = kit(ctx, out, at, len);
+  const { variant, pitch, build } = tapFeel(params);
+  const hz = ([660, 740, 830, 990][variant] ?? 660) * pitch;
+  tone(k, out, "square", hz, 0, 0.002, 0.14 + build * 0.01, 0.06);
+  const zap = tone(k, out, "sawtooth", hz * 2, 0.02, 0.002, 0.12, len);
+  glide(k, zap.frequency, hz * 0.5, len);
+  return len;
+};
+
+/** #1954: a dry papery tap: a soft paper thump with a crinkle of high-passed clicks. */
+const tapParchment: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.16;
+  const k = kit(ctx, out, at, len);
+  const { variant, pitch, build } = tapFeel(params);
+  tone(k, out, "sine", ([150, 165, 180, 195][variant] ?? 150) * pitch, 0, 0.004, 0.28, 0.09);
+  const paper = biquad(k, "highpass", 3500 * pitch, 0.7);
+  chain(paper, out);
+  clickTrain(k, paper, [0, 0.016, 0.03, 0.047], 5200 * pitch, 0.8, 0.3 + build * 0.03, 0.012);
+  return len;
+};
+
+/** #1954: a soft astral chime: a short bell partial with a faint sparkle tail. */
+const tapAstral: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.24;
+  const k = kit(ctx, out, at, len);
+  const { variant, pitch, build } = tapFeel(params);
+  const hz = ([1568, 1760, 1976, 2093][variant] ?? 1568) * pitch;
+  fmBell(k, out, hz, 3.5, 180, 0, 0.003, 0.2 + build * 0.02, len);
+  tone(k, out, "sine", hz * 2, 0.05, 0.002, 0.06, len);
+  tone(k, out, "sine", hz * 3, 0.1, 0.002, 0.04, len);
   return len;
 };
 
@@ -1745,6 +1829,13 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   emoteGasp: { recipe: emoteGasp, durationMs: 500, gain: 0.8 },
   emoteSalute: { recipe: emoteSalute, durationMs: 750, gain: 0.8 },
   emoteParty: { recipe: emoteParty, durationMs: 850, gain: 0.8 },
+  // #1954: the playmat taps, as short and quiet as sand.
+  tapWood: { recipe: tapWood, durationMs: 160, gain: 0.52 },
+  tapFelt: { recipe: tapFelt, durationMs: 140, gain: 0.52 },
+  tapStone: { recipe: tapStone, durationMs: 180, gain: 0.52 },
+  tapNeon: { recipe: tapNeon, durationMs: 150, gain: 0.52 },
+  tapParchment: { recipe: tapParchment, durationMs: 160, gain: 0.52 },
+  tapAstral: { recipe: tapAstral, durationMs: 240, gain: 0.52 },
 };
 
 /**

@@ -146,6 +146,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   fled: 900,
   // #1847 (Stinkyscape #148's starscape map, R1847001).
   starscapeTravelled: 200,
+  // #1850 (R1850003).
+  held: 350,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -282,6 +284,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   },
   fled: { type: "fled", player: "p1", opponent: "draw" },
   starscapeTravelled: { type: "starscapeTravelled", player: "p1", node: 3, reward: "heal" },
+  held: { type: "held", player: "p2", instanceId: "u6", defId: "core-004", holderId: "b5" },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -352,7 +355,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(93);
+    expect(rows).toHaveLength(94);
   });
 
   it("gives every row an animation name and a testid template", () => {

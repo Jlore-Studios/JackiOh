@@ -68,10 +68,6 @@ mod tests {
         card.unwrap_or_else(|| panic!("the scenario has no {what}"))
     }
 
-    fn at(instance: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": instance.id }])
-    }
-
     mod base {
         use super::*;
 
@@ -84,7 +80,7 @@ mod tests {
             }));
             let rock = must(s.unit("p2", 1), "p2 lane 1");
 
-            s.play("34", json!({ "targets": at(&rock) }));
+            s.play("34", json!({ "targets": pick::instance(&rock) }));
 
             s.expect_in_zone(&rock, "exile");
             s.expect_events(json!(["cardPlayed", "exiled"]));
@@ -100,7 +96,7 @@ mod tests {
             assert_eq!(s.state().counters.exiled, 0);
 
             let rock = must(s.unit("p2", 1), "p2 lane 1");
-            s.play("34", json!({ "targets": at(&rock) }));
+            s.play("34", json!({ "targets": pick::instance(&rock) }));
 
             // One for the permanent, one for the library card.
             assert_eq!(s.state().counters.exiled, 2);
@@ -115,7 +111,7 @@ mod tests {
             }));
             let trap = must(s.backrow("p2", 1), "p2 backrow 1");
 
-            s.play("34", json!({ "targets": at(&trap) }));
+            s.play("34", json!({ "targets": pick::instance(&trap) }));
 
             s.expect_in_zone(&trap, "exile");
         }
@@ -130,7 +126,7 @@ mod tests {
                     "p2": { "field": ["66"], "library": library },
                 }));
                 let rock = must(s.unit("p2", 1), "p2 lane 1");
-                s.play("34", json!({ "targets": at(&rock) }));
+                s.play("34", json!({ "targets": pick::instance(&rock) }));
                 s
             };
 
@@ -155,7 +151,7 @@ mod tests {
             }));
             let rock = must(s.unit("p2", 1), "p2 lane 1");
 
-            s.play("34", json!({ "targets": at(&rock) }));
+            s.play("34", json!({ "targets": pick::instance(&rock) }));
 
             s.expect_in_zone(&rock, "exile");
             assert_eq!(s.pile("p2", "exile").len(), 1);
@@ -177,7 +173,7 @@ mod tests {
             let middle = must(s.unit("p2", 2), "p2 lane 2");
             let right = must(s.unit("p2", 3), "p2 lane 3");
 
-            s.play("34", json!({ "targets": at(&middle) }));
+            s.play("34", json!({ "targets": pick::instance(&middle) }));
 
             s.expect_in_zone(&left, "exile");
             s.expect_in_zone(&middle, "exile");
@@ -200,7 +196,7 @@ mod tests {
             let faraway = must(s.unit("p2", 5), "p2 lane 5");
             let ally = must(s.unit("p1", 1), "p1 lane 1");
 
-            s.play("34", json!({ "targets": at(&edge) }));
+            s.play("34", json!({ "targets": pick::instance(&edge) }));
 
             s.expect_in_zone(&edge, "exile");
             s.expect_in_zone(&neighbour, "exile");
@@ -219,7 +215,7 @@ mod tests {
             s.card_mut("34").radiant = true;
 
             let rock = must(s.unit("p2", 1), "p2 lane 1");
-            s.play("34", json!({ "targets": at(&rock) }));
+            s.play("34", json!({ "targets": pick::instance(&rock) }));
 
             assert_eq!(s.pile("p2", "library").len(), 2);
         }
@@ -234,7 +230,7 @@ mod tests {
             s.card_mut("34").radiant = true;
             let rock = must(s.unit("p2", 1), "p2 lane 1");
 
-            s.play("34", json!({ "targets": at(&rock) }));
+            s.play("34", json!({ "targets": pick::instance(&rock) }));
 
             s.expect_in_zone(&rock, "exile");
         }

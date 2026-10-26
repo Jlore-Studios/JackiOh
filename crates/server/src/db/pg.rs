@@ -53,7 +53,7 @@
 
 use std::time::Duration;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -73,17 +73,17 @@ use crate::auth::is_uuid;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
-    CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FoldedRecords,
-    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
-    Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
-    SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
-    TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
+    ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow,
+    FoldedRecords, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
+    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
+    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
+    RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput,
+    RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile,
+    SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource,
+    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
     TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
     UsernameClaimOutcome,
 };
@@ -4656,6 +4656,53 @@ pub async fn game_records_insert_batch(
     }
     stats_totals_add(t, &delta).await?;
     Ok(written)
+}
+
+/// R1976000: the ids `game_records` holds are read first and left out, then the batch is claimed
+/// with the count it will fold (`on conflict do nothing`: a batch held already answers `None`
+/// before anything is added), then the rest are added to the totals. One transaction, so a claim
+/// is never left without its counts, nor counts without their claim; a second import of the same
+/// file waits on the first's claim and then finds it held. No `app.*` function: the fold is the
+/// engine's, in Rust, as `game_records_insert_batch`'s is.
+pub async fn game_record_batch_fold(
+    t: &mut PgTx<'_>,
+    batch: &str,
+    records: &[GameRecord],
+) -> Result<Option<BatchFolded>, StoreError> {
+    run_as(t, None).await?;
+    let ids: Vec<&str> = records.iter().map(|record| record.id.as_str()).collect();
+    let held: Vec<String> =
+        sqlx::query_scalar("select id from public.game_records where id = any($1::text[])")
+            .bind(&ids)
+            .fetch_all(&mut **t)
+            .await
+            .map_err(db_error)?;
+    let mut seen: IndexSet<&str> = held.iter().map(String::as_str).collect();
+    let mut delta = StatsTotals::default();
+    let mut folded = 0;
+    for record in records {
+        if seen.insert(record.id.as_str()) {
+            delta.fold(record, true);
+            folded += 1;
+        }
+    }
+    let claimed = sqlx::query(
+        "insert into public.game_record_batches (batch, records) values ($1::text, $2::int)
+         on conflict (batch) do nothing",
+    )
+    .bind(batch)
+    .bind(i32::try_from(folded).map_err(|_| StoreError::from(format!("a batch of {folded} records")))?)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if claimed.rows_affected() == 0 {
+        return Ok(None);
+    }
+    stats_totals_add(t, &delta).await?;
+    Ok(Some(BatchFolded {
+        folded,
+        left_out: records.len() - folded,
+    }))
 }
 
 /// The filter on the indexed columns; each row whose detail is still held (R1044001) read back
