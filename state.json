@@ -2189,12 +2189,9 @@
     "what": "revise #1963 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-26T06:06:15Z",
+    "at": "2026-10-26T06:16:38Z",
     "notes": [
-      "delivered build #1956 on claude-2 (run 40273436150): interrupted",
-      "delivered build #1953 on claude-7 (run 40273342055): interrupted",
-      "started revise #1963 on claude-7 (run 40278165230)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 2h 49m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 111h 49m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-26T10:10:00Z; it can start a build or a plan again in 3h 59m; `devin` is idle, but nothing queued is for it"
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` 7-day usage is 74%, too close to its 60% cap to start a long run (it starts under 55%); it resets at 2026-10-26T09:00:00Z; it can start a build or a plan again in 2h 41m; `muse` is busy; `agy` 7-day usage is 99%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-10-30T22:00:08Z; it takes reviews only; it can start a build or a plan again in 111h 41m; `gpt` it refused a call; its limit resets at 2026-11-01T09:25:55Z; `claude-2` 5-hour usage is 90%, too close to its 90% cap to start a long run (it starts under 85%); it resets at 2026-10-26T10:10:00Z; it can start a build or a plan again in 3h 51m; `devin` is idle, but nothing queued is for it"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -2900,7 +2897,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T06:06:15Z",
+  "loop_tick": "2026-10-26T06:16:38Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T04:58:08Z",
