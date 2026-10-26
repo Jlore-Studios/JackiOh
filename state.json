@@ -3204,6 +3204,9 @@
         }
       }
     },
+    "2020": {
+      "suggestion": true
+    },
     "2026": {
       "action": "review",
       "asks": [],
