@@ -8,8 +8,9 @@
 //!      nothing a Stop keeps.
 //!   4. a single candidate is played with no search: listed on a throwaway determinization, since
 //!      the seat's own legal actions never depend on the hidden cards, so `options.rng` is untouched.
-//!   5. the exact lethal solver, verified on every determinization (a style may pass over it, and
-//!      then step 6 keeps off every line that wins this turn, R1452).
+//!   5. the exact lethal solver, verified on every determinization, its line trimmed to the actions
+//!      it needs before the first is played (R1965000; a style may pass over it, and then step 6
+//!      keeps off every line that wins this turn, R1452).
 //!   6. the beam on determinization 0; its best lines are scored after the opponent's reply
 //!      (reply.rs), the best first actions are re-scored the same way on the other determinizations,
 //!      and the best mean wins (a style with a temperature picks among them, R1452).
@@ -46,7 +47,7 @@ use crate::config::{
     AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
 };
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
-use crate::lethal::find_lethal;
+use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
@@ -432,21 +433,28 @@ fn plan(
 
     // 5. Lethal, verified on every determinization, unless the style passes over it (R1452): then
     // the search below plays on as if it had not seen it, kept off every line that wins this turn.
+    // Played, it is first trimmed to the actions it needs (R1965000): only its first action is
+    // played, and a lethal found behind a free step that changes nothing would play that step at
+    // every decision. A trim the counter stops before it has a first action it can vouch for leaves
+    // no lethal to play: the decision goes on below as if none were found, its counter as spent.
     let mut passed_over: Option<ActionBody> = None;
     if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes)
         && let Some(first_lethal) = lethal.first().cloned()
     {
-        if !passes_over_lethal(style, rng) {
+        if passes_over_lethal(style, rng) {
+            passed_over = Some(first_lethal);
+        } else if let Some(trimmed) = trim_lethal(&dets, seat, lethal, counter)
+            && let Some(first) = trimmed.first().cloned()
+        {
             return Plan::Searched {
-                action: first_lethal,
+                action: first,
                 reason: DecisionReason::Lethal,
-                line: lethal,
+                line: trimmed,
                 score: AI_EVAL.win - f64::from(public.turn),
                 stopped_by: None,
                 runners_up: Vec::new(),
             };
         }
-        passed_over = Some(first_lethal);
     }
 
     // 6. The beam on determinization 0, keeping enough nodes back to score the finalists after the
