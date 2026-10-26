@@ -184,6 +184,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Hold beneath",
     "Cast it for yourself",
     "Radiant at N keywords",
+    // R1855000–R1855003: engine primitives no shipped card prints yet; Stinkyscape's Anomaly Found! and
+    // Scanning Probes (S20) explain them on their own faces.
+    "Replace your board",
+    "Scan for an Anomaly",
   ],
 };
 

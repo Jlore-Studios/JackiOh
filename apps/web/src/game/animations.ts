@@ -959,6 +959,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "card-<instanceId>",
     target: (e, view) => locateInstance(view, e.instanceId),
   },
+  // Issue #1855 (R1855000): an Anomaly replaces one side's board; the board tilts as for `swapped`,
+  // before its cards' `exiled` and `summoned` play the cards going and coming.
+  boardReplaced: {
+    animation: "jk-swap-cross",
+    durationMs: 500,
+    testid: "board",
+    target: () => testid.board,
+  },
 };
 
 /**

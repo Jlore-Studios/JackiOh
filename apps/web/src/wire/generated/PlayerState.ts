@@ -177,4 +177,10 @@ fled?: FleeOpponent,
  * R1847000: this player's starscape map, public. Absent until their first travel, so a game
  * without one hashes as before this field existed (D14).
  */
-starscape?: StarscapeMap, };
+starscape?: StarscapeMap, 
+/**
+ * R1855003 (Stinkyscape #166 and #167, the Scanning Probes): how many of this player's Anomaly
+ * scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
+ * Absent until the first miss, so a game without one hashes as before this field existed (D3).
+ */
+anomalyMisses?: number, };

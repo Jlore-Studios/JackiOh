@@ -35,15 +35,22 @@
 //! global roll, a cosmetic pack slot and the Chase Shard bar reach them, and no token does. A deck's
 //! save refuses a playmat, backdrop or card back its account does not own
 //! ([`owns_account_cosmetic`]), as it does a portrait.
+//!
+//! R1834001: every write of a pick (a deck's slots, the `cosmetics` settings group, a card's own
+//! picks) is held to [`check_pick`]: an id of the registry of the slot's kind that the account
+//! owns ([`owns`]: its kind's default, a starter, or a ledger row on the card or the account), and
+//! a loadout freezes nothing else (`loadout::freeze_loadout`, R1834002).
 
 use std::collections::BTreeSet;
 use std::fmt;
+use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
 
 use jackioh_engine::wire::emotes::{DEFAULT_PORTRAIT, PORTRAIT_IDS, PortraitId};
 
 use crate::config::{GLOBAL_COSMETIC_FLOOR_RARITY, PLAYER_SETTINGS_TEXT_MAX_LENGTH};
+use crate::economy::store::OwnedCosmetics;
 
 /// The registry's text, compiled in.
 pub const COSMETICS_JSON: &str = include_str!("../cosmetics.json");
@@ -322,6 +329,91 @@ pub fn parse(json: &str) -> Result<Vec<Cosmetic>, String> {
 /// The registry this build ships.
 pub fn shipped() -> Result<Vec<Cosmetic>, String> {
     parse(COSMETICS_JSON)
+}
+
+/// The shipped registry, read once; its unit tests hold it to [`problems`].
+pub fn registry() -> &'static [Cosmetic] {
+    static REGISTRY: OnceLock<Vec<Cosmetic>> = OnceLock::new();
+    REGISTRY.get_or_init(|| shipped().expect("cosmetics.json passes cosmetics::problems"))
+}
+
+/// The id of `kind`'s default in `registry`: what a slot wears when nothing else is picked or
+/// owned. `FullArt` has none (R1313000), so it answers `""`.
+pub fn default_of(registry: &[Cosmetic], kind: CosmeticKind) -> &str {
+    registry
+        .iter()
+        .find(|cosmetic| cosmetic.kind == kind && cosmetic.default)
+        .map_or("", |cosmetic| cosmetic.id.as_str())
+}
+
+/// R1834001: whether an account whose ledger holds `owned` owns `cosmetic` where it is worn: on
+/// the card `card`, or on the whole account when `card` is `None`. A kind's default and a starter
+/// are owned by every account everywhere (§14.2); any other is owned by a ledger row, on that card
+/// for a per-card kind (which no account row ever names, so a per-card cosmetic picked for every
+/// card is owned only when it is a starter) and on the account for an account kind.
+pub fn owns(cosmetic: &Cosmetic, card: Option<&str>, owned: &OwnedCosmetics) -> bool {
+    if cosmetic.default || cosmetic.starter {
+        return true;
+    }
+    if !cosmetic.kind.is_per_card() {
+        return owned.account.contains(&cosmetic.id);
+    }
+    card.is_some_and(|card| {
+        owned
+            .cards
+            .iter()
+            .any(|row| row.card_id == card && row.cosmetic_id == cosmetic.id)
+    })
+}
+
+/// Why [`check_pick`] refused a pick.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PickRefusal {
+    /// The registry has no such id of the slot's kind (an unknown id, or one of another kind).
+    WrongKind,
+    /// The id is of the slot's kind, and the account does not own it there.
+    NotOwned,
+}
+
+impl PickRefusal {
+    /// The words a write's 400 `bad_request` answers with, naming the field the pick came in.
+    pub fn message(self, key: &str) -> String {
+        match self {
+            PickRefusal::WrongKind => format!("\"{key}\" is not a cosmetic id of its kind"),
+            PickRefusal::NotOwned => format!("\"{key}\" is a cosmetic this account does not own"),
+        }
+    }
+}
+
+/// R1834001: a pick of `id` for a `kind` slot, worn on `card` (or on every card, or the account,
+/// when `None`), as every write of a pick checks it. A full art names its card, so a full art of
+/// another card is the wrong kind for this one.
+pub fn check_pick(
+    registry: &[Cosmetic],
+    owned: &OwnedCosmetics,
+    kind: CosmeticKind,
+    id: &str,
+    card: Option<&str>,
+) -> Result<(), PickRefusal> {
+    let Some(cosmetic) = registry.iter().find(|cosmetic| {
+        cosmetic.kind == kind
+            && cosmetic.id == id
+            && (cosmetic.kind != CosmeticKind::FullArt || cosmetic.card.as_deref() == card)
+    }) else {
+        return Err(PickRefusal::WrongKind);
+    };
+    if owns(cosmetic, card, owned) {
+        Ok(())
+    } else {
+        Err(PickRefusal::NotOwned)
+    }
+}
+
+/// The full art of `card` in `registry`, if the card has one (R1313000).
+pub fn full_art_of<'r>(registry: &'r [Cosmetic], card: &str) -> Option<&'r Cosmetic> {
+    registry
+        .iter()
+        .find(|cosmetic| cosmetic.kind == CosmeticKind::FullArt && cosmetic.card.as_deref() == Some(card))
 }
 
 /// The cosmetics a duplicate may drop (R1301002): the per-card ones that are neither a default
@@ -1292,5 +1384,110 @@ mod tests {
         let gary = [portrait_cosmetic_id(PortraitId::Gary)];
         assert!(owns_portrait(PortraitId::Gary, &gary));
         assert!(!owns_portrait(PortraitId::Timmy, &gary));
+    }
+
+    #[test]
+    fn r1834001_check_pick_refuses_another_kind_and_an_unowned_id() {
+        use crate::economy::store::CardCosmetic;
+        let earned = |id: &str, kind: CosmeticKind| Cosmetic {
+            rarity: GLOBAL_COSMETIC_FLOOR_RARITY,
+            starter: false,
+            ..entry(id, kind, false)
+        };
+        let mut cosmetics = defaults();
+        cosmetics.extend([
+            Cosmetic {
+                rarity: GLOBAL_COSMETIC_FLOOR_RARITY,
+                ..entry("table-felt", CosmeticKind::Table, false)
+            },
+            earned("table-velvet", CosmeticKind::Table),
+            earned("foil-prism", CosmeticKind::Foil),
+            Cosmetic {
+                card: Some("core-001".to_owned()),
+                ..earned("full-art-dfender", CosmeticKind::FullArt)
+            },
+        ]);
+        assert!(problems(&cosmetics).is_empty(), "{:?}", problems(&cosmetics));
+        let none = OwnedCosmetics {
+            cards: Vec::new(),
+            account: Vec::new(),
+        };
+        let check = |owned: &OwnedCosmetics, kind, id: &str, card: Option<&str>| {
+            check_pick(&cosmetics, owned, kind, id, card)
+        };
+
+        // A default and a starter are every account's, on every card and on the account.
+        assert_eq!(check(&none, CosmeticKind::Table, "table-tavern", None), Ok(()));
+        assert_eq!(check(&none, CosmeticKind::Table, "table-felt", None), Ok(()));
+        assert_eq!(
+            check(&none, CosmeticKind::Foil, "foil-none", Some("core-002")),
+            Ok(())
+        );
+        // An id of another kind, an unknown id and a full art of another card are the wrong kind.
+        assert_eq!(
+            check(&none, CosmeticKind::Field, "table-felt", None),
+            Err(PickRefusal::WrongKind)
+        );
+        assert_eq!(
+            check(&none, CosmeticKind::Table, "table-unheard-of", None),
+            Err(PickRefusal::WrongKind)
+        );
+        assert_eq!(
+            check(&none, CosmeticKind::FullArt, "full-art-dfender", Some("core-004")),
+            Err(PickRefusal::WrongKind)
+        );
+        // An earned one is owned only by its ledger row, on the account or on its card.
+        assert_eq!(
+            check(&none, CosmeticKind::Table, "table-velvet", None),
+            Err(PickRefusal::NotOwned)
+        );
+        let owned = OwnedCosmetics {
+            cards: vec![
+                CardCosmetic {
+                    card_id: "core-001".to_owned(),
+                    cosmetic_id: "full-art-dfender".to_owned(),
+                },
+                CardCosmetic {
+                    card_id: "core-002".to_owned(),
+                    cosmetic_id: "foil-prism".to_owned(),
+                },
+            ],
+            account: vec!["table-velvet".to_owned()],
+        };
+        assert_eq!(check(&owned, CosmeticKind::Table, "table-velvet", None), Ok(()));
+        assert_eq!(
+            check(
+                &owned,
+                CosmeticKind::FullArt,
+                "full-art-dfender",
+                Some("core-001")
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            check(&owned, CosmeticKind::Foil, "foil-prism", Some("core-002")),
+            Ok(())
+        );
+        // A per-card cosmetic owned on one card is not owned on another, nor on every card.
+        assert_eq!(
+            check(&owned, CosmeticKind::Foil, "foil-prism", Some("core-003")),
+            Err(PickRefusal::NotOwned)
+        );
+        assert_eq!(
+            check(&owned, CosmeticKind::Foil, "foil-prism", None),
+            Err(PickRefusal::NotOwned)
+        );
+        assert_eq!(default_of(&cosmetics, CosmeticKind::Border), "border-standard");
+        assert_eq!(default_of(&cosmetics, CosmeticKind::FullArt), "");
+        assert_eq!(
+            full_art_of(&cosmetics, "core-001").map(|cosmetic| cosmetic.id.as_str()),
+            Some("full-art-dfender")
+        );
+        assert!(full_art_of(&cosmetics, "core-002").is_none());
+        // The shipped registry reads once, and passes.
+        assert_eq!(
+            registry().len(),
+            shipped().map(|cosmetics| cosmetics.len()).unwrap_or(0)
+        );
     }
 }

@@ -236,6 +236,8 @@ export const GAME_EVENT_TYPES = [
   "starscapeTravelled",
   // #1850's card-on-card verbs: a permanent held beneath a card (R1850003).
   "held",
+  // Issue #1855's Anomalies: a side's board replaced by a preset (R1855000).
+  "boardReplaced",
 ] as const satisfies readonly GameEventType[];
 
 /**

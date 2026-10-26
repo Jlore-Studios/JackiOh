@@ -623,3 +623,123 @@ mod r633_the_body_is_checked_before_anything_is_stored {
         );
     }
 }
+
+/// R1834001: the `cosmetics` group's six picks are checked as every write of a pick is, since a
+/// match shows them to the other seat: each, where the body names it, a text naming an id of its
+/// kind the account owns. A default or a starter is owned with no ledger row; #1833's are neither
+/// (R1833000).
+mod r1834001_the_cosmetics_group_holds_owned_ids_of_their_kinds {
+    use super::*;
+
+    use jackioh_server::economy::store::{CosmeticGrant, EconomyReason};
+
+    /// `profile` holds `id` on `card` (on the account, `None`), as a pack's drop would leave it.
+    async fn own(app: &App, profile: &str, card: Option<&str>, id: &str) {
+        let mut tx = app.db.begin(Some(profile)).await.expect("a transaction");
+        let granted = tx
+            .economy_cosmetics_grant(&CosmeticGrant {
+                profile_id: profile.to_string(),
+                card_id: card.map(str::to_owned),
+                cosmetic_id: id.to_owned(),
+                delta: 1,
+                reason: EconomyReason::PackOpen,
+                reference: None,
+                dev: false,
+                at: wall_ms(),
+            })
+            .await
+            .expect("the grant");
+        assert!(granted, "{id} was already owned");
+        tx.commit().await.expect("the commit");
+    }
+
+    #[tokio::test]
+    async fn r1834001_the_cosmetics_group_refuses_an_unowned_pick() {
+        let f = setup().await;
+        // A per-card cosmetic owned on one card is no account-wide pick, and an account cosmetic
+        // the account does not hold is refused, as is one only another account holds.
+        own(&f.app, &f.profile, Some("core-002"), "foil-glitter").await;
+        own(&f.app, &f.other, None, "table-marble").await;
+        for (key, value) in [("foil", "foil-glitter"), ("table", "table-marble")] {
+            let (status, body) = put(
+                &f.app,
+                json!({ "groups": { "cosmetics": { "at": 1, "values": { key: value } } } }),
+                TOKEN,
+            )
+            .await;
+            assert_eq!(status, 400, "{key}: {body}");
+            assert_eq!(body["error"]["code"], "bad_request");
+            assert_eq!(
+                body["error"]["message"],
+                json!(format!(
+                    "\"cosmetics.{key}\" is a cosmetic this account does not own"
+                ))
+            );
+        }
+        assert!(stored(&f).await.is_empty());
+
+        // Once the account holds it, the same pick is kept.
+        own(&f.app, &f.profile, None, "table-marble").await;
+        let values = json!({ "table": "table-marble" });
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": { "cosmetics": { "at": 2, "values": values.clone() } } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(answer["groups"]["cosmetics"]["values"], values);
+    }
+
+    #[tokio::test]
+    async fn r1834001_the_cosmetics_group_refuses_another_kind() {
+        let f = setup().await;
+        for (key, value) in [
+            ("foil", json!("border-wood")),
+            ("finish", json!("finish-from-the-future")),
+            ("border", json!("full-art-mr-vanilla")),
+            ("table", json!("field-rain")),
+            ("field", json!("portrait-gary")),
+            ("cardBack", json!(true)),
+        ] {
+            let (status, body) = put(
+                &f.app,
+                json!({ "groups": { "cosmetics": { "at": 1, "values": { key: value } } } }),
+                TOKEN,
+            )
+            .await;
+            assert_eq!(status, 400, "{key}: {body}");
+            assert_eq!(body["error"]["code"], "bad_request");
+            assert_eq!(
+                body["error"]["message"],
+                json!(format!("\"cosmetics.{key}\" is not a cosmetic id of its kind"))
+            );
+        }
+        assert!(stored(&f).await.is_empty());
+
+        // Owned ids of their kinds are kept, beside any other key the client keeps there, and
+        // another group is not checked for picks.
+        let values = json!({
+            "foil": "foil-rainbow",
+            "finish": "finish-plain",
+            "border": "border-circuit",
+            "table": "table-felt",
+            "field": "field-embers",
+            "cardBack": "card-back-starfield",
+            "shown": true,
+        });
+        let answer = settings_of(
+            put(
+                &f.app,
+                json!({ "groups": {
+                    "cosmetics": { "at": 2, "values": values.clone() },
+                    "audio": { "at": 2, "values": { "foil": "anything" } },
+                } }),
+                TOKEN,
+            )
+            .await,
+        );
+        assert_eq!(answer["groups"]["cosmetics"]["values"], values);
+    }
+}

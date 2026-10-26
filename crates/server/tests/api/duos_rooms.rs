@@ -264,6 +264,7 @@ async fn with_ladder_bot() -> Three {
     let decks = [BotDeck {
         cards: deck(),
         portrait: pick_portrait_from_seed("bot-deck").to_string(),
+        slots: None,
     }];
     store!(app, t => t
         .bots_set_decks(BOT, &decks, &app.catalog.version)

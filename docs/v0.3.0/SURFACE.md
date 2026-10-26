@@ -964,6 +964,22 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   outside the pool is still `malformed`. The client reads a missing or `null` `emotes` as a server that
   deals none and shows its default hand (`apps/web/src/emotes/hand.ts`); hotseat and practice deal
   both seats through the `deal_emote_hand` binding.
+- **Loadouts** (#1834, R1834000–R1834005): two frames ride beside `portraits`, never in `PlayerView`.
+  `{ "type": "loadouts", "p1", "p2" }` (`ServerMessage::Loadouts { p1, p2 }`), each a `SeatLoadout`
+  `{ table, field, cardBack, foil, finish, border }` of registry ids, goes on `hello` and attach
+  before the view and to a watcher as it attaches; `{ "type": "cardLoadouts", "seat", "cards" }`
+  (`ServerMessage::CardLoadouts { seat, cards }`), `cards` a list of `{ cardId, foil?, finish?,
+  border?, fullArt? }`, goes after the first view to a socket that shows a card that seat's deck
+  dealt, once per socket (`loadout::shown_defs`, `cards_due`). Both are read off
+  `matches.loadouts` (migration 0061; a jsonb column, not the retired `loadouts` tables), which
+  `Registry::start` freezes (`loadout::freeze_loadout`). A replay page
+  (`GET /api/replays/:matchId`, `ReplaySteps`) gains `loadouts` (`{ p1, p2 }`, the same halves) and
+  `cardLoadouts` (`[{ seat, cards }]`, the cards its steps show). Three routes, all `Active`:
+  `GET /api/card-picks` → `{ cards }`, `PUT /api/card-picks` `{ cardId, foil?, finish?, border?,
+  fullArt? }` (absent keeps, `null` clears) and `POST /api/card-picks/upload` `{ cards }`
+  (`api/card_picks.rs`, over `public.card_cosmetic_picks`). The client reads the frames in
+  `apps/web/src/game/net.ts` and `src/cards/loadouts.ts`; without them every seat but the viewer's
+  draws the defaults.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
   rematch offers held in memory, finished actors kept in memory through their rematch window (`Registry::reap_finished`), the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.

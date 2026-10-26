@@ -2,7 +2,7 @@
 //! seed-accounts,season-start,card-stats,import-dev-records}.ts`, part 20, and `export_records`, which
 //! the TS never had (the records out, where `import_dev_records` reads them in), and the play
 //! telemetry's `timing_backfill` and `timing_fit` (R1442), §9.8's `invite_clusters` and the ladder bots'
-//! `bot_calibrate` (R748000), which it never had either. Each module's
+//! `bot_calibrate` (R748000) and `cosmetics_fit` (R1834006), which it never had either. Each module's
 //! `pub async fn run(args: Vec<String>) -> anyhow::Result<()>` is its TS `main()`, handed the
 //! arguments after the subcommand (`main.rs`).
 //! Written once by part 1 (SURFACE §1).
@@ -10,6 +10,7 @@
 pub mod balance_watch;
 pub mod bot_calibrate;
 pub mod card_stats;
+pub mod cosmetics_fit;
 pub mod export_records;
 pub mod import_dev_records;
 pub mod invite_clusters;
