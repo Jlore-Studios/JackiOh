@@ -583,6 +583,7 @@ mod generator {
             GameOverReason,
             GlitchOutcome,
             FengShuiOutcome,
+            StarscapeReward,
             RedirectWhat,
             Tuning,
             TuningChange,

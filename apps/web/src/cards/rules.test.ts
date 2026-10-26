@@ -158,6 +158,9 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // them (#123, #77) give them glossary entries.
     "Hidden Nerf",
     "Trade offer",
+    // R1847000: the starscape map, which no card prints until Stinkyscape #148 is built (S23); that
+    // card may move it into the glossary.
+    "Starscape map",
   ],
 };
 
