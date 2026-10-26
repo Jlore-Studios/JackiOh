@@ -259,8 +259,10 @@ muse=0`, then `bot/machine/register-runners.sh OWNER/REPO muse=2` on the night b
 ## The local runner
 
 A person's own machine runs the learn lane, every job of it (`.github/workflows/learn.yml`,
-`training/learn.md`: the self-play export, the retrain, the screen and the gate, and the lane's
-plan and watch), and is the default runner of any other self-play export (#1008, `docs/learned-eval.md`
+`training/learn.md`: the self-play export, the retrain, the screen and the gate, the lane's plan and
+watch, the import of each export's games and the start of the next run, one run after another,
+#1976), the gather workflow's job (`.github/workflows/gather.yml`, while `GATHER_ON_PATCH` is `true`),
+and is the default runner of any other self-play export (#1008, `docs/learned-eval.md`
 D1; `.github/workflows/selfplay.yml`, `training/README.md`, Where the exports come from), so an export
 no longer holds 12 of GitHub's 20 hosted runners while CI waits (#1455); a dispatch of `selfplay.yml`
 can still ask for GitHub's. It never touches the training box, which the lanes keep, and it can also
@@ -269,7 +271,7 @@ take some of the night box's own jobs while the box is busy or off.
 | | |
 |---|---|
 | Machine | the owner's laptop (jgoetzmann): Windows 11, Intel i7-11800H (8 cores, 16 threads), 32 GB, Docker Desktop on WSL2 (which `%USERPROFILE%\.wslconfig` caps at 8 GB and 8 processors for every container). The owner looks after it |
-| Label | `jackioh-selfplay-local`, and no other: `learn.yml` names it for every job, and `selfplay.yml` when its `runner` input does (its default since #1455). Registered to this repository alone |
+| Label | `jackioh-selfplay-local`, and no other: `learn.yml` and `gather.yml` name it for every job, and `selfplay.yml` when its `runner` input does (its default since #1455). Registered to this repository alone. `gather.yml` is left out of `config.json`'s workflows on purpose: its job waits for the idle runner the supervisor keeps for the label, so a learn job or a night-box job queued at the same time is served first |
 | How it runs | `bot/machine/local/supervisor.ps1`, started at logon by a scheduled task (`install-task.ps1`). Each runner is one ephemeral container of the image `local/Dockerfile` builds (`jackioh-pc-runner`): it registers with a single-use JIT config, takes one job and is gone. A `docker` or `gh` call that gives no answer in two minutes (`docker info`, 30 seconds) is killed and counts as failed, so a Docker engine that stops answering reads as Docker not running, not as a supervisor stuck in one call |
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
 | Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
@@ -286,7 +288,11 @@ subscription is served here only once it is logged in on the PC (`.\login.ps1 <i
 of the same account, into the volume `jackioh-pc-home-<id>`), and then only when one of its jobs is
 queued: a runner here with that label takes it, or the night box does. While the box is stopped the
 PC usually takes it first, since the starter looks every five minutes and the supervisor every 20
-seconds, and the box stays off. The jobs still count against `machine_parallel`.
+seconds, and the box stays off. The jobs still count against `machine_parallel`. Since the learn lane
+runs one run after another (#1976), the PC is seldom free, and its jobs come first (`config.json`
+lists `jackioh-selfplay-local` first): a night-box job queued while it works waits for the box's own
+starter, which starts the box in five minutes. To give the night box's jobs the PC first instead, list
+their entries before `jackioh-selfplay-local` in the installed `config.json` and restart the task.
 
 **Setting it up**, once, on the PC (PowerShell, Docker Desktop running):
 

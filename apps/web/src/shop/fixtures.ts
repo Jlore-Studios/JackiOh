@@ -79,8 +79,8 @@ export function ownedCosmeticsOf(
 
 /**
  * `POST /api/cosmetic-packs/open`: an Epic full art for an owned card, an account cosmetic and a
- * spent slot, the shard bar one further on (to full) and one pack left, the spent slot moving both
- * token bars without filling either.
+ * spent slot, the shard bar one further on (to full) and one pack left, the spent slot adding its 4
+ * points to both token bars without filling either (R1953000).
  */
 export function openedCosmeticPack(): OpenedCosmeticPackResponse {
   return {
@@ -114,6 +114,7 @@ export function openedCosmeticPack(): OpenedCosmeticPackResponse {
       card: { before: 3, after: 7, size: 12, pays: 0 },
       cosmetic: { before: 5, after: 9, size: 30, pays: 0 },
       cosmeticPaid: [],
+      slotPoints: [0, 0, 4],
     },
   };
 }

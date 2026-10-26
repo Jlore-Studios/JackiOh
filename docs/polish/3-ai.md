@@ -527,7 +527,7 @@ export function candidateActions(state: GameState, seat: PlayerId): ActionBody[]
 The move order is a stable sort by tier, and ties keep `legalActions` order:
 0 an attack on the enemy hero ·
 1 an attack on a unit it kills and survives, read from `unitView` (Divine Shield on the target means no kill) ·
-1b an attack on a unit it kills at an even trade or better by the static trader's `trade_value`
+1b an attack on a unit it kills, or whose Cleave splash kills a neighbour of it (#1821), at an even trade or better by the static trader's `trade_value`
 (crates/ai/src/reply.rs: the target's worth less the attacker's when it dies too, at least 0), only each
 attacker's best (ties: the first), its others staying in 4 (#1779) ·
 2 `play` and `activatePower`, round-robin across source instances (every source's first variant,
@@ -716,10 +716,12 @@ The rule, one step at a time, each step one `reduce` (one node):
    is worth the target's `unitWorth` if it dies (First Strike deciding who strikes first, Divine
    Shield popped for its keyword weight, Poisonous killing), less the `unitWorth` of the body it
    comes back as while its Reborn is unspent (§4.5 step 4, #1796), `chipPerDamage` per point
-   otherwise, less the attacker's own, priced the same way, if it dies. First, a Deft unit of its
-   in Defense Position, its switch and its attack unspent, is switched to Attack on trial (one node,
-   R49), and the switch is kept when the best attack afterwards, ranked one hit at a time, is its
-   own.
+   otherwise, less the attacker's own, priced the same way, if it dies. A Trample attacker's hits
+   add `facePerDamage` per point they land beyond each struck unit's health on the hero
+   (`projectedDamage`, §4.4 step 9), and a Lifesteal attacker's add what healing its own hero by
+   all they deal is worth on the hero curve (step 8, #1820). First, a Deft unit of its in Defense
+   Position, its switch and its attack unspent, is switched to Attack on trial (one node, R49), and
+   the switch is kept when the best attack afterwards, ranked one hit at a time, is its own.
 4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
    to Defense Position of its units in Attack Position whose switch is unspent (a unit that
    attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own

@@ -346,7 +346,8 @@ describe("R1655000 a card in context", () => {
   const shown = (): Element | null => screen.queryByTestId(T.cardViewPreview)?.querySelector(".cf") ?? null;
   const item = (id: string): HTMLElement => screen.getByTestId(T.stripItem(id));
 
-  it("R1655000 a card opened in the Collection wears its own picks while another card keeps the account's", () => {
+  it("R1655000 a card opened in the Collection wears its own picks while another card draws the defaults", () => {
+    // R1953001: the account's synced finish is worn by no card.
     writeCosmetics({ finish: "finish-linen" });
     writeCardPick(BIG_D, "border", "border-wood");
     writeCardPick(BIG_D, "foil", "foil-rainbow");
@@ -354,14 +355,14 @@ describe("R1655000 a card in context", () => {
 
     expect(large().getAttribute("data-frame")).toBe("border-wood");
     expect(large().getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
-    expect(large().getAttribute("data-finish")).toBe("finish-linen");
+    expect(large().getAttribute("data-finish")).toBeNull();
     expect(item("border-wood")).toHaveAttribute("data-equipped", "true");
     expect(item("border-standard")).toHaveAttribute("data-equipped", "false");
 
-    // Another card, in the same view: the account's picks, and none of Big D-fender's.
+    // Another card, in the same view: the defaults, and none of Big D-fender's.
     fireEvent.click(screen.getByTestId(T.card(PLAIN)));
     expect(screen.getByTestId(T.cardView)).toHaveAttribute("data-card", PLAIN);
-    expect(large().getAttribute("data-finish")).toBe("finish-linen");
+    expect(large().getAttribute("data-finish")).toBeNull();
     expect(large().getAttribute("data-frame")).toBeNull();
     expect(large().getAttribute("data-cosmetic-foil")).toBeNull();
   });
@@ -400,12 +401,13 @@ describe("R1655000 a card in context", () => {
 
     fireEvent.focus(item("foil-holo-sweep"));
     expect(shown()?.getAttribute("data-cosmetic-foil")).toBe("foil-holo-sweep");
-    // A preview's foil holds still: the cap on moving foils belongs to a game's faces.
+    // A preview of a foil that is no chase holds still; a chase moves (R1953001).
     expect(shown()?.getAttribute("data-cosmetic-motion")).toBe("static");
     fireEvent.mouseEnter(item("finish-gilded-edge"));
     fireEvent.blur(item("foil-holo-sweep"));
     expect(shown()?.getAttribute("data-finish")).toBe("finish-gilded-edge");
     expect(shown()?.getAttribute("data-cosmetic-foil")).toBeNull();
+    expect(shown()?.getAttribute("data-cosmetic-motion")).toBe("animated");
 
     fireEvent.mouseLeave(item("finish-gilded-edge"));
     expect(shown()).toBeNull();
@@ -424,9 +426,10 @@ describe("R1655000 a card in context", () => {
   });
 
   it("R1655000 clicking an owned item equips it on that card only, and Use default clears it", () => {
+    // R1953001: the account's synced border is worn by no card, before a pick or after Use default.
     writeCosmetics({ border: "border-bone" });
     open(BIG_D);
-    expect(large().getAttribute("data-frame")).toBe("border-bone");
+    expect(large().getAttribute("data-frame")).toBeNull();
 
     fireEvent.click(item("border-wood"));
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-wood" });
@@ -435,7 +438,7 @@ describe("R1655000 a card in context", () => {
     expect(screen.getByTestId(T.stripDefault("border"))).toHaveAttribute("aria-pressed", "false");
     expect(readCosmetics().border).toBe("border-bone");
 
-    // A pick of the kind's default is a pick: it beats the account's pick that is not the default.
+    // A pick of the kind's default is a pick of its own.
     fireEvent.click(item("border-standard"));
     expect(readCardPicks(BIG_D)).toEqual({ border: "border-standard" });
     expect(large().getAttribute("data-frame")).toBeNull();
@@ -443,7 +446,7 @@ describe("R1655000 a card in context", () => {
     fireEvent.click(screen.getByTestId(T.stripDefault("border")));
     expect(readCardPicks(BIG_D)).toEqual({});
     expect(localStorage.getItem(CARD_PICKS_SETTINGS_KEY)).toBe("{}");
-    expect(large().getAttribute("data-frame")).toBe("border-bone");
+    expect(large().getAttribute("data-frame")).toBeNull();
     expect(screen.getByTestId(T.stripDefault("border"))).toHaveAttribute("aria-pressed", "true");
 
     // Another card has none of it.
@@ -614,17 +617,20 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     return face;
   };
 
-  it("R1956000 an owned grid tile wears its card's picks over the account's; a locked tile, a Mythic tile's foil and a Radiant face do not", () => {
-    writeCosmetics({ finish: "finish-linen", foil: "foil-rainbow" });
+  it("R1956000 an owned grid tile wears its card's picks, never the account's; a locked tile, a Mythic tile's foil and a Radiant face do not", () => {
+    writeCosmetics({ finish: "finish-linen" });
     writeCardPick(PLAIN, "border", "border-bone");
+    writeCardPick(PLAIN, "foil", "foil-rainbow");
     writeCardPick(MYTHIC, "border", "border-bone");
+    writeCardPick(MYTHIC, "foil", "foil-rainbow");
     writeCardPick(LOCKED, "border", "border-bone");
     render(<OwnedCards collection={collectionOwning([PLAIN, MYTHIC])} defs={DEFS_HERE} />);
     fireEvent.click(screen.getByTestId(T.setToggle("Core")));
 
     const plain = tile(PLAIN);
     expect(plain.getAttribute("data-frame")).toBe("border-bone");
-    expect(plain.getAttribute("data-finish")).toBe("finish-linen");
+    // R1953001: a kind the card has no pick of wears its default, not the account's pick.
+    expect(plain.getAttribute("data-finish")).toBeNull();
     expect(plain.getAttribute("data-cosmetic-foil")).toBe("foil-rainbow");
     // A grid's foil holds still: the moving slots stay with the card a player opens.
     expect(plain.getAttribute("data-cosmetic-motion")).toBe("static");
@@ -649,7 +655,6 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
   });
 
   it("R1956000 a grid tile wears only what the ledger owns on its card", () => {
-    writeCosmetics({ finish: "finish-linen" });
     // A starter every account owns on every card, and a pick the ledger does not list on this one.
     writeCardPick(PLAIN, "border", "border-bone");
     writeCardPick(PLAIN, "finish", "finish-parchment");
@@ -660,7 +665,8 @@ describe("R1956000 the owned cards' grid wears their picks", () => {
     );
     fireEvent.click(screen.getByTestId(T.setToggle("Core")));
     expect(tile(PLAIN).getAttribute("data-frame")).toBe("border-bone");
-    expect(tile(PLAIN).getAttribute("data-finish")).toBe("finish-linen");
+    // The unowned pick wears its kind's default (R1953001).
+    expect(tile(PLAIN).getAttribute("data-finish")).toBeNull();
   });
 });
 

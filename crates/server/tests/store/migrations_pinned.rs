@@ -83,6 +83,7 @@ const PINNED: &[(&str, &str)] = &[
         "972e8478",
     ),
     ("0059_voted_out_and_fled.sql", "a40e0655"),
+    ("0060_game_record_batches.sql", "6699200b"),
 ];
 
 /// `PINNED[name]`.

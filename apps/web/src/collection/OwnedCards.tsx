@@ -3,9 +3,9 @@
 // opens its view, so a player sees what they are missing. The server's `GET
 // /api/collection` says which are owned (CLAUDE.md rule 7); this counts the rows and draws them.
 // R1655000: a card opens in its own view (CardCosmeticsView), large, wearing its own picks, with
-// a strip of what it may wear; the card's text is one click from there. R1956000: an owned card's
-// tile in the grid is the viewer's own copy too, and wears the same picks; a locked one draws the
-// defaults.
+// a strip of what it may wear; the card's text is one click from there. R1953001: `token` lets that
+// view offer a held cosmetic token on a locked cosmetic. R1956000: an owned card's tile in the grid
+// is the viewer's own copy too, and wears the same picks; a locked one draws the defaults.
 
 import { useId, useState, type ReactElement } from "react";
 
@@ -15,6 +15,7 @@ import type { CardDef, SetName } from "@jackioh/shared";
 import { CardDefsProvider, CardFace, closeInspect, faceModel } from "../cards/index.ts";
 import { formatNumber, t } from "../i18n/i18n.ts";
 import type { CollectionResponse } from "../net/api.ts";
+import { quantitiesOf } from "../shop/shop.ts";
 import CardCosmeticsView from "./CardCosmeticsView.tsx";
 import { COLLECTED_DEFS, collectionTestid, setCompletions } from "./collection.ts";
 
@@ -23,9 +24,11 @@ type Inspected = { def: CardDef; owned: boolean };
 export default function OwnedCards({
   collection,
   defs = COLLECTED_DEFS,
+  token = null,
 }: {
   collection: CollectionResponse;
   defs?: readonly CardDef[];
+  token?: string | null;
 }): ReactElement {
   const [openSet, setOpenSet] = useState<SetName | null>(null);
   const [inspected, setInspected] = useState<Inspected | null>(null);
@@ -89,6 +92,8 @@ export default function OwnedCards({
           key={inspected.def.id}
           def={inspected.def}
           owned={inspected.owned}
+          copies={quantitiesOf(collection).get(inspected.def.id) ?? 0}
+          token={token}
           onClose={() => {
             setInspected(null);
           }}

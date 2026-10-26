@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
-import { resetCosmeticsForTests, writeCardPick, writeCosmetics } from "../cards/cosmetics.ts";
+import { resetCosmeticsForTests, writeCardPick } from "../cards/cosmetics.ts";
 import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { CARD_FLAVOUR } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
@@ -399,9 +399,10 @@ describe("R1956000 the viewer's own cards in the Almanac", () => {
 
   beforeEach(() => {
     resetCosmeticsForTests();
-    writeCosmetics({ finish: "finish-linen" });
-    writeCardPick(OWNED, "border", "border-bone");
-    writeCardPick(UNOWNED, "border", "border-bone");
+    for (const id of [OWNED, UNOWNED]) {
+      writeCardPick(id, "border", "border-bone");
+      writeCardPick(id, "finish", "finish-linen");
+    }
   });
 
   afterEach(() => {

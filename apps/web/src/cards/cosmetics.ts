@@ -1,8 +1,9 @@
 // R1295000: the card cosmetics a player's own cards wear — a foil over the art, a finish on the
-// print and a border round the frame — picked in the collection's Cosmetics section
-// (`collection/CosmeticsPanel.tsx`, R1579000), kept per browser under `COSMETICS_SETTINGS_KEY` and
-// on the account as the `cosmetics` group (R633, `settings/groups.ts`). The ids are the registry's
-// (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`).
+// print and a border round the frame — whose account-wide picks are kept per browser under
+// `COSMETICS_SETTINGS_KEY` and on the account as the `cosmetics` group (R633, `settings/groups.ts`).
+// R1953001: nothing sets those three any more and no face wears them; the group keeps its shape
+// (R1655000), and a card wears its own picks (below) or its kind's default. The ids are the
+// registry's (`crates/server/cosmetics.json`, generated into `wire/generated/cosmetics.ts`).
 //
 // R1297000: the same store holds three deck slots beside them: the playmat (`table`), the ambient
 // backdrop (`field`) and the back of the viewer's face-down cards and deck (`cardBack`). Each saved
@@ -14,8 +15,7 @@
 // of one is worn only where the viewer owns it (`ownsAccountCosmetic`: a default or a starter counts,
 // and so does a row of `GET /api/cosmetics`' account list), or where every cosmetic counts as owned
 // (practice, hotseat, R1310004's builds: no `AccountCosmeticsOwned` above it). A stored pick the
-// account does not own, one synced from another device say, draws as its kind's default, and the
-// account-wide foil, finish and border picks are worn on a card only where the viewer owns them there.
+// account does not own, one synced from another device say, draws as its kind's default.
 //
 // The picks are the device's own: nothing here reaches the engine, an action, `PlayerView`, the
 // log or a replay, and a face wears them only where the board says it is the viewer's own card in
@@ -27,8 +27,9 @@
 //
 // R1655000: a card may also carry picks of its own, on the device alone (`jackioh.cosmetics.cards.v1`,
 // never the `cosmetics` group above, so no client overwrites another's): a foil, a finish, a border
-// and whether its full art prints. A kind a card has no pick of wears the account's pick above (the
-// Full-art cards setting, for full art). A card's pick is worn only where the viewer owns that
+// and whether its full art prints. R1953001: a kind a card has no pick of wears its kind's default,
+// never the account's pick above, which nothing sets any more (full art keeps the Full-art cards
+// setting as its default). A card's pick is worn only where the viewer owns that
 // cosmetic on that card (`ownsCosmetic`: a default or a starter counts, and so does a ledger row),
 // or where every cosmetic counts as owned (practice, hotseat, R1310004's builds); the store keeps what
 // it is given, the wear path and `useCanEquip` apply ownership. The face wearing them is still only
@@ -45,7 +46,8 @@
 // so this device never overwrites it, and drawn as its kind's default, never an error. A cosmetic
 // foil moves only while one of COSMETIC_FOIL_ANIMATED_MAX slots is the face's; the others wear its
 // still version, as every face does under reduced motion (cosmetics.css). R1833000: so does a moving
-// finish or border (`MOVING_FINISHES_AND_BORDERS`), which shares the foil's slot.
+// finish or border (`MOVING_FINISHES_AND_BORDERS`), which shares the foil's slot. R1953001: every
+// Legendary and Mythic one moves (`isChaseCosmetic`).
 
 import {
   createContext,
@@ -185,9 +187,9 @@ export function useCosmetics(): CardCosmetics {
 export const CARD_PICKS_SETTINGS_KEY = "jackioh.cosmetics.cards.v1";
 
 /**
- * What one card wears of its own. A kind it has no pick of is absent and wears the account's pick
- * (the Full-art cards setting, for `fullArt`); a pick of a kind's default id is a pick, which beats
- * a non-default account one. An id this client does not know reads as its kind's default.
+ * What one card wears of its own. A kind it has no pick of is absent and wears its kind's default
+ * (R1953001; the Full-art cards setting, for `fullArt`); a pick of a kind's default id is a pick. An
+ * id this client does not know reads as its kind's default.
  */
 export type CardPicks = { foil?: CosmeticId; finish?: CosmeticId; border?: CosmeticId; fullArt?: boolean };
 
@@ -352,7 +354,7 @@ function updateCardPicks(defId: string, change: (picks: StoredCardPicks) => void
   for (const listener of [...cardPicksListeners]) listener();
 }
 
-/** Sets `defId`'s `kind` pick to `id`, or clears it with null, which leaves it to the account's pick. */
+/** Sets `defId`'s `kind` pick to `id`, or clears it with null, which leaves it to the kind's default. */
 export function writeCardPick(defId: string, kind: CardSlotKind, id: CosmeticId | null): void {
   updateCardPicks(defId, (picks) => {
     if (id !== null && isPickText(id)) picks[kind] = id;
@@ -399,7 +401,8 @@ export function useCanEquip(): (defId: string, cosmeticId: CosmeticId) => boolea
  * What `face` wears, each kind resolved to a known id: the defaults where `picks` is null (a face
  * that is not the viewer's own), the default foil on a face with its rarity foil (Mythic, Radiant)
  * and the default finish and border on a Radiant face, whose gold is its own. R1655000: a kind
- * the card has a pick of (`card`) that `owns` takes the card's pick; the account's `picks` otherwise.
+ * the card has a pick of (`card`) that `owns` takes the card's pick; `picks` otherwise, which a face
+ * passes as the kind defaults (R1953001) and a sample of a cosmetic as that cosmetic.
  */
 export function wornCosmetics(
   face: FaceModel,
@@ -413,7 +416,7 @@ export function wornCosmetics(
   const pickOf = (kind: CardSlotKind): string => {
     const own = card[kind];
     if (own !== undefined && owns(own)) return own;
-    // R1833000: the account's pick too is worn only where it is owned on this card.
+    // R1833000: what lies under the card's pick is worn only where it is owned on this card.
     return owns(picks[kind]) ? picks[kind] : DEFAULT_CARD_COSMETICS[kind];
   };
   return {
@@ -581,14 +584,20 @@ function subscribeSlots(listener: () => void): () => void {
 
 /**
  * R1833000: the finishes and borders that move (cosmetics.css), each taking a foil's slot: the
- * Legendary and Mythic ones.
+ * Legendary and Mythic ones (R1953001: Gilded edge among them).
  */
 export const MOVING_FINISHES_AND_BORDERS: ReadonlySet<string> = new Set([
+  "finish-gilded-edge",
   "finish-obsidian",
   "finish-starlit",
   "border-filigree",
   "border-celestial",
 ]);
+
+/** R1953001: whether `id` is a chase, a Legendary or Mythic cosmetic (the registry's mark, R1333000), every one of which moves. */
+export function isChaseCosmetic(id: string): boolean {
+  return COSMETICS.find((cosmetic) => cosmetic.id === id)?.chase === true;
+}
 
 /** Whether this face's foil may move now: it wants to, and holds one of the slots. */
 function useFoilSlot(wanted: boolean): boolean {
@@ -617,18 +626,18 @@ export type CosmeticAttributes = {
 };
 
 /**
- * The cosmetic attributes of a face: the device's picks when `worn`, the defaults otherwise, the
- * card's own picks (R1655000) over the account's where the viewer owns them. R1956001: a Created
- * card's are its generator's (`createdBy`), owned on the generator, worn by its own face's rarity
- * rules. `animatedFoil` is the card settings' switch, which stills a cosmetic foil as it does the
- * rarity foil, and a moving finish or border with it (R1833000). Its hooks run on every face, worn or not.
+ * The cosmetic attributes of a face: when `worn`, the card's own picks (R1655000) where the viewer
+ * owns them and its kinds' defaults under them (R1953001: never the account's picks); the defaults
+ * otherwise. R1956001: a Created card's are its generator's (`createdBy`), owned on the generator,
+ * worn by its own face's rarity rules. `animatedFoil` is the card settings' switch, which stills a
+ * cosmetic foil as it does the rarity foil, and a moving finish or border with it (R1833000). Its
+ * hooks run on every face, worn or not.
  */
 export function useCosmeticAttributes(face: FaceModel, worn: boolean, animatedFoil: boolean): CosmeticAttributes {
-  const picks = useCosmetics();
   const source = face.createdBy ?? face.defId;
   const card = useCardPicks(source);
   const owned = useContext(OwnershipContext);
-  const wears = wornCosmetics(face, worn ? picks : null, card, (id) => ownsCosmetic(owned, source, id));
+  const wears = wornCosmetics(face, worn ? DEFAULT_CARD_COSMETICS : null, card, (id) => ownsCosmetic(owned, source, id));
   const foiled = wears.foil !== DEFAULT_CARD_COSMETICS.foil;
   const animates = foiled || MOVING_FINISHES_AND_BORDERS.has(wears.finish) || MOVING_FINISHES_AND_BORDERS.has(wears.border);
   const moves = useFoilSlot(animates && animatedFoil);

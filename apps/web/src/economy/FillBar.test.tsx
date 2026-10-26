@@ -364,6 +364,8 @@ describe("#1658 economy.css", () => {
       "@keyframes fill-bar-sweep",
       "@keyframes fill-bar-burst",
       "@keyframes reward-reveal-fly",
+      "@keyframes bar-flight",
+      "@keyframes opening-hud-pulse",
     ]);
     for (const block of keyframes) {
       const animated = blocks(block.body).flatMap((stop) => properties(stop.body));

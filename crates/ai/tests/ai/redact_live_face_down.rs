@@ -11,21 +11,7 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, card_by_id, is_legal, trap_pool};
-
-/// `determinize` with TS's default options (`{}`).
-fn det(public: &GameState, seat: PlayerId, rng: &mut Rng) -> GameState {
-    determinize(public, seat, rng, DeterminizeOptions::default())
-}
-
-/// TS's `{ rng: createRng(seed) }`: the AI's own stream at AI_BUDGET, with no clock.
-fn ai_options(seed: &str) -> AiOptions<'static> {
-    AiOptions {
-        rng: create_rng(seed, 0),
-        budget: AI_BUDGET,
-        should_stop: None,
-    }
-}
+use super::support::{AI, HUMAN, ai_options, card_by_id, det, is_legal, trap_pool};
 
 /// The card at the bottom of every unit pile of `player`'s (TS `pile[pile.length - 1]`).
 fn pile_bottoms(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
@@ -157,7 +143,11 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
                 assert!(legal.contains(&key), "{key}");
             }
         }
-        let decision = decide(&state, AI, &mut ai_options("redact-live-face-down-decide"));
+        let decision = decide(
+            &state,
+            AI,
+            &mut ai_options("redact-live-face-down-decide", AI_BUDGET),
+        );
         assert!(decision.is_some());
         let decision = decision.expect("a decision");
         assert_ne!(decision.reason, DecisionReason::Fallback);

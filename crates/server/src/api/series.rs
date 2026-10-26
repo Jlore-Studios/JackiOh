@@ -250,16 +250,17 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
     // After the start, not before: for every game after the first the match row is what `profiles`'
     // in-match reference points at, and only the start writes it.
     let marked = mark_in_match(app, &seats, &match_id).await;
-    let fenced = matches!(marked, Err(SeriesError::Store(StoreError::Fenced)));
-    if fenced || matches!(marked, Ok(false)) {
-        // A seat found another game mid-start: it keeps that game. Undo this one — stop the
+    if !matches!(marked, Ok(true)) {
+        // Anything but both seats flagged undoes this game. A seat that found another game
+        // mid-start keeps that game; a write a newer server's epoch fenced leaves the game to that
+        // server; a write that failed (a database hiccup) would leave a live match nobody is
+        // flagged into, which `app.matches.has` keeps every later start from retrying. Stop the
         // actor, then erase the live match with no result (R679), whose `on delete set null`
-        // releases the winner seat's flag while the taken seat is untouched — and report a game
-        // that never started, so the next transition retries with the same `next_match_id`. The
-        // ledger granted both seats, so the compare-and-set's refusal is drift (R1523000); the
-        // lease puts both sides back between games as it drops. A write a newer server's epoch
-        // fenced is undone the same way, and that server starts the game.
-        if !fenced {
+        // releases any flag this start wrote while a taken seat is untouched, and report a game
+        // that never started, so the next transition or the sweeper (R263) retries with the same
+        // `next_match_id`. The ledger granted both seats, so the compare-and-set's refusal is drift
+        // (R1523000); the lease puts both sides back between games as it drops.
+        if matches!(marked, Ok(false)) {
             tracing::error!(event = "seats.drift", source = "compare-and-set", matchId = %match_id);
             tracing::info!(
                 event = "series.seat_taken",
@@ -271,7 +272,6 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
         one_tx!(app.db, |t| t.matches_forget_voided(&match_id).await?)?;
         return marked.map(|_| false);
     }
-    marked?;
     lease.commit();
     tracing::info!(
         event = "series.game_started",

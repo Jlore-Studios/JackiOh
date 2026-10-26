@@ -1,6 +1,7 @@
 // R1833000: a cosmetic's look where a surface grants or sells one: a foil, finish or border on its
-// card's face, drawn still; a playmat or backdrop as a mini board; a card back as a game draws it; a
-// portrait as its art. A full art, and a per-card cosmetic with no card to draw it on, have none.
+// card's face, a chase one moving (R1953001); a playmat or backdrop as a mini board; a card back as a
+// game draws it; a portrait as its art. A full art, and a per-card cosmetic with no card to draw it
+// on, have none.
 
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -29,7 +30,7 @@ describe("R1833000 a cosmetic's look", () => {
     expect(hasLook("full-art-gary-the-gambler", "core-004")).toBe(false);
     expect(hasLook("no-such-cosmetic", CARD)).toBe(false);
 
-    // A foil on its card's face, still; a moving finish or border is still too.
+    // A foil on its card's face, moving, as a chase does (R1953001); a moving finish or border too.
     const { container, rerender } = render(<CosmeticLook id="foil-void-shimmer" cardId={CARD} />);
     const look = (): HTMLElement => {
       const found = container.querySelector<HTMLElement>(".cosmetic-look");
@@ -38,10 +39,10 @@ describe("R1833000 a cosmetic's look", () => {
     };
     expect(look()).toHaveAttribute("data-testid", "cosmetic-look-foil-void-shimmer");
     expect(look().querySelector(".cf")).toHaveAttribute("data-cosmetic-foil", "foil-void-shimmer");
-    expect(look().querySelector(".cf")).toHaveAttribute("data-cosmetic-motion", "static");
+    expect(look().querySelector(".cf")).toHaveAttribute("data-cosmetic-motion", "animated");
     rerender(<CosmeticLook id="finish-starlit" cardId={CARD} />);
     expect(look().querySelector(".cf")).toHaveAttribute("data-finish", "finish-starlit");
-    expect(look().querySelector(".cf")).toHaveAttribute("data-cosmetic-motion", "static");
+    expect(look().querySelector(".cf")).toHaveAttribute("data-cosmetic-motion", "animated");
     expect(look().querySelector(".cf")).not.toHaveAttribute("data-cosmetic-foil");
     rerender(<CosmeticLook id="border-celestial" cardId={CARD} />);
     expect(look().querySelector(".cf")).toHaveAttribute("data-frame", "border-celestial");

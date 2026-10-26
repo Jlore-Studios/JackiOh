@@ -1,23 +1,28 @@
 // The pack-opening scene and the card packs panel (#1308, SPEC §14.3, §14.4), from fixture responses:
 // each slot's outcome, the packs held on the panel before and after an opening, skip-all, reduced
-// motion, the pack object and the token bars after the reveal (#1663), batch opening, a refused open,
-// and the page told of an opening and asking for a fresh read (#1309). Nothing here rolls a pack: the
-// fixtures are what
-// `GET /api/packs` and `POST /api/packs/open` answer, and the audio engine is the recording fake the
-// audio suite's own wiring test uses.
+// motion, the pack object, the token bars pinned at the top from the answer and played once every card
+// shows (#1663, R1953000), batch opening, a refused open, and the page told of an opening and asking
+// for a fresh read (#1309). Nothing here rolls a pack: the fixtures are what `GET /api/packs` and
+// `POST /api/packs/open` answer, and the audio engine is the recording fake the audio suite's own
+// wiring test uses.
 
 import { CATALOG } from "@jackioh/cards";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  CARD_TOKEN_BAR_POINTS_PER_DUPLICATE,
-  COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE,
-  GLOBAL_PACK_NAME,
-} from "@jackioh/server-config";
+import { GLOBAL_PACK_NAME } from "@jackioh/server-config";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import { fakeAudioEngine, type FakeAudioEngine } from "../audio/test/fakeAudio.ts";
+import {
+  DEFAULT_CARD_COSMETICS,
+  readCardPicks,
+  readCosmetics,
+  resetCosmeticsForTests,
+  writeCardPick,
+  writeCosmetics,
+} from "../cards/cosmetics.ts";
+import { flightsMs } from "../economy/bars.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import type { OpenedPackResponse, PacksResponse } from "../net/api.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -43,6 +48,8 @@ import {
 const TOKEN = "token-1";
 const NO_PACK = "no unopened pack of that kind";
 const GARY = "Gary the Gambler full art";
+/** What the fixture's spent duplicate, slot 3, says: the 4 points the server gave each bar. */
+const SPENT = "Duplicate: +4 card token bar, +4 cosmetic token bar";
 
 let engine: FakeAudioEngine;
 
@@ -91,21 +98,27 @@ describe("#1308 the pack model", () => {
   });
 
   it("each grant says what the slot became", () => {
-    const [, , cosmetic, bars, card] = openedPack().slots;
-    expect(slotOutcome(card!)).toBe("New card");
-    expect(slotOutcome(cosmetic!)).toBe(`New cosmetic: ${GARY}`);
-    expect(slotOutcome(bars!)).toBe(
-      `Duplicate: +${String(CARD_TOKEN_BAR_POINTS_PER_DUPLICATE)} card token bar, +${String(COSMETIC_TOKEN_BAR_POINTS_PER_DUPLICATE)} cosmetic token bar`,
-    );
+    const [, , cosmetic, , card] = openedPack().slots;
+    expect(slotOutcome(card!, 0)).toBe("New card");
+    expect(slotOutcome(cosmetic!, 0)).toBe(`New cosmetic: ${GARY}`);
     expect(cosmeticName("full-art-gary-the-gambler")).toBe(GARY);
     expect(cosmeticName("not-in-the-registry")).toBe("not-in-the-registry");
     expect(
-      slotOutcome({
-        rarity: "Common",
-        cardId: "core-004",
-        grant: { kind: "cosmetic", cosmeticId: "not-in-the-registry", cosmeticRarity: "Common" },
-      }),
+      slotOutcome(
+        {
+          rarity: "Common",
+          cardId: "core-004",
+          grant: { kind: "cosmetic", cosmeticId: "not-in-the-registry", cosmeticRarity: "Common" },
+        },
+        0,
+      ),
     ).toBe("New cosmetic: not-in-the-registry");
+  });
+
+  it("R1953000 a spent duplicate says the points the server gave each bar", () => {
+    const bars = openedPack().slots[3]!;
+    expect(slotOutcome(bars, 4)).toBe(SPENT);
+    expect(slotOutcome(bars, 10)).toBe("Duplicate: +10 card token bar, +10 cosmetic token bar");
   });
 
   it("an opening moves the panel to the server's counters and count", () => {
@@ -255,9 +268,8 @@ describe("#1308 the pack-opening scene", () => {
     expect(engine.playSfx).toHaveBeenCalledWith("sting");
 
     fireEvent.click(screen.getByTestId(T.flip(3)));
-    expect(screen.getByTestId(T.outcome(3))).toHaveTextContent(
-      `Duplicate: +${String(CARD_TOKEN_BAR_POINTS_PER_DUPLICATE)} card token bar`,
-    );
+    // R1953000: the server's points for the slot, from the opening's answer.
+    expect(screen.getByTestId(T.outcome(3))).toHaveTextContent(SPENT);
     expect(engine.playSfx).toHaveBeenCalledWith("sting", { tier: "rare" });
 
     fireEvent.click(screen.getByTestId(T.flip(2)));
@@ -496,44 +508,76 @@ describe("#1308 the pack-opening scene", () => {
     expect(screen.queryByTestId(T.object)).toBeNull();
   });
 
-  it("the token bars mount once every card shows, not before", () => {
+  it("R1953000 the HUD sits at the bars' points before while the cards turn, and plays once every card shows", () => {
+    render(<PackScene {...props()} />);
+    expect(screen.queryByTestId(T.bars), "nothing before the server answers").toBeNull();
+    expect(screen.getByTestId(T.scene)).not.toHaveAttribute("data-hud");
+    cleanup();
+
     torn();
-    expect(screen.queryByTestId(T.bars)).toBeNull();
+    const bars = screen.getByTestId(T.bars);
+    expect(bars).toHaveClass("opening-hud");
+    expect(screen.getByTestId(T.scene), "the scene starts below the HUD").toHaveAttribute("data-hud", "true");
+    const card = (): HTMLElement => within(bars).getByTestId(`${T.bars}-card`);
+    const cosmetic = (): HTMLElement => within(bars).getByTestId(`${T.bars}-cosmetic`);
 
     // Epic and above hold to turn; a keyboard press (no pointer) turns them at once.
     for (const index of [4, 3, 2, 1]) {
       fireEvent.click(screen.getByTestId(T.flip(index)), { detail: 0 });
-      expect(screen.queryByTestId(T.bars), `after card ${String(index)}`).toBeNull();
+      expect(bars, `after card ${String(index)}`).toHaveAttribute("data-phase", "waiting");
+      expect(card()).toHaveTextContent("3 / 12");
+      expect(cosmetic()).toHaveTextContent("5 / 30");
+      expect(bars.querySelector(".bar-flight")).toBeNull();
     }
     fireEvent.click(screen.getByTestId(T.flip(0)), { detail: 0 });
-    const bars = screen.getByTestId(T.bars);
-    expect(within(bars).getByTestId(`${T.bars}-card`)).toBeInTheDocument();
-    expect(within(bars).getByTestId(`${T.bars}-cosmetic`)).toBeInTheDocument();
-    expect(
-      bars.compareDocumentPosition(screen.getByTestId(T.close)) & Node.DOCUMENT_POSITION_FOLLOWING,
-      "the bars sit above the actions",
-    ).not.toBe(0);
+
+    // The spent duplicate's points fly from its card, tinted by its rarity; then the bars fill.
+    expect(bars).toHaveAttribute("data-phase", "flights");
+    expect(bars.querySelectorAll(".bar-flight")).toHaveLength(1);
+    const flight = within(bars).getByTestId(`${T.bars}-flight-3`);
+    expect(flight).toHaveTextContent("+4");
+    expect(flight).toHaveAttribute("data-rarity", "Rare");
+    advance(flightsMs(1));
+    expect(bars).toHaveAttribute("data-phase", "fill");
+    expect(card()).toHaveAttribute("data-state", "filling");
+    expect(card()).toHaveTextContent("7 / 12");
+    expect(cosmetic()).toHaveTextContent("9 / 30");
   });
 
-  it("skip-all mounts the token bars at once, and a reduced-motion scene shows them with the cards", () => {
+  it("R1953000 skip-all plays the HUD at once, and a reduced-motion scene shows it filled with the cards", () => {
     render(<PackScene {...props({ opened: openedPack() })} />);
-    expect(screen.queryByTestId(T.bars)).toBeNull();
+    expect(screen.getByTestId(T.bars)).toHaveAttribute("data-phase", "waiting");
     fireEvent.click(screen.getByTestId(T.skipAll));
-    expect(screen.getByTestId(T.bars)).toBeInTheDocument();
+    expect(screen.getByTestId(T.bars)).toHaveAttribute("data-phase", "flights");
     cleanup();
 
     writeSettings({ reduceMotion: true });
     render(<PackScene {...props({ opened: openedPack() })} />);
-    expect(screen.getByTestId(T.bars)).toBeInTheDocument();
+    const bars = screen.getByTestId(T.bars);
+    expect(bars).toHaveAttribute("data-phase", "fill");
+    expect(bars).toHaveAttribute("data-motion", "still");
+    expect(bars.querySelector(".bar-flight")).toBeNull();
+    expect(within(bars).getByTestId(`${T.bars}-card`)).toHaveAttribute("data-state", "resting");
+    expect(within(bars).getByTestId(`${T.bars}-card`).querySelector("progress")).toHaveProperty("value", 7);
   });
 
-  it("no token bars are drawn for an opening that moved neither", () => {
+  it("R1953000 an opening that moved neither bar still shows both, with nothing to fly", () => {
+    // No slot was a spent duplicate: the fixture's is a new card here.
     const still = { before: 4, after: 4, size: 12, pays: 0 };
-    const opened: OpenedPackResponse = { ...openedPack(), bars: { card: still, cosmetic: still, cosmeticPaid: [] } };
+    const fixture = openedPack();
+    const opened: OpenedPackResponse = {
+      ...fixture,
+      slots: fixture.slots.map((slot) => (slot.grant.kind === "bars" ? { ...slot, grant: { kind: "card" } } : slot)),
+      bars: { card: still, cosmetic: still, cosmeticPaid: [], slotPoints: [0, 0, 0, 0, 0] },
+    };
     render(<PackScene {...props({ opened })} />);
     fireEvent.click(screen.getByTestId(T.skipAll));
     expect(revealed(0)).toBe(true);
-    expect(screen.queryByTestId(T.bars)).toBeNull();
+    const bars = screen.getByTestId(T.bars);
+    expect(bars).toHaveAttribute("data-phase", "fill");
+    expect(bars.querySelector(".bar-flight")).toBeNull();
+    expect(within(bars).getByTestId(`${T.bars}-card`)).toHaveTextContent("4 / 12");
+    expect(within(bars).getByTestId(`${T.bars}-cosmetic`)).toHaveTextContent("4 / 12");
   });
 
   it("the scene is a dialog named for its pack", () => {
@@ -868,5 +912,109 @@ describe("#1757 the pack-opening scene's focus and keys", () => {
 
     expect(screen.getByTestId(T.pack)).toHaveAttribute("data-state", "sealed");
     expect(screen.getByTestId(T.scene)).toHaveFocus();
+  });
+});
+
+describe("R1955000 a revealed new cosmetic is equipped from the scene", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    resetCosmeticsForTests();
+  });
+
+  afterEach(() => {
+    resetCosmeticsForTests();
+  });
+
+  /** The opened fixture with `grants` in place of slots 2 and 3's: slot 2 is `core-004`, slot 3 is `core-007`. */
+  function granting(...grants: OpenedPackResponse["slots"][number]["grant"][]): OpenedPackResponse {
+    const opened = openedPack();
+    return { ...opened, slots: opened.slots.map((slot, index) => (grants[index - 2] === undefined ? slot : { ...slot, grant: grants[index - 2]! })) };
+  }
+
+  it("R1955000 a per-card cosmetic's Equip shows once its slot is turned and writes that card's pick", () => {
+    torn({ opened: granting({ kind: "cosmetic", cosmeticId: "border-stone", cosmeticRarity: "Common" }) });
+    expect(screen.queryByTestId(T.equip(2)), "face down").toBeNull();
+
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    const equip = screen.getByTestId(T.equip(2));
+    expect(equip).toHaveTextContent("Equip");
+    expect(equip).toBeEnabled();
+
+    fireEvent.click(equip);
+    expect(readCardPicks("core-004").border).toBe("border-stone");
+    expect(readCosmetics().border, "the account's pick is not touched").toBe(DEFAULT_CARD_COSMETICS.border);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
+  it("R1955000 a full art's Equip turns that card's full art on", () => {
+    torn();
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    expect(readCardPicks("core-004").fullArt).toBeUndefined();
+
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCardPicks("core-004").fullArt).toBe(true);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equipped");
+    expect(screen.getByTestId(T.equip(2))).toBeDisabled();
+  });
+
+  it("R1955000 skip-all shows every Equip at once; an account cosmetic writes the account's pick, a portrait, a card and bars offer none", () => {
+    const opened = openedPack();
+    const account = (cosmeticId: string): OpenedPackResponse["slots"][number] => ({
+      rarity: "Common",
+      cardId: "core-002",
+      grant: { kind: "cosmetic", cosmeticId, cosmeticRarity: "Epic" },
+    });
+    render(
+      <PackScene
+        {...props({
+          opened: {
+            ...opened,
+            slots: [
+              account("table-marble"),
+              account("field-snow"),
+              account("card-back-tidal"),
+              account("portrait-gary"),
+              opened.slots[3]!,
+              opened.slots[4]!,
+            ],
+          },
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByTestId(T.skipAll));
+
+    for (const index of [0, 1, 2]) expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equip");
+    fireEvent.click(screen.getByTestId(T.equip(0)));
+    fireEvent.click(screen.getByTestId(T.equip(1)));
+    fireEvent.click(screen.getByTestId(T.equip(2)));
+    expect(readCosmetics()).toMatchObject({ table: "table-marble", field: "field-snow", cardBack: "card-back-tidal" });
+    expect(readCardPicks("core-002"), "an account cosmetic is no card's pick").toEqual({});
+    for (const index of [0, 1, 2]) expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equipped");
+    for (const index of [3, 4, 5]) expect(screen.queryByTestId(T.equip(index))).toBeNull();
+  });
+
+  it("R1955000 a cosmetic the store already holds shows Equipped when revealed", () => {
+    writeCardPick("core-004", "border", "border-stone");
+    writeCosmetics({ cardBack: "card-back-tidal" });
+    torn({
+      opened: granting(
+        { kind: "cosmetic", cosmeticId: "border-stone", cosmeticRarity: "Common" },
+        { kind: "cosmetic", cosmeticId: "card-back-tidal", cosmeticRarity: "Epic" },
+      ),
+    });
+    fireEvent.click(screen.getByTestId(T.flip(2)));
+    fireEvent.click(screen.getByTestId(T.flip(3)));
+    for (const index of [2, 3]) {
+      expect(screen.getByTestId(T.equip(index))).toHaveTextContent("Equipped");
+      expect(screen.getByTestId(T.equip(index))).toBeDisabled();
+    }
+  });
+
+  it("R1955000 under reduced motion the Equip shows with the results at once", () => {
+    writeSettings({ reduceMotion: true });
+    render(<PackScene {...props({ opened: openedPack() })} />);
+    expect(screen.getByTestId(T.equip(2))).toHaveTextContent("Equip");
+    for (const index of [0, 1, 3, 4]) expect(screen.queryByTestId(T.equip(index))).toBeNull();
   });
 });

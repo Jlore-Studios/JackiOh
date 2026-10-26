@@ -20,7 +20,7 @@ from harness.errors import GitHubError
 from harness.state import item as state_item
 
 from tests.fakes import OPERATOR, STRANGER, FakeGitHub
-from tests.support import NIGHT, make_config, make_ctx, raw_providers
+from tests.support import NIGHT, ROOT, make_config, make_ctx, raw_providers
 from tests.test_cross import ALL
 from tests.test_providers import EARLY, too_close_to_start
 
@@ -118,7 +118,8 @@ class LearnLaneTests(unittest.TestCase):
         names = {"fit": "retrain and screen (training/ml/retrain.sh)",
                  "gate": "the gate on main as it is now (training/ml/learn-promote.sh)",
                  "deliver": "deliver (push ai/learn, open its pull request, auto-merge)",
-                 "moving": "main kept moving, so another run on this export"}
+                 "moving": "main kept moving, so another run on this export",
+                 "waits": "a promotion still open, so this one waits"}
         return [{"name": "plan", "conclusion": "success"},
                 {"name": "export / plan the shards", "conclusion": "success"},
                 {"name": "retrain, screen, gate", "conclusion": "success",
@@ -144,6 +145,12 @@ class LearnLaneTests(unittest.TestCase):
         self.assertEqual(outcome(self.retrain(fit="success", gate="success", deliver="skipped",
                                               moving="success")),
                          "🔁 main kept moving: another run on the export")
+        # A pass while the lane's last promotion is still open waits behind it, as its artifact.
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", waits="success",
+                                              deliver="skipped", moving="skipped")),
+                         "⏸️ passed, behind a promotion still open: kept as its artifact")
+        self.assertEqual(outcome(self.retrain(fit="success", gate="success", waits="skipped",
+                                              deliver="success")), "🎉 promoted")
         # A run from before the lane gated on the newest main ("the gate, once") reads the same.
         old = self.retrain(fit="success")
         old[2]["steps"].append({"name": "the gate, once (promote --lane learn)", "conclusion": "skipped"})
@@ -176,13 +183,14 @@ class LearnLaneTests(unittest.TestCase):
                                                  "conclusion": "skipped"}], "cancelled"),
                          "⏹️ cancelled")
 
-    def test_the_next_run_is_the_next_monday_at_0623_utc(self):
-        wednesday = NIGHT  # 2026-09-30 03:00 UTC
-        self.assertEqual(dashboard.next_learn_run(wednesday).isoformat(), "2026-10-05T06:23:00+00:00")
-        monday_after = NIGHT.replace(day=28, hour=7)
-        self.assertEqual(dashboard.next_learn_run(monday_after).isoformat(), "2026-10-05T06:23:00+00:00")
-        monday_before = NIGHT.replace(day=28, hour=5)
-        self.assertEqual(dashboard.next_learn_run(monday_before).isoformat(), "2026-09-28T06:23:00+00:00")
+    def test_the_next_scheduled_run_is_the_next_0623_utc(self):
+        """Each run starts the next as it ends (#1976); the daily schedule starts the lane again."""
+        before = NIGHT  # 2026-09-30 03:00 UTC
+        self.assertEqual(dashboard.next_learn_run(before).isoformat(), "2026-09-30T06:23:00+00:00")
+        after = NIGHT.replace(hour=7)
+        self.assertEqual(dashboard.next_learn_run(after).isoformat(), "2026-10-01T06:23:00+00:00")
+        at = NIGHT.replace(hour=6, minute=23)
+        self.assertEqual(dashboard.next_learn_run(at).isoformat(), "2026-10-01T06:23:00+00:00")
 
     def test_the_section_says_what_is_on_main_its_pull_request_and_its_runs(self):
         gh = FakeGitHub()
@@ -200,7 +208,7 @@ class LearnLaneTests(unittest.TestCase):
                       "parent.", body)
         self.assertIn("▶️ [#1477](https://github.com/x/y/pull/1477) open since", body)
         self.assertIn("CI decides, and auto-merge lands it.", body)
-        self.assertIn("- **Next scheduled run:** Mon Oct 05 01:23 (Central).", body)
+        self.assertIn("- **Next scheduled run:** Wed Sep 30 01:23 (Central).", body)
         self.assertIn("| 🎉 promoted | [20](https://github.com/x/y/actions/runs/31) |", body)
         self.assertIn("| 🔄 running | [22]", body)
         # A watch run (CI on the lane's pull request) is not one of the lane's runs.
@@ -560,6 +568,31 @@ class StatisticsTests(unittest.TestCase):
         dashboard.update(later)
         self.assertIsNone(stats.kept(gh.threads[number]["body"]))
 
+    def test_more_runners_busy_are_cut_to_the_room_before_a_count(self):
+        """Between counts the issue keeps its statistics; when more runners are busy than the
+        issue has room for, fewer are listed rather than the statistics counted again."""
+        from harness import stats
+        from tests.support import DAY
+        from tests.test_stats import world
+        gh, ctx = world()
+        dashboard.update(ctx, stats=True)
+        [number] = opened(gh)
+        for n in range(12):
+            gh.runs[str(900 + n)] = {"id": 900 + n, "status": "in_progress",
+                                     "path": ".github/workflows/ci.yml", "event": "push",
+                                     "display_title": "Patch: something", "created_at": iso(DAY)}
+            gh.jobs[str(900 + n)] = [{"name": f"shard {n}", "status": "in_progress",
+                                      "labels": ["ubuntu-latest"],
+                                      "runner_name": f"GitHub Actions {n}"}]
+        soon = make_ctx(gh, at=DAY + timedelta(minutes=20))
+        body = dashboard.render(soon, (), stats.kept(gh.threads[number]["body"]))
+        with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")), \
+                mock.patch.object(dashboard, "MAX_BODY", len(body) - 500):
+            self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
+        body = gh.threads[number]["body"]
+        self.assertIn("…and ", body)
+        self.assertIsNotNone(stats.kept(body))
+
     def test_a_body_too_long_for_github_lists_fewer_merges_then_none(self):
         from harness import stats
         from tests.test_stats import merged_pull, world
@@ -576,6 +609,21 @@ class StatisticsTests(unittest.TestCase):
         with mock.patch.object(dashboard, "MAX_BODY", len(full) - 1):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
+        # Then fewer busy runners, with no merge listed, before the statistics go.
+        busy = {"name": "work", "status": "in_progress", "labels": ["ubuntu-latest"],
+                "runner_name": "GitHub Actions 1"}
+        gh.runs["900"] = {"id": 900, "status": "in_progress", "path": "x/ci.yml", "event": "push"}
+        gh.jobs["900"] = [dict(busy, runner_name=f"GitHub Actions {n}") for n in range(6)]
+        view = dashboard.look(ctx)
+        view.found = dashboard.read_runners(ctx)
+        view.runners = dashboard.runners_section(ctx, view.state, view.found)
+        bare = dashboard.render(ctx, (), stats.block(ctx, facts, shown=0), view)
+        with mock.patch.object(dashboard, "MAX_BODY", len(bare) - 1):
+            body = dashboard.fit(ctx, view, (), draw)
+        self.assertRegex(body, r"\n…and \d more\.\n")
+        self.assertLessEqual(len(body), len(bare) - 1)
+        self.assertIsNotNone(stats.kept(body))
+        view.runners = dashboard.runners_section(ctx, view.state, view.found, room=0)
         with mock.patch.object(dashboard, "MAX_BODY", len(dashboard.render(ctx, (), "", view))):
             body = dashboard.fit(ctx, view, (), draw)
         self.assertIsNone(stats.kept(body))  # left out last of all
@@ -690,6 +738,241 @@ class FreshEachTickTests(unittest.TestCase):
         self.assertIs(providers.newer_secrets(own, state, NIGHT + timedelta(hours=1)), own)
         self.assertEqual(providers.newer_secrets(own, state, None).present, {"A"})
         self.assertIs(providers.newer_secrets(own, {}, None), own)
+
+
+class RunnersTests(unittest.TestCase):
+    """Every runner and what it is doing (`runners_section`): each job a runner holds, the step
+    it is on and what it is for, the jobs queued for one, the self-hosted labels with no job, and
+    what each runner and workflow is for; redrawn alone every two minutes (`refresh_runners`)."""
+
+    def setUp(self):
+        self.gh = FakeGitHub()
+        self.ctx = make_ctx(self.gh, at=NIGHT, cfg=make_config())
+        ago = lambda minutes: iso(NIGHT - timedelta(minutes=minutes))
+
+        def seed(state):
+            state_item(state, 37).update(provider="claude-1", kind="build", run_id="101",
+                                         started_at=ago(47))
+            # A run the status loop started, before it found the run's id (#1455).
+            state_item(state, 49).update(provider="muse", kind="revise",
+                                         run_id="pending:49-1790000000", started_at=ago(20))
+        self.ctx.store.update(seed, "seed")
+        night = ".github/workflows/bot-night.yml"
+        self.gh.runs.update({
+            "101": {"id": 101, "status": "in_progress", "path": night, "display_title": "bot-night",
+                    "event": "workflow_dispatch", "created_at": ago(48)},
+            "102": {"id": 102, "status": "in_progress", "path": night,
+                    "display_title": "bot-night 49-1790000000 on night-vm-muse",
+                    "event": "workflow_dispatch", "created_at": ago(20)},
+            "103": {"id": 103, "status": "in_progress", "path": ".github/workflows/ci.yml",
+                    "display_title": "Patch: a Sets tab", "event": "pull_request",
+                    "pull_requests": [{"number": 1966}], "created_at": ago(4)},
+            "104": {"id": 104, "status": "queued", "path": ".github/workflows/learn.yml",
+                    "display_title": "learn", "event": "schedule", "created_at": ago(90)},
+        })
+        doing = {"name": "Build, check and review", "status": "in_progress"}
+        self.gh.jobs.update({
+            "101": [{"name": "plan", "status": "completed", "labels": ["ubuntu-latest"]},
+                    {"name": "work", "status": "in_progress", "labels": ["ubuntu-latest"],
+                     "runner_name": "GitHub Actions 1000123", "started_at": ago(47),
+                     "html_url": "https://github.com/x/y/actions/runs/101/job/1",
+                     "steps": [{"name": "Set up job", "status": "completed"}, doing]}],
+            "102": [{"name": "work", "status": "in_progress", "labels": ["night-vm-muse"],
+                     "runner_name": "night-vm-muse-b2", "started_at": ago(19),
+                     "html_url": "https://github.com/x/y/actions/runs/102/job/3",
+                     "steps": [{"name": "Set up job", "status": "completed"}]}],
+            "103": [{"name": "rust (test engine)", "status": "in_progress",
+                     "labels": ["ubuntu-latest"], "runner_name": "GitHub Actions 1000124",
+                     "started_at": ago(3), "steps": [{"name": "cargo test",
+                                                      "status": "in_progress"}]},
+                    {"name": "web (unit 2/4)", "status": "queued", "labels": ["ubuntu-latest"],
+                     "created_at": ago(4)},
+                    {"name": "web (unit 3/4)", "status": "queued", "labels": ["ubuntu-latest"],
+                     "created_at": ago(3)}],
+            "104": [{"name": "plan", "status": "queued", "labels": [dashboard.LOCAL_LABEL],
+                     "created_at": ago(90)}],
+        })
+
+    def section(self) -> str:
+        return dashboard.runners_section(self.ctx, self.ctx.store.load())
+
+    def test_each_busy_runner_says_what_it_does_and_what_for(self):
+        body = self.section()
+        self.assertTrue(body.startswith(dashboard.RUNNERS_START + "\n## 🖥️ Every runner"))
+        self.assertTrue(body.endswith(dashboard.RUNNERS_END))
+        self.assertIn("🟢 **3 runners busy**: 2 on GitHub's (of the 20 the organization may hold), "
+                      "1 on the Muse box · ⏳ **3 jobs queued** for a runner · read at 22:00", body)
+        # GitHub's runners first, the longest-running first; the night bot's runs name the item
+        # they work on, found by the run's id or the pending claim's reference in its title.
+        hosted = ("| `GitHub Actions 1000123` (Linux) | bot-night · work | Build, check and review "
+                  "| building #37 on `claude-1` | [47m](https://github.com/x/y/actions/runs/101/job/1) |")
+        ci = ("| `GitHub Actions 1000124` (Linux) | ci · rust (test engine) | cargo test "
+              "| #1966 Patch: a Sets tab | 3m |")
+        muse = ("| `night-vm-muse-b2` (Muse box) | bot-night · work | after Set up job "
+                "| revising #49 on `muse` | [19m](https://github.com/x/y/actions/runs/102/job/3) |")
+        for row in (hosted, ci, muse):
+            self.assertIn(row, body)
+        self.assertLess(body.index(hosted), body.index(ci))
+        self.assertLess(body.index(ci), body.index(muse))
+        # The queued jobs by label, the most first, each with its longest wait.
+        self.assertIn("⏳ **Queued for a runner:** `ubuntu-latest` 2 (ci · web (unit 2/4), the "
+                      "longest 4m); `jackioh-selfplay-local` 1 (learn · plan, the longest 1h 30m).",
+                      body)
+        # The self-hosted labels no job holds; Muse's runner holds one.
+        self.assertIn("💤 **No job on any of its runners:** `night-vm-agy`, `night-vm-gpt`, "
+                      "`night-vm-devin`, `jackioh-selfplay-local` (idle", body)
+
+    def test_a_long_list_of_busy_runners_is_cut(self):
+        self.gh.jobs["103"] = [{"name": f"shard {n}", "status": "in_progress",
+                                "labels": ["ubuntu-latest"], "runner_name": f"GitHub Actions {n}"}
+                               for n in range(dashboard.RUNNER_ROWS + 2)]
+        body = self.section()
+        self.assertIn(f"🟢 **{dashboard.RUNNER_ROWS + 4} runners busy**", body)
+        self.assertEqual(body.count(" (Linux) | "), dashboard.RUNNER_ROWS)
+        self.assertIn("…and 4 more.", body)
+        # With no room for a table, the runners are counted and the rest still says what waits.
+        tight = dashboard.runners_section(self.ctx, self.ctx.store.load(), room=0)
+        self.assertNotIn("| Runner |", tight)
+        self.assertIn(f"{dashboard.RUNNER_ROWS + 4} not listed: no room.", tight)
+        self.assertIn("⏳ **Queued for a runner:**", tight)
+        self.assertTrue(tight.endswith(dashboard.RUNNERS_END))
+
+    def test_what_each_runner_is_for_is_a_comment_kept_from_the_pool(self):
+        """The explanation changes only with the pool or the workflows, so it is a comment on
+        the status issue, written once and again only when its text changes; the section links
+        it."""
+        self.gh.add_issue(148, dashboard.TITLE, "x", user=OPERATOR)
+        state = self.ctx.store.load()
+        self.assertIn("What each runner and workflow is for is in a comment below.",
+                      dashboard.runners_section(self.ctx, state))
+        dashboard.explain(self.ctx, 148, state)
+        [comment] = self.gh.comments[148]
+        text = comment["body"]
+        self.assertTrue(text.startswith("## 🖥️ What each runner is for"))
+        self.assertIn(dashboard.EXPLAINED, text)
+        self.assertIn("| `ubuntu-latest` | GitHub's Linux", text)
+        self.assertIn("| `night-vm-devin` | the bot's AWS boxes, 6 lanes | `bot-night`'s `work` for "
+                      "`devin`: the `devin` CLI with `swe-2-max`, as the Linux user "
+                      "`agent-devin`, which holds that login alone |", text)
+        self.assertIn("| `night-vm-gpt` | the bot's AWS boxes, 1 lane | ", text)
+        self.assertIn(f"| `{dashboard.LOCAL_LABEL}` | the owner's PC", text)
+        self.assertIn("| `voice` | renders a branch's voice lines", text)
+        # None of the statistics' outcomes reads it as a run's.
+        from harness import stats
+        self.assertEqual(stats.classify(text), "other")
+        self.assertIn("What each runner and workflow is for: [its comment](https://github.com/"
+                      f"jgoetzmann/JackiOh/issues/148#issuecomment-{comment['id']}).",
+                      dashboard.runners_section(self.ctx, state))
+        # Unchanged, it costs nothing; changed, it is rewritten in place; deleted, written again.
+        with mock.patch.object(self.gh, "update_comment", side_effect=AssertionError("written")), \
+                mock.patch.object(self.gh, "create_comment", side_effect=AssertionError("posted")):
+            dashboard.explain(self.ctx, 148, self.ctx.store.load())
+        with mock.patch.object(dashboard, "BOXES_NOTE", "Another note."):
+            dashboard.explain(self.ctx, 148, self.ctx.store.load())
+        self.assertEqual(len(self.gh.comments[148]), 1)
+        self.assertIn("Another note.", self.gh.comments[148][0]["body"])
+        self.gh.comments[148].clear()
+        dashboard.explain(self.ctx, 148, self.ctx.store.load())
+        self.assertEqual(len(self.gh.comments[148]), 1)
+        self.assertNotIn("Another note.", self.gh.comments[148][0]["body"])
+        # A rewrite of the issue writes it, and links it in the same rewrite.
+        self.ctx.store.update(lambda s: s.update(dashboard={"issue": 148},
+                                                 runners_explained=None))
+        self.gh.comments[148].clear()
+        dashboard.update(self.ctx)
+        [comment] = self.gh.comments[148]
+        self.assertIn(f"#issuecomment-{comment['id']}", self.gh.threads[148]["body"])
+
+    def test_every_workflow_says_what_it_is_for(self):
+        on_disk = {path.name for path in (ROOT / ".github" / "workflows").glob("*.yml")}
+        self.assertEqual(set(dashboard.WORKFLOWS), on_disk)
+
+    def test_where_a_job_runs(self):
+        for name, label, where in (("GitHub Actions 7", "ubuntu-latest", "Linux"),
+                                   ("GitHub Actions 8", "macos-15", "macOS"),
+                                   ("GitHub Actions 9", "windows-2022", "Windows"),
+                                   ("night-vm-devin-3", "night-vm-devin", "night box"),
+                                   ("night-vm-muse-b2", "night-vm-muse", "Muse box"),
+                                   ("pc-devin-1026021400", "night-vm-devin", "owner's PC"),
+                                   ("", dashboard.LOCAL_LABEL, "owner's PC"),
+                                   ("someone-elses", "gpu", "unknown box")):
+            self.assertEqual(dashboard._where({"runner_name": name, "labels": [label]})[1], where)
+
+    def test_nothing_running_and_runs_that_cannot_be_read(self):
+        self.gh.runs.clear()
+        body = self.section()
+        self.assertIn("No runner holds a job right now.", body)
+        self.assertNotIn("Queued for a runner", body)
+        with mock.patch.object(self.gh, "list_repo_runs", side_effect=GitHubError("down", 502)):
+            body = self.section()
+        self.assertIn("The runs going could not be read at 22:00.", body)
+        self.assertIn("What each runner and workflow is for", body)  # its link stands regardless
+        self.assertTrue(body.endswith(dashboard.RUNNERS_END))
+
+    def test_the_issue_carries_it_after_running_now_and_before_the_queue(self):
+        body = dashboard.render(self.ctx)
+        self.assertLess(body.index("## ⚡ Running now"), body.index(dashboard.RUNNERS_START))
+        self.assertLess(body.index(dashboard.RUNNERS_END), body.index("## 📋 Queue"))
+        self.assertIn("`bot-status` rewrites this issue every 5 minutes, and its runners every 2",
+                      body)
+
+    def test_a_redraw_changes_the_runners_section_alone(self):
+        self.gh.add_issue(148, dashboard.TITLE, "x", user=OPERATOR)
+        self.ctx.store.update(lambda s: s.update(dashboard={"issue": 148}))
+        self.assertIn("has no runners section", dashboard.refresh_runners(self.ctx))
+        self.assertEqual(self.gh.threads[148]["body"], "x")  # the next rewrite draws it
+        before = (f"top\n{dashboard.RUNNERS_START}\nold runners\n{dashboard.RUNNERS_END}"
+                  "\nbottom")
+        self.gh.threads[148]["body"] = before
+        self.assertEqual(dashboard.refresh_runners(self.ctx), "redrew #148's runners")
+        body = self.gh.threads[148]["body"]
+        self.assertTrue(body.startswith("top\n" + dashboard.RUNNERS_START))
+        self.assertTrue(body.endswith(dashboard.RUNNERS_END + "\nbottom"))
+        self.assertNotIn("old runners", body)
+        self.assertIn("building #37 on `claude-1`", body)
+        # Near GitHub's limit, fewer runners are listed; past it, the redraw waits.
+        self.gh.threads[148]["body"] = before
+        full = len(before) + len(self.section()) - len(dashboard.RUNNERS_START + "\nold runners\n"
+                                                        + dashboard.RUNNERS_END)
+        with mock.patch.object(dashboard, "MAX_BODY", full - 1):
+            self.assertEqual(dashboard.refresh_runners(self.ctx), "redrew #148's runners")
+        self.assertLessEqual(len(self.gh.threads[148]["body"]), full - 1)
+        self.assertIn("…and 2 more.", self.gh.threads[148]["body"])
+        self.gh.threads[148]["body"] = before
+        with mock.patch.object(dashboard, "MAX_BODY", len(before)):
+            self.assertIn("would pass GitHub's limit", dashboard.refresh_runners(self.ctx))
+        self.assertEqual(self.gh.threads[148]["body"], before)
+
+    def test_the_loop_redraws_the_runners_between_rewrites(self):
+        """`--every 300 --runners-every 120`, as bot-status runs it: the rewrites keep their five
+        minutes, and between them the runners are redrawn every two; a failed redraw is only a
+        warning."""
+        clock, ticks = [0.0], []
+
+        def update(ctx, extra=(), **_):
+            ticks.append(("rewrite", clock[0]))
+            return "rewrote #148"
+
+        def refresh(ctx):
+            ticks.append(("runners", clock[0]))
+            if len(ticks) == 3:
+                raise RuntimeError("network down")
+            return "redrew #148's runners"
+
+        out = io.StringIO()
+        with mock.patch.object(dashboard, "update", update), \
+                mock.patch.object(dashboard, "refresh_runners", refresh), offline(), \
+                mock.patch.object(main_mod.time, "monotonic", lambda: clock[0]), \
+                mock.patch.object(main_mod.time, "sleep",
+                                  lambda s: clock.__setitem__(0, clock[0] + s)), \
+                contextlib.redirect_stdout(out):
+            cmd_dashboard(make_config(), argparse.Namespace(every=300, runners_every=120,
+                                                            for_seconds=600))
+        self.assertEqual(ticks, [("rewrite", 0.0), ("runners", 120.0), ("runners", 240.0),
+                                 ("rewrite", 300.0), ("runners", 420.0), ("runners", 540.0),
+                                 ("rewrite", 600.0)])
+        self.assertIn("::warning::the runners were not redrawn: network down", out.getvalue())
+        self.assertIn("runners: redrew #148's runners", out.getvalue())
 
 
 if __name__ == "__main__":

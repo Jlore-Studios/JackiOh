@@ -191,6 +191,14 @@ class FakeGitHub:
         self.comments.setdefault(number, []).append(comment)
         return comment
 
+    def update_comment(self, comment_id: int, body: str) -> dict[str, Any]:
+        for comments in self.comments.values():
+            for comment in comments:
+                if comment["id"] == comment_id:
+                    comment["body"] = with_marker(body)
+                    return dict(comment)
+        raise GitHubError("no comment", 404)
+
     def react(self, comment_id: int, content: str, *, review_comment: bool = False) -> None:
         self.reacted.append((comment_id, content))
 
@@ -417,7 +425,10 @@ class FakeGitHub:
     def rerun_failed_jobs(self, run_id: Any) -> None:
         self.reruns.append(run_id)
 
-    def list_jobs(self, run_id: Any) -> list[dict]:
+    def list_repo_runs(self, *, status: str, limit: int = 100, cached: bool = False) -> list[dict]:
+        return [dict(r) for r in self.runs.values() if r.get("status") == status][:limit]
+
+    def list_jobs(self, run_id: Any, *, cached: bool = False) -> list[dict]:
         return copy.deepcopy(self.jobs.get(str(run_id), []))
 
     def job_log(self, job_id: Any, tail_chars: int = 6000) -> str:

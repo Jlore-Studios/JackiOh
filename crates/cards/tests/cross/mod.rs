@@ -1,6 +1,14 @@
 //! The cross-card tests (SURFACE §1): one module per `packages/cards/test/<x>.test.ts` that is not
 //! a per-card file (those are the `mod tests` of their card's script). Written once by part 1; the
 //! files are parts 22–27's.
+//!
+//! The helpers the files share live here, beside `scenario`: `register_fixture_script`, `fixture`,
+//! `in_hand`, `targets_of` and `tributes_of` (#1826; crates/tools/tests/acceptance.rs refuses a copy).
+
+use jackioh_engine::testkit::{
+    ActionBody, AttackHealth, CardDef, CardInstance, CardScripts, CardType, PlayerId, Scenario, Script,
+    Selection, Zone, json, json_as, new_instance, register_scripts, registered_scripts,
+};
 
 /// `scenario(...)` over the real cards: what importing the TS harness registered (`registerAll()`).
 pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
@@ -41,6 +49,72 @@ pub fn craft_fused(
     };
     g.state_mut().rng_cursor = rng.cursor();
     made.expect("the crafted card")
+}
+
+/// `script` as both faces of `id` in the script registry.
+pub fn register_fixture_script(id: &str, script: Script) {
+    let mut scripts = registered_scripts().clone();
+    scripts.insert(
+        id.to_string(),
+        CardScripts {
+            base: script.clone(),
+            radiant: script,
+        },
+    );
+    register_scripts(scripts);
+}
+
+/// A fixture card: a transient def in the match state and its script in the registry (a Unit's
+/// `stats` default to 2/2).
+pub fn fixture(s: &mut Scenario, id: &str, type_: CardType, script: Script, stats: Option<AttackHealth>) {
+    let stats = stats.unwrap_or(AttackHealth { attack: 2, health: 2 });
+    let face = if type_ == CardType::Unit {
+        json!({ "attack": stats.attack, "health": stats.health, "keywords": [], "text": id })
+    } else {
+        json!({ "keywords": [], "text": id })
+    };
+    let def: CardDef = json_as(json!({
+        "id": id,
+        "index": id,
+        "name": id,
+        "set": "Core",
+        "type": type_,
+        "tags": [],
+        "rarity": "Common",
+        "token": false,
+        "cost": 0,
+        "base": face.clone(),
+        "radiant": face,
+    }));
+    s.state_mut().transient_defs.insert(id.to_string(), def);
+    register_fixture_script(id, script);
+}
+
+/// A fresh `def_id` card pushed onto `player`'s hand.
+pub fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
+    let card = new_instance(s.state_mut(), def_id, player, Zone::Hand { player });
+    s.state_mut().players[player].hand.push(card.clone());
+    card
+}
+
+/// A play's or an activation's `targets`, empty when it names none (TS `action.targets ?? []`).
+pub fn targets_of(action: &ActionBody) -> Vec<Selection> {
+    match action {
+        ActionBody::Play { targets, .. } | ActionBody::Activate { targets, .. } => {
+            targets.clone().unwrap_or_default()
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// A play's or an activation's `tributes`, empty when it names none (TS `action.tributes ?? []`).
+pub fn tributes_of(action: &ActionBody) -> Vec<String> {
+    match action {
+        ActionBody::Play { tributes, .. } | ActionBody::Activate { tributes, .. } => {
+            tributes.clone().unwrap_or_default()
+        }
+        _ => Vec::new(),
+    }
 }
 
 pub mod activate_listed;

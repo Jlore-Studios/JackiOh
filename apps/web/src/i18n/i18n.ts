@@ -24,6 +24,12 @@
 // match of `navigator.languages`, else English; the browser's pick is not written down, so only a
 // click on the language button fixes it. Never call `t()` at module scope: it would freeze the
 // language the module loaded in.
+//
+// The language button stays until the device has settled on its language (R1916000):
+// localStorage["jackioh.locale.settledVisits"] counts the boots (countLocaleVisit, main.tsx), every
+// language change and the settings' reset set it back to 0, and from the boot it reaches
+// LANGUAGE_SETTLED_VISITS the button leaves the top bar and the board; settings' Language row stays.
+// Storage that throws never settles.
 
 import { useSyncExternalStore } from "react";
 
@@ -66,6 +72,12 @@ export const DEFAULT_LOCALE: Locale = "en";
 
 export const LOCALE_STORAGE_KEY = "jackioh.locale";
 
+/** The boots since this device's last language change (R1916000), beside the language itself. */
+export const LOCALE_VISITS_STORAGE_KEY = "jackioh.locale.settledVisits";
+
+/** Boots with no language change after which the device has settled on its language: the language button leaves the top bar and the board, settings' Language row staying (R1916000). */
+export const LANGUAGE_SETTLED_VISITS = 3;
+
 const LOCALE_TAGS = Object.keys(LOCALES) as Locale[];
 
 /** Total: anything that is not a language of LOCALES is null. */
@@ -104,6 +116,8 @@ function stateFor(locale: Locale, dictionary: Dictionary): State {
 let state: State = stateFor(DEFAULT_LOCALE, {});
 let latest = 0;
 const listeners = new Set<() => void>();
+/** R1916000: whether this boot found the device settled on its language; a language change clears it. */
+let settled = false;
 
 const TOKEN = /\{(\w+)\}/g;
 
@@ -228,6 +242,56 @@ export function useLocale(): Locale {
   return useSyncExternalStore(subscribeLocale, getLocale, getLocale);
 }
 
+/** A stored count: a whole number of boots, anything else none. */
+function parseVisits(raw: string | null): number {
+  const visits = Number(raw);
+  return Number.isSafeInteger(visits) && visits > 0 ? visits : 0;
+}
+
+function setSettled(next: boolean): void {
+  if (settled === next) return;
+  settled = next;
+  notify();
+}
+
+/**
+ * Once per boot, before the first render (main.tsx): one more boot on this device's language. The
+ * device has settled once the count it wrote reaches LANGUAGE_SETTLED_VISITS; with storage
+ * unavailable it never settles, so the button is never lost (R1916000).
+ */
+export function countLocaleVisit(): void {
+  let visits: number;
+  try {
+    visits = parseVisits(window.localStorage.getItem(LOCALE_VISITS_STORAGE_KEY)) + 1;
+    window.localStorage.setItem(LOCALE_VISITS_STORAGE_KEY, String(visits));
+  } catch {
+    // Storage is unavailable: the device never settles and the button stays.
+    setSettled(false);
+    return;
+  }
+  setSettled(visits >= LANGUAGE_SETTLED_VISITS);
+}
+
+/** A language change: the count starts again and the button is back until the device settles again (R1916000). */
+function restartLocaleVisits(): void {
+  try {
+    window.localStorage.setItem(LOCALE_VISITS_STORAGE_KEY, "0");
+  } catch {
+    // Storage is unavailable: nothing was counted.
+  }
+  setSettled(false);
+}
+
+/** Whether this device has settled on its language (R1916000): the language button then shows nowhere. */
+export function isLocaleSettled(): boolean {
+  return settled;
+}
+
+/** isLocaleSettled(); the component re-renders when it changes. */
+export function useLocaleSettled(): boolean {
+  return useSyncExternalStore(subscribeLocale, isLocaleSettled, isLocaleSettled);
+}
+
 function readStored(): Locale | null {
   try {
     return parseLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
@@ -256,7 +320,10 @@ async function apply(locale: Locale, remember: boolean): Promise<Locale> {
   // A later choice made while this one loaded has the last word.
   if (mine !== latest) return state.locale;
   state = stateFor(locale, dictionary);
-  if (remember) persist(locale);
+  if (remember) {
+    persist(locale);
+    restartLocaleVisits();
+  }
   try {
     document.documentElement.lang = locale;
   } catch {
@@ -285,13 +352,14 @@ export function initLocale(): Promise<Locale> {
   return apply(readStored() ?? bestLocale(languages), false);
 }
 
-/** Forgets this device's choice, back to what a first visit picks: the settings panel's reset. */
+/** Forgets this device's choice, back to what a first visit picks, and starts the count again (R1916000): the settings panel's reset. */
 export function resetLocale(): Promise<Locale> {
   try {
     window.localStorage.removeItem(LOCALE_STORAGE_KEY);
   } catch {
     // Storage is unavailable: nothing was kept.
   }
+  restartLocaleVisits();
   return initLocale();
 }
 
@@ -336,8 +404,10 @@ export function resetLocaleForTests(): void {
   latest++;
   state = stateFor(DEFAULT_LOCALE, {});
   listeners.clear();
+  settled = false;
   try {
     window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+    window.localStorage.removeItem(LOCALE_VISITS_STORAGE_KEY);
     document.documentElement.lang = DEFAULT_LOCALE;
   } catch {
     // Nothing to reset.

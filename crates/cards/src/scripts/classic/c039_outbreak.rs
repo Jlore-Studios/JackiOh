@@ -147,11 +147,6 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// TS `at(s, ref): Selection[]`.
-    fn at(s: &Scenario, card: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": s.card(card).id }])
-    }
-
     fn stolen_ids(s: &Scenario) -> Vec<String> {
         s.events()
             .iter()
@@ -184,7 +179,7 @@ mod tests {
         // A Nerf finds it at its floor of 1 (an amount never drops below 1, R386); a Buff draws 2 a counter.
         assert!(!crate::can_degrade_number(&s, OUTBREAK, "drawPer"));
         assert_eq!(crate::upgrade_number(&mut s, OUTBREAK, "drawPer"), 2);
-        let targets = at(&s, VANILLA);
+        let targets = pick::card(&s, VANILLA);
         s.play(OUTBREAK, json!({ "targets": targets }));
         assert_eq!(s.card(VANILLA).counters.plague, Some(2));
         assert_eq!(drawn(&s), 4);
@@ -198,7 +193,7 @@ mod tests {
                 "p2": { "hand": [ANCHOR] },
             }));
             crate::upgrade_number(&mut s, OUTBREAK, "drawPer");
-            let targets = at(&s, VANILLA);
+            let targets = pick::card(&s, VANILLA);
             s.play(OUTBREAK, json!({ "targets": targets }));
             assert_eq!(drawn(&s), 2, "the kept script draws its printed 1 a counter");
         });
@@ -218,7 +213,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                let targets = at(&s, VANILLA);
+                let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.card(VANILLA).counters.plague, Some(3));
@@ -234,7 +229,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                let targets = at(&s, VANILLA);
+                let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(drawn(&s), 1);
@@ -249,7 +244,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [MENACE] },
                 }));
 
-                let targets = at(&s, MENACE);
+                let targets = pick::card(&s, MENACE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.card(MENACE).counters.plague, Some(1));
@@ -266,7 +261,7 @@ mod tests {
                 }));
                 let menace = s.card(MENACE).id.clone();
 
-                let targets = at(&s, MENACE);
+                let targets = pick::card(&s, MENACE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(stolen_ids(&s), vec![menace.clone()]);
@@ -284,7 +279,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [SLIME] },
                 }));
 
-                let targets = at(&s, SLIME);
+                let targets = pick::card(&s, SLIME);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(stolen_ids(&s), vec![s.card(SLIME).id.clone()]);
@@ -298,7 +293,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                let targets = at(&s, SLIME);
+                let targets = pick::card(&s, SLIME);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.card(SLIME).counters.plague, Some(2));
@@ -313,7 +308,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [VANILLA] },
                 }));
 
-                let targets = at(&s, VANILLA);
+                let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert!(stolen_ids(&s).is_empty());
@@ -333,7 +328,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                let targets = at(&s, VANILLA);
+                let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.hand(P1).len(), 10);
@@ -388,7 +383,7 @@ mod tests {
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
 
-                let targets = at(&s, BILLY);
+                let targets = pick::card(&s, BILLY);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.card(BILLY).counters.plague, Some(1));
@@ -408,7 +403,7 @@ mod tests {
                 s.play(CHALICE, json!({ "x": 3 }));
                 s.end_turn();
 
-                let targets = at(&s, CHALICE);
+                let targets = pick::card(&s, CHALICE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.card(CHALICE).counters.plague, Some(4));
@@ -424,7 +419,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "backrow": [CHALICE] },
                 }));
 
-                let targets = at(&s, CHALICE);
+                let targets = pick::card(&s, CHALICE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(stolen_ids(&s), vec![s.card(CHALICE).id.clone()]);
@@ -458,7 +453,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR] },
                 }));
 
-                let targets = at(&s, VANILLA);
+                let targets = pick::card(&s, VANILLA);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(s.card(VANILLA).counters.plague, Some(2));
@@ -473,7 +468,7 @@ mod tests {
                     "p2": { "hand": [ANCHOR], "field": [{ "def": MENACE, "counters": { "plague": 1 } }] },
                 }));
 
-                let targets = at(&s, MENACE);
+                let targets = pick::card(&s, MENACE);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(stolen_ids(&s), vec![s.card(MENACE).id.clone()]);
@@ -491,7 +486,7 @@ mod tests {
                 s.play(BILLY, json!({ "x": 3 }));
                 s.end_turn();
 
-                let targets = at(&s, BILLY);
+                let targets = pick::card(&s, BILLY);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert!(stolen_ids(&s).is_empty());
@@ -510,7 +505,7 @@ mod tests {
                 s.end_turn();
                 step_param(s.card_mut(OUTBREAK), "tokens", 1);
 
-                let targets = at(&s, BILLY);
+                let targets = pick::card(&s, BILLY);
                 s.play(OUTBREAK, json!({ "targets": targets }));
 
                 assert_eq!(stolen_ids(&s), vec![s.card(BILLY).id.clone()]);

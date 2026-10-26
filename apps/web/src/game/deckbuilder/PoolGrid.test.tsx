@@ -71,9 +71,10 @@ afterEach(() => {
 });
 
 describe("R1956000 the deck builder's pool and deck list wear the viewer's picks", () => {
-  it("R1956000 a pool tile below an OwnCopy wears its card's picks over the account's", () => {
+  it("R1956000 a pool tile below an OwnCopy wears its card's picks, never the account's", () => {
     writeCosmetics({ finish: "finish-linen" });
     writeCardPick(PICKED, "border", "border-bone");
+    writeCardPick(OTHER, "finish", "finish-parchment");
     render(
       <OwnCopy own>
         <PoolGrid ids={IDS} catalog={CATALOG_HERE} onInspect={noop} {...deckProps(owning(PICKED, OTHER))} />
@@ -81,9 +82,10 @@ describe("R1956000 the deck builder's pool and deck list wear the viewer's picks
     );
     const picked = poolFace(PICKED);
     expect(picked.getAttribute("data-frame")).toBe("border-bone");
-    expect(picked.getAttribute("data-finish")).toBe("finish-linen");
+    // R1953001: a kind the card has no pick of wears its default, not the account's pick.
+    expect(picked.getAttribute("data-finish")).toBeNull();
     expect(poolFace(OTHER).getAttribute("data-frame")).toBeNull();
-    expect(poolFace(OTHER).getAttribute("data-finish")).toBe("finish-linen");
+    expect(poolFace(OTHER).getAttribute("data-finish")).toBe("finish-parchment");
 
     // A pick reaches the same tile on the same render.
     act(() => {
@@ -94,8 +96,8 @@ describe("R1956000 the deck builder's pool and deck list wear the viewer's picks
   });
 
   it("R1956000 a pool tile with no OwnCopy, or one the collection does not own, draws the defaults", () => {
-    writeCosmetics({ finish: "finish-linen" });
     writeCardPick(PICKED, "border", "border-bone");
+    writeCardPick(OTHER, "finish", "finish-linen");
     render(<PoolGrid ids={IDS} catalog={CATALOG_HERE} onInspect={noop} {...deckProps(owning(PICKED, OTHER))} />);
     for (const id of IDS) wearsNothing(poolFace(id));
     cleanup();
@@ -119,8 +121,9 @@ describe("R1956000 the deck builder's pool and deck list wear the viewer's picks
   });
 
   it("R1956000 a deck list tile's art strip wears its card's picks below an OwnCopy", () => {
-    writeCosmetics({ foil: "foil-rainbow" });
+    writeCardPick(PICKED, "foil", "foil-rainbow");
     writeCardPick(PICKED, "border", "border-bone");
+    writeCardPick(OTHER, "foil", "foil-rainbow");
     const sidebar = (collection: Collection | null): ReactElement => (
       <DeckSidebar
         deckName="Deck"

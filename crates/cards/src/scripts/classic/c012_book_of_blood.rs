@@ -63,13 +63,6 @@ mod tests {
     const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005";
 
-    fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit in {player:?} lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     fn hits(s: &Scenario) -> Vec<i32> {
         s.events()
             .iter()
@@ -98,7 +91,7 @@ mod tests {
         fn deals_4_to_an_enemy_unit_in_one_hit_and_r85_its_lifesteal_heals_your_hero_4() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 5 }));
@@ -111,7 +104,7 @@ mod tests {
         fn targets_your_own_unit_too_and_still_heals_you() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "field": [MENACE], "health": 20 }, "p2": { "hand": [FILLER] } }));
 
-            let targets = at(&s, P1, 1);
+            let targets = pick::unit_at(&s, P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 5 }));
@@ -143,7 +136,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "position": "DEF" }] },
             }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(MENACE, json!({ "health": 6 }));
@@ -154,7 +147,7 @@ mod tests {
         fn r63_a_divine_shield_takes_the_hit_whole_and_the_heal_is_0() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [SHIELDED] } }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_in_zone(SHIELDED, "field").expect_events(json!("divineShieldLost"));
@@ -166,7 +159,7 @@ mod tests {
         fn sec4_4_step_5_r85_the_heal_is_the_amount_dealt_which_is_not_capped_at_the_unit_s_health_4_on_a_7_1_heals_4() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [POINTMASTER] } }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_in_zone(POINTMASTER, "graveyard");
@@ -179,7 +172,7 @@ mod tests {
         fn sec4_4_step_4_r85_an_indestructible_unit_takes_no_damage_so_the_heal_is_0() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [ROCK] } }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(ROCK, json!({ "health": 10 })).expect_in_zone(ROCK, "field");
@@ -192,13 +185,13 @@ mod tests {
         fn r386_an_upgrade_makes_it_deal_and_heal_5_a_degrade_3() {
             let mut up = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
             step_param(up.card_mut(BOOK), "damage", 1);
-            let targets = at(&up, P2, 1);
+            let targets = pick::unit_at(&up, P2, 1);
             up.play(BOOK, json!({ "targets": targets }));
             up.expect_stats(MENACE, json!({ "health": 4 })).expect_health(P1, 25);
 
             let mut down = scenario(json!({ "p1": { "hand": [BOOK, FILLER], "health": 20 }, "p2": { "hand": [FILLER], "field": [MENACE] } }));
             step_param(down.card_mut(BOOK), "damage", -1);
-            let targets = at(&down, P2, 1);
+            let targets = pick::unit_at(&down, P2, 1);
             down.play(BOOK, json!({ "targets": targets }));
             down.expect_stats(MENACE, json!({ "health": 6 })).expect_health(P1, 23);
         }
@@ -214,7 +207,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 } }] },
             }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(TEMPO, json!({ "health": 10, "maxHealth": 18 }));
@@ -229,7 +222,7 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [SHIELDED] },
             }));
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_health(P1, 20);
@@ -243,7 +236,7 @@ mod tests {
             }));
             step_param(s.card_mut(BOOK), "damage", 1);
 
-            let targets = at(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
             s.expect_stats(TEMPO, json!({ "health": 9 })).expect_health(P1, 19);

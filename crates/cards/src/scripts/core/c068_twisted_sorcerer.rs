@@ -91,14 +91,6 @@ mod tests {
         scenario(opts)
     }
 
-    /// A declared pick of a unit on the board (R81: it travels in the play action, never a prompt).
-    fn on_unit(s: &Scenario, player: PlayerId, lane: i32) -> Value {
-        let Some(unit) = s.unit(player, lane) else {
-            panic!("no unit for {player} in lane {lane}");
-        };
-        json!([{ "pick": "instance", "instanceId": unit.id }])
-    }
-
     fn at_enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }
@@ -124,7 +116,7 @@ mod tests {
         #[test]
         fn s8_3_deals_4_to_a_chosen_enemy_unit_with_the_hero_at_full_health() {
             let mut s = board(json!({ "p1": { "hand": [SOURCERER] }, "p2": { "field": [SPONGE] } }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }))
                 .expect_stats(SOURCERER, json!({ "attack": 5, "health": 5 }));
@@ -144,7 +136,7 @@ mod tests {
         #[test]
         fn s8_3_deals_8_when_the_controllers_hero_is_below_10_at_resolution() {
             let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": 9 }, "p2": { "field": [SPONGE] } }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
         }
@@ -152,7 +144,7 @@ mod tests {
         #[test]
         fn s8_3_below_10_is_strict_exactly_10_still_deals_4() {
             let mut s = board(json!({ "p1": { "hand": [SOURCERER], "health": 10 }, "p2": { "field": [SPONGE] } }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
         }
@@ -164,7 +156,7 @@ mod tests {
                 "p1": { "hand": [SOURCERER], "health": 30 },
                 "p2": { "field": [SPONGE], "health": 3 }
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 5, "maxHealth": 9 }));
         }
@@ -173,7 +165,7 @@ mod tests {
         fn s4_4_the_damage_is_one_pipeline_instance_so_armor_absorbs_it() {
             // #25 4-mana 7/7 prints Armor 7: §4.4 step 2 subtracts it, and R63 makes a 0 hit a non-event.
             let mut s = board(json!({ "p1": { "hand": [SOURCERER] }, "p2": { "field": ["core-025"] } }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats("core-025", json!({ "health": 7, "maxHealth": 7 }));
         }
@@ -194,7 +186,7 @@ mod tests {
                 "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] },
                 "p2": { "field": [SPONGE] }
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SOURCERER, json!({ "attack": 10, "health": 10, "maxHealth": 10 }))
                 .expect_stats(SPONGE, json!({ "health": 1, "maxHealth": 9 }));
@@ -206,7 +198,7 @@ mod tests {
                 "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 9 },
                 "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 2, "maxHealth": 18 }));
         }
@@ -217,7 +209,7 @@ mod tests {
                 "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 10 },
                 "p2": { "field": [{ "def": SPONGE, "radiant": true }] },
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 10, "maxHealth": 18 }));
         }
@@ -228,7 +220,7 @@ mod tests {
                 "p1": { "hand": [{ "def": SOURCERER, "radiant": true }], "health": 30 },
                 "p2": { "field": [{ "def": SPONGE, "radiant": true }], "health": 3 },
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats(SPONGE, json!({ "health": 10, "maxHealth": 18 }));
         }
@@ -250,7 +242,7 @@ mod tests {
                 "p1": { "hand": [{ "def": SOURCERER, "radiant": true }] },
                 "p2": { "field": ["core-025"] }
             }));
-            let targets = on_unit(&s, P2, 1);
+            let targets = pick::unit_at(&s, P2, 1);
             s.play(SOURCERER, json!({ "targets": targets }));
             s.expect_stats("core-025", json!({ "health": 6, "maxHealth": 7 }));
         }

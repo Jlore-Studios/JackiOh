@@ -9,7 +9,7 @@
 // Daily only: a pull request's `e2e smoke` plays SMOKE in scripts/shard-specs.mjs, which does not hold
 // 39. Every wait is a retried DOM assertion; the GIF's waits on its Download button.
 
-import { accounts, routes, seedFor, server, timeouts } from "../../support/config.ts";
+import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import type { InstalledLoadout } from "../../support/commands.ts";
 import { expectLastTurnGif, onStep, spyOnDownloads, stepForwardAndBack } from "../../support/replays.ts";
 import {
@@ -23,33 +23,12 @@ import {
 } from "../../support/testids.ts";
 import type { ActionInput, PlayerId } from "../../support/types.ts";
 
-/** Spec 06's session key: the browser's account, seeded before load. */
-const SESSION_STORAGE_KEY = "jackioh.e2e.session";
-
 const SEAT_TWO = "seat-two";
 const SEAT_TWO_ID: PlayerId = "p2";
-
-function api(path: string): string {
-  return `${server.http()}${path}`;
-}
-
-function bearer(token: string): Record<string, string> {
-  return { authorization: `Bearer ${token}` };
-}
 
 function deckOf(installed: InstalledLoadout | null): string {
   expect(installed, "cy.installLoadout has answered").to.not.eq(null);
   return installed?.deckIds[0] ?? "";
-}
-
-/** The browser as `token`, with downloads spied on (`support/replays.ts`). */
-function visitAs(token: string, path: string): void {
-  cy.visit(path, {
-    onBeforeLoad(win) {
-      win.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({ accessToken: token }));
-      spyOnDownloads(win);
-    },
-  });
 }
 
 /** Seat 2 keeps its whole opening hand (R9). */
@@ -84,8 +63,8 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
     cy.then(() => {
       cy.request<{ code: string }>({
         method: "POST",
-        url: api("/api/rooms"),
-        headers: bearer(seatOne.token),
+        url: apiUrl("/api/rooms"),
+        headers: bearerHeaders(seatOne.token),
         body: { mode: "bo1", deckId: deckOf(seatOneDecks), seed: seedFor("39-replays") },
       }).then((created) => {
         roomCode = created.body.code;
@@ -94,8 +73,8 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
     cy.then(() => {
       cy.request<{ matchId: string }>({
         method: "POST",
-        url: api(`/api/rooms/${roomCode}/join`),
-        headers: bearer(seatTwo.token),
+        url: apiUrl(`/api/rooms/${roomCode}/join`),
+        headers: bearerHeaders(seatTwo.token),
         body: { mode: "bo1", deckId: deckOf(seatTwoDecks) },
       }).then((joined) => {
         matchId = joined.body.matchId;
@@ -104,7 +83,7 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
     });
     cy.then(() => {
       cy.wsPlayer({ action: "connect", name: SEAT_TWO, url: server.ws(), token: seatTwo.token, matchId });
-      visitAs(seatOne.token, routes.match(matchId));
+      cy.visitAs(seatOne, routes.match(matchId), { onBeforeLoad: spyOnDownloads });
     });
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
 
@@ -132,7 +111,7 @@ describe("39 — an online match's replay (§9.5, R768000)", () => {
 
     // The recent games list the match, and open its replay at step 0.
     cy.then(() => {
-      visitAs(seatOne.token, routes.replays());
+      cy.visitAs(seatOne, routes.replays(), { onBeforeLoad: spyOnDownloads });
     });
     cy.get(ts(REPLAYS_ROOT), { timeout: timeouts.view }).should("be.visible");
     cy.then(() => {

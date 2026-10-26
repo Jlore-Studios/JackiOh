@@ -54,7 +54,6 @@ export const collectionTestid = {
   trackLock: (set: string) => `collection-track-lock-${set}`,
   body: "collection-body",
   door: (id: CollectionDoor) => `collection-door-${id}`,
-  equip: (kind: string) => `collection-equip-${kind}`,
   // R1655000: a card in context (CardCosmeticsView) and the account's tiles (AccountCosmeticTiles).
   cardView: "collection-card-view",
   cardViewFace: "collection-card-view-face",
@@ -66,6 +65,9 @@ export const collectionTestid = {
   stripDefault: (kind: string) => `collection-strip-default-${kind}`,
   tiles: (kind: string) => `collection-tiles-${kind}`,
   tile: (id: string) => `collection-tile-${id}`,
+  // R1953001: a held cosmetic token offered on a locked cosmetic (TokenOffer), and its refusal.
+  tokenOffer: (id: string) => `collection-token-offer-${id}`,
+  tokenOfferError: (id: string) => `collection-token-offer-error-${id}`,
   ownedCosmetic: (id: string, cardId: string | null) =>
     cardId === null ? `collection-owned-${id}` : `collection-owned-${id}-${cardId}`,
 } as const;

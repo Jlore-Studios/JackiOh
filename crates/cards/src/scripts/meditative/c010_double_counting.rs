@@ -68,11 +68,6 @@ mod tests {
         )
     }
 
-    /// A declared pick of one board instance (R81: it travels in the play action, never a prompt).
-    fn pick(id: &str) -> Value {
-        json!([{ "pick": "instance", "instanceId": id }])
-    }
-
     /// How many `damage` events hit one instance.
     fn damage_events(s: &Scenario, target_id: &str) -> usize {
         s.events()
@@ -101,7 +96,7 @@ mod tests {
                 "p2": side(json!({ "field": [FELINOR] })),
             }));
             let victim = s.card(FELINOR).id.clone();
-            s.play(SORCERER, json!({ "targets": pick(&victim) }));
+            s.play(SORCERER, json!({ "targets": pick::id(&victim) }));
             assert_eq!(damage_events(&s, &victim), 2);
             s.expect_stats(FELINOR, json!({ "health": 2, "maxHealth": 10 }));
         }
@@ -113,7 +108,7 @@ mod tests {
                 "p2": side(json!({ "field": [TIMMY] })),
             }));
             let victim = s.card(TIMMY).id.clone();
-            s.play(SORCERER, json!({ "targets": pick(&victim) }));
+            s.play(SORCERER, json!({ "targets": pick::id(&victim) }));
             s.expect_in_zone(TIMMY, "graveyard");
             assert_eq!(damage_events(&s, &victim), 1);
         }
@@ -162,7 +157,7 @@ mod tests {
             let lar = s.card(LAR).id.clone();
             // Hit Job is a Spell, so its own resolution runs once (R822) while Lar's Death runs
             // twice (R823).
-            s.play(HIT_JOB, json!({ "targets": pick(&lar) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&lar) }));
             s.expect_in_zone(LAR, "graveyard");
             assert_eq!(pings(&s, P1), 2);
         }
@@ -174,7 +169,7 @@ mod tests {
                 "p2": side(json!({ "field": [LAR] })),
             }));
             let lar = s.card(LAR).id.clone();
-            s.play(HIT_JOB, json!({ "targets": pick(&lar) }));
+            s.play(HIT_JOB, json!({ "targets": pick::id(&lar) }));
             assert_eq!(pings(&s, P2), 1);
             assert_eq!(pings(&s, P1), 0);
         }
@@ -186,7 +181,7 @@ mod tests {
                 "p2": side(json!({})),
             }));
             let sorcerer = s.card(SORCERER).id.clone();
-            s.play(REWIND, json!({ "targets": pick(&sorcerer) }));
+            s.play(REWIND, json!({ "targets": pick::id(&sorcerer) }));
             // The triggered Cry's declared target is asked once (R467); the extra run reuses it.
             assert!(s.state().pending.is_some());
             s.answer(json!("hero:p2"));
