@@ -1,9 +1,10 @@
 # The AI training lanes
 
 **Since 2026-10-25 the AI improves itself through the `learn` lane alone**, with no LLM in the loop
-([`learn.md`](learn.md)). Every week, on the owner's PC, a script plays the AI on `main` against
-itself, retrains the learned evaluation on those games, and gates the result against the AI on
-`main`. A pass opens its own pull request with auto-merge on. #682's audit
+([`learn.md`](learn.md)). On the owner's PC, one run after another, a script plays the AI on `main`
+against itself, retrains the learned evaluation on those games, and gates the result against the AI
+on `main`. A pass opens its own pull request with auto-merge on, and every run's games go into the
+card statistics as development records (#1976). #682's audit
 (`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
 they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
 generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
@@ -306,12 +307,19 @@ thread count.
 Since #1676 the development games come from the learn lane's exports. `cargo jackioh stats
 from-selfplay <shards>… --out <file>` files each game of an export that still replays under the
 catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
-and counts the rest (R1676000). The exports come about weekly, so a patch shipped between two has none
-until the next; `cargo jackioh stats` can be run by hand for it. Until a person adds the step to
-`learn.yml` that runs it after the export, run it by hand after `gh run download <run> --pattern
-'selfplay-<base>-*'`, then load the file with `jackioh-server stats-import`. The training box is being
-given back (#682's audit, `reviews/2026-10-22-issue-682-subscriptions.md`), so what follows is the
-lane's contract for a box that still runs it.
+and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
+`learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
+records' counts go into the totals and no row is kept per game, so production's database grows with
+the patches and not the games. Runs follow one another, so an export comes about every two days; a
+patch shipped between two has none until the next. `.github/workflows/gather.yml` plays `GATHER_GAMES`
+(2,000) games of each patch as it ships, on the PC, and files them the same way, but only while the
+repository variable `GATHER_ON_PATCH` is `true`: each patch's development totals take about 3 MB of
+the database however few its games, too much for the free plan at 2 to 7 patches a day, so it waits
+for the Pro plan. To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
+`cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
+--totals-only <file>`. The training box has been given back (#682's audit,
+`reviews/2026-10-22-issue-682-subscriptions.md`), so what follows is the lane's contract for a box that
+still runs it.
 
 `loop.sh gather` is the third lane, and it gathers data instead of improving the AI (#749, part of
 #636): it plays AI-against-AI All Random games without end and keeps their card figures, so the card
