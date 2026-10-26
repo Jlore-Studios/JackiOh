@@ -1826,7 +1826,7 @@
       "failures": 0,
       "feedback_since": "2026-10-26T08:41:45Z",
       "forced": false,
-      "interruptions": 0,
+      "interruptions": 1,
       "issue": 1855,
       "kind": "revise",
       "last_findings": [],
