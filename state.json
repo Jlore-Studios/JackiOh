@@ -2934,13 +2934,10 @@
     "what": "revise #2004 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-26T18:00:49Z",
+    "at": "2026-10-26T18:13:53Z",
     "notes": [
-      "delivered revise #2008 on muse (run 40370022489): approved",
-      "delivered plan #1857 on claude-4 (run 40359930733): planned",
-      "delivered build #1995 on claude-6 (run 40352160629): approved",
-      "started build #1857 on claude-4 (run 40374764355)",
-      "nothing more to start: nothing is queued"
+      "delivered revise #2004 on claude-3 (run 40365282574): approved",
+      "night_run: could not finish (IncompleteRead: IncompleteRead(0 bytes read, 401382 more expected))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -3646,7 +3643,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-10-26T18:00:49Z",
+  "loop_tick": "2026-10-26T18:13:53Z",
   "machine_disk": {
     "reading": {
       "at": "2026-10-26T18:01:10Z",
