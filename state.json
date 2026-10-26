@@ -5230,6 +5230,12 @@
         "number": 1998,
         "title": "Patch: practice puzzles, hand-built boards to win in one turn",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-10-26T13:07:32Z",
+        "number": 1993,
+        "title": "Patch: a card script's effect or target literal with a key its type never reads fails that card's tests",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
