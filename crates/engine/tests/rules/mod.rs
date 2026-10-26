@@ -223,6 +223,7 @@ pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;
 pub mod stays;
+pub mod stinkyscape_verbs;
 pub mod targeting;
 pub mod temporary;
 pub mod tradable;

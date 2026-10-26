@@ -599,6 +599,7 @@ mod generator {
             StatMod,
             TuneMultiplier,
             SpellDamageAura,
+            OwnTurnRedirect,
             StaticFlags,
             SlumberText,
             ActivationCost,
