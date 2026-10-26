@@ -2927,7 +2927,7 @@
       }
     },
     "2015": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -2950,17 +2950,17 @@
       "provider": "claude-3",
       "queued_at": "2026-10-26T18:23:07Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "40379071925",
-      "started_at": "2026-10-26T18:35:22Z",
+      "run_id": "pending:20608d7f-1793040782",
+      "started_at": "2026-10-26T18:53:48Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T18:52:49Z",
+    "at": "2026-10-26T18:53:48Z",
     "url": "",
-    "what": "build #2010 on muse"
+    "what": "build #2015 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-26T18:28:48Z",
