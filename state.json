@@ -5056,6 +5056,12 @@
         "number": 347,
         "title": "Patch: Start disconnect grace for an absent seat after a restart or no-show",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-26T12:58:36Z",
+        "number": 1990,
+        "title": "Patch: practice offers a Beginner opponent below Easy, one that starts behind",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": null,
