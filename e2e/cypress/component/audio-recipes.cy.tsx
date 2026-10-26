@@ -39,6 +39,7 @@ const EXPECTED_IDS = [
   "degrade", "upgrade",
   "emoteWave", "emoteClap", "emoteThumbsUp", "emoteFacepalm", "emoteShrug", "emoteThinking", "emoteHeart",
   "emoteFire", "emoteSkull", "emoteSweat", "emoteCool", "emoteGasp", "emoteSalute", "emoteParty",
+  "tapWood", "tapFelt", "tapStone", "tapNeon", "tapParchment", "tapAstral",
 ] as const;
 
 /** Each recipe's silence deadline. */
@@ -119,6 +120,13 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   emoteGasp: 500,
   emoteSalute: 750,
   emoteParty: 850,
+  // #1954: the playmat taps, as short and quiet as sand.
+  tapWood: 160,
+  tapFelt: 140,
+  tapStone: 180,
+  tapNeon: 150,
+  tapParchment: 160,
+  tapAstral: 240,
 };
 
 /** B14 parameter sets used here too. */
