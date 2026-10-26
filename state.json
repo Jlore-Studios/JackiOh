@@ -2120,7 +2120,7 @@
       "queued_at": "2026-10-26T14:30:30Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:49e22fbf-1793025034",
+      "run_id": "40340410718",
       "self_check_findings": [],
       "source": "ci",
       "started_at": "2026-10-26T14:31:38Z",
