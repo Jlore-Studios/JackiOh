@@ -605,7 +605,7 @@
       "verdict_rounds": 2
     },
     "1857": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "forced": false,
@@ -629,8 +629,8 @@
       "queued_at": "2026-10-26T14:57:32Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "40359930733",
-      "started_at": "2026-10-26T16:31:15Z",
+      "run_id": "pending:c04eee1c-1793037925",
+      "started_at": "2026-10-26T18:06:17Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -2938,9 +2938,9 @@
   },
   "labels_synced": "7853ef3862488cbb",
   "last_run": {
-    "at": "2026-10-26T17:48:38Z",
+    "at": "2026-10-26T18:06:17Z",
     "url": "",
-    "what": "build #2013 on claude-1"
+    "what": "build #1857 on claude-4"
   },
   "last_sweep": {
     "at": "2026-10-26T17:42:44Z",
