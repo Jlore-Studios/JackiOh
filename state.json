@@ -607,7 +607,7 @@
     "1857": {
       "action": "build",
       "asks": [],
-      "failures": 1,
+      "failures": 0,
       "forced": false,
       "handoff": {
         "at": "2026-10-26T17:53:50Z",
@@ -620,15 +620,18 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-26T18:02:29Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_tier": "strong",
+      "pr": 2018,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-26T14:57:32Z",
       "requested_by": "squishy-squooby",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "40374764355",
       "started_at": "2026-10-26T18:06:17Z",
       "stop_requested": false,
@@ -637,7 +640,7 @@
       ],
       "strikes": 1,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1889": {
       "action": "build",
