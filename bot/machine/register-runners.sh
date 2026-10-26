@@ -69,6 +69,17 @@ set -uo pipefail
 date +%s > /run/night-vm-last-busy
 repo="$1"; token="$2"; remove_token="$3"; box="$4"; shift 4
 failed=0
+# A runner's self-update leaves its bin and externals as links to bin.<version> and
+# externals.<version>, and the runner runs from where its bin really is: its Worker runs there,
+# and it reads its registration (.runner) and writes its svc.sh in that directory.
+busy() {  # a job runs on the runner in $1
+  pgrep -f "$1/bin/Runner.Worker" >/dev/null \
+    || pgrep -f "$(readlink -f "$1/bin")/Runner.Worker" >/dev/null
+}
+linked() {  # $1 is a copy whose bin links into another runner's directory: it runs as that one
+  [ "$1" != "$first" ] && [ -L "$1/bin" ] || return 1
+  case "$(readlink -f "$1/bin")" in "$1"/*) return 1;; esac
+}
 for entry in "$@"; do
   id="${entry%%=*}"; rest="${entry#*=}"; label="${rest%%=*}"; lanes="${rest#*=}"
   kind="${id#*:}"; [ "$kind" = "$id" ] && kind=""; id="${id%%:*}"
@@ -77,18 +88,23 @@ for entry in "$@"; do
     echo "$label: no runner unpacked for $user; run setup.sh with $id first"; failed=1; continue
   fi
   # Past this box's count: unregistered and gone, unless it holds a job (#1677). A lane is the
-  # base directory or base-<n>; ~/actions-runner-fill is never a lane of ~/actions-runner.
+  # base directory or base-<n>; ~/actions-runner-fill is never a lane of ~/actions-runner. So
+  # does a copy `linked` into another runner, which an older copy step made of a self-updated
+  # runner: its registration is that runner's, so it goes with its service and is copied again.
   for dir in "$base" "$base"-*; do
     lane="${dir#"$base"}"; lane="${lane#-}"; lane="${lane:-1}"
-    [[ "$lane" =~ ^[0-9]+$ ]] && [ "$lane" -gt "$lanes" ] && [ -f "$dir/.runner" ] || continue
-    gone="$(jq -r '.agentName // empty' "$dir/.runner" 2>/dev/null || true)"; gone="${gone:-$dir}"
-    if pgrep -f "$dir/bin/Runner.Worker" >/dev/null; then
+    [[ "$lane" =~ ^[0-9]+$ ]] && [ -d "$dir" ] || continue
+    [ "$lane" -gt "$lanes" ] || linked "$dir" || continue
+    [ -f "$dir/.runner" ] || [ "$dir" != "$first" ] || continue
+    gone="$(jq -r '.agentName // empty' "$dir/.runner" 2>/dev/null || true)"; gone="${gone:-${dir##*/}}"
+    if busy "$dir"; then
       echo "$gone: busy with a job, so still registered; run this again once it ends"; continue
     fi
     if [ -f "$dir/.service" ]; then
       (cd "$dir" && ./svc.sh stop >/dev/null 2>&1; ./svc.sh uninstall >/dev/null 2>&1)
     fi
-    if ! out="$(cd "$dir" && sudo -u "$user" ./config.sh remove --token "$remove_token" 2>&1)"; then
+    if [ -f "$dir/.runner" ] \
+        && ! out="$(cd "$dir" && sudo -u "$user" ./config.sh remove --token "$remove_token" 2>&1)"; then
       echo "$gone: removal failed:"; echo "$out" | grep -iv token | tail -4; failed=1; continue
     fi
     [ "$dir" = "$first" ] || rm -rf "$dir"  # the unpacked runner stays, the source of every copy
@@ -99,10 +115,18 @@ for entry in "$@"; do
     if [ "$lane" -gt 1 ]; then
       dir="$base-$lane"; name="$label-$lane${box:+-$box}"
     fi
+    if linked "$dir"; then  # still there: it held a job above
+      echo "$name: runs as ${first##*/} until its job ends; run this again then"; continue
+    fi
     if [ "$dir" != "$first" ] && [ ! -x "$dir/config.sh" ]; then
-      # A fresh copy of the unpacked runner, no registration.
+      # A fresh copy of the unpacked runner, no registration: the directories its bin and
+      # externals link to, never the links (`linked`), and no svc.sh, which config.sh writes
+      # with this runner's own service name.
       sudo -u "$user" mkdir -p "$dir"
-      (cd "$first" && sudo -u "$user" cp -a bin externals ./*.sh ./*.template .env .path "$dir/")
+      sudo -u "$user" cp -a "$(readlink -f "$first/bin")" "$dir/bin"
+      sudo -u "$user" cp -a "$(readlink -f "$first/externals")" "$dir/externals"
+      (cd "$first" && sudo -u "$user" cp -a ./*.sh ./*.template .env .path "$dir/")
+      rm -f "$dir/svc.sh"
     fi
     cd "$dir" || continue
     if [ ! -f .runner ]; then
@@ -122,7 +146,7 @@ for entry in "$@"; do
     path="/home/$user/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"
     fixed=""
     if [ "$(cat .path 2>/dev/null)" != "$path" ]; then
-      if systemctl is-active --quiet "$service" && pgrep -f "$dir/bin/Runner.Worker" >/dev/null; then
+      if systemctl is-active --quiet "$service" && busy "$dir"; then
         echo "$name: busy with a job, and no Rust on its PATH yet; run this again once it ends"
         continue
       fi

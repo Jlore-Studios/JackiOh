@@ -582,13 +582,19 @@ class GitHub:
     def get_run(self, run_id: int | str) -> dict[str, Any]:
         return self.request("GET", f"{self._r}/actions/runs/{run_id}")
 
-    def list_runs(self, workflow: str, *, status: str = "", limit: int = 30) -> list[dict]:
+    def list_runs(self, workflow: str, *, status: str = "", limit: int = 30,
+                  cached: bool = False) -> list[dict]:
         params: dict[str, Any] = {"per_page": min(limit, 100)}
         if status:
             params["status"] = status
         return self.paginate(
-            f"{self._r}/actions/workflows/{workflow}/runs", params, key="workflow_runs", limit=limit
+            f"{self._r}/actions/workflows/{workflow}/runs", params, key="workflow_runs", limit=limit,
+            cached=cached,
         )
+
+    def get_gist(self, gist_id: str, *, cached: bool = False) -> dict[str, Any]:
+        """A gist, by id (the owner's PC's heartbeat, `dashboard.PC_FILE`)."""
+        return self.request("GET", f"/gists/{urllib.parse.quote(gist_id)}", cached=cached)
 
     def list_repo_runs(self, *, status: str, limit: int = 100, cached: bool = False) -> list[dict]:
         """The runs of every workflow with `status` (`in_progress`, `queued`), newest first."""

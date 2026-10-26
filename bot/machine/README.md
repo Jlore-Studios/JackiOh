@@ -265,7 +265,10 @@ repository admin:
    `-fill-2`, copies of the unpacked runner under the same user and login; `muse:fill=1` would
    register one. A runner in the middle of a job is left registered, and the same command run
    again once it ends removes it. The second registers `night-vm-muse-2-b2` beside
-   `night-vm-muse-b2`.
+   `night-vm-muse-b2`. A copy takes the directories a self-updated runner's `bin` and
+   `externals` link to (`bin.<version>`), never the links: a copied link made the copy run as
+   the first runner, in its directory and with its registration ("already configured",
+   2026-10-26), and the script removes such a copy and makes it again.
 5. **Deploy its starter**:
    ```sh
    TAG=jackioh-train-box STARTER_NAME=jackioh-muse-box-starter STARTER_ROLE=jackioh-muse-box-starter \
@@ -311,6 +314,7 @@ take some of the night box's own jobs while the box is busy or off.
 | When | only while the PC is otherwise idle: CPU under 50% and memory under 24 GB in every sample of the last minute, leaving out the runners' own use and that of the `yieldingContainers` (a long-running container of the owner's that a gate of its own holds to the same rule and throttles while a runner works, so the two never read each other as the person's load) (`config.json`). A runner starts only when the PC is also quiet, CPU under 15% (`startCpuPercentBelow`) in every sample of that minute; one already up stays while it is calm. It keeps one runner Idle for the label while it is calm; when the PC gets busy the idle runner is unregistered at once, and a runner in a job is throttled to half a CPU until it is calm again, so no export loses a shard |
 | Limits | one job at a time, 6 CPUs and 6 GB a container, swap off; never a GPU (no `--gpus`, `NVIDIA_VISIBLE_DEVICES=void`); a non-root user with `no-new-privileges`, no host folder and no Docker socket |
 | Tools | Rust 1.97.0 (`rust-toolchain.toml`), a C++ compiler (`mlua` builds Luau from source), `git`, `jq` and `gh`, Node 24, Python 3.12, and the night box's CLIs. A job installs the rest itself (the learn lane's retrain: uv, which fetches Python 3.13 and torch for the fit) |
+| Heartbeat | every `heartbeatSeconds` (120, `config.json`; 0 turns it off) the supervisor writes `pc.json` to a secret gist of the account `gh` is signed in as: the PC's CPU and memory without its runners, whether it is calm (lending itself), and each runner container with the CPUs it uses and whether it is throttled. It makes the gist the first time, keeps its id in `pc-gist.txt` beside the scripts and names it to the repository as the variable `JACKIOH_PC_GIST` (`gh variable set`, which needs the admin sign-in the supervisor has anyway). `bot-status.yml` hands that variable to the status loop, whose runners section draws the PC from it, gather's job included. A heartbeat that fails is logged and tried again two minutes on; it never holds a runner up. `gh` needs its `gist` scope, which `gh auth login` gives by default (`gh auth refresh -s gist` adds it) |
 | Disk | a container's work directory goes with it, so `target/` never grows between exports; a shard runs the release `jackioh` the export's build job built, so it builds nothing. The learn lane's retrain is the biggest job: about 10 GB while it runs (the export's logs, its positions, two or three builds, the web's install). The image is about 6 GB |
 | Memory | the learn lane's retrain peaks at about 4.1 GB of the container's 6 GB on a 100,000-game export (the positions, the six seeds' fit, the AI's tests and the 800-game screen took 59 minutes here: learn run 21, 2026-10-21) |
 
@@ -348,7 +352,10 @@ Dockerfile changed, since a runner started after that uses the new one, and when
 `supervisor.ps1` changed, copy them over the installed ones (keep any setting of your own, such as
 `yieldingContainers`) and restart the task (`Stop-ScheduledTask` then `Start-ScheduledTask -TaskName
 'JackiOh PC runner'`), since the supervisor reads its config once, as it starts. Neither stops a job
-that is running: its container keeps going, and the new supervisor finds it.
+that is running: its container keeps going, and the new supervisor finds it. The first supervisor
+with the heartbeat makes its gist and sets `JACKIOH_PC_GIST` within two minutes (its log says so);
+the status issue shows the PC from the next `bot-status` loop on, which reads the variable as it
+starts.
 
 **The learn lane runs only here**, so the PC is its only runner: it should not sleep while it is
 plugged in (Settings → System → Power), since a shard in the middle of its work is lost when it does,

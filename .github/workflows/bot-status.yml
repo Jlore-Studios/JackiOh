@@ -80,6 +80,9 @@ jobs:
           # process never writes with it.
           SQUISHY_GITHUB_TOKEN: ${{ secrets.SQUISHY_GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ github.token }}
+          # The gist the owner's PC writes its heartbeat to, which its supervisor names here
+          # (bot/machine/README.md, The local runner): the runners section reads it.
+          JACKIOH_PC_GIST: ${{ vars.JACKIOH_PC_GIST }}
           # Which provider secrets exist, never their values: the issue says when one is unset.
           HARNESS_SECRETS_SET: >-
             ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' && 'CLAUDE_CODE_OAUTH_TOKEN' || '' }}
