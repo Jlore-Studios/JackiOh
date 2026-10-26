@@ -59,11 +59,11 @@ pub const HOOKS: [&str; 30] = [
 
 /// Named sub-hooks a face may declare beside its hooks: the functions closure-taking
 /// effect verbs call back by name (`after_state_check`, `draw_while`, `for_each_card`,
-/// `with_kill_credit`, and the generic aura's `applies` predicate).
+/// `with_kill_credit`, `choose_target_where`'s `where`, and the generic aura's `applies` predicate).
 /// A second use of one verb in the same face appends `_2`, `_3`, … (`each_cards_2`),
 /// since one face holds two `for_each_card`s with different closures (Classic #39).
 /// Anything else unknown is still a load error, so a misspelled hook stays one.
-pub const SUB_HOOKS: [&str; 7] = [
+pub const SUB_HOOKS: [&str; 8] = [
     "after_check",
     "draw_more",
     "each_cards",
@@ -71,6 +71,7 @@ pub const SUB_HOOKS: [&str; 7] = [
     "kill_pairs",
     "kill_then",
     "aura_filter",
+    "admits",
 ];
 
 /// Whether a face key is a named sub-hook: one of `SUB_HOOKS`, optionally with a
