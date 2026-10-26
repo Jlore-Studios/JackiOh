@@ -2640,11 +2640,11 @@
       "action": "revise",
       "asks": [],
       "cleared": {
-        "at": "2026-10-26T17:33:46Z",
+        "at": "2026-10-26T18:02:02Z",
         "by": "`claude` (strong)",
-        "carried_from": "6ca3af8bf4fbdd392e8d0d148cd7baa62f10e49e",
+        "carried_from": "bcd00e5504021d7e98e2164a5ee6836ef03c34ef",
         "resolved_by": "`muse` (medium)",
-        "sha": "bcd00e5504021d7e98e2164a5ee6836ef03c34ef"
+        "sha": "c00bfa5894dca7ad93dc41cb03993472a1629b42"
       },
       "died": 0,
       "difficulty": "medium",
