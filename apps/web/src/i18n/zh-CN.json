@@ -3377,6 +3377,7 @@
   "{cards} agreed: {who} removed from the game": "{cards}达成一致：{who}被移出对局",
   "{seat} escaped the universe, leaving the other side a loss": "{seat}逃离了宇宙，留给另一方一场败局",
   "{seat} escaped the universe, leaving the other side a draw": "{seat}逃离了宇宙，留给另一方一场平局",
+  "{whose} board was replaced": "{whose}棋盘被替换了",
   "you": "你",
   "your opponent": "你的对手",
   "Your opponent was voted out of the game.": "你的对手被投票移出了对局。",

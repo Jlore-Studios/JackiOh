@@ -223,6 +223,8 @@ export const GAME_EVENT_TYPES = [
   "voteCast",
   "votedOut",
   "fled",
+  // Issue #1855's Anomalies: a side's board replaced by a preset (R1855000).
+  "boardReplaced",
 ] as const satisfies readonly GameEventType[];
 
 /**

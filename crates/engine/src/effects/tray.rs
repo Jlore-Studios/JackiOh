@@ -7,6 +7,9 @@
 //! - `discard_resource` — "Discard a Narcor": the oldest tray Resource of those definitions ceases to
 //!   exist (R1840004). No hand rule reaches the tray, so a hand discard never takes one.
 //! - `gain_market_credits` — "Gain N Credits" (R1840005).
+//!
+//! R1855002: a card laid by a board replacement may carry a `resourcePool` rider in its memory
+//! (`RESOURCE_POOL_KEY`), the pool its own gains come from in place of the one its text names.
 
 use serde::{Deserialize, Serialize};
 
@@ -16,6 +19,11 @@ use crate::resources::{add_market_credits, gain_resource, roll_resource};
 use crate::script::Effect;
 use crate::wire::GameEvent;
 use crate::zones::cease_to_exist;
+
+/// R1855002: the memory key a card's rider names its own Resource pool under (a list of definition
+/// ids), which its own gains come from in place of the pool its text names (`effects::replace_board`'s
+/// preset entries carry it).
+pub const RESOURCE_POOL_KEY: &str = "resourcePool";
 
 /// `gainResources`' argument: how many Resources, whose tray (default the controller's own), whether
 /// they are Radiant, the pool they come from (default every Resource), and `fill` for "fill your hand
@@ -52,9 +60,16 @@ pub fn gain_resources(args: GainResourcesArgs) -> Effect {
             args.count
         };
         let radiant = args.radiant == Some(true);
+        // R1855002: a preset card's rider names the pool its own gains come from.
+        let pool: Option<Vec<String>> = ctx
+            .self_
+            .as_ref()
+            .and_then(|card| card.memory.get(RESOURCE_POOL_KEY))
+            .and_then(|value| serde_json::from_value(value.clone()).ok())
+            .or_else(|| args.pool.clone());
         for _ in 0..count.max(0) {
             let sink = &mut ctx.sink;
-            let Some(def_id) = roll_resource(sink.state, sink.rng, args.pool.as_deref()) else {
+            let Some(def_id) = roll_resource(sink.state, sink.rng, pool.as_deref()) else {
                 return;
             };
             gain_resource(sink, player, &def_id, radiant);

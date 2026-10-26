@@ -166,4 +166,10 @@ votes?: VoteTally,
  * the game on it. Absent otherwise, so a game without one hashes as before this field existed
  * (D3).
  */
-fled?: FleeOpponent, };
+fled?: FleeOpponent, 
+/**
+ * R1855003 (Stinkyscape #166 and #167, the Scanning Probes): how many of this player's Anomaly
+ * scans have missed (`effects::scan_for_anomaly`), each adding to their later scans' chances.
+ * Absent until the first miss, so a game without one hashes as before this field existed (D3).
+ */
+anomalyMisses?: number, };

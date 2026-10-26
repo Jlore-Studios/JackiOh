@@ -703,6 +703,10 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   voteCast: { sfx: "uiClick", cues: () => [sfx("uiClick")] },
   votedOut: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   fled: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
+
+  // ---- Issue #1855: Anomalies, the board swap (R1855000) ----
+  // The old board whooshes away; the `exiled` and `summoned` behind it sound the cards going and coming.
+  boardReplaced: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

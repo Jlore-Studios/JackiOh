@@ -189,6 +189,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   voteCast: { type: "voteCast", player: "p2", instanceId: "u1", defId: "core-073", votes: 1, needed: 3 },
   votedOut: { type: "votedOut", player: "p2", ballots: [{ instanceId: "u1", defId: "core-073" }] },
   fled: { type: "fled", player: "p1", opponent: "draw" },
+  // Issue #1855 (R1855000).
+  boardReplaced: { type: "boardReplaced", player: "p1" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -335,6 +337,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   voteCast: null,
   votedOut: "banner",
   fled: "banner",
+  // Issue #1855 (R1855000): the board tilts with no effect; the cards' own events carry theirs.
+  boardReplaced: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -470,10 +474,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   voteCast: ["jk-radiant-pulse", 400, "card-<instanceId> | backrow-<side>"],
   votedOut: ["jk-banner", 1200, "turn-banner"],
   fled: ["jk-exile-fade", 900, "hero-<side>"],
+  boardReplaced: ["jk-swap-cross", 500, "board"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 64 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003) and #1843's two endings (R1843000, R1843002) carry fx with the listed recipe and the other 26 carry none", () => {
+  it("B1 exactly the 64 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the Trade (R1838001), the launch (R1852003) and #1843's two endings (R1843000, R1843002) carry fx with the listed recipe and the other 27 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
     expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(64);
@@ -488,9 +493,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 26 rows without an effect have no fx value at all", () => {
+  it("B1 the 27 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(26);
+    expect(bare).toHaveLength(27);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

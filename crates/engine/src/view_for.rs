@@ -2412,7 +2412,9 @@ fn redact_event(
         | GameEventType::StarshipFused
         | GameEventType::StarshipLaunched
         // R1843002: a flight names a player and what it leaves the other.
-        | GameEventType::Fled => event.clone(),
+        | GameEventType::Fled
+        // R1855000: a board replacement names its player alone.
+        | GameEventType::BoardReplaced => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

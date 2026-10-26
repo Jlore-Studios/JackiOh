@@ -9,6 +9,7 @@ pub mod ai_policy;
 pub mod alt_wins;
 pub mod animated;
 pub mod announce;
+pub mod anomalies;
 pub mod armor_absorbed;
 pub mod attack_mods;
 pub mod audit;

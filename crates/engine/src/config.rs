@@ -1906,6 +1906,23 @@ pub const VOTE_TALLY_SIZE: i32 = 3;
 pub const LOSER_DRAWS_REASONS: &[crate::wire::GameOverReason] = &[crate::wire::GameOverReason::Fled];
 
 // ---------------------------------------------------------------------------------------------
+// Anomalies and the Scanning Probes (Stinkyscape, issue #1855; SPEC §6.3; R1855003)
+// ---------------------------------------------------------------------------------------------
+
+/// R1855003: a scan's chance, out of `ANOMALY_ROLL_SIDES`, to find a Radiant Anomaly before any miss
+/// (Stinkyscape #166 and #167, the Scanning Probes: "5% chance to add a Radiant Anomaly Found!").
+pub const ANOMALY_RADIANT_CHANCE: i32 = 5;
+/// R1855003: a scan's chance, out of `ANOMALY_ROLL_SIDES`, to find a plain Anomaly before any miss
+/// ("20% chance to add a Anomaly Found!").
+pub const ANOMALY_PLAIN_CHANCE: i32 = 20;
+/// R1855003: what each earlier miss of the player's adds to the Radiant chance ("+1%").
+pub const ANOMALY_RADIANT_STEP: i32 = 1;
+/// R1855003: what each earlier miss of the player's adds to the plain chance ("+4%").
+pub const ANOMALY_PLAIN_STEP: i32 = 4;
+/// R1855003: the sides of a scan's one roll, the chances' denominator (percent).
+pub const ANOMALY_ROLL_SIDES: i32 = 100;
+
+// ---------------------------------------------------------------------------------------------
 // Stinkyscape M11 (issue #1845, R1845000–R1845002): hidden Nerfs and trade offers
 // ---------------------------------------------------------------------------------------------
 

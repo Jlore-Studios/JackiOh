@@ -10,6 +10,7 @@
 pub mod add_to_hand;
 pub mod after_check;
 pub mod animate;
+pub mod anomaly;
 pub mod brittle;
 pub mod buff;
 pub mod card_scope;
@@ -85,6 +86,7 @@ pub mod win;
 pub use add_to_hand::*;
 pub use after_check::*;
 pub use animate::*;
+pub use anomaly::*;
 pub use brittle::*;
 pub use buff::*;
 pub use card_scope::*;
