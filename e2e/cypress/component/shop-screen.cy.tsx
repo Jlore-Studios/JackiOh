@@ -2,9 +2,17 @@
 // a browser, serves the six reads its four panels make from the fixtures, and checks that at 360 px,
 // 390 px and a desktop's 1280 px nothing is wider than the viewport and the page never scrolls: the
 // body is what scrolls. The pack opening still plays full screen over it: its scene, drawn in a
-// portal on the body, covers the window.
+// portal on the body, covers the window. #1999: on a phone a cosmetic pack's opening pins a compact
+// HUD that the Shop's body starts below, and nothing scrolls sideways.
 
-import { collectionOf, cosmeticPacksInfo, ownedCosmeticsOf, tokenBars, walletInfo } from "../../../apps/web/src/shop/fixtures.ts";
+import {
+  collectionOf,
+  cosmeticPacksInfo,
+  openedCosmeticPack,
+  ownedCosmeticsOf,
+  tokenBars,
+  walletInfo,
+} from "../../../apps/web/src/shop/fixtures.ts";
 import { packsInfo } from "../../../apps/web/src/packs/fixtures.ts";
 import { packTestid } from "../../../apps/web/src/packs/packs.ts";
 import ShopRoute, { shopRouteTestid } from "../../../apps/web/src/routes/shop.tsx";
@@ -16,10 +24,18 @@ const VIEWPORTS = [
   { width: 1280, height: 800 },
 ] as const;
 
-type Viewport = (typeof VIEWPORTS)[number];
+/** #1999: the two phones, portrait. */
+const PHONES = [
+  { width: 375, height: 667 },
+  { width: 360, height: 640 },
+] as const;
+
+type Viewport = { readonly width: number; readonly height: number };
 
 /** A browser rounds a fixed box's edges to a device pixel. */
 const EDGE_TOLERANCE_PX = 1;
+/** #1999: a compact HUD takes at most this share of a phone's height. */
+const HUD_MAX_SHARE = 0.1;
 
 function byTestid(testid: string): string {
   return `[data-testid="${testid}"]`;
@@ -34,6 +50,7 @@ function serveFixtures(): void {
     "/api/collection": collectionOf(),
     "/api/cosmetics": ownedCosmeticsOf(),
     "/api/cosmetic-packs": cosmeticPacksInfo(),
+    "/api/cosmetic-packs/open": openedCosmeticPack(),
   };
   cy.window({ log: false }).then((win) => {
     const passThrough = win.fetch.bind(win);
@@ -108,6 +125,32 @@ describe("R1580000 the Shop fits one screen", () => {
           expect(rect.height, `its height over ${size}`).to.be.closeTo(win.innerHeight, EDGE_TOLERANCE_PX);
         });
       });
+    });
+  }
+});
+
+describe("#1999 a cosmetic pack opening on a phone", () => {
+  for (const viewport of PHONES) {
+    const size = `${String(viewport.width)}x${String(viewport.height)}`;
+
+    it(`the Shop's body starts below the opening's compact HUD at ${size}`, () => {
+      cy.viewport(viewport.width, viewport.height);
+      serveFixtures();
+      cy.mount(<ShopRoute token="token-1" />);
+
+      waitForPanels();
+      cy.get(byTestid(shopTestid.open)).click();
+      cy.get(byTestid(shopTestid.reveal)).should("exist");
+      cy.get(byTestid(shopTestid.openingBars)).should(($hud) => {
+        const hud = $hud[0]!.getBoundingClientRect();
+        const body = $hud[0]!.ownerDocument.querySelector(byTestid(shopTestid.body))!.getBoundingClientRect();
+        expect(hud.height, `the HUD's height at ${size}`).to.be.at.most(viewport.height * HUD_MAX_SHARE);
+        expect(body.top, `the body's top under the HUD's bottom at ${size}`).to.be.at.least(hud.bottom - EDGE_TOLERANCE_PX);
+      });
+      // The reveal fills the Chase Shard bar, whose burst rides past its end: the body clips it and
+      // scrolls only up and down.
+      cy.get(byTestid(shopTestid.body)).should("have.css", "overflow-x", "hidden");
+      expectNoHorizontalOverflow(viewport);
     });
   }
 });

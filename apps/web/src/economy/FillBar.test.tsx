@@ -356,6 +356,8 @@ const gates = top.filter((block) => block.prelude.startsWith("@media"));
 const rules = top.filter((block) => !block.prelude.startsWith("@"));
 
 const GATE = "@media (prefers-reduced-motion: no-preference)";
+/** #1999: the phone's compact HUD, after the gate; it lays out and moves nothing. */
+const PHONE = "@media (max-width: 600px)";
 const NOT_REDUCED = ':root:not([data-reduce-motion="true"])';
 
 describe("#1658 economy.css", () => {
@@ -380,7 +382,12 @@ describe("#1658 economy.css", () => {
         expect(name, `${rule.prelude}: ${name}`).not.toMatch(/^(animation|transition)/);
       }
     }
-    expect(gates.map((gate) => gate.prelude)).toEqual([GATE]);
+    expect(gates.map((gate) => gate.prelude)).toEqual([GATE, PHONE]);
+    for (const rule of blocks(gates[1]!.body)) {
+      for (const name of properties(rule.body)) {
+        expect(name, `${PHONE} ${rule.prelude}: ${name}`).not.toMatch(/^(animation|transition)/);
+      }
+    }
 
     const gated = blocks(gates[0]!.body);
     const used = new Set<string>();

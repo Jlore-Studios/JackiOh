@@ -140,7 +140,9 @@ export function cosmeticName(id: string): string {
 
 /**
  * What a slot became, as the server decided it (R1301002): a spent duplicate says `points`, the
- * opening's `slotPoints` for the slot, which it added to each bar (R1953000).
+ * opening's `slotPoints` for the slot, which it added to each bar (R1953000). Every slot adds its
+ * points since R1999000, and its flight into the bars shows them; only a spent duplicate, which
+ * grants nothing else, says them too.
  */
 export function slotOutcome(slot: PackSlot, points: number): string {
   switch (slot.grant.kind) {

@@ -109,8 +109,8 @@ pub enum SlotGrant {
         cosmetic_id: String,
         cosmetic_rarity: CosmeticRarity,
     },
-    /// A spent duplicate: nothing of the rarity it rolled was left to own, so its points go to
-    /// both token bars (§14.5).
+    /// A spent duplicate: nothing of the rarity it rolled was left to own, so it grants nothing.
+    /// Like every slot, its points go to both token bars (§14.5, R1999000).
     Bars { cosmetic_rarity: CosmeticRarity },
 }
 
