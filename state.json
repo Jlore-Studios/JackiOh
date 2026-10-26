@@ -741,7 +741,7 @@
       "pending_request": false,
       "provider": "claude-2",
       "round_tier": "",
-      "run_id": "pending:d2220b6f-1793056173",
+      "run_id": "40417841840",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-10-26T23:09:55Z",
       "stop_requested": false,
