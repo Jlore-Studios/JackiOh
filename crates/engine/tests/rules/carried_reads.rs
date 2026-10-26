@@ -11,8 +11,8 @@ use std::cell::Cell;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::unit_def;
-use crate::rules::fixtures::field::{act, flush, playing};
-use crate::rules::fixtures::harness::{both, in_hand, put, sink_for, slot};
+use crate::rules::fixtures::field::{flush, playing};
+use crate::rules::fixtures::harness::{act, both, in_hand, put, sink_for, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;

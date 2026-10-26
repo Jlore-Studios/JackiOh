@@ -20,7 +20,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::{big_body, plain, taunter};
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
-use crate::rules::fixtures::harness::json_of;
+use crate::rules::fixtures::harness::{json_of, live, live_mut};
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -360,15 +360,6 @@ fn attacker_ids(events: &[GameEvent]) -> Vec<String> {
         .iter()
         .map(|event| event["attackerId"].as_str().expect("an attacker id").to_string())
         .collect()
-}
-
-/// The card as it stands in the state now (TS held the live object).
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
 fn unused() -> Exertion {

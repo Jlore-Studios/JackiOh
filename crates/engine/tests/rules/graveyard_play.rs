@@ -6,11 +6,11 @@ use jackioh_engine::mana::effective_cost;
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_json, matches_object, put, slot};
+use crate::rules::fixtures::harness::{act, act_result, events_json, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
-    only, pb_act, pb_playing, pb_reduce, plantation, plays_of, quest_card, round_trip, second_wind,
-    three_spell, titan, zero_spell,
+    only, pb_playing, plantation, plays_of, quest_card, round_trip, second_wind, three_spell, titan,
+    zero_spell,
 };
 
 fn hero_health(state: &GameState, player: PlayerId) -> i32 {
@@ -96,7 +96,7 @@ mod r454_e11_play_from_the_graveyard {
 
         assert_eq!(plays_json(&state, &spell.id, PlayerId::P1), Vec::<Value>::new());
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })
             ))
@@ -114,7 +114,7 @@ mod r454_e11_play_from_the_graveyard {
 
         let before = hero_health(&state, PlayerId::P2);
         let played = state.counters.played;
-        let result = pb_reduce(&state, with_player(only(&offered), PlayerId::P1));
+        let result = act_result(&state, with_player(only(&offered), PlayerId::P1));
         assert_eq!(result.error, None);
         let after = &result.state;
         assert_eq!(hero_health(after, PlayerId::P2), before - 1);
@@ -145,7 +145,7 @@ mod r454_e11_play_from_the_graveyard {
         let body = in_graveyard(&mut state, &grave_unit().id, PlayerId::P1);
         let before = hero_health(&state, PlayerId::P2);
 
-        let after = pb_act(
+        let after = act(
             &state,
             json!({ "type": "play", "instanceId": body.id, "zone": { "row": "units", "lane": 3 }, "playerId": "p1" }),
         );
@@ -179,7 +179,7 @@ mod r454_e11_play_from_the_graveyard {
         let theirs = in_graveyard(&mut state, &grave_spell().id, PlayerId::P2);
         assert_eq!(plays_json(&state, &theirs.id, PlayerId::P1), Vec::<Value>::new());
         assert!(no_card_in_hand(
-            &refusal(&pb_reduce(
+            &refusal(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": theirs.id, "playerId": "p1" })
             )),
@@ -219,7 +219,7 @@ mod r454_e11_play_from_the_graveyard {
         );
         let offered = plays_json(&state, &spell.id, PlayerId::P1);
         assert_eq!(offered.len(), 1);
-        let result = pb_reduce(&state, with_player(only(&offered), PlayerId::P1));
+        let result = act_result(&state, with_player(only(&offered), PlayerId::P1));
         assert_eq!(result.error, None);
         assert_eq!(
             only(&events_json(&result.events, GameEventType::CardPlayed))["costPaid"],
@@ -250,7 +250,7 @@ mod r454_e11_play_from_the_graveyard {
             Default::default(),
         );
         let again = in_graveyard(&mut taxed, &grave_spell().id, PlayerId::P1);
-        let paid = pb_reduce(
+        let paid = act_result(
             &taxed,
             json!({ "type": "play", "instanceId": again.id, "playerId": "p1" }),
         );
@@ -305,7 +305,7 @@ mod r454_e11_play_from_the_graveyard {
         let one = in_graveyard(&mut state, &grave_spell().id, PlayerId::P1);
         assert_eq!(plays_json(&state, &free.id, PlayerId::P1), Vec::<Value>::new());
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": free.id, "playerId": "p1" })
             ))
@@ -357,24 +357,24 @@ mod r454_e11_play_from_the_graveyard {
             ]
         );
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": body.id, "playerId": "p1" })
             ))
             .contains("spending Plague Counters")
         );
-        assert!(refusal(&pb_reduce(
+        assert!(refusal(&act_result(
             &state,
             json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 0 }, "playerId": "p1" })
         ))
         .contains("at least 1 Plague Counter"));
-        assert!(refusal(&pb_reduce(
+        assert!(refusal(&act_result(
             &state,
             json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 3 }, "playerId": "p1" })
         ))
         .contains("not that many"));
         let hand_card = only(&state.players.p1.hand);
-        let hand_play = pb_reduce(
+        let hand_play = act_result(
             &state,
             json!({
                 "type": "play",
@@ -385,7 +385,7 @@ mod r454_e11_play_from_the_graveyard {
         );
         assert!(refusal(&hand_play).contains("only a play from your graveyard can spend Plague Counters"));
 
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": body.id, "plague": { "from": field.id, "tokens": 1 }, "playerId": "p1" }),
         );
@@ -476,7 +476,7 @@ mod r454_e11_play_from_the_graveyard {
             Default::default(),
         );
         let trap = in_graveyard(&mut state, &grave_trap().id, PlayerId::P1);
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": trap.id, "zone": { "row": "backrow", "lane": 4 }, "playerId": "p1" }),
         );
@@ -560,7 +560,7 @@ mod r454_e11_play_from_the_graveyard {
             },
         );
         register_scripts(patched);
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({
                 "type": "play",
@@ -598,7 +598,7 @@ mod r454_e11_play_from_the_graveyard {
         let spell = in_graveyard(&mut state, &three_spell().id, PlayerId::P1);
         assert_eq!(plays_json(&state, &spell.id, PlayerId::P1), Vec::<Value>::new());
         assert!(
-            refusal(&pb_reduce(
+            refusal(&act_result(
                 &state,
                 json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" })
             ))
@@ -617,7 +617,7 @@ mod r454_e11_play_from_the_graveyard {
             Default::default(),
         );
         let asker = in_graveyard(&mut state, &discover_spell().id, PlayerId::P1);
-        let paused = pb_act(
+        let paused = act(
             &state,
             json!({ "type": "play", "instanceId": asker.id, "playerId": "p1" }),
         );
@@ -638,8 +638,8 @@ mod r454_e11_play_from_the_graveyard {
             .filter(|action| action.action_type() == ActionType::Answer)
             .collect();
         let answer = serde_json::to_value(only(&answers)).expect("an answer serialises");
-        let live = pb_act(&paused, with_player(answer.clone(), PlayerId::P1));
-        let replayed = pb_act(&round, with_player(answer, PlayerId::P1));
+        let live = act(&paused, with_player(answer.clone(), PlayerId::P1));
+        let replayed = act(&round, with_player(answer, PlayerId::P1));
         assert_eq!(hash_state(&replayed), hash_state(&live));
         assert_eq!(live.pending, None);
         assert!(ids(&live.players.p1.graveyard).contains(&asker.id));
@@ -655,7 +655,7 @@ mod r454_e11_play_from_the_graveyard {
             Default::default(),
         );
         let spell = in_graveyard(&mut state, &grave_spell().id, PlayerId::P1);
-        let result = pb_reduce(
+        let result = act_result(
             &state,
             json!({ "type": "play", "instanceId": spell.id, "playerId": "p1" }),
         );

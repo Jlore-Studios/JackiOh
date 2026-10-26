@@ -7,8 +7,8 @@ use jackioh_engine::effects::{damage, draw, lose_health, make_hero_immune, set_h
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::damage_combat::{act, grunt, playing, recorder};
-use crate::rules::fixtures::harness::{put, sink_for, slot};
+use crate::rules::fixtures::damage_combat::{grunt, playing, recorder};
+use crate::rules::fixtures::harness::{act, put, sink_for, slot};
 
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
 fn input(body: Value) -> ActionInput {

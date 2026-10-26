@@ -28,7 +28,6 @@
 //! to an `EngineSink` for each call, so one sink's rng and event list carry from call to call as TS's
 //! did while the test reads the state in between.
 
-use std::cell::Cell;
 use std::collections::BTreeSet;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -51,7 +50,9 @@ use jackioh_engine::triggers::SettleOptions;
 use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions};
 
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{both, in_hand, new_game, put as put_with, set_library, slot, spread};
+use super::fixtures::harness::{
+    act, act_result, both, in_hand, live, live_mut, new_game, put as put_with, set_library, slot, spread,
+};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -1019,19 +1020,6 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     put_with(state, def_id, at, json!({ "radiant": true }))
 }
 
-/// The card as it stands now in `state`, by id (TS read the live object).
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| panic!("{} is in no zone", card.id))
-}
-
-/// The card in `state`, by id, to write through (TS wrote the live object).
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    let id = card.id.clone();
-    find_instance_mut(state, &id).unwrap_or_else(|| panic!("{id} is in no zone"))
-}
-
 /// `sinkFor(state, events)` (fixtures/harness.ts): a sink whose rng starts at the state's cursor, as
 /// reduce does. Its events and rng are kept here and lent to an `EngineSink` over the state for each
 /// call, so they carry across calls exactly as TS's one sink object did.
@@ -1116,25 +1104,14 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-thread_local! {
-    /// TS's module-level `let nonce`.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
+/// `act_result` with the player apart from the body.
+fn act_result_as(state: &GameState, player_id: PlayerId, body: ActionBody) -> ReduceResult {
+    act_result(state, ActionInput { body, player_id })
 }
 
-fn act_result(state: &GameState, player_id: PlayerId, body: ActionBody) -> ReduceResult {
-    let nonce = NONCE.with(|counter| {
-        counter.set(counter.get() + 1);
-        counter.get()
-    });
-    reduce::reduce(state, &Action::new(body, player_id, format!("rc{nonce}")))
-}
-
-fn act(state: &GameState, player_id: PlayerId, body: ActionBody) -> GameState {
-    let result = act_result(state, player_id, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
+/// `act` with the player apart from the body.
+fn act_as(state: &GameState, player_id: PlayerId, body: ActionBody) -> GameState {
+    act(state, ActionInput { body, player_id })
 }
 
 /// A `play` action body from TS's object literal (its fields after `type: "play"`).
@@ -1166,9 +1143,9 @@ fn fuse_args(ingredients: &[&CardInstance], target: &CardInstance) -> FuseArgs {
 fn playing(seed: &str) -> GameState {
     let mut state = reduce::begin_game(&game(seed)).state;
     let keep = state.players.p1.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, P1, ActionBody::Mulligan { keep });
+    state = act_as(&state, P1, ActionBody::Mulligan { keep });
     let keep = state.players.p2.hand.iter().map(|card| card.id.clone()).collect();
-    state = act(&state, P2, ActionBody::Mulligan { keep });
+    state = act_as(&state, P2, ActionBody::Mulligan { keep });
     put(&mut state, LOG_CARD, slot(P1, Row::Backrow, NOTE_LANE));
     state
 }
@@ -2882,7 +2859,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             in_hand(&mut clean, CRIER, P1, 1).into_iter().next(),
             "a Cry unit in hand",
         );
-        let straight = act_result(
+        let straight = act_result_as(
             &clean,
             P1,
             play_body(json!({ "instanceId": clean_card.id, "zone": { "row": "units", "lane": 1 } })),
@@ -2899,7 +2876,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             in_hand(&mut state, CRIER, P1, 1).into_iter().next(),
             "a Cry unit in hand",
         );
-        let paused = act_result(
+        let paused = act_result_as(
             &state,
             P1,
             play_body(json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 1 } })),
@@ -2936,7 +2913,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         assert!(notes(&paused.state).is_empty());
 
         // The answer runs the trap's continuation and then the owed remainder, once each.
-        let answered = act(&paused.state, P2, answer(&paused.state));
+        let answered = act_as(&paused.state, P2, answer(&paused.state));
         assert_eq!(notes(&answered), vec!["answered", "cry"]);
         assert_eq!(
             notes(&answered)
@@ -2958,7 +2935,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             "a Cry unit in hand",
         );
 
-        let paused = act_result(
+        let paused = act_result_as(
             &state,
             P1,
             play_body(json!({ "instanceId": card.id, "zone": { "row": "units", "lane": 1 } })),
@@ -2971,7 +2948,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
         );
         assert!(notes(&paused.state).is_empty());
 
-        let answered = act(&paused.state, P2, answer(&paused.state));
+        let answered = act_as(&paused.state, P2, answer(&paused.state));
         // The trap resolved to completion first, then the play resumed at the step after the one that
         // paused: the Cry fires, after the trap, exactly once (R1).
         assert_eq!(notes(&answered), vec!["answered", "cry"]);
@@ -2981,7 +2958,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             zones::card_at(&answered, slot(P1, Row::Units, 1)).map(|placed| placed.def_id.clone()),
             Some(CRIER.to_string())
         );
-        assert!(act_result(&answered, P1, ActionBody::EndTurn).error.is_none());
+        assert!(act_result_as(&answered, P1, ActionBody::EndTurn).error.is_none());
 
         // R17's "the Cry is lost" is the other case, and only that case: a trap that takes the card off
         // the field leaves nothing to resolve, so the Cry never fires.
@@ -2991,7 +2968,7 @@ mod spec_11_r117_r118_pausing_the_play_pipeline_m3_gate {
             in_hand(&mut eaten, CRIER, P1, 1).into_iter().next(),
             "a Cry unit in hand",
         );
-        let after = act_result(
+        let after = act_result_as(
             &eaten,
             P1,
             play_body(json!({ "instanceId": doomed.id, "zone": { "row": "units", "lane": 1 } })),
@@ -3022,7 +2999,7 @@ mod spec_11_r122_r123_answering_a_prompt_and_a_declared_tribute_m3_gate {
 
         // p1 plays a Spell; p2's trap answers the `cardPlayed` and prompts, so the play stops between
         // step 4 and step 5 with its remainder owed (R117).
-        let paused = act_result(&state, P1, play_body(json!({ "instanceId": spell.id })));
+        let paused = act_result_as(&state, P1, play_body(json!({ "instanceId": spell.id })));
         assert!(paused.error.is_none());
         let mut held = paused.state;
         assert_eq!(held.pending.as_ref().map(|pending| pending.player_id), Some(P2));

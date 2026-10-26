@@ -14,7 +14,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::{armoured, plain, shielded};
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
-use crate::rules::fixtures::harness::json_of;
+use crate::rules::fixtures::harness::{json_of, live};
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -110,11 +110,6 @@ fn on_instance(instance: &CardInstance) -> Option<Vec<Selection>> {
     Some(vec![Selection::Instance {
         instance_id: instance.id.clone(),
     }])
-}
-
-/// The card as it stands in the state now (TS held the live object).
-fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
-    find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
 /// One field of every `damage` event, in order (TS `eventsOfType(events, "damage").map((e) => e.<key>)`).

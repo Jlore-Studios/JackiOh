@@ -9,9 +9,9 @@
 use jackioh_engine::testkit::*;
 
 use super::fixtures::combat as combat_fx;
-use super::fixtures::harness::{events_of_type, in_hand, json_of, put, slot};
+use super::fixtures::harness::{act, act_logged, events_of_type, in_hand, json_of, put, slot};
 use super::fixtures::prompt_harness::{
-    act, answer_keys, board, expect_replays, hand_card, open_as, replayable, round_trip,
+    answer_keys, board, expect_replays, hand_card, open_as, replayable, round_trip,
 };
 use super::fixtures::prompts as prompts_fx;
 
@@ -240,7 +240,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         );
         state.players.p1.library = vec![first, drum.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, play_body(PlayerId::P1, &card.id), None);
+        state = act(&state, play_body(PlayerId::P1, &card.id));
         let found = unit_top(&state, PlayerId::P1, 1);
         assert_eq!(found.as_ref().map(|unit| unit.id.clone()), Some(drum.id.clone()));
         assert_eq!(
@@ -266,7 +266,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         let eu = in_hand(&mut state, &prompts_fx::striker().id, PlayerId::P1, 1).remove(0);
         let body = in_hand(&mut state, &prompts_fx::grunt().id, PlayerId::P1, 1).remove(0);
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, play_body(PlayerId::P1, &zap.id), None);
+        state = act(&state, play_body(PlayerId::P1, &zap.id));
         assert!(ids_of(&state.players.p1.hand).contains(&eu.id));
         state = act(
             &state,
@@ -276,7 +276,6 @@ mod e26_summon_this_from_your_hand_or_deck {
                 "instanceId": body.id,
                 "zone": { "row": "units", "lane": 1 },
             }),
-            None,
         );
         assert_eq!(
             unit_top(&state, PlayerId::P1, 1).map(|unit| unit.id),
@@ -305,7 +304,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         );
         state.players.p1.library = vec![drum.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, play_body(PlayerId::P1, &card.id), None);
+        state = act(&state, play_body(PlayerId::P1, &card.id));
         assert_eq!(ids_of(&state.players.p1.library), vec![drum.id.clone()]);
         assert!(events_of_type(&last_applied_events(&state), GameEventType::Summoned).is_empty());
     }
@@ -321,7 +320,7 @@ mod e26_summon_this_from_your_hand_or_deck {
         );
         state.players.p1.library = vec![asker.clone()];
         let card = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, play_body(PlayerId::P1, &card.id), None);
+        state = act(&state, play_body(PlayerId::P1, &card.id));
         open_as(&state, PromptKind::Mode, PlayerId::P1);
         assert_eq!(
             json_of(view_for(&state, PlayerId::P2))["pending"],
@@ -356,7 +355,7 @@ mod e26_summon_this_from_your_hand_or_deck {
             .find(|card| card.def_id == wardrum_id)
             .cloned();
         let zap_id = hand_card(&state, PlayerId::P1, &zap).id.clone();
-        state = act(&state, play_body(PlayerId::P1, &zap_id), Some(&mut log));
+        state = act_logged(&state, play_body(PlayerId::P1, &zap_id), &mut log).state;
         // From the hand or the deck, wherever the deal left it, it answered the Spell.
         assert_eq!(
             unit_top(&state, PlayerId::P1, 0).map(|unit| unit.id),
@@ -386,7 +385,7 @@ mod e26_graveyard_triggers_classic_47 {
         );
         state.active = PlayerId::P2;
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P2, 1).remove(0);
-        let state = act(&state, play_body(PlayerId::P2, &zap.id), None);
+        let state = act(&state, play_body(PlayerId::P2, &zap.id));
         let moved = state
             .players
             .p1
@@ -429,7 +428,7 @@ mod e26_graveyard_triggers_classic_47 {
             json!({}),
         );
         let zap = in_hand(&mut state, &prompts_fx::spark().id, PlayerId::P1, 1).remove(0);
-        state = act(&state, play_body(PlayerId::P1, &zap.id), None);
+        state = act(&state, play_body(PlayerId::P1, &zap.id));
         assert_eq!(
             events_of_type(&last_applied_events(&state), GameEventType::TrapFired).len(),
             1

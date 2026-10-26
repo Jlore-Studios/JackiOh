@@ -15,11 +15,10 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::field::{
-    act, act_result, asker, banner, ears, flush, golem, listener, notes_of, playing, spatula, springer,
-    tesla, tower, wisp,
+    asker, banner, ears, flush, golem, listener, notes_of, playing, spatula, springer, tesla, tower, wisp,
 };
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, put, sink_for, slot,
+    act, act_result, events_of_type, in_hand, json_of, live, matches_object, put, sink_for, slot,
 };
 
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
@@ -114,11 +113,6 @@ fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
 
 fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
-}
-
-/// The card as it stands in `state` now, owned (TS held the live object).
-fn live(state: &GameState, id: &str) -> CardInstance {
-    by_id(state, id).clone()
 }
 
 fn fill_units(state: &mut GameState, player: PlayerId) {

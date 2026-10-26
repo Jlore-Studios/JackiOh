@@ -13,16 +13,11 @@ use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::restrictions::is_berserk;
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::EngineSink;
-use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instance_mut};
+use jackioh_engine::state::{GameState, find_instance, find_instance_mut};
 use jackioh_engine::view_for::view_for;
 
 use super::fixtures::damage_combat::{bot_loser, grunt, playing, recorder, replays_to};
-use super::fixtures::harness::{events_json, put, slot};
-
-/// The card under `id` as it stands in the state now (TS read the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
+use super::fixtures::harness::{events_json, live, put, slot};
 
 fn controlled_by(player: PlayerId) -> HookOptions {
     HookOptions {
@@ -62,7 +57,7 @@ mod e35_go_berserk {
                 let mut ctx = make_context(&mut sink, None, controlled_by(PlayerId::P2));
                 apply_effects(&[go_berserk(json_as(on(&bot.id)))], &mut ctx);
             }
-            assert!(is_berserk(live(&*sink.state, &bot.id)));
+            assert!(is_berserk(&live(&*sink.state, &bot.id)));
             assert_eq!(
                 events_json(&*sink.events, "marked"),
                 vec![
@@ -124,11 +119,11 @@ mod e35_go_berserk {
             let mut sink = EngineSink::new(&mut state, &mut events, &mut rng);
             let mut ctx = make_context(&mut sink, None, controlled_by(PlayerId::P1));
             apply_effects(&[go_berserk(json_as(on(&calm.id)))], &mut ctx);
-            assert!(!is_berserk(live(&*ctx.state, &calm.id)));
+            assert!(!is_berserk(&live(&*ctx.state, &calm.id)));
             apply_effects(&[go_berserk(json_as(on(&wild.id)))], &mut ctx);
             // A Vanilla takes text; Berserk is not text.
             apply_effects(&[vanilla(json_as(on(&wild.id)))], &mut ctx);
-            assert!(is_berserk(live(&*ctx.state, &wild.id)));
+            assert!(is_berserk(&live(&*ctx.state, &wild.id)));
             // Leaving the field resets it (R78).
             apply_effects(&[bounce(json_as(on(&wild.id)))], &mut ctx);
         }
@@ -196,7 +191,7 @@ mod e35_may_attack_again {
         assert!(has_attack(&now, &striker.id));
         // TS asked about the live object it had read before the effects ran, which the effect wrote
         // through: the card under its id now.
-        assert!(can_attack(&now, live(&now, &fresh.id), &enemy_hero()));
+        assert!(can_attack(&now, &live(&now, &fresh.id), &enemy_hero()));
     }
 
     #[test]
@@ -222,6 +217,6 @@ mod e35_may_attack_again {
                 &mut ctx,
             );
         }
-        assert!(!can_attack(&state, live(&state, &guard.id), &enemy_hero()));
+        assert!(!can_attack(&state, &live(&state, &guard.id), &enemy_hero()));
     }
 }

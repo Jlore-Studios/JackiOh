@@ -8,7 +8,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::harness::{events_of_type, json_of, new_game};
+use crate::rules::fixtures::harness::{act_ok, events_of_type, json_of, new_game, next_action};
 
 const SEED: &str = "r345";
 
@@ -16,25 +16,9 @@ fn decks() -> (Vec<String>, Vec<String>) {
     (vanilla_deck(DECK_SIZE, 1), vanilla_deck(DECK_SIZE, 21))
 }
 
-/// TS's module `let counter`: every action this file builds takes the next nonce.
-static COUNTER: AtomicU32 = AtomicU32::new(0);
-
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn action(body: ActionInput) -> Action {
-    let counter = COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
-    body.with_nonce(format!("r345-{counter}"))
-}
-
-fn act(state: &GameState, body: ActionInput) -> ReduceResult {
-    let result = reduce(state, &action(body));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
 }
 
 fn mulligans(state: &GameState) -> Vec<Action> {
@@ -46,7 +30,7 @@ fn mulligans(state: &GameState) -> Vec<Action> {
                 .iter()
                 .map(|card| card.id.clone())
                 .collect();
-            action(input(
+            next_action(input(
                 json!({ "type": "mulligan", "keep": keep, "playerId": player }),
             ))
         })
@@ -85,7 +69,7 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
 
     #[test]
     fn r345_turned_off_a_turn_with_nothing_left_waits_for_end_turn_turned_on_again_it_ends_at_once() {
-        let off = act(
+        let off = act_ok(
             &idle_turn(),
             input(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" })),
         );
@@ -93,14 +77,14 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
         assert_eq!(off.state.active, P1);
         assert_eq!(off.state.players.p1.auto_end_turn, Some(false));
 
-        let ended = act(&off.state, input(json!({ "type": "endTurn", "playerId": "p1" })));
+        let ended = act_ok(&off.state, input(json!({ "type": "endTurn", "playerId": "p1" })));
         assert_eq!(
             events_of_type(&ended.events, GameEventType::TurnAutoEnded).len(),
             0
         );
         assert_eq!(ended.state.active, P2);
 
-        let on = act(
+        let on = act_ok(
             &off.state,
             input(json!({ "type": "setAutoEndTurn", "enabled": true, "playerId": "p1" })),
         );
@@ -115,7 +99,7 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
     #[test]
     fn r345_the_default_is_r82s_and_the_preference_is_the_senders_own() {
         // p2 turning it off for p2 leaves p1's idle turn to end by itself, as R82 says.
-        let result = act(
+        let result = act_ok(
             &idle_turn(),
             input(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" })),
         );
@@ -132,14 +116,14 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
         let setup = begin_game(&new_game(SEED, Some(decks()))).state;
         assert!(setup.mulligan.is_some());
         for player in [P1, P2] {
-            let result = act(
+            let result = act_ok(
                 &setup,
                 input(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": player })),
             );
             assert!(result.events.is_empty());
             assert_eq!(result.state.players[player].auto_end_turn, Some(false));
         }
-        let on_their_turn = act(
+        let on_their_turn = act_ok(
             &started(),
             input(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" })),
         );
@@ -165,7 +149,7 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
 
     #[test]
     fn r345_a_view_carries_the_viewers_own_preference_only_and_nothing_while_it_is_on() {
-        let off = act(
+        let off = act_ok(
             &idle_turn(),
             input(json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" })),
         )
@@ -180,10 +164,10 @@ mod r345_the_automatic_turn_end_is_each_players_to_turn_off {
         let setup = begin_game(&new_game(SEED, Some(decks()))).state;
         let plain = mulligans(&setup);
         let mut toggled = vec![
-            action(input(
+            next_action(input(
                 json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }),
             )),
-            action(input(
+            next_action(input(
                 json!({ "type": "setAutoEndTurn", "enabled": true, "playerId": "p1" }),
             )),
         ];
@@ -262,7 +246,7 @@ mod r82_the_automatic_turn_end_looks_no_further_than_the_first_action_that_holds
         state.players.p1.hand = vec![playable, later.clone()];
 
         PRICED.store(0, Ordering::SeqCst);
-        let result = act(
+        let result = act_ok(
             &state,
             input(json!({ "type": "setAutoEndTurn", "enabled": true, "playerId": "p1" })),
         );

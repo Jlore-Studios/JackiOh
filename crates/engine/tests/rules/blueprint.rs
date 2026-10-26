@@ -15,8 +15,8 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::blueprint::*;
-use super::fixtures::harness::{put, sink_for, slot};
-use super::fixtures::play_pipeline_b::{pb_act, pb_reduce, plays_of, round_trip};
+use super::fixtures::harness::{act, act_result, put, sink_for, slot};
+use super::fixtures::play_pipeline_b::{plays_of, round_trip};
 use super::fixtures::prompt_harness::board;
 
 fn give_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
@@ -92,7 +92,7 @@ mod r1281_stack_base {
             |p| matches!(p, ActionBody::Play { zone: Some(z), .. } if z.row == Row::Units && z.lane == 1)
         ));
 
-        let state = pb_act(
+        let state = act(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -117,7 +117,7 @@ mod r1281_stack_base {
             |p| matches!(p, ActionBody::Play { zone: Some(z), .. } if z.row == Row::Units && z.lane == 1)
         ));
 
-        let res = pb_reduce(
+        let res = act_result(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -158,7 +158,7 @@ mod r1281_stack_base {
         let unit = give_hand(&mut state, "bp-cheap-unit", P1);
         state.players.p1.mana.current = 5;
 
-        let mut state = pb_act(
+        let mut state = act(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -187,7 +187,7 @@ mod r1281_stack_base {
         let unit = give_hand(&mut state, "bp-cry-unit", P1);
         state.players.p1.mana.current = 5;
 
-        let res = pb_reduce(
+        let res = act_result(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -214,7 +214,7 @@ mod r1281_stack_base {
         let unit_base = give_hand(&mut state_base, "bp-cry-unit", P1);
         state_base.players.p1.mana.current = 5;
 
-        let res_base = pb_reduce(
+        let res_base = act_result(
             &state_base,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit_base.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -286,7 +286,7 @@ mod r1282_wide_tribute {
             eu.id.clone(),
             eb.id.clone(),
         ];
-        let state = pb_act(
+        let state = act(
             &state,
             json!({
                 "type": "play",
@@ -563,7 +563,7 @@ mod r1284_capture {
 
         let unit = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare = give_hand(&mut state, "bp-cheap-unit", P2); // Keep R82 away
-        let res = pb_reduce(
+        let res = act_result(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -620,7 +620,7 @@ mod r1284_capture {
         let own_unit = give_hand(&mut state, "bp-cheap-unit", P1);
         let _spare = give_hand(&mut state, "bp-cheap-unit", P1);
         state.players.p1.mana.current = 5;
-        let res = pb_reduce(
+        let res = act_result(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": own_unit.id, "zone": { "row": "units", "lane": 2 } }),
         );
@@ -644,7 +644,7 @@ mod r1284_capture {
         let u_a = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare1 = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare2 = give_hand(&mut state, "bp-cheap-unit", P2);
-        let mut state = pb_act(
+        let mut state = act(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": u_a.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -653,7 +653,7 @@ mod r1284_capture {
 
         // Play unit B
         let u_b = give_hand(&mut state, "bp-cheap-unit", P2);
-        let state = pb_act(
+        let state = act(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": u_b.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -681,7 +681,7 @@ mod r1284_capture {
 
         let unit = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare = give_hand(&mut state, "bp-cheap-unit", P2);
-        let state = pb_act(
+        let state = act(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -709,12 +709,12 @@ mod r1284_capture {
         let u_a = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare1 = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare2 = give_hand(&mut state, "bp-cheap-unit", P2);
-        let mut state = pb_act(
+        let mut state = act(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": u_a.id, "zone": { "row": "units", "lane": 1 } }),
         );
         let u_b = give_hand(&mut state, "bp-cheap-unit", P2);
-        let mut state = pb_act(
+        let mut state = act(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": u_b.id, "zone": { "row": "units", "lane": 1 } }),
         );
@@ -766,7 +766,7 @@ mod r1284_capture {
         state.players.p2.mana.current = 5;
         let unit = give_hand(&mut state, "bp-cheap-unit", P2);
         let _spare = give_hand(&mut state, "bp-cheap-unit", P2);
-        let state = pb_act(
+        let state = act(
             &state,
             json!({ "type": "play", "playerId": "p2", "instanceId": unit.id, "zone": { "row": "units", "lane": 1 } }),
         );

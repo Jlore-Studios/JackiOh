@@ -4,10 +4,14 @@
 //! calling test's thread only. Surface contract: docs/v0.3.0/SURFACE.md §8.
 //! `put` hands back an owned copy of the placed card; a test that changes it writes through
 //! `find_instance_mut`.
-//! The rules tests take `both`, `spread`, `json_of` and `events_json` from here rather than a
-//! copy (#1777; crates/tools/tests/acceptance.rs refuses a local `both` or `spread`).
+//! The rules tests take `both`, `spread`, `json_of`, `events_json`, the nonce and the action, card and
+//! effect helpers from here rather than a copy (#1777, #1997; crates/tools/tests/acceptance.rs refuses
+//! a copy and a local `static NONCE`).
+
+use std::cell::Cell;
 
 use jackioh_engine::testkit::*;
+use serde::Serialize;
 
 use super::catalog::{vanilla_catalog, vanilla_deck};
 use super::combat::{COMBAT_SCRIPTS, combat_catalog};
@@ -127,6 +131,106 @@ pub fn spread(mut base: Value, extra: Value) -> Value {
         }
     }
     base
+}
+
+thread_local! {
+    /// The rules tests' one nonce counter (#1997). libtest runs each test on a thread of its own, so a
+    /// test's nonces count `act-1`, `act-2`, … on every run.
+    static NONCE: Cell<u32> = const { Cell::new(0) };
+}
+
+/// The calling test's next nonce: fresh within the test, so `reduce`'s dedupe (§9.3) never hands back
+/// an earlier action's result in place of this one.
+pub fn next_nonce() -> String {
+    NONCE.with(|count| {
+        count.set(count.get() + 1);
+        format!("act-{}", count.get())
+    })
+}
+
+/// `body` as an action with the next nonce. `body` is an `ActionInput` or its JSON literal, `playerId`
+/// included; a nonce it carries is replaced.
+pub fn next_action(body: impl Serialize) -> Action {
+    json_as::<ActionInput>(json_of(body)).with_nonce(next_nonce())
+}
+
+/// `reduce` with the next nonce; a refusal comes back in the result.
+pub fn act_result(state: &GameState, body: impl Serialize) -> ReduceResult {
+    reduce(state, &next_action(body))
+}
+
+/// `act_result` for an action that must be accepted: a refusal panics with the action's type and reason.
+pub fn act_ok(state: &GameState, body: impl Serialize) -> ReduceResult {
+    let action = next_action(body);
+    accepted(&action, reduce(state, &action))
+}
+
+/// `act_ok`'s state.
+pub fn act(state: &GameState, body: impl Serialize) -> GameState {
+    act_ok(state, body).state
+}
+
+/// `act_ok`, the action appended to `log`, for a test that replays what it played (§9.2).
+pub fn act_logged(state: &GameState, body: impl Serialize, log: &mut Vec<Action>) -> ReduceResult {
+    let action = next_action(body);
+    let result = accepted(&action, reduce(state, &action));
+    log.push(action);
+    result
+}
+
+/// `act` with the nonce given, so two copies of one state sent the same action stay equal, `applied`
+/// and all.
+pub fn act_with_nonce(state: &GameState, body: impl Serialize, nonce: &str) -> GameState {
+    let action = json_as::<ActionInput>(json_of(body)).with_nonce(nonce);
+    accepted(&action, reduce(state, &action)).state
+}
+
+fn accepted(action: &Action, result: ReduceResult) -> ReduceResult {
+    if let Some(error) = &result.error {
+        panic!("{} refused: {error}", action.action_type());
+    }
+    result
+}
+
+/// The card as it stands in `state` now, by its id or a copy of it (TS held the live object).
+pub fn live(state: &GameState, card: impl Into<CardRef>) -> CardInstance {
+    let id = ref_id(card.into());
+    find_instance(state, &id)
+        .cloned()
+        .unwrap_or_else(|| panic!("no card {id} in the state"))
+}
+
+/// The card in `state`, by its id or a copy of it, to write through (TS wrote the live object).
+pub fn live_mut(state: &mut GameState, card: impl Into<CardRef>) -> &mut CardInstance {
+    let id = ref_id(card.into());
+    find_instance_mut(state, &id).unwrap_or_else(|| panic!("no card {id} in the state"))
+}
+
+fn ref_id(card: CardRef) -> String {
+    match card {
+        CardRef::Text(id) | CardRef::Instance { id, .. } => id,
+    }
+}
+
+/// One effect applied straight through its `apply` as `controller`'s, with no card of its own and no
+/// settle, the rng's cursor written back; the events it emitted.
+pub fn run_effect(state: &mut GameState, effect: Effect, controller: PlayerId) -> Vec<GameEvent> {
+    let mut events: Vec<GameEvent> = Vec::new();
+    let mut rng = Rng::new(&state.seed, state.rng_cursor);
+    {
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        let mut ctx = make_context(
+            &mut sink,
+            None,
+            HookOptions {
+                controller: Some(controller),
+                ..Default::default()
+            },
+        );
+        (effect.apply)(&mut ctx);
+    }
+    state.rng_cursor = rng.cursor();
+    events
 }
 
 #[derive(Clone, Debug)]

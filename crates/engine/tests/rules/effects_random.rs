@@ -38,7 +38,7 @@ use jackioh_engine::state::{CardInstance, GameState, find_instance, find_instanc
 use jackioh_engine::zones::{card_at, lock_zone};
 
 use super::fixtures::feng_shui::{FS, register_feng_shui};
-use super::fixtures::harness::{events_json, new_game, put, set_library, slot};
+use super::fixtures::harness::{events_json, live, new_game, put, set_library, slot};
 
 // ---------------------------------------------------------------------------
 // Fixture cards. Indices start above 1600 so they never collide with another test file's locals.
@@ -203,14 +203,9 @@ fn ids_of_type(events: &[GameEvent], kind: &str) -> Vec<String> {
         .collect()
 }
 
-/// The card under `id` as it stands in the state now (TS read the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
-
 /// `toMatchObject` on a unit view's `attack` and `maxHealth`.
 fn stats_of(state: &GameState, card: &CardInstance) -> (i32, i32) {
-    let view = unit_view(state, live(state, &card.id));
+    let view = unit_view(state, &live(state, &card.id));
     (view.attack, view.max_health)
 }
 
@@ -1098,7 +1093,7 @@ mod r77_r102_fuse_cards_s6_3_fuse_s8_5_c99_s8_4_c85 {
             }
         );
         assert_eq!(now.damage, 1);
-        let view = unit_view(&state, now);
+        let view = unit_view(&state, &now);
         assert_eq!((view.attack, view.max_health, view.health), (3, 4, 3));
         // The other ingredient ceased to exist: no graveyard, no death, no pile.
         assert!(card_at(&state, slot(PlayerId::P1, Row::Units, 2)).is_none());
@@ -1311,7 +1306,7 @@ mod r1085_grant_keywords_random_unit {
         // One pick, and exactly one of the two Units holds both keywords afterwards.
         assert_eq!(draws(&ran), 1);
         let kinds_of = |id: &str| -> Vec<KeywordKind> {
-            keywords_of(&state, live(&state, id))
+            keywords_of(&state, &live(&state, id))
                 .iter()
                 .map(|keyword| keyword.kind())
                 .collect()

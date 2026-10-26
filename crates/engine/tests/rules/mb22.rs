@@ -12,9 +12,9 @@
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use super::fixtures::harness::{in_hand, put, set_library, sink_for, slot};
+use super::fixtures::harness::{act, act_result, in_hand, put, set_library, sink_for, slot};
 use super::fixtures::mb22 as fx;
-use super::fixtures::mb22::{act, act_result, playing, recorder, replays_to};
+use super::fixtures::mb22::{playing, recorder, replays_to};
 
 fn play_action(player: PlayerId, instance_id: &str) -> Value {
     json!({ "type": "play", "instanceId": instance_id, "playerId": player })

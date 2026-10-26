@@ -4,14 +4,13 @@
 //! smallest script that has them, and a Trap and a Field Trap to put face-down. The engine never
 //! imports packages/cards (CLAUDE.md), so the real card's test covers the same cases again.
 
-use std::cell::Cell;
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
 use super::catalog::{spell_def, vanilla_deck};
-use super::harness::setup_catalog;
+use super::harness::{act_logged, setup_catalog};
 
 /// C+ #29's shape: base Discovers from the caster's last board, Radiant adds 3 random; each costs (0).
 pub const PORTAL: &str = "lb-portal";
@@ -94,35 +93,6 @@ pub static LB_DECKS: LazyLock<(Vec<String>, Vec<String>)> = LazyLock::new(|| {
     (first, vanilla_deck(DECK_SIZE, 21))
 });
 
-thread_local! {
-    /// TS's module `let nonce`: one counter per test thread, so every action a test sends is fresh.
-    static NONCE: Cell<u32> = const { Cell::new(0) };
-}
-
-/// One action through `reduce`, appended to `log`; panics on a refusal (TS threw).
-pub fn act(state: &GameState, log: &mut Vec<Action>, body: Value) -> GameState {
-    let nonce = NONCE.with(|n| {
-        n.set(n.get() + 1);
-        n.get()
-    });
-    let kind = body
-        .get("type")
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_string();
-    let mut fields = body;
-    if let Some(object) = fields.as_object_mut() {
-        object.insert("nonce".to_string(), json!(format!("lb{nonce}")));
-    }
-    let action: Action = json_as(fields);
-    let result = reduce(state, &action);
-    if let Some(error) = result.error {
-        panic!("{kind} refused: {error}");
-    }
-    log.push(action);
-    result.state
-}
-
 /// What `portal_game` answers: TS's `{ seed, state, log }`.
 pub struct PortalGame {
     pub seed: String,
@@ -153,11 +123,12 @@ pub fn portal_game(seed_base: &str, last_boards: Option<LastBoardInput>) -> Port
                 .iter()
                 .map(|card| card.id.clone())
                 .collect();
-            state = act(
+            state = act_logged(
                 &state,
-                &mut log,
                 json!({ "type": "mulligan", "keep": keep, "playerId": player }),
-            );
+                &mut log,
+            )
+            .state;
         }
         return PortalGame { seed, state, log };
     }

@@ -6,13 +6,11 @@
 // Decks hold a card once (§2.6 L3), so the fixtures are one def each: `fx-cod-N` casts on draw,
 // `fx-qd-N` is a Quickdraw Field Spell, `fx-dual` is both.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::choose_mode;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::setup_catalog;
+use crate::rules::fixtures::harness::{act_logged, setup_catalog};
 
 const POOL: i32 = 30;
 const DUAL: &str = "fx-dual";
@@ -142,30 +140,6 @@ fn start(
     begin_game(&game)
 }
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-struct Acted {
-    state: GameState,
-    events: Vec<GameEvent>,
-    action: Action,
-}
-
-fn act(state: &GameState, body: Value) -> Acted {
-    let n = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let input: ActionInput = json_as(body);
-    let kind = input.body.action_type();
-    let action = input.with_nonce(format!("aside-{n}"));
-    let result = reduce(state, &action);
-    if let Some(error) = &result.error {
-        panic!("{kind} refused: {error}");
-    }
-    Acted {
-        state: result.state,
-        events: result.events,
-        action,
-    }
-}
-
 struct Answered {
     state: GameState,
     events: Vec<GameEvent>,
@@ -185,13 +159,13 @@ fn answer_both(state: &GameState, keep: PerPlayerOpt<Vec<String>>) -> Answered {
                 .map(|card| card.id.clone())
                 .collect()
         });
-        let answered = act(
+        let answered = act_logged(
             &next,
             json!({ "type": "mulligan", "keep": kept, "playerId": player }),
+            &mut log,
         );
         next = answered.state;
         events.extend(answered.events);
-        log.push(answered.action);
     }
     Answered {
         state: next,
@@ -714,7 +688,8 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
             serde_json::from_value(serde_json::to_value(&answered.state).unwrap()).unwrap();
         assert_eq!(round_tripped, answered.state);
 
-        let done = act(
+        let mut log = answered.log.clone();
+        let done = act_logged(
             &answered.state,
             json!({
                 "type": "answer",
@@ -722,12 +697,11 @@ mod r748_a_hand_the_other_cards_cannot_fill_takes_cast_on_draw_cards_cast_at_the
                 "selection": [{ "pick": "mode", "option": "ok" }],
                 "playerId": "p1",
             }),
+            &mut log,
         );
         assert!(done.state.turn >= 1);
         assert!(done.state.players.p1.graveyard.len() as i32 >= OPENING_DRAW[0]);
 
-        let mut log = answered.log.clone();
-        log.push(done.action.clone());
         let replayed = fold(&FoldArgs {
             seed,
             decks,

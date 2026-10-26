@@ -22,7 +22,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::harness::{
-    both, events_of_type, in_hand, json_of, matches_object, new_game, put, slot,
+    both, events_of_type, in_hand, json_of, live, live_mut, matches_object, new_game, put, slot,
 };
 
 // Fixtures.
@@ -334,17 +334,6 @@ fn fuse_in(state: &mut GameState, sink: &mut Sink, args: Value) -> Option<CardIn
 fn fuse_fresh(state: &mut GameState, args: Value) -> Option<CardInstance> {
     let mut sink = Sink::for_state(state);
     fuse_in(state, &mut sink, args)
-}
-
-/// The card under `id` as the state holds it now.
-fn live(state: &GameState, id: &str) -> CardInstance {
-    find_instance(state, id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {id}"))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
-    find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
 /// The card placed, then made Radiant.

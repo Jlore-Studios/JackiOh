@@ -4,28 +4,10 @@
 //! first spends the exertion a switch needs, and `legalActions` and the reducer's refusal agree on it
 //! because both ask `combat.hasExertion` (BUILD M2-T1).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{deft_duelist, plain, windfurier};
-use crate::rules::fixtures::harness::{new_game, put, slot};
-
-/// TS's module `let nonce = 0`.
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn attempt(state: &GameState, body: ActionInput) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    reduce(state, &body.with_nonce(format!("wf{nonce}")))
-}
-
-fn act(state: &GameState, body: ActionInput) -> GameState {
-    let result = attempt(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
+use crate::rules::fixtures::harness::{act, act_result, new_game, put, slot};
 
 fn input(body: ActionBody, player_id: PlayerId) -> ActionInput {
     ActionInput { body, player_id }
@@ -130,7 +112,7 @@ mod r636_windfury {
 
         // The third is refused the way a second attack by any unit is, and `legalActions` no longer lists it.
         assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 1)));
-        expect_refusal(attempt(&state, attack_body(&state, 1)).error, "already acted");
+        expect_refusal(act_result(&state, attack_body(&state, 1)).error, "already acted");
         assert_eq!(state.players.p2.hero.health, 24);
     }
 
@@ -164,7 +146,7 @@ mod r636_windfury {
                 .any(|a| matches!(a, ActionBody::SwitchPosition { instance_id } if *instance_id == wind.id))
         );
         expect_refusal(
-            attempt(
+            act_result(
                 &state,
                 input(
                     ActionBody::SwitchPosition {
@@ -209,7 +191,7 @@ mod r636_windfury {
         assert!(!has_exertion(&state, &wind, ExertionKind::Attack));
         assert!(!offers_attack(&state, &wind));
         expect_refusal(
-            attempt(
+            act_result(
                 &state,
                 input(
                     ActionBody::Attack {
@@ -284,7 +266,7 @@ mod r636_windfury {
         unit_at_mut(&mut state, PlayerId::P1, 2).vanilla = true;
         assert_eq!(attacks_per_turn(&state, unit_in(&state, PlayerId::P1, 2)), 1);
         assert!(!offers_attack(&state, unit_in(&state, PlayerId::P1, 2)));
-        expect_refusal(attempt(&state, attack_body(&state, 2)).error, "already acted");
+        expect_refusal(act_result(&state, attack_body(&state, 2)).error, "already acted");
     }
 
     #[test]

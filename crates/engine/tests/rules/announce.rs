@@ -10,17 +10,13 @@
 //! JSON round trip, replay from the log), the steal and its hand cap, and the redaction of a face-down
 //! card's announce.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::announce::open_announces;
 use jackioh_engine::testkit::*;
 use jackioh_engine::zones::card_at;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_json, in_hand, new_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{events_json, in_hand, new_game, next_nonce, put, setup_catalog, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, register_play_a, with_play_a};
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
 
 /// A game in p1's first main phase, both mulligans kept, with this file's fixtures registered.
 fn game(seed: &str) -> GameState {
@@ -42,10 +38,9 @@ fn game(seed: &str) -> GameState {
 
 /// `{ ...body, playerId, nonce }` reduced; a refusal panics.
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
-    let n = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let mut action = body;
     action["playerId"] = json!(player_id);
-    action["nonce"] = json!(format!("pa-an-{n}"));
+    action["nonce"] = json!(next_nonce());
     let result = reduce(state, &json_as::<Action>(action));
     if let Some(error) = &result.error {
         panic!("{error}");

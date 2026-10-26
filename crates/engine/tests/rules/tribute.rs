@@ -11,14 +11,13 @@
 //! Fixtures are prefixed `tb-` and indexed above 1550 (BUILD §0). The Sheep carries index `T-sheep`
 //! and the `tributeWorth` flag its script declares.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::effects::{damage, sacrifice};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    both, events_of_type, in_hand, matches_object, new_game, put, sink_for, slot, spread,
+    act, act_result, both, events_of_type, in_hand, live, matches_object, new_game, put, sink_for, slot,
+    spread,
 };
 
 // Fixtures.
@@ -245,22 +244,6 @@ fn scripts() -> IndexMap<String, CardScripts> {
 
 // Harness.
 
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
-    let input: ActionInput = json_as(body);
-    reduce(state, &input.with_nonce(format!("tb{nonce}")))
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = result.error {
-        panic!("{error}");
-    }
-    result.state
-}
-
 fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
@@ -308,13 +291,6 @@ fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .iter()
         .map(|card| card.id.clone())
         .collect()
-}
-
-/// The card as it stands in the state now.
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .expect("the card is in the state")
 }
 
 /// `why_choices_refused` for p1's play of `card` into a units lane, as the refusal message if any.

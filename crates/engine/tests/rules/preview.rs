@@ -24,7 +24,9 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, sink_for, slot, spread};
+use crate::rules::fixtures::harness::{
+    in_hand, live, live_mut, new_game, put, set_library, sink_for, slot, spread,
+};
 
 // Fixtures
 
@@ -329,17 +331,6 @@ fn game(seed: &str) -> GameState {
 
 fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("expected a card")
-}
-
-/// The card as it stands in `state` now.
-fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-    find_instance(state, &card.id)
-        .cloned()
-        .unwrap_or_else(|| panic!("no card {}", card.id))
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("no card {}", card.id))
 }
 
 fn own_hand(view: &PlayerView) -> Vec<CardView> {

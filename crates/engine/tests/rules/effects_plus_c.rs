@@ -19,7 +19,7 @@ use jackioh_engine::scripts::registered_scripts;
 use jackioh_engine::state::{CardInstance, GameState, find_instance_mut};
 use jackioh_engine::view_for::view_for;
 
-use super::fixtures::harness::{both, in_hand, new_game, put, slot};
+use super::fixtures::harness::{act_ok, both, in_hand, new_game, put, slot};
 
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let face = json!({ "keywords": [], "text": name });
@@ -196,18 +196,6 @@ fn local_scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// `reduce` with a fresh nonce, panicking on a refusal. The game's count of applied actions numbers the
-/// nonces, unique within a game (the state hash leaves `applied` out, §5.2).
-fn act(state: &GameState, body: Value) -> ReduceResult {
-    let mut action = body;
-    action["nonce"] = json!(format!("pcv{}", state.applied.len() + 1));
-    let result = reduce(state, &json_as::<Action>(action));
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
-
 /// p1's main phase, hands empty, this file's cards registered.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
@@ -217,7 +205,7 @@ fn playing(seed: &str) -> GameState {
             .iter()
             .map(|c| c.id.clone())
             .collect();
-        state = act(
+        state = act_ok(
             &state,
             json!({ "type": "mulligan", "keep": keep, "playerId": player_id }),
         )
@@ -261,7 +249,7 @@ fn stormed<T>(
         .expect("the storm")
         .radiant = options.radiant;
     in_hand(&mut state, &plain().id, PlayerId::P1, 1);
-    let played = act(
+    let played = act_ok(
         &state,
         json!({ "type": "play", "instanceId": card.id, "playerId": "p1" }),
     );
@@ -519,7 +507,7 @@ mod r59_damage_rounds_until_death_each_round_checks_state_and_the_storm_stops_af
         assert_eq!(thawed, state);
         let pending = thawed.pending.clone().expect("a prompt");
         let answer = |s: &GameState| {
-            act(
+            act_ok(
                 s,
                 json!({
                     "type": "answer",
@@ -583,7 +571,7 @@ mod r23_choose_from_hands_where_only_the_cards_it_admits_are_offered {
             .iter()
             .flat_map(|def_id| in_hand(&mut state, def_id, PlayerId::P1, 1))
             .collect();
-        let ended = act(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+        let ended = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
         (held, ended)
     }
 

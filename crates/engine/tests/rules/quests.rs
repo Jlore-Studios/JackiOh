@@ -2,8 +2,6 @@
 //! through the quest fixture cards, so the engine half of Classic #90 In Too Deep stands without the
 //! cards crate: goals, completion at the state check, the reward prompt, Radiant paths, JSON pause, replay, views.
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use serde::Serialize;
 
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
@@ -14,7 +12,8 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, json_of, matches_object, new_game, put, set_library, setup_catalog, slot,
+    act_logged, act_ok, events_of_type, in_hand, json_of, live_mut, matches_object, new_game, put,
+    set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::prompt_harness::{answer_keys, open_as, round_trip};
 use crate::rules::fixtures::quests::{
@@ -50,30 +49,12 @@ fn quest_board(seed: &str) -> GameState {
     state
 }
 
-struct Step {
-    state: GameState,
-    events: Vec<GameEvent>,
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act(state: &GameState, body: Value, log: Option<&mut Vec<Action>>) -> Step {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let action = json_as::<ActionInput>(body).with_nonce(format!("qt{nonce}"));
-    let result = reduce(state, &action);
-    if let Some(error) = &result.error {
-        panic!("{} refused: {error}", action.action_type());
-    }
-    if let Some(log) = log {
-        log.push(action);
-    }
-    Step {
-        state: result.state,
-        events: result.events,
-    }
-}
-
-fn play(state: &GameState, card: &CardInstance, targets: &[&str], log: Option<&mut Vec<Action>>) -> Step {
+fn play(
+    state: &GameState,
+    card: &CardInstance,
+    targets: &[&str],
+    log: Option<&mut Vec<Action>>,
+) -> ReduceResult {
     let targets: Vec<Value> = targets
         .iter()
         .map(|id| match id.strip_prefix("hero-") {
@@ -81,11 +62,11 @@ fn play(state: &GameState, card: &CardInstance, targets: &[&str], log: Option<&m
             None => json!({ "pick": "instance", "instanceId": id }),
         })
         .collect();
-    act(
-        state,
-        json!({ "type": "play", "playerId": card.owner, "instanceId": card.id, "targets": targets }),
-        log,
-    )
+    let body = json!({ "type": "play", "playerId": card.owner, "instanceId": card.id, "targets": targets });
+    match log {
+        Some(log) => act_logged(state, body, log),
+        None => act_ok(state, body),
+    }
 }
 
 fn hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
@@ -95,7 +76,7 @@ fn hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
         .expect(def_id)
 }
 
-fn play_new(state: &mut GameState, def_id: &str, player: PlayerId, targets: &[&str]) -> Step {
+fn play_new(state: &mut GameState, def_id: &str, player: PlayerId, targets: &[&str]) -> ReduceResult {
     let card = hand(state, def_id, player);
     play(state, &card, targets, None)
 }
@@ -168,13 +149,9 @@ fn shown_to(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Option<
     })
 }
 
-fn end_turn(state: &GameState) -> Step {
+fn end_turn(state: &GameState) -> ReduceResult {
     let player = state.active;
-    act(state, json!({ "type": "endTurn", "playerId": player }), None)
-}
-
-fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
-    find_instance_mut(state, &card.id).expect("the card")
+    act_ok(state, json!({ "type": "endTurn", "playerId": player }))
 }
 
 fn has_indestructible(state: &GameState, unit: &CardInstance) -> bool {
@@ -223,7 +200,9 @@ mod r404_e33_quests_the_first_quest_opens_as_the_card_enters {
             json!({}),
         );
         assert!(quest_memory_of(&card).is_none());
-        let Step { state: after, events } = play_new(&mut state, &draw_two().id, P1, &[]);
+        let ReduceResult {
+            state: after, events, ..
+        } = play_new(&mut state, &draw_two().id, P1, &[]);
         assert_eq!(completed(&events, &card), [ONLY_QUEST]);
         assert_eq!(memory_of(&after, &card)["done"], json!([ONLY_QUEST]));
     }
@@ -527,10 +506,9 @@ mod e33_quests_each_goal_counted_and_not_counted {
         live_mut(&mut state, &wall).damage = 0;
         let Played { state: s1, card, .. } = goal(&mut state, "damageToEnemies", P1);
         // The 3/3 Rush Token and the 3/3 trade: both die in the check after the combat, before dispatch.
-        let mut fight = act(
+        let mut fight = act_ok(
             &s1,
             json!({ "type": "attack", "playerId": "p1", "attackerId": token.id, "targetId": wall.id }),
-            None,
         );
         assert!(find_instance(&fight.state, &token.id).is_none());
         assert_eq!(progress_of(&fight.state, &card, ONLY_QUEST), 3);
@@ -584,10 +562,9 @@ mod e33_quests_each_goal_counted_and_not_counted {
             .map(|quest| json_of(&quest.open[0]));
         assert!(open.is_some_and(|open| matches_object(&open, &json!({ "progress": 2, "goal": 3 }))));
         let unit = hand(&mut s1, &plain.id, P1);
-        let placed = act(
+        let placed = act_ok(
             &s1,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit.id }),
-            None,
         );
         assert_eq!(completed(&placed.events, &card), [ONLY_QUEST]);
     }
@@ -604,10 +581,9 @@ mod e33_quests_each_goal_counted_and_not_counted {
         } = goal(&mut state, "unitTotals", P1);
         assert!(completed(&events, &card).is_empty());
         let unit = hand(&mut s1, &plain.id, P1);
-        let placed = act(
+        let placed = act_ok(
             &s1,
             json!({ "type": "play", "playerId": "p1", "instanceId": unit.id }),
-            None,
         );
         assert_eq!(completed(&placed.events, &card), [ONLY_QUEST]);
     }
@@ -1007,10 +983,10 @@ mod e33_quests_the_view_hidden_information_and_replay {
         .state;
         for player in [P1, P2] {
             let keep: Vec<String> = state.players[player].hand.iter().map(|c| c.id.clone()).collect();
-            state = act(
+            state = act_logged(
                 &state,
                 json!({ "type": "mulligan", "playerId": player, "keep": keep }),
-                Some(&mut log),
+                &mut log,
             )
             .state;
         }
@@ -1023,18 +999,8 @@ mod e33_quests_the_view_hidden_information_and_replay {
             .expect("the tree in hand")
             .clone();
         state = play(&state, &tree_card, &[], Some(&mut log)).state;
-        state = act(
-            &state,
-            json!({ "type": "endTurn", "playerId": "p1" }),
-            Some(&mut log),
-        )
-        .state;
-        state = act(
-            &state,
-            json!({ "type": "endTurn", "playerId": "p2" }),
-            Some(&mut log),
-        )
-        .state;
+        state = act_logged(&state, json!({ "type": "endTurn", "playerId": "p1" }), &mut log).state;
+        state = act_logged(&state, json!({ "type": "endTurn", "playerId": "p2" }), &mut log).state;
         assert_eq!(progress_of(&state, &tree_card, "draws"), 1);
         let twice = state
             .players
@@ -1046,13 +1012,13 @@ mod e33_quests_the_view_hidden_information_and_replay {
             .clone();
         state = play(&state, &twice, &[], Some(&mut log)).state;
         let pending = open_as(&state, PromptKind::Reward, P1);
-        state = act(
+        state = act_logged(
             &state,
             json!({
                 "type": "answer", "playerId": "p1", "choiceId": pending.id,
                 "selection": [{ "pick": "mode", "option": "heal" }],
             }),
-            Some(&mut log),
+            &mut log,
         )
         .state;
         assert_eq!(memory_of(&state, &tree_card)["active"], json!(["kill"]));

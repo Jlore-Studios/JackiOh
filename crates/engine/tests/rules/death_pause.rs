@@ -12,11 +12,9 @@
 //! Controls: with nothing asking, the hooks run in one call and `state.work` stays empty.
 //! Fixtures: defs prefixed `dp-`, indexed from 2600, so they cannot collide with another file (BUILD §0).
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use jackioh_engine::play_steps::{PLAY_WORK_KIND, run_of};
 use jackioh_engine::prompts::{OpenPromptArgs, open_prompt, resume_self};
-use jackioh_engine::reduce::{begin_game, reduce};
+use jackioh_engine::reduce::begin_game;
 use jackioh_engine::resolve::{CastOptions, cast_card};
 use jackioh_engine::state_check::{DEATHS_WORK, owed_deaths_of, state_check};
 use jackioh_engine::testkit::*;
@@ -24,7 +22,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::work::owed_work;
 use jackioh_engine::zones::card_at;
 
-use crate::rules::fixtures::harness::{both, events_of_type, json_of, new_game, put, round_trip, slot};
+use crate::rules::fixtures::harness::{
+    act, act_result, both, events_of_type, json_of, new_game, put, round_trip, slot,
+};
 
 // Fixtures.
 
@@ -253,24 +253,6 @@ fn game(seed: &str) -> GameState {
     registered.extend(scripts());
     register_scripts(registered);
     state
-}
-
-static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn act_result(state: &GameState, body: Value) -> ReduceResult {
-    let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
-    let mut action = body;
-    action["nonce"] = json!(format!("dp{nonce}"));
-    let action: Action = json_as(action);
-    reduce(state, &action)
-}
-
-fn act(state: &GameState, body: Value) -> GameState {
-    let result = act_result(state, body);
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result.state
 }
 
 fn ids(cards: &[CardInstance]) -> Vec<String> {

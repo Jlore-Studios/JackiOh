@@ -11,11 +11,11 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{json_of, setup_catalog};
+use crate::rules::fixtures::harness::{act, act_logged, json_of, run_effect, setup_catalog};
 use crate::rules::fixtures::ky_competition::{
     KENNY_RUSH_AT, competition, competition_qd, kenny, register_ky_competition_fixtures,
 };
-use crate::rules::fixtures::prompt_harness::{act, answer_keys, board, cast_now, must, open_as, round_trip};
+use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
 
 /// p1's main phase with the fixture Competition cast and its first question open.
 fn asked(seed: &str, radiant: bool) -> GameState {
@@ -253,7 +253,6 @@ mod m_plus_20_the_sequence_r1184000 {
             playing = act(
                 &playing,
                 json!({ "type": "answer", "playerId": "p1", "choiceId": choice_id, "selection": selection }),
-                None,
             );
             answers += 1;
             assert!(answers <= KY_COMPETITION_MAX);
@@ -421,11 +420,12 @@ mod m_plus_20_the_sequence_r1184000 {
                 .iter()
                 .map(|card| card.id.clone())
                 .collect();
-            state = act(
+            state = act_logged(
                 &state,
                 json!({ "type": "mulligan", "playerId": player, "keep": keep }),
-                Some(&mut log),
-            );
+                &mut log,
+            )
+            .state;
         }
         let card = must(
             state
@@ -437,15 +437,16 @@ mod m_plus_20_the_sequence_r1184000 {
             "the Competition in hand",
         )
         .clone();
-        state = act(
+        state = act_logged(
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": card.id }),
-            Some(&mut log),
-        );
+            &mut log,
+        )
+        .state;
         for _ in 0..2 {
             let question = open_as(&state, PromptKind::Answer, P1);
             let key = key(&state);
-            state = act(
+            state = act_logged(
                 &state,
                 json!({
                     "type": "answer",
@@ -453,15 +454,12 @@ mod m_plus_20_the_sequence_r1184000 {
                     "choiceId": question.id,
                     "selection": [{ "pick": "mode", "option": key }],
                 }),
-                Some(&mut log),
-            );
+                &mut log,
+            )
+            .state;
         }
         let question = open_as(&state, PromptKind::Answer, P1);
-        state = act(
-            &state,
-            json!({ "type": "answer", "playerId": "p1", "choiceId": question.id, "selection": [{ "pick": "none" }] }),
-            Some(&mut log),
-        );
+        state = act_logged(&state, json!({ "type": "answer", "playerId": "p1", "choiceId": question.id, "selection": [{ "pick": "none" }] }), &mut log).state;
         assert!(state.pending.is_none());
         assert_eq!(the_kenny(&state), (2, 2, 2, false));
         assert!(
@@ -526,21 +524,7 @@ mod summon_with_an_x_r1184003 {
 
     /// One effect applied for p1 with no running card, as `effects_summon.rs` runs one.
     fn run(state: &mut GameState, effect: Effect) {
-        let mut events = Vec::new();
-        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
-        {
-            let mut sink = EngineSink::new(state, &mut events, &mut rng);
-            let mut ctx = make_context(
-                &mut sink,
-                None,
-                HookOptions {
-                    controller: Some(P1),
-                    ..HookOptions::default()
-                },
-            );
-            (effect.apply)(&mut ctx);
-        }
-        state.rng_cursor = rng.cursor();
+        run_effect(state, effect, P1);
     }
 
     #[test]

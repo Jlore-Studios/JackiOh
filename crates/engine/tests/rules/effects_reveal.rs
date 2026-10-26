@@ -10,19 +10,14 @@ use jackioh_engine::effects::reveal;
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::EngineSink;
-use jackioh_engine::state::{CardInstance, GameState, find_instance};
+use jackioh_engine::state::{CardInstance, GameState};
 use jackioh_engine::traps::is_spent;
 use jackioh_engine::view_for::view_for;
 
 use super::fixtures::combat::plain;
 use super::fixtures::field::{doom, listener, playing};
 use super::fixtures::harness::{put, slot};
-use crate::rules::fixtures::harness::matches_object;
-
-/// The card under `id` as it stands in the state now (TS read the live object).
-fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
-    find_instance(state, id).expect("the card is in the state")
-}
+use crate::rules::fixtures::harness::{live, matches_object};
 
 /// `reveal().apply(makeContext(sinkFor(state), card, {}))`: the rng starts at the state's cursor, as
 /// `fixtures/harness.ts`'s `sinkFor` builds it; TS did not write the cursor back, and neither does this.
@@ -61,7 +56,7 @@ mod r686_reveal {
             &json!({ "faceDown": false, "defId": doom.id })
         ));
         // …but it has not fired: a Trap that is merely revealed still answers.
-        assert!(!is_spent(&state, live(&state, &trap.id)));
+        assert!(!is_spent(&state, &live(&state, &trap.id)));
     }
 
     #[test]
@@ -80,7 +75,7 @@ mod r686_reveal {
             &backrow_seen_by(&state, PlayerId::P2, 1),
             &json!({ "faceDown": false, "defId": listener.id })
         ));
-        assert!(!is_spent(&state, live(&state, &trap.id)));
+        assert!(!is_spent(&state, &live(&state, &trap.id)));
     }
 
     #[test]
