@@ -2326,6 +2326,13 @@
     "1997": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-26T13:52:51Z",
+        "difficulty": "hard",
+        "provider": "claude-2",
+        "tier": "strong",
+        "why": "about 40 files or more: the migration touches ~170 rule-test files; mechanical, but no line of the easy or medium rule holds at that size"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
