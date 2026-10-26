@@ -11,7 +11,7 @@
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    choose_mode, damage, destroy_all, exile_all, replace_board, rotate, scan_for_anomaly,
+    choose_mode, damage, delay, destroy_all, exile_all, replace_board, rotate, scan_for_anomaly,
 };
 use jackioh_engine::testkit::*;
 
@@ -123,6 +123,17 @@ pub static spinner: LazyLock<CardDef> =
     LazyLock::new(|| card(18601, "spinner", "Unit", Some((1, 3)), json!([])));
 /// A Spell: the spinner in lane 1 and the aimer in lane 2.
 pub static whirl: LazyLock<CardDef> = LazyLock::new(|| card(18602, "whirl", "Spell", None, json!([])));
+/// A 1/3 Unit: "Cry: your opponent chooses heads or tails; then you choose left or right; then deal
+/// 4 to the enemy hero" (the other player's question first, then one for its caster).
+pub static polite: LazyLock<CardDef> =
+    LazyLock::new(|| card(18603, "polite", "Unit", Some((1, 3)), json!([])));
+/// A Spell: the polite unit in lane 1 and the aimer in lane 2.
+pub static parley: LazyLock<CardDef> = LazyLock::new(|| card(18604, "parley", "Spell", None, json!([])));
+/// A 1/3 Unit: "Cry: at the end of this turn, choose left or right".
+pub static planner: LazyLock<CardDef> =
+    LazyLock::new(|| card(18605, "planner", "Unit", Some((1, 3)), json!([])));
+/// A Spell: the planner in lane 1.
+pub static scheme: LazyLock<CardDef> = LazyLock::new(|| card(18606, "scheme", "Spell", None, json!([])));
 
 /// A Spell whose Cry replaces its caster's board with `board`.
 fn anomaly_script(board: Value) -> CardScripts {
@@ -193,6 +204,46 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
                     ))]
                 })),
                 resume: IndexMap::from([("picked", hook(|_ctx| vec![to_enemy_hero(ASK_DAMAGE)]))]),
+                ..Script::default()
+            }),
+        ),
+        (
+            polite.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![choose_mode(json_as(
+                        json!({ "options": ["heads", "tails"], "by": "enemy", "step": "theirs" }),
+                    ))]
+                })),
+                resume: IndexMap::from([
+                    (
+                        "theirs",
+                        hook(|_ctx| {
+                            vec![choose_mode(json_as(
+                                json!({ "options": ["left", "right"], "step": "mine" }),
+                            ))]
+                        }),
+                    ),
+                    ("mine", hook(|_ctx| vec![to_enemy_hero(ASK_DAMAGE)])),
+                ]),
+                ..Script::default()
+            }),
+        ),
+        (
+            planner.id.clone(),
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![delay(json_as(json!({
+                        "at": { "phase": "end", "player": "self" },
+                        "step": "later",
+                    })))]
+                })),
+                delayed: Some(hook(|_ctx| {
+                    vec![choose_mode(json_as(
+                        json!({ "options": ["left", "right"], "step": "planned" }),
+                    ))]
+                })),
+                resume: IndexMap::from([("planned", hook(|_ctx| vec![]))]),
                 ..Script::default()
             }),
         ),
@@ -293,6 +344,17 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
             ])),
         ),
         (
+            parley.id.clone(),
+            anomaly_script(json!([
+                entry(&polite, "units", 1, json!({})),
+                entry(&aimer, "units", 2, json!({})),
+            ])),
+        ),
+        (
+            scheme.id.clone(),
+            anomaly_script(json!([entry(&planner, "units", 1, json!({}))])),
+        ),
+        (
             welcome.id.clone(),
             anomaly_script(json!([
                 entry(&greeter, "units", 1, json!({})),
@@ -327,6 +389,10 @@ pub static AN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         welcome.clone(),
         spinner.clone(),
         whirl.clone(),
+        polite.clone(),
+        parley.clone(),
+        planner.clone(),
+        scheme.clone(),
     ]
 });
 

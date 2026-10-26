@@ -15,14 +15,16 @@
 //! `prompts::open_prompt`). The stack is transient: a step that pauses returns through `with_cast_mode`,
 //! which takes the mode off again, so a state at rest, a paused one included, never carries it, and the
 //! owed step puts it back when it is driven again (the run record keeps `random` and `targetEnemies`,
-//! which are JSON).
+//! which are JSON). A run whose caster's choices are all random outside any cast (a replaced board's
+//! laid Cries, R1855001) keeps its caster in its data instead (`RANDOM_CHOICES_KEY`), and each of its
+//! continuations puts the mode back as it runs (`prompts::run_resume`).
 
 use indexmap::IndexSet;
 
 use crate::config::RANDOM_CAST_CHAIN_CAP;
 use crate::rng::Rng;
 use crate::script::EngineSink;
-use crate::state::{CastMode, GameState, find_instance};
+use crate::state::{CastMode, GameState, Resume, find_instance};
 use crate::wire::{PlayerId, Selection, Zone, opponent_of};
 
 /// The casts whose modes are in force now, outermost first.
@@ -52,6 +54,30 @@ pub fn with_cast_mode<'a, T>(
     }
     sink.state.casts_resolving = if stack.is_empty() { None } else { Some(stack) };
     out
+}
+
+/// R1855001: where a run whose caster's choices are all random names that caster: in the card's own
+/// data, which every continuation of the run carries (`prompts::resume_self`, `work::park_work`), as
+/// `resolve::MANA_BEFORE_PLAY_KEY` rides, so the mode the stack drops at a pause comes back with the
+/// answered step and the parked tail (`random_choices_of`). A delayed effect, a run of its own, drops
+/// it (`effects::delay`).
+pub const RANDOM_CHOICES_KEY: &str = "__randomChoices";
+
+/// R1855001: the random mode a continuation runs under, or null when its run's choices are its
+/// caster's own: R452's, for the player its data names (`RANDOM_CHOICES_KEY`), as a cast that makes no
+/// cast of its own (`casts` 0).
+pub fn random_choices_of(resume: &Resume) -> Option<CastMode> {
+    let player: PlayerId = serde_json::from_value(resume.data.get(RANDOM_CHOICES_KEY)?.clone()).ok()?;
+    Some(CastMode {
+        instance_id: resume
+            .instance_id
+            .clone()
+            .unwrap_or_else(|| resume.def_id.clone()),
+        player,
+        random: true,
+        target_enemies: false,
+        casts: 0,
+    })
 }
 
 /// R452: the innermost random cast of this player's being driven now, or null.

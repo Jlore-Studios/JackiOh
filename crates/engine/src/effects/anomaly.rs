@@ -20,14 +20,13 @@ use crate::config::{
     ANOMALY_PLAIN_CHANCE, ANOMALY_PLAIN_STEP, ANOMALY_RADIANT_CHANCE, ANOMALY_RADIANT_STEP,
     ANOMALY_ROLL_SIDES,
 };
-use crate::cry_trigger::trigger_cry_of;
+use crate::cry_trigger::trigger_random_cry_of;
 use crate::faces::card_type_of_face;
 use crate::plague::permanents_on_field;
 use crate::query::{luck_of, lucky_on};
-use crate::random_cast::with_cast_mode;
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectPart};
-use crate::state::{CardInstance, CastMode, GameState, find_instance_mut};
+use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{GameEvent, PLAYER_IDS, Position, Row, TargetAim};
 use crate::zones::exile_to_pile;
 
@@ -181,19 +180,9 @@ pub fn replace_board(args: ReplaceBoardArgs) -> Effect {
                         }) else {
                             return;
                         };
-                        // R1855001: a triggered Cry (R467) under R452's random mode, so its caster is
-                        // never asked. R452's cast-mode stack is transient, so a Cry tail parked by
-                        // the other player's prompt resumes outside random mode.
-                        let mode = CastMode {
-                            instance_id: id,
-                            player,
-                            random: true,
-                            target_enemies: false,
-                            casts: 0,
-                        };
-                        with_cast_mode(&mut at.sink, Some(mode), |sink| {
-                            trigger_cry_of(sink, &card, player)
-                        });
+                        // R1855001: a triggered Cry (R467) whose caster's every choice is random
+                        // (R452's), before a pause and after one.
+                        trigger_random_cry_of(&mut at.sink, &card, player);
                     })
                 }),
         );

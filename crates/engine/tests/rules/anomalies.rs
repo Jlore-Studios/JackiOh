@@ -12,8 +12,8 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::anomalies::{
     AIM_DAMAGE, ASK_DAMAGE, MODE_THREE, MODE_TWO, aimer, anomaly, asker, banisher, crowd, exodus, field,
-    found, greeter, grunt, lucky_probe, mine, misfit, modal, probe, register_anomaly_fixtures, spinner, trap,
-    wall, ward, welcome, whirl, wipe,
+    found, greeter, grunt, lucky_probe, mine, misfit, modal, parley, planner, polite, probe,
+    register_anomaly_fixtures, scheme, spinner, trap, wall, ward, welcome, whirl, wipe,
 };
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::resources::{ASTEROID, ASTEROID_YIELD, MYTHIC};
@@ -457,6 +457,55 @@ mod r1855001_a_replaced_boards_laid_units_fire_their_cries_at_random {
             damage_dealt(s.last_events()),
             vec![(Some(aimer_id), AIM_DAMAGE)],
             "and the laid Cries fire once it is laid"
+        );
+    }
+
+    #[test]
+    fn r1855001_a_cry_the_other_player_pauses_keeps_its_casters_choices_random_when_it_resumes() {
+        let mut s = board("r1855001-parley", json!({ "hand": [parley.id] }), json!({}));
+        let health = s.state().players[P2].hero.health;
+        s.play(parley.id.as_str(), json!({}));
+        assert_eq!(
+            s.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P2),
+            "the other player's question is theirs"
+        );
+        assert!(s.unit(P1, 2).is_some(), "the whole preset is laid first");
+        // §9.3: the paused Cry is data, and nothing of the random mode is left on the state at rest.
+        let round: GameState =
+            serde_json::from_str(&serde_json::to_string(s.state()).expect("serialises")).expect("parses");
+        assert_eq!(&round, s.state());
+        assert!(s.state().casts_resolving.is_none());
+
+        s.answer(json!("heads"));
+        assert!(
+            s.state().pending.is_none(),
+            "the rest of the Cry draws its caster's question at random"
+        );
+        let polite_id = unit_id(&s, P1, 1);
+        let aimer_id = unit_id(&s, P1, 2);
+        assert_eq!(s.card(polite_id.as_str()).def_id, polite.id);
+        assert_eq!(
+            damage_dealt(s.last_events()),
+            vec![(Some(polite_id), ASK_DAMAGE), (Some(aimer_id), AIM_DAMAGE)],
+            "the paused Cry ends, then the next one fires, its target drawn"
+        );
+        assert!(s.state().players[P2].hero.health <= health - ASK_DAMAGE);
+        assert!(s.state().casts_resolving.is_none());
+    }
+
+    #[test]
+    fn r1855001_a_delayed_effect_a_laid_cry_sets_up_asks_its_controller() {
+        let mut s = board("r1855001-scheme", json!({ "hand": [scheme.id] }), json!({}));
+        s.play(scheme.id.as_str(), json!({}));
+        assert_eq!(s.unit(P1, 1).expect("the planner").def_id, planner.id);
+        assert!(s.state().pending.is_none());
+
+        s.end_turn();
+        assert_eq!(
+            s.state().pending.as_ref().map(|pending| pending.player_id),
+            Some(P1),
+            "R62: a run of its own, so its question is its controller's"
         );
     }
 }
