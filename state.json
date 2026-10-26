@@ -2752,11 +2752,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-10-26T18:49:36Z",
-        "difficulty": "medium",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "spans engine, web and e2e with a shared-surface view fix: fails easy lines 2, 5 and 7"
+        "at": "2026-10-26T21:49:04Z",
+        "difficulty": "hard",
+        "provider": "step-up",
+        "tier": "",
+        "why": "failed 3 times at difficulty:medium"
       },
       "failures": 0,
       "forced": false,
