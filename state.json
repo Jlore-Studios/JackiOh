@@ -2626,6 +2626,14 @@
           "claude": "strong"
         }
       }
+    },
+    "1983": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-26T07:32:37Z",
+      "issue": 1953,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "7853ef3862488cbb",
