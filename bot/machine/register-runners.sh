@@ -19,16 +19,24 @@
 # A box keeps only the runners it is given: one past its count (or every one, at `id=0`) is
 # unregistered and its service removed, unless it holds a job, which a run once it ends removes.
 #
-#   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1
-#   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=1
+#   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=0 muse:fill
+#   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=2
+#
+# `id:fill` is a subscription's fill-in runners (providers.json `fill_in`): labelled with the
+# fill-in's runs_on, in ~/actions-runner-fill (-2 …), one per lane of the subscriptions it fills
+# unless given a count (`muse:fill=1`). Muse's two are on the night box, in gpt's and agy's lanes.
 set -euo pipefail
 repo="${1:?OWNER/REPO, the repository the runners serve}"
 shift
 here="$(cd "$(dirname "$0")" && pwd)"
 box="${BOX:-}"
 [[ "$box" =~ ^[a-z0-9]*$ ]] || { echo "BOX=$box: lower-case letters and digits only" >&2; exit 2; }
-all="$(jq -r '.providers | to_entries[] | select(.value.runs_on // "" | startswith("night-vm-"))
-  | "\(.key)=\(.value.runs_on)=\(.value.lanes // 1)"' .harness/providers.json)"
+all="$(jq -r '.providers as $all | $all | to_entries[]
+  | select(.value.runs_on // "" | startswith("night-vm-"))
+  | "\(.key)=\(.value.runs_on)=\(.value.lanes // 1)",
+    (select(.value.fill_in) | "\(.key):fill=\(.value.fill_in.runs_on)=\(
+      [.value.fill_in.for[] | $all[.] | select(.runs_on // "" | startswith("night-vm-"))
+       | .lanes // 1] | add // 0)")' .harness/providers.json)"
 [ -n "$all" ] || { echo "no provider in .harness/providers.json runs on night-vm-*" >&2; exit 1; }
 if [ "$#" -eq 0 ]; then
   labels="$all"
@@ -55,20 +63,23 @@ remote="$scratch/register.sh"
 cat > "$remote" <<'EOF'
 #!/bin/bash
 # On the machine, as root: $1 the repository, $2 the registration token, $3 the removal token,
-# $4 the box's name suffix (empty on the night box), then id=label=lanes.
+# $4 the box's name suffix (empty on the night box), then id=label=lanes (id:fill for a fill-in's
+# runners, which live in ~/actions-runner-fill, -2 …, copies of the unpacked runner).
 set -uo pipefail
 date +%s > /run/night-vm-last-busy
 repo="$1"; token="$2"; remove_token="$3"; box="$4"; shift 4
 failed=0
 for entry in "$@"; do
   id="${entry%%=*}"; rest="${entry#*=}"; label="${rest%%=*}"; lanes="${rest#*=}"
-  user="agent-$id"; first="/home/$user/actions-runner"
+  kind="${id#*:}"; [ "$kind" = "$id" ] && kind=""; id="${id%%:*}"
+  user="agent-$id"; first="/home/$user/actions-runner"; base="$first${kind:+-$kind}"
   if [ ! -x "$first/config.sh" ]; then
     echo "$label: no runner unpacked for $user; run setup.sh with $id first"; failed=1; continue
   fi
-  # Past this box's count: unregistered and gone, unless it holds a job (#1677).
-  for dir in "$first" "$first"-*; do
-    lane="${dir#"$first"}"; lane="${lane#-}"; lane="${lane:-1}"
+  # Past this box's count: unregistered and gone, unless it holds a job (#1677). A lane is the
+  # base directory or base-<n>; ~/actions-runner-fill is never a lane of ~/actions-runner.
+  for dir in "$base" "$base"-*; do
+    lane="${dir#"$base"}"; lane="${lane#-}"; lane="${lane:-1}"
     [[ "$lane" =~ ^[0-9]+$ ]] && [ "$lane" -gt "$lanes" ] && [ -f "$dir/.runner" ] || continue
     gone="$(jq -r '.agentName // empty' "$dir/.runner" 2>/dev/null || true)"; gone="${gone:-$dir}"
     if pgrep -f "$dir/bin/Runner.Worker" >/dev/null; then
@@ -84,13 +95,14 @@ for entry in "$@"; do
     echo "$gone: removed from this box"
   done
   for lane in $(seq 1 "$lanes"); do
-    dir="$first"; name="$label${box:+-$box}"
+    dir="$base"; name="$label${box:+-$box}"
     if [ "$lane" -gt 1 ]; then
-      dir="$first-$lane"; name="$label-$lane${box:+-$box}"
-      if [ ! -x "$dir/config.sh" ]; then  # a fresh copy of the unpacked runner, no registration
-        sudo -u "$user" mkdir -p "$dir"
-        (cd "$first" && sudo -u "$user" cp -a bin externals ./*.sh ./*.template .env .path "$dir/")
-      fi
+      dir="$base-$lane"; name="$label-$lane${box:+-$box}"
+    fi
+    if [ "$dir" != "$first" ] && [ ! -x "$dir/config.sh" ]; then
+      # A fresh copy of the unpacked runner, no registration.
+      sudo -u "$user" mkdir -p "$dir"
+      (cd "$first" && sudo -u "$user" cp -a bin externals ./*.sh ./*.template .env .path "$dir/")
     fi
     cd "$dir" || continue
     if [ ! -f .runner ]; then

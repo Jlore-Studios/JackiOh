@@ -818,9 +818,9 @@ class RunnersTests(unittest.TestCase):
         self.assertIn("⏳ **Queued for a runner:** `ubuntu-latest` 2 (ci · web (unit 2/4), the "
                       "longest 4m); `jackioh-selfplay-local` 1 (learn · plan, the longest 1h 30m).",
                       body)
-        # The self-hosted labels no job holds; Muse's runner holds one.
-        self.assertIn("💤 **No job on any of its runners:** `night-vm-agy`, `night-vm-gpt`, "
-                      "`night-vm-devin`, `jackioh-selfplay-local` (idle", body)
+        # The self-hosted labels no job holds; Muse's runner holds one, its fill-in runners none.
+        self.assertIn("💤 **No job on any of its runners:** `night-vm-muse-fill`, `night-vm-agy`, "
+                      "`night-vm-gpt`, `night-vm-devin`, `jackioh-selfplay-local` (idle", body)
 
     def test_a_long_list_of_busy_runners_is_cut(self):
         self.gh.jobs["103"] = [{"name": f"shard {n}", "status": "in_progress",

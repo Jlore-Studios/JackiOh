@@ -868,7 +868,7 @@ LOCAL_ROLE = (LOCAL_LABEL, "the owner's PC: a container a job, `pc-selfplay-<tim
               "the PC is otherwise idle", "`learn`, every job of it, back to back, `selfplay` "
               "exports and `gather`")
 BOXES_NOTE = ("The night box and the Muse box (a runner name ending `-b2`) are the bot's two AWS "
-              "machines, 2 vCPUs and 8 GB each; each starts when one of its jobs queues and stops "
+              "machines, 4 vCPUs and 16 GB each; each starts when one of its jobs queues and stops "
               "after 30 idle minutes. A lane past a subscription's first is `-2`, `-3` …. A "
               "subscription logged in on the owner's PC may take its job there too "
               "(`pc-<id>-<time>`). bot/machine/README.md has the rest.")
@@ -887,6 +887,11 @@ def explanation(ctx: Context) -> str:
                         f"`work` for `{provider.id}`: the `{provider.cli}` CLI with "
                         f"`{provider.model}`, as the Linux user `agent-{provider.id}`, which holds "
                         "that login alone |")
+            if provider.fill_in is not None:
+                of = ", ".join(f"`{i}`" for i in provider.fill_in.of)
+                rows.append(f"| `{provider.fill_in.runs_on}` | the bot's AWS boxes, in the lanes "
+                            f"of {of} | `{provider.id}`'s `work` in those lanes while they cannot "
+                            "start work (capped, off, backing off), as the same user |")
     rows.append("| `{}` | {} | {} |".format(*LOCAL_ROLE))
     flows = [f"| `{name.removesuffix('.yml')}` | {what} |" for name, what in sorted(WORKFLOWS.items())]
     return "\n".join([
@@ -1081,7 +1086,9 @@ def runners_section(ctx: Context, state: dict[str, Any], found: Found | None = N
             parts.append(f"`{label}` {len(jobs)} ({_job_name(run, job)}{longest})")
         tail += ["⏳ **Queued for a runner:** " + "; ".join(parts) + ".", ""]
     pool = ctx.cfg.pool
-    labels = [p.runs_on for p in pool.ordered() if pool.on_machine(p.id)] + [LOCAL_LABEL]
+    labels = [label for p in pool.ordered() if pool.on_machine(p.id)
+              for label in (p.runs_on, *((p.fill_in.runs_on,) if p.fill_in else ()))]
+    labels.append(LOCAL_LABEL)
     held = {str(label) for _, job in busy for label in job.get("labels") or []}
     idle = [label for label in dict.fromkeys(labels) if label not in held]
     if idle:

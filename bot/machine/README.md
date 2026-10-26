@@ -7,9 +7,10 @@ night box: one virtual machine on AWS, where each subscription in
 The Claude accounts log in from secrets, so their jobs run on GitHub's own runners (free for this
 public repository, four vCPUs each), and so do `gate`, `plan` and `deliver`, the jobs that hold a
 GitHub write token. A second box, the training box (below), ran the two LLM training lanes
-outside the harness until #1677 stopped them on 2026-10-25. It is the Muse box now: it holds one of
-Muse's two runners and the night box the other, so each Muse build has a box to itself, and it
-still runs `gather` ([The Muse box](#the-muse-box)).
+outside the harness until #1677 stopped them on 2026-10-25. It is the Muse box now: it holds
+Muse's two lanes of its own, the night box holds gpt's and agy's, which Muse fills while either
+cannot start work, and each box runs two of these jobs at most. It still runs `gather`
+([The Muse box](#the-muse-box)).
 
 **After the v0.3.0 cutover (#306), run `setup.sh` on the night box again, once**, with the same
 ids as before (Building it, step 2). The repository's checks are Rust now, and that run gives every
@@ -24,10 +25,10 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse devin
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.xlarge` (4 vCPUs, 16 GB, plus 8 GB swap) since 2026-10-26, an `m7i-flex.large` (2 vCPUs, 8 GB) before; Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`, `agent-devin`): a home only it can read, no `sudo`, no Docker |
-| Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user |
+| Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user. Muse's fill-in runners ([The Muse box](#the-muse-box)) are `~agent-muse/actions-runner-fill` and `-fill-2`, `night-vm-muse-fill` and `night-vm-muse-fill-2`, labelled `night-vm-muse-fill` |
 | CLIs | `claude`, `codex`, `agy`, `muse` and `devin`, installed for every user; Node 24, pnpm (corepack) and Python 3.12 |
 | Browser | Google Chrome stable (`google-chrome-stable`, from Google's `.deb`, which adds Google's apt repository, so a later `setup.sh` upgrades it), for the UI walkthroughs `scripts/browse.sh` drives (`.claude/skills/ui-walkthrough/`, #816); nothing starts it but an item's UI work |
 | Rust | in each user's home: rustup, and the toolchain `rust-toolchain.toml` pins (1.97.0) on the minimal profile with `rustfmt`, `clippy` and the `wasm32-unknown-unknown` target; `~/.cargo/bin` is first on every runner's `PATH` |
@@ -41,8 +42,9 @@ place. With one user per subscription, a session can read only its own login and
 only in its own home, and its runner, labelled with its id alone, takes only its jobs. A Claude
 account's token comes from its GitHub secret, handed to that job alone, and is never written to
 the home. At most `machine_parallel` (6) jobs run here at once, each as its own user; Devin has
-`"lanes": 6` on the six runners here, and Muse has two (#1273): one runner here, `night-vm-muse`,
-and one on the Muse box, `night-vm-muse-b2`, each under that box's `agent-muse` and its login
+`"lanes": 6` on the six runners here, and Muse has two (#1273), both on the Muse box
+(`night-vm-muse-b2` and `night-vm-muse-2-b2`), plus two fill-in runners here in gpt's and agy's
+lanes (`night-vm-muse-fill`, `-fill-2`), each under that box's `agent-muse` and its login
 (#1677). A lane the harness counts but no
 runner serves only queues its job until another runner of that label is free, so after raising a
 subscription's `lanes`, run `register-runners.sh` (Building it, step 4) to add the new runners.
@@ -72,7 +74,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## Building it
 
-1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.large` with a 120 GB gp3 disk, an
+1. **The instance.** Launch Ubuntu 24.04 (x86_64) as `m7i-flex.xlarge` with a 120 GB gp3 disk, an
    instance profile holding `AmazonSSMManagedInstanceCore`, a security group with no inbound
    rule, no key pair, shutdown behaviour **stop**, and the tag `Name=jackioh-night-vm`.
 2. **Set it up**, with the ids from `providers.json`:
@@ -97,7 +99,7 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
    It prints each runner's state; they also appear under Settings → Actions → Runners. With the
    Muse box, name what each box carries instead ([The Muse box](#the-muse-box), step 4): here,
-   `bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1`.
+   `bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=0 muse:fill`.
 5. **Deploy the starter**:
 
    ```sh
@@ -138,7 +140,7 @@ and CI's `training gate` re-runs its promotion before anything merges; the gathe
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refuses instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is the `m7i-flex.large`; on a paid plan the bigger one halves a lane's cycle |
+| Instance | EC2 `m7i-flex.xlarge` (4 vCPUs, 16 GB, plus 8 GB swap) since 2026-10-26, Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) was an `m7i-flex.large` (2 vCPUs, 8 GB) until then |
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
 | Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
@@ -201,23 +203,39 @@ Running the lanes:
   deletes one 8 hours after it ended, as `clean.sh` does on the night box. The records
   (`training-out/`) and logs stay. A box set up before #1272 also holds Devin's session database
   in `~/.local/share/devin/cli/`; delete it as that user.
-- **Cost**: the box is always on: about $70 a month for the instance (on-demand `m7i-flex.large` in
-  `us-east-2`; an `m7i.xlarge` would be about $150) plus about $8 for its disk.
+- **Cost**: about $0.19 an hour for the instance (on-demand `m7i-flex.xlarge` in `us-east-2`), so
+  about $140 a month were it always on (the Muse box stops when idle), plus about $8 for its disk.
 
 ## The Muse box
 
-Since #1677 the training box also carries one of Muse's two runners, and the night box the other.
-Two builds at once on one 8 GB box swap (`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse
-build that shared the box took a median 57 minutes in its build call, against 34 alone. With one
-Muse runner on each box, GitHub hands Muse's two jobs to different boxes. Muse has no login a
-secret can carry onto GitHub's runners, which is why both boxes are AWS's.
+Since #1677 the training box also carries Muse's runners. Two builds at once on one 8 GB box swap
+(`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse build that shared the box took a median
+57 minutes in its build call, against 34 alone, so each box held one Muse runner. Since 2026-10-26
+both boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB), and each runs two of these jobs at most:
+
+- **The Muse box** holds Muse's two lanes of its own (`runs_on` `night-vm-muse`, `"lanes": 2`):
+  `night-vm-muse-b2` and `night-vm-muse-2-b2`.
+- **The night box** holds gpt's lane and agy's, and Muse fills either while that subscription
+  cannot start work: capped, off, outside its hours or backing off (`fill_in` in
+  [`providers.json`](../../.harness/providers.json); `plan.fill_in_free`). Muse's two runners
+  here carry a label of their own, `night-vm-muse-fill`, which a Muse run takes only when the
+  planner puts it in such a lane (`plan.runner_for`; the item's record keeps it as `runs_on`).
+  gpt, agy and Muse's runs here share the two lanes: a subscription whose lane Muse holds waits
+  for that run to end, even once its own cap resets (`plan.fill_in_full`), so the night box never
+  runs three of them.
+
+Muse has no login a secret can carry onto GitHub's runners, which is why both boxes are AWS's.
+Devin's six runners stay on the night box until its plan ends on 2026-11-02, outside those two
+lanes.
 
 | | The night box (`jackioh-night-vm`) | The Muse box (`jackioh-train-box`) |
 |---|---|---|
-| Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-devin` (until 2026-11-02) and `night-vm-muse` | `night-vm-muse-b2` |
+| Instance | `m7i-flex.xlarge` (4 vCPUs, 16 GB) | `m7i-flex.xlarge` (4 vCPUs, 16 GB) |
+| Runners | `night-vm-gpt`, `night-vm-agy`, Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2`, and `night-vm-devin` (until 2026-11-02) | `night-vm-muse-b2` and `night-vm-muse-2-b2` |
+| At once | gpt's lane and agy's, which Muse fills while either cannot start work; Devin's apart | Muse's two lanes |
 | Also | | `jackioh-train@gather` ([`training/gather.md`](../../training/gather.md)), while the box is on |
 | Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
-| Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
+| Starter | `jackioh-night-vm-starter`, for its own labels (step 6) | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
 
 Both boxes are one machine to the harness: `machine_parallel` (6) holds their jobs together, and a
 runner's `-b2` says which box a run, or its memory reading, came from. The status issue's memory
@@ -239,22 +257,39 @@ repository admin:
    `sudo -iu agent-muse muse login` (a second login of the same account).
 4. **Register the runners**, the night box's first:
    ```sh
-   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=1
-   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=1
+   bot/machine/register-runners.sh OWNER/REPO gpt agy devin muse=0 muse:fill
+   TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=2
    ```
-   The first removes the night box's Muse runners past its one (`night-vm-muse-2` to `-4`); one in
-   the middle of a job is left registered, and the same command run again once it ends removes it.
+   The first removes the night box's own Muse runners (`night-vm-muse`, and any of `-2` to `-4`
+   left from before #1677) and registers the fill-in ones, `~agent-muse/actions-runner-fill` and
+   `-fill-2`, copies of the unpacked runner under the same user and login; `muse:fill=1` would
+   register one. A runner in the middle of a job is left registered, and the same command run
+   again once it ends removes it. The second registers `night-vm-muse-2-b2` beside
+   `night-vm-muse-b2`.
 5. **Deploy its starter**:
    ```sh
    TAG=jackioh-train-box STARTER_NAME=jackioh-muse-box-starter STARTER_ROLE=jackioh-muse-box-starter \
      RUNNER_LABELS=night-vm-muse REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
    ```
+6. **Keep the night box's starter to its own labels**, or a job queued for the Muse box's
+   runners (`night-vm-muse`) starts the night box too, which then idles 30 minutes for nothing:
+   ```sh
+   RUNNER_LABELS=night-vm-gpt,night-vm-agy,night-vm-devin,night-vm-muse-fill \
+     REPO_ID=$(gh api repos/OWNER/REPO --jq .id) bot/machine/deploy-starter.sh
+   ```
+
+**Moving the boxes to two lanes each** (2026-10-26), once both instances are `m7i-flex.xlarge`
+(stop each, change its type, start it again; neither the idle stop nor the starters change for
+that): run step 4's two commands and step 6. Until the night box's fill-in runners are
+registered, a Muse run the planner puts in gpt's or agy's lane waits queued for them.
 
 **Updating it:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh muse`. Never
 `--training` on it: that takes the idle stop off again, and the box then stays on for good.
 
-**Going back to one box:** `TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO
-muse=0`, then `bot/machine/register-runners.sh OWNER/REPO muse=2` on the night box.
+**Going back to one box:** take `fill_in` out of Muse's entry in `providers.json`, run
+`TAG=jackioh-train-box BOX=b2 bot/machine/register-runners.sh OWNER/REPO muse=0`, then
+`bot/machine/register-runners.sh OWNER/REPO muse=2 muse:fill=0` on the night box, and deploy its
+starter again without `RUNNER_LABELS`.
 
 ## The local runner
 
@@ -399,9 +434,9 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   build of the CLI (on 2026-10-07 it took 7.5 minutes on four vCPUs busy with other builds, and
   the engine's crate held about 1.4 GB while it compiled); clippy, the cargo tests and the web's
   unit tests (`"machine": false`) run in CI. The
-  Claude accounts run on GitHub's runners, under `max_parallel` (11), apart from these six. The
-  Free plan's largest machines are the 2-vCPU `m7i-flex.large` and
-  `c7i-flex.large`.
+  Claude accounts run on GitHub's runners, under `max_parallel` (11), apart from these six. Both
+  boxes are `m7i-flex.xlarge` (4 vCPUs, 16 GB) since 2026-10-26; the Free plan's largest had been
+  the 2-vCPU `m7i-flex.large` and `c7i-flex.large`.
 - **Memory** (#317): EC2 records only the CPU (hourly averages above 60% in 27 of the 48 hours
   to 2026-10-05, peaks of 100%), so `setup.sh` installs the CloudWatch agent, which sends
   `mem_used_percent`, `mem_available` and `swap_used_percent` every 60 s to the
@@ -416,9 +451,10 @@ ten minutes, so nothing stays registered once the supervisor is gone and `stop-a
   5 s or more), with the least memory available and how many runs swapped
   ([`harness/memory.py`](../harness/memory.py)). After a busy day, read it beside CPU and decide
   `machine_parallel`: fewer lanes if the box ran short or swapped, the same if it had memory to
-  spare. A bigger box (4 vCPUs) needs the paid plan.
-- **Cost:** the machine is billed by the hour while it runs (about $0.096 an hour, so about $70 a
-  month if it never stopped) plus its disk (about $4.80 a month). A stopped machine costs only
+  spare. Both boxes have 4 vCPUs and 16 GB since 2026-10-26.
+- **Cost:** the machine is billed by the hour while it runs (about $0.19 an hour for the
+  `m7i-flex.xlarge`, so about $140 a month if it never stopped) plus its disk (about $9.60 a
+  month for 120 GB of gp3). A stopped machine costs only
   the disk. The starter's Lambda calls and its schedule fit in the free tier.
 - **The starter** looks only at bot-night runs, through GitHub's public API by repository id, so a
   rename or a transfer does not break it. It leaves alone a job that has waited three hours (its
